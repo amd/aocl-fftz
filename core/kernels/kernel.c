@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file kernel.c
+/** @file kernel.c
  *
  *  @brief Provides common functionality for a Kernel
  *

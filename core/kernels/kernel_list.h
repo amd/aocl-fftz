@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file kernel_list.h
+/** @file kernel_list.h
  *
  *  @brief List of kernels for computing DFT.
  *
@@ -42,8 +42,8 @@
 
 #include "core/kernels/kernel.h"
 
-//Data structure containing kernel function pointers corresponding to the
-//registration, and operation count of the kernel
+// Data structure containing kernel function pointers corresponding to the
+// registration, and operation count of the kernel
 typedef struct
 {
     k_register_kernel_ k_register_kernel;
@@ -52,7 +52,8 @@ typedef struct
 } kernel_fp_list;
 
 kernel_fp_list kernels_c[NUM_KERNELS_IN_EACH_CATEGORY] =
-{   {register_kernel_fft2c, get_ops_cnt_fft2c, 2}, // radix-2
+{
+    {register_kernel_fft2c, get_ops_cnt_fft2c, 2}, // radix-2
     {register_kernel_fft3c, get_ops_cnt_fft3c, 3}, // radix-3
     {NULL, NULL, 4},                               // radix-4
     {NULL, NULL, 5},                               // radix-5
@@ -142,4 +143,4 @@ kernel_fp_list kernels_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
     {NULL, NULL, 64}  //radix-64
 };
 
-#endif //AOCLFFTZ_KERNEL_LIST_H
+#endif // AOCLFFTZ_KERNEL_LIST_H

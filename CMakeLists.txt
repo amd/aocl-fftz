@@ -60,6 +60,7 @@ else ()
 endif ()
 
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
+
 option (BUILD_STATIC_LIBS "Build static library (Default build type is shared library)" OFF)
 option (ENABLE_AVX "Compile with AVX instruction set support" OFF)
 option (ENABLE_AVX2 "Compile with AVX2 instruction set support" OFF)
@@ -72,7 +73,8 @@ option (ENABLE_STRICT_WARNINGS "Enable compiler flags to treat all warnings as e
 #list source files to be compiled for the library
 set (CORE_PATH core)
 file(GLOB API_SRC_FILES api/*.c api/*.cpp api/*.h)
-file(GLOB CORE_SRC_FILES ${CORE_PATH}/*.c ${CORE_PATH}/*.h
+#CONFIURE_DEPENDS option will be used to pick up the new added files and re-run the cmake build if necessary
+file(GLOB CORE_SRC_FILES CONFIGURE_DEPENDS ${CORE_PATH}/*.c ${CORE_PATH}/*.h
                         ${CORE_PATH}/common/*.c ${CORE_PATH}/common/*.h
                         ${CORE_PATH}/kernels/*.c ${CORE_PATH}/kernels/*.h
                         ${CORE_PATH}/kernels/c/*.c ${CORE_PATH}/kernels/c/*.h

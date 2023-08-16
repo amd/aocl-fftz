@@ -1,0 +1,21 @@
+# build and lib directory
+build/
+lib/
+
+# docs directory
+docs/
+
+# CTest logs
+Testing/
+
+# log files
+*.log
+
+# executables
+*.exe
+
+# clang-format config file
+.clang-format
+
+# vscode files
+.vscode/
