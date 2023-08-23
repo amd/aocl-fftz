@@ -40,7 +40,10 @@
 #define AOCLFFTZ_GTEST_TYPES_H
 
 #include <tuple>
-#include "core/kernels/kernel.h"
+extern "C"
+{
+#include "core/solvers/solver.h"
+}
 
 /**
  * @brief An enum for the supported input types for tests
@@ -105,5 +108,16 @@ enum aocl_fftz_kernel_type
  * perform bitwise operations to make decisions.
  */
 typedef std::tuple<UINT32, UINT8, UINT8> aoclfftz_kernel_test_params_t;
+
+/**
+ * @brief A type used as the parameter for the paraterized selector tests
+ * (TEST_P)
+ *
+ */
+typedef std::tuple<std::string, INT32, INT32, std::vector<aoclfftz_solver_type>>
+    aoclfftz_selector_test_params_t;
+
+// function pointer to dft_solver
+typedef INT32 (*dft_solver_)(aoclfftz_solution_t *);
 
 #endif // AOCLFFTZ_GTEST_TYPES_H

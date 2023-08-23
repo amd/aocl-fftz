@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2023, Advanced Micro Devices. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
@@ -27,7 +27,7 @@
  */
 
 /** @file utils.h
- *  
+ *
  *  @brief Utility functions related to logger, timer, cpuid and others.
  *
  *  This file contains the utility functions related to logging mechanism,
@@ -96,7 +96,7 @@ typedef struct timespec timeVal;
                                 else if (logType == TRACE)\
                                     type = "TRACE";\
                                 if (logType <= enableLog)\
-                                    printf ("[%s] : %s : %s : %d : "str"\n",\
+                                    printf ("[%s] : %s : %s : %d : " str"\n",\
                                     type, __FILE__, FUNC_NAME, __LINE__);\
                             }\
                         } while (0)
@@ -113,7 +113,7 @@ typedef struct timespec timeVal;
                                 else if (logType == TRACE)\
                                     type = "TRACE";\
                                 if (logType <= enableLog)\
-                                    printf ("[%s] : %s : %s : %d : "str"\n",\
+                                    printf ("[%s] : %s : %s : %d : " str"\n",\
                                     type, __FILE__, FUNC_NAME, __LINE__, __VA_ARGS__);\
                             }\
                         } while (0)
