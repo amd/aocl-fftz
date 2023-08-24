@@ -40,24 +40,184 @@
 #ifndef AOCLFFTZ_KERNEL_LIST_H
 #define AOCLFFTZ_KERNEL_LIST_H
 
-#include "api/aoclfftz_internal.h"
+#include "core/kernels/kernel.h"
 
-#define NUM_KERNELS_IN_CATEGORY 64
-UCHAR kernels_standard_c[NUM_KERNELS_IN_CATEGORY] = 
- { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 25, 32, 64 };
-UCHAR kernels_permuted_c[NUM_KERNELS_IN_CATEGORY] =
-{ 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 25, 32, 64 };
-UCHAR kernels_standard_avx128[NUM_KERNELS_IN_CATEGORY] =
-{ 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 25, 32, 64 };
-UCHAR kernels_permuted_avx128[NUM_KERNELS_IN_CATEGORY] =
-{ 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 25, 32, 64 };
-UCHAR kernels_standard_avx256[NUM_KERNELS_IN_CATEGORY] =
-{ 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 25, 32, 64 };
-UCHAR kernels_permuted_avx256[NUM_KERNELS_IN_CATEGORY] =
-{ 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 25, 32, 64 };
-UCHAR kernels_standard_avx512[NUM_KERNELS_IN_CATEGORY] =
-{ 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 25, 32, 64 };
-UCHAR kernels_permuted_avx512[NUM_KERNELS_IN_CATEGORY] =
-{ 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 25, 32, 64 };
+//Data structure containing kernel function pointers corresponding to the
+//registration, and operation count of the kernel
+typedef struct
+{
+    k_register_kernel_ k_register_kernel;
+    k_ops_cnt_ k_ops_cnt;
+    UINT32 radix;
+} kernel_fp_list;
+
+kernel_fp_list kernels_standard_c[NUM_KERNELS_IN_EACH_CATEGORY] =
+{ {register_kernel_fft2c, get_ops_cnt_fft2c, 2}, //radix-2
+  {register_kernel_fft3c, get_ops_cnt_fft3c, 3}, //radix-3
+  {NULL, NULL, 4 }, //radix-4
+  {NULL, NULL, 5 }, //radix-5
+  {NULL, NULL, 6 }, //radix-6
+  {NULL, NULL, 7 }, //radix-7
+  {NULL, NULL, 8 }, //radix-8
+  {NULL, NULL, 9 }, //radix-9
+  {NULL, NULL, 10}, //radix-10
+  {NULL, NULL, 11}, //radix-11
+  {NULL, NULL, 12}, //radix-12
+  {NULL, NULL, 13}, //radix-13
+  {NULL, NULL, 14}, //radix-14
+  {NULL, NULL, 15}, //radix-15
+  {NULL, NULL, 16}, //radix-16
+  {NULL, NULL, 20}, //radix-20
+  {NULL, NULL, 25}, //radix-25
+  {NULL, NULL, 32}, //radix-32
+  {NULL, NULL, 64} }; //radix-64
+
+kernel_fp_list kernels_permuted_c[NUM_KERNELS_IN_EACH_CATEGORY] =
+{ {NULL, NULL, 2 }, //radix-2
+  {NULL, NULL, 3 }, //radix-3
+  {NULL, NULL, 4 }, //radix-4
+  {NULL, NULL, 5 }, //radix-5
+  {NULL, NULL, 6 }, //radix-6
+  {NULL, NULL, 7 }, //radix-7
+  {NULL, NULL, 8 }, //radix-8
+  {NULL, NULL, 9 }, //radix-9
+  {NULL, NULL, 10}, //radix-10
+  {NULL, NULL, 11}, //radix-11
+  {NULL, NULL, 12}, //radix-12
+  {NULL, NULL, 13}, //radix-13
+  {NULL, NULL, 14}, //radix-14
+  {NULL, NULL, 15}, //radix-15
+  {NULL, NULL, 16}, //radix-16
+  {NULL, NULL, 20}, //radix-20
+  {NULL, NULL, 25}, //radix-25
+  {NULL, NULL, 32}, //radix-32
+  {NULL, NULL, 64} }; //radix-64
+
+kernel_fp_list kernels_standard_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
+{ {NULL, NULL, 2 }, //radix-2
+  {NULL, NULL, 3 }, //radix-3
+  {NULL, NULL, 4 }, //radix-4
+  {NULL, NULL, 5 }, //radix-5
+  {NULL, NULL, 6 }, //radix-6
+  {NULL, NULL, 7 }, //radix-7
+  {NULL, NULL, 8 }, //radix-8
+  {NULL, NULL, 9 }, //radix-9
+  {NULL, NULL, 10}, //radix-10
+  {NULL, NULL, 11}, //radix-11
+  {NULL, NULL, 12}, //radix-12
+  {NULL, NULL, 13}, //radix-13
+  {NULL, NULL, 14}, //radix-14
+  {NULL, NULL, 15}, //radix-15
+  {NULL, NULL, 16}, //radix-16
+  {NULL, NULL, 20}, //radix-20
+  {NULL, NULL, 25}, //radix-25
+  {NULL, NULL, 32}, //radix-32
+  {NULL, NULL, 64} }; //radix-64
+
+kernel_fp_list kernels_permuted_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
+{ {NULL, NULL, 2 }, //radix-2
+  {NULL, NULL, 3 }, //radix-3
+  {NULL, NULL, 4 }, //radix-4
+  {NULL, NULL, 5 }, //radix-5
+  {NULL, NULL, 6 }, //radix-6
+  {NULL, NULL, 7 }, //radix-7
+  {NULL, NULL, 8 }, //radix-8
+  {NULL, NULL, 9 }, //radix-9
+  {NULL, NULL, 10}, //radix-10
+  {NULL, NULL, 11}, //radix-11
+  {NULL, NULL, 12}, //radix-12
+  {NULL, NULL, 13}, //radix-13
+  {NULL, NULL, 14}, //radix-14
+  {NULL, NULL, 15}, //radix-15
+  {NULL, NULL, 16}, //radix-16
+  {NULL, NULL, 20}, //radix-20
+  {NULL, NULL, 25}, //radix-25
+  {NULL, NULL, 32}, //radix-32
+  {NULL, NULL, 64} }; //radix-64
+
+kernel_fp_list kernels_standard_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
+{ {NULL, NULL, 2 }, //radix-2
+  {NULL, NULL, 3 }, //radix-3
+  {NULL, NULL, 4 }, //radix-4
+  {NULL, NULL, 5 }, //radix-5
+  {NULL, NULL, 6 }, //radix-6
+  {NULL, NULL, 7 }, //radix-7
+  {NULL, NULL, 8 }, //radix-8
+  {NULL, NULL, 9 }, //radix-9
+  {NULL, NULL, 10}, //radix-10
+  {NULL, NULL, 11}, //radix-11
+  {NULL, NULL, 12}, //radix-12
+  {NULL, NULL, 13}, //radix-13
+  {NULL, NULL, 14}, //radix-14
+  {NULL, NULL, 15}, //radix-15
+  {NULL, NULL, 16}, //radix-16
+  {NULL, NULL, 20}, //radix-20
+  {NULL, NULL, 25}, //radix-25
+  {NULL, NULL, 32}, //radix-32
+  {NULL, NULL, 64} }; //radix-64
+
+kernel_fp_list kernels_permuted_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
+{ {NULL, NULL, 2 }, //radix-2
+  {NULL, NULL, 3 }, //radix-3
+  {NULL, NULL, 4 }, //radix-4
+  {NULL, NULL, 5 }, //radix-5
+  {NULL, NULL, 6 }, //radix-6
+  {NULL, NULL, 7 }, //radix-7
+  {NULL, NULL, 8 }, //radix-8
+  {NULL, NULL, 9 }, //radix-9
+  {NULL, NULL, 10}, //radix-10
+  {NULL, NULL, 11}, //radix-11
+  {NULL, NULL, 12}, //radix-12
+  {NULL, NULL, 13}, //radix-13
+  {NULL, NULL, 14}, //radix-14
+  {NULL, NULL, 15}, //radix-15
+  {NULL, NULL, 16}, //radix-16
+  {NULL, NULL, 20}, //radix-20
+  {NULL, NULL, 25}, //radix-25
+  {NULL, NULL, 32}, //radix-32
+  {NULL, NULL, 64} }; //radix-64
+
+kernel_fp_list kernels_standard_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
+{ {NULL, NULL, 2 }, //radix-2
+  {NULL, NULL, 3 }, //radix-3
+  {NULL, NULL, 4 }, //radix-4
+  {NULL, NULL, 5 }, //radix-5
+  {NULL, NULL, 6 }, //radix-6
+  {NULL, NULL, 7 }, //radix-7
+  {NULL, NULL, 8 }, //radix-8
+  {NULL, NULL, 9 }, //radix-9
+  {NULL, NULL, 10}, //radix-10
+  {NULL, NULL, 11}, //radix-11
+  {NULL, NULL, 12}, //radix-12
+  {NULL, NULL, 13}, //radix-13
+  {NULL, NULL, 14}, //radix-14
+  {NULL, NULL, 15}, //radix-15
+  {NULL, NULL, 16}, //radix-16
+  {NULL, NULL, 20}, //radix-20
+  {NULL, NULL, 25}, //radix-25
+  {NULL, NULL, 32}, //radix-32
+  {NULL, NULL, 64} }; //radix-64
+
+kernel_fp_list kernels_permuted_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
+{ {NULL, NULL, 2 }, //radix-2
+  {NULL, NULL, 3 }, //radix-3
+  {NULL, NULL, 4 }, //radix-4
+  {NULL, NULL, 5 }, //radix-5
+  {NULL, NULL, 6 }, //radix-6
+  {NULL, NULL, 7 }, //radix-7
+  {NULL, NULL, 8 }, //radix-8
+  {NULL, NULL, 9 }, //radix-9
+  {NULL, NULL, 10}, //radix-10
+  {NULL, NULL, 11}, //radix-11
+  {NULL, NULL, 12}, //radix-12
+  {NULL, NULL, 13}, //radix-13
+  {NULL, NULL, 14}, //radix-14
+  {NULL, NULL, 15}, //radix-15
+  {NULL, NULL, 16}, //radix-16
+  {NULL, NULL, 20}, //radix-20
+  {NULL, NULL, 25}, //radix-25
+  {NULL, NULL, 32}, //radix-32
+  {NULL, NULL, 64} }; //radix-64
+
 
 #endif //AOCLFFTZ_KERNEL_LIST_H

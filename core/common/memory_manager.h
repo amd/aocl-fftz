@@ -26,39 +26,28 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file executor.h
+ /** @file memory_manager.h
  *
- *  @brief Functions and data structures for executor module.
+ *  @brief Declares memory allocation and management functions of AOCL-FFTZ.
  *
- *  This file contains the functions and data structures that are used to
- *  execute a solution of kernels for the given input problem description.
+ *  This file contains the function declarations for performing memory
+ *  allocation management of different modules of the AOCL-FFTZ library.
  *
  *  @author S. Biplab Raut
  */
 
-#ifndef AOCLFFTZ_EXECUTOR_H
-#define AOCLFFTZ_EXECUTOR_H
+#ifndef MEMORY_MANAGER_H
+#define MEMORY_MANAGER_H
 
-#include "core/solvers/solver.h"
-#include "core/kernels/kernel.h"
+#include "utils/allocator.h"
+#include "api/aoclfftz_internal.h"
+#include "selector/selector.h"
 
-//Error return codes related to executor
-//Add more codes at the top
-typedef enum
-{
-    EXECUTOR_FAILURE = -1,
-    EXECUTOR_SUCCESS         //Successful operation
-} aoclfftz_executor_status;
+aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank);
+aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank);
+aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank);
+VOID *alloc_twiddle_for_solution(UINT32 rad_size, UINT32 dt_prec);
+VOID destroy_selector(aoclfftz_selector_t *sol);
+VOID destroy_solution(aoclfftz_solution_t *sol);
 
-//Executor data structure that is used to hold the solution and cost analysis
-// at each decomposition level for the associated sub-problem 
-typedef struct
-{
-    aoclfftz_solution_t *solution;
-    //cost_analysis_t *cost_analysis;
-} aoclfftz_executor_t;
-
-//Function declarations
-INT32 execute_dft(aoclfftz_executor_t *);
-
-#endif //AOCLFFTZ_EXECUTOR_H
+#endif //MEMORY_MANAGER_H

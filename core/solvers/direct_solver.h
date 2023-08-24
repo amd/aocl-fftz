@@ -26,39 +26,26 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file executor.h
+ /** @file direct_solver.h
  *
- *  @brief Functions and data structures for executor module.
+ *  @brief Interface header file of the Direct Solver
  *
- *  This file contains the functions and data structures that are used to
- *  execute a solution of kernels for the given input problem description.
+ *  This file contains the data strucutes and function declarationss that 
+ *  setup, execute and destroy the direct solver.
  *
  *  @author S. Biplab Raut
  */
 
-#ifndef AOCLFFTZ_EXECUTOR_H
-#define AOCLFFTZ_EXECUTOR_H
+#ifndef DIRECT_SOLVER_H
+#define DIRECT_SOLVER_H
 
 #include "core/solvers/solver.h"
-#include "core/kernels/kernel.h"
 
-//Error return codes related to executor
-//Add more codes at the top
-typedef enum
+//Solver data structure that holds solver object/pointer and its type
+typedef struct direct_solver
 {
-    EXECUTOR_FAILURE = -1,
-    EXECUTOR_SUCCESS         //Successful operation
-} aoclfftz_executor_status;
+    solver_t *direct_solver;
+    cost_analysis_t *cost;
+} direct_solver_t;
 
-//Executor data structure that is used to hold the solution and cost analysis
-// at each decomposition level for the associated sub-problem 
-typedef struct
-{
-    aoclfftz_solution_t *solution;
-    //cost_analysis_t *cost_analysis;
-} aoclfftz_executor_t;
-
-//Function declarations
-INT32 execute_dft(aoclfftz_executor_t *);
-
-#endif //AOCLFFTZ_EXECUTOR_H
+#endif //DIRECT_SOLVER_H

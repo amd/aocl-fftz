@@ -104,7 +104,7 @@ typedef struct
     //2 - AVX optimizations, 3 - AVX2 optimizations, 4 - AVX512 optimizations
     INT32 opt_level;
     INT32 opt_off; //Turn off all optimizations
-    INT32 print_debug_logs;
+    INT32 logger_mode;
     INT32 measure_stats;     
 } aoclfftz_cntrl_params;
 
@@ -122,7 +122,7 @@ typedef struct
     //       2 : forward(0) or backward(1),
     //       3 : complex(0) or real
     UINT32 flags;
-    aoclfftz_smp_pfft pfft;
+    aoclfftz_smp_pfft pthr_fft;
     aoclfftz_cntrl_params cntrl_params;
 } aoclfftz_prob_desc_f;
 
@@ -140,7 +140,7 @@ typedef struct
     //       2 : forward(0) or backward(1),
     //       3 : complex(0) or real
     UINT32 flags;
-    aoclfftz_smp_pfft pfft;
+    aoclfftz_smp_pfft pthr_fft;
     aoclfftz_cntrl_params cntrl_params;
 } aoclfftz_prob_desc_d;
 
@@ -158,7 +158,7 @@ typedef struct
     //       2 : forward(0) or backward(1),
     //       3 : complex(0) or real
     UINT32 flags;
-    aoclfftz_smp_pfft pfft;
+    aoclfftz_smp_pfft pthr_fft;
     aoclfftz_cntrl_params cntrl_params;
 } aoclfftz_prob_desc_f_64_;
 
@@ -176,7 +176,7 @@ typedef struct
     //       2 : forward(0) or backward(1),
     //       3 : complex(0) or real
     UINT32 flags;
-    aoclfftz_smp_pfft pfft;
+    aoclfftz_smp_pfft pthr_fft;
     aoclfftz_cntrl_params cntrl_params;
 } aoclfftz_prob_desc_d_64_;
 

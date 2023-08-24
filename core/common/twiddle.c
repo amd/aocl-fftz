@@ -26,39 +26,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file executor.h
+ /** @file twiddle.h
  *
- *  @brief Functions and data structures for executor module.
+ *  @brief Computes and applies Twiddle factor.
  *
- *  This file contains the functions and data structures that are used to
- *  execute a solution of kernels for the given input problem description.
+ *  This file contains the functions related to computing and multiplying
+ *  twiddle factors to the values as needed between FFT stages
  *
  *  @author S. Biplab Raut
  */
 
-#ifndef AOCLFFTZ_EXECUTOR_H
-#define AOCLFFTZ_EXECUTOR_H
-
-#include "core/solvers/solver.h"
-#include "core/kernels/kernel.h"
-
-//Error return codes related to executor
-//Add more codes at the top
-typedef enum
-{
-    EXECUTOR_FAILURE = -1,
-    EXECUTOR_SUCCESS         //Successful operation
-} aoclfftz_executor_status;
-
-//Executor data structure that is used to hold the solution and cost analysis
-// at each decomposition level for the associated sub-problem 
-typedef struct
-{
-    aoclfftz_solution_t *solution;
-    //cost_analysis_t *cost_analysis;
-} aoclfftz_executor_t;
-
-//Function declarations
-INT32 execute_dft(aoclfftz_executor_t *);
-
-#endif //AOCLFFTZ_EXECUTOR_H
+#include "core/common/twiddle.h"

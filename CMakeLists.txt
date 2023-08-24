@@ -75,6 +75,10 @@ file(GLOB API_SRC_FILES api/*.c api/*.cpp api/*.h)
 file(GLOB CORE_SRC_FILES ${CORE_PATH}/*.c ${CORE_PATH}/*.h
                         ${CORE_PATH}/common/*.c ${CORE_PATH}/common/*.h
 						${CORE_PATH}/kernels/*.c ${CORE_PATH}/kernels/*.h
+						${CORE_PATH}/kernels/c/*.c ${CORE_PATH}/kernels/c/*.h
+						${CORE_PATH}/kernels/avx128/*.c ${CORE_PATH}/kernels/avx128/*.h
+						${CORE_PATH}/kernels/avx256/*.c ${CORE_PATH}/kernels/avx256/*.h
+						${CORE_PATH}/kernels/avx512/*.c ${CORE_PATH}/kernels/avx512/*.h
 						${CORE_PATH}/solvers/*.c ${CORE_PATH}/solvers/*.h)
 file(GLOB SELECTOR_SRC_FILES selector/*.c selector/*.h)
 file(GLOB THREADS_SRC_FILES threads/*.c threads/*.h)

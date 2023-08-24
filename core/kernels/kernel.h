@@ -44,18 +44,81 @@
 #define AOCLFFTZ_KERNEL_H
 
 #include "api/aoclfftz_internal.h"
- 
-//Kernel data structure that holds forward and backward kernel objects/pointers
-//and the associated radix of the kernels
+
+//Constants related to radix sizes
+#define RADIX_2  2
+#define RADIX_3  3
+#define RADIX_4  4
+#define RADIX_5  5
+#define RADIX_6  6
+#define RADIX_7  7
+#define RADIX_8  8
+#define RADIX_9  9
+#define RADIX_10 10
+#define RADIX_11 11
+#define RADIX_12 12
+#define RADIX_13 13
+#define RADIX_14 14
+#define RADIX_15 15
+#define RADIX_16 16
+
+//Error return codes related to Kernel
+//Add more codes at the top
+typedef enum
+{
+    KERNEL_FAILURE = -1,
+    KERNEL_SUCCESS         //Successful operation
+} aoclfftz_kernel_status;
+
+//Holds the kernel level operational complexity in terms approximate cycles
+typedef struct ops_cycles
+{
+    USHORT fma;
+    USHORT mul;
+    USHORT add;
+    USHORT move;
+    USHORT perm;
+    USHORT other;
+} ops_cycles_t;
+
+//Function pointer to get kernel compute operations in terms of approx cycles
+typedef ops_cycles_t (*k_ops_cnt_) (INT32);
+typedef kfft_ (*k_register_kernel_) (INT32);
+
+//Kernel data structure that holds kernel function pointers and other
+//associated parameters related to radix and compute operations
 typedef struct kernel
 {
+    kfft_ kfft;
+    k_ops_cnt_ k_ops_cnt;
     UINT32 radix;
-    VOID(*kfftf_) (VOID* in, VOID* out, ptrdiff_t n,
-        ptrdiff_t istride, ptrdiff_t ostride,
-        ptrdiff_t vistride, ptrdiff_t vostride);
-    VOID(*kfftb_) (VOID* in, VOID* out, ptrdiff_t n,
-        ptrdiff_t istride, ptrdiff_t ostride,
-        ptrdiff_t vistride, ptrdiff_t vostride);
 } kernel_t;
+
+//Function declarations for the common routines
+INT32 register_kernels(kernel_t kertab[NUM_KERNEL_TABLES][NUM_KERNELS_IN_TABLE],
+                       INT32 dt, INT32 cpu_flags);
+
+//Kernel function declarations for different floating point precision types
+//supported in scalar and vector compute variants
+ops_cycles_t get_ops_cnt_fft2c(INT32 precision);
+kfft_ register_kernel_fft2c(INT32 precision);
+ops_cycles_t get_ops_cnt_fft3c(INT32 precision);
+kfft_ register_kernel_fft3c(INT32 precision);
+VOID fft2c_fp32(VOID* in_real, VOID* in_imag,
+                VOID* out_real, VOID* out_imag,
+                ptrdiff_t n,
+                aoclfftz_strides_t *strides);
+VOID fft2c_fp64(VOID* in_real, VOID* in_imag,
+                VOID* out_real, VOID* out_imag,
+                ptrdiff_t n,
+                aoclfftz_strides_t *strides);
+VOID fft3c_fp32(VOID* in_real, VOID* in_imag,
+                VOID* out_real, VOID* out_imag,
+                ptrdiff_t n,
+                aoclfftz_strides_t *strides);
+VOID fft3c_fp64(VOID* in_real, VOID* in_imag,
+                VOID* out_real, VOID* out_imag,
+                ptrdiff_t n,
+                aoclfftz_strides_t *strides);
 
 #endif //AOCLFFTZ_KERNEL_H

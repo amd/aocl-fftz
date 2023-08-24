@@ -40,8 +40,17 @@
 #define AOCLFFTZ_SOLVER_H
 
 #include "api/aoclfftz_internal.h"
+#include "core/kernels/kernel.h"
 
- //Solver types implemented in the library for executing a given DFT problem
+//Error return codes related to solver
+//Add more codes at the top
+typedef enum
+{
+    SOLVER_FAILURE = -1,
+    SOLVER_SUCCESS         //Successful operation
+} aoclfftz_solver_status;
+
+//Solver types implemented in the library for executing a given DFT problem
 typedef enum
 {
     SOLVER_CT = 1,
@@ -61,8 +70,30 @@ typedef enum
 //Solver data structure that holds solver object/pointer and its type
 typedef struct solver
 {
-    aoclfftz_generic_solver_t solver;
-    aoclfftz_solver_type solv_type;
+    aoclfftz_generic_solver_t *solver;
+    //aoclfftz_solver_type solv_type;
 } solver_t;
+
+//Function declarations of all the supported solvers
+//(called by selector and executor)
+INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
+                          kernel_t *);
+INT32 setup_ct_solver(aoclfftz_solution_t *sol,
+                      aoclfftz_solution_t *sol_r,
+                      aoclfftz_solution_t *sol_m,
+                      UINT32 radix_r,
+                      UINT32 radix_m);
+#if 0
+INT32 setup_permuted_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost\,
+                            kernel_t *);
+INT32 setup_buffered_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
+                            kernel_t *);
+INT32 setup_bluestein_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
+                             kernel_t *);
+INT32 setup_ndim_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
+                        kernel_t *);
+INT32 setup_batched_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
+                           kernel_t *);
+#endif
 
 #endif //AOCLFFTZ_SOLVER_H

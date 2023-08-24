@@ -26,39 +26,22 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file executor.h
+ /** @file allocator.h
  *
- *  @brief Functions and data structures for executor module.
+ *  @brief Wrappers to basic memory allocation and management primitives
  *
- *  This file contains the functions and data structures that are used to
- *  execute a solution of kernels for the given input problem description.
+ *  This file contains wrapper functions and macros for allocating, managing,
+ *  and destroying the memory as needed by AOCL-FFTZ.
  *
  *  @author S. Biplab Raut
  */
 
-#ifndef AOCLFFTZ_EXECUTOR_H
-#define AOCLFFTZ_EXECUTOR_H
+#ifndef ALLOCATOR_H
+#define ALLOCATOR_H
 
-#include "core/solvers/solver.h"
-#include "core/kernels/kernel.h"
+#include <stdlib.h>
 
-//Error return codes related to executor
-//Add more codes at the top
-typedef enum
-{
-    EXECUTOR_FAILURE = -1,
-    EXECUTOR_SUCCESS         //Successful operation
-} aoclfftz_executor_status;
+#define ALLOC_UNALIGN_UNINIT(num_bytes) malloc(num_bytes)
+#define FREE_ALLOCATED_MEM(mem_ptr) if (mem_ptr) free(mem_ptr); mem_ptr = NULL
 
-//Executor data structure that is used to hold the solution and cost analysis
-// at each decomposition level for the associated sub-problem 
-typedef struct
-{
-    aoclfftz_solution_t *solution;
-    //cost_analysis_t *cost_analysis;
-} aoclfftz_executor_t;
-
-//Function declarations
-INT32 execute_dft(aoclfftz_executor_t *);
-
-#endif //AOCLFFTZ_EXECUTOR_H
+#endif //ALLOCATOR_H

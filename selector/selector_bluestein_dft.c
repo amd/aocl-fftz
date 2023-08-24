@@ -26,39 +26,20 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file executor.h
+ /** @file selector_bluestein_dft.c
  *
- *  @brief Functions and data structures for executor module.
+ *  @brief Wrapper that acts on the bluestein solver as guided by the selector.
  *
- *  This file contains the functions and data structures that are used to
- *  execute a solution of kernels for the given input problem description.
+ *  This file contains the implementation of functions that are used to
+ *  setup, factorize and evaluate sub-problems and kernels as applicable.
  *
  *  @author S. Biplab Raut
  */
 
-#ifndef AOCLFFTZ_EXECUTOR_H
-#define AOCLFFTZ_EXECUTOR_H
+#include "selector/selector.h"
 
-#include "core/solvers/solver.h"
-#include "core/kernels/kernel.h"
-
-//Error return codes related to executor
-//Add more codes at the top
-typedef enum
+INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, solver_t *solvtab,
+                             kernel_t *kertab)
 {
-    EXECUTOR_FAILURE = -1,
-    EXECUTOR_SUCCESS         //Successful operation
-} aoclfftz_executor_status;
-
-//Executor data structure that is used to hold the solution and cost analysis
-// at each decomposition level for the associated sub-problem 
-typedef struct
-{
-    aoclfftz_solution_t *solution;
-    //cost_analysis_t *cost_analysis;
-} aoclfftz_executor_t;
-
-//Function declarations
-INT32 execute_dft(aoclfftz_executor_t *);
-
-#endif //AOCLFFTZ_EXECUTOR_H
+    return SELECTOR_SUCCESS;
+}
