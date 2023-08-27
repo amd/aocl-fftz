@@ -50,6 +50,13 @@ aoclfftz_kernel_test_params_t param_float_kernels[] = {
     {7, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
     {8, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
     {9, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
+    {10, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
+    {11, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
+    {12, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
+    {13, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
+    {14, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
+    {15, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
+    {16, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
     {2, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
     {3, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
     {4, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
@@ -57,7 +64,14 @@ aoclfftz_kernel_test_params_t param_float_kernels[] = {
     {6, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
     {7, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
     {8, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
-    {9, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL}};
+    {9, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
+    {10, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
+    {11, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
+    {12, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
+    {13, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
+    {14, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
+    {15, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
+    {16, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL}};
 
 // DOUBLE test params consisting of radix, kernel-type and test-type
 aoclfftz_kernel_test_params_t param_double_kernels[] = {
@@ -69,6 +83,13 @@ aoclfftz_kernel_test_params_t param_double_kernels[] = {
     {7, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
     {8, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
     {9, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
+    {10, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
+    {11, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
+    {12, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
+    {13, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
+    {14, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
+    {15, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
+    {16, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
     {2, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
     {3, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
     {4, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
@@ -76,7 +97,14 @@ aoclfftz_kernel_test_params_t param_double_kernels[] = {
     {6, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
     {7, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
     {8, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
-    {9, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL}};
+    {9, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
+    {10, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
+    {11, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
+    {12, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
+    {13, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
+    {14, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
+    {15, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
+    {16, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL}};
 
 // stride values as in-stride, out-stride pairs
 std::vector<std::pair<INTP, INTP>> strides = {{1, 1}, {2, 9},  {7, 3},

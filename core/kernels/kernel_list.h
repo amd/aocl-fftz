@@ -53,25 +53,25 @@ typedef struct
 
 kernel_fp_list kernels_c[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
-    {register_kernel_fft2c, get_ops_cnt_fft2c, 2}, // radix-2
-    {register_kernel_fft3c, get_ops_cnt_fft3c, 3}, // radix-3
-    {register_kernel_fft4c, get_ops_cnt_fft4c, 4}, // radix-4
-    {register_kernel_fft5c, get_ops_cnt_fft5c, 5}, // radix-5
-    {register_kernel_fft6c, get_ops_cnt_fft6c, 6}, // radix-6
-    {register_kernel_fft7c, get_ops_cnt_fft7c, 7}, // radix-7
-    {register_kernel_fft8c, get_ops_cnt_fft8c, 8}, // radix-8
-    {register_kernel_fft9c, get_ops_cnt_fft9c, 9}, // radix-9
-    {NULL, NULL, 10},                              // radix-10
-    {NULL, NULL, 11},                              // radix-11
-    {NULL, NULL, 12},                              // radix-12
-    {NULL, NULL, 13},                              // radix-13
-    {NULL, NULL, 14},                              // radix-14
-    {NULL, NULL, 15},                              // radix-15
-    {NULL, NULL, 16},                              // radix-16
-    {NULL, NULL, 20},                              // radix-20
-    {NULL, NULL, 25},                              // radix-25
-    {NULL, NULL, 32},                              // radix-32
-    {NULL, NULL, 64}                               // radix-64
+    {register_kernel_fft2c, get_ops_cnt_fft2c, 2},    // radix-2
+    {register_kernel_fft3c, get_ops_cnt_fft3c, 3},    // radix-3
+    {register_kernel_fft4c, get_ops_cnt_fft4c, 4},    // radix-4
+    {register_kernel_fft5c, get_ops_cnt_fft5c, 5},    // radix-5
+    {register_kernel_fft6c, get_ops_cnt_fft6c, 6},    // radix-6
+    {register_kernel_fft7c, get_ops_cnt_fft7c, 7},    // radix-7
+    {register_kernel_fft8c, get_ops_cnt_fft8c, 8},    // radix-8
+    {register_kernel_fft9c, get_ops_cnt_fft9c, 9},    // radix-9
+    {register_kernel_fft10c, get_ops_cnt_fft10c, 10}, // radix-10
+    {register_kernel_fft11c, get_ops_cnt_fft11c, 11}, // radix-11
+    {register_kernel_fft12c, get_ops_cnt_fft12c, 12}, // radix-12
+    {register_kernel_fft13c, get_ops_cnt_fft13c, 13}, // radix-13
+    {register_kernel_fft14c, get_ops_cnt_fft14c, 14}, // radix-14
+    {register_kernel_fft15c, get_ops_cnt_fft15c, 15}, // radix-15
+    {register_kernel_fft16c, get_ops_cnt_fft16c, 16}, // radix-16
+    {NULL, NULL, 20},                                 // radix-20
+    {NULL, NULL, 25},                                 // radix-25
+    {NULL, NULL, 32},                                 // radix-32
+    {NULL, NULL, 64}                                  // radix-64
 };
 
 kernel_fp_list kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
