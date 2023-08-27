@@ -55,12 +55,12 @@ kernel_fp_list kernels_c[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2c, get_ops_cnt_fft2c, 2}, // radix-2
     {register_kernel_fft3c, get_ops_cnt_fft3c, 3}, // radix-3
-    {NULL, NULL, 4},                               // radix-4
-    {NULL, NULL, 5},                               // radix-5
-    {NULL, NULL, 6},                               // radix-6
-    {NULL, NULL, 7},                               // radix-7
-    {NULL, NULL, 8},                               // radix-8
-    {NULL, NULL, 9},                               // radix-9
+    {register_kernel_fft4c, get_ops_cnt_fft4c, 4}, // radix-4
+    {register_kernel_fft5c, get_ops_cnt_fft5c, 5}, // radix-5
+    {register_kernel_fft6c, get_ops_cnt_fft6c, 6}, // radix-6
+    {register_kernel_fft7c, get_ops_cnt_fft7c, 7}, // radix-7
+    {register_kernel_fft8c, get_ops_cnt_fft8c, 8}, // radix-8
+    {register_kernel_fft9c, get_ops_cnt_fft9c, 9}, // radix-9
     {NULL, NULL, 10},                              // radix-10
     {NULL, NULL, 11},                              // radix-11
     {NULL, NULL, 12},                              // radix-12

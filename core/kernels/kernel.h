@@ -105,7 +105,19 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE], INT32 dt,
 // Kernel function declarations for different floating point precision types
 // supported in scalar and vector compute variants
 ops_cycles_t get_ops_cnt_fft2c(INT32 precision);
+ops_cycles_t get_ops_cnt_fft4c(INT32 precision);
+ops_cycles_t get_ops_cnt_fft5c(INT32 precision);
+ops_cycles_t get_ops_cnt_fft6c(INT32 precision);
+ops_cycles_t get_ops_cnt_fft7c(INT32 precision);
+ops_cycles_t get_ops_cnt_fft8c(INT32 precision);
+ops_cycles_t get_ops_cnt_fft9c(INT32 precision);
 kfft_ register_kernel_fft2c(INT32 precision);
+kfft_ register_kernel_fft4c(INT32 precision);
+kfft_ register_kernel_fft5c(INT32 precision);
+kfft_ register_kernel_fft6c(INT32 precision);
+kfft_ register_kernel_fft7c(INT32 precision);
+kfft_ register_kernel_fft8c(INT32 precision);
+kfft_ register_kernel_fft9c(INT32 precision);
 ops_cycles_t get_ops_cnt_fft3c(INT32 precision);
 kfft_ register_kernel_fft3c(INT32 precision);
 VOID fft2c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
@@ -113,8 +125,32 @@ VOID fft2c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 VOID fft2c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                 INTP n, aoclfftz_strides_t *strides);
 VOID fft3c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                ptrdiff_t n, aoclfftz_strides_t *strides);
 VOID fft3c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides);
+VOID fft4c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides);
+VOID fft4c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides);
+VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides);
+VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides);
+VOID fft6c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides);
+VOID fft6c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides);
+VOID fft7c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides);
+VOID fft7c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides);
+VOID fft8c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides);
+VOID fft8c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides);
+VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides);
+VOID fft9c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                 INTP n, aoclfftz_strides_t *strides);
 
 // Permuted copy kernels
