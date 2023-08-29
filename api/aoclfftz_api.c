@@ -43,6 +43,7 @@
 #include "aoclfftz.h"
 #include "types.h"
 #include "selector/selector.h"
+#include "core/executor.h"
 
 //Setup function for float LP64 based Single-threaded and multi-threaded FFT
 VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem)
@@ -56,7 +57,7 @@ VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem)
 //Execute function for float LP64 based Single-threaded and multi-threaded FFT
 INT32 aoclfftz_execute_f(VOID *handle)
 {
-    return AOCLFFTZ_SUCCESS;
+    return execute_dft(handle);
 }
 
 //Destroy function for float LP64 based Single-threaded and multi-threaded FFT
@@ -78,7 +79,7 @@ VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d* problem)
 //Execute function for double LP64 based Single-threaded and multi-threaded FFT
 INT32 aoclfftz_execute_d(VOID *handle)
 {
-    return AOCLFFTZ_SUCCESS;
+    return execute_dft(handle);
 }
 
 //Destroy function for double LP64 based Single-threaded and multi-threaded FFT
@@ -100,7 +101,7 @@ VOID *aoclfftz_setup_f_64_(aoclfftz_prob_desc_f_64_ *problem)
 //Execute function for float ILP64 based Single-threaded and multi-threaded FFT
 INT32 aoclfftz_execute_f_64_(VOID *handle)
 {
-    return AOCLFFTZ_SUCCESS;
+    return execute_dft(handle);
 }
 
 //Destroy function for float ILP64 based Single-threaded and multi-threaded FFT
@@ -124,7 +125,7 @@ VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem)
 //multi-threaded FFT
 INT32 aoclfftz_execute_d_64_(VOID *handle)
 {
-    return AOCLFFTZ_SUCCESS;
+    return execute_dft(handle);
 }
 
 //Destroy function for double ILP64 based Single-threaded and 

@@ -37,6 +37,7 @@
  */
 
 #include "core/solvers/ct_solver.h"
+#include "core/common/twiddle.h"
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
@@ -90,4 +91,61 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol,
         radix_r * sol->decomp_scheme->vecs[0].out_stride; //Next recursion level;
 
 	return SELECTOR_SUCCESS;
+}
+
+INT32 execute_ct_solver(aoclfftz_solution_t* sol)
+{
+    INT32 status = SOLVER_SUCCESS;
+    aoclfftz_generic_solver_t* solver_obj = sol->solver;
+    aoclfftz_strides_t* strides = sol->strides;
+
+    //Call CT solver executor recursively for factors/sub-problems in a
+    //depth-first way
+    if (sol->next_sol != NULL)
+    {
+        //Depth-first recursive solving of the radix-m DFT sub-problem
+        if (execute_ct_solver(sol->next_sol) != SOLVER_SUCCESS)
+            return SOLVER_FAILURE;
+        
+        //Perform inter-stage twiddle factor multiplications
+        if (twiddle_multiplier(sol) != SOLVER_SUCCESS)
+            return SOLVER_FAILURE;
+
+        //Solve radix-r DFT sub-problem
+        if (solver_obj->kernel_r)
+        {
+            strides->in_stride = sol->decomp_scheme->dims[0].in_stride;
+            strides->out_stride = sol->decomp_scheme->dims[0].out_stride;
+            strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
+            strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
+
+            solver_obj->kernel_r(sol->decomp_scheme->in_real,
+                sol->decomp_scheme->in_imag,
+                sol->decomp_scheme->out_real,
+                sol->decomp_scheme->out_imag,
+                sol->decomp_scheme->vecs[0].n,
+                strides);
+        }
+    }
+    //Solve DFT computations for the leaf-level sub-problems
+    else
+    {
+        //Solve radix-r DFT sub-problem
+        if (solver_obj->kernel_r)
+        {
+            strides->in_stride = sol->decomp_scheme->dims[0].in_stride;
+            strides->out_stride = sol->decomp_scheme->dims[0].out_stride;
+            strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
+            strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
+
+            solver_obj->kernel_r(sol->decomp_scheme->in_real,
+                sol->decomp_scheme->in_imag,
+                sol->decomp_scheme->out_real,
+                sol->decomp_scheme->out_imag,
+                sol->decomp_scheme->vecs[0].n,
+                strides);
+        }
+    }
+
+    return status;
 }

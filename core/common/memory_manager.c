@@ -72,6 +72,10 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
     if (sol)
     {
         sol->solver = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_generic_solver_t));
+        sol->solver->execute_solver = NULL;
+        sol->solver->kernel_r = NULL;
+        sol->solver->kernel_m = NULL;
+        sol->solver->destroy_solver = NULL;
         sol->decomp_scheme = alloc_decomp_scheme(vec_rank, dim_rank);
         sol->strides = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_strides_t));
         sol->twiddle = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_twiddle_t));

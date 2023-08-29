@@ -37,3 +37,8 @@
  */
 
 #include "core/common/twiddle.h"
+
+INT32 twiddle_multiplier(aoclfftz_solution_t* sol)
+{
+    return TW_SUCCESS;
+}

@@ -41,10 +41,6 @@
 #include "core/common/memory_manager.h"
 #include "core/kernels/kernel.h"
 
-//Table of solvers that is populated with applicable solvers at setup time
-//ct, direct, nDim, buf, permKer, batched, bluestein, PFA, rader, permCopy,
-//trans
-solver_t solvers_table[NUM_SOLVERS] = { { 0x0 } };
 
 //Tables of kernels that are populated with applicable kernels at setup time.
 //There are 8 sets of kernels contained in the kernels_table which are :
@@ -55,13 +51,16 @@ kernel_t kernels_table[NUM_KERNEL_TABLES][NUM_KERNELS_IN_TABLE] = { {{0x0},}, };
 
 //Register all applicable solvers and kernels into the respective tables
 //based on the input problem and cpu arch flags
-INT32 register_solvers_kernels(solver_t *solvtab, 
+INT32 register_solvers_kernels(
                     kernel_t kertab[NUM_KERNEL_TABLES][NUM_KERNELS_IN_TABLE],
                     INT32 dt, INT32 cpu_flags)
 {
     INT32 ret = SELECTOR_FAILURE;
 
     //Register Solvers
+    ret = register_solvers(dt, cpu_flags);
+    if (ret != SOLVER_SUCCESS)
+        return SELECTOR_FAILURE;
     
     //Register Kernels
     ret = register_kernels(kertab, dt, cpu_flags);
@@ -126,9 +125,9 @@ INT32 check_FFT_kernel_support(INT32 n)
 //Fixed decision logic and CPI based selector mode execution for the
 //single-precision input problem based on the applicable tables
 //of solvers and kernels
-INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, solver_t *solvtab,
-                               kernel_t *kertab)
+INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
+    aoclfftz_generic_solver_t* solver_obj = sel->solution->solver;
     INT32 ret = SELECTOR_FAILURE;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
@@ -152,13 +151,11 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, solver_t *solvtab,
     level1_cond1 |= (is_solvable_by_bluestein << 2);
     //SOLVER_BUFFERED
     level1_cond2 = IS_IN_PLACE(sel->solution->decomp_scheme->flags);
-    //SOLVER_BUFFERED
-    level1_cond2 |= (sel->solution->decomp_scheme->dims[0].n > 
-                            MAX_GUARANTEED_CACHEABLE_SIZE ||
-                      sel->solution->decomp_scheme->dims[0].n != 
-                      sel->solution->decomp_scheme->dims[0].in_stride ||
-                      sel->solution->decomp_scheme->dims[0].n !=
-                      sel->solution->decomp_scheme->dims[0].out_stride);
+    //SOLVER_BUFFERED -> ToDo: Conditions to work with AOCLFFTZ_FIXED_SELECTOR_MODE
+    level1_cond2 &= ((sel->solution->decomp_scheme->dims[0].n > 
+                            MAX_GUARANTEED_CACHEABLE_SIZE) &&
+                     (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
+                            AOCLFFTZ_AUTO_SELECTOR_MODE));
     //SOLVER_PERM_KER
     level1_cond2 |= 
                    (IS_OUT_OF_ORDER(sel->solution->decomp_scheme->flags) << 1);
@@ -171,50 +168,78 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, solver_t *solvtab,
     //Batched/vector FFT Solver
     if (level1_cond1 & 0x1)
     {
+        solver_obj->solver_type = SOLVER_BATCHED;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+            return SELECTOR_FAILURE;
+
         //call batched solver master
-        ret = selector_batched_dft(sel, solvtab, kertab);
+        ret = selector_batched_dft(sel, kertab);
         return ret;
     }
     //Multi-dimentional FFT Solver
     if (level1_cond1 & 0x2)
     {
+        solver_obj->solver_type = SOLVER_NDIM;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+            return SELECTOR_FAILURE;
+
         //call ndim solver master
-        ret = selector_ndim_dft(sel, solvtab, kertab);
+        ret = selector_ndim_dft(sel, kertab);
         return ret;
     }
     //Large Primes - Bluestein FFT Solver
     if (level1_cond1 & 0x4)
     {
+        solver_obj->solver_type = SOLVER_BLUESTEIN;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+            return SELECTOR_FAILURE;
+
         //call bluestein solver master
-        ret = selector_bluestein_dft(sel, solvtab, kertab);
+        ret = selector_bluestein_dft(sel, kertab);
         return ret;
     }
     //Buffered FFT Solver
     if (level1_cond2 & 0x1)
     {
+        solver_obj->solver_type = SOLVER_BUFFERED;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+            return SELECTOR_FAILURE;
+
         //call buffered solver master
-        ret = selector_buffered_dft(sel, solvtab, kertab);
+        ret = selector_buffered_dft(sel, kertab);
         return ret;
     }
     //Permuted (out-of-order output) FFT Solver
     if (level1_cond2 & 0x2)
     {
+        solver_obj->solver_type = SOLVER_PERM_KER;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+            return SELECTOR_FAILURE;
+
         //call permuted solver master
-        ret = selector_permuted_dft(sel, solvtab, kertab);
+        ret = selector_permuted_dft(sel, kertab);
         return ret;
     }
 
     /** Level 2 decisions : CT Solver and Kernels **/
     if (level2_cond & 0x1)
     {
+        solver_obj->solver_type = SOLVER_DIRECT;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+            return SELECTOR_FAILURE;
+
         //Call Direct Solver master
-        ret = selector_direct_dft(sel, solvtab, kertab);
+        ret = selector_direct_dft(sel, kertab);
         return ret;
     }
     else
     {
+        solver_obj->solver_type = SOLVER_CT;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+            return SELECTOR_FAILURE;
+
         //Call CT Solver master
-        ret = selector_ct_dft(sel, solvtab, kertab);
+        ret = selector_ct_dft(sel, kertab);
         return ret;
     }
 
@@ -224,17 +249,16 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, solver_t *solvtab,
 //Setup to find a solution for the input problem based on the
 //applicable tables of solvers and kernels
 //Common function for both single-precision and double-precision
-INT32 setup_dft_(aoclfftz_selector_t *sel, solver_t *solvtab, 
-                 kernel_t *kertab)
+INT32 setup_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     INT32 ret;
     
 #if AOCLFFTZ_SELECTOR_AUTO_TUNER_MODE == 0
     //Fixed decision logic and CPI based selector mode
-    ret = selector_fixed_mode_dft_(sel, solvtab, kertab);
+    ret = selector_fixed_mode_dft_(sel, kertab);
 #else
     //Auto tuner based selector mode
-    ret = selector_autotuner_mode_dft_(sel, solvtab, kertab);
+    ret = selector_autotuner_mode_dft_(sel, kertab);
 #endif
 
     return ret;
@@ -261,7 +285,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
 
     //Register solvers and kernels for solving the problem based on
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(solvers_table, kernels_table,
+    ret = register_solvers_kernels(kernels_table,
                                    DT_FLOAT, cpu_flags);
     if (ret == 0)
         return NULL;
@@ -271,7 +295,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_FLOAT);
 
     //Select the best solution for the given input problem
-    ret = setup_dft_(sel_obj, solvers_table, (kernel_t *)kernels_table);
+    ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);
     if (ret != SELECTOR_SUCCESS)
         return NULL;
 
@@ -299,7 +323,7 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
 
     //Register solvers and kernels for solving the problem based on
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(solvers_table, kernels_table,
+    ret = register_solvers_kernels(kernels_table,
                                    DT_DOUBLE, cpu_flags);
     if (ret == 0)
         return NULL;
@@ -309,7 +333,7 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_FLOAT);
 
     //Select the best solution for the given input problem
-    ret = setup_dft_(sel_obj, solvers_table, (kernel_t *)kernels_table);
+    ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);
     if (ret != SELECTOR_SUCCESS)
         return NULL;
 
@@ -337,7 +361,7 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
 
     //Register solvers and kernels for solving the problem based on
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(solvers_table, kernels_table,
+    ret = register_solvers_kernels(kernels_table,
                                    DT_FLOAT, cpu_flags);
     if (ret == 0)
         return NULL;
@@ -347,7 +371,7 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_FLOAT);
 
     //Select the best solution for the given input problem
-    ret = setup_dft_(sel_obj, solvers_table, (kernel_t *)kernels_table);
+    ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);
     if (ret != SELECTOR_SUCCESS)
         return NULL;
 
@@ -375,7 +399,7 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
 
     //Register solvers and kernels for solving the problem based on
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(solvers_table, kernels_table,
+    ret = register_solvers_kernels(kernels_table,
                                    DT_DOUBLE, cpu_flags);
     if (ret == 0)
         return NULL;
@@ -385,7 +409,7 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_FLOAT);
 
     //Select the best solution for the given input problem
-    ret = setup_dft_(sel_obj, solvers_table, (kernel_t *)kernels_table);
+    ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);
     if (ret != SELECTOR_SUCCESS)
         return NULL;
 

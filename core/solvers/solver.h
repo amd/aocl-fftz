@@ -53,8 +53,8 @@ typedef enum
 //Solver types implemented in the library for executing a given DFT problem
 typedef enum
 {
-    SOLVER_CT = 1,
-    SOLVER_DIRECT,
+    SOLVER_DIRECT = 1,
+    SOLVER_CT,
     SOLVER_NDIM,
     SOLVER_BUFFERED,
     SOLVER_PERM_KER,
@@ -73,6 +73,10 @@ typedef struct solver
     aoclfftz_generic_solver_t *solver;
     //aoclfftz_solver_type solv_type;
 } solver_t;
+
+INT32 register_solvers(INT32 dt, INT32 cpu_flags);
+dft_solver_ get_solver_fp(aoclfftz_solution_t *sol);
+INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj);
 
 //Function declarations of all the supported solvers
 //(called by selector and executor)
@@ -95,5 +99,10 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 INT32 setup_batched_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                            kernel_t *);
 #endif
+
+INT32 executor_direct_dft(aoclfftz_solution_t *solution);
+INT32 executor_ct_dft(aoclfftz_solution_t *solution);
+INT32 execute_direct_solver(aoclfftz_solution_t* sol);
+INT32 execute_ct_solver(aoclfftz_solution_t* sol);
 
 #endif //AOCLFFTZ_SOLVER_H

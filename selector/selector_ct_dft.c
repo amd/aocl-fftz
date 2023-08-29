@@ -56,7 +56,7 @@ UINT32 check_radix_applicable(ptrdiff_t n, UINT32 r)
     }
 }
 
-INT32 selector_ct_dft(aoclfftz_selector_t *sel, solver_t *solvtab,
+INT32 selector_ct_dft(aoclfftz_selector_t *sel,
                       kernel_t *kertab)
 {
     aoclfftz_selector_t *cur_sel = NULL;
@@ -126,7 +126,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, solver_t *solvtab,
         //Compute twiddle factors in a separate buffer : ToDo for IN_MEMORY_TWIDDLE_FACTORS
 
         //Call selector for applying CT on the m set of sub-problems (radix-m)
-        ret = setup_dft_(cur_sel_m, solvtab, kertab);
+        ret = setup_dft_(cur_sel_m, kertab);
         if (ret != SELECTOR_SUCCESS)
             goto exit_ct_dft;
 
@@ -137,7 +137,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, solver_t *solvtab,
         }
         
         //Call selector for the radix-r sub-problem
-        ret = setup_dft_(cur_sel, solvtab, kertab);
+        ret = setup_dft_(cur_sel, kertab);
         if (ret != SELECTOR_SUCCESS)
             goto exit_ct_dft;
 

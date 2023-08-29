@@ -38,7 +38,7 @@
 
 #include "selector/selector.h"
 
-INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, solver_t *solvtab,
+INT32 selector_bluestein_dft(aoclfftz_selector_t *sel,
                              kernel_t *kertab)
 {
     return SELECTOR_SUCCESS;

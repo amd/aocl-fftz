@@ -40,7 +40,7 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 selector_direct_dft(aoclfftz_selector_t *sel, solver_t *solvtab,
+INT32 selector_direct_dft(aoclfftz_selector_t *sel,
                           kernel_t *kertab)
 {
     aoclfftz_selector_t *cur_sel = NULL;

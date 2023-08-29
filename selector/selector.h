@@ -104,10 +104,10 @@ typedef struct
 }
 
 #define COPY_SOLUTION_OBJ(to_sol_obj, from_sol_obj) { \
-    to_sol_obj->solver->register_solver = \
-            from_sol_obj->solver->register_solver; \
-    to_sol_obj->solver->dft_solver = \
-            from_sol_obj->solver->dft_solver; \
+    to_sol_obj->solver->solver_type = \
+            from_sol_obj->solver->solver_type; \
+    to_sol_obj->solver->execute_solver = \
+            from_sol_obj->solver->execute_solver; \
     to_sol_obj->solver->destroy_solver = \
             from_sol_obj->solver->destroy_solver; \
     to_sol_obj->solver->kernel_r = \
@@ -166,30 +166,23 @@ typedef struct
 }
 
 //Function declarations
-INT32 register_solvers_kernels(solver_t *,
+INT32 register_solvers_kernels(
                             kernel_t [NUM_KERNEL_TABLES][NUM_KERNELS_IN_TABLE],
                             INT32 dt, INT32 cpu_flags);
-INT32 setup_dft_(aoclfftz_selector_t *sel, solver_t *solvtab, kernel_t *kertab);
-INT32 setup_dft_f_(aoclfftz_selector_t *, solver_t *, kernel_t *);
-INT32 setup_dft_d_(aoclfftz_selector_t *, solver_t *, kernel_t *);
+INT32 setup_dft_(aoclfftz_selector_t *sel, kernel_t *kertab);
+INT32 setup_dft_f_(aoclfftz_selector_t *, kernel_t *);
+INT32 setup_dft_d_(aoclfftz_selector_t *, kernel_t *);
 VOID *setup_dft_f(aoclfftz_prob_desc_f *);
 VOID *setup_dft_d(aoclfftz_prob_desc_d *);
 VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *);
 VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *);
-INT32 selector_batched_dft(aoclfftz_selector_t *sel, solver_t *solvtab,
-                            kernel_t *kertab);
-INT32 selector_ndim_dft(aoclfftz_selector_t *sel, solver_t *solvtab,
-                            kernel_t *kertab);
-INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, solver_t *solvtab,
-                            kernel_t *kertab);
-INT32 selector_buffered_dft(aoclfftz_selector_t *sel, solver_t *solvtab,
-                            kernel_t *kertab);
-INT32 selector_permuted_dft(aoclfftz_selector_t *sel, solver_t *solvtab,
-                            kernel_t *kertab);
-INT32 selector_direct_dft(aoclfftz_selector_t *sel, solver_t *solvtab,
-                            kernel_t *kertab);
-INT32 selector_ct_dft(aoclfftz_selector_t *sel, solver_t *solvtab,
-                            kernel_t *kertab);
+INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+INT32 selector_permuted_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 VOID destroy_handle(VOID *handle);
 
 #endif //AOCLFFTZ_SELECTOR_H

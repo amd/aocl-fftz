@@ -124,12 +124,15 @@ typedef VOID (*kfft_) (VOID *in_real, VOID *in_imag,
                        ptrdiff_t n,
                        aoclfftz_strides_t *strides);
 
+//Solver execute template function pointer
+typedef INT32 (*dft_solver_) (aoclfftz_solution_t* solution);
+
 //Base data structure acting as an abstract class that is derived by the
 //top-level DFT data structure and implemented by all the solvers
 struct aoclfftz_generic_solver
 {
-    INT32 * (*register_solver) (VOID *solver);
-    INT32 * (*dft_solver) (VOID *prob_desc, aoclfftz_solution_t *solution);
+    INT32 solver_type;
+    dft_solver_ execute_solver;
     VOID (*destroy_solver) (aoclfftz_solution_t *solution);
     kfft_ kernel_r;
     kfft_ kernel_m;

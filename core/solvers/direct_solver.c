@@ -48,7 +48,7 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol,
 	ptrdiff_t n = sol->decomp_scheme->vecs[0].n;
 	ops_cycles_t ops_cycles;
 	UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-	INT32 status = SELECTOR_SUCCESS;
+	INT32 status = SOLVER_SUCCESS;
 
 	strides->in_stride = sol->decomp_scheme->dims[0].in_stride;
 	strides->out_stride = sol->decomp_scheme->dims[0].out_stride;
@@ -60,12 +60,12 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol,
 		/** Fixed mode **/
 		cost->time = 0;
 		ops_cycles = kernel->k_ops_cnt(precision);
-		cost->ops = (ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
-					(ops_cycles.mul * AMD_ZEN_FP_FMA_CYCLES) +
-					(ops_cycles.add * AMD_ZEN_FP_FMA_CYCLES) +
-					(ops_cycles.move * AMD_ZEN_FP_FMA_CYCLES) +
-					(ops_cycles.perm * AMD_ZEN_FP_FMA_CYCLES) +
-					(ops_cycles.other * AMD_ZEN_FP_FMA_CYCLES);
+		cost->ops = n * ((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
+					     (ops_cycles.mul * AMD_ZEN_FP_FMA_CYCLES) +
+					     (ops_cycles.add * AMD_ZEN_FP_FMA_CYCLES) +
+					     (ops_cycles.move * AMD_ZEN_FP_FMA_CYCLES) +
+					     (ops_cycles.perm * AMD_ZEN_FP_FMA_CYCLES) +
+					     (ops_cycles.other * AMD_ZEN_FP_FMA_CYCLES));
 	}
 	else
 	{
@@ -88,13 +88,35 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol,
 		getTime(endTime);
 		cost->time = diffTime(clkTick, startTime, endTime);
 		ops_cycles = kernel->k_ops_cnt(precision);
-		cost->ops = (ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
-			(ops_cycles.mul * AMD_ZEN_FP_FMA_CYCLES) +
-			(ops_cycles.add * AMD_ZEN_FP_FMA_CYCLES) +
-			(ops_cycles.move * AMD_ZEN_FP_FMA_CYCLES) +
-			(ops_cycles.perm * AMD_ZEN_FP_FMA_CYCLES) +
-			(ops_cycles.other * AMD_ZEN_FP_FMA_CYCLES);
+		cost->ops = n * ((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
+			             (ops_cycles.mul * AMD_ZEN_FP_FMA_CYCLES) +
+			             (ops_cycles.add * AMD_ZEN_FP_FMA_CYCLES) +
+			             (ops_cycles.move * AMD_ZEN_FP_FMA_CYCLES) +
+			             (ops_cycles.perm * AMD_ZEN_FP_FMA_CYCLES) +
+			             (ops_cycles.other * AMD_ZEN_FP_FMA_CYCLES));
 	}
+
+	return status;
+}
+
+INT32 execute_direct_solver(aoclfftz_solution_t* sol)
+{
+	INT32 status = SOLVER_SUCCESS;
+	kfft_ kernel = sol->solver->kernel_r;
+	aoclfftz_strides_t* strides = sol->strides;
+
+	strides->in_stride = sol->decomp_scheme->dims[0].in_stride;
+	strides->out_stride = sol->decomp_scheme->dims[0].out_stride;
+	strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
+	strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
+
+	//execute the direct kernel
+	kernel(sol->decomp_scheme->in_real,
+		sol->decomp_scheme->in_imag,
+		sol->decomp_scheme->out_real,
+		sol->decomp_scheme->out_imag,
+		sol->decomp_scheme->vecs[0].n,
+		strides);
 
 	return status;
 }
