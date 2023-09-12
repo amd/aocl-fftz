@@ -42,16 +42,15 @@
 #include "core/kernels/kernel.h"
 
 //Tables of kernels that are populated with applicable kernels at setup time.
-//There are 8 sets of kernels contained in the kernels_table which are :
-//c, perm_c, avx128, perm_avx128, avx256, perm_avx256, avx512, perm_avx512
-//Each set is having 64 enteries populated based on support for the kernels of those radices.
-//Permuted and Non-permuted kernels are stored separately.
-kernel_t kernels_table[NUM_KERNEL_TABLES][NUM_KERNELS_IN_TABLE] = { {{0x0},}, };
+//There are 4 sets of kernels contained in the kernels_table which are :
+//c, avx128, avx256, avx512
+//Each set is having 64 entries populated based on support for the kernels of those radices.
+kernel_t kernels_table[NUM_KERNELS_IN_TABLE] = {{0x0}};
 
 //Register all applicable solvers and kernels into the respective tables
 //based on the input problem and cpu arch flags
 INT32 register_solvers_kernels(
-                    kernel_t kertab[NUM_KERNEL_TABLES][NUM_KERNELS_IN_TABLE],
+                    kernel_t kertab[NUM_KERNELS_IN_TABLE],
                     INT32 dt, INT32 cpu_flags)
 {
     INT32 ret = SELECTOR_FAILURE;
@@ -109,9 +108,9 @@ INT32 check_FFT_kernel_support(INT32 n)
     INT32 is_supported = 0, i;
     for (i = 0; i < NUM_KERNELS_IN_TABLE; i++)
     {
-        if (kernels_table[STANDARD_KERNEL_TBL_IDX][i].radix == 0)
+        if (kernels_table[i].radix == 0)
             break;
-        if (kernels_table[STANDARD_KERNEL_TBL_IDX][i].radix == n)
+        if (kernels_table[i].radix == n)
         {
             is_supported = 1;
             break;
@@ -141,6 +140,7 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     SET_SELECTOR_MODE(sel->solution->decomp_scheme->flags,
                       AOCLFFTZ_FIXED_SELECTOR_MODE);
+
     //SOLVER_BATCHED
     level1_cond1 = ((vec_rank > 1) || (sel->solution->decomp_scheme->vecs[0].n > 1));
     //SOLVER_NDIM

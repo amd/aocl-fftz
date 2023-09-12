@@ -95,7 +95,7 @@ typedef struct kernel
 } kernel_t;
 
 //Function declarations for the common routines
-INT32 register_kernels(kernel_t kertab[NUM_KERNEL_TABLES][NUM_KERNELS_IN_TABLE],
+INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
                        INT32 dt, INT32 cpu_flags);
 
 //Kernel function declarations for different floating point precision types

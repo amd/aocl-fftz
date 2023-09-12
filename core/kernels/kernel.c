@@ -35,48 +35,30 @@
  *
  *  @author S. Biplab Raut
  */
- 
+
 #include "core/kernels/kernel_list.h"
 
  //Register all applicable solvers and kernels into the respective tables
 //based on the input problem and cpu arch flags
-INT32 register_kernels(kernel_t kertab[NUM_KERNEL_TABLES][NUM_KERNELS_IN_TABLE],
+INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
                        INT32 dt, INT32 cpu_flags)
 {
     UINT32 num_kernels = 0;
     UINT32 num_list_kernels;
 
     {//Only non-AVX ISA is supported, optimized C kernels applicable
-        //kernels_standard_c kernel category
-        for (num_list_kernels = 0; 
+        for (num_list_kernels = 0;
             num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
             num_list_kernels++)
         {
-            if (kernels_standard_c[num_list_kernels].k_register_kernel != NULL)
+            if (kernels_c[num_list_kernels].k_register_kernel != NULL)
             {
-                kertab[STANDARD_KERNEL_TBL_IDX][num_kernels].kfft =
-                    kernels_standard_c[num_list_kernels].k_register_kernel(dt);
-                kertab[STANDARD_KERNEL_TBL_IDX][num_kernels].k_ops_cnt =
-                    kernels_standard_c[num_list_kernels].k_ops_cnt;
-                kertab[STANDARD_KERNEL_TBL_IDX][num_kernels].radix =
-                    kernels_standard_c[num_list_kernels].radix;
-                num_kernels++;
-            }
-        }
-
-        //kernels_permuted_c kernel category
-        for (num_list_kernels = 0; 
-            num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
-            num_list_kernels++)
-        {
-            if (kernels_permuted_c[num_list_kernels].k_register_kernel != NULL)
-            {
-                kertab[PERM_KERNEL_TBL_IDX][num_kernels].kfft =
-                    kernels_permuted_c[num_list_kernels].k_register_kernel(dt);
-                kertab[PERM_KERNEL_TBL_IDX][num_kernels].k_ops_cnt =
-                    kernels_permuted_c[num_list_kernels].k_ops_cnt;
-                kertab[PERM_KERNEL_TBL_IDX][num_kernels].radix =
-                    kernels_permuted_c[num_list_kernels].radix;
+                kertab[num_kernels].kfft =
+                    kernels_c[num_list_kernels].k_register_kernel(dt);
+                kertab[num_kernels].k_ops_cnt =
+                    kernels_c[num_list_kernels].k_ops_cnt;
+                kertab[num_kernels].radix =
+                    kernels_c[num_list_kernels].radix;
                 num_kernels++;
             }
         }
@@ -84,38 +66,19 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNEL_TABLES][NUM_KERNELS_IN_TABLE],
 
     if (cpu_flags >= 2) //AVX ISA is supported, 128-bit SIMD kernels applicable
     {
-        //kernels_standard_avx128 kernel category
-        for (num_list_kernels = 0; 
+        for (num_list_kernels = 0;
             num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
             num_list_kernels++)
         {
-            if (kernels_standard_avx128[num_list_kernels].k_register_kernel !=
+            if (kernels_avx128[num_list_kernels].k_register_kernel !=
                 NULL)
             {
-                kertab[STANDARD_KERNEL_TBL_IDX][num_kernels].kfft =
-                    kernels_standard_avx128[num_list_kernels].k_register_kernel(dt);
-                kertab[STANDARD_KERNEL_TBL_IDX][num_kernels].k_ops_cnt =
-                    kernels_standard_avx128[num_list_kernels].k_ops_cnt;
-                kertab[STANDARD_KERNEL_TBL_IDX][num_kernels].radix =
-                    kernels_standard_avx128[num_list_kernels].radix;
-                num_kernels++;
-            }
-        }
-
-        //kernels_permuted_avx128 kernel category
-        for (num_list_kernels = 0; 
-            num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
-            num_list_kernels++)
-        {
-            if (kernels_permuted_avx128[num_list_kernels].k_register_kernel != 
-                NULL)
-            {
-                kertab[PERM_KERNEL_TBL_IDX][num_kernels].kfft =
-                    kernels_permuted_avx128[num_list_kernels].k_register_kernel(dt);
-                kertab[PERM_KERNEL_TBL_IDX][num_kernels].k_ops_cnt =
-                    kernels_permuted_avx128[num_list_kernels].k_ops_cnt;
-                kertab[PERM_KERNEL_TBL_IDX][num_kernels].radix =
-                    kernels_permuted_avx128[num_list_kernels].radix;
+                kertab[num_kernels].kfft =
+                    kernels_avx128[num_list_kernels].k_register_kernel(dt);
+                kertab[num_kernels].k_ops_cnt =
+                    kernels_avx128[num_list_kernels].k_ops_cnt;
+                kertab[num_kernels].radix =
+                    kernels_avx128[num_list_kernels].radix;
                 num_kernels++;
             }
         }
@@ -123,38 +86,19 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNEL_TABLES][NUM_KERNELS_IN_TABLE],
 
     if (cpu_flags >= 3) //AVX2 ISA is supported, 256-bit SIMD kernels applicable
     {
-        //kernels_standard_avx256 kernel category
-        for (num_list_kernels = 0; 
+        for (num_list_kernels = 0;
             num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
             num_list_kernels++)
         {
-            if (kernels_standard_avx256[num_list_kernels].k_register_kernel != 
+            if (kernels_avx256[num_list_kernels].k_register_kernel !=
                 NULL)
             {
-                kertab[STANDARD_KERNEL_TBL_IDX][num_kernels].kfft =
-                    kernels_standard_avx256[num_list_kernels].k_register_kernel(dt);
-                kertab[STANDARD_KERNEL_TBL_IDX][num_kernels].k_ops_cnt =
-                    kernels_standard_avx256[num_list_kernels].k_ops_cnt;
-                kertab[STANDARD_KERNEL_TBL_IDX][num_kernels].radix =
-                    kernels_standard_avx256[num_list_kernels].radix;
-                num_kernels++;
-            }
-        }
-
-        //kernels_permuted_avx256 kernel category
-        for (num_list_kernels = 0; 
-            num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
-            num_list_kernels++)
-        {
-            if (kernels_permuted_avx256[num_list_kernels].k_register_kernel != 
-                NULL)
-            {
-                kertab[PERM_KERNEL_TBL_IDX][num_kernels].kfft =
-                    kernels_permuted_avx256[num_list_kernels].k_register_kernel(dt);
-                kertab[PERM_KERNEL_TBL_IDX][num_kernels].k_ops_cnt =
-                    kernels_permuted_avx256[num_list_kernels].k_ops_cnt;
-                kertab[PERM_KERNEL_TBL_IDX][num_kernels].radix =
-                    kernels_permuted_avx256[num_list_kernels].radix;
+                kertab[num_kernels].kfft =
+                    kernels_avx256[num_list_kernels].k_register_kernel(dt);
+                kertab[num_kernels].k_ops_cnt =
+                    kernels_avx256[num_list_kernels].k_ops_cnt;
+                kertab[num_kernels].radix =
+                    kernels_avx256[num_list_kernels].radix;
                 num_kernels++;
             }
         }
@@ -162,38 +106,19 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNEL_TABLES][NUM_KERNELS_IN_TABLE],
 
     if (cpu_flags >= 4) //AVX512 ISA is supported, 512-bit SIMD kernels applicable
     {
-        //kernels_standard_avx512 kernel category
-        for (num_list_kernels = 0; 
+        for (num_list_kernels = 0;
             num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
             num_list_kernels++)
         {
-            if (kernels_standard_avx512[num_list_kernels].k_register_kernel != 
+            if (kernels_avx512[num_list_kernels].k_register_kernel !=
                 NULL)
             {
-                kertab[STANDARD_KERNEL_TBL_IDX][num_kernels].kfft =
-                    kernels_standard_avx512[num_list_kernels].k_register_kernel(dt);
-                kertab[STANDARD_KERNEL_TBL_IDX][num_kernels].k_ops_cnt =
-                    kernels_standard_avx512[num_list_kernels].k_ops_cnt;
-                kertab[STANDARD_KERNEL_TBL_IDX][num_kernels].radix =
-                    kernels_standard_avx512[num_list_kernels].radix;
-                num_kernels++;
-            }
-        }
-
-        //kernels_permuted_avx512 kernel category
-        for (num_list_kernels = 0; 
-            num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
-            num_list_kernels++)
-        {
-            if (kernels_permuted_avx512[num_list_kernels].k_register_kernel != 
-                NULL)
-            {
-                kertab[PERM_KERNEL_TBL_IDX][num_kernels].kfft =
-                    kernels_permuted_avx512[num_list_kernels].k_register_kernel(dt);
-                kertab[PERM_KERNEL_TBL_IDX][num_kernels].k_ops_cnt =
-                    kernels_permuted_avx512[num_list_kernels].k_ops_cnt;
-                kertab[PERM_KERNEL_TBL_IDX][num_kernels].radix =
-                    kernels_permuted_avx512[num_list_kernels].radix;
+                kertab[num_kernels].kfft =
+                    kernels_avx512[num_list_kernels].k_register_kernel(dt);
+                kertab[num_kernels].k_ops_cnt =
+                    kernels_avx512[num_list_kernels].k_ops_cnt;
+                kertab[num_kernels].radix =
+                    kernels_avx512[num_list_kernels].radix;
                 num_kernels++;
             }
         }

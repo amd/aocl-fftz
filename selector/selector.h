@@ -167,7 +167,7 @@ typedef struct
 
 //Function declarations
 INT32 register_solvers_kernels(
-                            kernel_t [NUM_KERNEL_TABLES][NUM_KERNELS_IN_TABLE],
+                            kernel_t [NUM_KERNELS_IN_TABLE],
                             INT32 dt, INT32 cpu_flags);
 INT32 setup_dft_(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 setup_dft_f_(aoclfftz_selector_t *, kernel_t *);
