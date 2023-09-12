@@ -145,37 +145,9 @@ typedef struct timespec timeVal;
 #endif
 #endif
 
-//CPU Features detection using CPUID
-#ifdef AOCLFFTZ_CPUID_SIMD_DETECTION
-#ifndef _WINDOWS
-inline VOID cpu_features_detection(INTP fn, INTP optVal,
-                                   INTP *eax, INTP *ebx,
-                                   INTP *ecx, INTP *edx)
-{
-    *eax = fn;
-    *ecx = optVal;
-    *ebx = 0;
-    *edx = 0;
-    __asm__ ("cpuid            \n\t"
-             : "+a" (*eax), "+b" (*ebx), "+c" (*ecx), "+d" (*edx));
-}
-#else
-#include <intrin.h>
-inline VOID cpu_features_detection(INTP fn, INTP optVal,
-    INTP* eax, INTP* ebx,
-    INTP* ecx, INTP* edx)
-{
-    INT32 CPUInfo[4];
-
-    __cpuid(CPUInfo, fn);
-
-    *eax = CPUInfo[0];
-    *ebx = CPUInfo[1];
-    *ecx = CPUInfo[2];
-    *edx = CPUInfo[3];
-}
-#endif
-#endif
+VOID cpu_features_detection(INTP fn, INTP optVal,
+                            INTP *eax, INTP *ebx,
+                            INTP *ecx, INTP *edx);
 
 INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level, INT32 logger_mode);
 

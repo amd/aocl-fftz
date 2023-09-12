@@ -75,6 +75,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel,
         if (radix == n)
         {
             cur_sel->solution->solver->kernel_r = kertab[ker_cat].kfft;
+            cur_sel->solution->solver->kernel_m = NULL;
 
             //call direct solver
             ret = setup_direct_solver(cur_sel->solution,
@@ -86,6 +87,15 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel,
                 if (selector_mode ==
                     AOCLFFTZ_FIXED_SELECTOR_MODE)
                 {
+                    if(!sel->cost_analysis->ops)
+                    {
+                        sel->cost_analysis->ops =
+                            cur_sel->cost_analysis->ops;
+                        sel->cost_analysis->time =
+                            cur_sel->cost_analysis->time;
+                        //copy solution object from cur_sel to sel
+                        COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
+                    }
                     if (cur_sel->cost_analysis->ops <
                         sel->cost_analysis->ops)
                     {
@@ -117,7 +127,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel,
             } //if (SELECTOR_SUCCESS == ret)
         } //if (radix == n)
     } //End of FOR loop
-    
+
     destroy_selector(cur_sel);
 
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");

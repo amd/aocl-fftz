@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2023, Advanced Micro Devices. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
@@ -25,9 +25,9 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
  /** @file aoclfftz.h
- *  
+ *
  *  @brief Interface APIs and data structures of AOCL FFTZ library.
  *
  *  This file contains the APIs and associated data structures that
@@ -35,11 +35,11 @@
  *  and multi-threaded FFT operations.
  *
  *  @note Different variants of APIs and data structures are exposed to
- *  support float and double precision types in LP64 and ILP64 data models.  
+ *  support float and double precision types in LP64 and ILP64 data models.
  *
  *  @author S. Biplab Raut
  */
- 
+
 #ifndef AOCLFFTZ_H
 #define AOCLFFTZ_H
 
@@ -48,7 +48,6 @@
 
 #ifdef __cplusplus
 extern "C" {
-
 #endif
 
 #ifdef _WINDOWS
@@ -105,7 +104,7 @@ typedef struct
     INT32 opt_level;
     INT32 opt_off; //Turn off all optimizations
     INT32 logger_mode;
-    INT32 measure_stats;     
+    INT32 measure_stats;
 } aoclfftz_cntrl_params;
 
 //float LP64

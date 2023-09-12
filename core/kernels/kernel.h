@@ -31,7 +31,7 @@
  *  @brief Kernel template and related routines for computing DFT computations.
  *
  *  This file defines the kernel template that is used to statically derive the
- *  kernels of different precisions (float and double) related to all the 
+ *  kernels of different precisions (float and double) related to all the
  *  compute types (C, AVX128, AVX256, AVX512).
  *
  *  @note Different variants of data structures are defined to

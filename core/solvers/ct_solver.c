@@ -90,7 +90,7 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol,
         sol->decomp_scheme->vecs[0].out_stride :
         radix_r * sol->decomp_scheme->vecs[0].out_stride; //Next recursion level;
     //Swap pointers in case of out-of-place problem
-    if (IS_IN_PLACE(sol->decomp_scheme->flags) == 0)
+    if (IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
     {
         sol_r->decomp_scheme->in_real = sol->decomp_scheme->out_real;
         sol_r->decomp_scheme->in_imag = sol->decomp_scheme->out_imag;
@@ -114,7 +114,7 @@ INT32 execute_ct_solver(aoclfftz_solution_t* sol)
         //Depth-first recursive solving of the radix-m DFT sub-problem
         if (execute_ct_solver(sol->next_sol) != SOLVER_SUCCESS)
             return SOLVER_FAILURE;
-        
+
         //Perform inter-stage twiddle factor multiplications
         if (twiddle_multiplier(sol) != SOLVER_SUCCESS)
             return SOLVER_FAILURE;

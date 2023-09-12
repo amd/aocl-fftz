@@ -30,8 +30,8 @@
  *
  *  @brief APIs and data structures implementaion of the core (ST, MT) library.
  *
- *  This file contains the implementation of APIs and associated 
- *  data structures that are responsible for setting up and executing the 
+ *  This file contains the implementation of APIs and associated
+ *  data structures that are responsible for setting up and executing the
  *  single-threaded and multi-threaded FFT operations.
  *
  *  @note Different variants of APIs and data structures are exposed to
@@ -57,7 +57,17 @@ VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem)
 //Execute function for float LP64 based Single-threaded and multi-threaded FFT
 INT32 aoclfftz_execute_f(VOID *handle)
 {
-    return execute_dft(handle);
+    if (handle == NULL)
+    {
+        return AOCLFFTZ_EXECUTION_FAILURE;
+    }
+    INT32 ret = AOCLFFTZ_SUCCESS;
+    ret = execute_dft(handle);
+    if (ret != 0)
+    {
+        return AOCLFFTZ_EXECUTION_FAILURE;
+    }
+    return AOCLFFTZ_SUCCESS;
 }
 
 //Destroy function for float LP64 based Single-threaded and multi-threaded FFT
@@ -79,7 +89,16 @@ VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d* problem)
 //Execute function for double LP64 based Single-threaded and multi-threaded FFT
 INT32 aoclfftz_execute_d(VOID *handle)
 {
-    return execute_dft(handle);
+    if (handle == NULL)
+    {
+        return AOCLFFTZ_EXECUTION_FAILURE;
+    }
+    INT32 ret = execute_dft(handle);
+    if (ret != 0)
+    {
+        return AOCLFFTZ_EXECUTION_FAILURE;
+    }
+    return AOCLFFTZ_SUCCESS;
 }
 
 //Destroy function for double LP64 based Single-threaded and multi-threaded FFT
@@ -101,7 +120,16 @@ VOID *aoclfftz_setup_f_64_(aoclfftz_prob_desc_f_64_ *problem)
 //Execute function for float ILP64 based Single-threaded and multi-threaded FFT
 INT32 aoclfftz_execute_f_64_(VOID *handle)
 {
-    return execute_dft(handle);
+    if (handle == NULL)
+    {
+        return AOCLFFTZ_EXECUTION_FAILURE;
+    }
+    INT32 ret = execute_dft(handle);
+    if (ret != 0)
+    {
+        return AOCLFFTZ_EXECUTION_FAILURE;
+    }
+    return AOCLFFTZ_SUCCESS;
 }
 
 //Destroy function for float ILP64 based Single-threaded and multi-threaded FFT
@@ -121,14 +149,23 @@ VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     return setup_dft_d_64_(problem);
 }
 
-//Execute function for double ILP64 based Single-threaded and 
+//Execute function for double ILP64 based Single-threaded and
 //multi-threaded FFT
 INT32 aoclfftz_execute_d_64_(VOID *handle)
 {
-    return execute_dft(handle);
+    if (handle == NULL)
+    {
+        return AOCLFFTZ_EXECUTION_FAILURE;
+    }
+    INT32 ret = execute_dft(handle);
+    if (ret != 0)
+    {
+        return AOCLFFTZ_EXECUTION_FAILURE;
+    }
+    return AOCLFFTZ_SUCCESS;
 }
 
-//Destroy function for double ILP64 based Single-threaded and 
+//Destroy function for double ILP64 based Single-threaded and
 //multi-threaded FFT
 VOID aoclfftz_destroy_d_64_(VOID *handle)
 {

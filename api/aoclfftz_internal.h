@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2023, Advanced Micro Devices. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
@@ -25,9 +25,9 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
  /** @file aoclfftz_internal.h
- *  
+ *
  *  @brief Top-level data structures used across different modules that are not
  *  publicly exposed but are internal to the AOCL FFTZ library.
  *
@@ -39,7 +39,7 @@
  *
  *  @author S. Biplab Raut
  */
- 
+
 #ifndef AOCLFFTZ_INTERNAL_H
 #define AOCLFFTZ_INTERNAL_H
 
@@ -55,34 +55,37 @@
 #define MAX_GUARANTEED_CACHEABLE_SIZE (2097152) //2MB
 
 //Set and Get Flags bits
-#define IS_IN_PLACE(flags) (flags & 0x1)
-#define IS_REAL(flags) (flags & 0x2)
+#define IS_OUT_OF_PLACE(flags) (flags & 0x1)
+#define IS_OUT_OF_ORDER(flags) (flags & 0x2)
 #define FFT_DIR(flags) (flags & 0x4)
-#define IS_OUT_OF_ORDER(flags) (flags & 0x7)
+#define IS_REAL(flags) (flags & 0x8)
 #define DT_PRECISION_FLAG(flags) (flags >> 30)
-#define DT_PRECISION_BYTES(dt) dt_bytes = 1; \
-                               while (dt > 0) \
-                               { \
-                                    dt_bytes *= 2; \
-                                    dt--; \
-                               }
-#define SET_SELECTOR_MODE(flags, val) if (val == 0) \
-                                  { \
-                                      flags &= (~(1<<16)); \
-                                  } \
-				  else \
-                                  { \
-                                      flags |= (1<<16); \
-                                  } 
-#define SET_PRECISION(flags, val) if (val == 0) \
-                                  { \
-                                      flags &= (~(1<<30)); \
-                                  } \
-				  else \
-                                  { \
-                                      flags |= (1<<30); \
-                                  } 
-#define GET_SELECTOR_MODE(flags) ((flags<<15)>>16)
+#define DT_PRECISION_BYTES(dt) \
+    dt_bytes = 1;              \
+    while (dt > 0)             \
+    {                          \
+        dt_bytes *= 2;         \
+        dt--;                  \
+    }
+#define SET_SELECTOR_MODE(flags, val) \
+    if (val == 0)                     \
+    {                                 \
+        flags &= (~(1 << 16));        \
+    }                                 \
+    else                              \
+    {                                 \
+        flags |= (1 << 16);           \
+    }
+#define SET_PRECISION(flags, val) \
+    if (val == 0)                 \
+    {                             \
+        flags &= (~(1 << 30));    \
+    }                             \
+    else                          \
+    {                             \
+        flags |= (1 << 30);       \
+    }
+#define GET_SELECTOR_MODE(flags) ((flags<<15)>>31)
 #define GET_PRECISION(flags, val) (flags>>30)
 
 #define NUM_FFT_DIRS 2
@@ -120,7 +123,7 @@ typedef struct cost_analysis
 
 //Kernel template function pointer for performing FFT
 typedef VOID (*kfft_) (VOID *in_real, VOID *in_imag,
-                       VOID *out_real, VOID *out_imag, 
+                       VOID *out_real, VOID *out_imag,
                        ptrdiff_t n,
                        aoclfftz_strides_t *strides);
 
@@ -153,7 +156,7 @@ typedef struct {
     aoclfftz_cntrl_params *cntrl_params;
     aoclfftz_smp_pfft *pthr_fft;
     //Application side flag bits =>
-    //  in-place:0-bit, real:1-bit, out-of-order:2-bit, dir:3-bit, ...
+    //  in/out-of place:0-bit, in/out-of order:1-bit, dir:2-bit, real/comp:3-bit..
     //Library side internal flag bits =>
     //  datatype:30-31 bits for precision
     //  2-bits: 64-bit(11), 32-bit(10), 16-bit(01), 8-bit(00)
@@ -177,7 +180,7 @@ typedef struct aoclfftz_twiddle
     VOID *TW;
 } aoclfftz_twiddle_t;
 
-//Solution data structure that is returned as a handle by the setup API and 
+//Solution data structure that is returned as a handle by the setup API and
 //used by the execute API.
 typedef struct aoclfftz_solution
 {

@@ -45,15 +45,13 @@ aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank)
     decomp_scheme = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_decomp_scheme_t));
     if (decomp_scheme)
     {
-        decomp_scheme->dims = 
-            ALLOC_UNALIGN_UNINIT(vec_rank * sizeof(aoclfftz_dim_t_64_));
-        decomp_scheme->vecs = 
+        decomp_scheme->dims =
             ALLOC_UNALIGN_UNINIT(dim_rank * sizeof(aoclfftz_dim_t_64_));
+        decomp_scheme->vecs =
+            ALLOC_UNALIGN_UNINIT(vec_rank * sizeof(aoclfftz_dim_t_64_));
         if (decomp_scheme->dims == NULL || decomp_scheme->vecs == NULL)
         {
-            FREE_ALLOCATED_MEM(decomp_scheme->dims);
-            FREE_ALLOCATED_MEM(decomp_scheme->vecs);
-            FREE_ALLOCATED_MEM(decomp_scheme);
+            destroy_decomp_scheme(decomp_scheme);
             return NULL;
         }
         return decomp_scheme;
@@ -66,7 +64,7 @@ aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank)
 
 aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
 {
-    aoclfftz_solution_t* sol = NULL;
+    aoclfftz_solution_t *sol = NULL;
 
     sol = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_solution_t));
     if (sol)
@@ -84,12 +82,13 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
             sol->strides == NULL || sol->twiddle == NULL)
         {
             FREE_ALLOCATED_MEM(sol->solver);
-            FREE_ALLOCATED_MEM(sol->decomp_scheme);
+            destroy_decomp_scheme(sol->decomp_scheme);
             FREE_ALLOCATED_MEM(sol->strides);
             FREE_ALLOCATED_MEM(sol->twiddle);
             FREE_ALLOCATED_MEM(sol);
             return NULL;
         }
+        sol->twiddle->TW = NULL;
         return sol;
     }
     else
@@ -100,18 +99,17 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
 
 aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank)
 {
-    aoclfftz_selector_t* selector = NULL;
+    aoclfftz_selector_t *selector = NULL;
+
     selector = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_selector_t));
     if (selector)
     {
         selector->solution = alloc_solution(vec_rank, dim_rank);
-        selector->cost_analysis = 
+        selector->cost_analysis =
             ALLOC_UNALIGN_UNINIT(sizeof(cost_analysis_t));
         if (selector->solution == NULL || selector->cost_analysis == NULL)
         {
-            FREE_ALLOCATED_MEM(selector->solution);
-            FREE_ALLOCATED_MEM(selector->cost_analysis);
-            FREE_ALLOCATED_MEM(selector);
+            destroy_selector(selector);
             return NULL;
         }
         selector->cost_analysis->ops = 0;
@@ -131,23 +129,41 @@ VOID *alloc_twiddle_for_solution(UINT32 rad_size, UINT32 dt_prec)
     return ALLOC_UNALIGN_UNINIT(rad_size * dt_bytes);
 }
 
+VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme)
+{
+    if (decomp_scheme != NULL)
+    {
+        FREE_ALLOCATED_MEM(decomp_scheme->dims);
+        FREE_ALLOCATED_MEM(decomp_scheme->vecs);
+        FREE_ALLOCATED_MEM(decomp_scheme);
+    }
+    return;
+}
+
 VOID destroy_solution(aoclfftz_solution_t *sol)
 {
+    aoclfftz_solution_t *cur_sol = NULL;
     while (sol != NULL)
     {
+        cur_sol = sol;
         FREE_ALLOCATED_MEM(sol->solver);
-        FREE_ALLOCATED_MEM(sol->decomp_scheme);
+        destroy_decomp_scheme(sol->decomp_scheme);
         FREE_ALLOCATED_MEM(sol->strides);
         FREE_ALLOCATED_MEM(sol->twiddle->TW);
         FREE_ALLOCATED_MEM(sol->twiddle);
         sol = sol->next_sol;
+        FREE_ALLOCATED_MEM(cur_sol);
     }
     return;
 }
 
 VOID destroy_selector(aoclfftz_selector_t *sel)
 {
-    destroy_solution(sel->solution);
-    FREE_ALLOCATED_MEM(sel->cost_analysis);
+    if (sel != NULL)
+    {
+        destroy_solution(sel->solution);
+        FREE_ALLOCATED_MEM(sel->cost_analysis);
+        FREE_ALLOCATED_MEM(sel);
+    }
     return;
 }

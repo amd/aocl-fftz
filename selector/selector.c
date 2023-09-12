@@ -41,7 +41,6 @@
 #include "core/common/memory_manager.h"
 #include "core/kernels/kernel.h"
 
-
 //Tables of kernels that are populated with applicable kernels at setup time.
 //There are 8 sets of kernels contained in the kernels_table which are :
 //c, perm_c, avx128, perm_avx128, avx256, perm_avx256, avx512, perm_avx512
@@ -61,7 +60,7 @@ INT32 register_solvers_kernels(
     ret = register_solvers(dt, cpu_flags);
     if (ret != SOLVER_SUCCESS)
         return SELECTOR_FAILURE;
-    
+
     //Register Kernels
     ret = register_kernels(kertab, dt, cpu_flags);
 
@@ -73,7 +72,7 @@ INT32 smallest_prime_divisor(INT32 n)
 {
     if (n <= 1)
         return n;
-    
+
     INT32 divisor = 2;
 
     for (divisor = 2; (divisor * divisor) <= n; divisor++)
@@ -97,7 +96,7 @@ INT32 check_prime_solvability_bluestein(
     if (dim_rank != 1 || vec_rank != 0)
         return 0;
 
-    smallest_prime_factor = smallest_prime_divisor(n);  
+    smallest_prime_factor = smallest_prime_divisor(n);
     if (smallest_prime_factor == n &&
         is_FFT_ker_supported != 0)
         return 1;
@@ -133,16 +132,15 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 is_FFT_ker_supported =
             check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n);
-    INT32 is_solvable_by_bluestein = 
+    INT32 is_solvable_by_bluestein =
             check_prime_solvability_bluestein(sel->solution->decomp_scheme,
                                               is_FFT_ker_supported);
     INT32 level1_cond1 = 0;
     INT32 level1_cond2 = 0;
     INT32 level2_cond = 0;
 
-    SET_SELECTOR_MODE(sel->solution->decomp_scheme->flags, 
+    SET_SELECTOR_MODE(sel->solution->decomp_scheme->flags,
                       AOCLFFTZ_FIXED_SELECTOR_MODE);
-    
     //SOLVER_BATCHED
     level1_cond1 = ((vec_rank > 1) || (sel->solution->decomp_scheme->vecs[0].n > 1));
     //SOLVER_NDIM
@@ -150,14 +148,14 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
     //SOLVER_BLUESTEIN
     level1_cond1 |= (is_solvable_by_bluestein << 2);
     //SOLVER_BUFFERED
-    level1_cond2 = IS_IN_PLACE(sel->solution->decomp_scheme->flags);
+    level1_cond2 = !(IS_OUT_OF_PLACE(sel->solution->decomp_scheme->flags));
     //SOLVER_BUFFERED -> ToDo: Conditions to work with AOCLFFTZ_FIXED_SELECTOR_MODE
-    level1_cond2 &= ((sel->solution->decomp_scheme->dims[0].n > 
+    level1_cond2 &= ((sel->solution->decomp_scheme->dims[0].n >
                             MAX_GUARANTEED_CACHEABLE_SIZE) &&
                      (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
                             AOCLFFTZ_AUTO_SELECTOR_MODE));
     //SOLVER_PERM_KER
-    level1_cond2 |= 
+    level1_cond2 |=
                    (IS_OUT_OF_ORDER(sel->solution->decomp_scheme->flags) << 1);
     //SOLVER_DIRECT
     level2_cond = is_FFT_ker_supported;
@@ -252,7 +250,7 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
 INT32 setup_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     INT32 ret;
-    
+
 #if AOCLFFTZ_SELECTOR_AUTO_TUNER_MODE == 0
     //Fixed decision logic and CPI based selector mode
     ret = selector_fixed_mode_dft_(sel, kertab);
@@ -272,7 +270,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     INT32 cpu_flags = 0;
     aoclfftz_cntrl_params cntrl_params = problem->cntrl_params;
     aoclfftz_selector_t* sel_obj = NULL;
-    
+
     //allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, problem->dim_rank);
     if (sel_obj == NULL)
@@ -287,7 +285,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
     ret = register_solvers_kernels(kernels_table,
                                    DT_FLOAT, cpu_flags);
-    if (ret == 0)
+    if (ret != 0)
         return NULL;
 
     //Initialize decomposition scheme data object
@@ -299,7 +297,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     if (ret != SELECTOR_SUCCESS)
         return NULL;
 
-    return sel_obj->solution;
+    return sel_obj;
 }
 
 //Selector interface function that performs setup for finding solution for a
@@ -325,19 +323,19 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
     ret = register_solvers_kernels(kernels_table,
                                    DT_DOUBLE, cpu_flags);
-    if (ret == 0)
+    if (ret != 0)
         return NULL;
 
     //Initialize decomposition scheme data object
     INIT_DECOMP_SCHEME(sel_obj, problem);
-    SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_FLOAT);
+    SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_DOUBLE);
 
     //Select the best solution for the given input problem
     ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);
     if (ret != SELECTOR_SUCCESS)
         return NULL;
 
-    return sel_obj->solution;
+    return sel_obj;
 }
 
 //Selector interface function that performs setup for finding solution for a
@@ -363,7 +361,7 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
     ret = register_solvers_kernels(kernels_table,
                                    DT_FLOAT, cpu_flags);
-    if (ret == 0)
+    if (ret != 0)
         return NULL;
 
     //Initialize decomposition scheme data object
@@ -375,7 +373,7 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     if (ret != SELECTOR_SUCCESS)
         return NULL;
 
-    return sel_obj->solution;
+    return sel_obj;
 }
 
 //Selector interface function that performs setup for finding solution for a
@@ -401,22 +399,22 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
     ret = register_solvers_kernels(kernels_table,
                                    DT_DOUBLE, cpu_flags);
-    if (ret == 0)
+    if (ret != 0)
         return NULL;
 
     //Initialize decomposition scheme data object
     INIT_DECOMP_SCHEME(sel_obj, problem);
-    SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_FLOAT);
+    SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_DOUBLE);
 
     //Select the best solution for the given input problem
     ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);
     if (ret != SELECTOR_SUCCESS)
         return NULL;
 
-    return sel_obj->solution;
+    return sel_obj;
 }
 
 VOID destroy_handle(VOID *handle)
 {
-    destroy_solution((aoclfftz_solution_t*)handle);
+    destroy_selector((aoclfftz_selector_t *)handle);
 }

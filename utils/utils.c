@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2023, Advanced Micro Devices. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
@@ -27,7 +27,7 @@
  */
 
 /** @file utils.c
- *  
+ *
  *  @brief Utility functions that are used by library framework and methods.
  *
  *  This file contains the utility functions to provide functionalities like
@@ -83,7 +83,7 @@ INTP is_AVX512_supported(INT32 logger_mode)
     INTP ret = 0;
     INTP eax, ebx, ecx, edx;
     //Below is the set of checks for AVX512 detection
-    //1. Check CPU support for ZMM state management using OSXSAVE 
+    //1. Check CPU support for ZMM state management using OSXSAVE
     //Its support also implies that XGETBV is enabled for application use
     cpu_features_detection(0x1, 0, &eax, &ebx, &ecx, &edx);
     if ((ecx & 0x08000000) == 0x08000000)
@@ -105,6 +105,38 @@ INTP is_AVX512_supported(INT32 logger_mode)
     return ret;
 }
 
+//CPU Features detection using CPUID
+#ifdef AOCLFFTZ_CPUID_SIMD_DETECTION
+#ifndef _WINDOWS
+inline VOID cpu_features_detection(INTP fn, INTP optVal,
+                                   INTP *eax, INTP *ebx,
+                                   INTP *ecx, INTP *edx)
+{
+    *eax = fn;
+    *ecx = optVal;
+    *ebx = 0;
+    *edx = 0;
+    __asm__ ("cpuid            \n\t"
+             : "+a" (*eax), "+b" (*ebx), "+c" (*ecx), "+d" (*edx));
+}
+#else
+#include <intrin.h>
+inline VOID cpu_features_detection(INTP fn, INTP optVal,
+    INTP* eax, INTP* ebx,
+    INTP* ecx, INTP* edx)
+{
+    INT32 CPUInfo[4];
+
+    __cpuid(CPUInfo, fn);
+
+    *eax = CPUInfo[0];
+    *ebx = CPUInfo[1];
+    *ecx = CPUInfo[2];
+    *edx = CPUInfo[3];
+}
+#endif
+#endif
+
 INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level, INT32 logger_mode)
 {
     INT32 cpu_flags = 0;
@@ -112,7 +144,7 @@ INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level, INT32 logger_mode
 
     if (opt_off)
         return -1;
-    
+
     if (opt_level == 0)
         return 0;
 
@@ -127,7 +159,7 @@ INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level, INT32 logger_mode
 
     if (opt_level > 3) //opt_level == 4
         cpu_flags += is_AVX512_supported(logger_mode);
-    
+
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 
     return cpu_flags;

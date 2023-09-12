@@ -30,24 +30,28 @@
  *
  *  @brief Executes the DFT problem based on the solution found by selector.
  *
- *  This file contains the functions to execute a solution of kernels for the 
+ *  This file contains the functions to execute a solution of kernels for the
  *  given input problem description.
  *
  *  @author S. Biplab Raut
+ *  @author Prasandh Sankarankutty
  */
 
 #include "core/executor.h"
 
 INT32 execute_dft(aoclfftz_executor_t *executor_obj)
 {
-    INT32 ret = EXECUTOR_SUCCESS;
+    INT32 ret = EXECUTOR_FAILURE;
 
     if (executor_obj == NULL)
         return EXECUTOR_FAILURE;
 
     aoclfftz_solution_t *sol = executor_obj->solution;
-    
-    ret = sol->solver->execute_solver(sol);
+
+    if(sol != NULL && sol->solver != NULL && sol->solver->execute_solver != NULL)
+    {
+        ret = sol->solver->execute_solver(sol);
+    }
 
     return ret;
 }

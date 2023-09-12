@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file direct_solver.c
+/** @file direct_solver.c
  *
  *  @brief Direct Solver that applies an available kernel to the input problem
  *
@@ -34,6 +34,8 @@
  *  the solver.
  *
  *  @author S. Biplab Raut
+ *  @author Srirammaswamy Srinivasan
+ *  @author Prasandh Sankarankutty
  */
 
 #include "core/solvers/direct_solver.h"
@@ -41,82 +43,91 @@
 #include "utils/utils.h"
 
 INT32 setup_direct_solver(aoclfftz_solution_t *sol,
-	                      cost_analysis_t *cost,
-	                      kernel_t * kernel)
+                          cost_analysis_t *cost,
+                          kernel_t *kernel)
 {
-	aoclfftz_strides_t *strides = sol->strides;
-	ptrdiff_t n = sol->decomp_scheme->vecs[0].n;
-	ops_cycles_t ops_cycles;
-	UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-	INT32 status = SOLVER_SUCCESS;
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 
-	strides->in_stride = sol->decomp_scheme->dims[0].in_stride;
-	strides->out_stride = sol->decomp_scheme->dims[0].out_stride;
-	strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
-	strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
-	
-	if (GET_SELECTOR_MODE(sol->decomp_scheme->flags) == AOCLFFTZ_FIXED_SELECTOR_MODE)
-	{
-		/** Fixed mode **/
-		cost->time = 0;
-		ops_cycles = kernel->k_ops_cnt(precision);
-		cost->ops = n * ((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
-					     (ops_cycles.mul * AMD_ZEN_FP_FMA_CYCLES) +
-					     (ops_cycles.add * AMD_ZEN_FP_FMA_CYCLES) +
-					     (ops_cycles.move * AMD_ZEN_FP_FMA_CYCLES) +
-					     (ops_cycles.perm * AMD_ZEN_FP_FMA_CYCLES) +
-					     (ops_cycles.other * AMD_ZEN_FP_FMA_CYCLES));
-	}
-	else
-	{
-		/** Auto tuner mode **/
+    aoclfftz_strides_t *strides = sol->strides;
+    ptrdiff_t n = sol->decomp_scheme->vecs[0].n;
+    ops_cycles_t ops_cycles;
+    UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    INT32 status = SOLVER_SUCCESS;
+
+    strides->in_stride = sol->decomp_scheme->dims[0].in_stride;
+    strides->out_stride = sol->decomp_scheme->dims[0].out_stride;
+    strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
+    strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
+
+    if (GET_SELECTOR_MODE(sol->decomp_scheme->flags) == AOCLFFTZ_FIXED_SELECTOR_MODE)
+    {
+        /** Fixed mode **/
+        cost->time = 0;
+        ops_cycles = kernel->k_ops_cnt(precision);
+        cost->ops = n * ((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
+                         (ops_cycles.mul * AMD_ZEN_FP_FMA_CYCLES) +
+                         (ops_cycles.add * AMD_ZEN_FP_FMA_CYCLES) +
+                         (ops_cycles.move * AMD_ZEN_FP_FMA_CYCLES) +
+                         (ops_cycles.perm * AMD_ZEN_FP_FMA_CYCLES) +
+                         (ops_cycles.other * AMD_ZEN_FP_FMA_CYCLES));
+    }
+    else
+    {
+        /** Auto tuner mode **/
 #ifdef WIN32
-		timer clkTick;
+        timer clkTick;
 #endif
-		timeVal startTime, endTime;
-		initTimer(clkTick);
-		getTime(startTime);
+        timeVal startTime, endTime;
+        initTimer(clkTick);
+        getTime(startTime);
 
-		//execute the direct kernel
-		kernel->kfft(sol->decomp_scheme->in_real,
-					 sol->decomp_scheme->in_imag,
-					 sol->decomp_scheme->out_real,
-					 sol->decomp_scheme->out_imag,
-					 n,
-					 strides);
+        // execute the direct kernel
+        kernel->kfft(sol->decomp_scheme->in_real,
+                     sol->decomp_scheme->in_imag,
+                     sol->decomp_scheme->out_real,
+                     sol->decomp_scheme->out_imag,
+                     n,
+                     strides);
 
-		getTime(endTime);
-		cost->time = diffTime(clkTick, startTime, endTime);
-		ops_cycles = kernel->k_ops_cnt(precision);
-		cost->ops = n * ((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
-			             (ops_cycles.mul * AMD_ZEN_FP_FMA_CYCLES) +
-			             (ops_cycles.add * AMD_ZEN_FP_FMA_CYCLES) +
-			             (ops_cycles.move * AMD_ZEN_FP_FMA_CYCLES) +
-			             (ops_cycles.perm * AMD_ZEN_FP_FMA_CYCLES) +
-			             (ops_cycles.other * AMD_ZEN_FP_FMA_CYCLES));
-	}
+        getTime(endTime);
+        cost->time = diffTime(clkTick, startTime, endTime);
+        ops_cycles = kernel->k_ops_cnt(precision);
+        cost->ops = n * ((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
+                         (ops_cycles.mul * AMD_ZEN_FP_FMA_CYCLES) +
+                         (ops_cycles.add * AMD_ZEN_FP_FMA_CYCLES) +
+                         (ops_cycles.move * AMD_ZEN_FP_FMA_CYCLES) +
+                         (ops_cycles.perm * AMD_ZEN_FP_FMA_CYCLES) +
+                         (ops_cycles.other * AMD_ZEN_FP_FMA_CYCLES));
+    }
 
-	return status;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+    return status;
 }
 
-INT32 execute_direct_solver(aoclfftz_solution_t* sol)
+INT32 execute_direct_solver(aoclfftz_solution_t *sol)
 {
-	kfft_ kernel = sol->solver->kernel_r;
-	aoclfftz_strides_t* strides = sol->strides;
-	INT32 status = SOLVER_SUCCESS;
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 
-	strides->in_stride = sol->decomp_scheme->dims[0].in_stride;
-	strides->out_stride = sol->decomp_scheme->dims[0].out_stride;
-	strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
-	strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
+    kfft_ kernel = sol->solver->kernel_r;
+    aoclfftz_strides_t *strides = sol->strides;
+    if (strides == NULL)
+    {
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, logger_mode, "Invalid Strides");
+        return SOLVER_FAILURE;
+    }
 
-	//execute the direct kernel
-	kernel(sol->decomp_scheme->in_real,
-		sol->decomp_scheme->in_imag,
-		sol->decomp_scheme->out_real,
-		sol->decomp_scheme->out_imag,
-		sol->decomp_scheme->vecs[0].n,
-		strides);
+    AOCLFFTZ_LOG_FORMATTED(TRACE, logger_mode, "Executing Radix-%ld kernel",
+                           sol->decomp_scheme->dims[0].n);
+    // execute the direct kernel
+    kernel(sol->decomp_scheme->in_real,
+           sol->decomp_scheme->in_imag,
+           sol->decomp_scheme->out_real,
+           sol->decomp_scheme->out_imag,
+           sol->decomp_scheme->vecs[0].n,
+           strides);
 
-	return status;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+    return SOLVER_SUCCESS;
 }

@@ -51,7 +51,7 @@ typedef enum
 } aoclfftz_executor_status;
 
 //Executor data structure that is used to hold the solution and cost analysis
-// at each decomposition level for the associated sub-problem 
+// at each decomposition level for the associated sub-problem
 typedef struct
 {
     aoclfftz_solution_t *solution;

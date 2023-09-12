@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2023, Advanced Micro Devices. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
@@ -25,9 +25,9 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
  /** @file selector.h
- *  
+ *
  *  @brief Functions and data structures of the selector module.
  *
  *  This file contains the functions and data structures that are used to
@@ -35,7 +35,7 @@
  *
  *  @author S. Biplab Raut
  */
- 
+
 #ifndef AOCLFFTZ_SELECTOR_H
 #define AOCLFFTZ_SELECTOR_H
 
@@ -53,7 +53,7 @@ typedef enum
 } aoclfftz_selector_status;
 
 //Selector data structure that is used to hold the solution and cost analysis
-// at each decomposition level for the associated sub-problem 
+// at each decomposition level for the associated sub-problem
 typedef struct
 {
     aoclfftz_solution_t *solution;
@@ -83,7 +83,7 @@ typedef struct
         sel_obj->solution->decomp_scheme->vecs[cnt].out_stride = \
                                             problem->vecs[cnt].out_stride; \
     } \
-    if (FFT_DIR(sel_obj->solution->decomp_scheme->flags) == FORWARD_FFT_DIR) \
+    if (FFT_DIR(problem->flags) == FORWARD_FFT_DIR) \
     { \
         sel_obj->solution->decomp_scheme->in_real = problem->in; \
         sel_obj->solution->decomp_scheme->in_imag = problem->in+1; \

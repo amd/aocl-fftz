@@ -49,5 +49,6 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank);
 VOID *alloc_twiddle_for_solution(UINT32 rad_size, UINT32 dt_prec);
 VOID destroy_selector(aoclfftz_selector_t *sol);
 VOID destroy_solution(aoclfftz_solution_t *sol);
+VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme);
 
 #endif //MEMORY_MANAGER_H
