@@ -101,9 +101,9 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol,
 
 INT32 execute_direct_solver(aoclfftz_solution_t* sol)
 {
-	INT32 status = SOLVER_SUCCESS;
 	kfft_ kernel = sol->solver->kernel_r;
 	aoclfftz_strides_t* strides = sol->strides;
+	INT32 status = SOLVER_SUCCESS;
 
 	strides->in_stride = sol->decomp_scheme->dims[0].in_stride;
 	strides->out_stride = sol->decomp_scheme->dims[0].out_stride;

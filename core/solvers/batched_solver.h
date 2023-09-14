@@ -26,28 +26,26 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file executor.c
+ /** @file batched_solver.h
  *
- *  @brief Executes the DFT problem based on the solution found by selector.
+ *  @brief Interface header file of the batched Solver that solves a vector problem
  *
- *  This file contains the functions to execute a solution of kernels for the 
- *  given input problem description.
+ *  This file contains the data strucutes and function declarationss that
+ *  setup, execute and destroy the batched solver.
  *
  *  @author S. Biplab Raut
  */
 
-#include "core/executor.h"
+#ifndef BATCHED_SOLVER_H
+#define BATCHED_SOLVER_H
 
-INT32 execute_dft(aoclfftz_executor_t *executor_obj)
+#include "core/solvers/solver.h"
+
+ //Solver data structure that holds solver object/pointer and its type
+typedef struct batched_solver
 {
-    INT32 ret = EXECUTOR_SUCCESS;
+    solver_t *batched_solver;
+    cost_analysis_t *cost;
+} batched_solver_t;
 
-    if (executor_obj == NULL)
-        return EXECUTOR_FAILURE;
-
-    aoclfftz_solution_t *sol = executor_obj->solution;
-    
-    ret = sol->solver->execute_solver(sol);
-
-    return ret;
-}
+#endif //BATCHED_SOLVER_H

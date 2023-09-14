@@ -144,7 +144,7 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
                       AOCLFFTZ_FIXED_SELECTOR_MODE);
     
     //SOLVER_BATCHED
-    level1_cond1 = (vec_rank > 1);
+    level1_cond1 = ((vec_rank > 1) || (sel->solution->decomp_scheme->vecs[0].n > 1));
     //SOLVER_NDIM
     level1_cond1 |= ((dim_rank > 1) << 1);
     //SOLVER_BLUESTEIN

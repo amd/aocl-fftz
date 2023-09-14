@@ -54,6 +54,7 @@ INT32 register_solvers(INT32 dt, INT32 cpu_flags)
 	//Add all the available solvers
 	solvers_table[SOLVER_DIRECT] = executor_direct_dft;
 	solvers_table[SOLVER_CT] = executor_ct_dft;
+	solvers_table[SOLVER_BATCHED] = executor_batched_dft;
 
 	return SOLVER_SUCCESS;
 }
@@ -80,4 +81,9 @@ INT32 executor_direct_dft(aoclfftz_solution_t* solution)
 INT32 executor_ct_dft(aoclfftz_solution_t* solution)
 {
 	return execute_ct_solver(solution);
+}
+
+INT32 executor_batched_dft(aoclfftz_solution_t* solution)
+{
+	return execute_batched_solver(solution);
 }

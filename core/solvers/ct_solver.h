@@ -42,9 +42,9 @@
 #include "core/solvers/solver.h"
 
  //Solver data structure that holds solver object/pointer and its type
-typedef struct direct_solver
+typedef struct ct_solver
 {
-    solver_t *direct_solver;
+    solver_t *ct_solver;
     cost_analysis_t *cost;
 } ct_solver_t;
 

@@ -78,7 +78,7 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol,
         sol->decomp_scheme->vecs[0].in_stride; //Next recursion level
     sol_r->decomp_scheme->dims[0].out_stride =
         (sol->decomp_scheme->vecs[0].n == 1) ? //First recursion level
-        radix_m * sol->decomp_scheme->dims[0].out_stride :
+        sol->decomp_scheme->dims[0].out_stride ://For in-order output
         sol->decomp_scheme->vecs[0].out_stride; //Next recursion level
     sol_r->decomp_scheme->vecs[0].n = radix_m;
     sol_r->decomp_scheme->vecs[0].in_stride =
@@ -89,15 +89,23 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol,
         (sol->decomp_scheme->vecs[0].n == 1) ? //First recursion level
         sol->decomp_scheme->vecs[0].out_stride :
         radix_r * sol->decomp_scheme->vecs[0].out_stride; //Next recursion level;
+    //Swap pointers in case of out-of-place problem
+    if (IS_IN_PLACE(sol->decomp_scheme->flags) == 0)
+    {
+        sol_r->decomp_scheme->in_real = sol->decomp_scheme->out_real;
+        sol_r->decomp_scheme->in_imag = sol->decomp_scheme->out_imag;
+        sol_r->decomp_scheme->out_real = sol->decomp_scheme->in_real;
+        sol_r->decomp_scheme->out_imag = sol->decomp_scheme->in_imag;
+    }
 
-	return SELECTOR_SUCCESS;
+	return SOLVER_SUCCESS;
 }
 
 INT32 execute_ct_solver(aoclfftz_solution_t* sol)
 {
-    INT32 status = SOLVER_SUCCESS;
     aoclfftz_generic_solver_t* solver_obj = sol->solver;
     aoclfftz_strides_t* strides = sol->strides;
+    INT32 status = SOLVER_SUCCESS;
 
     //Call CT solver executor recursively for factors/sub-problems in a
     //depth-first way

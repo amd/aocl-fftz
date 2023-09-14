@@ -141,6 +141,11 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
         if (ret != SELECTOR_SUCCESS)
             goto exit_ct_dft;
 
+        //Set the current solution to be CT for the sub-problem r
+        cur_sel->solution->solver->solver_type = SOLVER_CT;
+        if (set_solver_fp(cur_sel->solution->solver) != SOLVER_SUCCESS)
+            return SELECTOR_FAILURE;
+
         if (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
             AOCLFFTZ_FIXED_SELECTOR_MODE)
         {
@@ -185,10 +190,9 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
     }
 
     sel->solution->next_sol = next_sol;
-
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
     destroy_selector(cur_sel);
     destroy_selector(cur_sel_m);
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 
     return ret;
 
@@ -199,6 +203,7 @@ exit_ct_dft:
 #if IN_MEMORY_TWIDDLE_FACTORS==1
     FREE_ALLOCATED_MEM(TW);
 #endif
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 
     return ret;
 }
