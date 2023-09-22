@@ -33,18 +33,11 @@
  *  This file contains the DIT radix-11 FFT implementations using scalar
  *  operations for single-precision and double-precision inputs.
  *
+ *  @author S. Biplab Raut
  *  @author Varun Sanjay
  */
 
 #include "core/kernels/kernel.h"
-#include "core/kernels/kernel_utils.h"
-
-static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 184, 768, 110, 0, 661},
-                                                     {0, 184, 768, 110, 0, 661}};
-ops_cycles_t get_ops_cnt_fft11c(INT32 precision)
-{
-    return ops_cnt[precision - 1];
-}
 
 kfft_ register_kernel_fft11c(INT32 precision)
 {
@@ -54,6 +47,575 @@ kfft_ register_kernel_fft11c(INT32 precision)
         return fft11c_fp64;
     else
         return NULL;
+}
+
+#ifdef USE_OPT_KERNEL_VARIANT
+/* --------------- optimized C kernel variant --------------- */
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 100, 140, 44, 0, 0},
+                                                     {0, 100, 140, 44, 0, 0}};
+
+ops_cycles_t get_ops_cnt_fft11c(INT32 precision)
+{
+    return ops_cnt[precision - 1];
+}
+
+VOID fft11c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                 INTP n, aoclfftz_strides_t *strides)
+{
+    const DOUBLE CRTM_11_1 =
+        +0.84125353283118116029052039464203089547681594330064;
+    const DOUBLE CRTM_11_2 =
+        +0.54064081745559759544482548159299693174139803024473;
+    const DOUBLE CRTM_11_3 =
+        +0.41541501300188639668675795488636098054966524290126;
+    const DOUBLE CRTM_11_4 =
+        +0.90963199535451838458365117807108162835411650732265;
+    const DOUBLE CRTM_11_5 =
+        +0.14231483827328501490317354898047094957684096668515;
+    const DOUBLE CRTM_11_6 =
+        +0.98982144188093275042610808187068914262031166769031;
+    const DOUBLE CRTM_11_7 =
+        +0.65486073394528511198338203198719613618953603946564;
+    const DOUBLE CRTM_11_8 =
+        +0.75574957435425824224552448923467521721665586591805;
+    const DOUBLE CRTM_11_9 =
+        +0.95949297361449738989036805706632769906245484800000;
+    const DOUBLE CRTM_11_10 =
+        +0.28173255684142978898192655345478532989004751779983;
+
+    DOUBLE *in_r = (DOUBLE *)in_real;
+    DOUBLE *in_i = (DOUBLE *)in_imag;
+    DOUBLE *out_r = (DOUBLE *)out_real;
+    DOUBLE *out_i = (DOUBLE *)out_imag;
+    INTP in_stride = (strides->in_stride << 1);
+    INTP out_stride = (strides->out_stride << 1);
+    INTP v_in_stride = (strides->v_in_stride << 1);
+    INTP v_out_stride = (strides->v_out_stride << 1);
+    INTP cnt;
+
+    for (cnt = 0; cnt < n; cnt++)
+    {
+        DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v6r, v6i, v7r,
+            v7i, v8r, v8i, v9r, v9i, v10r, v10i, v11r, v11i, v211r, v310r, v49r,
+            v58r, v67r, v112i, v103i, v94i, v85i, v76i, v211i, v310i, v49i,
+            v58i, v67i, v112r, v103r, v94r, v85r, v76r, tvrr, tvri, tvir, tvii;
+
+        // Input point 1: x(0)
+        v1r = *in_r;
+        v1i = *in_i;
+
+        // Input point 2: x(1)
+        v2r = in_r[in_stride];
+        v2i = in_i[in_stride];
+
+        // Input point 2: x(1)
+
+        v3r = in_r[(in_stride << 1)];
+        v3i = in_i[(in_stride << 1)];
+
+        v4r = in_r[in_stride * 3];
+        v4i = in_i[in_stride * 3];
+
+        v5r = in_r[(in_stride << 2)];
+        v5i = in_i[(in_stride << 2)];
+
+        v6r = in_r[in_stride * 5];
+        v6i = in_i[in_stride * 5];
+
+        v7r = in_r[in_stride * 6];
+        v7i = in_i[in_stride * 6];
+
+        v8r = in_r[in_stride * 7];
+        v8i = in_i[in_stride * 7];
+
+        v9r = in_r[in_stride << 3];
+        v9i = in_i[in_stride << 3];
+
+        v10r = in_r[in_stride * 9];
+        v10i = in_i[in_stride * 9];
+
+        v11r = in_r[in_stride * 10];
+        v11i = in_i[in_stride * 10];
+
+        // common operations
+        v211r = v2r + v11r;
+        v310r = v3r + v10r;
+        v49r = v4r + v9r;
+        v58r = v5r + v8r;
+        v67r = v6r + v7r;
+
+        v112i = v11i - v2i;
+        v103i = v10i - v3i;
+        v94i = v9i - v4i;
+        v85i = v8i - v5i;
+        v76i = v7i - v6i;
+
+        v211i = v2i + v11i;
+        v310i = v3i + v10i;
+        v49i = v4i + v9i;
+        v58i = v5i + v8i;
+        v67i = v6i + v7i;
+
+        v112r = v11r - v2r;
+        v103r = v10r - v3r;
+        v94r = v9r - v4r;
+        v85r = v8r - v5r;
+        v76r = v7r - v6r;
+
+        // Output point 1: X(0)
+        *out_r = v1r + v211r + v310r + v49r + v58r + v67r;
+        *out_i = v1i + v211i + v310i + v49i + v58i + v67i;
+
+        // Output point 2: X(1)
+        tvrr = v1r;
+        tvrr += (CRTM_11_1 * v211r);
+        tvrr += (CRTM_11_3 * v310r);
+        tvrr -= (CRTM_11_5 * v49r);
+        tvrr -= (CRTM_11_7 * v58r);
+        tvrr -= (CRTM_11_9 * v67r);
+        tvri = (CRTM_11_2 * v112i);
+        tvri += (CRTM_11_4 * v103i);
+        tvri += (CRTM_11_6 * v94i);
+        tvri += (CRTM_11_8 * v85i);
+        tvri += (CRTM_11_10 * v76i);
+
+        tvir = (CRTM_11_2 * v112r);
+        tvir += (CRTM_11_4 * v103r);
+        tvir += (CRTM_11_6 * v94r);
+        tvir += (CRTM_11_8 * v85r);
+        tvir += (CRTM_11_10 * v76r);
+        tvii = v1i;
+        tvii += (CRTM_11_1 * v211i);
+        tvii += (CRTM_11_3 * v310i);
+        tvii -= (CRTM_11_5 * v49i);
+        tvii -= (CRTM_11_7 * v58i);
+        tvii -= (CRTM_11_9 * v67i);
+
+        out_r[out_stride] = tvrr - tvri;
+        out_i[out_stride] = tvir + tvii;
+
+        // Output point 11: X(10)
+        out_r[(out_stride * 10)] = tvrr + tvri;
+        out_i[(out_stride * 10)] = tvii - tvir;
+
+        // Output point 3: X(2)
+        tvrr = v1r;
+        tvrr += (CRTM_11_3 * v211r);
+        tvrr -= (CRTM_11_7 * v310r);
+        tvrr -= (CRTM_11_9 * v49r);
+        tvrr -= (CRTM_11_5 * v58r);
+        tvrr += (CRTM_11_1 * v67r);
+        tvri = (CRTM_11_4 * v112i);
+        tvri += (CRTM_11_8 * v103i);
+        tvri -= (CRTM_11_10 * v94i);
+        tvri -= (CRTM_11_6 * v85i);
+        tvri -= (CRTM_11_2 * v76i);
+
+        tvii = v1i;
+        tvii += (CRTM_11_3 * v211i);
+        tvii -= (CRTM_11_7 * v310i);
+        tvii -= (CRTM_11_9 * v49i);
+        tvii -= (CRTM_11_5 * v58i);
+        tvii += (CRTM_11_1 * v67i);
+        tvir = (CRTM_11_4 * v112r);
+        tvir += (CRTM_11_8 * v103r);
+        tvir -= (CRTM_11_10 * v94r);
+        tvir -= (CRTM_11_6 * v85r);
+        tvir -= (CRTM_11_2 * v76r);
+
+        out_r[(out_stride << 1)] = tvrr - tvri;
+        out_i[(out_stride << 1)] = tvir + tvii;
+
+        // Output point 10: X(9)
+        out_r[(out_stride * 9)] = tvrr + tvri;
+        out_i[(out_stride * 9)] = tvii - tvir;
+
+        // Output point 4: X(3)
+        tvrr = v1r;
+        tvrr -= (CRTM_11_5 * v211r);
+        tvrr -= (CRTM_11_9 * v310r);
+        tvrr += (CRTM_11_3 * v49r);
+        tvrr += (CRTM_11_1 * v58r);
+        tvrr -= (CRTM_11_7 * v67r);
+        tvri = (CRTM_11_6 * v112i);
+        tvri -= (CRTM_11_10 * v103i);
+        tvri -= (CRTM_11_4 * v94i);
+        tvri += (CRTM_11_2 * v85i);
+        tvri += (CRTM_11_8 * v76i);
+
+        tvii = v1i;
+        tvii -= (CRTM_11_5 * v211i);
+        tvii -= (CRTM_11_9 * v310i);
+        tvii += (CRTM_11_3 * v49i);
+        tvii += (CRTM_11_1 * v58i);
+        tvii -= (CRTM_11_7 * v67i);
+        tvir = (CRTM_11_6 * v112r);
+        tvir -= (CRTM_11_10 * v103r);
+        tvir -= (CRTM_11_4 * v94r);
+        tvir += (CRTM_11_2 * v85r);
+        tvir += (CRTM_11_8 * v76r);
+
+        out_r[out_stride * 3] = tvrr - tvri;
+        out_i[out_stride * 3] = tvir + tvii;
+
+        // Output point 9: X(8)
+        out_r[(out_stride << 3)] = tvrr + tvri;
+        out_i[(out_stride << 3)] = tvii - tvir;
+
+        // Output point 5: X(4)
+        tvrr = v1r;
+        tvrr -= (CRTM_11_7 * v211r);
+        tvrr -= (CRTM_11_5 * v310r);
+        tvrr += (CRTM_11_1 * v49r);
+        tvrr -= (CRTM_11_9 * v58r);
+        tvrr += (CRTM_11_3 * v67r);
+        tvri = (CRTM_11_8 * v112i);
+        tvri -= (CRTM_11_6 * v103i);
+        tvri += (CRTM_11_2 * v94i);
+        tvri += (CRTM_11_10 * v85i);
+        tvri -= (CRTM_11_4 * v76i);
+
+        tvii = v1i;
+        tvii -= (CRTM_11_7 * v211i);
+        tvii -= (CRTM_11_5 * v310i);
+        tvii += (CRTM_11_1 * v49i);
+        tvii -= (CRTM_11_9 * v58i);
+        tvii += (CRTM_11_3 * v67i);
+        tvir = (CRTM_11_8 * v112r);
+        tvir -= (CRTM_11_6 * v103r);
+        tvir += (CRTM_11_2 * v94r);
+        tvir += (CRTM_11_10 * v85r);
+        tvir -= (CRTM_11_4 * v76r);
+
+        out_r[(out_stride << 2)] = tvrr - tvri;
+        out_i[(out_stride << 2)] = tvir + tvii;
+
+        // Output point 8: X(7)
+        out_r[(out_stride * 7)] = tvrr + tvri;
+        out_i[(out_stride * 7)] = tvii - tvir;
+
+        // Output point 6: X(5)
+        tvrr = v1r;
+        tvrr -= (CRTM_11_9 * v211r);
+        tvrr += (CRTM_11_1 * v310r);
+        tvrr -= (CRTM_11_7 * v49r);
+        tvrr += (CRTM_11_3 * v58r);
+        tvrr -= (CRTM_11_5 * v67r);
+        tvri = (CRTM_11_10 * v112i);
+        tvri -= (CRTM_11_2 * v103i);
+        tvri += (CRTM_11_8 * v94i);
+        tvri -= (CRTM_11_4 * v85i);
+        tvri += (CRTM_11_6 * v76i);
+
+        tvii = v1i;
+        tvii -= (CRTM_11_9 * v211i);
+        tvii += (CRTM_11_1 * v310i);
+        tvii -= (CRTM_11_7 * v49i);
+        tvii += (CRTM_11_3 * v58i);
+        tvii -= (CRTM_11_5 * v67i);
+        tvir = (CRTM_11_10 * v112r);
+        tvir -= (CRTM_11_2 * v103r);
+        tvir += (CRTM_11_8 * v94r);
+        tvir -= (CRTM_11_4 * v85r);
+        tvir += (CRTM_11_6 * v76r);
+
+        out_r[(out_stride * 5)] = tvrr - tvri;
+        out_i[(out_stride * 5)] = tvir + tvii;
+
+        // Output point 7: X(6)
+        out_r[(out_stride * 6)] = tvrr + tvri;
+        out_i[(out_stride * 6)] = tvii - tvir;
+
+        in_r += v_in_stride;
+        in_i += v_in_stride;
+        out_r += v_out_stride;
+        out_i += v_out_stride;
+    }
+}
+
+VOID fft11c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                 INTP n, aoclfftz_strides_t *strides)
+{
+    const FLOAT CRTM_11_1 =
+        +0.84125353283118116029052039464203089547681594330064;
+    const FLOAT CRTM_11_2 =
+        +0.54064081745559759544482548159299693174139803024473;
+    const FLOAT CRTM_11_3 =
+        +0.41541501300188639668675795488636098054966524290126;
+    const FLOAT CRTM_11_4 =
+        +0.90963199535451838458365117807108162835411650732265;
+    const FLOAT CRTM_11_5 =
+        +0.14231483827328501490317354898047094957684096668515;
+    const FLOAT CRTM_11_6 =
+        +0.98982144188093275042610808187068914262031166769031;
+    const FLOAT CRTM_11_7 =
+        +0.65486073394528511198338203198719613618953603946564;
+    const FLOAT CRTM_11_8 =
+        +0.75574957435425824224552448923467521721665586591805;
+    const FLOAT CRTM_11_9 =
+        +0.95949297361449738989036805706632769906245484800000;
+    const FLOAT CRTM_11_10 =
+        +0.28173255684142978898192655345478532989004751779983;
+
+    FLOAT *in_r = (FLOAT *)in_real;
+    FLOAT *in_i = (FLOAT *)in_imag;
+    FLOAT *out_r = (FLOAT *)out_real;
+    FLOAT *out_i = (FLOAT *)out_imag;
+    INTP in_stride = (strides->in_stride << 1);
+    INTP out_stride = (strides->out_stride << 1);
+    INTP v_in_stride = (strides->v_in_stride << 1);
+    INTP v_out_stride = (strides->v_out_stride << 1);
+    INTP cnt;
+
+    for (cnt = 0; cnt < n; cnt++)
+    {
+        FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v6r, v6i, v7r,
+            v7i, v8r, v8i, v9r, v9i, v10r, v10i, v11r, v11i, v211r, v310r, v49r,
+            v58r, v67r, v112i, v103i, v94i, v85i, v76i, v211i, v310i, v49i,
+            v58i, v67i, v112r, v103r, v94r, v85r, v76r, tvrr, tvri, tvir, tvii;
+
+        // Input point 1: x(0)
+        v1r = *in_r;
+        v1i = *in_i;
+
+        // Input point 2: x(1)
+        v2r = in_r[in_stride];
+        v2i = in_i[in_stride];
+
+        // Input point 2: x(1)
+
+        v3r = in_r[(in_stride << 1)];
+        v3i = in_i[(in_stride << 1)];
+
+        v4r = in_r[in_stride * 3];
+        v4i = in_i[in_stride * 3];
+
+        v5r = in_r[(in_stride << 2)];
+        v5i = in_i[(in_stride << 2)];
+
+        v6r = in_r[in_stride * 5];
+        v6i = in_i[in_stride * 5];
+
+        v7r = in_r[in_stride * 6];
+        v7i = in_i[in_stride * 6];
+
+        v8r = in_r[in_stride * 7];
+        v8i = in_i[in_stride * 7];
+
+        v9r = in_r[in_stride << 3];
+        v9i = in_i[in_stride << 3];
+
+        v10r = in_r[in_stride * 9];
+        v10i = in_i[in_stride * 9];
+
+        v11r = in_r[in_stride * 10];
+        v11i = in_i[in_stride * 10];
+
+        // common operations
+        v211r = v2r + v11r;
+        v310r = v3r + v10r;
+        v49r = v4r + v9r;
+        v58r = v5r + v8r;
+        v67r = v6r + v7r;
+
+        v112i = v11i - v2i;
+        v103i = v10i - v3i;
+        v94i = v9i - v4i;
+        v85i = v8i - v5i;
+        v76i = v7i - v6i;
+
+        v211i = v2i + v11i;
+        v310i = v3i + v10i;
+        v49i = v4i + v9i;
+        v58i = v5i + v8i;
+        v67i = v6i + v7i;
+
+        v112r = v11r - v2r;
+        v103r = v10r - v3r;
+        v94r = v9r - v4r;
+        v85r = v8r - v5r;
+        v76r = v7r - v6r;
+
+        // Output point 1: X(0)
+        *out_r = v1r + v211r + v310r + v49r + v58r + v67r;
+        *out_i = v1i + v211i + v310i + v49i + v58i + v67i;
+
+        // Output point 2: X(1)
+        tvrr = v1r;
+        tvrr += (CRTM_11_1 * v211r);
+        tvrr += (CRTM_11_3 * v310r);
+        tvrr -= (CRTM_11_5 * v49r);
+        tvrr -= (CRTM_11_7 * v58r);
+        tvrr -= (CRTM_11_9 * v67r);
+        tvri = (CRTM_11_2 * v112i);
+        tvri += (CRTM_11_4 * v103i);
+        tvri += (CRTM_11_6 * v94i);
+        tvri += (CRTM_11_8 * v85i);
+        tvri += (CRTM_11_10 * v76i);
+
+        tvir = (CRTM_11_2 * v112r);
+        tvir += (CRTM_11_4 * v103r);
+        tvir += (CRTM_11_6 * v94r);
+        tvir += (CRTM_11_8 * v85r);
+        tvir += (CRTM_11_10 * v76r);
+        tvii = v1i;
+        tvii += (CRTM_11_1 * v211i);
+        tvii += (CRTM_11_3 * v310i);
+        tvii -= (CRTM_11_5 * v49i);
+        tvii -= (CRTM_11_7 * v58i);
+        tvii -= (CRTM_11_9 * v67i);
+
+        out_r[out_stride] = tvrr - tvri;
+        out_i[out_stride] = tvir + tvii;
+
+        // Output point 11: X(10)
+        out_r[(out_stride * 10)] = tvrr + tvri;
+        out_i[(out_stride * 10)] = tvii - tvir;
+
+        // Output point 3: X(2)
+        tvrr = v1r;
+        tvrr += (CRTM_11_3 * v211r);
+        tvrr -= (CRTM_11_7 * v310r);
+        tvrr -= (CRTM_11_9 * v49r);
+        tvrr -= (CRTM_11_5 * v58r);
+        tvrr += (CRTM_11_1 * v67r);
+        tvri = (CRTM_11_4 * v112i);
+        tvri += (CRTM_11_8 * v103i);
+        tvri -= (CRTM_11_10 * v94i);
+        tvri -= (CRTM_11_6 * v85i);
+        tvri -= (CRTM_11_2 * v76i);
+
+        tvii = v1i;
+        tvii += (CRTM_11_3 * v211i);
+        tvii -= (CRTM_11_7 * v310i);
+        tvii -= (CRTM_11_9 * v49i);
+        tvii -= (CRTM_11_5 * v58i);
+        tvii += (CRTM_11_1 * v67i);
+        tvir = (CRTM_11_4 * v112r);
+        tvir += (CRTM_11_8 * v103r);
+        tvir -= (CRTM_11_10 * v94r);
+        tvir -= (CRTM_11_6 * v85r);
+        tvir -= (CRTM_11_2 * v76r);
+
+        out_r[(out_stride << 1)] = tvrr - tvri;
+        out_i[(out_stride << 1)] = tvir + tvii;
+
+        // Output point 10: X(9)
+        out_r[(out_stride * 9)] = tvrr + tvri;
+        out_i[(out_stride * 9)] = tvii - tvir;
+
+        // Output point 4: X(3)
+        tvrr = v1r;
+        tvrr -= (CRTM_11_5 * v211r);
+        tvrr -= (CRTM_11_9 * v310r);
+        tvrr += (CRTM_11_3 * v49r);
+        tvrr += (CRTM_11_1 * v58r);
+        tvrr -= (CRTM_11_7 * v67r);
+        tvri = (CRTM_11_6 * v112i);
+        tvri -= (CRTM_11_10 * v103i);
+        tvri -= (CRTM_11_4 * v94i);
+        tvri += (CRTM_11_2 * v85i);
+        tvri += (CRTM_11_8 * v76i);
+
+        tvii = v1i;
+        tvii -= (CRTM_11_5 * v211i);
+        tvii -= (CRTM_11_9 * v310i);
+        tvii += (CRTM_11_3 * v49i);
+        tvii += (CRTM_11_1 * v58i);
+        tvii -= (CRTM_11_7 * v67i);
+        tvir = (CRTM_11_6 * v112r);
+        tvir -= (CRTM_11_10 * v103r);
+        tvir -= (CRTM_11_4 * v94r);
+        tvir += (CRTM_11_2 * v85r);
+        tvir += (CRTM_11_8 * v76r);
+
+        out_r[out_stride * 3] = tvrr - tvri;
+        out_i[out_stride * 3] = tvir + tvii;
+
+        // Output point 9: X(8)
+        out_r[(out_stride << 3)] = tvrr + tvri;
+        out_i[(out_stride << 3)] = tvii - tvir;
+
+        // Output point 5: X(4)
+        tvrr = v1r;
+        tvrr -= (CRTM_11_7 * v211r);
+        tvrr -= (CRTM_11_5 * v310r);
+        tvrr += (CRTM_11_1 * v49r);
+        tvrr -= (CRTM_11_9 * v58r);
+        tvrr += (CRTM_11_3 * v67r);
+        tvri = (CRTM_11_8 * v112i);
+        tvri -= (CRTM_11_6 * v103i);
+        tvri += (CRTM_11_2 * v94i);
+        tvri += (CRTM_11_10 * v85i);
+        tvri -= (CRTM_11_4 * v76i);
+
+        tvii = v1i;
+        tvii -= (CRTM_11_7 * v211i);
+        tvii -= (CRTM_11_5 * v310i);
+        tvii += (CRTM_11_1 * v49i);
+        tvii -= (CRTM_11_9 * v58i);
+        tvii += (CRTM_11_3 * v67i);
+        tvir = (CRTM_11_8 * v112r);
+        tvir -= (CRTM_11_6 * v103r);
+        tvir += (CRTM_11_2 * v94r);
+        tvir += (CRTM_11_10 * v85r);
+        tvir -= (CRTM_11_4 * v76r);
+
+        out_r[(out_stride << 2)] = tvrr - tvri;
+        out_i[(out_stride << 2)] = tvir + tvii;
+
+        // Output point 8: X(7)
+        out_r[(out_stride * 7)] = tvrr + tvri;
+        out_i[(out_stride * 7)] = tvii - tvir;
+
+        // Output point 6: X(5)
+        tvrr = v1r;
+        tvrr -= (CRTM_11_9 * v211r);
+        tvrr += (CRTM_11_1 * v310r);
+        tvrr -= (CRTM_11_7 * v49r);
+        tvrr += (CRTM_11_3 * v58r);
+        tvrr -= (CRTM_11_5 * v67r);
+        tvri = (CRTM_11_10 * v112i);
+        tvri -= (CRTM_11_2 * v103i);
+        tvri += (CRTM_11_8 * v94i);
+        tvri -= (CRTM_11_4 * v85i);
+        tvri += (CRTM_11_6 * v76i);
+
+        tvii = v1i;
+        tvii -= (CRTM_11_9 * v211i);
+        tvii += (CRTM_11_1 * v310i);
+        tvii -= (CRTM_11_7 * v49i);
+        tvii += (CRTM_11_3 * v58i);
+        tvii -= (CRTM_11_5 * v67i);
+        tvir = (CRTM_11_10 * v112r);
+        tvir -= (CRTM_11_2 * v103r);
+        tvir += (CRTM_11_8 * v94r);
+        tvir -= (CRTM_11_4 * v85r);
+        tvir += (CRTM_11_6 * v76r);
+
+        out_r[(out_stride * 5)] = tvrr - tvri;
+        out_i[(out_stride * 5)] = tvir + tvii;
+
+        // Output point 7: X(6)
+        out_r[(out_stride * 6)] = tvrr + tvri;
+        out_i[(out_stride * 6)] = tvii - tvir;
+
+        in_r += v_in_stride;
+        in_i += v_in_stride;
+        out_r += v_out_stride;
+        out_i += v_out_stride;
+    }
+}
+#else
+/* --------------- non-optimized C kernel variant --------------- */
+#include "core/kernels/kernel_utils.h"
+
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {
+    {0, 184, 768, 110, 0, 661}, {0, 184, 768, 110, 0, 661}};
+
+ops_cycles_t get_ops_cnt_fft11c(INT32 precision)
+{
+    return ops_cnt[precision - 1];
 }
 
 const DOUBLE CRTM_11[RADIX_11][2] = {{1.0, 0.0},
@@ -775,3 +1337,4 @@ VOID fft11c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         out_fi += v_out_stride;
     }
 }
+#endif // USE_OPT_KERNEL_VARIANT
