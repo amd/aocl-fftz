@@ -33,18 +33,11 @@
  *  This file contains the DIT radix-5 FFT implementations using scalar
  *  operations for single-precision and double-precision inputs.
  *
+ *  @author S. Biplab Raut
  *  @author Varun Sanjay
  */
 
 #include "core/kernels/kernel.h"
-#include "core/kernels/kernel_utils.h"
-
-static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 28, 120, 50, 0, 61},
-                                                     {0, 28, 120, 50, 0, 61}};
-ops_cycles_t get_ops_cnt_fft5c(INT32 precision)
-{
-    return ops_cnt[precision - 1];
-}
 
 kfft_ register_kernel_fft5c(INT32 precision)
 {
@@ -55,12 +48,215 @@ kfft_ register_kernel_fft5c(INT32 precision)
     else
         return NULL;
 }
+#ifdef USE_OPT_KERNEL_VARIANT
+/* --------------- optimized C kernel variant --------------- */
+//TODO: Update ops_cnt
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 16, 32, 20, 0, 0},
+                                                     {0, 16, 32, 20, 0, 0}};
+ops_cycles_t get_ops_cnt_fft5c(INT32 precision)
+{
+    return ops_cnt[precision - 1];
+}
+
+VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides)
+{
+    const DOUBLE CRTM_5_1 = +0.30901699437494768947509845811874610960940392680748;
+    const DOUBLE CRTM_5_2 = +0.95105651629515357211643933337938214340569863400000;
+    const DOUBLE CRTM_5_3 = +0.80901699437494750610700001978173170344740065252138;
+    const DOUBLE CRTM_5_4 = +0.58778525229247301629891039327884007596190389052978;
+
+    DOUBLE *in_r = (DOUBLE *)in_real;
+    DOUBLE *in_i = (DOUBLE *)in_imag;
+    DOUBLE *out_r = (DOUBLE *)out_real;
+    DOUBLE *out_i = (DOUBLE *)out_imag;
+    INTP in_stride = (strides->in_stride << 1);
+    INTP out_stride = (strides->out_stride << 1);
+    INTP v_in_stride = (strides->v_in_stride << 1);
+    INTP v_out_stride = (strides->v_out_stride << 1);
+    INTP cnt;
+
+    for (cnt = 0; cnt < n; cnt++)
+    {
+        DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i,
+            v25r, v34r, v52i, v43i, v25i, v34i, v52r, v43r, tvri, tvir, tvii,
+            tvrr;
+
+        // Input point 1: x(0)
+        v1r = *in_r;
+        v1i = *in_i;
+
+        // Input point 2: x(1)
+        v2r = in_r[in_stride];
+        v2i = in_i[in_stride];
+
+        // Input point 3: x(2)
+        v3r = in_r[(in_stride << 1)];
+        v3i = in_i[(in_stride << 1)];
+
+        // Input point 4: x(3)
+        v4r = in_r[in_stride * 3];
+        v4i = in_i[in_stride * 3];
+
+        // Input point 5: x(4)
+        v5r = in_r[(in_stride << 2)];
+        v5i = in_i[(in_stride << 2)];
+
+        v25r = v2r + v5r;
+        v34r = v3r + v4r;
+        v52i = v5i - v2i;
+        v43i = v4i - v3i;
+
+        v25i = v5i + v2i;
+        v34i = v3i + v4i;
+        v52r = v5r - v2r;
+        v43r = v4r - v3r;
+
+        // Output point 1: X(0)
+        *out_r = v1r + v25r + v34r;
+        *out_i = v1i + v25i + v34i;
+
+        // Output point 2: X(1)
+        tvrr = v1r + (CRTM_5_1 * v25r) - (CRTM_5_3 * v34r);
+        tvri = (CRTM_5_2 * v52i) + (CRTM_5_4 * v43i);
+
+        tvir = (CRTM_5_2 * v52r) + (CRTM_5_4 * v43r);
+        tvii = v1i + (CRTM_5_1 * v25i) - (CRTM_5_3 * v34i);
+
+        out_r[out_stride] = tvrr - tvri;
+        out_i[out_stride] = tvii + tvir;
+
+        // Output point 5: X(4)
+        out_r[(out_stride << 2)] = tvrr + tvri;
+        out_i[(out_stride << 2)] = tvii - tvir;
+
+        // Output point 3: X(2)
+        tvrr = v1r + (CRTM_5_1 * v34r) - (CRTM_5_3 * v25r);
+        tvri = (CRTM_5_4 * v52i) - (CRTM_5_2 * v43i);
+        tvir = (CRTM_5_4 * v52r) - (CRTM_5_2 * v43r);
+        tvii = v1i + (CRTM_5_1 * v34i) - (CRTM_5_3 * v25i);
+
+        out_r[(out_stride << 1)] = tvrr - tvri;
+        out_i[(out_stride << 1)] = tvii + tvir;
+
+        // Output point 4: X(3)
+        out_r[out_stride * 3] = tvrr + tvri;
+        out_i[out_stride * 3] = tvii - tvir;
+
+        in_r += v_in_stride;
+        in_i += v_in_stride;
+        out_r += v_out_stride;
+        out_i += v_out_stride;
+    }
+}
+
+VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides)
+{
+    const FLOAT CRTM_5_1 = +0.30901699437494768947509845811874610960940392680748;
+    const FLOAT CRTM_5_2 = +0.95105651629515357211643933337938214340569863400000;
+    const FLOAT CRTM_5_3 = +0.80901699437494750610700001978173170344740065252138;
+    const FLOAT CRTM_5_4 = +0.58778525229247301629891039327884007596190389052978;
+
+    FLOAT *in_r = (FLOAT *)in_real;
+    FLOAT *in_i = (FLOAT *)in_imag;
+    FLOAT *out_r = (FLOAT *)out_real;
+    FLOAT *out_i = (FLOAT *)out_imag;
+    INTP in_stride = (strides->in_stride << 1);
+    INTP out_stride = (strides->out_stride << 1);
+    INTP v_in_stride = (strides->v_in_stride << 1);
+    INTP v_out_stride = (strides->v_out_stride << 1);
+    INTP cnt;
+
+    for (cnt = 0; cnt < n; cnt++)
+    {
+        FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i,
+            v25r, v34r, v52i, v43i, v25i, v34i, v52r, v43r, tvri, tvir, tvii,
+            tvrr;
+
+        // Input point 1: x(0)
+        v1r = *in_r;
+        v1i = *in_i;
+
+        // Input point 2: x(1)
+        v2r = in_r[in_stride];
+        v2i = in_i[in_stride];
+
+        // Input point 3: x(2)
+        v3r = in_r[(in_stride << 1)];
+        v3i = in_i[(in_stride << 1)];
+
+        // Input point 4: x(3)
+        v4r = in_r[in_stride * 3];
+        v4i = in_i[in_stride * 3];
+
+        // Input point 5: x(4)
+        v5r = in_r[(in_stride << 2)];
+        v5i = in_i[(in_stride << 2)];
+
+        v25r = v2r + v5r;
+        v34r = v3r + v4r;
+        v52i = v5i - v2i;
+        v43i = v4i - v3i;
+
+        v25i = v5i + v2i;
+        v34i = v3i + v4i;
+        v52r = v5r - v2r;
+        v43r = v4r - v3r;
+
+        // Output point 1: X(0)
+        *out_r = v1r + v25r + v34r;
+        *out_i = v1i + v25i + v34i;
+
+        // Output point 2: X(1)
+        tvrr = v1r + (CRTM_5_1 * v25r) - (CRTM_5_3 * v34r);
+        tvri = (CRTM_5_2 * v52i) + (CRTM_5_4 * v43i);
+
+        tvir = (CRTM_5_2 * v52r) + (CRTM_5_4 * v43r);
+        tvii = v1i + (CRTM_5_1 * v25i) - (CRTM_5_3 * v34i);
+
+        out_r[out_stride] = tvrr - tvri;
+        out_i[out_stride] = tvii + tvir;
+
+        // Output point 5: X(4)
+        out_r[(out_stride << 2)] = tvrr + tvri;
+        out_i[(out_stride << 2)] = tvii - tvir;
+
+        // Output point 3: X(2)
+        tvrr = v1r + (CRTM_5_1 * v34r) - (CRTM_5_3 * v25r);
+        tvri = (CRTM_5_4 * v52i) - (CRTM_5_2 * v43i);
+        tvir = (CRTM_5_4 * v52r) - (CRTM_5_2 * v43r);
+        tvii = v1i + (CRTM_5_1 * v34i) - (CRTM_5_3 * v25i);
+
+        out_r[(out_stride << 1)] = tvrr - tvri;
+        out_i[(out_stride << 1)] = tvii + tvir;
+
+        // Output point 4: X(3)
+        out_r[out_stride * 3] = tvrr + tvri;
+        out_i[out_stride * 3] = tvii - tvir;
+
+        in_r += v_in_stride;
+        in_i += v_in_stride;
+        out_r += v_out_stride;
+        out_i += v_out_stride;
+    }
+}
+#else
+/* --------------- non-optimized C kernel variant --------------- */
+#include "core/kernels/kernel_utils.h"
+
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 28, 120, 50, 0, 61},
+                                                     {0, 28, 120, 50, 0, 61}};
+ops_cycles_t get_ops_cnt_fft5c(INT32 precision)
+{
+    return ops_cnt[precision - 1];
+}
 
 const DOUBLE CRTM_5[RADIX_5][2] = {{1.0, 0.0},
-                                    {0.309016994374947, -0.951056516295154},
-                                    {-0.809016994374947, -0.587785252292473},
-                                    {-0.809016994374948, 0.587785252292473},
-                                    {0.309016994374947, 0.951056516295154}};
+                                   {0.309016994374947, -0.951056516295154},
+                                   {-0.809016994374947, -0.587785252292473},
+                                   {-0.809016994374948, 0.587785252292473},
+                                   {0.309016994374947, 0.951056516295154}};
 
 VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                 INTP n, aoclfftz_strides_t *strides)
@@ -318,3 +514,4 @@ VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         out_fi += v_out_stride;
     }
 }
+#endif // USE_OPT_KERNEL_VARIANT
