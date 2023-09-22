@@ -208,7 +208,8 @@ class AoclfftzKernelTestBase
      */
     T *prepare_impulse_input()
     {
-        T *input = (T *)calloc(sizeof(T), input_length * DATA_STRIDE);
+        T *input =
+            (T *)ALLOC_UNALIGN_INIT(input_length * DATA_STRIDE, sizeof(T));
         INTP idx = (INTP)(rand() % length) * stride.in_stride;
         // range: [-10.0, 10.0) with 3 decimal precision
         input[idx * DATA_STRIDE] = (T)((rand() % 2000) / 200.0 - 10.0);
@@ -315,10 +316,14 @@ class AoclfftzKernelTestBase
             return;
         T *in_combined =
             (T *)ALLOC_UNALIGN_UNINIT(sizeof(T) * input_length * DATA_STRIDE);
-        T *out1 = (T *)calloc(sizeof(T), output_length * DATA_STRIDE);
-        T *out2 = (T *)calloc(sizeof(T), output_length * DATA_STRIDE);
-        T *out_combined = (T *)calloc(sizeof(T), output_length * DATA_STRIDE);
-        T *out_added = (T *)calloc(sizeof(T), output_length * DATA_STRIDE);
+        T *out1 =
+            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
+        T *out2 =
+            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
+        T *out_combined =
+            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
+        T *out_added =
+            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
 
         // Constant multiplier a1 and a2 will range from [-10.0 to 10.0)
         // with one digit precision
@@ -418,10 +423,14 @@ class AoclfftzKernelTestBase
         T *in = prepare_input(input_type);
         if (in == nullptr)
             return;
-        T *out = (T *)calloc(sizeof(T), output_length * DATA_STRIDE);
-        T *inv_out = (T *)calloc(sizeof(T), input_length * DATA_STRIDE);
-        T *perm_out = (T *)calloc(sizeof(T), output_length * DATA_STRIDE);
-        T *perm_inv_out = (T *)calloc(sizeof(T), input_length * DATA_STRIDE);
+        T *out =
+            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
+        T *inv_out =
+            (T *)ALLOC_UNALIGN_INIT(input_length * DATA_STRIDE, sizeof(T));
+        T *perm_out =
+            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
+        T *perm_inv_out =
+            (T *)ALLOC_UNALIGN_INIT(input_length * DATA_STRIDE, sizeof(T));
 
         // prepare local strides
         aoclfftz_strides_t kernel_stride;
@@ -545,11 +554,14 @@ class AoclfftzKernelTestBase
             return;
         T *in2 =
             (T *)ALLOC_UNALIGN_UNINIT(sizeof(T) * input_length * DATA_STRIDE);
-        T *out1 = (T *)calloc(sizeof(T), output_length * DATA_STRIDE);
-        T *out2 = (T *)calloc(sizeof(T), output_length * DATA_STRIDE);
-        T *out_comp = (T *)calloc(sizeof(T), output_length * DATA_STRIDE);
-        T *temp = (T *)calloc(sizeof(T), std::max(input_length, output_length) *
-                                             DATA_STRIDE);
+        T *out1 =
+            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
+        T *out2 =
+            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
+        T *out_comp =
+            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
+        T *temp = (T *)ALLOC_UNALIGN_INIT(
+            std::max(input_length, output_length) * DATA_STRIDE, sizeof(T));
 
         // Perform circular right shift by `m` times
         // range of m => [1, radix)

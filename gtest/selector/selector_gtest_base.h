@@ -207,14 +207,15 @@ class AoclfftzSelectorTestBase
         FREE_ALLOCATED_MEM(vecs);
 
         dm_t n = p_desc->dims[0].n;
-        dt_t *in = (dt_t *)ALLOC_UNALIGN_UNINIT(2 * n * sizeof(dt_t));
-        dt_t *out = (dt_t *)calloc(2 * n, sizeof(dt_t));
-        for (int i = 0; i < 2 * n; i++)
+        dt_t *in = (dt_t *)ALLOC_UNALIGN_UNINIT(n * DATA_STRIDE * sizeof(dt_t));
+        dt_t *out = (dt_t *)ALLOC_UNALIGN_INIT(n * DATA_STRIDE, sizeof(dt_t));
+        for (int i = 0; i < n * DATA_STRIDE; i++)
             in[i] = (rand() % 1000) / 100.0;
 
         p_desc->in = in;
         p_desc->out = out;
-        // in-place:0-bit, real:1-bit, out-of-order:2-bit, dir:3-bit
+        // in/out-of place:0-bit, in/out-of order:1-bit, dir:2-bit,
+        // real/comp:3-bit..
         p_desc->flags = flags;
 
         p_desc->cntrl_params.opt_level = opt_level;
@@ -240,7 +241,8 @@ class AoclfftzSelectorTestBase
      *
      * @param dims_and_vecs problem descriptor string which contains dims and
      * vecs info
-     * @param flags in-place:0-bit, real:1-bit, out-of-order:2-bit, dir:3-bit
+     * @param flags in/out-of place:0-bit, in/out-of order:1-bit, dir:2-bit,
+     * real/comp:3-bit
      * @param kernel_r pointer to the first FFT kernel
      * @param kernel_m pointer to the second FFT kernel (only used in CT-solver,
      * NULL otherwise)

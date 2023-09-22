@@ -225,7 +225,9 @@
     }
 
 /**
- * @brief Initialize params object from one to another
+ * @brief Initialize dst params object and copy the values from src to dst
+ *        NOTE: This function will not create in and out buffers, it needs to be
+ *              created manually
  *
  */
 #define ALLOC_AND_COPY_PARAMS(dst, src)                                        \
@@ -241,13 +243,6 @@
                sizeof(aoclfftz_dim_t_64_) * src->dim_rank);                    \
         memcpy(dst->vecs, src->vecs,                                           \
                sizeof(aoclfftz_dim_t_64_) * src->vec_rank);                    \
-        INT32 element_size = (src->precision == FLOAT_P) ? 4 : 8;              \
-        dst->in =                                                              \
-            ALLOC_UNALIGN_UNINIT(element_size * dst->dims[0].n *               \
-                                 dst->dims[0].in_stride * T_DATA_STRIDE);      \
-        dst->out =                                                             \
-            calloc(element_size,                                               \
-                   dst->dims[0].n * dst->dims[0].out_stride * T_DATA_STRIDE);  \
     }
 
 /**
@@ -366,7 +361,7 @@
 #define PRINT_CARRAY_FP32(arr, size)                                           \
     {                                                                          \
         FLOAT *arr_f = (FLOAT *)arr;                                           \
-        for (int i = 0; i < size; ++i)                                         \
+        for (INTP i = 0; i < size; ++i)                                        \
         {                                                                      \
             printf("%ld: %12.6f + %12.6fj\n", (INTP)i,                         \
                    (arr_f)[i * T_DATA_STRIDE],                                 \
@@ -382,7 +377,7 @@
 #define PRINT_CARRAY_FP64(arr, size)                                           \
     {                                                                          \
         DOUBLE *arr_d = (DOUBLE *)arr;                                         \
-        for (int i = 0; i < size; ++i)                                         \
+        for (INTP i = 0; i < size; ++i)                                        \
         {                                                                      \
             printf("%ld: %20.14lf + %20.14lfj\n", (INTP)i,                     \
                    (arr_d)[i * T_DATA_STRIDE],                                 \

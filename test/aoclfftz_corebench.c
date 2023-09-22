@@ -572,9 +572,9 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         bench_params->in = ALLOC_UNALIGN_UNINIT(
             element_size * bench_params->dims[0].n *
             bench_params->dims[0].in_stride * T_DATA_STRIDE);
-        bench_params->out = calloc(
-            element_size, bench_params->dims[0].n *
-                              bench_params->dims[0].out_stride * T_DATA_STRIDE);
+        bench_params->out = ALLOC_UNALIGN_INIT(
+            bench_params->dims[0].n * bench_params->dims[0].out_stride *
+                T_DATA_STRIDE, element_size);
     }
     else
     {
@@ -862,7 +862,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
 #endif
     timeVal start_time, end_time;
     UINT64 min_time = INT64_MAX, avg_time = 0, cur_time = 0;
-    double avg_mflops, max_mflops;
+    DOUBLE avg_mflops, max_mflops;
     INTP n = params->dims[0].n;
 
     // prepare random seed value
@@ -906,15 +906,48 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
         }
     }
     avg_time = avg_time / params->num_iterations;
-    max_mflops = (5.0 * n * log2(n)) / min_time;
-    avg_mflops = (5.0 * n * log2(n)) / avg_time;
+    max_mflops = (5.0 * n * log2(n)) / (min_time * 1E-3);
+    avg_mflops = (5.0 * n * log2(n)) / (avg_time * 1E-3);
+
+    // prepare suitable execution time unit
+    DOUBLE time_multiplier = 1.0;
+    CHAR time_unit[4];
+    // units will be decided based on minimum of min_time and avg_time which is
+    // min_time
+    // print time in seconds
+    if (min_time > 1E9)
+    {
+        time_multiplier = 1E-9;
+        strcpy(time_unit, "s");
+    }
+    // print time in milli-seconds
+    else if (min_time > 1E6)
+    {
+        time_multiplier = 1E-6;
+        strcpy(time_unit, "ms");
+    }
+    // print time in micro-seconds
+    else if (min_time > 1E3)
+    {
+        time_multiplier = 1E-3;
+        strcpy(time_unit, "µs");
+    }
+    // print time in nano-seconds
+    else
+    {
+        time_multiplier = 1.0;
+        strcpy(time_unit, "ns");
+    }
+
     printf("\n=====================================\n");
-    printf("  Min Execution time : %9.6lf ms\n", min_time * 1E-6);
-    printf("  Avg Execution time : %9.6lf ms\n", avg_time * 1E-6);
+    printf("  Min Execution time : %6.3lf %s\n", min_time * time_multiplier,
+           time_unit);
+    printf("  Avg Execution time : %6.3lf %s\n", avg_time * time_multiplier,
+           time_unit);
     printf("=====================================\n");
     printf("      Max MFLOPS : %9.6lf\n", max_mflops);
     printf("      Avg MFLOPS : %9.6lf\n", avg_mflops);
-    printf("====================================\n");
+    printf("=====================================\n");
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
     return BENCH_SUCCESS;
 }
@@ -943,8 +976,8 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params)
     }
 
     // create local buffer to store DFT reference output
-    VOID *out_ref =
-        calloc(element_size, n * params->dims[0].out_stride * T_DATA_STRIDE);
+    VOID *out_ref = ALLOC_UNALIGN_INIT(
+        n * params->dims[0].out_stride * T_DATA_STRIDE, element_size);
 
     // initialize the random seed value based on current time
     if (params->use_random_seed)
@@ -1026,7 +1059,7 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params)
     factors = in1 = in2 = out1 = out2 = out_combined = handle = NULL;
 
     // create buffer to store 2 complex constant values
-    factors = calloc(element_size, 4);
+    factors = ALLOC_UNALIGN_INIT(4, element_size);
     // create locals buffer to store inputs and outputs
     in1 = ALLOC_UNALIGN_UNINIT(element_size * input_size * T_DATA_STRIDE);
     in2 = ALLOC_UNALIGN_UNINIT(element_size * input_size * T_DATA_STRIDE);
@@ -1036,9 +1069,10 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params)
         status = SETUP_FAILURE;
         goto exit_linearity_test;
     }
-    out1 = calloc(element_size, output_size * T_DATA_STRIDE);
-    out2 = calloc(element_size, output_size * T_DATA_STRIDE);
-    out_combined = calloc(element_size, output_size * T_DATA_STRIDE);
+    out1 = ALLOC_UNALIGN_INIT(output_size * T_DATA_STRIDE, element_size);
+    out2 = ALLOC_UNALIGN_INIT(output_size * T_DATA_STRIDE, element_size);
+    out_combined =
+        ALLOC_UNALIGN_INIT(output_size * T_DATA_STRIDE, element_size);
     if (out1 == NULL || out2 == NULL || out_combined == NULL)
     {
         printf("run_linearity_test : output buffer creation failed\n");
@@ -1190,6 +1224,14 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params)
     params_reverse->vecs[0].in_stride = params->vecs[0].out_stride;
     params_reverse->vecs[0].out_stride = params->vecs[0].in_stride;
 
+    // create in and out buffers for params_reverse object
+    params_reverse->in =
+        ALLOC_UNALIGN_UNINIT(element_size * params_reverse->dims[0].n *
+                             params_reverse->dims[0].in_stride * T_DATA_STRIDE);
+    params_reverse->out = ALLOC_UNALIGN_INIT(
+        params_reverse->dims[0].n * params_reverse->dims[0].out_stride *
+            T_DATA_STRIDE, element_size);
+
     // setup FFT problem
     handle = setup_problem(params);
     if (handle == NULL)
@@ -1291,7 +1333,6 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params)
     VOID *in1, *in2, *out1, *out2, *handle;
     in1 = in2 = out1 = out2 = handle = NULL;
     // create buffers for inputs and outputs
-
     in1 = ALLOC_UNALIGN_UNINIT(element_size * input_size * T_DATA_STRIDE);
     in2 = ALLOC_UNALIGN_UNINIT(element_size * input_size * T_DATA_STRIDE);
     if (in1 == NULL || in2 == NULL)
@@ -1300,8 +1341,8 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params)
         status = SETUP_FAILURE;
         goto exit_timeshift_test;
     }
-    out1 = calloc(element_size, output_size * T_DATA_STRIDE);
-    out2 = calloc(element_size, output_size * T_DATA_STRIDE);
+    out1 = ALLOC_UNALIGN_INIT(output_size * T_DATA_STRIDE, element_size);
+    out2 = ALLOC_UNALIGN_INIT(output_size * T_DATA_STRIDE, element_size);
     if (out1 == NULL || out2 == NULL)
     {
         printf("run_timeshift_test : output buffer creation failed\n");
@@ -1488,9 +1529,9 @@ INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params)
  *
  * @param argc command-line argument count
  * @param argv command-line argument values as char array
- * @return int
+ * @return INT32
  */
-int main(int argc, char *argv[])
+INT32 main(INT32 argc, CHAR *argv[])
 {
     printf("\nAOCL-FFTZ version: %s\n\n", aoclfftz_version());
 

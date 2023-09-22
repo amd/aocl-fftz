@@ -42,6 +42,7 @@
 #include <stdlib.h>
 
 #define ALLOC_UNALIGN_UNINIT(num_bytes) malloc(num_bytes)
+#define ALLOC_UNALIGN_INIT(num_elements, element_bytes) calloc(num_elements, element_bytes)
 #define FREE_ALLOCATED_MEM(mem_ptr) if (mem_ptr) free(mem_ptr); mem_ptr = NULL
 
 #endif //ALLOCATOR_H
