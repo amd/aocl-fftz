@@ -62,12 +62,12 @@ endif ()
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
 
 option (BUILD_STATIC_LIBS "Build static library (Default build type is shared library)" OFF)
-option (ENABLE_AVX "Compile with AVX instruction set support" OFF)
-option (ENABLE_AVX2 "Compile with AVX2 instruction set support" OFF)
-option (ENABLE_AVX512 "Compile with AVX512 instruction set support" OFF)
-option (ENABLE_MPI "Compile with distributed MPI FFTZ support" OFF)
+#option (ENABLE_AVX "Compile with AVX instruction set support" OFF)
+#option (ENABLE_AVX2 "Compile with AVX2 instruction set support" OFF)
+#option (ENABLE_AVX512 "Compile with AVX512 instruction set support" OFF)
+#option (ENABLE_MPI "Compile with distributed MPI FFTZ support" OFF)
 option (AOCL_TEST_COVERAGE "Enable GTest and AOCL test bench based CTest suite (Disabled by default)" OFF)
-option (BUILD_DOC "Build documentation for aocl-fftz (Disabled by default)" OFF)
+#option (BUILD_DOC "Build documentation for aocl-fftz (Disabled by default)" OFF)
 option (ENABLE_STRICT_WARNINGS "Enable compiler flags to treat all warnings as errors (Enabled by default)" ON)
 
 #list source files to be compiled for the library
