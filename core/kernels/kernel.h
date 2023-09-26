@@ -46,8 +46,9 @@
 
 #include "api/aoclfftz_internal.h"
 
-// un-comment this macro to use optimized C kernel variants
-// #define USE_OPT_KERNEL_VARIANT
+// macro to enable optimized C Radix kernels.
+// Comment this to switch to Basic version of kernels
+#define USE_OPT_KERNEL_VARIANT
 
 // Constants related to radix sizes
 #define RADIX_2  2
