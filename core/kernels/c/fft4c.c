@@ -33,18 +33,11 @@
  *  This file contains the DIT radix-4 FFT implementations using scalar
  *  operations for single-precision and double-precision inputs.
  *
+ *  @author S. Biplab Raut
  *  @author Varun Sanjay
  */
 
 #include "core/kernels/kernel.h"
-#include "core/kernels/kernel_utils.h"
-
-static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 16, 68, 40, 0, 31},
-                                                     {0, 16, 68, 40, 0, 31}};
-ops_cycles_t get_ops_cnt_fft4c(INT32 precision)
-{
-    return ops_cnt[precision - 1];
-}
 
 kfft_ register_kernel_fft4c(INT32 precision)
 {
@@ -54,6 +47,167 @@ kfft_ register_kernel_fft4c(INT32 precision)
         return fft4c_fp64;
     else
         return NULL;
+}
+
+#ifdef USE_OPT_KERNEL_VARIANT
+/* --------------- optimized C kernel variant --------------- */
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 0, 16, 16, 0, 0},
+                                                     {0, 0, 16, 16, 0, 0}};
+ops_cycles_t get_ops_cnt_fft4c(INT32 precision)
+{
+    return ops_cnt[precision - 1];
+}
+
+VOID fft4c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides)
+{
+    DOUBLE *in_r = (DOUBLE *)in_real;
+    DOUBLE *in_i = (DOUBLE *)in_imag;
+    DOUBLE *out_r = (DOUBLE *)out_real;
+    DOUBLE *out_i = (DOUBLE *)out_imag;
+    INTP in_stride = (strides->in_stride << 1);
+    INTP out_stride = (strides->out_stride << 1);
+    INTP v_in_stride = (strides->v_in_stride << 1);
+    INTP v_out_stride = (strides->v_out_stride << 1);
+    INTP cnt;
+
+    for (cnt = 0; cnt < n; cnt++)
+    {
+        DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, tvri, tvir, tvii,
+            tvrr, v13r, v24r, v13i, v24i;
+
+        // Input point 1: x(0)
+        v1r = *in_r;
+        v1i = *in_i;
+
+        // Input point 2: x(1)
+        v2r = in_r[in_stride];
+        v2i = in_i[in_stride];
+
+        // Input point 3: x(2)
+        v3r = in_r[(in_stride << 1)];
+        v3i = in_i[(in_stride << 1)];
+
+        // Input point 4: x(3)
+        v4r = in_r[in_stride * 3];
+        v4i = in_i[in_stride * 3];
+
+        v13r = v1r + v3r;
+        v24r = v2r + v4r;
+        v13i = v1i + v3i;
+        v24i = v2i + v4i;
+
+        // Output point 1: X(0)
+        *out_r = v13r + v24r;
+        *out_i = v13i + v24i;
+
+        // Output point 2: X(1)
+        tvri = v4i - v2i;
+        tvir = v4r - v2r;
+
+        tvrr = v1r - v3r;
+        tvii = v1i - v3i;
+
+        out_r[out_stride] = tvrr - tvri;
+        out_i[out_stride] = tvii + tvir;
+
+        // Output point 4: X(3)
+        out_r[out_stride * 3] = tvrr + tvri;
+        out_i[out_stride * 3] = tvii - tvir;
+
+        // Output point 3: X(2)
+        tvrr = v13r - v24r;
+        tvii = v13i - v24i;
+
+        out_r[(out_stride << 1)] = tvrr;
+        out_i[(out_stride << 1)] = tvii;
+
+        in_r += v_in_stride;
+        in_i += v_in_stride;
+        out_r += v_out_stride;
+        out_i += v_out_stride;
+    }
+}
+
+VOID fft4c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides)
+{
+    FLOAT *in_r = (FLOAT *)in_real;
+    FLOAT *in_i = (FLOAT *)in_imag;
+    FLOAT *out_r = (FLOAT *)out_real;
+    FLOAT *out_i = (FLOAT *)out_imag;
+    INTP in_stride = (strides->in_stride << 1);
+    INTP out_stride = (strides->out_stride << 1);
+    INTP v_in_stride = (strides->v_in_stride << 1);
+    INTP v_out_stride = (strides->v_out_stride << 1);
+    INTP cnt;
+
+    for (cnt = 0; cnt < n; cnt++)
+    {
+        FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, tvri, tvir, tvii,
+            tvrr, v13r, v24r, v13i, v24i;
+
+        // Input point 1: x(0)
+        v1r = *in_r;
+        v1i = *in_i;
+
+        // Input point 2: x(1)
+        v2r = in_r[in_stride];
+        v2i = in_i[in_stride];
+
+        // Input point 3: x(2)
+        v3r = in_r[(in_stride << 1)];
+        v3i = in_i[(in_stride << 1)];
+
+        // Input point 4: x(3)
+        v4r = in_r[in_stride * 3];
+        v4i = in_i[in_stride * 3];
+
+        v13r = v1r + v3r;
+        v24r = v2r + v4r;
+        v13i = v1i + v3i;
+        v24i = v2i + v4i;
+
+        // Output point 1: X(0)
+        *out_r = v13r + v24r;
+        *out_i = v13i + v24i;
+
+        // Output point 2: X(1)
+        tvri = v4i - v2i;
+        tvir = v4r - v2r;
+
+        tvrr = v1r - v3r;
+        tvii = v1i - v3i;
+
+        out_r[out_stride] = tvrr - tvri;
+        out_i[out_stride] = tvii + tvir;
+
+        // Output point 4: X(3)
+        out_r[out_stride * 3] = tvrr + tvri;
+        out_i[out_stride * 3] = tvii - tvir;
+
+        // Output point 3: X(2)
+        tvrr = v13r - v24r;
+        tvii = v13i - v24i;
+
+        out_r[(out_stride << 1)] = tvrr;
+        out_i[(out_stride << 1)] = tvii;
+
+        in_r += v_in_stride;
+        in_i += v_in_stride;
+        out_r += v_out_stride;
+        out_i += v_out_stride;
+    }
+}
+#else
+/* --------------- non-optimized C kernel variant --------------- */
+#include "core/kernels/kernel_utils.h"
+
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 16, 68, 40, 0, 31},
+                                                     {0, 16, 68, 40, 0, 31}};
+ops_cycles_t get_ops_cnt_fft4c(INT32 precision)
+{
+    return ops_cnt[precision - 1];
 }
 
 const DOUBLE CRTM_4[RADIX_4][2] = {
@@ -268,3 +422,4 @@ VOID fft4c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         out_fi += v_out_stride;
     }
 }
+#endif // USE_OPT_KERNEL_VARIANT
