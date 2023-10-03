@@ -172,7 +172,14 @@ set(SRC_FILES
 set (BENCH_PATH test)
 
 #set library dependencies
+if (UNIX)
 set(lib_deps m) #math library
+endif()
+
+#add macro for math constants
+if (WIN32)
+add_compile_definitions(_USE_MATH_DEFINES)
+endif()
 
 #setup CTest for GoogleTest and test bench
 if (AOCL_TEST_COVERAGE)

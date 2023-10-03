@@ -42,11 +42,11 @@
 
 #include <string>
 #include <typeinfo>
+#include "core/kernels/kernel_utils.h"
 extern "C"
 {
-#include "core/kernels/kernel_list.h"
+#include "gtest/aoclfftz_core_wrapper.h"
 }
-#include "core/kernels/kernel_utils.h"
 #include "gtest/gtest_types.h"
 
 #define TOLERANCE_F 1E-3
@@ -55,12 +55,12 @@ extern "C"
 /**
  * @brief Get the kernel object from the kernel table based on the given radix
  *
- * @param kernel_table kernel_fp_list to search the kernel
+ * @param kernel_table wrapper_kernel_fp_list to search the kernel
  * @param radix radix of the FFT kernel
  * @return kffft_ a kernel pointer; returns nullptr if kernel not found
  */
 template <class T>
-kfft_ get_kernel(const kernel_fp_list *kernel_table, const UINT32 radix)
+kfft_ get_kernel(const wrapper_kernel_fp_list *kernel_table, const UINT32 radix)
 {
     while (kernel_table->k_register_kernel != nullptr)
     {
@@ -86,24 +86,24 @@ kfft_ get_kernel(const kernel_fp_list *kernel_table, const UINT32 radix)
  * @brief Get the global kernel table vector based on the kernel type
  *
  * @param kernel_type kernel type (as an unsigned 8-bit integer)
- * @return kernel_fp_list
+ * @return wrapper_kernel_fp_list
  */
-kernel_fp_list *get_kernel_table(UINT8 kernel_type)
+wrapper_kernel_fp_list *get_kernel_table(UINT8 kernel_type)
 {
     switch (kernel_type)
     {
     case aocl_fftz_kernel_type::STANDARD_C:
     case aocl_fftz_kernel_type::PERMUTED_C:
-        return kernels_c;
+        return wrapper_kernels_c;
     case aocl_fftz_kernel_type::STANDARD_AVX128:
     case aocl_fftz_kernel_type::PERMUTED_AVX128:
-        return kernels_avx128;
+        return wrapper_kernels_avx128;
     case aocl_fftz_kernel_type::STANDARD_AVX256:
     case aocl_fftz_kernel_type::PERMUTED_AVX256:
-        return kernels_avx256;
+        return wrapper_kernels_avx256;
     case aocl_fftz_kernel_type::STANDARD_AVX512:
     case aocl_fftz_kernel_type::PERMUTED_AVX512:
-        return kernels_avx512;
+        return wrapper_kernels_avx512;
     default:
         return {};
     }
@@ -158,11 +158,13 @@ void permuted_copy(T *in, T *out, ptrdiff_t n, ptrdiff_t size,
 {
     if (typeid(T) == typeid(FLOAT32))
     {
-        permuted_copy_c_fp32((FLOAT32 *)in, (FLOAT32 *)out, n, size, strides);
+        permuted_copy_c_fp32_wrapper((FLOAT32 *)in, (FLOAT32 *)out, n, size,
+                                     strides);
     }
     else if (typeid(T) == typeid(FLOAT64))
     {
-        permuted_copy_c_fp64((FLOAT64 *)in, (FLOAT64 *)out, n, size, strides);
+        permuted_copy_c_fp64_wrapper((FLOAT64 *)in, (FLOAT64 *)out, n, size,
+                                     strides);
     }
 }
 

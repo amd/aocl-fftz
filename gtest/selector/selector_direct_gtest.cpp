@@ -45,8 +45,8 @@ TEST_F(AoclfftzSelectorTestFloatLP64, TEST_SELECTOR_DIRECT_FLOAT_LP64)
     INT32 opt_level = -1;
     aoclfftz_solution_t *sol =
         run_setup_and_get_solution(dims, flags, opt_level);
-    aoclfftz_solution_t *ref_sol = generate_reference_solution(
-        dims, flags, opt_level, fft2c_fp32, NULL, executor_direct_dft);
+    aoclfftz_solution_t *ref_sol =
+        generate_reference_solution(dims, flags, opt_level, SOLVER_DIRECT);
     COMPARE_SOLUTIONS(sol, ref_sol);
 }
 
@@ -57,8 +57,8 @@ TEST_F(AoclfftzSelectorTestDoubleLP64, TEST_SELECTOR_DIRECT_DOUBLE_LP64)
     INT32 opt_level = -1;
     aoclfftz_solution_t *sol =
         run_setup_and_get_solution(dims, flags, opt_level);
-    aoclfftz_solution_t *ref_sol = generate_reference_solution(
-        dims, flags, opt_level, fft5c_fp64, NULL, executor_direct_dft);
+    aoclfftz_solution_t *ref_sol =
+        generate_reference_solution(dims, flags, opt_level, SOLVER_DIRECT);
     COMPARE_SOLUTIONS(sol, ref_sol);
 }
 
@@ -69,8 +69,8 @@ TEST_F(AoclfftzSelectorTestFloatILP64, TEST_SELECTOR_DIRECT_FLOAT_ILP64)
     INT32 opt_level = -1;
     aoclfftz_solution_t *sol =
         run_setup_and_get_solution(dims, flags, opt_level);
-    aoclfftz_solution_t *ref_sol = generate_reference_solution(
-        dims, flags, opt_level, fft8c_fp32, NULL, executor_direct_dft);
+    aoclfftz_solution_t *ref_sol =
+        generate_reference_solution(dims, flags, opt_level, SOLVER_DIRECT);
     COMPARE_SOLUTIONS(sol, ref_sol);
 }
 
@@ -81,7 +81,7 @@ TEST_F(AoclfftzSelectorTestDoubleILP64, TEST_SELECTOR_DIRECT_DOUBLE_ILP64)
     INT32 opt_level = -1;
     aoclfftz_solution_t *sol =
         run_setup_and_get_solution(dims, flags, opt_level);
-    aoclfftz_solution_t *ref_sol = generate_reference_solution(
-        dims, flags, opt_level, fft13c_fp64, NULL, executor_direct_dft);
+    aoclfftz_solution_t *ref_sol =
+        generate_reference_solution(dims, flags, opt_level, SOLVER_DIRECT);
     COMPARE_SOLUTIONS(sol, ref_sol);
 }

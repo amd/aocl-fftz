@@ -40,6 +40,7 @@
  */
 
 #include <math.h>
+#include <time.h>
 #include "aoclfftz_corebench.h"
 #include "aoclfftz_corebench_utils.h"
 #include "utils/utils.h"
@@ -225,9 +226,6 @@ INT32 get_option(CHAR **argv, INT32 arg_idx)
 INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                            aoclfftz_bench_params_t *bench_params)
 {
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, bench_params->logger_mode,
-                             "Preparing bench params");
-
     INT32 c = -1;
 
     aoclfftz_bench_type_t bench_type = PERFORMANCE;
@@ -997,25 +995,25 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     if (min_time > 1E9)
     {
         time_multiplier = 1E-9;
-        strcpy(time_unit, "s");
+        STRCPY(time_unit, 4, "s");
     }
     // print time in milli-seconds
     else if (min_time > 1E6)
     {
         time_multiplier = 1E-6;
-        strcpy(time_unit, "ms");
+        STRCPY(time_unit, 4, "ms");
     }
     // print time in micro-seconds
     else if (min_time > 1E3)
     {
         time_multiplier = 1E-3;
-        strcpy(time_unit, "µs");
+        STRCPY(time_unit, 4, "µs");
     }
     // print time in nano-seconds
     else
     {
         time_multiplier = 1.0;
-        strcpy(time_unit, "ns");
+        STRCPY(time_unit, 4, "ns");
     }
 
     printf("\n=====================================\n");

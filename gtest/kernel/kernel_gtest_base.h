@@ -120,7 +120,7 @@ class AoclfftzKernelTestBase
             offset = (rand() % 9) + 2;
         }
         length = radix * offset;
-        kernel_fp_list *table = get_kernel_table(kernel_type);
+        wrapper_kernel_fp_list *table = get_kernel_table(kernel_type);
         if (table == nullptr)
         {
             GTEST_NONFATAL_FAILURE_(

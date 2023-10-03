@@ -53,6 +53,14 @@
 
 #define MAX(a, b) ((a > b) ? a : b)
 
+#ifdef WIN32
+#define SSCANF sscanf_s
+#define STRCPY(dst, size, src) strcpy_s(dst, size, src)
+#else
+#define SSCANF sscanf
+#define STRCPY(dst, size, src) strcpy(dst, src)
+#endif
+
 #define PRINT_SUCCESS(str) printf("\033[1;32m" str "\033[1;0m");
 
 #define PRINT_FAILURE(str) printf("\033[1;31m" str "\033[1;0m");
@@ -70,7 +78,7 @@
         INT32 length;                                                          \
         DOUBLE temp;                                                           \
         result = atof(str);                                                    \
-        ret = sscanf(str, "%lf %n", &temp, &length) != 1;                      \
+        ret = SSCANF(str, "%lf %n", &temp, &length) != 1;                      \
         ret |= strlen(str) != length;                                          \
         ret |= (result < min_val);                                             \
         ret |= (result > max_val);                                             \
@@ -256,7 +264,7 @@
         for (INT32 i = 0; i < params->dim_rank; i++)                           \
         {                                                                      \
             AOCLFFTZ_LOG_FORMATTED(                                            \
-                INFO, params->logger_mode, "    dims[%d]   : %ld:%ld:%ld", i,  \
+                INFO, params->logger_mode, "    dims[%d]   : %td:%td:%td", i,  \
                 params->dims[i].n, params->dims[i].in_stride,                  \
                 params->dims[i].out_stride);                                   \
         }                                                                      \
@@ -265,7 +273,7 @@
         for (INT32 i = 0; i < params->dim_rank; i++)                           \
         {                                                                      \
             AOCLFFTZ_LOG_FORMATTED(                                            \
-                INFO, params->logger_mode, "    vecs[%d]   : %ld:%ld:%ld", i,  \
+                INFO, params->logger_mode, "    vecs[%d]   : %td:%td:%td", i,  \
                 params->vecs[i].n, params->vecs[i].in_stride,                  \
                 params->vecs[i].out_stride);                                   \
         }                                                                      \
@@ -363,7 +371,7 @@
         FLOAT *arr_f = (FLOAT *)arr;                                           \
         for (INTP i = 0; i < size; ++i)                                        \
         {                                                                      \
-            printf("%ld: %12.6f + %12.6fj\n", (INTP)i,                         \
+            printf("%td: %12.6f + %12.6fj\n", (INTP)i,                         \
                    (arr_f)[i * T_DATA_STRIDE],                                 \
                    (arr_f)[i * T_DATA_STRIDE + 1]);                            \
         }                                                                      \
@@ -379,7 +387,7 @@
         DOUBLE *arr_d = (DOUBLE *)arr;                                         \
         for (INTP i = 0; i < size; ++i)                                        \
         {                                                                      \
-            printf("%ld: %20.14lf + %20.14lfj\n", (INTP)i,                     \
+            printf("%td: %20.14lf + %20.14lfj\n", (INTP)i,                     \
                    (arr_d)[i * T_DATA_STRIDE],                                 \
                    (arr_d)[i * T_DATA_STRIDE + 1]);                            \
         }                                                                      \
@@ -1040,7 +1048,7 @@ INT32 compare_f(VOID *a, VOID *b, INTP n, INTP stride, DOUBLE tol,
         AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
                                "Tolerance       = %.10f (%8.5e)", tol, tol);
         AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
-                               "Max absolute error at index %ld", max_err_idx);
+                               "Max absolute error at index %td", max_err_idx);
         AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode, "  expected = %.10f + %.10f",
                                b_f[max_err_idx * T_DATA_STRIDE],
                                b_f[max_err_idx * T_DATA_STRIDE + 1]);
@@ -1117,7 +1125,7 @@ INT32 compare_d(VOID *a, VOID *b, INTP n, INTP stride, DOUBLE tol,
         AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
                                "Tolerance       = %.20lf (%8.5le)", tol, tol);
         AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
-                               "Max absolute error at index %ld", max_err_idx);
+                               "Max absolute error at index %td", max_err_idx);
         AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
                                "  expected = %.20lf + %.20lf",
                                b_d[max_err_idx * T_DATA_STRIDE],

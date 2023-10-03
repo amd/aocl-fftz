@@ -43,7 +43,7 @@
 #include "api/aoclfftz.h"
 extern "C"
 {
-#include "core/common/memory_manager.h"
+#include "gtest/aoclfftz_core_wrapper.h"
 }
 #include "gtest/gtest_types.h"
 #include "test/aoclfftz_corebench_utils.h"
@@ -128,8 +128,8 @@ class AoclfftzSelectorTestBase
 
     ~AoclfftzSelectorTestBase()
     {
-        destroy_handle(handle);
-        destroy_solution(ref_solution);
+        destroy_handle_wrapper(handle);
+        destroy_solution_wrapper(ref_solution);
         // destroy problem descriptor
         if (p_desc != NULL)
         {
@@ -243,17 +243,14 @@ class AoclfftzSelectorTestBase
      * vecs info
      * @param flags in/out-of place:0-bit, in/out-of order:1-bit, dir:2-bit,
      * real/comp:3-bit
-     * @param kernel_r pointer to the first FFT kernel
-     * @param kernel_m pointer to the second FFT kernel (only used in CT-solver,
-     * NULL otherwise)
-     * @param exec pointer to the solver's execute function
+     * @param solver_type aoclfftz_solver_type
      * @param opt_level optimization level
      * @return aoclfftz_solution_t*
      */
     aoclfftz_solution_t *
     generate_reference_solution(std::string dims_and_vecs, INT32 flags,
-                                INT32 opt_level, kfft_ kernel_r, kfft_ kernel_m,
-                                dft_solver_ exec)
+                                INT32 opt_level,
+                                aoclfftz_solver_type solver_type)
     {
         INT32 status = PARSER_SUCCESS;
         INT32 dim_rank = 0;
@@ -273,7 +270,7 @@ class AoclfftzSelectorTestBase
             return NULL;
         }
         // creating a solution object to store the reference values
-        ref_solution = alloc_solution(vec_rank, dim_rank);
+        ref_solution = alloc_solution_wrapper(vec_rank, dim_rank);
         if (ref_solution == NULL)
         {
             return NULL;
@@ -316,9 +313,7 @@ class AoclfftzSelectorTestBase
         ref_solution->decomp_scheme->pthr_fft = &pthr_fft;
         ref_solution->decomp_scheme->pthr_fft->num_threads = 1;
         ref_solution->decomp_scheme->pthr_fft->dynamic_load_model = 0;
-        ref_solution->solver->kernel_r = kernel_r;
-        ref_solution->solver->kernel_m = kernel_m;
-        ref_solution->solver->execute_solver = exec;
+        ref_solution->solver->solver_type = solver_type;
         ref_solution->next_sol = NULL;
         if (typeid(dt_t) == typeid(FLOAT))
         {
@@ -352,10 +347,7 @@ class AoclfftzSelectorTestBase
         while (cur_a != NULL && cur_b != NULL && ret)
         {
             // ********** check solver **********
-            ret &= (cur_a->solver->kernel_r == cur_b->solver->kernel_r);
-            ret &= (cur_a->solver->kernel_m == cur_b->solver->kernel_m);
-            ret &= (cur_a->solver->execute_solver ==
-                    cur_b->solver->execute_solver);
+            ret &= (cur_a->solver->solver_type == cur_b->solver->solver_type);
 
             // ********** check strides **********
             ret &= (cur_a->strides->in_stride == cur_b->strides->in_stride);
@@ -377,6 +369,7 @@ class AoclfftzSelectorTestBase
                 ret &= (cur_a->decomp_scheme->dims[i].out_stride ==
                         cur_b->decomp_scheme->dims[i].out_stride);
             }
+
             ret &= (cur_a->decomp_scheme->vec_rank ==
                     cur_b->decomp_scheme->vec_rank);
             for (INT32 i = 0; i < cur_a->decomp_scheme->vec_rank; ++i)
@@ -444,11 +437,9 @@ class AoclfftzSelectorTestBase
             {
             case SOLVER_DIRECT:
                 ret &= (cur_sol->solver->solver_type == SOLVER_DIRECT);
-                ret &= (cur_sol->solver->execute_solver == executor_direct_dft);
                 break;
             case SOLVER_CT:
                 ret &= (cur_sol->solver->solver_type == SOLVER_CT);
-                ret &= (cur_sol->solver->execute_solver == executor_ct_dft);
                 break;
             default:
                 ret = false;
