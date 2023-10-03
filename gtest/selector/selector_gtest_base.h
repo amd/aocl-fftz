@@ -413,6 +413,27 @@ class AoclfftzSelectorTestBase
                 }
                 cur_a = cur_a->next_sol;
             }
+            else if (cur_a->solver->solver_type == SOLVER_BATCHED)
+            {
+                aoclfftz_solution_t *next_sol = cur_a->next_sol;
+                if (next_sol == NULL)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "Failed at level 2 compare [Batched solver]");
+                    return false;
+                }
+                ret &= ((next_sol->solver->solver_type == SOLVER_CT) ||
+                        (next_sol->solver->solver_type == SOLVER_BLUESTEIN));
+                ret &= next_sol->decomp_scheme->vec_rank == 1;
+                ret &= next_sol->decomp_scheme->vecs[0].n == 1;
+                if (ret == false)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "Failed at level 2 compare [Batched solver]");
+                    return false;
+                }
+                cur_a = next_sol;
+            }
             else
             {
                 cur_a = cur_a->next_sol;
@@ -446,6 +467,9 @@ class AoclfftzSelectorTestBase
             {
             case SOLVER_DIRECT:
                 ret &= (cur_sol->solver->solver_type == SOLVER_DIRECT);
+                break;
+            case SOLVER_BATCHED:
+                ret &= (cur_sol->solver->solver_type == SOLVER_BATCHED);
                 break;
             case SOLVER_CT:
                 ret &= (cur_sol->solver->solver_type == SOLVER_CT);
