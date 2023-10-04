@@ -39,7 +39,6 @@
  *  @author Srirammaswamy Srinivasan
  */
 
-#include <getopt.h>
 #include <math.h>
 #include "aoclfftz_corebench.h"
 #include "aoclfftz_corebench_utils.h"
@@ -92,8 +91,7 @@ VOID show_help_menu()
         "                           NOTE: iters will set to 1 if seed is "
         "specified\n"
         "-t, --tol                error tolerance value ranges from 0.0 to 1.0 "
-        "(inclusive) [default: 1E-10 for "
-        "double, 1E-3 for float]\n"
+        "(inclusive) [default: 1E-10 for double, 1E-3 for float]\n"
         "-n, --num-threads        number of CPU threads for multi-threading "
         "FFT [default: 1]\n"
         "--dynamic-load-model     use it to allow the library to determine how "
@@ -114,12 +112,106 @@ VOID show_help_menu()
         "                            2 = info\n"
         "                            3 = debug\n"
         "                            4 = trace\n"
-        "--selector-time          use it to print the time taken for preparing "
-        "the solution (this option takes no value argument)\n"
-        "--measure-stats          use it to measure selector stats (this "
-        "option takes no value argument)\n"
-        "--bit-reproducibility    use it for bit reproducibility mode (this "
-        "option takes no value argument)\n");
+        "--selector-time          '1' to print the time taken for preparing "
+        "the solution, '0' to disable it [default: 0]\n"
+        "--measure-stats          '1' to measure selector stats, '0' to "
+        "disable it [default: 0]\n"
+        "--bit-reproducibility    '1' to use bit reproducibility mode, '0' to "
+        "disable it [default: 0]\n");
+}
+
+INT32 get_option(CHAR **argv, INT32 arg_idx)
+{
+    CHAR *arg = argv[arg_idx];
+    if (arg[0] == '-')
+    {
+        if (strcmp(arg, "--help") == 0 || arg[1] == 'h')
+        {
+            return 'h';
+        }
+        else if (strcmp(arg, "--precision") == 0 || arg[1] == 'p')
+        {
+            return 'p';
+        }
+        else if (strcmp(arg, "--data-model") == 0 || arg[1] == 'm')
+        {
+            return 'm';
+        }
+        else if (strcmp(arg, "--bench-type") == 0 || arg[1] == 'b')
+        {
+            return 'b';
+        }
+        else if (strcmp(arg, "--result-placement") == 0 || arg[1] == 'r')
+        {
+            return 'r';
+        }
+        else if (strcmp(arg, "--order") == 0)
+        {
+            return 300;
+        }
+        else if (strcmp(arg, "--dir") == 0)
+        {
+            return 301;
+        }
+        else if (strcmp(arg, "--fft-type") == 0 || arg[1] == 'f')
+        {
+            return 'f';
+        }
+        else if (strcmp(arg, "--iters") == 0 || arg[1] == 'i')
+        {
+            return 'i';
+        }
+        else if (strcmp(arg, "--warmup-iters") == 0 || arg[1] == 'w')
+        {
+            return 'w';
+        }
+        else if (strcmp(arg, "--seed") == 0 || arg[1] == 's')
+        {
+            return 's';
+        }
+        else if (strcmp(arg, "--tol") == 0 || arg[1] == 't')
+        {
+            return 't';
+        }
+        else if (strcmp(arg, "--num-threads") == 0 || arg[1] == 'n')
+        {
+            return 'n';
+        }
+        else if (strcmp(arg, "--dynamic-load-model") == 0)
+        {
+            return 302;
+        }
+        else if (strcmp(arg, "--opt-level") == 0 || arg[1] == 'o')
+        {
+            return 'o';
+        }
+        else if (strcmp(arg, "--logger-mode") == 0 || arg[1] == 'l')
+        {
+            return 'l';
+        }
+        else if (strcmp(arg, "--selector-time") == 0)
+        {
+            return 303;
+        }
+        else if (strcmp(arg, "--measure-stats") == 0)
+        {
+            return 304;
+        }
+        else if (strcmp(arg, "--bit-reproducibility") == 0)
+        {
+            return 305;
+        }
+        else
+        {
+            // Unsupported option
+            return '?';
+        }
+    }
+    else
+    {
+        // Non option argument
+        return 306;
+    }
 }
 
 /**
@@ -136,29 +228,6 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, bench_params->logger_mode,
                              "Preparing bench params");
 
-    static const struct option bench_options[] = {
-        {"help", no_argument, 0, 'h'},
-        {"precision", required_argument, 0, 'p'},
-        {"data-model", required_argument, 0, 'm'},
-        {"bench-type", required_argument, 0, 'b'},
-        {"fft-type", required_argument, 0, 'f'},
-        {"result-placement", required_argument, 0, 'r'},
-        {"order", required_argument, 0, 300},
-        {"dir", required_argument, 0, 301},
-        {"iters", required_argument, 0, 'i'},
-        {"warmup-iters", required_argument, 0, 'w'},
-        {"seed", required_argument, 0, 's'},
-        {"tol", required_argument, 0, 't'},
-        {"num-threads", required_argument, 0, 'n'},
-        {"dynamic-load-model", no_argument, 0, 302},
-        {"opt-level", required_argument, 0, 'o'},
-        {"logger-mode", required_argument, 0, 'l'},
-        {"selector-time", no_argument, 0, 303},
-        {"measure-stats", no_argument, 0, 304},
-        {"bit-reproducibility", no_argument, 0, 305},
-        {NULL, 0, 0, 0}};
-
-    INT32 option_index = 0;
     INT32 c = -1;
 
     aoclfftz_bench_type_t bench_type = PERFORMANCE;
@@ -193,9 +262,12 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
 
     CHAR *str_buff = (CHAR *)ALLOC_UNALIGN_UNINIT(sizeof(CHAR) * 50);
 
-    while ((c = getopt_long(argc, argv, "p:m:b:f:r:i:w:s:t:n:o:l:h",
-                            bench_options, &option_index)) != -1)
+    INT32 arg_idx = 1;
+    INT32 non_opt_arg_cnt = 0;
+    while (arg_idx < argc)
     {
+        c = get_option(argv, arg_idx);
+        CHAR *optarg = argv[arg_idx + 1];
         switch (c)
         {
         case 'h':
@@ -434,7 +506,10 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                    "running bench with dynamic-load-model disabled\n");
             break;
         case 303:
-            selector_time = 1;
+            if (atoi(optarg) != 0)
+            {
+                selector_time = 1;
+            }
             break;
         case 304:
             // TODO: Modify this after adding support for measure-stats
@@ -444,8 +519,38 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         case 305:
             // TODO: Modify this after adding support for bit-reproducibility
             printf("WARNING: bit-reproducibility option is currently not "
-                   "supported, "
-                   "running bench without bit-reproducibility\n");
+                   "supported, running bench without bit-reproducibility\n");
+            break;
+        case 306:
+            if (non_opt_arg_cnt == 0)
+            {
+                // Parse dimension sizes and vector sizes
+                ret = find_dim_vec_ranks(argv[arg_idx], &dim_rank, &vec_rank);
+                if (ret != PARSER_SUCCESS)
+                {
+                    status = MAX(status, SIZE_PARSING_ERROR);
+                }
+                else
+                {
+                    ret = allocate_and_fill_dims_vecs(
+                        argv[arg_idx], dim_rank, vec_rank, &dims, &vecs, 1);
+                    if (ret != PARSER_SUCCESS)
+                    {
+                        FREE_ALLOCATED_MEM(dims);
+                        FREE_ALLOCATED_MEM(vecs);
+                        status = MAX(status, ret);
+                    }
+                }
+                non_opt_arg_cnt++;
+            }
+            else
+            {
+                // Only one non-option argument should be provided
+                // (which is problem size)
+                status = MAX(status, NON_OPTION_ARGUMENTS_ERROR);
+            }
+            // should not move arg_idx by 2 places if it is a non option arg
+            arg_idx--;
             break;
         case '?':
             status = MAX(status, INVALID_ARGUMENT_ERROR);
@@ -453,41 +558,15 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         default:
             status = MAX(status, INVALID_ARGUMENT_ERROR);
         }
+        arg_idx += 2;
     }
 
     FREE_ALLOCATED_MEM(str_buff);
 
-    // Getting problem size from a non-option argument
-    if (optind < argc)
-    {
-        ret = find_dim_vec_ranks(argv[optind], &dim_rank, &vec_rank);
-        if (ret != PARSER_SUCCESS)
-        {
-            status = MAX(status, SIZE_PARSING_ERROR);
-        }
-        else
-        {
-            ret = allocate_and_fill_dims_vecs(argv[optind], dim_rank, vec_rank,
-                                              &dims, &vecs, 1);
-            if (ret != PARSER_SUCCESS)
-            {
-                FREE_ALLOCATED_MEM(dims);
-                FREE_ALLOCATED_MEM(vecs);
-                status = MAX(status, ret);
-            }
-        }
-        optind++;
-    }
     // Problem size argument must be present
-    else
+    if (non_opt_arg_cnt == 0)
     {
         status = MAX(status, SIZE_REQUIRED_ERROR);
-    }
-
-    // Only one non-option argument should be provided (which is problem size)
-    if (optind < argc)
-    {
-        status = MAX(status, NON_OPTION_ARGUMENTS_ERROR);
     }
 
     else if (dim_rank == 0 || vec_rank == 0 || dims == NULL || vecs == NULL)
@@ -574,7 +653,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             bench_params->dims[0].in_stride * T_DATA_STRIDE);
         bench_params->out = ALLOC_UNALIGN_INIT(
             bench_params->dims[0].n * bench_params->dims[0].out_stride *
-                T_DATA_STRIDE, element_size);
+            T_DATA_STRIDE, element_size);
     }
     else
     {
@@ -1230,7 +1309,7 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params)
                              params_reverse->dims[0].in_stride * T_DATA_STRIDE);
     params_reverse->out = ALLOC_UNALIGN_INIT(
         params_reverse->dims[0].n * params_reverse->dims[0].out_stride *
-            T_DATA_STRIDE, element_size);
+        T_DATA_STRIDE, element_size);
 
     // setup FFT problem
     handle = setup_problem(params);
