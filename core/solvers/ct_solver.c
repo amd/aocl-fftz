@@ -47,113 +47,73 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol,
                       UINT32 radix_r,
                       UINT32 radix_m)
 {
-
+    // TODO : to be fixed for IN-PLACE problems
     //Setup radix-m sub-problem
     COPY_SOLUTION_OBJ(sol_m, sol);
     sol_m->decomp_scheme->dims[0].n = radix_m;
     sol_m->decomp_scheme->dims[0].in_stride =
-        (sol->decomp_scheme->vecs[0].n == 1) ? //First recursion level
-        radix_r * sol->decomp_scheme->dims[0].in_stride :
-        sol->decomp_scheme->vecs[0].in_stride; //Next recursion level
+        radix_r * sol->decomp_scheme->dims[0].in_stride;
     sol_m->decomp_scheme->dims[0].out_stride =
-        (sol->decomp_scheme->vecs[0].n == 1) ? //First recursion level
-        radix_r * sol->decomp_scheme->dims[0].out_stride :
-        sol->decomp_scheme->vecs[0].out_stride; //Next recursion level
+        sol->decomp_scheme->dims[0].out_stride;
     sol_m->decomp_scheme->vecs[0].n = radix_r;
     sol_m->decomp_scheme->vecs[0].in_stride =
-        (sol->decomp_scheme->vecs[0].n == 1) ? //First recursion level
-        radix_m :
-        radix_r * sol->decomp_scheme->vecs[0].in_stride; //Next recursion level;
+        sol->decomp_scheme->dims[0].in_stride;
     sol_m->decomp_scheme->vecs[0].out_stride =
-        (sol->decomp_scheme->vecs[0].n == 1) ? //First recursion level
-        radix_m :
-        radix_r * sol->decomp_scheme->vecs[0].out_stride; //Next recursion level;
+        radix_m * sol->decomp_scheme->dims[0].out_stride;
 
     //Setup radix-r sub-problem
-    COPY_SOLUTION_OBJ(sol_r, sol);
+    COPY_SOLUTION_OBJ_OUT_P(sol_r, sol);
     sol_r->decomp_scheme->dims[0].n = radix_r;
     sol_r->decomp_scheme->dims[0].in_stride =
-        (sol->decomp_scheme->vecs[0].n == 1) ? //First recursion level
-        radix_m * sol->decomp_scheme->dims[0].in_stride :
-        sol->decomp_scheme->vecs[0].in_stride; //Next recursion level
+        radix_m * sol->decomp_scheme->dims[0].out_stride;
     sol_r->decomp_scheme->dims[0].out_stride =
-        (sol->decomp_scheme->vecs[0].n == 1) ? //First recursion level
-        sol->decomp_scheme->dims[0].out_stride ://For in-order output
-        sol->decomp_scheme->vecs[0].out_stride; //Next recursion level
+        radix_m * sol->decomp_scheme->dims[0].out_stride;
     sol_r->decomp_scheme->vecs[0].n = radix_m;
     sol_r->decomp_scheme->vecs[0].in_stride =
-        (sol->decomp_scheme->vecs[0].n == 1) ? //First recursion level
-        sol->decomp_scheme->vecs[0].in_stride :
-        radix_r * sol->decomp_scheme->vecs[0].in_stride; //Next recursion level;
+        sol->decomp_scheme->dims[0].out_stride;
     sol_r->decomp_scheme->vecs[0].out_stride =
-        (sol->decomp_scheme->vecs[0].n == 1) ? //First recursion level
-        sol->decomp_scheme->vecs[0].out_stride :
-        radix_r * sol->decomp_scheme->vecs[0].out_stride; //Next recursion level;
-    //Swap pointers in case of out-of-place problem
-    if (IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
-    {
-        sol_r->decomp_scheme->in_real = sol->decomp_scheme->out_real;
-        sol_r->decomp_scheme->in_imag = sol->decomp_scheme->out_imag;
-        sol_r->decomp_scheme->out_real = sol->decomp_scheme->in_real;
-        sol_r->decomp_scheme->out_imag = sol->decomp_scheme->in_imag;
-    }
+        sol->decomp_scheme->dims[0].out_stride;
 
 	return SOLVER_SUCCESS;
 }
 
 INT32 execute_ct_solver(aoclfftz_solution_t* sol)
 {
-    aoclfftz_generic_solver_t* solver_obj = sol->solver;
-    aoclfftz_strides_t* strides = sol->strides;
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
     INT32 status = SOLVER_SUCCESS;
+    aoclfftz_solution_t *radix_r_sol = sol->next_sol;
+    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol;
 
-    //Call CT solver executor recursively for factors/sub-problems in a
-    //depth-first way
-    if (sol->next_sol != NULL)
+    // update radix-m & radix-r solution data pointers
+    radix_m_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
+    radix_m_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
+    radix_m_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+    radix_m_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+
+    radix_r_sol->decomp_scheme->in_real  = sol->decomp_scheme->out_real;
+    radix_r_sol->decomp_scheme->in_imag  = sol->decomp_scheme->out_imag;
+    radix_r_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+    radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+
+    // execute radix-m sub-problem
+    if(radix_m_sol->solver->execute_solver(radix_m_sol) != SOLVER_SUCCESS)
     {
-        //Depth-first recursive solving of the radix-m DFT sub-problem
-        if (execute_ct_solver(sol->next_sol) != SOLVER_SUCCESS)
-            return SOLVER_FAILURE;
-
-        //Perform inter-stage twiddle factor multiplications
-        if (twiddle_multiplier(sol) != SOLVER_SUCCESS)
-            return SOLVER_FAILURE;
-
-        //Solve radix-r DFT sub-problem
-        if (solver_obj->kernel_r)
-        {
-            strides->in_stride = sol->decomp_scheme->dims[0].in_stride;
-            strides->out_stride = sol->decomp_scheme->dims[0].out_stride;
-            strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
-            strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
-
-            solver_obj->kernel_r(sol->decomp_scheme->in_real,
-                sol->decomp_scheme->in_imag,
-                sol->decomp_scheme->out_real,
-                sol->decomp_scheme->out_imag,
-                sol->decomp_scheme->vecs[0].n,
-                strides);
-        }
+        return SOLVER_FAILURE;
     }
-    //Solve DFT computations for the leaf-level sub-problems
-    else
+
+    if (twiddle_multiplier(radix_r_sol) != SOLVER_SUCCESS)
     {
-        //Solve radix-r DFT sub-problem
-        if (solver_obj->kernel_r)
-        {
-            strides->in_stride = sol->decomp_scheme->dims[0].in_stride;
-            strides->out_stride = sol->decomp_scheme->dims[0].out_stride;
-            strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
-            strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
-
-            solver_obj->kernel_r(sol->decomp_scheme->in_real,
-                sol->decomp_scheme->in_imag,
-                sol->decomp_scheme->out_real,
-                sol->decomp_scheme->out_imag,
-                sol->decomp_scheme->vecs[0].n,
-                strides);
-        }
+        return SOLVER_FAILURE;
     }
+
+    // execute radix-r DFT
+    if(radix_r_sol->solver->execute_solver(radix_r_sol) != SOLVER_SUCCESS)
+    {
+        return SOLVER_FAILURE;
+    }
+
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 
     return status;
 }

@@ -165,6 +165,45 @@ typedef struct
         from_sol_obj->next_sol; \
 }
 
+// maps both in & out pointers to out pointer
+// incase of out-of-place problems, except the first DFT, other DFTs happen
+// in-place ie., in the output buffer.
+#define COPY_SOLUTION_OBJ_OUT_P(to_sol_obj, from_sol_obj) { \
+    COPY_SOLUTION_OBJ(to_sol_obj, from_sol_obj) \
+    UINT32 cnt; \
+    for (cnt = 0; cnt < to_sol_obj->decomp_scheme->dim_rank; cnt++) \
+    { \
+        to_sol_obj->decomp_scheme->dims[cnt].n = \
+            from_sol_obj->decomp_scheme->dims[cnt].n; \
+        to_sol_obj->decomp_scheme->dims[cnt].in_stride = \
+            from_sol_obj->decomp_scheme->dims[cnt].out_stride; \
+        to_sol_obj->decomp_scheme->dims[cnt].out_stride = \
+            from_sol_obj->decomp_scheme->dims[cnt].out_stride; \
+    } \
+    for (cnt = 0; cnt < to_sol_obj->decomp_scheme->vec_rank; cnt++) \
+    { \
+        to_sol_obj->decomp_scheme->vecs[cnt].n = \
+            from_sol_obj->decomp_scheme->vecs[cnt].n; \
+        to_sol_obj->decomp_scheme->vecs[cnt].in_stride = \
+            from_sol_obj->decomp_scheme->vecs[cnt].out_stride; \
+        to_sol_obj->decomp_scheme->vecs[cnt].out_stride = \
+            from_sol_obj->decomp_scheme->vecs[cnt].out_stride; \
+    } \
+    to_sol_obj->decomp_scheme->in_real = \
+        from_sol_obj->decomp_scheme->out_real; \
+    to_sol_obj->decomp_scheme->in_imag = \
+        from_sol_obj->decomp_scheme->out_imag; \
+    to_sol_obj->decomp_scheme->out_real = \
+        from_sol_obj->decomp_scheme->out_real; \
+    to_sol_obj->decomp_scheme->out_imag = \
+        from_sol_obj->decomp_scheme->out_imag; \
+}
+
+#define RESET_COST(sol) {\
+    sol->cost_analysis->ops = 0; \
+    sol->cost_analysis->time = 0; \
+}
+
 //Function declarations
 INT32 register_solvers_kernels(
                             kernel_t [NUM_KERNELS_IN_TABLE],

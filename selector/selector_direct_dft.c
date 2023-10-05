@@ -74,6 +74,8 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel,
 
         if (radix == n)
         {
+            AOCLFFTZ_LOG_FORMATTED(TRACE, logger_mode,
+                                "Evaluating Radix-%td kernel", n);
             cur_sel->solution->solver->kernel_r = kertab[ker_cat].kfft;
             cur_sel->solution->solver->kernel_m = NULL;
 

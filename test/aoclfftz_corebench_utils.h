@@ -94,10 +94,6 @@
         {                                                                      \
             status = UNSUPPORTED_SIZE_ERROR;                                   \
         }                                                                      \
-        if ((dims)[0]->n < 2 || (dims)[0]->n > 16)                             \
-        {                                                                      \
-            status = UNSUPPORTED_SIZE_ERROR;                                   \
-        }                                                                      \
     }
 
 /**

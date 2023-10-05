@@ -61,7 +61,10 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
 {
     aoclfftz_selector_t *cur_sel = NULL;
     aoclfftz_selector_t *cur_sel_m = NULL;
-    aoclfftz_solution_t *next_sol = NULL;
+
+    // holds the original sub-problem. 'sel' would get overwritten while updating cost
+    aoclfftz_solution_t *org_sol = NULL;
+
 #if IN_MEMORY_TWIDDLE_FACTORS==1
     VOID* TW = NULL;
     UINT32 dt_prec = 0;
@@ -90,9 +93,9 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
     cur_sel_m = alloc_selector(vec_rank, dim_rank);
     if (cur_sel == NULL || cur_sel_m == NULL)
         goto exit_ct_dft;
-    
-    next_sol = alloc_solution(vec_rank, dim_rank);
-    if (next_sol == NULL)
+
+    org_sol = alloc_solution(vec_rank, dim_rank);
+    if (org_sol == NULL)
         goto exit_ct_dft;
 
 #if IN_MEMORY_TWIDDLE_FACTORS==1
@@ -100,6 +103,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
     if (TW == NULL)
         goto exit_ct_dft;
 #endif
+    COPY_SOLUTION_OBJ(org_sol, sel->solution);
 
     for (ker_cat = 0; ker_cat < NUM_KERNELS_IN_TABLE; ker_cat++)
     {
@@ -115,7 +119,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
         //choose the other radix m
         radix_m = n / radix_r;
 
-        ret = setup_ct_solver(sel->solution,
+        ret = setup_ct_solver(org_sol,
             cur_sel->solution,
             cur_sel_m->solution,
             radix_r,
@@ -135,20 +139,29 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
         {
             //Call twiddle multiplier
         }
-        
+
         //Call selector for the radix-r sub-problem
         ret = setup_dft_(cur_sel, kertab);
         if (ret != SELECTOR_SUCCESS)
             goto exit_ct_dft;
 
-        //Set the current solution to be CT for the sub-problem r
-        cur_sel->solution->solver->solver_type = SOLVER_CT;
-        if (set_solver_fp(cur_sel->solution->solver) != SOLVER_SUCCESS)
-            return SELECTOR_FAILURE;
-
         if (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
             AOCLFFTZ_FIXED_SELECTOR_MODE)
         {
+            if (!sel->cost_analysis->ops)
+            {
+                sel->cost_analysis->ops = cur_sel->cost_analysis->ops +
+                    cur_sel_m->cost_analysis->ops;
+                sel->cost_analysis->time = cur_sel->cost_analysis->time +
+                    cur_sel_m->cost_analysis->time;
+                sel->solution->next_sol = cur_sel->solution;
+                sel->solution->next_sol->next_sol = cur_sel_m->solution;
+                RESET_COST(cur_sel);
+                RESET_COST(cur_sel_m);
+#if IN_MEMORY_TWIDDLE_FACTORS==1
+                sel->solution->twiddle->TW = TW;
+#endif
+            }
             if ((cur_sel->cost_analysis->ops +
                 cur_sel_m->cost_analysis->ops) <
                 sel->cost_analysis->ops)
@@ -157,9 +170,10 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
                     cur_sel_m->cost_analysis->ops;
                 sel->cost_analysis->time = cur_sel->cost_analysis->time +
                     cur_sel_m->cost_analysis->time;
-                //copy cur_sel to sel and cur_sel_m to next_sol
-                COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
-                COPY_SOLUTION_OBJ(next_sol, cur_sel_m->solution);
+                sel->solution->next_sol = cur_sel->solution;
+                sel->solution->next_sol->next_sol = cur_sel_m->solution;
+                RESET_COST(cur_sel);
+                RESET_COST(cur_sel_m);
 #if IN_MEMORY_TWIDDLE_FACTORS==1
                 sel->solution->twiddle->TW = TW;
 #endif
@@ -172,12 +186,11 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
                 sel->cost_analysis->time)
             {
                 sel->cost_analysis->ops = cur_sel->cost_analysis->ops +
-                cur_sel_m->cost_analysis->ops;
+                    cur_sel_m->cost_analysis->ops;
                 sel->cost_analysis->time = cur_sel->cost_analysis->time +
                     cur_sel_m->cost_analysis->time;
-                //copy cur_sel to sel and cur_sel_m to next_sol
-                COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
-                COPY_SOLUTION_OBJ(next_sol, cur_sel_m->solution);
+                sel->solution->next_sol = cur_sel->solution;
+                sel->solution->next_sol->next_sol = cur_sel_m->solution;
 #if IN_MEMORY_TWIDDLE_FACTORS==1
                 sel->solution->twiddle->TW = TW;
 #endif
@@ -189,9 +202,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
         }
     }
 
-    sel->solution->next_sol = next_sol;
-    destroy_selector(cur_sel);
-    destroy_selector(cur_sel_m);
+    destroy_solution(org_sol);
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 
     return ret;
@@ -199,7 +210,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
 exit_ct_dft:
     destroy_selector(cur_sel);
     destroy_selector(cur_sel_m);
-    destroy_solution(next_sol);
+    destroy_solution(org_sol);
 #if IN_MEMORY_TWIDDLE_FACTORS==1
     FREE_ALLOCATED_MEM(TW);
 #endif
