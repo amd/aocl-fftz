@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file twiddle.h
+ /** @file twiddle.c
  *
  *  @brief Computes and applies Twiddle factor.
  *
@@ -34,11 +34,103 @@
  *  twiddle factors to the values as needed between FFT stages
  *
  *  @author S. Biplab Raut
+ *  @author Prasandh Sankarankutty
  */
 
+#include <math.h>
 #include "core/common/twiddle.h"
 
+// TODO : Add support for In-Place problems
 INT32 twiddle_multiplier(aoclfftz_solution_t* sol)
 {
+    UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+
+    if(precision == DT_FLOAT)
+    {
+        FLOAT *in_real  = (FLOAT *)sol->decomp_scheme->in_real;
+        FLOAT *in_imag  = (FLOAT *)sol->decomp_scheme->in_imag;
+        FLOAT *out_real = (FLOAT *)sol->decomp_scheme->out_real;
+        FLOAT *out_imag = (FLOAT *)sol->decomp_scheme->out_imag;
+
+        INTP sets = sol->decomp_scheme->vecs[0].n;
+        INTP radix = sol->decomp_scheme->dims[0].n;
+        INTP N = sets * radix; // actual problem length
+
+        // out-of-order -> out-of-order multiplication of twiddle
+        // output_buffer = output_buffer * twiddle_val
+        INTP in_stride = sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE;
+        INTP out_stride = sol->decomp_scheme->dims[0].out_stride * DATA_STRIDE;
+        INTP v_in_stride = sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
+        INTP v_out_stride = sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
+
+        for(INTP s = 0; s < sets; s++)
+        {
+            INTP out_idx = 0;
+            INTP in_idx = 0;
+            for(INTP r = 0; r < radix; r++)
+            {
+                FLOAT x = (-2 * M_PI * r * s) / ((FLOAT)(N));
+                FLOAT TW_real = cos(x);
+                FLOAT TW_imag = sin(x);
+                FLOAT real = out_real[out_idx];
+                FLOAT imag = out_imag[out_idx];
+
+                in_real[in_idx] = real * TW_real - imag * TW_imag;
+                in_imag[in_idx] = real * TW_imag + imag * TW_real;
+
+                in_idx += in_stride;
+                out_idx += out_stride;
+            }
+
+            in_real  += v_in_stride;
+            in_imag  += v_in_stride;
+            out_real += v_out_stride;
+            out_imag += v_out_stride;
+        }
+    }
+    else
+    {
+        DOUBLE *in_real  = (DOUBLE *)sol->decomp_scheme->in_real;
+        DOUBLE *in_imag  = (DOUBLE *)sol->decomp_scheme->in_imag;
+        DOUBLE *out_real = (DOUBLE *)sol->decomp_scheme->out_real;
+        DOUBLE *out_imag = (DOUBLE *)sol->decomp_scheme->out_imag;
+
+        INTP sets = sol->decomp_scheme->vecs[0].n;
+        INTP radix = sol->decomp_scheme->dims[0].n;
+        INTP N = sets * radix; // actual problem length
+
+        // out-of-order -> out-of-order multiplication of twiddle
+        // output_buffer = output_buffer * twiddle_val
+        INTP in_stride = sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE;
+        INTP out_stride = sol->decomp_scheme->dims[0].out_stride * DATA_STRIDE;
+        INTP v_in_stride = sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
+        INTP v_out_stride = sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
+
+        for(INTP s = 0; s < sets; s++)
+        {
+            INTP out_idx = 0;
+            INTP in_idx = 0;
+            for(INTP r = 0; r < radix; r++)
+            {
+                DOUBLE x = (-2 * M_PI * r * s) / ((DOUBLE)(N));
+                DOUBLE TW_real = cos(x);
+                DOUBLE TW_imag = sin(x);
+                DOUBLE real = out_real[out_idx];
+                DOUBLE imag = out_imag[out_idx];
+
+                in_real[in_idx] = real * TW_real - imag * TW_imag;
+                in_imag[in_idx] = real * TW_imag + imag * TW_real;
+
+                in_idx += in_stride;
+                out_idx += out_stride;
+            }
+
+            in_real  += v_in_stride;
+            in_imag  += v_in_stride;
+            out_real += v_out_stride;
+            out_imag += v_out_stride;
+        }
+    }
+
     return TW_SUCCESS;
 }
