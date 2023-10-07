@@ -51,7 +51,6 @@ kfft_ register_kernel_fft3c(INT32 precision)
 
 #ifdef USE_OPT_KERNEL_VARIANT
 /* --------------- optimized C kernel variant --------------- */
-// FIXME: This kernel won't pass the FFT property test. Need to fix it.
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 4, 12, 12, 0, 0},
                                                      {0, 4, 12, 12, 0, 0}};
 ops_cycles_t get_ops_cnt_fft3c(INT32 precision)
@@ -77,7 +76,9 @@ VOID fft3c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        FLOAT v1r, v1i, v2r, v2i, v3r, v3i, tv1r, tv1i, tv2r, tv2i, tv3r, tv3i;
+        FLOAT v1r, v1i, v2r, v2i, v3r, v3i, tv1r, tv1i, tv2r, tv2i, tv3r, tv3i,
+              avrr, avri, avir, avii;
+
         // Input point 1: x(0)
         v1r = *in_r;
         v1i = *in_i;
@@ -88,24 +89,29 @@ VOID fft3c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         v3r = in_r[(in_stride << 1)];
         v3i = in_i[(in_stride << 1)];
 
-        tv3r = v2r + v3r;
-        tv3i = v2i - v3i;
-        tv1r = CRTM_3_1 * (tv3r);
-        tv1i = CRTM_3_2 * (tv3i);
-        tv2r = CRTM_3_2 * (v3r - v2r);
-        tv2i = CRTM_3_1 * (v2i + v3i);
+        avrr = v2r + v3r;
+        avri = v3i - v2i;
+        avir = v3r - v2r;
+        avii = v2i + v3i;
+
+        tv1r = CRTM_3_1 * avrr;
+        tv1i = CRTM_3_2 * avri;
+        tv2r = CRTM_3_2 * avir;
+        tv2i = CRTM_3_1 * avii;
 
         // Output point 1: X(0)
-        *out_r = v1r + tv3r;
-        *out_i = v1i + tv3i;
+        *out_r = v1r + avrr;
+        *out_i = v1i + avii;
+
         // Output point 2: X(1)
-        tv3r = v1r + tv1r;
-        tv3i = tv2r - v1i;
-        out_r[out_stride] = tv3r + tv1i;
-        out_i[out_stride] = tv3i + tv2i;
+        tv3r = v1r - tv1r;
+        tv3i = v1i - tv2i;
+        out_r[out_stride] = tv3r - tv1i;
+        out_i[out_stride] = tv3i + tv2r;
+
         // Output point 3: X(2)
-        out_r[(out_stride << 1)] = tv3r - tv1i;
-        out_i[(out_stride << 1)] = tv3i - tv2i;
+        out_r[(out_stride << 1)] = tv3r + tv1i;
+        out_i[(out_stride << 1)] = tv3i - tv2r;
 
         in_r = in_r + v_in_stride;
         in_i = in_i + v_in_stride;
@@ -132,7 +138,9 @@ VOID fft3c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, tv1r, tv1i, tv2r, tv2i, tv3r, tv3i;
+        DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, tv1r, tv1i, tv2r, tv2i, tv3r, tv3i,
+               avrr, avri, avir, avii;
+
         // Input point 1: x(0)
         v1r = *in_r;
         v1i = *in_i;
@@ -143,24 +151,29 @@ VOID fft3c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         v3r = in_r[(in_stride << 1)];
         v3i = in_i[(in_stride << 1)];
 
-        tv3r = v2r + v3r;
-        tv3i = v2i - v3i;
-        tv1r = CRTM_3_1 * (tv3r);
-        tv1i = CRTM_3_2 * (tv3i);
-        tv2r = CRTM_3_2 * (v3r - v2r);
-        tv2i = CRTM_3_1 * (v2i + v3i);
+        avrr = v2r + v3r;
+        avri = v3i - v2i;
+        avir = v3r - v2r;
+        avii = v2i + v3i;
+
+        tv1r = CRTM_3_1 * avrr;
+        tv1i = CRTM_3_2 * avri;
+        tv2r = CRTM_3_2 * avir;
+        tv2i = CRTM_3_1 * avii;
 
         // Output point 1: X(0)
-        *out_r = v1r + tv3r;
-        *out_i = v1i + tv3i;
+        *out_r = v1r + avrr;
+        *out_i = v1i + avii;
+
         // Output point 2: X(1)
-        tv3r = v1r + tv1r;
-        tv3i = tv2r - v1i;
-        out_r[out_stride] = tv3r + tv1i;
-        out_i[out_stride] = tv3i + tv2i;
+        tv3r = v1r - tv1r;
+        tv3i = v1i - tv2i;
+        out_r[out_stride] = tv3r - tv1i;
+        out_i[out_stride] = tv3i + tv2r;
+
         // Output point 3: X(2)
-        out_r[(out_stride << 1)] = tv3r - tv1i;
-        out_i[(out_stride << 1)] = tv3i - tv2i;
+        out_r[(out_stride << 1)] = tv3r + tv1i;
+        out_i[(out_stride << 1)] = tv3i - tv2r;
 
         in_r = in_r + v_in_stride;
         in_i = in_i + v_in_stride;
