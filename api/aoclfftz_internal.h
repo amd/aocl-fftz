@@ -50,8 +50,9 @@
 
 
 #define NUM_PRECISIONS 2 //Float, Double : Can be increased to add FP16 or FP8
-#define DT_FLOAT 1
-#define DT_DOUBLE 2
+// 0, 1 reserved for FP8 & FP16
+#define DT_FLOAT 2
+#define DT_DOUBLE 3
 #define MAX_GUARANTEED_CACHEABLE_SIZE (2097152) //2MB
 
 //Set and Get Flags bits
@@ -59,6 +60,7 @@
 #define IS_OUT_OF_ORDER(flags) (flags & 0x2)
 #define FFT_DIR(flags) (flags & 0x4)
 #define IS_REAL(flags) (flags & 0x8)
+#define SET_PRECISION(flags, val) (flags |= (val << 30))
 #define DT_PRECISION_FLAG(flags) (flags >> 30)
 #define DT_PRECISION_BYTES(dt) \
     dt_bytes = 1;              \
@@ -76,17 +78,7 @@
     {                                 \
         flags |= (1 << 16);           \
     }
-#define SET_PRECISION(flags, val) \
-    if (val == 0)                 \
-    {                             \
-        flags &= (~(1 << 30));    \
-    }                             \
-    else                          \
-    {                             \
-        flags |= (1 << 30);       \
-    }
-#define GET_SELECTOR_MODE(flags) ((flags<<15)>>31)
-#define GET_PRECISION(flags, val) (flags>>30)
+#define GET_SELECTOR_MODE(flags) ((flags << 15) >> 31)
 
 #define NUM_FFT_DIRS 2
 #define FORWARD_FFT_DIR 0
