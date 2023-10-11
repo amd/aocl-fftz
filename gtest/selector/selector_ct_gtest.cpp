@@ -26,25 +26,25 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file selector_batched_gtest.cpp
+/** @file selector_ct_gtest.cpp
  *
- *  @brief File that contains the GTest based batched selector unit tests.
+ *  @brief File that contains the GTest based CT selector unit tests.
  *
- *  This file contains the entry point of the batched selector GTest.
+ *  This file contains the entry point of the CT selector GTest.
  *
- *  @author Prasandh Sankarankutty
  *  @author Srirammaswamy Srinivasan
+ *  @author Murugan Vairavel
  */
 
 #include <gtest/gtest.h>
 #include "gtest/selector/selector_gtest_base.h"
 
 std::string dims_and_vecs[] = {
-    // batched CT problems
-    "2:20:20v20:1:1",
-    "2:800:600v200:2:3",
-    "10:100:200v50:2:2",
-    "5:39:78v39:1:1"
+    // CT problems
+    "18:1:1",
+    "48:2:5",
+    "38:3:1",
+    "57:4:7"
 };
 
 INT32 flags[] = {
@@ -57,28 +57,28 @@ INT32 opt_levels[] = {
     -1 // no optimization at all
 };
 
-TEST_P(AoclfftzSelectorTestFloatLP64, TEST_SELECTOR_BATCHED_FLOAT_LP64)
+TEST_P(AoclfftzSelectorTestFloatLP64, TEST_SELECTOR_CT_FLOAT_LP64)
 {
-    run_selector_test_and_verify_solutions(SOLVER_BATCHED);
+    run_selector_test_and_verify_solutions(SOLVER_CT);
 }
 
-TEST_P(AoclfftzSelectorTestDoubleLP64, TEST_SELECTOR_BATCHED_DOUBLE_LP64)
+TEST_P(AoclfftzSelectorTestDoubleLP64, TEST_SELECTOR_CT_DOUBLE_LP64)
 {
-    run_selector_test_and_verify_solutions(SOLVER_BATCHED);
+    run_selector_test_and_verify_solutions(SOLVER_CT);
 }
 
-TEST_P(AoclfftzSelectorTestFloatILP64, TEST_SELECTOR_BATCHED_FLOAT_ILP64)
+TEST_P(AoclfftzSelectorTestFloatILP64, TEST_SELECTOR_CT_FLOAT_ILP64)
 {
-    run_selector_test_and_verify_solutions(SOLVER_BATCHED);
+    run_selector_test_and_verify_solutions(SOLVER_CT);
 }
 
-TEST_P(AoclfftzSelectorTestDoubleILP64, TEST_SELECTOR_BATCHED_DOUBLE_ILP64)
+TEST_P(AoclfftzSelectorTestDoubleILP64, TEST_SELECTOR_CT_DOUBLE_ILP64)
 {
-    run_selector_test_and_verify_solutions(SOLVER_BATCHED);
+    run_selector_test_and_verify_solutions(SOLVER_CT);
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    SelectorBatchedParamTest, AoclfftzSelectorTestFloatLP64,
+    SelectorCTParamTest, AoclfftzSelectorTestFloatLP64,
     ::testing::Combine(
         ::testing::ValuesIn(dims_and_vecs),
         ::testing::ValuesIn(flags),
@@ -87,7 +87,7 @@ INSTANTIATE_TEST_SUITE_P(
         ));
 
 INSTANTIATE_TEST_SUITE_P(
-    SelectorBatchedParamTest, AoclfftzSelectorTestDoubleLP64,
+    SelectorCTParamTest, AoclfftzSelectorTestDoubleLP64,
     ::testing::Combine(
         ::testing::ValuesIn(dims_and_vecs),
         ::testing::ValuesIn(flags),
@@ -96,7 +96,7 @@ INSTANTIATE_TEST_SUITE_P(
         ));
 
 INSTANTIATE_TEST_SUITE_P(
-    SelectorBatchedParamTest, AoclfftzSelectorTestFloatILP64,
+    SelectorCTParamTest, AoclfftzSelectorTestFloatILP64,
     ::testing::Combine(
         ::testing::ValuesIn(dims_and_vecs),
         ::testing::ValuesIn(flags),
@@ -105,7 +105,7 @@ INSTANTIATE_TEST_SUITE_P(
         ));
 
 INSTANTIATE_TEST_SUITE_P(
-    SelectorBatchedParamTest, AoclfftzSelectorTestDoubleILP64,
+    SelectorCTParamTest, AoclfftzSelectorTestDoubleILP64,
     ::testing::Combine(
         ::testing::ValuesIn(dims_and_vecs),
         ::testing::ValuesIn(flags),

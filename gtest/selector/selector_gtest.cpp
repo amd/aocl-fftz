@@ -44,7 +44,14 @@ aoclfftz_selector_test_params_t selector_params[] = {
     {"15:3:4", 0b0000, -1, {SOLVER_DIRECT}},
     {"7v12:3:2", 0b0000, -1, {SOLVER_DIRECT}},
     {"4:20:30v10:2:3", 0b0000, -1, {SOLVER_DIRECT}},
-    {"10:5:5v5:1:1", 0b0000, -1, {SOLVER_DIRECT}}};
+    {"10:5:5v5:1:1", 0b0000, -1, {SOLVER_DIRECT}},
+    // 1 level CT; factors: 2, 9
+    {"18:1:1", 0b0000, -1, {SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT}},
+    // 2 level CT; factors: 5, 7, 11
+    {"385:1:1", 0b0000, -1, {SOLVER_CT, SOLVER_DIRECT, SOLVER_BATCHED, SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT}},
+    // 1 level CT; factors: 2, 9
+    {"2v18:1:1", 0b0000, -1, {SOLVER_BATCHED, SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT}},
+};
 
 TEST_P(AoclfftzSelectorTestFloatLP64, TEST_SELECTOR_FLOAT_LP64)
 {

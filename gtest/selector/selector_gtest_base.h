@@ -111,6 +111,9 @@ class AoclfftzSelectorTestBase
     /**
      * @brief Entry function to run selector tests and verify the properties of
      * all the solutions in the list
+     *
+     * @param solver_type solver type of the first solution in reference
+     * solution
      */
     void run_selector_test_and_verify_solutions(aoclfftz_solver_type solver)
     {
@@ -433,6 +436,70 @@ class AoclfftzSelectorTestBase
                     return false;
                 }
                 cur_a = next_sol;
+            }
+            else if (cur_a->solver->solver_type == SOLVER_CT)
+            {
+                aoclfftz_solution_t *sol_r = cur_a->next_sol;
+                if (sol_r == NULL)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "Failed at level 2 compare [CT solver]");
+                    return false;
+                }
+                aoclfftz_solution_t *sol_m = cur_a->next_sol->next_sol;
+                if (sol_m == NULL)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "Failed at level 2 compare [CT solver]");
+                    return false;
+                }
+                ret &= sol_r->solver->solver_type == SOLVER_DIRECT;
+                ret &= ((sol_m->solver->solver_type == SOLVER_DIRECT) ||
+                        (sol_m->solver->solver_type == SOLVER_BATCHED));
+
+                // verify the dims and vecs values of solution-r and solution-m
+                ret &= (cur_a->decomp_scheme->dims[0].n ==
+                        sol_r->decomp_scheme->dims[0].n *
+                            sol_m->decomp_scheme->dims[0].n);
+                ret &= (sol_r->decomp_scheme->dims[0].n ==
+                        sol_m->decomp_scheme->vecs[0].n);
+                ret &= (sol_m->decomp_scheme->dims[0].n ==
+                        sol_r->decomp_scheme->vecs[0].n);
+                // verify the strides and vec strides of solution-r
+                ret &= (sol_r->decomp_scheme->dims[0].in_stride ==
+                        sol_m->decomp_scheme->dims[0].n *
+                            cur_a->decomp_scheme->dims[0].out_stride);
+                ret &= (sol_r->decomp_scheme->dims[0].out_stride ==
+                        sol_m->decomp_scheme->dims[0].n *
+                            cur_a->decomp_scheme->dims[0].out_stride);
+                ret &= (sol_r->decomp_scheme->vecs[0].in_stride ==
+                        cur_a->decomp_scheme->dims[0].out_stride);
+                ret &= (sol_r->decomp_scheme->vecs[0].out_stride ==
+                        cur_a->decomp_scheme->dims[0].out_stride);
+                // verify the strides and vec strides of solution-m
+                ret &= (sol_m->decomp_scheme->dims[0].in_stride ==
+                        sol_r->decomp_scheme->dims[0].n *
+                            cur_a->decomp_scheme->dims[0].in_stride);
+                ret &= (sol_m->decomp_scheme->dims[0].out_stride ==
+                        (IS_OUT_OF_PLACE(cur_a->decomp_scheme->flags)
+                             ? cur_a->decomp_scheme->dims[0].out_stride
+                             : sol_r->decomp_scheme->dims[0].n *
+                                   cur_a->decomp_scheme->dims[0].out_stride));
+                ret &= (sol_m->decomp_scheme->vecs[0].in_stride ==
+                        cur_a->decomp_scheme->dims[0].in_stride);
+                ret &= (sol_m->decomp_scheme->vecs[0].out_stride ==
+                        (IS_OUT_OF_PLACE(cur_a->decomp_scheme->flags)
+                             ? sol_m->decomp_scheme->dims[0].n *
+                                   cur_a->decomp_scheme->dims[0].out_stride
+                             : cur_a->decomp_scheme->dims[0].out_stride));
+
+                if (ret == false)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "Failed at level 2 compare [CT solver]");
+                    return false;
+                }
+                cur_a = sol_m;
             }
             else
             {
