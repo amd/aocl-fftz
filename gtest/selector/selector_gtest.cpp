@@ -47,11 +47,31 @@ aoclfftz_selector_test_params_t selector_params[] = {
     {"10:5:5v5:1:1", 0b0000, -1, {SOLVER_DIRECT}},
     // 1 level CT; factors: 2, 9
     {"18:1:1", 0b0000, -1, {SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT}},
-    // 2 level CT; factors: 5, 7, 11
-    {"385:1:1", 0b0000, -1, {SOLVER_CT, SOLVER_DIRECT, SOLVER_BATCHED, SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT}},
     // 1 level CT; factors: 2, 9
-    {"2v18:1:1", 0b0000, -1, {SOLVER_BATCHED, SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT}},
-};
+    {"2v18:1:1", 0b0000, -1,
+     {SOLVER_BATCHED, SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT}},
+    // 2 level CT; factors: 5, 7, 11
+    {"385:1:1", 0b0000, -1,
+     {SOLVER_CT, SOLVER_DIRECT, SOLVER_BATCHED, SOLVER_CT, SOLVER_DIRECT,
+      SOLVER_DIRECT}},
+    // 1 level CT; factors: 2, 9
+    {"2v18:1:1", 0b0000, -1,
+     {SOLVER_BATCHED, SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT}},
+    // bluestein: 19 -> 39 (factors: 3, 13)
+    {"19:1:1", 0b0000, -1,
+     {SOLVER_BLUESTEIN, SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT}},
+    // bluestein: 17 -> 33 (factors: 3, 11)
+    {"5v17:1:1", 0b0000, -1,
+     {SOLVER_BATCHED, SOLVER_BLUESTEIN, SOLVER_CT, SOLVER_DIRECT,
+      SOLVER_DIRECT}},
+    // 1 level CT; factors: 2, 19; bluestein: 19 -> 39 (factors: 3, 13)
+    {"38:2:3", 0b0000, -1,
+     {SOLVER_CT, SOLVER_DIRECT, SOLVER_BATCHED, SOLVER_BLUESTEIN, SOLVER_CT,
+      SOLVER_DIRECT, SOLVER_DIRECT}},
+    // 1 level CT; factors: 3, 17; bluestein: 19 -> 39 (factors: 3, 13)
+    {"3v51:1:2", 0b0000, -1,
+     {SOLVER_BATCHED, SOLVER_CT, SOLVER_DIRECT, SOLVER_BATCHED,
+      SOLVER_BLUESTEIN, SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT}}};
 
 TEST_P(AoclfftzSelectorTestFloatLP64, TEST_SELECTOR_FLOAT_LP64)
 {

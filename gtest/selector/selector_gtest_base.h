@@ -48,6 +48,76 @@ extern "C"
 #include "gtest/gtest_types.h"
 #include "test/aoclfftz_corebench_utils.h"
 
+/****** Utility functions for Bluestein solver ******/
+INTP get_extended_length_ref(INTP n)
+{
+    INTP m = 2 * n - 1;
+    // check all the factors of m is within the supported kernels
+    // i.e. prime numbers in range 2 to 16
+    // if not, adjust the m to a nearest larger number
+    // which satisfies the above condition
+    INTP supported_primes[] = {2, 3, 5, 7, 11, 13};
+    UINT32 prime_count = sizeof(supported_primes) / sizeof(supported_primes[0]);
+    for (INTP next_m = m, quo = 0; quo != 1; next_m++)
+    {
+        quo = m = next_m;
+        for (UINT32 i = 0; i < prime_count; i++)
+        {
+            while (quo % supported_primes[i] == 0)
+                quo /= supported_primes[i];
+            if (quo == 1)
+                break; // solvable m value
+        }
+    }
+    return m;
+}
+
+VOID prepare_bluestein_sequence_ref(VOID *B, INTP m, INTP n, UINT32 precision)
+{
+    /*            Bluestein sequence B of length m
+        <------ (n) -----><-- (m-2n-1) --><----- (n-1) ----->
+        |     values      |     zeros     | reversed values |
+                                                                */
+    if (precision == DT_FLOAT)
+    {
+        FLOAT *B_f = (FLOAT *)B;
+        // fill the sequence values
+        for (INTP i = 0; i < n; i++)
+        {
+            B_f[i * DATA_STRIDE] = cos((M_PI * i * i) / n);
+            B_f[i * DATA_STRIDE + 1] = sin((M_PI * i * i) / n);
+        }
+        // zero padding
+        memset(B_f + n * DATA_STRIDE, 0,
+               (m - n - 1) * DATA_STRIDE * sizeof(FLOAT));
+        // reverse the first n values (from 2 to n)
+        for (INTP i = 1; i < n; i++)
+        {
+            B_f[(m - i) * DATA_STRIDE] = B_f[i * DATA_STRIDE];
+            B_f[(m - i) * DATA_STRIDE + 1] = B_f[i * DATA_STRIDE + 1];
+        }
+    }
+    else
+    {
+        DOUBLE *B_d = (DOUBLE *)B;
+        // fill the sequence values
+        for (INTP i = 0; i < n; i++)
+        {
+            B_d[i * DATA_STRIDE] = cos((M_PI * i * i) / n);
+            B_d[i * DATA_STRIDE + 1] = sin((M_PI * i * i) / n);
+        }
+        // zero padding
+        memset(B_d + n * DATA_STRIDE, 0,
+               (m - n - 1) * DATA_STRIDE * sizeof(DOUBLE));
+        // reverse the first n values (from 2 to n)
+        for (INTP i = 1; i < n; i++)
+        {
+            B_d[(m - i) * DATA_STRIDE] = B_d[i * DATA_STRIDE];
+            B_d[(m - i) * DATA_STRIDE + 1] = B_d[i * DATA_STRIDE + 1];
+        }
+    }
+}
+
 /**
  * @brief Base class for the AOCLFFTZ Selector GTest
  *
@@ -501,6 +571,35 @@ class AoclfftzSelectorTestBase
                 }
                 cur_a = sol_m;
             }
+            else if (cur_a->solver->solver_type == SOLVER_BLUESTEIN)
+            {
+                INTP n = cur_a->decomp_scheme->dims[0].n;
+                if (cur_a->next_sol == NULL)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR,
+                        "Failed at level 2 compare [Bluestein solver]");
+                }
+                UINT32 dt_prec, dt_bytes;
+                dt_prec = DT_PRECISION_FLAG(cur_a->decomp_scheme->flags);
+                DT_PRECISION_BYTES(dt_prec);
+                INTP m = cur_a->next_sol->decomp_scheme->dims[0].n;
+                VOID *B = cur_a->bluestein->B;
+                VOID *B_ref = ALLOC_UNALIGN_UNINIT(m * DATA_STRIDE * dt_bytes);
+                prepare_bluestein_sequence_ref(B_ref, m, n, dt_prec);
+                ret &= get_extended_length_ref(n) == m;
+                ret &= ((B != NULL) &&
+                        (memcmp(B, B_ref, m * DATA_STRIDE * dt_bytes) == 0));
+                FREE_ALLOCATED_MEM(B_ref);
+                if (ret == false)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR,
+                        "Failed at level 2 compare [Bluestein solver]");
+                    return false;
+                }
+                cur_a = cur_a->next_sol;
+            }
             else
             {
                 cur_a = cur_a->next_sol;
@@ -540,6 +639,9 @@ class AoclfftzSelectorTestBase
                 break;
             case SOLVER_CT:
                 ret &= (cur_sol->solver->solver_type == SOLVER_CT);
+                break;
+            case SOLVER_BLUESTEIN:
+                ret &= (cur_sol->solver->solver_type == SOLVER_BLUESTEIN);
                 break;
             default:
                 ret = false;

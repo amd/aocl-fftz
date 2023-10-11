@@ -43,8 +43,10 @@ std::string dims_and_vecs[] = {
     // CT problems
     "18:1:1",
     "48:2:5",
+    "57:4:7",
+    // CT + bluestein problems
     "38:3:1",
-    "57:4:7"
+    "170:3:5"
 };
 
 INT32 flags[] = {
