@@ -45,7 +45,7 @@
 #include "api/aoclfftz.h"
 #include "api/types.h"
 
-/* uncomment this macro to enable DFT reference test in accuracy mode */
+/* enable this to compare against DFT reference in accuracy mode */
 // #define ENABLE_DFT_REFERENCE
 
 typedef enum

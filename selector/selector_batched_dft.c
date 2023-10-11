@@ -44,7 +44,6 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel,
                            kernel_t *kertab)
 {
     aoclfftz_selector_t *cur_sel = NULL;
-    aoclfftz_solution_t *next_sol = NULL;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->
@@ -65,14 +64,10 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel,
     if (cur_sel == NULL)
         goto exit_batched_dft;
 
-    next_sol = alloc_solution(vec_rank, dim_rank);
-    if (next_sol == NULL)
-        goto exit_batched_dft;
-
     //copy solution object from sel to cur_sel
     COPY_SOLUTION_OBJ(cur_sel->solution, sel->solution);
 
-    //Setup batched solver to find the next solution for a single set/unit 
+    //Setup batched solver to find the next solution for a single set/unit
     //of the vector problem
     ret = setup_batched_solver(cur_sel->solution);
     if (ret != SELECTOR_SUCCESS)
@@ -91,23 +86,19 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel,
 
     sel->cost_analysis->ops = batch_size * cur_sel->cost_analysis->ops;
     sel->cost_analysis->time = batch_size * cur_sel->cost_analysis->time;
-    //copy solution object from cur_sel->solution to next_sol
-    COPY_SOLUTION_OBJ(next_sol, cur_sel->solution);
 
     if (stats_mode)
     {
         //capture stats
     }
 
-    sel->solution->next_sol = next_sol;
-    destroy_selector(cur_sel);
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+    sel->solution->next_sol = cur_sel->solution;
 
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
     return SELECTOR_SUCCESS;
 
 exit_batched_dft:
     destroy_selector(cur_sel);
-    destroy_solution(next_sol);
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 
     return ret;

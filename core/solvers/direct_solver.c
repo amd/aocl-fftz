@@ -118,8 +118,9 @@ INT32 execute_direct_solver(aoclfftz_solution_t *sol)
         return SOLVER_FAILURE;
     }
 
-    AOCLFFTZ_LOG_FORMATTED(TRACE, logger_mode, "Executing Radix-%td kernel",
-                           sol->decomp_scheme->dims[0].n);
+    AOCLFFTZ_LOG_FORMATTED(TRACE, logger_mode,
+        "Executing Radix-%td kernel with Offset - %td",
+        sol->decomp_scheme->dims[0].n, sol->decomp_scheme->vecs[0].n);
     // execute the direct kernel
     kernel(sol->decomp_scheme->in_real,
            sol->decomp_scheme->in_imag,

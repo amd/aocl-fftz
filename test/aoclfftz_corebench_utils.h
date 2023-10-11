@@ -98,11 +98,6 @@
         {                                                                      \
             status = UNSUPPORTED_SIZE_ERROR;                                   \
         }                                                                      \
-        if ((vecs)[0]->n != 1 || (vecs)[0]->in_stride > 10 ||                  \
-            (vecs)[0]->out_stride > 10)                                        \
-        {                                                                      \
-            status = UNSUPPORTED_SIZE_ERROR;                                   \
-        }                                                                      \
     }
 
 /**
@@ -394,21 +389,23 @@
         printf("\n");                                                          \
     }
 
-#define PREPARE_LINEAR_TEST_INPUTS(in1, in2, in_combined, factors, precision)  \
+#define PREPARE_LINEAR_TEST_INPUTS(in1, in2, in_combined, size, factors,       \
+                                   precision)                                  \
     {                                                                          \
         if (precision == FLOAT_P)                                              \
         {                                                                      \
-            PREPARE_LINEAR_TEST_INPUTS_IMPL(in1, in2, in_combined, factors,    \
-                                            FLOAT);                            \
+            PREPARE_LINEAR_TEST_INPUTS_IMPL(in1, in2, in_combined, size,       \
+                                            factors, FLOAT);                   \
         }                                                                      \
         else                                                                   \
         {                                                                      \
-            PREPARE_LINEAR_TEST_INPUTS_IMPL(in1, in2, in_combined, factors,    \
-                                            DOUBLE);                           \
+            PREPARE_LINEAR_TEST_INPUTS_IMPL(in1, in2, in_combined, size,       \
+                                            factors, DOUBLE);                  \
         }                                                                      \
     }
 
-#define PREPARE_LINEAR_TEST_INPUTS_IMPL(in1, in2, in_combined, factors, dt_t)  \
+#define PREPARE_LINEAR_TEST_INPUTS_IMPL(in1, in2, in_combined, size, factors,  \
+                                        dt_t)                                  \
     dt_t *in1_t = (dt_t *)in1;                                                 \
     dt_t *in2_t = (dt_t *)in2;                                                 \
     dt_t *in_combined_t = (dt_t *)in_combined;                                 \
@@ -420,28 +417,30 @@
     dt_t temp1[T_DATA_STRIDE] = {0.0, 0.0};                                    \
     dt_t temp2[T_DATA_STRIDE] = {0.0, 0.0};                                    \
     dt_t cmul_temp[T_DATA_STRIDE] = {0.0, 0.0};                                \
-    for (INTP idx = 0; idx < input_size; ++idx)                                \
+    for (INTP idx = 0; idx < size; ++idx)                                      \
     {                                                                          \
         CMUL(factors_t, in1_t + idx * T_DATA_STRIDE, temp1, cmul_temp);        \
         CMUL(factors_t + 2, in2_t + idx * T_DATA_STRIDE, temp2, cmul_temp);    \
         CADD(temp1, temp2, in_combined_t + idx * T_DATA_STRIDE);               \
     }
 
-#define PREPARE_LINEAR_TEST_OUTPUTS(out1, out2, out_added, factors, precision) \
+#define PREPARE_LINEAR_TEST_OUTPUTS(out1, out2, out_added, size, factors,      \
+                                    precision)                                 \
     {                                                                          \
         if (precision == FLOAT_P)                                              \
         {                                                                      \
-            PREPARE_LINEAR_TEST_OUTPUTS_IMPL(out1, out2, out_added, factors,   \
-                                             FLOAT);                           \
+            PREPARE_LINEAR_TEST_OUTPUTS_IMPL(out1, out2, out_added, size,      \
+                                             factors, FLOAT);                  \
         }                                                                      \
         else                                                                   \
         {                                                                      \
-            PREPARE_LINEAR_TEST_OUTPUTS_IMPL(out1, out2, out_added, factors,   \
-                                             DOUBLE);                          \
+            PREPARE_LINEAR_TEST_OUTPUTS_IMPL(out1, out2, out_added, size,      \
+                                             factors, DOUBLE);                 \
         }                                                                      \
     }
 
-#define PREPARE_LINEAR_TEST_OUTPUTS_IMPL(out1, out2, out_added, factors, dt_t) \
+#define PREPARE_LINEAR_TEST_OUTPUTS_IMPL(out1, out2, out_added, size, factors, \
+                                         dt_t)                                 \
     {                                                                          \
         dt_t *out1_t = (dt_t *)out1;                                           \
         dt_t *out2_t = (dt_t *)out2;                                           \
@@ -450,7 +449,7 @@
         dt_t temp1[T_DATA_STRIDE] = {0.0, 0.0};                                \
         dt_t temp2[T_DATA_STRIDE] = {0.0, 0.0};                                \
         dt_t cmul_temp[T_DATA_STRIDE] = {0.0, 0.0};                            \
-        for (INTP idx = 0; idx < output_size; ++idx)                           \
+        for (INTP idx = 0; idx < size; ++idx)                                  \
         {                                                                      \
             CMUL(factors_t, out1_t + idx * T_DATA_STRIDE, temp1, cmul_temp);   \
             CMUL(factors_t + 2, out2_t + idx * T_DATA_STRIDE, temp2,           \
@@ -544,7 +543,7 @@
 
 // Function pointers
 VOID (*prepare_input_data)(VOID *, INTP, INTP, INT32);
-VOID (*dft_ref)(VOID *, VOID *, INTP, INTP, INTP, INT32);
+VOID (*dft_ref)(VOID *, VOID *, INTP, INTP, INTP, INTP, INTP, INTP, INT32);
 INT32 (*compare)(VOID *, VOID *, INTP, INTP, DOUBLE, INT32);
 
 // Function declarations
@@ -557,9 +556,9 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
 VOID prepare_input_data_f(VOID *input, INTP n, INTP stride, INT32 input_type);
 VOID prepare_input_data_d(VOID *input, INTP n, INTP stride, INT32 input_type);
 VOID dft_ref_f(VOID *in, VOID *out, INTP n, INTP in_stride, INTP out_stride,
-               INT32 is_bwd);
+               INTP batch, INTP v_in_stride, INTP v_out_stride, INT32 is_bwd);
 VOID dft_ref_d(VOID *in, VOID *out, INTP n, INTP in_stride, INTP out_stride,
-               INT32 is_bwd);
+               INTP batch, INTP v_in_stride, INTP v_out_stride, INT32 is_bwd);
 INT32 compare_f(VOID *a, VOID *b, INTP n, INTP stride, DOUBLE tol,
                 INT32 logger_mode);
 INT32 compare_d(VOID *a, VOID *b, INTP n, INTP stride, DOUBLE tol,
@@ -662,6 +661,7 @@ INT32 find_dim_vec_ranks(CHAR *arg, INT32 *dim_rank, INT32 *vec_rank)
  * @param default_stride default stride value to be used for dims and vecs
  * @return INT32
  */
+// FIXME : multi-dimension support
 INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
                                   aoclfftz_dim_t_64_ **dims,
                                   aoclfftz_dim_t_64_ **vecs,
@@ -676,6 +676,7 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
     INT32 rank_count = 0;
     INT32 vec_count = 0;
     INT32 def_stride_rank = -1;
+    INT32 def_vec_stride_rank = -1;
     CHAR last_char = '\0';
     INT32 start = 0;
     CHAR val_str[strlen(arg)];
@@ -694,8 +695,6 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
             }
             if (is_stride != 2)
             {
-                dims[rank_count]->in_stride = default_stride;
-                dims[rank_count]->out_stride = default_stride;
                 def_stride_rank = rank_count;
             }
             is_stride = 0;
@@ -704,13 +703,18 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         }
         else if (arg[i] == 'v')
         {
-            if (is_vec_stride != 2)
-            {
-                vecs[rank_count]->in_stride = dims[rank_count]->in_stride;
-                vecs[rank_count]->out_stride = dims[rank_count]->out_stride;
-                dims[rank_count]->in_stride = default_stride;
-                dims[rank_count]->out_stride = default_stride;
-            }
+            // by default the data is stored in dims always
+            // once "v" is encountered, its moved to vecs and then dims is reset
+            // FIXME : this needs to be fixed properly
+            vecs[rank_count]->n = dims[rank_count]->n;
+            vecs[rank_count]->in_stride =
+                (is_stride >= 1) ? dims[rank_count]->in_stride : 0;
+            vecs[rank_count]->out_stride =
+                (is_stride == 2) ? dims[rank_count]->out_stride : 0;
+            dims[rank_count]->in_stride = default_stride;
+            dims[rank_count]->out_stride = default_stride;
+            def_vec_stride_rank = def_stride_rank;
+            def_stride_rank = 0;
             is_vec_stride = 0;
             vec_count++;
             last_char = 'v';
@@ -742,20 +746,19 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
             }
             if (last_char == 'v')
             {
-                if (is_vec_stride == 0)
+                if (is_vec_stride == 0) // no strides encountered till now
                 {
-                    vecs[rank_count]->n = dims[rank_count]->n;
                     dims[rank_count]->n = val;
                 }
                 else if (is_vec_stride == 1)
                 {
-                    vecs[rank_count]->in_stride = dims[rank_count]->in_stride;
                     dims[rank_count]->in_stride = val;
+                    def_stride_rank++;
                 }
                 else if (is_vec_stride == 2)
                 {
-                    vecs[rank_count]->out_stride = dims[rank_count]->out_stride;
                     dims[rank_count]->out_stride = val;
+                    def_stride_rank++;
                 }
             }
             else
@@ -782,10 +785,27 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
             return SIZE_PARSING_ERROR;
         }
     }
+
+    // TODO: align with FFTW's bench behaviour
+    // for now, either no stride or both in/out strides should be provided
+    // only in_stride will not be parsed
     if ((is_stride != 0 && is_stride != 2) ||
         (is_vec_stride != 0 && is_vec_stride != 2))
     {
         return SIZE_PARSING_ERROR;
+    }
+
+    // if both strides are provided, check if vec strides are as expected
+    if(is_stride == 2 && is_vec_stride == 2)
+    {
+        for(INT32 i = 0; i < dim_rank; i++)
+        {
+            if( (vecs[i]->in_stride != (dims[i]->in_stride * dims[i]->n)) ||
+                (vecs[i]->out_stride != (dims[i]->out_stride * dims[i]->n)) )
+            {
+                return SIZE_PARSING_ERROR;
+            }
+        }
     }
 
     // Fill the default stride values for the last dimension if missed
@@ -795,6 +815,16 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         {
             dims[i]->in_stride = default_stride;
             dims[i]->out_stride = default_stride;
+        }
+    }
+
+    if (def_vec_stride_rank < vec_rank * 2 - 1)
+    {
+        for (INT32 i = def_vec_stride_rank + 1; i < vec_rank; ++i)
+        {
+            // default value of vec stride is atleast the size of its corresponding dim
+            vecs[i]->in_stride = dims[i]->n * dims[i]->in_stride;
+            vecs[i]->out_stride = dims[i]->n * dims[i]->out_stride;
         }
     }
 
@@ -839,7 +869,7 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP stride, INT32 input_type)
     else if (input_type == IMPULSE_INPUT)
     {
         INTP idx = (INTP)(rand() % n) * stride;
-        memset(input_f, 0.0, n * stride * T_DATA_STRIDE);
+        memset(input_f, 0, n * stride * T_DATA_STRIDE);
         // range: [-10.0, 10.0) with 3 decimal precision
         input_f[idx * T_DATA_STRIDE] = (FLOAT)((rand() % 2000) / 200.0 - 10.0);
         input_f[idx * T_DATA_STRIDE + 1] =
@@ -892,7 +922,7 @@ VOID prepare_input_data_d(VOID *input, INTP n, INTP stride, INT32 input_type)
     else if (input_type == IMPULSE_INPUT)
     {
         INTP idx = (INTP)(rand() % n) * stride;
-        memset(input_d, 0.0, n * stride * T_DATA_STRIDE);
+        memset(input_d, 0, n * stride * T_DATA_STRIDE);
         // range: [-10.0, 10.0) with 3 decimal precision */
         input_d[idx * T_DATA_STRIDE] = (DOUBLE)((rand() % 2000) / 200.0 - 10.0);
         input_d[idx * T_DATA_STRIDE + 1] =
@@ -932,25 +962,41 @@ VOID prepare_input_data_d(VOID *input, INTP n, INTP stride, INT32 input_type)
  * @return VOID
  */
 VOID dft_ref_f(VOID *in, VOID *out, INTP n, INTP in_stride, INTP out_stride,
-               INT32 is_bwd)
+               INTP batch, INTP v_in_stride, INTP v_out_stride, INT32 is_bwd)
 {
-    FLOAT e[T_DATA_STRIDE], temp[T_DATA_STRIDE], mul_buf[T_DATA_STRIDE];
+    FLOAT e[T_DATA_STRIDE], mul_buf[T_DATA_STRIDE];
     FLOAT two = is_bwd ? 2.0 : -2.0;
     FLOAT *in_f = (FLOAT *)in;
     FLOAT *out_f = (FLOAT *)out;
+    in_stride = in_stride * T_DATA_STRIDE;
+    out_stride = out_stride * T_DATA_STRIDE;
+    v_in_stride = v_in_stride * T_DATA_STRIDE;
+    v_out_stride = v_out_stride * T_DATA_STRIDE;
 
-    for (INTP k = 0; k < n; k++)
+    for (INTP b = 0; b < batch; b++)
     {
-        out_f[k * out_stride * T_DATA_STRIDE] = 0.0;
-        out_f[k * out_stride * T_DATA_STRIDE + 1] = 0.0;
-        for (INTP i = 0; i < n; i++)
+        for (INTP k = 0; k < n; k++)
         {
-            EULER(two * M_PI * i * k / n, e);
-            CMUL(in_f + i * in_stride * T_DATA_STRIDE, e, temp, mul_buf);
-            CADD(out_f + k * out_stride * T_DATA_STRIDE, temp,
-                 out_f + k * out_stride * T_DATA_STRIDE);
+            INTP out_idx = k * out_stride;
+            for (INTP i = 0; i < n; i++)
+            {
+                INTP in_idx = i * in_stride;
+
+                FLOAT x = (two * M_PI * i * k / n);
+                e[0] = cos(x);
+                e[1] = sin(x);
+
+                mul_buf[0] = (in_f[in_idx] * e[0]) - (in_f[in_idx + 1] * e[1]);
+                mul_buf[1] = (in_f[in_idx] * e[1]) + (in_f[in_idx + 1] * e[0]);
+
+                out_f[out_idx]     = out_f[out_idx] + mul_buf[0];
+                out_f[out_idx + 1] = out_f[out_idx + 1] + mul_buf[1];
+            }
         }
+        in_f  += v_in_stride;
+        out_f += v_out_stride;
     }
+
 }
 
 /**
@@ -965,23 +1011,38 @@ VOID dft_ref_f(VOID *in, VOID *out, INTP n, INTP in_stride, INTP out_stride,
  * @return VOID
  */
 VOID dft_ref_d(VOID *in, VOID *out, INTP n, INTP in_stride, INTP out_stride,
-               INT32 is_bwd)
+               INTP batch, INTP v_in_stride, INTP v_out_stride, INT32 is_bwd)
 {
-    DOUBLE e[T_DATA_STRIDE], temp[T_DATA_STRIDE], mul_buf[T_DATA_STRIDE];
+    DOUBLE e[T_DATA_STRIDE], mul_buf[T_DATA_STRIDE];
     DOUBLE two = is_bwd ? 2.0 : -2.0;
     DOUBLE *in_d = (DOUBLE *)in;
     DOUBLE *out_d = (DOUBLE *)out;
-    for (INTP k = 0; k < n; k++)
+    in_stride = in_stride * T_DATA_STRIDE;
+    out_stride = out_stride * T_DATA_STRIDE;
+    v_in_stride = v_in_stride * T_DATA_STRIDE;
+    v_out_stride = v_out_stride * T_DATA_STRIDE;
+
+    for (INTP b = 0; b < batch; b++)
     {
-        out_d[k * out_stride * T_DATA_STRIDE] = 0.0;
-        out_d[k * out_stride * T_DATA_STRIDE + 1] = 0.0;
-        for (INTP i = 0; i < n; i++)
+        for (INTP k = 0; k < n; k++)
         {
-            EULER(two * M_PI * i * k / n, e);
-            CMUL(in_d + i * in_stride * T_DATA_STRIDE, e, temp, mul_buf);
-            CADD(out_d + k * out_stride * T_DATA_STRIDE, temp,
-                 out_d + k * out_stride * T_DATA_STRIDE);
+            INTP out_idx = k * out_stride;
+            for (INTP i = 0; i < n; i++)
+            {
+                INTP in_idx = i * in_stride;
+                DOUBLE x = (two * M_PI * i * k / n);
+                e[0] = cos(x);
+                e[1] = sin(x);
+
+                mul_buf[0] = (in_d[in_idx] * e[0]) - (in_d[in_idx + 1] * e[1]);
+                mul_buf[1] = (in_d[in_idx] * e[1]) + (in_d[in_idx + 1] * e[0]);
+
+                out_d[out_idx]     = out_d[out_idx] + mul_buf[0];
+                out_d[out_idx + 1] = out_d[out_idx + 1] + mul_buf[1];
+            }
         }
+        in_d  += v_in_stride;
+        out_d += v_out_stride;
     }
 }
 
@@ -1006,6 +1067,7 @@ INT32 compare_f(VOID *a, VOID *b, INTP n, INTP stride, DOUBLE tol,
     FLOAT max_abs_err = 0.0;
     FLOAT max_mag = 0.0;
     INTP max_err_idx = -1;
+    INTP first_err_idx = INT64_MAX;
     for (INTP idx = 0; idx < n; idx += stride)
     {
         FLOAT abs_err = fmaxf(
@@ -1019,6 +1081,10 @@ INT32 compare_f(VOID *a, VOID *b, INTP n, INTP stride, DOUBLE tol,
         {
             max_abs_err = abs_err;
             max_err_idx = idx;
+            if (idx < first_err_idx)
+            {
+                first_err_idx = idx;
+            }
         }
         if (mag > max_mag)
         {
@@ -1047,6 +1113,9 @@ INT32 compare_f(VOID *a, VOID *b, INTP n, INTP stride, DOUBLE tol,
                                rel_err);
         AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
                                "Tolerance       = %.10f (%8.5e)", tol, tol);
+        AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
+                               "First absolute error at index %td",
+                               first_err_idx);
         AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
                                "Max absolute error at index %td", max_err_idx);
         AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode, "  expected = %.10f + %.10f",
@@ -1083,6 +1152,8 @@ INT32 compare_d(VOID *a, VOID *b, INTP n, INTP stride, DOUBLE tol,
     DOUBLE max_abs_err = 0.0;
     DOUBLE max_mag = 0.0;
     INTP max_err_idx = -1;
+    INTP first_err_idx = INT64_MAX;
+    DOUBLE first_abs_err = 0.0;
     for (INTP idx = 0; idx < n; idx += stride)
     {
         DOUBLE abs_err = fmax(
@@ -1096,6 +1167,11 @@ INT32 compare_d(VOID *a, VOID *b, INTP n, INTP stride, DOUBLE tol,
         {
             max_abs_err = abs_err;
             max_err_idx = idx;
+            if (idx < first_err_idx && abs_err > tol)
+            {
+                first_err_idx = idx;
+                first_abs_err = abs_err;
+            }
         }
         if (mag > max_mag)
         {
@@ -1124,6 +1200,23 @@ INT32 compare_d(VOID *a, VOID *b, INTP n, INTP stride, DOUBLE tol,
                                rel_err);
         AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
                                "Tolerance       = %.20lf (%8.5le)", tol, tol);
+        if (first_err_idx < INT64_MAX)
+        {
+            AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
+                                   "First absolute error at index %td",
+                                   first_err_idx);
+            AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
+                                   "  expected = %.20lf + %.20lf",
+                                   b_d[first_err_idx * T_DATA_STRIDE],
+                                   b_d[first_err_idx * T_DATA_STRIDE + 1]);
+            AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
+                                   "  got      = %.20lf + %.20lf",
+                                   a_d[first_err_idx * T_DATA_STRIDE],
+                                   a_d[first_err_idx * T_DATA_STRIDE + 1]);
+        }
+        AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
+                               "  max abs error = %.20lf (%8.5le)",
+                               first_abs_err, first_abs_err);
         AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
                                "Max absolute error at index %td", max_err_idx);
         AOCLFFTZ_LOG_FORMATTED(DEBUG, logger_mode,
