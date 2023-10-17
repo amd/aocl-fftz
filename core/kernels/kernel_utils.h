@@ -151,10 +151,11 @@
  */
 #define PRINT_CARRAY_FP32(arr, size)                                           \
     {                                                                          \
+        FLOAT *arr_f = (FLOAT *)arr;                                           \
         for (int i = 0; i < size; ++i)                                         \
         {                                                                      \
-            printf("%td: %12.6f + %12.6fj\n", (INTP)i, (arr)[i * DATA_STRIDE], \
-                   (arr)[i * DATA_STRIDE + 1]);                                \
+            printf("%td: %12.6f + %12.6fj\n", (INTP)i, arr_f[i * DATA_STRIDE], \
+                   arr_f[i * DATA_STRIDE + 1]);                                \
         }                                                                      \
         printf("\n");                                                          \
     }
@@ -165,10 +166,11 @@
  */
 #define PRINT_CARRAY_FP64(arr, size)                                           \
     {                                                                          \
+        DOUBLE *arr_d = (DOUBLE *)arr;                                         \
         for (int i = 0; i < size; ++i)                                         \
         {                                                                      \
             printf("%td: %20.14lf + %20.14lfj\n", (INTP)i,                     \
-                   (arr)[i * DATA_STRIDE], (arr)[i * DATA_STRIDE + 1]);        \
+                   arr_d[i * DATA_STRIDE], arr_d[i * DATA_STRIDE + 1]);        \
         }                                                                      \
         printf("\n");                                                          \
     }

@@ -62,12 +62,13 @@
 #define IS_REAL(flags) (flags & 0x8)
 #define SET_PRECISION(flags, val) (flags |= (val << 30))
 #define DT_PRECISION_FLAG(flags) (flags >> 30)
-#define DT_PRECISION_BYTES(dt) \
-    dt_bytes = 1;              \
-    while (dt > 0)             \
-    {                          \
-        dt_bytes *= 2;         \
-        dt--;                  \
+#define DT_PRECISION_BYTES(dt_prec) \
+    UINT32 _dt = dt_prec;           \
+    dt_bytes = 1;                   \
+    while (_dt > 0)                 \
+    {                               \
+        dt_bytes *= 2;              \
+        _dt--;                      \
     }
 #define SET_SELECTOR_MODE(flags, val) \
     if (val == 0)                     \
@@ -79,6 +80,8 @@
         flags |= (1 << 16);           \
     }
 #define GET_SELECTOR_MODE(flags) ((flags << 15) >> 31)
+//Move the base address of void pointer by adding offset
+#define MOVE_ADDR(base_addr, offset) (VOID *)((CHAR *)base_addr + offset)
 
 #define NUM_FFT_DIRS 2
 #define FORWARD_FFT_DIR 0
@@ -102,6 +105,7 @@ typedef struct aoclfftz_solution aoclfftz_solution_t;
 typedef struct aoclfftz_generic_solver aoclfftz_generic_solver_t;
 typedef struct aoclfftz_strides aoclfftz_strides_t;
 typedef struct aoclfftz_twiddle aoclfftz_twiddle_t;
+typedef struct aoclfftz_bluestein aoclfftz_bluestein_t;
 
 //Computational cost analysis of solution of an executed problem/sub-problem
 typedef struct cost_analysis
@@ -169,6 +173,19 @@ typedef struct aoclfftz_twiddle
     VOID *TW;
 } aoclfftz_twiddle_t;
 
+//Holds bluestein sequence B used by the bluestein solver
+//When FFT is computed for B, it will be stored in B_out and
+//is_B_out_valid will be set to 1.
+//Also holds the internal input and output buffers.
+typedef struct aoclfftz_bluestein
+{
+    VOID *B;
+    VOID *B_out;
+    VOID *in;
+    VOID *out;
+    UINT8 is_B_out_valid;
+} aoclfftz_bluestein_t;
+
 //Solution data structure that is returned as a handle by the setup API and
 //used by the execute API.
 typedef struct aoclfftz_solution
@@ -177,6 +194,7 @@ typedef struct aoclfftz_solution
     aoclfftz_decomp_scheme_t *decomp_scheme;
     aoclfftz_strides_t *strides;
     aoclfftz_twiddle_t *twiddle;
+    aoclfftz_bluestein_t *bluestein;
     aoclfftz_solution_t *next_sol;
 } aoclfftz_solution_t;
 

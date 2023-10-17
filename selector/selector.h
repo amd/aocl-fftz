@@ -161,6 +161,16 @@ typedef struct
         from_sol_obj->strides->v_out_stride; \
     to_sol_obj->twiddle->TW = \
         from_sol_obj->twiddle->TW; \
+    to_sol_obj->bluestein->B = \
+        from_sol_obj->bluestein->B; \
+    to_sol_obj->bluestein->B_out = \
+        from_sol_obj->bluestein->B_out; \
+    to_sol_obj->bluestein->in = \
+        from_sol_obj->bluestein->in; \
+    to_sol_obj->bluestein->out = \
+        from_sol_obj->bluestein->out; \
+    to_sol_obj->bluestein->is_B_out_valid = \
+        from_sol_obj->bluestein->is_B_out_valid; \
     to_sol_obj->next_sol = \
         from_sol_obj->next_sol; \
 }

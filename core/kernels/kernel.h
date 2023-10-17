@@ -197,9 +197,9 @@ VOID fft16c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                  INTP n, aoclfftz_strides_t *strides);
 
 // Permuted copy kernels
-VOID permuted_copy_c_fp32(VOID *in, VOID *out, INTP n, INTP radix,
+VOID permuted_copy_c_fp32(VOID *in, VOID *out, INTP n, INTP size,
                           aoclfftz_strides_t *strides);
-VOID permuted_copy_c_fp64(VOID *in, VOID *out, INTP n, INTP radix,
+VOID permuted_copy_c_fp64(VOID *in, VOID *out, INTP n, INTP size,
                           aoclfftz_strides_t *strides);
 
 #endif // AOCLFFTZ_KERNEL_H

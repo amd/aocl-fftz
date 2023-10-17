@@ -75,20 +75,27 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->solver->kernel_m = NULL;
         sol->solver->destroy_solver = NULL;
         sol->decomp_scheme = alloc_decomp_scheme(vec_rank, dim_rank);
-        sol->strides = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_strides_t));
+        sol->strides = ALLOC_UNALIGN_INIT(1, sizeof(aoclfftz_strides_t));
         sol->twiddle = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_twiddle_t));
+        sol->bluestein = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_bluestein_t));
         sol->next_sol = NULL;
         if (sol->solver == NULL || sol->decomp_scheme == NULL ||
-            sol->strides == NULL || sol->twiddle == NULL)
+            sol->strides == NULL || sol->bluestein == NULL || sol->twiddle == NULL)
         {
             FREE_ALLOCATED_MEM(sol->solver);
             destroy_decomp_scheme(sol->decomp_scheme);
             FREE_ALLOCATED_MEM(sol->strides);
+            destroy_bluestein(sol->bluestein);
             FREE_ALLOCATED_MEM(sol->twiddle);
             FREE_ALLOCATED_MEM(sol);
             return NULL;
         }
         sol->twiddle->TW = NULL;
+        sol->bluestein->B = NULL;
+        sol->bluestein->B_out = NULL;
+        sol->bluestein->in = NULL;
+        sol->bluestein->out = NULL;
+        sol->bluestein->is_B_out_valid = 0;
         return sol;
     }
     else
@@ -122,6 +129,13 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank)
     }
 }
 
+VOID *alloc_bluestein_sequence(INTP n, UINT32 dt_prec)
+{
+    UINT32 dt_bytes;
+    DT_PRECISION_BYTES(dt_prec);
+    return ALLOC_UNALIGN_UNINIT(n * dt_bytes);
+}
+
 VOID *alloc_twiddle_for_solution(UINT32 rad_size, UINT32 dt_prec)
 {
     UINT32 dt_bytes;
@@ -149,6 +163,7 @@ VOID destroy_solution(aoclfftz_solution_t *sol)
         FREE_ALLOCATED_MEM(sol->solver);
         destroy_decomp_scheme(sol->decomp_scheme);
         FREE_ALLOCATED_MEM(sol->strides);
+        destroy_bluestein(sol->bluestein);
         FREE_ALLOCATED_MEM(sol->twiddle->TW);
         FREE_ALLOCATED_MEM(sol->twiddle);
         sol = sol->next_sol;
@@ -166,4 +181,15 @@ VOID destroy_selector(aoclfftz_selector_t *sel)
         FREE_ALLOCATED_MEM(sel);
     }
     return;
+}
+
+VOID destroy_bluestein(aoclfftz_bluestein_t *bluestein)
+{
+    if (bluestein != NULL)
+    {
+        FREE_ALLOCATED_MEM(bluestein->B);
+        FREE_ALLOCATED_MEM(bluestein->B_out);
+        FREE_ALLOCATED_MEM(bluestein->in);
+        FREE_ALLOCATED_MEM(bluestein->out);
+    }
 }

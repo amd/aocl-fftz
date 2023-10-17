@@ -88,13 +88,14 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol,
                       UINT32 radix_r,
                       UINT32 radix_m);
 INT32 setup_batched_solver(aoclfftz_solution_t *sol);
+INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
+                             aoclfftz_solution_t *next_sol,
+                             INTP m);
 #if 0
 INT32 setup_permuted_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost\,
                             kernel_t *);
 INT32 setup_buffered_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                             kernel_t *);
-INT32 setup_bluestein_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
-                             kernel_t *);
 INT32 setup_ndim_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                         kernel_t *);
 #endif
@@ -102,8 +103,10 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 INT32 executor_direct_dft(aoclfftz_solution_t *solution);
 INT32 executor_ct_dft(aoclfftz_solution_t *solution);
 INT32 executor_batched_dft(aoclfftz_solution_t* solution);
+INT32 executor_bluestein_dft(aoclfftz_solution_t* solution);
 INT32 execute_direct_solver(aoclfftz_solution_t* sol);
 INT32 execute_ct_solver(aoclfftz_solution_t* sol);
 INT32 execute_batched_solver(aoclfftz_solution_t* solution);
+INT32 execute_bluestein_solver(aoclfftz_solution_t* solution);
 
 #endif //AOCLFFTZ_SOLVER_H

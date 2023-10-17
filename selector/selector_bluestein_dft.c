@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file selector_bluestein_dft.c
+/** @file selector_bluestein_dft.c
  *
  *  @brief Wrapper that acts on the bluestein solver as guided by the selector.
  *
@@ -34,12 +34,59 @@
  *  setup, factorize and evaluate sub-problems and kernels as applicable.
  *
  *  @author S. Biplab Raut
+ *  @author Srirammaswamy Srinivasan
  */
 
 #include "selector/selector.h"
+#include "core/common/memory_manager.h"
+#include "core/common/bluestein_utils.h"
+#include "utils/utils.h"
 
-INT32 selector_bluestein_dft(aoclfftz_selector_t *sel,
-                             kernel_t *kertab)
+INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
+    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    INTP n = sel->solution->decomp_scheme->dims[0].n;
+    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
+    INT32 ret = SELECTOR_FAILURE;
+
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+
+    // Get the extended length
+    INTP m = get_extended_length(n);
+    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode,
+                           "Problem length %td, extended Bluestein length %td",
+                           n, m);
+
+    // To hold the selector to perform FFT with extended length m
+    aoclfftz_selector_t *next_sel = NULL;
+    next_sel = alloc_selector(vec_rank, dim_rank);
+    if (next_sel == NULL)
+        goto exit_bluestein_dft;
+
+    // Allocate in, out buffers for next sol and
+    // Bluestein sequence B buffers for cur sol
+    ret = setup_bluestein_solver(sel->solution, next_sel->solution, m);
+    if (ret != SELECTOR_SUCCESS)
+        goto exit_bluestein_dft;
+
+    // Initialize Bluestein sequence B
+    ret = prepare_bluestein_sequence(sel->solution, m);
+    if (ret != BLUESTEIN_SUCCESS)
+        goto exit_bluestein_dft;
+
+    // Invoke CT/direct selectors of extended length `m`
+    ret = setup_dft_(next_sel, kertab);
+    if (ret != SELECTOR_SUCCESS)
+        goto exit_bluestein_dft;
+
+    sel->solution->next_sol = next_sel->solution;
+
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
     return SELECTOR_SUCCESS;
+
+exit_bluestein_dft:
+    destroy_selector(next_sel);
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit with failure");
+    return ret;
 }

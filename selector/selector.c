@@ -66,43 +66,6 @@ INT32 register_solvers_kernels(
     return ret;
 }
 
-
-INT32 smallest_prime_divisor(INT32 n)
-{
-    if (n <= 1)
-        return n;
-
-    INT32 divisor = 2;
-
-    for (divisor = 2; (divisor * divisor) <= n; divisor++)
-    {
-        if (n % divisor == 0)
-            return divisor;
-    }
-
-    return n;
-}
-
-INT32 check_prime_solvability_bluestein(
-                            aoclfftz_decomp_scheme_t *decomp_scheme,
-                            INT32 is_FFT_ker_supported)
-{
-    INT32 n = decomp_scheme->dims[0].n;
-    INT32 dim_rank = decomp_scheme->dim_rank;
-    INT32 vec_rank = decomp_scheme->vec_rank;
-    INT32 smallest_prime_factor = 1;
-
-    if (dim_rank != 1 || vec_rank != 0)
-        return 0;
-
-    smallest_prime_factor = smallest_prime_divisor(n);
-    if (smallest_prime_factor == n &&
-        is_FFT_ker_supported != 0)
-        return 1;
-
-    return 0;
-}
-
 INT32 check_FFT_kernel_support(INT32 n)
 {
     INT32 is_supported = 0, i;
@@ -120,6 +83,45 @@ INT32 check_FFT_kernel_support(INT32 n)
     return is_supported;
 }
 
+INT32 check_CT_solvability(INT32 n, kernel_t *kertab)
+{
+    INT32 ker_cat = 0;
+    UINT32 radix = 0;
+    for (ker_cat = 0; ker_cat < NUM_KERNELS_IN_TABLE; ker_cat++)
+    {
+        radix = kertab[ker_cat].radix;
+        if (radix == 0) //End of suitable kernels in the list
+            break;
+        //Check if this radix can factorize the problem
+        if ((n % radix) == 0)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+INT32 check_prime_solvability_bluestein(
+                            aoclfftz_decomp_scheme_t *decomp_scheme,
+                            INT32 is_FFT_ker_supported, kernel_t *kertab)
+{
+    INT32 n = decomp_scheme->dims[0].n;
+    INT32 batch = decomp_scheme->vecs[0].n;
+    INT32 dim_rank = decomp_scheme->dim_rank;
+    INT32 vec_rank = decomp_scheme->vec_rank;
+
+    if (dim_rank != 1 || vec_rank != 1 || batch != 1)
+        return 0;
+
+    // n is solvable by bluestein solver if is not solvable by direct
+    // and CT solvers
+    INT32 is_solvable_by_CT = check_CT_solvability(n, kertab);
+    if (is_FFT_ker_supported == 0 && is_solvable_by_CT == 0)
+        return 1;
+
+    return 0;
+}
+
 //Fixed decision logic and CPI based selector mode execution for the
 //single-precision input problem based on the applicable tables
 //of solvers and kernels
@@ -133,7 +135,7 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
             check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n);
     INT32 is_solvable_by_bluestein =
             check_prime_solvability_bluestein(sel->solution->decomp_scheme,
-                                              is_FFT_ker_supported);
+                                              is_FFT_ker_supported, kertab);
     INT32 level1_cond1 = 0;
     INT32 level1_cond2 = 0;
     INT32 level2_cond = 0;
