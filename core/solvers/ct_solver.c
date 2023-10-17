@@ -47,21 +47,27 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol,
                       UINT32 radix_r,
                       UINT32 radix_m)
 {
-    // TODO : to be fixed for IN-PLACE problems
-    //Setup radix-m sub-problem
+    // Setup radix-m sub-problem
+    // out-of-order -> in-order for out-of-place problems
+    // out-of-order -> out-of-order for inplace problems
     COPY_SOLUTION_OBJ(sol_m, sol);
     sol_m->decomp_scheme->dims[0].n = radix_m;
     sol_m->decomp_scheme->dims[0].in_stride =
         radix_r * sol->decomp_scheme->dims[0].in_stride;
     sol_m->decomp_scheme->dims[0].out_stride =
-        sol->decomp_scheme->dims[0].out_stride;
+        (IS_OUT_OF_PLACE(sol->decomp_scheme->flags)) ?
+        sol->decomp_scheme->dims[0].out_stride :
+        radix_r * sol->decomp_scheme->dims[0].out_stride;
     sol_m->decomp_scheme->vecs[0].n = radix_r;
     sol_m->decomp_scheme->vecs[0].in_stride =
         sol->decomp_scheme->dims[0].in_stride;
     sol_m->decomp_scheme->vecs[0].out_stride =
-        radix_m * sol->decomp_scheme->dims[0].out_stride;
+        (IS_OUT_OF_PLACE(sol->decomp_scheme->flags)) ?
+        radix_m * sol->decomp_scheme->dims[0].out_stride :
+        sol->decomp_scheme->dims[0].out_stride;
 
-    //Setup radix-r sub-problem
+    // Setup radix-r sub-problem
+    // out-of-order -> out-of-order for inplace & out-of-place problems
     COPY_SOLUTION_OBJ_OUT_P(sol_r, sol);
     sol_r->decomp_scheme->dims[0].n = radix_r;
     sol_r->decomp_scheme->dims[0].in_stride =
@@ -102,7 +108,16 @@ INT32 execute_ct_solver(aoclfftz_solution_t* sol)
         return SOLVER_FAILURE;
     }
 
-    if (twiddle_multiplier(radix_r_sol) != SOLVER_SUCCESS)
+    if(IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
+    {
+        status = twiddle_multiplier(radix_r_sol);
+    }
+    else
+    {
+        status = twiddle_multiplier_inplace(radix_r_sol);
+    }
+
+    if(status != SOLVER_SUCCESS)
     {
         return SOLVER_FAILURE;
     }

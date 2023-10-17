@@ -52,5 +52,6 @@ typedef enum
 } twiddle_status;
 
 INT32 twiddle_multiplier(aoclfftz_solution_t* sol);
+INT32 twiddle_multiplier_inplace(aoclfftz_solution_t* sol);
 
 #endif //TWIDDLE_H

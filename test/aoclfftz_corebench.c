@@ -240,6 +240,37 @@ VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
         (((params->vecs[0].n - 1) * (params->vecs[0].out_stride))
         + (params->dims[0].n * params[0].dims[0].out_stride));
 }
+
+/**
+ * @brief checks if input & output strides are the same for of an inplace problem
+ *
+ * @param dims holds dims related stride info
+ * @param vecs holds vecs related stride info
+ * @param dim_rank rank of the dimension
+ * @param vec_rank rank of the vector
+ * @return INT32
+ */
+
+INT32 check_inplace_strides(aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
+                           INTP dim_rank, INTP vec_rank)
+{
+    for(INTP i = 0; i < dim_rank; i++)
+    {
+        if(dims[i].in_stride != dims[i].out_stride)
+        {
+            return SIZE_PARSING_ERROR;
+        }
+    }
+    for(INTP i = 0; i < vec_rank; i++)
+    {
+        if(vecs[i].in_stride != vecs[i].out_stride)
+        {
+            return SIZE_PARSING_ERROR;
+        }
+    }
+
+    return PARSER_SUCCESS;
+}
 /**
  * @brief prepare the bench params from the command line arguments
  *
@@ -355,14 +386,6 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             else
             {
                 printf("ERROR: Unknown result placement\n");
-                status = MAX(status, UNSUPPORTED_OPTION_ERROR);
-            }
-            // TODO: Remove this after adding support for in-place result
-            // placement
-            if (res_placement == IN_PLACE)
-            {
-                printf("ERROR: in-place result placement 'i' is currently "
-                       "not supported\n");
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
             }
             break;
@@ -602,6 +625,16 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         FREE_ALLOCATED_MEM(vecs);
         return status;
     }
+    if(res_placement == IN_PLACE)
+    {
+        status = check_inplace_strides(dims, vecs, dim_rank, vec_rank);
+        if (status != PARSER_SUCCESS)
+        {
+            FREE_ALLOCATED_MEM(dims);
+            FREE_ALLOCATED_MEM(vecs);
+            return status;
+        }
+    }
     if (valid_iters_arg_found == 0)
     {
         if (bench_type == ACCURACY)
@@ -680,7 +713,14 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         in_buffer_size = in_buffer_size * T_DATA_STRIDE;
         out_buffer_size = out_buffer_size * T_DATA_STRIDE;
         bench_params->in  = ALLOC_UNALIGN_UNINIT(in_buffer_size * dt_bytes);
-        bench_params->out = ALLOC_UNALIGN_INIT(out_buffer_size, dt_bytes);
+        if(res_placement == IN_PLACE)
+        {
+            bench_params->out = bench_params->in;
+        }
+        else
+        {
+            bench_params->out = ALLOC_UNALIGN_INIT(out_buffer_size, dt_bytes);
+        }
     }
     else
     {
@@ -944,7 +984,10 @@ VOID destroy_bench_param(aoclfftz_bench_params_t *params)
     if (params != NULL)
     {
         FREE_ALLOCATED_MEM(params->in);
-        FREE_ALLOCATED_MEM(params->out);
+        if(params->res_placement == OUT_OF_PLACE)
+        {
+            FREE_ALLOCATED_MEM(params->out);
+        }
         FREE_ALLOCATED_MEM(params->dims);
         FREE_ALLOCATED_MEM(params->vecs);
         FREE_ALLOCATED_MEM(params);
@@ -1115,10 +1158,10 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params)
         // prepare random input data
         // use in_stride as 1 to fill random data in all points
         prepare_input_data(params->in, input_size, 1, RANDOM_INPUT);
-        status |= aoclfftz_execute(handle);
         // get the DFT reference output
         dft_ref(params->in, out_ref, n, in_stride, out_stride, batches,
                 v_in_stride, v_out_stride, params->dir);
+        status |= aoclfftz_execute(handle);
 
         if (status != BENCH_SUCCESS)
         {
@@ -1344,16 +1387,24 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params)
     {
         params_reverse->dir = FORWARD;
     }
-    params_reverse->dims[0].in_stride = params->dims[0].out_stride;
-    params_reverse->dims[0].out_stride = params->dims[0].in_stride;
-    params_reverse->vecs[0].in_stride = params->vecs[0].out_stride;
-    params_reverse->vecs[0].out_stride = params->vecs[0].in_stride;
-
     // create in and out buffers for params_reverse object
     params_reverse->in =
         ALLOC_UNALIGN_INIT(output_size * T_DATA_STRIDE, dt_bytes);
-    params_reverse->out =
-        ALLOC_UNALIGN_INIT(input_size * T_DATA_STRIDE, dt_bytes);
+
+    if(params->res_placement == IN_PLACE)
+    {
+        params_reverse->out = params_reverse->in;
+    }
+    else
+    {
+        params_reverse->out =
+            ALLOC_UNALIGN_INIT(input_size * T_DATA_STRIDE, dt_bytes);
+
+        params_reverse->dims[0].in_stride = params->dims[0].out_stride;
+        params_reverse->dims[0].out_stride = params->dims[0].in_stride;
+        params_reverse->vecs[0].in_stride = params->vecs[0].out_stride;
+        params_reverse->vecs[0].out_stride = params->vecs[0].in_stride;
+    }
 
     // setup FFT problem
     handle = setup_problem(params);
