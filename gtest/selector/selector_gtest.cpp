@@ -39,41 +39,41 @@
 #include "gtest/selector/selector_gtest_base.h"
 
 aoclfftz_selector_test_params_t selector_params[] = {
+    // flag: 0b0000 => complex, forward, in-order, in-place problem
     {"2:1:1", 0b0000, -1, {SOLVER_DIRECT}},
-    {"15:3:4", 0b0000, -1, {SOLVER_DIRECT}}};
+    {"15:3:4", 0b0000, -1, {SOLVER_DIRECT}},
+    {"7v12:3:2", 0b0000, -1, {SOLVER_DIRECT}},
+    {"4:20:30v10:2:3", 0b0000, -1, {SOLVER_DIRECT}},
+    {"10:5:5v5:1:1", 0b0000, -1, {SOLVER_DIRECT}}};
 
-TEST_P(AoclfftzSelectorTestFloatLP64Parameterized, TEST_SELECTOR_FLOAT_LP64)
+TEST_P(AoclfftzSelectorTestFloatLP64, TEST_SELECTOR_FLOAT_LP64)
 {
-    run_selector_test();
+    run_selector_test_and_compare_solver_list();
 }
 
-TEST_P(AoclfftzSelectorTestDoubleLP64Parameterized, TEST_SELECTOR_DOUBLE_LP64)
+TEST_P(AoclfftzSelectorTestDoubleLP64, TEST_SELECTOR_DOUBLE_LP64)
 {
-    run_selector_test();
+    run_selector_test_and_compare_solver_list();
 }
 
-TEST_P(AoclfftzSelectorTestFloatILP64Parameterized, TEST_SELECTOR_FLOAT_ILP64)
+TEST_P(AoclfftzSelectorTestFloatILP64, TEST_SELECTOR_FLOAT_ILP64)
 {
-    run_selector_test();
+    run_selector_test_and_compare_solver_list();
 }
 
-TEST_P(AoclfftzSelectorTestDoubleILP64Parameterized, TEST_SELECTOR_DOUBLE_ILP64)
+TEST_P(AoclfftzSelectorTestDoubleILP64, TEST_SELECTOR_DOUBLE_ILP64)
 {
-    run_selector_test();
+    run_selector_test_and_compare_solver_list();
 }
 
-INSTANTIATE_TEST_CASE_P(SelectorParamTest,
-                        AoclfftzSelectorTestFloatLP64Parameterized,
-                        ::testing::ValuesIn(selector_params));
+INSTANTIATE_TEST_SUITE_P(SelectorParamTest, AoclfftzSelectorTestFloatLP64,
+                         ::testing::ValuesIn(selector_params));
 
-INSTANTIATE_TEST_CASE_P(SelectorParamTest,
-                        AoclfftzSelectorTestDoubleLP64Parameterized,
-                        ::testing::ValuesIn(selector_params));
+INSTANTIATE_TEST_SUITE_P(SelectorParamTest, AoclfftzSelectorTestDoubleLP64,
+                         ::testing::ValuesIn(selector_params));
 
-INSTANTIATE_TEST_CASE_P(SelectorParamTest,
-                        AoclfftzSelectorTestFloatILP64Parameterized,
-                        ::testing::ValuesIn(selector_params));
+INSTANTIATE_TEST_SUITE_P(SelectorParamTest, AoclfftzSelectorTestFloatILP64,
+                         ::testing::ValuesIn(selector_params));
 
-INSTANTIATE_TEST_CASE_P(SelectorParamTest,
-                        AoclfftzSelectorTestDoubleILP64Parameterized,
-                        ::testing::ValuesIn(selector_params));
+INSTANTIATE_TEST_SUITE_P(SelectorParamTest, AoclfftzSelectorTestDoubleILP64,
+                         ::testing::ValuesIn(selector_params));

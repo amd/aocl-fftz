@@ -796,8 +796,8 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
     {
         for(INT32 i = 0; i < dim_rank; i++)
         {
-            if( (vecs[i]->in_stride != (dims[i]->in_stride * dims[i]->n)) ||
-                (vecs[i]->out_stride != (dims[i]->out_stride * dims[i]->n)) )
+            if( (vecs[i]->in_stride < (dims[i]->in_stride * dims[i]->n)) ||
+                (vecs[i]->out_stride < (dims[i]->out_stride * dims[i]->n)))
             {
                 return SIZE_PARSING_ERROR;
             }

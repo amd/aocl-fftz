@@ -49,48 +49,6 @@ extern "C"
 #include "test/aoclfftz_corebench_utils.h"
 
 /**
- * @brief a macro for Gtest SetUp function to be used in non-parameterized test
- * classes
- *
- */
-#define SETUP_SELECTOR_TEST_CLASS                                              \
-    void SetUp() override                                                      \
-    {                                                                          \
-        random_seed = std::chrono::duration_cast<std::chrono::microseconds>(   \
-                          std::chrono::system_clock::now().time_since_epoch()) \
-                          .count();                                            \
-        srand(random_seed);                                                    \
-    }
-
-/**
- * @brief a macro for Gtest SetUp function and run_selector_test function to be
- * used in parameterized test classes
- *
- */
-#define SETUP_SELECTOR_TEST_WITH_PARAMS_CLASS                                  \
-    void SetUp() override                                                      \
-    {                                                                          \
-        random_seed = std::chrono::duration_cast<std::chrono::microseconds>(   \
-                          std::chrono::system_clock::now().time_since_epoch()) \
-                          .count();                                            \
-        srand(random_seed);                                                    \
-    }                                                                          \
-    void run_selector_test()                                                   \
-    {                                                                          \
-        run_selector_test_with_param(GetParam());                              \
-    }
-
-/**
- * @brief a helper macro function to compare the solution objects
- *
- */
-#define COMPARE_SOLUTIONS(sol, ref_sol)                                        \
-    ASSERT_NE(sol, nullptr) << "Failed at: run_setup_and_get_solution\n";      \
-    ASSERT_NE(ref_sol, nullptr) << "Failed at: generate_reference_solution\n"; \
-    ASSERT_TRUE(compare_solution(sol, ref_sol))                                \
-        << "Failed at: compare_solution";
-
-/**
  * @brief Base class for the AOCLFFTZ Selector GTest
  *
  * @tparam dt_t data-type of input and output (supported: FLOAT and DOUBLE)
@@ -101,6 +59,7 @@ extern "C"
  */
 template <class dt_t, class dm_t, class dim_t, class prob_desc_t>
 class AoclfftzSelectorTestBase
+    : public ::testing::TestWithParam<aoclfftz_selector_test_params_t>
 {
   protected:
     // function pointers for aoclfftz_setup_* and aoclfftz_execute_* APIs
@@ -141,14 +100,45 @@ class AoclfftzSelectorTestBase
         }
     }
 
-    /**
-     * @brief Entry function to run the generic selector test
-     *
-     * @param params selector test params contains dims, flags and solver list
-     */
-    void run_selector_test_with_param(aoclfftz_selector_test_params_t params)
+    void SetUp() override
     {
-        const auto [dims_and_vecs, flags, opt_level, solver_list] = params;
+        random_seed = std::chrono::duration_cast<std::chrono::microseconds>(
+                          std::chrono::system_clock::now().time_since_epoch())
+                          .count();
+        srand(random_seed);
+    }
+
+    /**
+     * @brief Entry function to run selector tests and verify the properties of
+     * all the solutions in the list
+     */
+    void run_selector_test_and_verify_solutions(aoclfftz_solver_type solver)
+    {
+        std::string dims_and_vecs = std::get<0>(GetParam());
+        INT32 flags = std::get<1>(GetParam());
+        INT32 opt_level = std::get<2>(GetParam());
+        std::vector<aoclfftz_solver_type> solver_list = std::get<3>(GetParam());
+        aoclfftz_solution_t *sol =
+            run_setup_and_get_solution(dims_and_vecs, flags, opt_level);
+        generate_default_ref_solution(&ref_solution, dims_and_vecs, flags,
+                                      opt_level, solver);
+        ASSERT_NE(sol, nullptr) << "Failed at: run_setup_and_get_solution\n";
+        ASSERT_NE(ref_solution, nullptr)
+            << "Failed at: generate_reference_solution\n";
+        ASSERT_TRUE(verify_solution(sol, ref_solution))
+            << "Failed at: verify_solution\n";
+    }
+
+    /**
+     * @brief Entry function to run selector tests and compare the solver types
+     * in the soutions list
+     */
+    void run_selector_test_and_compare_solver_list()
+    {
+        std::string dims_and_vecs = std::get<0>(GetParam());
+        INT32 flags = std::get<1>(GetParam());
+        INT32 opt_level = std::get<2>(GetParam());
+        std::vector<aoclfftz_solver_type> solver_list = std::get<3>(GetParam());
         aoclfftz_solution_t *sol =
             run_setup_and_get_solution(dims_and_vecs, flags, opt_level);
         EXPECT_TRUE(compare_solver_list(sol, solver_list));
@@ -175,6 +165,7 @@ class AoclfftzSelectorTestBase
                                     &vec_rank);
         if (status != PARSER_SUCCESS)
         {
+            AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "invalid dims/vecs rank");
             return NULL;
         }
         aoclfftz_dim_t_64_ *dims = NULL;
@@ -183,6 +174,9 @@ class AoclfftzSelectorTestBase
             (CHAR *)dims_and_vecs.c_str(), dim_rank, vec_rank, &dims, &vecs, 1);
         if (status != PARSER_SUCCESS)
         {
+            AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "dims and vecs parsing failed");
+            FREE_ALLOCATED_MEM(dims);
+            FREE_ALLOCATED_MEM(vecs);
             return NULL;
         }
 
@@ -223,6 +217,7 @@ class AoclfftzSelectorTestBase
         {
             p_desc->cntrl_params.opt_off = 1;
         }
+        p_desc->cntrl_params.logger_mode = 0;
 
         p_desc->pthr_fft.num_threads = 1;
         p_desc->pthr_fft.dynamic_load_model = 0;
@@ -230,6 +225,7 @@ class AoclfftzSelectorTestBase
         handle = aoclfftz_setup(p_desc);
         if (handle == NULL)
         {
+            AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "aoclfftz_setup failed");
             return NULL;
         }
         aoclfftz_selector_t *sel = (aoclfftz_selector_t *)handle;
@@ -237,20 +233,20 @@ class AoclfftzSelectorTestBase
     }
 
     /**
-     * @brief Get the solution object based on given params
+     * @brief Generate the solution object based on given params
      *
+     * @param sol aoclfftz_solution_t**
      * @param dims_and_vecs problem descriptor string which contains dims and
      * vecs info
      * @param flags in/out-of place:0-bit, in/out-of order:1-bit, dir:2-bit,
      * real/comp:3-bit
-     * @param solver_type aoclfftz_solver_type
      * @param opt_level optimization level
-     * @return aoclfftz_solution_t*
+     * @param solver_type aoclfftz_solver_type
      */
-    aoclfftz_solution_t *
-    generate_reference_solution(std::string dims_and_vecs, INT32 flags,
-                                INT32 opt_level,
-                                aoclfftz_solver_type solver_type)
+    VOID generate_default_ref_solution(aoclfftz_solution_t **ref_sol,
+                                       std::string dims_and_vecs, INT32 flags,
+                                       INT32 opt_level,
+                                       aoclfftz_solver_type solver_type)
     {
         INT32 status = PARSER_SUCCESS;
         INT32 dim_rank = 0;
@@ -259,7 +255,8 @@ class AoclfftzSelectorTestBase
                                     &vec_rank);
         if (status != PARSER_SUCCESS)
         {
-            return NULL;
+            AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "invalid dims/vecs rank");
+            return;
         }
         aoclfftz_dim_t_64_ *dims;
         aoclfftz_dim_t_64_ *vecs;
@@ -267,149 +264,160 @@ class AoclfftzSelectorTestBase
             (CHAR *)dims_and_vecs.c_str(), dim_rank, vec_rank, &dims, &vecs, 1);
         if (status != PARSER_SUCCESS)
         {
-            return NULL;
+            AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "dims and vecs parsing failed");
+            FREE_ALLOCATED_MEM(dims);
+            FREE_ALLOCATED_MEM(vecs);
+            return;
         }
         // creating a solution object to store the reference values
-        ref_solution = alloc_solution_wrapper(vec_rank, dim_rank);
-        if (ref_solution == NULL)
+        aoclfftz_solution_t *sol;
+        sol = alloc_solution_wrapper(vec_rank, dim_rank);
+        if (sol == NULL)
         {
-            return NULL;
+            AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "sol creation failed");
+            FREE_ALLOCATED_MEM(dims);
+            FREE_ALLOCATED_MEM(vecs);
+            return;
         }
-        ref_solution->decomp_scheme->dim_rank = dim_rank;
-        for (INT32 idx = 0; idx < ref_solution->decomp_scheme->dim_rank; ++idx)
+        sol->decomp_scheme->dim_rank = dim_rank;
+        for (INT32 idx = 0; idx < sol->decomp_scheme->dim_rank; ++idx)
         {
-            ref_solution->decomp_scheme->dims[idx].n = dims[idx].n;
-            ref_solution->decomp_scheme->dims[idx].in_stride =
-                dims[idx].in_stride;
-            ref_solution->decomp_scheme->dims[idx].out_stride =
-                dims[idx].out_stride;
+            sol->decomp_scheme->dims[idx].n = dims[idx].n;
+            sol->decomp_scheme->dims[idx].in_stride = dims[idx].in_stride;
+            sol->decomp_scheme->dims[idx].out_stride = dims[idx].out_stride;
         }
-        ref_solution->decomp_scheme->vec_rank = vec_rank;
-        for (INT32 idx = 0; idx < ref_solution->decomp_scheme->vec_rank; ++idx)
+        sol->decomp_scheme->vec_rank = vec_rank;
+        for (INT32 idx = 0; idx < sol->decomp_scheme->vec_rank; ++idx)
         {
-            ref_solution->decomp_scheme->vecs[idx].n = vecs[idx].n;
-            ref_solution->decomp_scheme->vecs[idx].in_stride =
-                vecs[idx].in_stride;
-            ref_solution->decomp_scheme->vecs[idx].out_stride =
-                vecs[idx].out_stride;
+            sol->decomp_scheme->vecs[idx].n = vecs[idx].n;
+            sol->decomp_scheme->vecs[idx].in_stride = vecs[idx].in_stride;
+            sol->decomp_scheme->vecs[idx].out_stride = vecs[idx].out_stride;
         }
         FREE_ALLOCATED_MEM(dims);
         FREE_ALLOCATED_MEM(vecs);
-        ref_solution->strides->in_stride =
-            ref_solution->decomp_scheme->dims[0].in_stride;
-        ref_solution->strides->out_stride =
-            ref_solution->decomp_scheme->dims[0].out_stride;
-        ref_solution->strides->v_in_stride =
-            ref_solution->decomp_scheme->vecs[0].in_stride;
-        ref_solution->strides->v_out_stride =
-            ref_solution->decomp_scheme->vecs[0].out_stride;
-        ref_solution->decomp_scheme->flags = flags;
-        ref_solution->decomp_scheme->cntrl_params = &cntrl_params;
-        ref_solution->decomp_scheme->cntrl_params->opt_level = opt_level;
-        ref_solution->decomp_scheme->cntrl_params->opt_off =
-            opt_level == -1 ? 1 : 0;
-        ref_solution->decomp_scheme->cntrl_params->logger_mode = 0;
-        ref_solution->decomp_scheme->cntrl_params->measure_stats = 0;
-        ref_solution->decomp_scheme->pthr_fft = &pthr_fft;
-        ref_solution->decomp_scheme->pthr_fft->num_threads = 1;
-        ref_solution->decomp_scheme->pthr_fft->dynamic_load_model = 0;
-        ref_solution->solver->solver_type = solver_type;
-        ref_solution->next_sol = NULL;
+        sol->decomp_scheme->flags = flags;
+        sol->decomp_scheme->cntrl_params = &cntrl_params;
+        sol->decomp_scheme->cntrl_params->opt_level = opt_level;
+        sol->decomp_scheme->cntrl_params->opt_off = opt_level == -1 ? 1 : 0;
+        sol->decomp_scheme->cntrl_params->logger_mode = 0;
+        sol->decomp_scheme->cntrl_params->measure_stats = 0;
+        sol->decomp_scheme->pthr_fft = &pthr_fft;
+        sol->decomp_scheme->pthr_fft->num_threads = 1;
+        sol->decomp_scheme->pthr_fft->dynamic_load_model = 0;
+        sol->solver->solver_type = solver_type;
+        sol->next_sol = NULL;
         if (typeid(dt_t) == typeid(FLOAT))
         {
-            SET_PRECISION(ref_solution->decomp_scheme->flags, DT_FLOAT);
+            SET_PRECISION(sol->decomp_scheme->flags, DT_FLOAT);
         }
         else if (typeid(dt_t) == typeid(DOUBLE))
         {
-            SET_PRECISION(ref_solution->decomp_scheme->flags, DT_DOUBLE);
+            SET_PRECISION(sol->decomp_scheme->flags, DT_DOUBLE);
         }
-
-        return ref_solution;
+        *ref_sol = sol;
     }
 
     /**
-     * @brief compare the two solution object `a` and `b`
+     * @brief compare the first solutions of two solution lists `a` and `b`
+     * and verify the properties of solvers for all the each child solutions
+     * in `a` belonging to the decomposed sub-problems
      *
      * @param sol_a first solution object
      * @param sol_b second solution object
      * @return bool
      */
-    bool compare_solution(aoclfftz_solution_t *sol_a,
-                          aoclfftz_solution_t *sol_b)
+    bool verify_solution(aoclfftz_solution_t *sol_a, aoclfftz_solution_t *sol_b)
     {
         if (sol_a == NULL || sol_b == NULL)
         {
+            AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "sol_a or sol_b is empty");
             return false;
         }
         bool ret = true;
         aoclfftz_solution_t *cur_a = sol_a;
         aoclfftz_solution_t *cur_b = sol_b;
-        while (cur_a != NULL && cur_b != NULL && ret)
+
+        /*************************************************************
+         *  Level 1: Compare the first solution of sol_a with sol_b  *
+         *************************************************************/
+
+        // ********** check solver **********
+        ret &= (cur_a->solver->solver_type == cur_b->solver->solver_type);
+
+        // ********** decomp scheme **********
+        // dims and vecs
+        ret &=
+            (cur_a->decomp_scheme->dim_rank == cur_b->decomp_scheme->dim_rank);
+        for (INT32 i = 0; i < cur_a->decomp_scheme->dim_rank; ++i)
         {
-            // ********** check solver **********
-            ret &= (cur_a->solver->solver_type == cur_b->solver->solver_type);
-
-            // ********** check strides **********
-            ret &= (cur_a->strides->in_stride == cur_b->strides->in_stride);
-            ret &= (cur_a->strides->out_stride == cur_b->strides->out_stride);
-            ret &= (cur_a->strides->v_in_stride == cur_b->strides->v_in_stride);
-            ret &=
-                (cur_a->strides->v_out_stride == cur_b->strides->v_out_stride);
-
-            // ********** decomp scheme **********
-            // dims and vecs
-            ret &= (cur_a->decomp_scheme->dim_rank ==
-                    cur_b->decomp_scheme->dim_rank);
-            for (INT32 i = 0; i < cur_a->decomp_scheme->dim_rank; ++i)
-            {
-                ret &= (cur_a->decomp_scheme->dims[i].n ==
-                        cur_b->decomp_scheme->dims[i].n);
-                ret &= (cur_a->decomp_scheme->dims[i].in_stride ==
-                        cur_b->decomp_scheme->dims[i].in_stride);
-                ret &= (cur_a->decomp_scheme->dims[i].out_stride ==
-                        cur_b->decomp_scheme->dims[i].out_stride);
-            }
-
-            ret &= (cur_a->decomp_scheme->vec_rank ==
-                    cur_b->decomp_scheme->vec_rank);
-            for (INT32 i = 0; i < cur_a->decomp_scheme->vec_rank; ++i)
-            {
-                ret &= (cur_a->decomp_scheme->vecs[i].n ==
-                        cur_b->decomp_scheme->vecs[i].n);
-                ret &= (cur_a->decomp_scheme->vecs[i].in_stride ==
-                        cur_b->decomp_scheme->vecs[i].in_stride);
-                ret &= (cur_a->decomp_scheme->vecs[i].out_stride ==
-                        cur_b->decomp_scheme->vecs[i].out_stride);
-            }
-            // flags
-            ret &= (cur_a->decomp_scheme->flags == cur_b->decomp_scheme->flags);
-            // cntrl params
-            ret &= (cur_a->decomp_scheme->cntrl_params->opt_level ==
-                    cur_b->decomp_scheme->cntrl_params->opt_level);
-            ret &= (cur_a->decomp_scheme->cntrl_params->opt_off ==
-                    cur_b->decomp_scheme->cntrl_params->opt_off);
-
-            // following values from decomp_scheme are skipped from comparison
-            // 1. cntrl_params->logger_mode
-            // 2. cntrl_params->measure_stat
-            // 3. pthr_fft->num_threads
-            // 4. pthr_fftdynamic_load_model
-
-            // ********** twiddle **********
-            // either both should be NULL or both should have values
-            ret &= (((cur_a->twiddle->TW != NULL) &&
-                     (cur_b->twiddle->TW != NULL)) ||
-                    ((cur_a->twiddle->TW == NULL) &&
-                     (cur_b->twiddle->TW == NULL)));
-
-            // go to next solution
-            cur_a = cur_a->next_sol;
-            cur_b = cur_b->next_sol;
+            ret &= (cur_a->decomp_scheme->dims[i].n ==
+                    cur_b->decomp_scheme->dims[i].n);
+            ret &= (cur_a->decomp_scheme->dims[i].in_stride ==
+                    cur_b->decomp_scheme->dims[i].in_stride);
+            ret &= (cur_a->decomp_scheme->dims[i].out_stride ==
+                    cur_b->decomp_scheme->dims[i].out_stride);
         }
-        if (cur_a != NULL || cur_b != NULL)
+
+        ret &=
+            (cur_a->decomp_scheme->vec_rank == cur_b->decomp_scheme->vec_rank);
+        for (INT32 i = 0; i < cur_a->decomp_scheme->vec_rank; ++i)
         {
-            ret = false;
+            ret &= (cur_a->decomp_scheme->vecs[i].n ==
+                    cur_b->decomp_scheme->vecs[i].n);
+            ret &= (cur_a->decomp_scheme->vecs[i].in_stride ==
+                    cur_b->decomp_scheme->vecs[i].in_stride);
+            ret &= (cur_a->decomp_scheme->vecs[i].out_stride ==
+                    cur_b->decomp_scheme->vecs[i].out_stride);
         }
+        // flags
+        ret &= (cur_a->decomp_scheme->flags == cur_b->decomp_scheme->flags);
+        // cntrl params
+        ret &= (cur_a->decomp_scheme->cntrl_params->opt_level ==
+                cur_b->decomp_scheme->cntrl_params->opt_level);
+        ret &= (cur_a->decomp_scheme->cntrl_params->opt_off ==
+                cur_b->decomp_scheme->cntrl_params->opt_off);
+
+        // following values from decomp_scheme are skipped from comparison
+        // 1. cntrl_params->logger_mode
+        // 2. cntrl_params->measure_stat
+        // 3. pthr_fft->num_threads
+        // 4. pthr_fftdynamic_load_model
+
+        // ********** twiddle **********
+        // either both should be NULL or both should have values
+        ret &=
+            (((cur_a->twiddle->TW != NULL) && (cur_b->twiddle->TW != NULL)) ||
+             ((cur_a->twiddle->TW == NULL) && (cur_b->twiddle->TW == NULL)));
+
+        /*****************************************************************
+         * Level 2: Verify the properties of solvers for all the child   *
+         *          solutions belonging to the decomposed sub-problems.  *
+         *****************************************************************/
+        while (cur_a != NULL)
+        {
+            if (cur_a->solver->solver_type == SOLVER_DIRECT)
+            {
+                ret &= cur_a->strides->in_stride ==
+                       cur_a->decomp_scheme->dims[0].in_stride;
+                ret &= cur_a->strides->out_stride ==
+                       cur_a->decomp_scheme->dims[0].out_stride;
+                ret &= cur_a->strides->v_in_stride ==
+                       cur_a->decomp_scheme->vecs[0].in_stride;
+                ret &= cur_a->strides->v_out_stride ==
+                       cur_a->decomp_scheme->vecs[0].out_stride;
+                if (ret == false)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "Failed at level 2 compare [Direct solver]");
+                    return false;
+                }
+                cur_a = cur_a->next_sol;
+            }
+            else
+            {
+                cur_a = cur_a->next_sol;
+            }
+        };
         return ret;
     }
 
@@ -426,6 +434,7 @@ class AoclfftzSelectorTestBase
     {
         if (sol == NULL)
         {
+            AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "sol is empty");
             return false;
         }
         bool ret = true;
@@ -453,17 +462,15 @@ class AoclfftzSelectorTestBase
 };
 
 /**
- * @brief A test class derived from AoclfftzSelectorTestBase for FLOAT data-type
- * and LP64 data-model
+ * @brief A test class derived from AoclfftzSelectorTestBase for
+ * FLOAT data-type and LP64 data-model
  *
  */
 class AoclfftzSelectorTestFloatLP64
     : public AoclfftzSelectorTestBase<FLOAT, INT32, aoclfftz_dim_t,
-                                      aoclfftz_prob_desc_f>,
-      public ::testing::Test
+                                      aoclfftz_prob_desc_f>
 {
   protected:
-    SETUP_SELECTOR_TEST_CLASS;
     AoclfftzSelectorTestFloatLP64()
     {
         aoclfftz_setup = aoclfftz_setup_f;
@@ -472,17 +479,15 @@ class AoclfftzSelectorTestFloatLP64
 };
 
 /**
- * @brief A test class derived from AoclfftzSelectorTestBase for DOUBLE
+ * @brief A derived class from AoclfftzSelectorTestBase for DOUBLE
  * data-type and LP64 data-model
  *
  */
 class AoclfftzSelectorTestDoubleLP64
     : public AoclfftzSelectorTestBase<DOUBLE, INT32, aoclfftz_dim_t,
-                                      aoclfftz_prob_desc_d>,
-      public ::testing::Test
+                                      aoclfftz_prob_desc_d>
 {
   protected:
-    SETUP_SELECTOR_TEST_CLASS;
     AoclfftzSelectorTestDoubleLP64()
     {
         aoclfftz_setup = aoclfftz_setup_d;
@@ -491,94 +496,16 @@ class AoclfftzSelectorTestDoubleLP64
 };
 
 /**
- * @brief A test class derived from AoclfftzSelectorTestBase for FLOAT data-type
- * and ILP64 data-model
+ * @brief A derived class from AoclfftzSelectorTestBase for FLOAT
+ * data-type and ILP64 data-model
  *
  */
 class AoclfftzSelectorTestFloatILP64
     : public AoclfftzSelectorTestBase<FLOAT, INTP, aoclfftz_dim_t_64_,
-                                      aoclfftz_prob_desc_f_64_>,
-      public ::testing::Test
+                                      aoclfftz_prob_desc_f_64_>
 {
   protected:
-    SETUP_SELECTOR_TEST_CLASS;
     AoclfftzSelectorTestFloatILP64()
-    {
-        aoclfftz_setup = aoclfftz_setup_f_64_;
-        aoclfftz_execute = aoclfftz_execute_f_64_;
-    }
-};
-
-/**
- * @brief A parameterized test class derived from AoclfftzSelectorTestBase for
- * DOUBLE data-type and ILP64 data-model
- *
- */
-class AoclfftzSelectorTestDoubleILP64
-    : public AoclfftzSelectorTestBase<DOUBLE, INTP, aoclfftz_dim_t_64_,
-                                      aoclfftz_prob_desc_d_64_>,
-      public ::testing::Test
-{
-  protected:
-    SETUP_SELECTOR_TEST_CLASS;
-    AoclfftzSelectorTestDoubleILP64()
-    {
-        aoclfftz_setup = aoclfftz_setup_d_64_;
-        aoclfftz_execute = aoclfftz_execute_d_64_;
-    }
-};
-
-/**
- * @brief A parameterized test class derived from AoclfftzSelectorTestBase for
- * FLOAT data-type and LP64 data-model
- *
- */
-class AoclfftzSelectorTestFloatLP64Parameterized
-    : public AoclfftzSelectorTestBase<FLOAT, INT32, aoclfftz_dim_t,
-                                      aoclfftz_prob_desc_f>,
-      public ::testing::TestWithParam<aoclfftz_selector_test_params_t>
-{
-  protected:
-    SETUP_SELECTOR_TEST_WITH_PARAMS_CLASS;
-    AoclfftzSelectorTestFloatLP64Parameterized()
-    {
-        aoclfftz_setup = aoclfftz_setup_f;
-        aoclfftz_execute = aoclfftz_execute_f;
-    }
-};
-
-/**
- * @brief A parameterized derived class from AoclfftzSelectorTestBase for DOUBLE
- * data-type and LP64 data-model
- *
- */
-class AoclfftzSelectorTestDoubleLP64Parameterized
-    : public AoclfftzSelectorTestBase<DOUBLE, INT32, aoclfftz_dim_t,
-                                      aoclfftz_prob_desc_d>,
-      public ::testing::TestWithParam<aoclfftz_selector_test_params_t>
-{
-  protected:
-    SETUP_SELECTOR_TEST_WITH_PARAMS_CLASS;
-    AoclfftzSelectorTestDoubleLP64Parameterized()
-    {
-        aoclfftz_setup = aoclfftz_setup_d;
-        aoclfftz_execute = aoclfftz_execute_d;
-    }
-};
-
-/**
- * @brief A parameterized derived class from AoclfftzSelectorTestBase for FLOAT
- * data-type and ILP64 data-model
- *
- */
-class AoclfftzSelectorTestFloatILP64Parameterized
-    : public AoclfftzSelectorTestBase<FLOAT, INTP, aoclfftz_dim_t_64_,
-                                      aoclfftz_prob_desc_f_64_>,
-      public ::testing::TestWithParam<aoclfftz_selector_test_params_t>
-{
-  protected:
-    SETUP_SELECTOR_TEST_WITH_PARAMS_CLASS;
-    AoclfftzSelectorTestFloatILP64Parameterized()
     {
         aoclfftz_setup = aoclfftz_setup_f_64_;
         aoclfftz_execute = aoclfftz_execute_f_64_;
@@ -590,14 +517,12 @@ class AoclfftzSelectorTestFloatILP64Parameterized
  * ILP64 data-model
  *
  */
-class AoclfftzSelectorTestDoubleILP64Parameterized
+class AoclfftzSelectorTestDoubleILP64
     : public AoclfftzSelectorTestBase<DOUBLE, INTP, aoclfftz_dim_t_64_,
-                                      aoclfftz_prob_desc_d_64_>,
-      public ::testing::TestWithParam<aoclfftz_selector_test_params_t>
+                                      aoclfftz_prob_desc_d_64_>
 {
   protected:
-    SETUP_SELECTOR_TEST_WITH_PARAMS_CLASS;
-    AoclfftzSelectorTestDoubleILP64Parameterized()
+    AoclfftzSelectorTestDoubleILP64()
     {
         aoclfftz_setup = aoclfftz_setup_d_64_;
         aoclfftz_execute = aoclfftz_execute_d_64_;

@@ -38,50 +38,81 @@
 #include <gtest/gtest.h>
 #include "gtest/selector/selector_gtest_base.h"
 
-TEST_F(AoclfftzSelectorTestFloatLP64, TEST_SELECTOR_DIRECT_FLOAT_LP64)
+std::string dims_and_vecs[] = {
+    // direct problems
+    "2:1:1",
+    "5:1:2",
+    "8:3:1",
+    "1v13:5:3",
+    // batched direct problems
+    "7v2:1:1",
+    "4v15:1:4",
+    "4:60:24v12:5:1",
+    "10:45:24v3:5:2"
+};
+
+INT32 flags[] = {
+    0b0000, // complex, forward, in-order, in-place problem
+    0b0001, // complex, forward, in-order, out-of-place problem
+    0b0100  // complex, backward, in-order, in-place problem
+};
+
+INT32 opt_levels[] = {
+    -1 // no optimization at all
+};
+
+TEST_P(AoclfftzSelectorTestFloatLP64, TEST_SELECTOR_DIRECT_FLOAT_LP64)
 {
-    std::string dims = "2:1:1";
-    INT32 flags = 0b0000;
-    INT32 opt_level = -1;
-    aoclfftz_solution_t *sol =
-        run_setup_and_get_solution(dims, flags, opt_level);
-    aoclfftz_solution_t *ref_sol =
-        generate_reference_solution(dims, flags, opt_level, SOLVER_DIRECT);
-    COMPARE_SOLUTIONS(sol, ref_sol);
+    run_selector_test_and_verify_solutions(SOLVER_DIRECT);
 }
 
-TEST_F(AoclfftzSelectorTestDoubleLP64, TEST_SELECTOR_DIRECT_DOUBLE_LP64)
+TEST_P(AoclfftzSelectorTestDoubleLP64, TEST_SELECTOR_DIRECT_DOUBLE_LP64)
 {
-    std::string dims = "5:1:2";
-    INT32 flags = 0b0000;
-    INT32 opt_level = -1;
-    aoclfftz_solution_t *sol =
-        run_setup_and_get_solution(dims, flags, opt_level);
-    aoclfftz_solution_t *ref_sol =
-        generate_reference_solution(dims, flags, opt_level, SOLVER_DIRECT);
-    COMPARE_SOLUTIONS(sol, ref_sol);
+    run_selector_test_and_verify_solutions(SOLVER_DIRECT);
 }
 
-TEST_F(AoclfftzSelectorTestFloatILP64, TEST_SELECTOR_DIRECT_FLOAT_ILP64)
+TEST_P(AoclfftzSelectorTestFloatILP64, TEST_SELECTOR_DIRECT_FLOAT_ILP64)
 {
-    std::string dims = "8:3:1";
-    INT32 flags = 0b0000;
-    INT32 opt_level = -1;
-    aoclfftz_solution_t *sol =
-        run_setup_and_get_solution(dims, flags, opt_level);
-    aoclfftz_solution_t *ref_sol =
-        generate_reference_solution(dims, flags, opt_level, SOLVER_DIRECT);
-    COMPARE_SOLUTIONS(sol, ref_sol);
+    run_selector_test_and_verify_solutions(SOLVER_DIRECT);
 }
 
-TEST_F(AoclfftzSelectorTestDoubleILP64, TEST_SELECTOR_DIRECT_DOUBLE_ILP64)
+TEST_P(AoclfftzSelectorTestDoubleILP64, TEST_SELECTOR_DIRECT_DOUBLE_ILP64)
 {
-    std::string dims = "1v13:5:3";
-    INT32 flags = 0b0000;
-    INT32 opt_level = -1;
-    aoclfftz_solution_t *sol =
-        run_setup_and_get_solution(dims, flags, opt_level);
-    aoclfftz_solution_t *ref_sol =
-        generate_reference_solution(dims, flags, opt_level, SOLVER_DIRECT);
-    COMPARE_SOLUTIONS(sol, ref_sol);
+    run_selector_test_and_verify_solutions(SOLVER_DIRECT);
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    SelectorDirectParamTest, AoclfftzSelectorTestFloatLP64,
+    ::testing::Combine(
+        ::testing::ValuesIn(dims_and_vecs),
+        ::testing::ValuesIn(flags),
+        ::testing::ValuesIn(opt_levels),
+        ::testing::Values(std::vector<aoclfftz_solver_type>()) // empty list
+        ));
+
+INSTANTIATE_TEST_SUITE_P(
+    SelectorDirectParamTest, AoclfftzSelectorTestDoubleLP64,
+    ::testing::Combine(
+        ::testing::ValuesIn(dims_and_vecs),
+        ::testing::ValuesIn(flags),
+        ::testing::ValuesIn(opt_levels),
+        ::testing::Values(std::vector<aoclfftz_solver_type>()) // empty list
+        ));
+
+INSTANTIATE_TEST_SUITE_P(
+    SelectorDirectParamTest, AoclfftzSelectorTestFloatILP64,
+    ::testing::Combine(
+        ::testing::ValuesIn(dims_and_vecs),
+        ::testing::ValuesIn(flags),
+        ::testing::ValuesIn(opt_levels),
+        ::testing::Values(std::vector<aoclfftz_solver_type>()) // empty list
+        ));
+
+INSTANTIATE_TEST_SUITE_P(
+    SelectorDirectParamTest, AoclfftzSelectorTestDoubleILP64,
+    ::testing::Combine(
+        ::testing::ValuesIn(dims_and_vecs),
+        ::testing::ValuesIn(flags),
+        ::testing::ValuesIn(opt_levels),
+        ::testing::Values(std::vector<aoclfftz_solver_type>()) // empty list
+        ));
