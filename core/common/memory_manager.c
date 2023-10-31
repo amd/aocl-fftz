@@ -160,14 +160,24 @@ VOID destroy_solution(aoclfftz_solution_t *sol)
     while (sol != NULL)
     {
         cur_sol = sol;
-        FREE_ALLOCATED_MEM(sol->solver);
-        destroy_decomp_scheme(sol->decomp_scheme);
-        FREE_ALLOCATED_MEM(sol->strides);
-        destroy_bluestein(sol->bluestein);
-        FREE_ALLOCATED_MEM(sol->twiddle->TW);
-        FREE_ALLOCATED_MEM(sol->twiddle);
         sol = sol->next_sol;
+        FREE_ALLOCATED_MEM(cur_sol->solver);
+        destroy_decomp_scheme(cur_sol->decomp_scheme);
+        FREE_ALLOCATED_MEM(cur_sol->strides);
+        destroy_bluestein(cur_sol->bluestein);
+        FREE_ALLOCATED_MEM(cur_sol->twiddle->TW);
+        FREE_ALLOCATED_MEM(cur_sol->twiddle);
         FREE_ALLOCATED_MEM(cur_sol);
+    }
+    return;
+}
+
+VOID destroy_selector_without_solution(aoclfftz_selector_t *sel)
+{
+    if (sel != NULL)
+    {
+        FREE_ALLOCATED_MEM(sel->cost_analysis);
+        FREE_ALLOCATED_MEM(sel);
     }
     return;
 }
@@ -177,8 +187,7 @@ VOID destroy_selector(aoclfftz_selector_t *sel)
     if (sel != NULL)
     {
         destroy_solution(sel->solution);
-        FREE_ALLOCATED_MEM(sel->cost_analysis);
-        FREE_ALLOCATED_MEM(sel);
+        destroy_selector_without_solution(sel);
     }
     return;
 }
@@ -191,5 +200,6 @@ VOID destroy_bluestein(aoclfftz_bluestein_t *bluestein)
         FREE_ALLOCATED_MEM(bluestein->B_out);
         FREE_ALLOCATED_MEM(bluestein->in);
         FREE_ALLOCATED_MEM(bluestein->out);
+        FREE_ALLOCATED_MEM(bluestein);
     }
 }

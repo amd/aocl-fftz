@@ -292,7 +292,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     ret = register_solvers_kernels(kernels_table,
                                    DT_FLOAT, cpu_flags);
     if (ret != 0)
-        return NULL;
+        goto exit_setup_dft_f;
 
     //Initialize decomposition scheme data object
     INIT_DECOMP_SCHEME(sel_obj, problem);
@@ -301,9 +301,13 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     //Select the best solution for the given input problem
     ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);
     if (ret != SELECTOR_SUCCESS)
-        return NULL;
+        goto exit_setup_dft_f;
 
     return sel_obj;
+
+exit_setup_dft_f:
+    destroy_selector(sel_obj);
+    return NULL;
 }
 
 //Selector interface function that performs setup for finding solution for a
@@ -330,7 +334,7 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     ret = register_solvers_kernels(kernels_table,
                                    DT_DOUBLE, cpu_flags);
     if (ret != 0)
-        return NULL;
+        goto exit_setup_dft_d;
 
     //Initialize decomposition scheme data object
     INIT_DECOMP_SCHEME(sel_obj, problem);
@@ -339,9 +343,13 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     //Select the best solution for the given input problem
     ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);
     if (ret != SELECTOR_SUCCESS)
-        return NULL;
+        goto exit_setup_dft_d;
 
     return sel_obj;
+
+exit_setup_dft_d:
+    destroy_selector(sel_obj);
+    return NULL;
 }
 
 //Selector interface function that performs setup for finding solution for a
@@ -368,7 +376,7 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     ret = register_solvers_kernels(kernels_table,
                                    DT_FLOAT, cpu_flags);
     if (ret != 0)
-        return NULL;
+        goto exit_setup_dft_f_64_;
 
     //Initialize decomposition scheme data object
     INIT_DECOMP_SCHEME(sel_obj, problem);
@@ -377,9 +385,13 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     //Select the best solution for the given input problem
     ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);
     if (ret != SELECTOR_SUCCESS)
-        return NULL;
+        goto exit_setup_dft_f_64_;
 
     return sel_obj;
+
+exit_setup_dft_f_64_:
+    destroy_selector(sel_obj);
+    return NULL;
 }
 
 //Selector interface function that performs setup for finding solution for a
@@ -406,7 +418,7 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     ret = register_solvers_kernels(kernels_table,
                                    DT_DOUBLE, cpu_flags);
     if (ret != 0)
-        return NULL;
+        goto exit_setup_dft_d_64_;
 
     //Initialize decomposition scheme data object
     INIT_DECOMP_SCHEME(sel_obj, problem);
@@ -415,9 +427,13 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     //Select the best solution for the given input problem
     ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);
     if (ret != SELECTOR_SUCCESS)
-        return NULL;
+        goto exit_setup_dft_d_64_;
 
     return sel_obj;
+
+exit_setup_dft_d_64_:
+    destroy_selector(sel_obj);
+    return NULL;
 }
 
 VOID destroy_handle(VOID *handle)

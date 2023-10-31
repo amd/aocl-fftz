@@ -94,6 +94,8 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel,
 
     sel->solution->next_sol = cur_sel->solution;
 
+    // destroy only the selector not the solution within it
+    destroy_selector_without_solution(cur_sel);
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
     return SELECTOR_SUCCESS;
 
