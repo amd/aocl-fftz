@@ -55,7 +55,10 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 12, 32, 20, 0, 0},
                                                      {0, 12, 32, 20, 0, 0}};
 ops_cycles_t get_ops_cnt_fft5c(INT32 precision)
 {
-    return ops_cnt[precision - 1];
+    if (precision == DT_FLOAT)
+        return ops_cnt[0];
+    else
+        return ops_cnt[1];
 }
 
 VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
@@ -265,9 +268,13 @@ VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 28, 120, 50, 0, 61},
                                                      {0, 28, 120, 50, 0, 61}};
+
 ops_cycles_t get_ops_cnt_fft5c(INT32 precision)
 {
-    return ops_cnt[precision - 1];
+    if (precision == DT_FLOAT)
+        return ops_cnt[0];
+    else
+        return ops_cnt[1];
 }
 
 const DOUBLE CRTM_5[RADIX_5][2] = {{1.0, 0.0},

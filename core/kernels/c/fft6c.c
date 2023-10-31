@@ -53,9 +53,13 @@ kfft_ register_kernel_fft6c(INT32 precision)
 #ifdef USE_OPT_KERNEL_VARIANT
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 8, 36, 24, 0, 0},
                                                      {0, 8, 36, 24, 0, 0}};
+
 ops_cycles_t get_ops_cnt_fft6c(INT32 precision)
 {
-    return ops_cnt[precision - 1];
+    if (precision == DT_FLOAT)
+        return ops_cnt[0];
+    else
+        return ops_cnt[1];
 }
 
 VOID fft6c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
@@ -261,9 +265,13 @@ VOID fft6c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 44, 188, 60, 0, 106},
                                                      {0, 44, 188, 60, 0, 106}};
+
 ops_cycles_t get_ops_cnt_fft6c(INT32 precision)
 {
-    return ops_cnt[precision - 1];
+    if (precision == DT_FLOAT)
+        return ops_cnt[0];
+    else
+        return ops_cnt[1];
 }
 
 const DOUBLE CRTM_6[RADIX_6][2] = {

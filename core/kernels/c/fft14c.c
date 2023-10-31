@@ -53,9 +53,13 @@ kfft_ register_kernel_fft14c(INT32 precision)
 /* --------------- optimized C kernel variant --------------- */
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 72, 148, 56, 0, 0},
                                                      {0, 72, 148, 56, 0, 0}};
+
 ops_cycles_t get_ops_cnt_fft14c(INT32 precision)
 {
-    return ops_cnt[precision - 1];
+    if (precision == DT_FLOAT)
+        return ops_cnt[0];
+    else
+        return ops_cnt[1];
 }
 
 VOID fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
@@ -703,9 +707,13 @@ VOID fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {
     {0, 316, 1308, 140, 0, 1366}, {0, 316, 1308, 140, 0, 1366}};
+
 ops_cycles_t get_ops_cnt_fft14c(INT32 precision)
 {
-    return ops_cnt[precision - 1];
+    if (precision == DT_FLOAT)
+        return ops_cnt[0];
+    else
+        return ops_cnt[1];
 }
 
 const DOUBLE CRTM_14[RADIX_14][2] = {{1.0, 0.0},

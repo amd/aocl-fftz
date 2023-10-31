@@ -89,14 +89,19 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
 #if IN_MEMORY_TWIDDLE_FACTORS==1
     dt_prec = DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags);
 #endif
+
+    org_sol = alloc_solution(vec_rank, dim_rank);
+    if (org_sol == NULL)
+        goto exit_ct_dft;
+
     cur_sel = alloc_selector(vec_rank, dim_rank);
     cur_sel_m = alloc_selector(vec_rank, dim_rank);
     if (cur_sel == NULL || cur_sel_m == NULL)
         goto exit_ct_dft;
 
-    org_sol = alloc_solution(vec_rank, dim_rank);
-    if (org_sol == NULL)
-        goto exit_ct_dft;
+    //Create empty solutions to copy cur_sel & cur_sel_m
+    sel->solution->next_sol = alloc_solution(vec_rank, dim_rank);
+    sel->solution->next_sol->next_sol = alloc_solution(vec_rank, dim_rank);
 
 #if IN_MEMORY_TWIDDLE_FACTORS==1
     TW = alloc_twiddle_for_solution(n, dt_prec);
@@ -104,6 +109,11 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
         goto exit_ct_dft;
 #endif
     COPY_SOLUTION_OBJ(org_sol, sel->solution);
+    org_sol->next_sol = NULL;
+
+    //Flag to store whether the previous solution is selected
+    //based on minimum ops cost
+    UINT8 is_previous_solution_selected = 0;
 
     for (ker_cat = 0; ker_cat < NUM_KERNELS_IN_TABLE; ker_cat++)
     {
@@ -118,6 +128,19 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
 
         //choose the other radix m
         radix_m = n / radix_r;
+
+        //Create a new cur_sel & cur_sel_m selectors
+        //if previous solutions is selected
+        if (is_previous_solution_selected)
+        {
+            destroy_selector(cur_sel);
+            destroy_selector(cur_sel_m);
+            cur_sel = alloc_selector(vec_rank, dim_rank);
+            cur_sel_m = alloc_selector(vec_rank, dim_rank);
+            if (cur_sel == NULL || cur_sel_m == NULL)
+                goto exit_ct_dft;
+            is_previous_solution_selected = 0;
+        }
 
         ret = setup_ct_solver(org_sol,
             cur_sel->solution,
@@ -148,39 +171,55 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
         if (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
             AOCLFFTZ_FIXED_SELECTOR_MODE)
         {
-            if (!sel->cost_analysis->ops)
+            if (sel->cost_analysis->ops == 0 ||
+                ((cur_sel->cost_analysis->ops + cur_sel_m->cost_analysis->ops) <
+                 sel->cost_analysis->ops))
             {
                 sel->cost_analysis->ops = cur_sel->cost_analysis->ops +
                     cur_sel_m->cost_analysis->ops;
                 sel->cost_analysis->time = cur_sel->cost_analysis->time +
-                    cur_sel_m->cost_analysis->time;
-                sel->solution->next_sol = cur_sel->solution;
-                sel->solution->next_sol->next_sol = cur_sel_m->solution;
-                RESET_COST(cur_sel);
-                RESET_COST(cur_sel_m);
+                                           cur_sel_m->cost_analysis->time;
+
+                //Destroy the solutions except the first 3 objects
+                //since it points to current CT, CT-R, CT-M respectively
+                if (sel->solution != NULL && sel->solution->next_sol != NULL &&
+                    sel->solution->next_sol->next_sol != NULL)
+                    destroy_solution(
+                        sel->solution->next_sol->next_sol->next_sol);
+
+                aoclfftz_solution_t *sel_next_sol =
+                    sel->solution->next_sol->next_sol;
+                COPY_SOLUTION_OBJ(sel->solution->next_sol, cur_sel->solution);
+                //Restore the original next_sol after copy
+                sel->solution->next_sol->next_sol = sel_next_sol;
+                COPY_SOLUTION_OBJ(sel->solution->next_sol->next_sol,
+                                  cur_sel_m->solution);
+
+                //Break the link from cur_sel and cur_sel_m
+                //it can be still accessed through sel object
+                cur_sel->solution->next_sol = NULL;
+                cur_sel_m->solution->next_sol = NULL;
+                is_previous_solution_selected = 1;
 #if IN_MEMORY_TWIDDLE_FACTORS==1
                 sel->solution->twiddle->TW = TW;
 #endif
             }
-            if ((cur_sel->cost_analysis->ops +
-                cur_sel_m->cost_analysis->ops) <
-                sel->cost_analysis->ops)
+            else
             {
-                sel->cost_analysis->ops = cur_sel->cost_analysis->ops +
-                    cur_sel_m->cost_analysis->ops;
-                sel->cost_analysis->time = cur_sel->cost_analysis->time +
-                    cur_sel_m->cost_analysis->time;
-                sel->solution->next_sol = cur_sel->solution;
-                sel->solution->next_sol->next_sol = cur_sel_m->solution;
+                //Destroy the solutions of cur_sel and cur_sel_m
+                //except first solution
+                destroy_solution(cur_sel->solution->next_sol);
+                cur_sel->solution->next_sol = NULL;
+                destroy_solution(cur_sel_m->solution->next_sol);
+                cur_sel_m->solution->next_sol = NULL;
+                is_previous_solution_selected = 0;
                 RESET_COST(cur_sel);
                 RESET_COST(cur_sel_m);
-#if IN_MEMORY_TWIDDLE_FACTORS==1
-                sel->solution->twiddle->TW = TW;
-#endif
             }
         }
         else
         {
+            //FIXME: Update this logic
             if ((cur_sel->cost_analysis->time +
                 cur_sel_m->cost_analysis->time) <
                 sel->cost_analysis->time)
@@ -201,11 +240,6 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
             //capture stats
         }
     }
-
-    destroy_solution(org_sol);
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-
-    return ret;
 
 exit_ct_dft:
     destroy_selector(cur_sel);

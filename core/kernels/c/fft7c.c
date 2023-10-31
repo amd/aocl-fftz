@@ -54,9 +54,13 @@ kfft_ register_kernel_fft7c(INT32 precision)
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 36, 60, 28, 0, 0},
                                                      {0, 36, 60, 28, 0, 0}};
+
 ops_cycles_t get_ops_cnt_fft7c(INT32 precision)
 {
-    return ops_cnt[precision - 1];
+    if (precision == DT_FLOAT)
+        return ops_cnt[0];
+    else
+        return ops_cnt[1];
 }
 
 VOID fft7c_fp64(VOID* in_real, VOID* in_imag, VOID* out_real, VOID* out_imag,
@@ -391,9 +395,13 @@ VOID fft7c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 64, 272, 70, 0, 169},
                                                      {0, 64, 272, 70, 0, 169}};
+
 ops_cycles_t get_ops_cnt_fft7c(INT32 precision)
 {
-    return ops_cnt[precision - 1];
+    if (precision == DT_FLOAT)
+        return ops_cnt[0];
+    else
+        return ops_cnt[1];
 }
 
 const DOUBLE CRTM_7[RADIX_7][2] = {{1.0, 0.0},

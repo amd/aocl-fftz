@@ -50,13 +50,16 @@ kfft_ register_kernel_fft9c(INT32 precision)
 }
 
 #ifdef USE_OPT_KERNEL_VARIANT
-
 // TODO : to be updated
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 44, 84, 36, 0, 0},
                                                      {0, 44, 84, 36, 0, 0}};
+
 ops_cycles_t get_ops_cnt_fft9c(INT32 precision)
 {
-    return ops_cnt[precision - 1];
+    if (precision == DT_FLOAT)
+        return ops_cnt[0];
+    else
+        return ops_cnt[1];
 }
 
 VOID fft9c_fp64(VOID* in_real, VOID* in_imag, VOID* out_real, VOID* out_imag,
@@ -461,9 +464,13 @@ VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 116, 488, 90, 0, 361},
                                                      {0, 116, 488, 90, 0, 361}};
+
 ops_cycles_t get_ops_cnt_fft9c(INT32 precision)
 {
-    return ops_cnt[precision - 1];
+    if (precision == DT_FLOAT)
+        return ops_cnt[0];
+    else
+        return ops_cnt[1];
 }
 
 const DOUBLE CRTM_9[RADIX_9][2] = {{1.0, 0.0},
