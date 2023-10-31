@@ -50,7 +50,7 @@
  *
  * @return VOID
  */
-VOID show_help_menu()
+VOID show_help_menu(VOID)
 {
     printf(
         "\nUSAGE: aocl_fftz_bench [OPTIONS]... PROBLEM_SIZE\n\n"

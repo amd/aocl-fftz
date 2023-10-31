@@ -30,7 +30,7 @@
  *
  *  @brief Interface header file of the Direct Solver
  *
- *  This file contains the data strucutes and function declarationss that 
+ *  This file contains the data strucutes and function declarationss that
  *  setup, execute and destroy the direct solver.
  *
  *  @author S. Biplab Raut

@@ -69,7 +69,7 @@ INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj)
 {
 	if (solvers_table[solver_obj->solver_type] == NULL)
 		return SOLVER_FAILURE;
-	
+
 	solver_obj->execute_solver = solvers_table[solver_obj->solver_type];
 	return SOLVER_SUCCESS;
 }

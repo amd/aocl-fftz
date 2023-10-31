@@ -883,7 +883,7 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP stride, INT32 input_type)
         INTP shift = rand() % length;
         // scale the amplitude of the wave by `scale` times, scale range:
         // [0.0 5.0)
-        FLOAT scale = ((FLOAT)rand() / RAND_MAX) * 5.0;
+        FLOAT scale = ((FLOAT)rand() / (FLOAT)RAND_MAX) * 5.0;
         for (INTP i = 0; i < length; i++)
         {
             input_f[((i + shift) % length) * T_DATA_STRIDE] =

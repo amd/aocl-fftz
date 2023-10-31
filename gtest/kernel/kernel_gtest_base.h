@@ -233,7 +233,7 @@ class AoclfftzKernelTestBase
         INTP shift = rand() % input_length;
         // scale the amplitude of the wave by `scale` times, scale range:
         // [0.0 5.0)
-        T scale = ((T)rand() / RAND_MAX) * 5.0;
+        T scale = ((T)rand() / (T)RAND_MAX) * 5.0;
         T *input =
             (T *)ALLOC_UNALIGN_UNINIT(sizeof(T) * input_length * DATA_STRIDE);
         for (INTP i = 0; i < input_length; i++)
