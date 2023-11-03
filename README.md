@@ -23,7 +23,11 @@ library.
 PreRequisites
 -------------
 1. CMake - Version 3.10 or above
-2. GCC compiler - Version 7.1 or above
+2. Linux :
+        GCC compiler - Version 7.1 or above (or)
+        AOCC compiler - Version 2.0 or above
+3. Windows :
+        Visual Studio with Clang
 
 Building on Linux
 -----------------
@@ -45,6 +49,7 @@ Building on Linux
    -DENABLE_STRICT_WARNINGS=<ON or OFF>
    <Additional Library Build Options>
    ```
+   To use clang compiler for the build, specify ` -DCMAKE_C_COMPILER=clang ` as the option.
 
 3. Compile using the following command:
    ```
@@ -71,7 +76,30 @@ Building on Linux
 
 Building on Windows
 -------------------
---TBD--
+As a prerequisite, make Microsoft Visual Studio® available along with
+Desktop development with C++ toolset that includes the Clang compiler.
+
+Building with Visual Studio IDE (GUI)
+-------------------------------------
+1. Launch CMake GUI and set the locations for source package and build output
+2. Click **Configure** option and select:
+    * **Generator** as the Installed Microsoft Visual Studio Version
+    * **Platform** as **x64**
+    * **Optional toolset** as **ClangCl**
+3. Select additional library config and build options.
+4. Configure CMAKE_INSTALL_PREFIX appropriately.
+5. Click **Generate**. Microsoft Visual Studio project is generated.
+6. Click **Open Project**. Microsoft Visual Studio project for the source package **is launched**.
+
+Building with Visual Studio IDE (Command Line)
+----------------------------------------------
+1. Go to AOCL-FFTZ source package and create a folder named build.
+2. Go to the build folder.
+3. Use the following command to configure and build the library & test bench executable.
+
+```
+cmake .. -T ClangCl -G <installed Visual Studio version> && cmake --build . --config Release --target INSTALL
+```
 
 Additional Library Build Options
 --------------------------------
@@ -82,8 +110,8 @@ Option                              |  Description
 AOCL_TEST_COVERAGE                  |  Enables GTest and AOCL test bench based CTest suite (Disabled by default)
 ENABLE_STRICT_WARNINGS              |  Enables strict warnings (Enabled by default)
 
-Running Test Bench On Linux
----------------------------
+Running Test Bench On Linux & Windows
+-------------------------------------
 The AOCL-FFTZ test bench supports multiple options in order to compute, validate & benchmark FFT.<br>
 Following are a few sample commands to use and test with the test bench :
 
@@ -104,10 +132,6 @@ Following are a few sample commands to use and test with the test bench :
 
 * To check other options for test bench use the following command:<br>
   `aocl_fftz_bench -h`
-
-Running Test Bench On Windows
------------------------------
---TBD--
 
 Running tests with CTest
 ------------------------
