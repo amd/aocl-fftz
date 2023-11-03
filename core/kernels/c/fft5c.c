@@ -35,6 +35,7 @@
  *
  *  @author S. Biplab Raut
  *  @author Varun Sanjay
+ *  @author Jeya R
  */
 
 #include "core/kernels/kernel.h"
@@ -50,9 +51,8 @@ kfft_ register_kernel_fft5c(INT32 precision)
 }
 #ifdef USE_OPT_KERNEL_VARIANT
 /* --------------- optimized C kernel variant --------------- */
-//TODO: Update ops_cnt
-static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 16, 32, 20, 0, 0},
-                                                     {0, 16, 32, 20, 0, 0}};
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 12, 32, 20, 0, 0},
+                                                     {0, 12, 32, 20, 0, 0}};
 ops_cycles_t get_ops_cnt_fft5c(INT32 precision)
 {
     return ops_cnt[precision - 1];
@@ -61,9 +61,9 @@ ops_cycles_t get_ops_cnt_fft5c(INT32 precision)
 VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                 INTP n, aoclfftz_strides_t *strides)
 {
-    const DOUBLE CRTM_5_1 = +0.30901699437494768947509845811874610960940392680748;
+    const DOUBLE CRTM_5_1 = +0.55901699437494742410229341718281905886015458990288;
     const DOUBLE CRTM_5_2 = +0.95105651629515357211643933337938214340569863400000;
-    const DOUBLE CRTM_5_3 = +0.80901699437494750610700001978173170344740065252138;
+    const DOUBLE CRTM_5_3 = +0.25000000000000000000000000000000000000000000000000;
     const DOUBLE CRTM_5_4 = +0.58778525229247301629891039327884007596190389052978;
 
     DOUBLE *in_r = (DOUBLE *)in_real;
@@ -79,8 +79,8 @@ VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
     for (cnt = 0; cnt < n; cnt++)
     {
         DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i,
-            v25r, v34r, v52i, v43i, v25i, v34i, v52r, v43r, tvri, tvir, tvii,
-            tvrr;
+            v25r, v34r, v52i, v43i, v25i, v34i, v52r, v43r, tvri, tvir,
+            cv1rr, cv2rr, cv3rr, cv1ii, cv2ii, cv3ii;
 
         // Input point 1: x(0)
         v1r = *in_r;
@@ -112,36 +112,46 @@ VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         v52r = v5r - v2r;
         v43r = v4r - v3r;
 
+        // common arithmetic computations
+        cv1rr = v25r + v34r;
+        cv1ii = v25i + v34i;
+        cv2rr = v1r - (CRTM_5_3 * cv1rr);
+        cv2ii = v1i - (CRTM_5_3 * cv1ii);
+
         // Output point 1: X(0)
-        *out_r = v1r + v25r + v34r;
-        *out_i = v1i + v25i + v34i;
+        *out_r = v1r + cv1rr;
+        *out_i = v1i + cv1ii;
+
 
         // Output point 2: X(1)
-        tvrr = v1r + (CRTM_5_1 * v25r) - (CRTM_5_3 * v34r);
+        cv1rr = CRTM_5_1 * (v25r - v34r);
+        cv1ii = CRTM_5_1 * (v25i - v34i);
+        cv3rr = cv2rr + cv1rr;
+        cv3ii = cv2ii + cv1ii;
         tvri = (CRTM_5_2 * v52i) + (CRTM_5_4 * v43i);
-
         tvir = (CRTM_5_2 * v52r) + (CRTM_5_4 * v43r);
-        tvii = v1i + (CRTM_5_1 * v25i) - (CRTM_5_3 * v34i);
 
-        out_r[out_stride] = tvrr - tvri;
-        out_i[out_stride] = tvii + tvir;
+        out_r[out_stride] = cv3rr - tvri;
+        out_i[out_stride] = cv3ii + tvir;
 
         // Output point 5: X(4)
-        out_r[(out_stride << 2)] = tvrr + tvri;
-        out_i[(out_stride << 2)] = tvii - tvir;
+        out_r[(out_stride << 2)] = cv3rr + tvri;
+        out_i[(out_stride << 2)] = cv3ii - tvir;
+
 
         // Output point 3: X(2)
-        tvrr = v1r + (CRTM_5_1 * v34r) - (CRTM_5_3 * v25r);
+        cv3rr = cv2rr - cv1rr;
+        cv3ii = cv2ii - cv1ii;
+
         tvri = (CRTM_5_4 * v52i) - (CRTM_5_2 * v43i);
         tvir = (CRTM_5_4 * v52r) - (CRTM_5_2 * v43r);
-        tvii = v1i + (CRTM_5_1 * v34i) - (CRTM_5_3 * v25i);
 
-        out_r[(out_stride << 1)] = tvrr - tvri;
-        out_i[(out_stride << 1)] = tvii + tvir;
+        out_r[(out_stride << 1)] = cv3rr - tvri;
+        out_i[(out_stride << 1)] = cv3ii + tvir;
 
         // Output point 4: X(3)
-        out_r[out_stride * 3] = tvrr + tvri;
-        out_i[out_stride * 3] = tvii - tvir;
+        out_r[out_stride * 3] = cv3rr + tvri;
+        out_i[out_stride * 3] = cv3ii - tvir;
 
         in_r += v_in_stride;
         in_i += v_in_stride;
@@ -153,9 +163,9 @@ VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                 INTP n, aoclfftz_strides_t *strides)
 {
-    const FLOAT CRTM_5_1 = +0.30901699437494768947509845811874610960940392680748;
+    const FLOAT CRTM_5_1 = +0.55901699437494742410229341718281905886015458990288;
     const FLOAT CRTM_5_2 = +0.95105651629515357211643933337938214340569863400000;
-    const FLOAT CRTM_5_3 = +0.80901699437494750610700001978173170344740065252138;
+    const FLOAT CRTM_5_3 = +0.25000000000000000000000000000000000000000000000000;
     const FLOAT CRTM_5_4 = +0.58778525229247301629891039327884007596190389052978;
 
     FLOAT *in_r = (FLOAT *)in_real;
@@ -171,8 +181,8 @@ VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
     for (cnt = 0; cnt < n; cnt++)
     {
         FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i,
-            v25r, v34r, v52i, v43i, v25i, v34i, v52r, v43r, tvri, tvir, tvii,
-            tvrr;
+            v25r, v34r, v52i, v43i, v25i, v34i, v52r, v43r, tvri, tvir,
+            cv1rr, cv2rr, cv3rr, cv1ii, cv2ii, cv3ii;
 
         // Input point 1: x(0)
         v1r = *in_r;
@@ -204,36 +214,44 @@ VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         v52r = v5r - v2r;
         v43r = v4r - v3r;
 
+        // common arithmetic computations
+        cv1rr = v25r + v34r;
+        cv1ii = v25i + v34i;
+        cv2rr = v1r - (CRTM_5_3 * cv1rr);
+        cv2ii = v1i - (CRTM_5_3 * cv1ii);
+
         // Output point 1: X(0)
-        *out_r = v1r + v25r + v34r;
-        *out_i = v1i + v25i + v34i;
+        *out_r = v1r + cv1rr;
+        *out_i = v1i + cv1ii;
+
 
         // Output point 2: X(1)
-        tvrr = v1r + (CRTM_5_1 * v25r) - (CRTM_5_3 * v34r);
+        cv1rr = CRTM_5_1 * (v25r - v34r);
+        cv1ii = CRTM_5_1 * (v25i - v34i);
+        cv3rr = cv2rr + cv1rr;
+        cv3ii = cv2ii + cv1ii;
         tvri = (CRTM_5_2 * v52i) + (CRTM_5_4 * v43i);
-
         tvir = (CRTM_5_2 * v52r) + (CRTM_5_4 * v43r);
-        tvii = v1i + (CRTM_5_1 * v25i) - (CRTM_5_3 * v34i);
 
-        out_r[out_stride] = tvrr - tvri;
-        out_i[out_stride] = tvii + tvir;
+        out_r[out_stride] = cv3rr - tvri;
+        out_i[out_stride] = cv3ii + tvir;
 
         // Output point 5: X(4)
-        out_r[(out_stride << 2)] = tvrr + tvri;
-        out_i[(out_stride << 2)] = tvii - tvir;
+        out_r[(out_stride << 2)] = cv3rr + tvri;
+        out_i[(out_stride << 2)] = cv3ii - tvir;
 
         // Output point 3: X(2)
-        tvrr = v1r + (CRTM_5_1 * v34r) - (CRTM_5_3 * v25r);
+        cv3rr = cv2rr - cv1rr;
+        cv3ii = cv2ii - cv1ii;
         tvri = (CRTM_5_4 * v52i) - (CRTM_5_2 * v43i);
         tvir = (CRTM_5_4 * v52r) - (CRTM_5_2 * v43r);
-        tvii = v1i + (CRTM_5_1 * v34i) - (CRTM_5_3 * v25i);
 
-        out_r[(out_stride << 1)] = tvrr - tvri;
-        out_i[(out_stride << 1)] = tvii + tvir;
+        out_r[(out_stride << 1)] = cv3rr - tvri;
+        out_i[(out_stride << 1)] = cv3ii + tvir;
 
         // Output point 4: X(3)
-        out_r[out_stride * 3] = tvrr + tvri;
-        out_i[out_stride * 3] = tvii - tvir;
+        out_r[out_stride * 3] = cv3rr + tvri;
+        out_i[out_stride * 3] = cv3ii - tvir;
 
         in_r += v_in_stride;
         in_i += v_in_stride;
