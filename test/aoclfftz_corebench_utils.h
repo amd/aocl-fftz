@@ -779,6 +779,14 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
                     def_stride_rank++;
                 }
             }
+            if(dims[rank_count]->in_stride == 0) // check for zero stride
+            {
+                dims[rank_count]->in_stride = 1;
+            }
+            if(dims[rank_count]->out_stride == 0) // check for zero stride
+            {
+                dims[rank_count]->out_stride = 1;
+            }
             i--;
         }
         else
