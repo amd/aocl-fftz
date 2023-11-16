@@ -1570,7 +1570,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params)
         }
 
         // Perform circular right shift by `m` times
-        // range of m => [1, radix)
+        // range of m => [1, n)
         INTP m = (INTP)(rand() % (n - 1)) + 1;
         for (INTP b = 0; b < batches ; b++)
         {

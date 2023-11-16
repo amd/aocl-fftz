@@ -657,7 +657,10 @@ class AoclfftzKernelTestBase
 
         for (INTP k = 0; k < length; k++)
         {
-            EULER((two * M_PI * m * k / radix), e_k);
+            // handle overflow to improve accuracy for larger values
+            INTP mk = (m * k) % radix;
+            T angle = two * M_PI * mk / radix;
+            EULER(angle, e_k);
             CMUL(out1 + k * stride.out_stride * DATA_STRIDE, e_k,
                  out_comp + k * stride.out_stride * DATA_STRIDE, cmul_temp);
         }

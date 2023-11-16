@@ -471,6 +471,8 @@
     {                                                                          \
         dt_t *in1_t = (dt_t *)in1;                                             \
         dt_t *in2_t = (dt_t *)in2;                                             \
+        /* Handle overflow to avoid negative indexing */                       \
+        m = m % n;                                                             \
         for (INTP idx = 0; idx < n; idx++)                                     \
         {                                                                      \
             for (INTP is = 0; is < stride; is++)                               \
@@ -509,7 +511,10 @@
         dt_t two = (dir == FORWARD) ? -2.0 : 2.0;                              \
         for (INTP k = 0; k < n; k++)                                           \
         {                                                                      \
-            EULER((two * M_PI * m * k / n), e_k);                              \
+            /* Handle overflow to improve accuracy for larger values */        \
+            INTP mk = (m * k) % n;                                             \
+            dt_t angle = (two * M_PI * mk / n);                                \
+            EULER(angle, e_k);                                                 \
             CMUL(out1_t + k * stride * T_DATA_STRIDE, e_k,                     \
                  out_combined_t + k * stride * T_DATA_STRIDE, cmul_temp);      \
         }                                                                      \

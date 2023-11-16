@@ -74,14 +74,18 @@ INT32 prepare_bluestein_sequence(aoclfftz_solution_t *sol, INTP m)
                                                                 */
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     INTP n = sol->decomp_scheme->dims[0].n;
+    INTP n2 = n << 1;
 
     if (precision == DT_FLOAT)
     {
         FLOAT *B = (FLOAT *)sol->bluestein->B;
         for (INTP i = 0; i < n; i++)
         {
-            B[i * DATA_STRIDE] = cos((M_PI * i * i) / n);
-            B[i * DATA_STRIDE + 1] = sin((M_PI * i * i) / n);
+            // Handle overflow to improve accuracy for larger values
+            INTP m = (i * i) % n2;
+            FLOAT angle = (2.0 * M_PI * m) / n2;
+            B[i * DATA_STRIDE] = cos(angle);
+            B[i * DATA_STRIDE + 1] = sin(angle);
         }
         memset(B + n * DATA_STRIDE, 0,
                (m - n - 1) * DATA_STRIDE * sizeof(FLOAT));
@@ -96,8 +100,11 @@ INT32 prepare_bluestein_sequence(aoclfftz_solution_t *sol, INTP m)
         DOUBLE *B = (DOUBLE *)sol->bluestein->B;
         for (INTP i = 0; i < n; i++)
         {
-            B[i * DATA_STRIDE] = cos((M_PI * i * i) / n);
-            B[i * DATA_STRIDE + 1] = sin((M_PI * i * i) / n);
+            // Handle overflow to improve accuracy for larger values
+            INTP m = (i * i) % n2;
+            DOUBLE angle = (2.0 * M_PI * m) / n2;
+            B[i * DATA_STRIDE] = cos(angle);
+            B[i * DATA_STRIDE + 1] = sin(angle);
         }
         memset(B + n * DATA_STRIDE, 0,
                (m - n - 1) * DATA_STRIDE * sizeof(DOUBLE));
