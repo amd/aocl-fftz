@@ -83,9 +83,9 @@ INT32 prepare_bluestein_sequence(aoclfftz_solution_t *sol, INTP m)
         {
             // Handle overflow to improve accuracy for larger values
             INTP m = (i * i) % n2;
-            FLOAT angle = (2.0 * M_PI * m) / n2;
-            B[i * DATA_STRIDE] = cos(angle);
-            B[i * DATA_STRIDE + 1] = sin(angle);
+            FLOAT angle = (AOCLFFTZ_2_PIf * m) / n2;
+            B[i * DATA_STRIDE] = cosf(angle);
+            B[i * DATA_STRIDE + 1] = sinf(angle);
         }
         memset(B + n * DATA_STRIDE, 0,
                (m - n - 1) * DATA_STRIDE * sizeof(FLOAT));
@@ -102,7 +102,7 @@ INT32 prepare_bluestein_sequence(aoclfftz_solution_t *sol, INTP m)
         {
             // Handle overflow to improve accuracy for larger values
             INTP m = (i * i) % n2;
-            DOUBLE angle = (2.0 * M_PI * m) / n2;
+            DOUBLE angle = (AOCLFFTZ_2_PI * m) / n2;
             B[i * DATA_STRIDE] = cos(angle);
             B[i * DATA_STRIDE + 1] = sin(angle);
         }

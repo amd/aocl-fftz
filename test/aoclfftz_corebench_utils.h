@@ -508,12 +508,12 @@
         dt_t *out_combined_t = (dt_t *)out_combined;                           \
         dt_t cmul_temp[T_DATA_STRIDE] = {0.0, 0.0};                            \
         dt_t e_k[T_DATA_STRIDE] = {1.0, 0.0};                                  \
-        dt_t two = (dir == FORWARD) ? -2.0 : 2.0;                              \
+        dt_t sign = (dir == FORWARD) ? -1.0 : 1.0;                             \
         for (INTP k = 0; k < n; k++)                                           \
         {                                                                      \
             /* Handle overflow to improve accuracy for larger values */        \
             INTP mk = (m * k) % n;                                             \
-            dt_t angle = (two * M_PI * mk / n);                                \
+            dt_t angle = (sign * BENCH_2_PI * mk / n);                         \
             EULER(angle, e_k);                                                 \
             CMUL(out1_t + k * stride * T_DATA_STRIDE, e_k,                     \
                  out_combined_t + k * stride * T_DATA_STRIDE, cmul_temp);      \
@@ -870,8 +870,8 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP stride, INT32 input_type)
     {
         for (INTP idx = 0; idx < n * stride * T_DATA_STRIDE; ++idx)
         {
-            // range: [-10.0, 10.0) with 3 decimal precision
-            input_f[idx] = (FLOAT)((rand() % 2000) / 200.0) - 10.0;
+            // range: [-10.0, 10.0)
+            input_f[idx] = (20.0f / RAND_MAX) * rand() - 10.0f;
         }
     }
     // impulse input
@@ -879,10 +879,9 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP stride, INT32 input_type)
     {
         INTP idx = (INTP)(rand() % n) * stride;
         memset(input_f, 0, n * stride * T_DATA_STRIDE);
-        // range: [-10.0, 10.0) with 3 decimal precision
-        input_f[idx * T_DATA_STRIDE] = (FLOAT)((rand() % 2000) / 200.0 - 10.0);
-        input_f[idx * T_DATA_STRIDE + 1] =
-            (FLOAT)((rand() % 2000) / 200.0 - 10.0);
+        // range: [-10.0, 10.0)
+        input_f[idx * T_DATA_STRIDE] = (20.0f / RAND_MAX) * rand() - 10.0f;
+        input_f[idx * T_DATA_STRIDE + 1] = (20.0f / RAND_MAX) * rand() - 10.0f;
     }
     // sinusoidal signal input
     else if (input_type == SINUSOIDAL_SIGNAL_INPUT)
@@ -890,18 +889,18 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP stride, INT32 input_type)
         INTP length = n * stride;
         // Sine wave cycles
         INTP cycles = (rand() % (length / 2)) + 2;
-        FLOAT size = 2.0 * M_PI * cycles;
+        FLOAT size = BENCH_2_PIf * cycles;
         // Shift the origin of the wave from 0 to a positive integer `shift`,
         // shift range: [0, length)
         INTP shift = rand() % length;
-        // scale the amplitude of the wave by `scale` times, scale range:
-        // [0.0 5.0)
-        FLOAT scale = ((FLOAT)rand() / (FLOAT)RAND_MAX) * 5.0;
+        // scale the amplitude of the wave by `scale` times,
+        // scale range: [0.0, 5.0)
+        FLOAT scale = ((FLOAT)rand() / RAND_MAX) * 5.0f;
         for (INTP i = 0; i < length; i++)
         {
             input_f[((i + shift) % length) * T_DATA_STRIDE] =
-                sin((FLOAT)(i * size) / length) * scale;
-            input_f[((i + shift) % length) * T_DATA_STRIDE + 1] = 0.0;
+                sinf((FLOAT)(i * size) / length) * scale;
+            input_f[((i + shift) % length) * T_DATA_STRIDE + 1] = 0.0f;
         }
     }
 }
@@ -923,8 +922,8 @@ VOID prepare_input_data_d(VOID *input, INTP n, INTP stride, INT32 input_type)
     {
         for (INTP idx = 0; idx < n * stride * T_DATA_STRIDE; ++idx)
         {
-            // range: [-10.0, 10.0) with 3 decimal precision
-            input_d[idx] = (DOUBLE)((rand() % 2000) / 200.0) - 10.0;
+            // range: [-10.0, 10.0)
+            input_d[idx] = (20.0 / RAND_MAX) * rand() - 10.0;
         }
     }
     // impulse input
@@ -932,10 +931,9 @@ VOID prepare_input_data_d(VOID *input, INTP n, INTP stride, INT32 input_type)
     {
         INTP idx = (INTP)(rand() % n) * stride;
         memset(input_d, 0, n * stride * T_DATA_STRIDE);
-        // range: [-10.0, 10.0) with 3 decimal precision */
-        input_d[idx * T_DATA_STRIDE] = (DOUBLE)((rand() % 2000) / 200.0 - 10.0);
-        input_d[idx * T_DATA_STRIDE + 1] =
-            (DOUBLE)((rand() % 2000) / 200.0 - 10.0);
+        // range: [-10.0, 10.0)
+        input_d[idx * T_DATA_STRIDE] = (20.0 / RAND_MAX) * rand() - 10.0;
+        input_d[idx * T_DATA_STRIDE + 1] = (20.0 / RAND_MAX) * rand() - 10.0;
     }
     // sinusoidal signal input
     else if (input_type == SINUSOIDAL_SIGNAL_INPUT)
@@ -943,12 +941,12 @@ VOID prepare_input_data_d(VOID *input, INTP n, INTP stride, INT32 input_type)
         INTP length = n * stride;
         // Sine wave cycles
         INTP cycles = (rand() % (length / 2)) + 2;
-        DOUBLE size = 2.0 * M_PI * cycles;
+        DOUBLE size = BENCH_2_PI * cycles;
         // Shift the origin of the wave from 0 to a positive integer `shift`,
         // shift range: [0, length)
         INTP shift = rand() % length;
-        // scale the amplitude of the wave by `scale` times, scale range:
-        // [0.0 5.0)
+        // scale the amplitude of the wave by `scale` times,
+        // scale range: [0.0, 5.0)
         DOUBLE scale = ((DOUBLE)rand() / RAND_MAX) * 5.0;
         for (INTP i = 0; i < length; i++)
         {
@@ -974,7 +972,7 @@ VOID dft_ref_f(VOID *in, VOID *out, INTP n, INTP in_stride, INTP out_stride,
                INTP batch, INTP v_in_stride, INTP v_out_stride, INT32 is_bwd)
 {
     FLOAT e[T_DATA_STRIDE], mul_buf[T_DATA_STRIDE];
-    FLOAT two = is_bwd ? 2.0 : -2.0;
+    FLOAT sign = is_bwd ? 1.0 : -1.0;
     FLOAT *in_f = (FLOAT *)in;
     FLOAT *out_f = (FLOAT *)out;
     in_stride = in_stride * T_DATA_STRIDE;
@@ -991,9 +989,9 @@ VOID dft_ref_f(VOID *in, VOID *out, INTP n, INTP in_stride, INTP out_stride,
             {
                 INTP in_idx = i * in_stride;
 
-                FLOAT x = (two * M_PI * i * k / n);
-                e[0] = cos(x);
-                e[1] = sin(x);
+                FLOAT x = (sign * BENCH_2_PIf * i * k / n);
+                e[0] = cosf(x);
+                e[1] = sinf(x);
 
                 mul_buf[0] = (in_f[in_idx] * e[0]) - (in_f[in_idx + 1] * e[1]);
                 mul_buf[1] = (in_f[in_idx] * e[1]) + (in_f[in_idx + 1] * e[0]);
@@ -1023,7 +1021,7 @@ VOID dft_ref_d(VOID *in, VOID *out, INTP n, INTP in_stride, INTP out_stride,
                INTP batch, INTP v_in_stride, INTP v_out_stride, INT32 is_bwd)
 {
     DOUBLE e[T_DATA_STRIDE], mul_buf[T_DATA_STRIDE];
-    DOUBLE two = is_bwd ? 2.0 : -2.0;
+    DOUBLE sign = is_bwd ? 1.0 : -1.0;
     DOUBLE *in_d = (DOUBLE *)in;
     DOUBLE *out_d = (DOUBLE *)out;
     in_stride = in_stride * T_DATA_STRIDE;
@@ -1039,7 +1037,7 @@ VOID dft_ref_d(VOID *in, VOID *out, INTP n, INTP in_stride, INTP out_stride,
             for (INTP i = 0; i < n; i++)
             {
                 INTP in_idx = i * in_stride;
-                DOUBLE x = (two * M_PI * i * k / n);
+                DOUBLE x = (sign * BENCH_2_PI * i * k / n);
                 e[0] = cos(x);
                 e[1] = sin(x);
 

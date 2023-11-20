@@ -227,7 +227,7 @@ class AoclfftzKernelTestBase
     {
         // Sine wave cycles
         INTP cycles = (rand() % (input_length / 2)) + 2;
-        T size = 2.0 * M_PI * cycles;
+        T size = AOCLFFTZ_2_PI * cycles;
         // Shift the origin of the wave from 0 to a positive integer `shift`,
         // shift range: [0, length)
         INTP shift = rand() % input_length;
@@ -653,13 +653,13 @@ class AoclfftzKernelTestBase
 
         T cmul_temp[DATA_STRIDE] = {0.0, 0.0};
         T e_k[DATA_STRIDE] = {1.0, 0.0};
-        T two = is_bwd ? 2.0 : -2.0;
+        T sign = is_bwd ? 1.0 : -1.0;
 
         for (INTP k = 0; k < length; k++)
         {
             // handle overflow to improve accuracy for larger values
             INTP mk = (m * k) % radix;
-            T angle = two * M_PI * mk / radix;
+            T angle = sign * AOCLFFTZ_2_PI * mk / radix;
             EULER(angle, e_k);
             CMUL(out1 + k * stride.out_stride * DATA_STRIDE, e_k,
                  out_comp + k * stride.out_stride * DATA_STRIDE, cmul_temp);

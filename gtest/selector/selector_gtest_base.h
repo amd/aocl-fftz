@@ -87,7 +87,7 @@ VOID prepare_bluestein_sequence_ref(VOID *B, INTP m, INTP n, UINT32 precision)
         for (INTP i = 0; i < n; i++)
         {
             INTP m = (i * i) % n2;
-            FLOAT angle = (2.0 * M_PI * m) / n2;
+            FLOAT angle = (AOCLFFTZ_2_PIf * m) / n2;
             B_f[i * DATA_STRIDE] = cos(angle);
             B_f[i * DATA_STRIDE + 1] = sin(angle);
         }
@@ -108,7 +108,7 @@ VOID prepare_bluestein_sequence_ref(VOID *B, INTP m, INTP n, UINT32 precision)
         for (INTP i = 0; i < n; i++)
         {
             INTP m = (i * i) % n2;
-            DOUBLE angle = (2.0 * M_PI * m) / n2;
+            DOUBLE angle = (AOCLFFTZ_2_PI * m) / n2;
             B_d[i * DATA_STRIDE] = cos(angle);
             B_d[i * DATA_STRIDE + 1] = sin(angle);
         }

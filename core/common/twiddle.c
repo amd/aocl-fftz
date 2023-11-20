@@ -70,9 +70,9 @@ INT32 twiddle_multiplier(aoclfftz_solution_t* sol)
             INTP in_idx = 0;
             for(INTP r = 0; r < radix; r++)
             {
-                FLOAT x = (-2 * M_PI * r * s) / ((FLOAT)(N));
-                FLOAT TW_real = cos(x);
-                FLOAT TW_imag = sin(x);
+                FLOAT x = (-AOCLFFTZ_2_PIf * r * s) / ((FLOAT)(N));
+                FLOAT TW_real = cosf(x);
+                FLOAT TW_imag = sinf(x);
                 FLOAT real = out_real[out_idx];
                 FLOAT imag = out_imag[out_idx];
 
@@ -113,7 +113,7 @@ INT32 twiddle_multiplier(aoclfftz_solution_t* sol)
             INTP in_idx = 0;
             for(INTP r = 0; r < radix; r++)
             {
-                DOUBLE x = (-2 * M_PI * r * s) / ((DOUBLE)(N));
+                DOUBLE x = (-AOCLFFTZ_2_PI * r * s) / ((DOUBLE)(N));
                 DOUBLE TW_real = cos(x);
                 DOUBLE TW_imag = sin(x);
                 DOUBLE real = out_real[out_idx];
@@ -205,9 +205,9 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t* sol)
                 FLOAT next_real = in_real[dst];
                 FLOAT next_imag = in_imag[dst];
 
-                FLOAT x = (-2 * M_PI * r * s) / ((FLOAT)(N));
-                FLOAT TW_real = cos(x);
-                FLOAT TW_imag = sin(x);
+                FLOAT x = (-AOCLFFTZ_2_PIf * r * s) / ((FLOAT)(N));
+                FLOAT TW_real = cosf(x);
+                FLOAT TW_imag = sinf(x);
 
                 out_real[dst] = src_real * TW_real - src_imag * TW_imag;
                 out_imag[dst] = src_real * TW_imag + src_imag * TW_real;
@@ -270,7 +270,7 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t* sol)
                 DOUBLE next_real = in_real[dst];
                 DOUBLE next_imag = in_imag[dst];
 
-                DOUBLE x = (-2 * M_PI * r * s) / ((DOUBLE)(N));
+                DOUBLE x = (-AOCLFFTZ_2_PI * r * s) / ((DOUBLE)(N));
                 DOUBLE TW_real = cos(x);
                 DOUBLE TW_imag = sin(x);
 
