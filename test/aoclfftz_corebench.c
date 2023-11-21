@@ -525,10 +525,11 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             // TODO: Modify this after adding support for all optimization
             // levels
-            else if (opt_level != -1)
+            else if (opt_level != -1 && opt_level != 2)
             {
-                printf("WARNING: only opt-level -1 is currently supported, "
-                       "running bench with this option\n");
+                printf(
+                    "WARNING: only opt-level -1 and 2 are currently supported, "
+                    "running bench with defaultvalue (-1: no-optimization)\n");
                 opt_level = -1;
             }
             break;

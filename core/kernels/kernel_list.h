@@ -74,27 +74,26 @@ kernel_fp_list kernels_c[NUM_KERNELS_IN_EACH_CATEGORY] =
     {NULL, NULL, 64}                                  // radix-64
 };
 #ifdef ENABLE_AVX128
-kernel_fp_list kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
-{
-    {NULL, NULL, 2 }, //radix-2
-    {NULL, NULL, 3 }, //radix-3
-    {NULL, NULL, 4 }, //radix-4
-    {NULL, NULL, 5 }, //radix-5
-    {NULL, NULL, 6 }, //radix-6
-    {NULL, NULL, 7 }, //radix-7
-    {NULL, NULL, 8 }, //radix-8
-    {NULL, NULL, 9 }, //radix-9
-    {NULL, NULL, 10}, //radix-10
-    {NULL, NULL, 11}, //radix-11
-    {NULL, NULL, 12}, //radix-12
-    {NULL, NULL, 13}, //radix-13
-    {NULL, NULL, 14}, //radix-14
-    {NULL, NULL, 15}, //radix-15
-    {NULL, NULL, 16}, //radix-16
-    {NULL, NULL, 20}, //radix-20
-    {NULL, NULL, 25}, //radix-25
-    {NULL, NULL, 32}, //radix-32
-    {NULL, NULL, 64}  //radix-64
+kernel_fp_list kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] = {
+    {register_kernel_fft2avx128, get_ops_cnt_fft2avx128, 2},  // radix-2
+    {NULL, NULL, 3},                                          // radix-3
+    {NULL, NULL, 4},                                          // radix-4
+    {NULL, NULL, 5},                                          // radix-5
+    {NULL, NULL, 6},                                          // radix-6
+    {NULL, NULL, 7},                                          // radix-7
+    {NULL, NULL, 8},                                          // radix-8
+    {NULL, NULL, 9},                                          // radix-9
+    {NULL, NULL, 10},                                         // radix-10
+    {NULL, NULL, 11},                                         // radix-11
+    {NULL, NULL, 12},                                         // radix-12
+    {NULL, NULL, 13},                                         // radix-13
+    {NULL, NULL, 14},                                         // radix-14
+    {NULL, NULL, 15},                                         // radix-15
+    {NULL, NULL, 16},                                         // radix-16
+    {NULL, NULL, 20},                                         // radix-20
+    {NULL, NULL, 25},                                         // radix-25
+    {NULL, NULL, 32},                                         // radix-32
+    {NULL, NULL, 64}                                          // radix-64
 };
 #endif
 #ifdef ENABLE_AVX256

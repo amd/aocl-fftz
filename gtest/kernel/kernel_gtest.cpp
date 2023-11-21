@@ -106,6 +106,14 @@ aoclfftz_kernel_test_params_t param_double_kernels[] = {
     {15, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
     {16, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL}};
 
+aoclfftz_kernel_test_params_t param_float_avx128_kernels[] = {
+    {2, aocl_fftz_kernel_type::STANDARD_AVX128,
+    aoclfftz_kernel_test_type::ALL}};
+
+aoclfftz_kernel_test_params_t param_double_avx128_kernels[] = {
+    {2, aocl_fftz_kernel_type::STANDARD_AVX128,
+    aoclfftz_kernel_test_type::ALL}};
+
 // stride values as in-stride, out-stride pairs
 std::vector<std::pair<INTP, INTP>> strides = {{1, 1}, {2, 9},  {7, 3},
                                               {4, 4}, {11, 1}, {1, 6}};
@@ -197,3 +205,20 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(strides),
                        ::testing::Values(0, 1)), // 0 -> FWD, 1 -> BWD
     name_generator);
+
+#ifdef ENABLE_AVX128
+//AVX128 TEST SUITE
+INSTANTIATE_TEST_SUITE_P(
+    AVXKernelTest, AoclfftzKernelTestFloat,
+    ::testing::Combine(::testing::ValuesIn(param_float_avx128_kernels),
+                       ::testing::ValuesIn(strides),
+                       ::testing::Values(0, 1)), // 0 -> FWD, 1 -> BWD
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    AVXKernelTest, AoclfftzKernelTestDouble,
+    ::testing::Combine(::testing::ValuesIn(param_double_avx128_kernels),
+                       ::testing::ValuesIn(strides),
+                       ::testing::Values(0, 1)), // 0 -> FWD, 1 -> BWD
+    name_generator);
+#endif
