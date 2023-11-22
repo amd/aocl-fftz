@@ -35,6 +35,7 @@
  *
  * @author S. Biplab Raut
  * @author Varun Sanjay
+ * @author Jeya R
  *
  */
 
@@ -51,9 +52,8 @@ kfft_ register_kernel_fft15c(INT32 precision)
 }
 #ifdef USE_OPT_KERNEL_VARIANT
 /* --------------- optimized C kernel variant --------------- */
-// TODO: update ops_cnt
-static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 104, 203, 60, 0, 0},
-                                                     {0, 104, 203, 60, 0, 0}};
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 56, 156, 60, 0, 0},
+                                                     {0, 56, 156, 60, 0, 0}};
 
 ops_cycles_t get_ops_cnt_fft15c(INT32 precision)
 {
@@ -67,33 +67,17 @@ VOID fft15c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                  INTP n, aoclfftz_strides_t *strides)
 {
     const DOUBLE CRTM_15_1 =
-        +0.91354545764260089786653411260175763014630651476859;
+        +0.55901699437494742410229341718281905886015458990288;
     const DOUBLE CRTM_15_2 =
-        +0.40673664307580020244344195165731987476994255841557;
+        +0.25000000000000000000000000000000000000000000000000;
     const DOUBLE CRTM_15_3 =
-        +0.66913060635885822246624475148920014459869481182487;
+        +0.95105651629515357211643933337938214340569863400000;
     const DOUBLE CRTM_15_4 =
-        +0.74314482547739422723523183906600387567804039038099;
-    const DOUBLE CRTM_15_5 =
-        +0.30901699437494735775909215694883353691106407759980;
-    const DOUBLE CRTM_15_6 =
-        +0.95105651629515359367265213397317432075121805913368;
-    const DOUBLE CRTM_15_7 =
-        +0.10452846326765344827475689190358280057779765406449;
-    const DOUBLE CRTM_15_8 =
-        +0.99452189536827333935323550615724320908650656433540;
-    const DOUBLE CRTM_15_9 =
-        +0.49999999999999989931390918883503052434117283719579;
-    const DOUBLE CRTM_15_10 =
-        +0.86602540378443870489486480423012865512801223847686;
-    const DOUBLE CRTM_15_11 =
-        +0.80901699437494750610700001978173170344740065252139;
-    const DOUBLE CRTM_15_12 =
         +0.58778525229247301629891039327884007596190389052978;
-    const DOUBLE CRTM_15_13 =
-        +0.97814760073380564759748190481590945657945761737292;
-    const DOUBLE CRTM_15_14 =
-        +0.20791169081775929161307291104291640870739670391251;
+    const DOUBLE CRTM_15_5 =
+        +0.50000000000000000000000000000000000000000000000000;
+    const DOUBLE CRTM_15_6 =
+        +0.86602540378443864676372317075293618347140262690519;
 
     DOUBLE *in_r = (DOUBLE *)in_real;
     DOUBLE *in_i = (DOUBLE *)in_imag;
@@ -111,16 +95,10 @@ VOID fft15c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
             v7i, v8r, v8i, v9r, v9i, v10r, v10i, v11r, v11i, v12r, v12i, v13r,
             v13i, v14r, v14i, v15r, v15i,
 
-            adr1, adr2, adr3, adr4, adr5, adr6, adr7, adi1, adi2, adi3, adi4,
-            adi5, adi6, adi7, sbi1, sbi2, sbi3, sbi4, sbi5, sbi6, sbi7, sbr1,
-            sbr2, sbr3, sbr4, sbr5, sbr6, sbr7, adr12, adi12,
-
-            tvrr, tvri, tvir, tvii,
-
-            tv1, tv2, tv3, tv4, tv5, tv6, tv7, tv8, tv9, tv10, tv11, tv12, tv13,
-            tv14, tv15, tv16, tv17, tv18, tv19, tv20, adr9, adr11, sbi8, adi10,
-            adi11, sbr8, adr8, adi9, adr10, adi8, sbr9, sbi9, tv21, tv22, tv23,
-            tv24, tv25, tv26, tv27, tv28, tv29, tv30;
+            tv1, tv2, tv3, tv4, tv5, tv6, tv7, tv8, tv9, tv10, tv11, tv12, cv1r, cv1i,
+            cv1, cv2, cv3, cv4, cv5, cv6, cv7, cv8, cv9, cv10, cv11, cv12,
+            cv13, cv14, cv15, cv16, cv17, cv18, cv19, cv20, cv21, cv22, cv23, cv24,
+            cv25, cv26, cv27, cv28, cv29, cv30;
 
         // Input point 1: x(0)
         v1r = *in_r;
@@ -183,275 +161,210 @@ VOID fft15c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         v15i = in_i[in_stride * 14];
 
         // common calculations
-        adr1 = v2r + v15r;
-        adr2 = v3r + v14r;
-        adr3 = v4r + v13r;
-        adr4 = v5r + v12r;
-        adr5 = v6r + v11r;
-        adr6 = v7r + v10r;
-        adr7 = v8r + v9r;
-        adr8 = adr1 + adr4;
-        adr9 = adr8 + adr6;
-        adr10 = adr2 + adr7;
-        adr11 = adr10 + adr3;
-        adr12 = v1r + adr5;
+        tv1 = v11r + v6r;
+        tv2 = v11i + v6i;
+        cv1 = v1r + tv1;
+        cv2 = v1i + tv2;
+        tv3 = v1r - CRTM_15_5 * (tv1);
+        tv4 = v1i - CRTM_15_5 * (tv2);
 
-        sbi1 = v15i - v2i;
-        sbi2 = v14i - v3i;
-        sbi3 = v13i - v4i;
-        sbi4 = v12i - v5i;
-        sbi5 = v11i - v6i;
-        sbi6 = v10i - v7i;
-        sbi7 = v9i - v8i;
-        sbi8 = sbi1 - sbi4 + sbi6;
-        sbi9 = sbi2 + sbi7;
+        tv5 = CRTM_15_6 * (v11r - v6r);
+        tv6 = CRTM_15_6 * (v11i - v6i);
+        cv3 = tv3 + tv6;
+        cv4 = tv3 - tv6;
+        cv5 = tv4 + tv5;
+        cv6 = tv4 - tv5;
 
-        sbr1 = v15r - v2r;
-        sbr2 = v14r - v3r;
-        sbr3 = v13r - v4r;
-        sbr4 = v12r - v5r;
-        sbr5 = v11r - v6r;
-        sbr6 = v10r - v7r;
-        sbr7 = v9r - v8r;
-        sbr8 = sbr1 - sbr4 + sbr6;
-        sbr9 = sbr2 + sbr7;
+        tv1 = v3r + v8r;
+        tv2 = v3i + v8i;
+        cv7 = v13r + tv1;
+        cv8 = v13i + tv2;
+        tv3 = v13r - CRTM_15_5 * (tv1);
+        tv4 = v13i - CRTM_15_5 * (tv2);
 
-        adi1 = v2i + v15i;
-        adi2 = v3i + v14i;
-        adi3 = v4i + v13i;
-        adi4 = v5i + v12i;
-        adi5 = v6i + v11i;
-        adi6 = v7i + v10i;
-        adi7 = v8i + v9i;
-        adi8 = adi2 + adi7;
-        adi9 = adi1 + adi4;
-        adi10 = adi9 + adi6;
-        adi11 = adi2 + adi3 + adi7;
-        adi12 = v1i + adi5;
+        tv5 = CRTM_15_6 * (v3r - v8r);
+        tv6 = CRTM_15_6 * (v3i - v8i);
+        cv9 = tv3 + tv6;
+        cv10 = tv3 - tv6;
+        cv11 = tv4 + tv5;
+        cv12 = tv4 - tv5;
 
-        tv1 = CRTM_15_5 * adr3;
-        tv2 = CRTM_15_9 * adr5;
-        tv3 = CRTM_15_11 * adr6;
-        tv4 = CRTM_15_6 * sbi3;
-        tv5 = CRTM_15_10 * sbi5;
-        tv6 = CRTM_15_12 * sbi6;
-        tv7 = CRTM_15_6 * sbr3;
-        tv8 = CRTM_15_10 * sbr5;
-        tv9 = CRTM_15_12 * sbr6;
-        tv10 = CRTM_15_5 * adi3;
-        tv11 = CRTM_15_9 * adi5;
-        tv12 = CRTM_15_11 * adi6;
-        tv13 = CRTM_15_11 * adr3;
-        tv14 = CRTM_15_5 * adr6;
-        tv15 = CRTM_15_12 * sbi3;
-        tv16 = CRTM_15_6 * sbi6;
-        tv17 = CRTM_15_12 * sbr3;
-        tv18 = CRTM_15_6 * sbr6;
-        tv19 = CRTM_15_11 * adi3;
-        tv20 = CRTM_15_5 * adi6;
+        tv1 = v14r + v9r;
+        tv2 = v14i + v9i;
+        cv13 = v4r + tv1;
+        cv14 = v4i + tv2;
+        tv3 = v4r - CRTM_15_5 * (tv1);
+        tv4 = v4i - CRTM_15_5 * (tv2);
 
-        tv21 = tv7 + tv9;
-        tv22 = tv4 + tv6;
-        tv23 = tv2 + tv3;
-        tv24 = tv11 + tv12;
-        tv25 = v1r + tv14 - tv13 - tv2;
-        tv26 = tv15 - tv16;
-        tv27 = tv17 - tv18;
-        tv28 = v1i + tv20 - tv19 - tv11;
-        tv29 = v1r + tv1 - tv23;
-        tv30 = v1i + tv10 - tv24;
+        tv5 = CRTM_15_6 * (v14r - v9r);
+        tv6 = CRTM_15_6 * (v14i - v9i);
+        cv15 = tv3 + tv6;
+        cv16 = tv3 - tv6;
+        cv17 = tv4 + tv5;
+        cv18 = tv4 - tv5;
+
+        tv1 = v12r + v2r;
+        tv2 = v12i + v2i;
+        cv19 = v7r + tv1;
+        cv20 = v7i + tv2;
+        tv3 = v7r - CRTM_15_5 * (tv1);
+        tv4 = v7i - CRTM_15_5 * (tv2);
+
+        tv5 = CRTM_15_6 * (v12r - v2r);
+        tv6 = CRTM_15_6 * (v12i - v2i);
+        cv21 = tv3 + tv6;
+        cv22 = tv3 - tv6;
+        cv23 = tv4 + tv5;
+        cv24 = tv4 - tv5;
+
+        tv1 = v15r + v5r;
+        tv2 = v15i + v5i;
+        cv25 = v10r + tv1;
+        cv26 = v10i + tv2;
+        tv3 = v10r - CRTM_15_5 * (tv1);
+        tv4 = v10i - CRTM_15_5 * (tv2);
+
+        tv5 = CRTM_15_6 * (v15r - v5r);
+        tv6 = CRTM_15_6 * (v15i - v5i);
+        cv27 = tv3 + tv6;
+        cv28 = tv3 - tv6;
+        cv29 = tv4 + tv5;
+        cv30 = tv4 - tv5;
+
+        tv1 = cv25 + cv19;
+        tv2 = cv7 + cv13;
+        tv3 = tv1 + tv2;
+        tv4 = CRTM_15_1 * (tv1 - tv2);
+        tv5 = cv1 - CRTM_15_2 * (tv3);
+        tv6 = cv8 - cv14;
+        tv1 = cv20 - cv26;
+        tv2 = CRTM_15_3 * (tv1) + CRTM_15_4 * (tv6);
+        cv1r = tv5 + tv4;
+
+        tv7 = cv26 + cv20;
+        tv8 = cv8 + cv14;
+        tv9 = tv7 + tv8;
+        tv10 = CRTM_15_1 * (tv7 - tv8);
+        tv11 = cv2 - CRTM_15_2 * (tv9);
+        tv12 = cv13 - cv7;
+        tv7 = cv25 - cv19;
+        tv8 = CRTM_15_3* (tv7) + CRTM_15_4 * (tv12);
+        cv1i = tv11 + tv10;
 
         // Output point 1: X(0)
-        *out_r = adr12 + adr9 + adr11;
-        *out_i = adi12 + adi10 + adi11;
-
-        // Output point 2: X(1)
-        tvrr = (CRTM_15_1 * adr1);
-        tvrr += (CRTM_15_3 * adr2);
-        tvrr += tv29;
-        tvrr -= (CRTM_15_7 * adr4);
-        tvrr -= (CRTM_15_13 * adr7);
-        tvri = (CRTM_15_2 * sbi1);
-        tvri += (CRTM_15_4 * sbi2);
-        tvri += tv22;
-        tvri += (CRTM_15_8 * sbi4);
-        tvri += tv5;
-        tvri += (CRTM_15_14 * sbi7);
-
-        tvir = (CRTM_15_2 * sbr1);
-        tvir += (CRTM_15_4 * sbr2);
-        tvir += tv21;
-        tvir += (CRTM_15_8 * sbr4);
-        tvir += tv8;
-        tvir += (CRTM_15_14 * sbr7);
-        tvii = (CRTM_15_1 * adi1);
-        tvii += (CRTM_15_3 * adi2);
-        tvii += tv30;
-        tvii -= (CRTM_15_7 * adi4);
-        tvii -= (CRTM_15_13 * adi7);
-
-        out_r[out_stride] = tvrr - tvri;
-        out_i[out_stride] = tvii + tvir;
-
-        // Output point 15: X(14)
-        out_r[out_stride * 14] = tvrr + tvri;
-        out_i[out_stride * 14] = tvii - tvir;
-
-        // Output point 3: X(2)
-        tvrr = (CRTM_15_3 * adr1);
-        tvrr -= (CRTM_15_7 * adr2);
-        tvrr -= (CRTM_15_13 * adr4);
-        tvrr += tv25;
-        tvrr += (CRTM_15_1 * adr7);
-        tvri = (CRTM_15_4 * sbi1);
-        tvri += (CRTM_15_8 * sbi2);
-        tvri += tv26;
-        tvri -= (CRTM_15_14 * sbi4);
-        tvri -= tv5;
-        tvri -= (CRTM_15_2 * sbi7);
-
-        tvir = (CRTM_15_4 * sbr1);
-        tvir += (CRTM_15_8 * sbr2);
-        tvir += tv27;
-        tvir -= (CRTM_15_14 * sbr4);
-        tvir -= tv8;
-        tvir -= (CRTM_15_2 * sbr7);
-        tvii = (CRTM_15_3 * adi1);
-        tvii -= (CRTM_15_7 * adi2);
-        tvii -= (CRTM_15_13 * adi4);
-        tvii += tv28;
-        tvii += (CRTM_15_1 * adi7);
-
-        out_r[out_stride * 2] = tvrr - tvri;
-        out_i[out_stride * 2] = tvii + tvir;
-
-        // Output point 14: X(13)
-        out_r[out_stride * 13] = tvrr + tvri;
-        out_i[out_stride * 13] = tvii - tvir;
+        *out_r = cv1 + tv3;
+        *out_i = cv2 + tv9;
 
         // Output point 4: X(3)
-        tvrr = adr12;
-        tvrr += CRTM_15_5 * (adr9);
-        tvrr -= CRTM_15_11 * (adr11);
-        tvri = CRTM_15_6 * (sbi8);
-        tvri += CRTM_15_12 * (sbi9 - sbi3);
-
-        tvir = CRTM_15_6 * (sbr8);
-        tvir += CRTM_15_12 * (sbr9 - sbr3);
-        tvii = adi12;
-        tvii += CRTM_15_5 * (adi10);
-        tvii -= CRTM_15_11 * (adi11);
-
-        out_r[out_stride * 3] = tvrr - tvri;
-        out_i[out_stride * 3] = tvii + tvir;
+        out_r[out_stride * 3] = cv1r + tv2;
+        out_i[out_stride * 3] = cv1i + tv8;
 
         // Output point 13: X(12)
-        out_r[out_stride * 12] = tvrr + tvri;
-        out_i[out_stride * 12] = tvii - tvir;
+        out_r[out_stride * 12] = cv1r - tv2;
+        out_i[out_stride * 12] = cv1i - tv8;
 
-        // Output point 5: X(4)
-        tvrr = (CRTM_15_1 * adr4);
-        tvrr -= (CRTM_15_7 * adr1);
-        tvrr -= (CRTM_15_13 * adr2);
-        tvrr += tv29;
-        tvrr += (CRTM_15_3 * adr7);
-        tvri = (CRTM_15_8 * sbi1);
-        tvri -= (CRTM_15_14 * sbi2);
-        tvri -= tv22;
-        tvri += (CRTM_15_2 * sbi4);
-        tvri += tv5;
-        tvri -= (CRTM_15_4 * sbi7);
-
-        tvir = (CRTM_15_8 * sbr1);
-        tvir -= (CRTM_15_14 * sbr2);
-        tvir -= tv21;
-        tvir += (CRTM_15_2 * sbr4);
-        tvir += tv8;
-        tvir -= (CRTM_15_4 * sbr7);
-        tvii = (CRTM_15_1 * adi4);
-        tvii -= (CRTM_15_7 * adi1);
-        tvii -= (CRTM_15_13 * adi2);
-        tvii += tv30;
-        tvii += (CRTM_15_3 * adi7);
-
-        out_r[out_stride * 4] = tvrr - tvri;
-        out_i[out_stride * 4] = tvii + tvir;
-
-        // Output point 12: X(11)
-        out_r[out_stride * 11] = tvrr + tvri;
-        out_i[out_stride * 11] = tvii - tvir;
-
-        // Output point 6: X(5)
-        tvrr = v1r;
-        tvrr -= CRTM_15_9 * (adr8 + adr10 + adr5);
-        tvrr += adr3;
-        tvrr += adr6;
-        tvri = CRTM_15_10 * (sbi1 - sbi2 + sbi4 - sbi5 + sbi7);
-
-        tvir = CRTM_15_10 * (sbr1 - sbr2 + sbr4 - sbr5 + sbr7);
-        tvii = v1i;
-        tvii -= CRTM_15_9 * (adi9 + adi8 + adi5);
-        tvii += adi3;
-        tvii += adi6;
-
-        out_r[out_stride * 5] = tvrr - tvri;
-        out_i[out_stride * 5] = tvii + tvir;
-
-        // Output point 11: X(10)
-        out_r[out_stride * 10] = tvrr + tvri;
-        out_i[out_stride * 10] = tvii - tvir;
+        cv1r = tv5 - tv4;
+        cv1i = tv11 - tv10;
+        tv2 = CRTM_15_4 * (tv1) - CRTM_15_3 * (tv6);
+        tv8 = CRTM_15_4 * (tv7) - CRTM_15_3 * (tv12);
 
         // Output point 7: X(6)
-        tvrr = adr12;
-        tvrr -= CRTM_15_11 * (adr9);
-        tvrr += CRTM_15_5 * (adr11);
-        tvri = CRTM_15_12 * (sbi8);
-        tvri += CRTM_15_6 * (sbi3 - sbi9);
-
-        tvir = CRTM_15_12 * (sbr8);
-        tvir += CRTM_15_6 * (sbr3 - sbr9);
-        tvii = adi12;
-        tvii -= CRTM_15_11 * (adi10);
-        tvii += CRTM_15_5 * (adi11);
-
-        out_r[out_stride * 6] = tvrr - tvri;
-        out_i[out_stride * 6] = tvii + tvir;
+        out_r[out_stride * 6] = cv1r + tv2;
+        out_i[out_stride * 6] = cv1i + tv8;
 
         // Output point 10: X(9)
-        out_r[out_stride * 9] = tvrr + tvri;
-        out_i[out_stride * 9] = tvii - tvir;
+        out_r[out_stride * 9] = cv1r - tv2;
+        out_i[out_stride * 9] = cv1i - tv8;
 
-        // Output point 8: X(7)
-        tvrr = (CRTM_15_3 * adr4);
-        tvrr -= (CRTM_15_13 * adr1);
-        tvrr += (CRTM_15_1 * adr2);
-        tvrr += tv25;
-        tvrr -= (CRTM_15_7 * adr7);
-        tvri = (CRTM_15_14 * sbi1);
-        tvri -= (CRTM_15_2 * sbi2);
-        tvri += tv26;
-        tvri -= (CRTM_15_4 * sbi4);
-        tvri += tv5;
-        tvri += (CRTM_15_8 * sbi7);
+        tv1 = cv22 + cv28;
+        tv2 = cv10 + cv15;
+        tv3 = tv1 + tv2;
+        tv4 = CRTM_15_1 * (tv1 - tv2);
+        tv5 = cv3 - CRTM_15_2 * (tv3);
+        tv6 = cv18 - cv11;
+        tv1 = cv29 - cv23;
+        tv2 = CRTM_15_3 * (tv1) + CRTM_15_4 * (tv6);
+        cv1r = tv5 + tv4;
 
-        tvir = (CRTM_15_14 * sbr1);
-        tvir -= (CRTM_15_2 * sbr2);
-        tvir += tv27;
-        tvir -= (CRTM_15_4 * sbr4);
-        tvir += tv8;
-        tvir += (CRTM_15_8 * sbr7);
-        tvii = (CRTM_15_3 * adi4);
-        tvii -= (CRTM_15_13 * adi1);
-        tvii += (CRTM_15_1 * adi2);
-        tvii += tv28;
-        tvii -= (CRTM_15_7 * adi7);
+        tv7 = cv29 + cv23;
+        tv8 = cv11 + cv18;
+        tv9 = tv7 + tv8;
+        tv10 = CRTM_15_1 * (tv7 - tv8);
+        tv11 = cv6 - CRTM_15_2 * (tv9);
+        tv12 = cv10 - cv15;
+        tv7 = cv22 - cv28;
+        tv8 = CRTM_15_3 * (tv7) + CRTM_15_4 * (tv12);
+        cv1i = tv11 + tv10;
 
-        out_r[out_stride * 7] = tvrr - tvri;
-        out_i[out_stride * 7] = tvii + tvir;
+        // Output point 6: X(5)
+        out_r[out_stride * 5] = cv3 + tv3;
+        out_i[out_stride * 5] = cv6 + tv9;
+
+        // Output point 3: X(2)
+        out_r[out_stride << 1] = cv1r + tv2;
+        out_i[out_stride << 1] = cv1i + tv8;
 
         // Output point 9: X(8)
-        out_r[(out_stride << 3)] = tvrr + tvri;
-        out_i[(out_stride << 3)] = tvii - tvir;
+        out_r[out_stride << 3] = cv1r - tv2;
+        out_i[out_stride << 3] = cv1i - tv8;
+
+        cv1r = tv5 - tv4;
+        cv1i = tv11 - tv10;
+        tv2 = CRTM_15_3 * (tv6) - CRTM_15_4 * (tv1);
+        tv8 = CRTM_15_3 * (tv12) - CRTM_15_4 * (tv7);
+
+        // Output point 12: X(11)
+        out_r[out_stride * 11] = cv1r + tv2;
+        out_i[out_stride * 11] = cv1i + tv8;
+
+        // Output point 15: X(14)
+        out_r[out_stride * 14] = cv1r - tv2;
+        out_i[out_stride * 14] = cv1i - tv8;
+
+        tv1 = cv27 + cv21;
+        tv2 = cv9 + cv16;
+        tv3 = tv1 + tv2;
+        tv4 = CRTM_15_1 * (tv2 - tv1);
+        tv5 = cv4 - CRTM_15_2 * (tv3);
+        tv6 = cv24 - cv30;
+        tv1 = cv17 - cv12;
+        tv2 = CRTM_15_3 * (tv1) + CRTM_15_4 * (tv6);
+        cv1r = tv5 + tv4;
+
+        tv7 = cv24 + cv30;
+        tv8 = cv17 + cv12;
+        tv9 = tv7 + tv8;
+        tv10 = CRTM_15_1 * (tv8 - tv7);
+        tv11 = cv5 - CRTM_15_2 * (tv9);
+        tv12 = cv27 - cv21;
+        tv7 = cv9 - cv16;
+        tv8 = CRTM_15_3 * (tv7) + CRTM_15_4 * (tv12);
+        cv1i = tv11 + tv10;
+
+        // Output point 11: X(10)
+        out_r[out_stride * 10] = cv4 + tv3;
+        out_i[out_stride * 10] = cv5 + tv9;
+
+        // Output point 2: X(1)
+        out_r[out_stride] = cv1r + tv2;
+        out_i[out_stride] = cv1i + tv8;
+
+        // Output point 13: X(4)
+        out_r[out_stride << 2] = cv1r - tv2;
+        out_i[out_stride << 2] = cv1i - tv8;
+
+        cv1r = tv5 - tv4;
+        cv1i = tv11 - tv10;
+        tv2 = CRTM_15_4 * (tv1) - CRTM_15_3 * (tv6);
+        tv8 = CRTM_15_4 * (tv7) - CRTM_15_3 * (tv12);
+
+        // Output point 8: X(7)
+        out_r[out_stride * 7] = cv1r + tv2;
+        out_i[out_stride * 7] = cv1i + tv8;
+
+        // Output point 14: X(13)
+        out_r[out_stride * 13] = cv1r - tv2;
+        out_i[out_stride * 13] = cv1i - tv8;
 
         in_r += v_in_stride;
         in_i += v_in_stride;
@@ -464,33 +377,17 @@ VOID fft15c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                  INTP n, aoclfftz_strides_t *strides)
 {
     const FLOAT CRTM_15_1 =
-        +0.91354545764260089786653411260175763014630651476859;
+        +0.55901699437494742410229341718281905886015458990288;
     const FLOAT CRTM_15_2 =
-        +0.40673664307580020244344195165731987476994255841557;
+        +0.25000000000000000000000000000000000000000000000000;
     const FLOAT CRTM_15_3 =
-        +0.66913060635885822246624475148920014459869481182487;
+        +0.95105651629515357211643933337938214340569863400000;
     const FLOAT CRTM_15_4 =
-        +0.74314482547739422723523183906600387567804039038099;
-    const FLOAT CRTM_15_5 =
-        +0.30901699437494735775909215694883353691106407759980;
-    const FLOAT CRTM_15_6 =
-        +0.95105651629515359367265213397317432075121805913368;
-    const FLOAT CRTM_15_7 =
-        +0.10452846326765344827475689190358280057779765406449;
-    const FLOAT CRTM_15_8 =
-        +0.99452189536827333935323550615724320908650656433540;
-    const FLOAT CRTM_15_9 =
-        +0.49999999999999989931390918883503052434117283719579;
-    const FLOAT CRTM_15_10 =
-        +0.86602540378443870489486480423012865512801223847686;
-    const FLOAT CRTM_15_11 =
-        +0.80901699437494750610700001978173170344740065252139;
-    const FLOAT CRTM_15_12 =
         +0.58778525229247301629891039327884007596190389052978;
-    const FLOAT CRTM_15_13 =
-        +0.97814760073380564759748190481590945657945761737292;
-    const FLOAT CRTM_15_14 =
-        +0.20791169081775929161307291104291640870739670391251;
+    const FLOAT CRTM_15_5 =
+        +0.50000000000000000000000000000000000000000000000000;
+    const FLOAT CRTM_15_6 =
+        +0.86602540378443864676372317075293618347140262690519;
 
     FLOAT *in_r = (FLOAT *)in_real;
     FLOAT *in_i = (FLOAT *)in_imag;
@@ -508,16 +405,10 @@ VOID fft15c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
             v7i, v8r, v8i, v9r, v9i, v10r, v10i, v11r, v11i, v12r, v12i, v13r,
             v13i, v14r, v14i, v15r, v15i,
 
-            adr1, adr2, adr3, adr4, adr5, adr6, adr7, adi1, adi2, adi3, adi4,
-            adi5, adi6, adi7, sbi1, sbi2, sbi3, sbi4, sbi5, sbi6, sbi7, sbr1,
-            sbr2, sbr3, sbr4, sbr5, sbr6, sbr7, adr12, adi12,
-
-            tvrr, tvri, tvir, tvii,
-
-            tv1, tv2, tv3, tv4, tv5, tv6, tv7, tv8, tv9, tv10, tv11, tv12, tv13,
-            tv14, tv15, tv16, tv17, tv18, tv19, tv20, adr9, adr11, sbi8, adi10,
-            adi11, sbr8, adr8, adi9, adr10, adi8, sbr9, sbi9, tv21, tv22, tv23,
-            tv24, tv25, tv26, tv27, tv28, tv29, tv30;
+            tv1, tv2, tv3, tv4, tv5, tv6, tv7, tv8, tv9, tv10, tv11, tv12, cv1r, cv1i,
+            cv1, cv2, cv3, cv4, cv5, cv6, cv7, cv8, cv9, cv10, cv11, cv12,
+            cv13, cv14, cv15, cv16, cv17, cv18, cv19, cv20, cv21, cv22, cv23, cv24,
+            cv25, cv26, cv27, cv28, cv29, cv30;
 
         // Input point 1: x(0)
         v1r = *in_r;
@@ -580,275 +471,220 @@ VOID fft15c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         v15i = in_i[in_stride * 14];
 
         // common calculations
-        adr1 = v2r + v15r;
-        adr2 = v3r + v14r;
-        adr3 = v4r + v13r;
-        adr4 = v5r + v12r;
-        adr5 = v6r + v11r;
-        adr6 = v7r + v10r;
-        adr7 = v8r + v9r;
-        adr8 = adr1 + adr4;
-        adr9 = adr8 + adr6;
-        adr10 = adr2 + adr7;
-        adr11 = adr10 + adr3;
-        adr12 = v1r + adr5;
+        tv1 = v11r + v6r;
+        tv2 = v11i + v6i;
+        cv1 = v1r + tv1;
+        cv2 = v1i + tv2;
+        tv3 = v1r - CRTM_15_5 * (tv1);
+        tv4 = v1i - CRTM_15_5 * (tv2);
 
-        sbi1 = v15i - v2i;
-        sbi2 = v14i - v3i;
-        sbi3 = v13i - v4i;
-        sbi4 = v12i - v5i;
-        sbi5 = v11i - v6i;
-        sbi6 = v10i - v7i;
-        sbi7 = v9i - v8i;
-        sbi8 = sbi1 - sbi4 + sbi6;
-        sbi9 = sbi2 + sbi7;
+        tv1 = v11r - v6r;
+        tv2 = v11i - v6i;
+        tv5 = CRTM_15_6 * (tv1);
+        tv6 = CRTM_15_6 * (tv2);
+        cv3 = tv3 + tv6;
+        cv4 = tv3 - tv6;
+        cv5 = tv4 + tv5;
+        cv6 = tv4 - tv5;
 
-        sbr1 = v15r - v2r;
-        sbr2 = v14r - v3r;
-        sbr3 = v13r - v4r;
-        sbr4 = v12r - v5r;
-        sbr5 = v11r - v6r;
-        sbr6 = v10r - v7r;
-        sbr7 = v9r - v8r;
-        sbr8 = sbr1 - sbr4 + sbr6;
-        sbr9 = sbr2 + sbr7;
+        tv1 = v3r + v8r;
+        tv2 = v3i + v8i;
+        cv7 = v13r + tv1;
+        cv8 = v13i + tv2;
+        tv3 = v13r - CRTM_15_5 * (tv1);
+        tv4 = v13i - CRTM_15_5 * (tv2);
 
-        adi1 = v2i + v15i;
-        adi2 = v3i + v14i;
-        adi3 = v4i + v13i;
-        adi4 = v5i + v12i;
-        adi5 = v6i + v11i;
-        adi6 = v7i + v10i;
-        adi7 = v8i + v9i;
-        adi8 = adi2 + adi7;
-        adi9 = adi1 + adi4;
-        adi10 = adi9 + adi6;
-        adi11 = adi2 + adi3 + adi7;
-        adi12 = v1i + adi5;
+        tv1 = v3r - v8r;
+        tv2 = v3i - v8i;
+        tv5 = CRTM_15_6 * (tv1);
+        tv6 = CRTM_15_6 * (tv2);
+        cv9 = tv3 + tv6;
+        cv10 = tv3 - tv6;
+        cv11 = tv4 + tv5;
+        cv12 = tv4 - tv5;
 
-        tv1 = CRTM_15_5 * adr3;
-        tv2 = CRTM_15_9 * adr5;
-        tv3 = CRTM_15_11 * adr6;
-        tv4 = CRTM_15_6 * sbi3;
-        tv5 = CRTM_15_10 * sbi5;
-        tv6 = CRTM_15_12 * sbi6;
-        tv7 = CRTM_15_6 * sbr3;
-        tv8 = CRTM_15_10 * sbr5;
-        tv9 = CRTM_15_12 * sbr6;
-        tv10 = CRTM_15_5 * adi3;
-        tv11 = CRTM_15_9 * adi5;
-        tv12 = CRTM_15_11 * adi6;
-        tv13 = CRTM_15_11 * adr3;
-        tv14 = CRTM_15_5 * adr6;
-        tv15 = CRTM_15_12 * sbi3;
-        tv16 = CRTM_15_6 * sbi6;
-        tv17 = CRTM_15_12 * sbr3;
-        tv18 = CRTM_15_6 * sbr6;
-        tv19 = CRTM_15_11 * adi3;
-        tv20 = CRTM_15_5 * adi6;
+        tv1 = v14r + v9r;
+        tv2 = v14i + v9i;
+        cv13 = v4r + tv1;
+        cv14 = v4i + tv2;
+        tv3 = v4r - CRTM_15_5 * (tv1);
+        tv4 = v4i - CRTM_15_5 * (tv2);
 
-        tv21 = tv7 + tv9;
-        tv22 = tv4 + tv6;
-        tv23 = tv2 + tv3;
-        tv24 = tv11 + tv12;
-        tv25 = v1r + tv14 - tv13 - tv2;
-        tv26 = tv15 - tv16;
-        tv27 = tv17 - tv18;
-        tv28 = v1i + tv20 - tv19 - tv11;
-        tv29 = v1r + tv1 - tv23;
-        tv30 = v1i + tv10 - tv24;
+        tv1 = v14r - v9r;
+        tv2 = v14i - v9i;
+        tv5 = CRTM_15_6 * (tv1);
+        tv6 = CRTM_15_6 * (tv2);
+        cv15 = tv3 + tv6;
+        cv16 = tv3 - tv6;
+        cv17 = tv4 + tv5;
+        cv18 = tv4 - tv5;
+
+        tv1 = v12r + v2r;
+        tv2 = v12i + v2i;
+        cv19 = v7r + tv1;
+        cv20 = v7i + tv2;
+        tv3 = v7r - CRTM_15_5 * (tv1);
+        tv4 = v7i - CRTM_15_5 * (tv2);
+
+        tv1 = v12r - v2r;
+        tv2 = v12i - v2i;
+        tv5 = CRTM_15_6 * (tv1);
+        tv6 = CRTM_15_6 * (tv2);
+        cv21 = tv3 + tv6;
+        cv22 = tv3 - tv6;
+        cv23 = tv4 + tv5;
+        cv24 = tv4 - tv5;
+
+        tv1 = v15r + v5r;
+        tv2 = v15i + v5i;
+        cv25 = v10r + tv1;
+        cv26 = v10i + tv2;
+        tv3 = v10r - CRTM_15_5 * (tv1);
+        tv4 = v10i - CRTM_15_5 * (tv2);
+
+        tv1 = v15r - v5r;
+        tv2 = v15i - v5i;
+        tv5 = CRTM_15_6 * (tv1);
+        tv6 = CRTM_15_6 * (tv2);
+        cv27 = tv3 + tv6;
+        cv28 = tv3 - tv6;
+        cv29 = tv4 + tv5;
+        cv30 = tv4 - tv5;
+
+        tv1 = cv25 + cv19;
+        tv2 = cv7 + cv13;
+        tv3 = tv1 + tv2;
+        tv4 = CRTM_15_1 * (tv1 - tv2);
+        tv5 = cv1 - CRTM_15_2 * (tv3);
+        tv6 = cv8 - cv14;
+        tv1 = cv20 - cv26;
+        tv2 = CRTM_15_3 * (tv1) + CRTM_15_4 * (tv6);
+        cv1r = tv5 + tv4;
+
+        tv7 = cv26 + cv20;
+        tv8 = cv8 + cv14;
+        tv9 = tv7 + tv8;
+        tv10 = CRTM_15_1 * (tv7 - tv8);
+        tv11 = cv2 - CRTM_15_2 * (tv9);
+        tv12 = cv13 - cv7;
+        tv7 = cv25 - cv19;
+        tv8 = CRTM_15_3 * (tv7) + CRTM_15_4 * (tv12);
+        cv1i = tv11 + tv10;
 
         // Output point 1: X(0)
-        *out_r = adr12 + adr9 + adr11;
-        *out_i = adi12 + adi10 + adi11;
-
-        // Output point 2: X(1)
-        tvrr = (CRTM_15_1 * adr1);
-        tvrr += (CRTM_15_3 * adr2);
-        tvrr += tv29;
-        tvrr -= (CRTM_15_7 * adr4);
-        tvrr -= (CRTM_15_13 * adr7);
-        tvri = (CRTM_15_2 * sbi1);
-        tvri += (CRTM_15_4 * sbi2);
-        tvri += tv22;
-        tvri += (CRTM_15_8 * sbi4);
-        tvri += tv5;
-        tvri += (CRTM_15_14 * sbi7);
-
-        tvir = (CRTM_15_2 * sbr1);
-        tvir += (CRTM_15_4 * sbr2);
-        tvir += tv21;
-        tvir += (CRTM_15_8 * sbr4);
-        tvir += tv8;
-        tvir += (CRTM_15_14 * sbr7);
-        tvii = (CRTM_15_1 * adi1);
-        tvii += (CRTM_15_3 * adi2);
-        tvii += tv30;
-        tvii -= (CRTM_15_7 * adi4);
-        tvii -= (CRTM_15_13 * adi7);
-
-        out_r[out_stride] = tvrr - tvri;
-        out_i[out_stride] = tvii + tvir;
-
-        // Output point 15: X(14)
-        out_r[out_stride * 14] = tvrr + tvri;
-        out_i[out_stride * 14] = tvii - tvir;
-
-        // Output point 3: X(2)
-        tvrr = (CRTM_15_3 * adr1);
-        tvrr -= (CRTM_15_7 * adr2);
-        tvrr -= (CRTM_15_13 * adr4);
-        tvrr += tv25;
-        tvrr += (CRTM_15_1 * adr7);
-        tvri = (CRTM_15_4 * sbi1);
-        tvri += (CRTM_15_8 * sbi2);
-        tvri += tv26;
-        tvri -= (CRTM_15_14 * sbi4);
-        tvri -= tv5;
-        tvri -= (CRTM_15_2 * sbi7);
-
-        tvir = (CRTM_15_4 * sbr1);
-        tvir += (CRTM_15_8 * sbr2);
-        tvir += tv27;
-        tvir -= (CRTM_15_14 * sbr4);
-        tvir -= tv8;
-        tvir -= (CRTM_15_2 * sbr7);
-        tvii = (CRTM_15_3 * adi1);
-        tvii -= (CRTM_15_7 * adi2);
-        tvii -= (CRTM_15_13 * adi4);
-        tvii += tv28;
-        tvii += (CRTM_15_1 * adi7);
-
-        out_r[out_stride * 2] = tvrr - tvri;
-        out_i[out_stride * 2] = tvii + tvir;
-
-        // Output point 14: X(13)
-        out_r[out_stride * 13] = tvrr + tvri;
-        out_i[out_stride * 13] = tvii - tvir;
+        *out_r = cv1 + tv3;
+        *out_i = cv2 + tv9;
 
         // Output point 4: X(3)
-        tvrr = adr12;
-        tvrr += CRTM_15_5 * (adr9);
-        tvrr -= CRTM_15_11 * (adr11);
-        tvri = CRTM_15_6 * (sbi8);
-        tvri += CRTM_15_12 * (sbi9 - sbi3);
-
-        tvir = CRTM_15_6 * (sbr8);
-        tvir += CRTM_15_12 * (sbr9 - sbr3);
-        tvii = adi12;
-        tvii += CRTM_15_5 * (adi10);
-        tvii -= CRTM_15_11 * (adi11);
-
-        out_r[out_stride * 3] = tvrr - tvri;
-        out_i[out_stride * 3] = tvii + tvir;
+        out_r[out_stride * 3] = cv1r + tv2;
+        out_i[out_stride * 3] = cv1i + tv8;
 
         // Output point 13: X(12)
-        out_r[out_stride * 12] = tvrr + tvri;
-        out_i[out_stride * 12] = tvii - tvir;
+        out_r[out_stride * 12] = cv1r - tv2;
+        out_i[out_stride * 12] = cv1i - tv8;
 
-        // Output point 5: X(4)
-        tvrr = (CRTM_15_1 * adr4);
-        tvrr -= (CRTM_15_7 * adr1);
-        tvrr -= (CRTM_15_13 * adr2);
-        tvrr += tv29;
-        tvrr += (CRTM_15_3 * adr7);
-        tvri = (CRTM_15_8 * sbi1);
-        tvri -= (CRTM_15_14 * sbi2);
-        tvri -= tv22;
-        tvri += (CRTM_15_2 * sbi4);
-        tvri += tv5;
-        tvri -= (CRTM_15_4 * sbi7);
-
-        tvir = (CRTM_15_8 * sbr1);
-        tvir -= (CRTM_15_14 * sbr2);
-        tvir -= tv21;
-        tvir += (CRTM_15_2 * sbr4);
-        tvir += tv8;
-        tvir -= (CRTM_15_4 * sbr7);
-        tvii = (CRTM_15_1 * adi4);
-        tvii -= (CRTM_15_7 * adi1);
-        tvii -= (CRTM_15_13 * adi2);
-        tvii += tv30;
-        tvii += (CRTM_15_3 * adi7);
-
-        out_r[out_stride * 4] = tvrr - tvri;
-        out_i[out_stride * 4] = tvii + tvir;
-
-        // Output point 12: X(11)
-        out_r[out_stride * 11] = tvrr + tvri;
-        out_i[out_stride * 11] = tvii - tvir;
-
-        // Output point 6: X(5)
-        tvrr = v1r;
-        tvrr -= CRTM_15_9 * (adr8 + adr10 + adr5);
-        tvrr += adr3;
-        tvrr += adr6;
-        tvri = CRTM_15_10 * (sbi1 - sbi2 + sbi4 - sbi5 + sbi7);
-
-        tvir = CRTM_15_10 * (sbr1 - sbr2 + sbr4 - sbr5 + sbr7);
-        tvii = v1i;
-        tvii -= CRTM_15_9 * (adi9 + adi8 + adi5);
-        tvii += adi3;
-        tvii += adi6;
-
-        out_r[out_stride * 5] = tvrr - tvri;
-        out_i[out_stride * 5] = tvii + tvir;
-
-        // Output point 11: X(10)
-        out_r[out_stride * 10] = tvrr + tvri;
-        out_i[out_stride * 10] = tvii - tvir;
+        cv1r = tv5 - tv4;
+        cv1i = tv11 - tv10;
+        tv2 = CRTM_15_4 * (tv1) - CRTM_15_3 * (tv6);
+        tv8 = CRTM_15_4 * (tv7) - CRTM_15_3 * (tv12);
 
         // Output point 7: X(6)
-        tvrr = adr12;
-        tvrr -= CRTM_15_11 * (adr9);
-        tvrr += CRTM_15_5 * (adr11);
-        tvri = CRTM_15_12 * (sbi8);
-        tvri += CRTM_15_6 * (sbi3 - sbi9);
-
-        tvir = CRTM_15_12 * (sbr8);
-        tvir += CRTM_15_6 * (sbr3 - sbr9);
-        tvii = adi12;
-        tvii -= CRTM_15_11 * (adi10);
-        tvii += CRTM_15_5 * (adi11);
-
-        out_r[out_stride * 6] = tvrr - tvri;
-        out_i[out_stride * 6] = tvii + tvir;
+        out_r[out_stride * 6] = cv1r + tv2;
+        out_i[out_stride * 6] = cv1i + tv8;
 
         // Output point 10: X(9)
-        out_r[out_stride * 9] = tvrr + tvri;
-        out_i[out_stride * 9] = tvii - tvir;
+        out_r[out_stride * 9] = cv1r - tv2;
+        out_i[out_stride * 9] = cv1i - tv8;
 
-        // Output point 8: X(7)
-        tvrr = (CRTM_15_3 * adr4);
-        tvrr -= (CRTM_15_13 * adr1);
-        tvrr += (CRTM_15_1 * adr2);
-        tvrr += tv25;
-        tvrr -= (CRTM_15_7 * adr7);
-        tvri = (CRTM_15_14 * sbi1);
-        tvri -= (CRTM_15_2 * sbi2);
-        tvri += tv26;
-        tvri -= (CRTM_15_4 * sbi4);
-        tvri += tv5;
-        tvri += (CRTM_15_8 * sbi7);
+        tv1 = cv22 + cv28;
+        tv2 = cv10 + cv15;
+        tv3 = tv1 + tv2;
+        tv4 = CRTM_15_1 * (tv1 - tv2);
+        tv5 = cv3 - CRTM_15_2 * (tv3);
+        tv6 = cv18 - cv11;
+        tv1 = cv29 - cv23;
+        tv2 = CRTM_15_3 * (tv1) + CRTM_15_4 * (tv6);
+        cv1r = tv5 + tv4;
 
-        tvir = (CRTM_15_14 * sbr1);
-        tvir -= (CRTM_15_2 * sbr2);
-        tvir += tv27;
-        tvir -= (CRTM_15_4 * sbr4);
-        tvir += tv8;
-        tvir += (CRTM_15_8 * sbr7);
-        tvii = (CRTM_15_3 * adi4);
-        tvii -= (CRTM_15_13 * adi1);
-        tvii += (CRTM_15_1 * adi2);
-        tvii += tv28;
-        tvii -= (CRTM_15_7 * adi7);
+        tv7 = cv29 + cv23;
+        tv8 = cv11 + cv18;
+        tv9 = tv7 + tv8;
+        tv10 = CRTM_15_1 * (tv7 - tv8);
+        tv11 = cv6 - CRTM_15_2 * (tv9);
+        tv12 = cv10 - cv15;
+        tv7 = cv22 - cv28;
+        tv8 = CRTM_15_3 * (tv7) + CRTM_15_4 * (tv12);
+        cv1i = tv11 + tv10;
 
-        out_r[out_stride * 7] = tvrr - tvri;
-        out_i[out_stride * 7] = tvii + tvir;
+        // Output point 6: X(5)
+        out_r[out_stride * 5] = cv3 + tv3;
+        out_i[out_stride * 5] = cv6 + tv9;
+
+        // Output point 3: X(2)
+        out_r[out_stride << 1] = cv1r + tv2;
+        out_i[out_stride << 1] = cv1i + tv8;
 
         // Output point 9: X(8)
-        out_r[(out_stride << 3)] = tvrr + tvri;
-        out_i[(out_stride << 3)] = tvii - tvir;
+        out_r[out_stride << 3] = cv1r - tv2;
+        out_i[out_stride << 3] = cv1i - tv8;
+
+        cv1r = tv5 - tv4;
+        cv1i = tv11 - tv10;
+        tv2 = CRTM_15_3 * (tv6) - CRTM_15_4 * (tv1);
+        tv8 = CRTM_15_3 * (tv12) - CRTM_15_4 * (tv7);
+
+        // Output point 12: X(11)
+        out_r[out_stride * 11] = cv1r + tv2;
+        out_i[out_stride * 11] = cv1i + tv8;
+
+        // Output point 15: X(14)
+        out_r[out_stride * 14] = cv1r - tv2;
+        out_i[out_stride * 14] = cv1i - tv8;
+
+        tv1 = cv27 + cv21;
+        tv2 = cv9 + cv16;
+        tv3 = tv1 + tv2;
+        tv4 = CRTM_15_1 * (tv2 - tv1);
+        tv5 = cv4 - CRTM_15_2 * (tv3);
+        tv6 = cv24 - cv30;
+        tv1 = cv17 - cv12;
+        tv2 = CRTM_15_3 * (tv1) + CRTM_15_4 * (tv6);
+        cv1r = tv5 + tv4;
+
+        tv7 = cv24 + cv30;
+        tv8 = cv17 + cv12;
+        tv9 = tv7 + tv8;
+        tv10 = CRTM_15_1 * (tv8 - tv7);
+        tv11 = cv5 - CRTM_15_2 * (tv9);
+        tv12 = cv27 - cv21;
+        tv7 = cv9 - cv16;
+        tv8 = CRTM_15_3 * (tv7) + CRTM_15_4 * (tv12);
+        cv1i = tv11 + tv10;
+
+        // Output point 11: X(10)
+        out_r[out_stride * 10] = cv4 + tv3;
+        out_i[out_stride * 10] = cv5 + tv9;
+
+        // Output point 2: X(1)
+        out_r[out_stride] = cv1r + tv2;
+        out_i[out_stride] = cv1i + tv8;
+
+        // Output point 13: X(4)
+        out_r[out_stride << 2] = cv1r - tv2;
+        out_i[out_stride << 2] = cv1i - tv8;
+
+        cv1r = tv5 - tv4;
+        cv1i = tv11 - tv10;
+        tv2 = CRTM_15_4 * (tv1) - CRTM_15_3 * (tv6);
+        tv8 = CRTM_15_4 * (tv7) - CRTM_15_3 * (tv12);
+
+        // Output point 8: X(7)
+        out_r[out_stride * 7] = cv1r + tv2;
+        out_i[out_stride * 7] = cv1i + tv8;
+
+        // Output point 14: X(13)
+        out_r[out_stride * 13] = cv1r - tv2;
+        out_i[out_stride * 13] = cv1i - tv8;
 
         in_r += v_in_stride;
         in_i += v_in_stride;
