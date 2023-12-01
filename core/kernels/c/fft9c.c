@@ -50,9 +50,8 @@ kfft_ register_kernel_fft9c(INT32 precision)
 }
 
 #ifdef USE_OPT_KERNEL_VARIANT
-// TODO : to be updated
-static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 44, 84, 36, 0, 0},
-                                                     {0, 44, 84, 36, 0, 0}};
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 40, 80, 36, 0, 0},
+                                                     {0, 40, 80, 36, 0, 0}};
 
 ops_cycles_t get_ops_cnt_fft9c(INT32 precision)
 {
@@ -87,11 +86,9 @@ VOID fft9c_fp64(VOID* in_real, VOID* in_imag, VOID* out_real, VOID* out_imag,
     {
         DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i,
                v6r, v6i, v7r, v7i, v8r, v8i, v9r, v9i,
-               tv1rr, tv1ri, tv2rr, tv2ri, tv3rr, tv3ri, tv4rr, tv4ri,
-               tv1ir, tv1ii, tv2ir, tv2ii, tv3ir, tv3ii, tv4ir, tv4ii,
-               av1rr, av1ri, av2rr, av2ri, av3rr, av3ri, av4rr, av4ri,
-               av1ir, av1ii, av2ir, av2ii, av3ir, av3ii, av4ir, av4ii,
-               cv47rr, cv47ir, cv47r, cv47i, mvrr, mvii, cvrr, cvri, cvir, cvii;
+               tv1rr, tv2rr, tv3rr, tv1ii, tv2ii, tv3ii, tv3ir, tv4ir, 
+               cv1rr, cv1ii, cv2rr, cv2ii, cv3rr, cv3ii, cv4rr, cv4ii, cv5rr,
+               cv5ii, cv6rr, cv6ii, cv7rr, cv7ii, cv8rr, cv8ii, cv9rr, cv9ii;
 
         // Input point 1: x(0)
         v1r = *in_r;
@@ -121,137 +118,119 @@ VOID fft9c_fp64(VOID* in_real, VOID* in_imag, VOID* out_real, VOID* out_imag,
         v9r = in_r[(in_stride << 3)];
         v9i = in_i[(in_stride << 3)];
 
-        av1rr = (v2r + v9r);
-        av2rr = (v3r + v8r);
-        av3rr = (v4r + v7r);
-        av4rr = (v5r + v6r);
-        av1ri = (v9i - v2i);
-        av2ri = (v8i - v3i);
-        av3ri = (v7i - v4i);
-        av4ri = (v6i - v5i);
+        // common calculations
+        tv1rr = v4r + v7r;
+        tv1ii = v4i + v7i;
+        cv1rr = v1r + tv1rr;
+        cv1ii = v1i + tv1ii;
+        tv2rr = v1r - CRTM_9_7 * (tv1rr);
+        tv2ii = v1i - CRTM_9_7 * (tv1ii);
 
-        av1ir = (v2i + v9i);
-        av2ir = (v3i + v8i);
-        av3ir = (v4i + v7i);
-        av4ir = (v5i + v6i);
-        av1ii = (v9r - v2r);
-        av2ii = (v8r - v3r);
-        av3ii = (v7r - v4r);
-        av4ii = (v6r - v5r);
+        tv1rr = CRTM_9_8 * (v7r - v4r);
+        tv1ii = CRTM_9_8 * (v4i - v7i);
+        cv2rr = tv2rr + tv1ii;
+        cv2ii = tv2ii + tv1rr;
+        cv3rr = tv2rr - tv1ii;
+        cv3ii = tv2ii - tv1rr;
 
-        cv47rr = av1rr + av2rr + av4rr;
-        cv47ir = av1ir + av2ir + av4ir;
-        cv47r  = v1r + av3rr;
-        cv47i  = v1i + av3ir;
-        // output point 1 : X(0)
-        *out_r = cv47r + cv47rr;
-        *out_i = cv47i + cv47ir;
+        tv1rr = v5r + v8r;
+        tv1ii = v5i + v8i;
+        cv4rr = v2r + tv1rr;
+        cv4ii = v2i + tv1ii;
+        tv2rr = v2r - CRTM_9_7 * (tv1rr);
+        tv2ii = v2i - CRTM_9_7 * (tv1ii);
 
-        tv1rr = CRTM_9_6 * av1rr;
-        tv2rr = CRTM_9_4 * av2rr;
-        tv3rr = CRTM_9_7 * av3rr;
-        tv4rr = CRTM_9_1 * av4rr;
-        tv1ri = CRTM_9_5 * av1ri;
-        tv2ri = CRTM_9_3 * av2ri;
-        tv3ri = CRTM_9_8 * av3ri;
-        tv4ri = CRTM_9_2 * av4ri;
+        tv1rr = CRTM_9_8 * (v8r - v5r);
+        tv1ii = CRTM_9_8 * (v5i - v8i);
+        cv5rr = tv2rr + tv1ii;
+        cv5ii = tv2ii + tv1rr;
+        cv6rr = tv2rr - tv1ii;
+        cv6ii = tv2ii - tv1rr;
 
-        tv1ii = CRTM_9_6 * av1ir;
-        tv2ii = CRTM_9_4 * av2ir;
-        tv3ii = CRTM_9_7 * av3ir;
-        tv4ii = CRTM_9_1 * av4ir;
-        tv1ir = CRTM_9_5 * av1ii;
-        tv2ir = CRTM_9_3 * av2ii;
-        tv3ir = CRTM_9_8 * av3ii;
-        tv4ir = CRTM_9_2 * av4ii;
+        tv1rr = v6r + v9r;
+        tv1ii = v6i + v9i;
+        cv7rr = v3r + tv1rr;
+        cv7ii = v3i + tv1ii;
+        tv2rr = v3r - CRTM_9_7 * (tv1rr);
+        tv2ii = v3i - CRTM_9_7 * (tv1ii);
 
-        mvrr = v1r - tv3rr;
-        mvii = v1i - tv3ii;
+        tv1rr = CRTM_9_8 * (v9r - v6r);
+        tv1ii = CRTM_9_8 * (v6i - v9i);
+        cv8rr = tv2rr + tv1ii;
+        cv8ii = tv2ii + tv1rr;
+        cv9rr = tv2rr - tv1ii;
+        cv9ii = tv2ii - tv1rr;
 
-        cvrr = mvrr + tv1rr + tv2rr - tv4rr;
-        cvri = tv1ri + tv2ri + tv3ri + tv4ri;
-        cvir = tv1ir + tv2ir + tv3ir + tv4ir;
-        cvii = mvii + tv1ii + tv2ii - tv4ii;
+        //Output point 1: X[0]
+        tv1rr = cv4rr + cv7rr;
+        tv1ii = cv4ii + cv7ii;
 
-        // output point 2 : X(1)
-        out_r[out_stride] = cvrr - cvri;
-        out_i[out_stride] = cvii + cvir;
+        *out_r = cv1rr + tv1rr;
+        *out_i = cv1ii + tv1ii;
 
-        // output point 9 : X(8)
-        out_r[out_stride << 3] = cvrr + cvri;
-        out_i[out_stride << 3] = cvii - cvir;
+        tv2rr = cv1rr - CRTM_9_7 * (tv1rr);
+        tv2ii = cv1ii - CRTM_9_7 * (tv1ii);
 
-        tv1rr = CRTM_9_4 * av1rr;
-        tv2rr = CRTM_9_1 * av2rr;
-        tv4rr = CRTM_9_6 * av4rr;
-        tv1ri = CRTM_9_3 * av1ri;
-        tv2ri = CRTM_9_2 * av2ri;
-        tv4ri = CRTM_9_5 * av4ri;
+        tv1rr = CRTM_9_8 * (cv7rr - cv4rr);
+        tv1ii = CRTM_9_8 * (cv4ii - cv7ii);
 
-        tv1ii = CRTM_9_4 * av1ir;
-        tv2ii = CRTM_9_1 * av2ir;
-        tv4ii = CRTM_9_6 * av4ir;
-        tv1ir = CRTM_9_3 * av1ii;
-        tv2ir = CRTM_9_2 * av2ii;
-        tv4ir = CRTM_9_5 * av4ii;
+        //Output point 4: X[3]
+        out_r[out_stride * 3] = tv2rr + tv1ii;
+        out_i[out_stride * 3] = tv2ii + tv1rr;
 
-        cvrr = mvrr + tv1rr - tv2rr + tv4rr;
-        cvri = tv1ri + tv2ri - tv3ri - tv4ri;
-        cvir = tv1ir + tv2ir - tv3ir - tv4ir;
-        cvii = mvii + tv1ii - tv2ii + tv4ii;
+        //Output point 7: X[6]
+        out_r[out_stride * 6] = tv2rr - tv1ii;
+        out_i[out_stride * 6] = tv2ii - tv1rr;
 
-        // output point 3 : X(2)
-        out_r[out_stride << 1] = cvrr - cvri;
-        out_i[out_stride << 1] = cvii + cvir;
+        tv3ir = (CRTM_9_6 * cv5rr) + (CRTM_9_5 * cv5ii);
+        tv4ir = (CRTM_9_4 * cv8rr) + (CRTM_9_3 * cv8ii);
+        tv3rr = CRTM_9_8 * (tv4ir - tv3ir);
+        tv1rr = tv3ir + tv4ir;
 
-        // output point 8 : X(7)
-        out_r[out_stride * 7] = cvrr + cvri;
-        out_i[out_stride * 7] = cvii - cvir;
+        tv3ir = (CRTM_9_6 * cv5ii) - (CRTM_9_5 * cv5rr);
+        tv4ir = (CRTM_9_4 * cv8ii) - (CRTM_9_3 * cv8rr);
+        tv3ii = CRTM_9_8 * (tv3ir - tv4ir);
+        tv1ii = tv3ir + tv4ir;
 
-        tv1rr = CRTM_9_7 * (cv47rr);
-        tv1ri = CRTM_9_8 * (av1ri + av4ri - av2ri);
-        tv1ii = CRTM_9_7 * (cv47ir);
-        tv1ir = CRTM_9_8 * (av1ii + av4ii - av2ii);
+        //Output point 1: X[1]
+        out_r[out_stride] = cv2rr + tv1rr;
+        out_i[out_stride] = cv2ii + tv1ii;
 
-        cvrr = cv47r - tv1rr;
-        cvii = cv47i - tv1ii;
-        cvri = tv1ri;
-        cvir = tv1ir;
+        tv2rr = cv2rr - CRTM_9_7 * (tv1rr);
+        tv2ii = cv2ii - CRTM_9_7 * (tv1ii);
 
-        // output point 4 : X(3)
-        out_r[out_stride * 3] = cvrr - cvri;
-        out_i[out_stride * 3] = cvii + cvir;
+        //Output point 4: X[4]
+        out_r[out_stride << 2] = tv2rr + tv3ii;
+        out_i[out_stride << 2] = tv2ii + tv3rr;
 
-        // output point 7 : X(6)
-        out_r[out_stride * 6] = cvrr + cvri;
-        out_i[out_stride * 6] = cvii - cvir;
+        //Output point 7: X[7]
+        out_r[out_stride * 7] = tv2rr - tv3ii;
+        out_i[out_stride * 7] = tv2ii - tv3rr;
 
-        tv1rr = CRTM_9_1 * av1rr;
-        tv2rr = CRTM_9_6 * av2rr;
-        tv4rr = CRTM_9_4 * av4rr;
-        tv1ri = CRTM_9_2 * av1ri;
-        tv2ri = CRTM_9_5 * av2ri;
-        tv4ri = CRTM_9_3 * av4ri;
+        tv3ir = (CRTM_9_4 * cv6rr) + (CRTM_9_3 * cv6ii);
+        tv4ir = (CRTM_9_2 * cv9ii) - (CRTM_9_1 * cv9rr);
+        tv3rr = CRTM_9_8 * (tv4ir - tv3ir);
+        tv1rr = tv3ir + tv4ir;
 
-        tv1ii = CRTM_9_1 * av1ir;
-        tv2ii = CRTM_9_6 * av2ir;
-        tv4ii = CRTM_9_4 * av4ir;
-        tv1ir = CRTM_9_2 * av1ii;
-        tv2ir = CRTM_9_5 * av2ii;
-        tv4ir = CRTM_9_3 * av4ii;
+        tv3ir = (CRTM_9_4 * cv6ii) - (CRTM_9_3 * cv6rr);
+        tv4ir = (CRTM_9_1 * cv9ii) + (CRTM_9_2 * cv9rr);
+        tv3ii = CRTM_9_8 * (tv3ir + tv4ir);
+        tv1ii = tv3ir - tv4ir;
 
-        cvrr = mvrr - tv1rr + tv2rr + tv4rr;
-        cvri = tv1ri - tv2ri + tv3ri - tv4ri;
-        cvir = tv1ir - tv2ir + tv3ir - tv4ir;
-        cvii = mvii - tv1ii + tv2ii + tv4ii;
+        //Output point 3: X[2]
+        out_r[out_stride << 1] = cv3rr + tv1rr;
+        out_i[out_stride << 1] = cv3ii + tv1ii;
 
-        // output point 5 : X(4)
-        out_r[out_stride << 2] = cvrr - cvri;
-        out_i[out_stride << 2] = cvii + cvir;
+        tv2rr = cv3rr - CRTM_9_7 * (tv1rr);
+        tv2ii = cv3ii - CRTM_9_7 * (tv1ii);
 
-        // output point 6 : X(5)
-        out_r[out_stride * 5] = cvrr + cvri;
-        out_i[out_stride * 5] = cvii - cvir;
+        //Output point 6: X[5]
+        out_r[out_stride * 5] = tv2rr + tv3ii;
+        out_i[out_stride * 5] = tv2ii + tv3rr;
+
+        //Output point 9: X[8]
+        out_r[out_stride << 3] = tv2rr - tv3ii;
+        out_i[out_stride << 3] = tv2ii - tv3rr;
 
         in_r = in_r + v_in_stride;
         in_i = in_i + v_in_stride;
@@ -284,12 +263,10 @@ VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
     for (INTP cnt = 0; cnt < n; cnt++)
     {
         FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i,
-              v6r, v6i, v7r, v7i, v8r, v8i, v9r, v9i,
-              tv1rr, tv1ri, tv2rr, tv2ri, tv3rr, tv3ri, tv4rr, tv4ri,
-              tv1ir, tv1ii, tv2ir, tv2ii, tv3ir, tv3ii, tv4ir, tv4ii,
-              av1rr, av1ri, av2rr, av2ri, av3rr, av3ri, av4rr, av4ri,
-              av1ir, av1ii, av2ir, av2ii, av3ir, av3ii, av4ir, av4ii,
-              cv47rr, cv47ir, cv47r, cv47i, mvrr, mvii, cvrr, cvri, cvir, cvii;
+               v6r, v6i, v7r, v7i, v8r, v8i, v9r, v9i,
+               tv1rr, tv2rr, tv3rr, tv1ii, tv2ii, tv3ii, tv3ir, tv4ir,
+               cv1rr, cv1ii, cv2rr, cv2ii, cv3rr, cv3ii, cv4rr, cv4ii, cv5rr,
+               cv5ii, cv6rr, cv6ii, cv7rr, cv7ii, cv8rr, cv8ii, cv9rr, cv9ii;
 
         // Input point 1: x(0)
         v1r = *in_r;
@@ -319,137 +296,119 @@ VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         v9r = in_r[(in_stride << 3)];
         v9i = in_i[(in_stride << 3)];
 
-        av1rr = (v2r + v9r);
-        av2rr = (v3r + v8r);
-        av3rr = (v4r + v7r);
-        av4rr = (v5r + v6r);
-        av1ri = (v9i - v2i);
-        av2ri = (v8i - v3i);
-        av3ri = (v7i - v4i);
-        av4ri = (v6i - v5i);
+        // common calculations
+        tv1rr = v4r + v7r;
+        tv1ii = v4i + v7i;
+        cv1rr = v1r + tv1rr;
+        cv1ii = v1i + tv1ii;
+        tv2rr = v1r - CRTM_9_7 * (tv1rr);
+        tv2ii = v1i - CRTM_9_7 * (tv1ii);
 
-        av1ir = (v2i + v9i);
-        av2ir = (v3i + v8i);
-        av3ir = (v4i + v7i);
-        av4ir = (v5i + v6i);
-        av1ii = (v9r - v2r);
-        av2ii = (v8r - v3r);
-        av3ii = (v7r - v4r);
-        av4ii = (v6r - v5r);
+        tv1rr = CRTM_9_8 * (v7r - v4r);
+        tv1ii = CRTM_9_8 * (v4i - v7i);
+        cv2rr = tv2rr + tv1ii;
+        cv2ii = tv2ii + tv1rr;
+        cv3rr = tv2rr - tv1ii;
+        cv3ii = tv2ii - tv1rr;
 
-        cv47rr = av1rr + av2rr + av4rr;
-        cv47ir = av1ir + av2ir + av4ir;
-        cv47r  = v1r + av3rr;
-        cv47i  = v1i + av3ir;
-        // output point 1 : X(0)
-        *out_r = cv47r + cv47rr;
-        *out_i = cv47i + cv47ir;
+        tv1rr = v5r + v8r;
+        tv1ii = v5i + v8i;
+        cv4rr = v2r + tv1rr;
+        cv4ii = v2i + tv1ii;
+        tv2rr = v2r - CRTM_9_7 * (tv1rr);
+        tv2ii = v2i - CRTM_9_7 * (tv1ii);
 
-        tv1rr = CRTM_9_6 * av1rr;
-        tv2rr = CRTM_9_4 * av2rr;
-        tv3rr = CRTM_9_7 * av3rr;
-        tv4rr = CRTM_9_1 * av4rr;
-        tv1ri = CRTM_9_5 * av1ri;
-        tv2ri = CRTM_9_3 * av2ri;
-        tv3ri = CRTM_9_8 * av3ri;
-        tv4ri = CRTM_9_2 * av4ri;
+        tv1rr = CRTM_9_8 * (v8r - v5r);
+        tv1ii = CRTM_9_8 * (v5i - v8i);
+        cv5rr = tv2rr + tv1ii;
+        cv5ii = tv2ii + tv1rr;
+        cv6rr = tv2rr - tv1ii;
+        cv6ii = tv2ii - tv1rr;
 
-        tv1ii = CRTM_9_6 * av1ir;
-        tv2ii = CRTM_9_4 * av2ir;
-        tv3ii = CRTM_9_7 * av3ir;
-        tv4ii = CRTM_9_1 * av4ir;
-        tv1ir = CRTM_9_5 * av1ii;
-        tv2ir = CRTM_9_3 * av2ii;
-        tv3ir = CRTM_9_8 * av3ii;
-        tv4ir = CRTM_9_2 * av4ii;
+        tv1rr = v6r + v9r;
+        tv1ii = v6i + v9i;
+        cv7rr = v3r + tv1rr;
+        cv7ii = v3i + tv1ii;
+        tv2rr = v3r - CRTM_9_7 * (tv1rr);
+        tv2ii = v3i - CRTM_9_7 * (tv1ii);
 
-        mvrr = v1r - tv3rr;
-        mvii = v1i - tv3ii;
+        tv1rr = CRTM_9_8 * (v9r - v6r);
+        tv1ii = CRTM_9_8 * (v6i - v9i);
+        cv8rr = tv2rr + tv1ii;
+        cv8ii = tv2ii + tv1rr;
+        cv9rr = tv2rr - tv1ii;
+        cv9ii = tv2ii - tv1rr;
 
-        cvrr = mvrr + tv1rr + tv2rr - tv4rr;
-        cvri = tv1ri + tv2ri + tv3ri + tv4ri;
-        cvir = tv1ir + tv2ir + tv3ir + tv4ir;
-        cvii = mvii + tv1ii + tv2ii - tv4ii;
+        //Output point 1: X[0]
+        tv1rr = cv4rr + cv7rr;
+        tv1ii = cv4ii + cv7ii;
 
-        // output point 2 : X(1)
-        out_r[out_stride] = cvrr - cvri;
-        out_i[out_stride] = cvii + cvir;
+        *out_r = cv1rr + tv1rr;
+        *out_i = cv1ii + tv1ii;
 
-        // output point 9 : X(8)
-        out_r[out_stride << 3] = cvrr + cvri;
-        out_i[out_stride << 3] = cvii - cvir;
+        tv2rr = cv1rr - CRTM_9_7 * (tv1rr);
+        tv2ii = cv1ii - CRTM_9_7 * (tv1ii);
 
-        tv1rr = CRTM_9_4 * av1rr;
-        tv2rr = CRTM_9_1 * av2rr;
-        tv4rr = CRTM_9_6 * av4rr;
-        tv1ri = CRTM_9_3 * av1ri;
-        tv2ri = CRTM_9_2 * av2ri;
-        tv4ri = CRTM_9_5 * av4ri;
+        tv1rr = CRTM_9_8 * (cv7rr - cv4rr);
+        tv1ii = CRTM_9_8 * (cv4ii - cv7ii);
 
-        tv1ii = CRTM_9_4 * av1ir;
-        tv2ii = CRTM_9_1 * av2ir;
-        tv4ii = CRTM_9_6 * av4ir;
-        tv1ir = CRTM_9_3 * av1ii;
-        tv2ir = CRTM_9_2 * av2ii;
-        tv4ir = CRTM_9_5 * av4ii;
+        //Output point 4: X[3]
+        out_r[out_stride * 3] = tv2rr + tv1ii;
+        out_i[out_stride * 3] = tv2ii + tv1rr;
 
-        cvrr = mvrr + tv1rr - tv2rr + tv4rr;
-        cvri = tv1ri + tv2ri - tv3ri - tv4ri;
-        cvir = tv1ir + tv2ir - tv3ir - tv4ir;
-        cvii = mvii + tv1ii - tv2ii + tv4ii;
+        //Output point 7: X[6]
+        out_r[out_stride * 6] = tv2rr - tv1ii;
+        out_i[out_stride * 6] = tv2ii - tv1rr;
 
-        // output point 3 : X(2)
-        out_r[out_stride << 1] = cvrr - cvri;
-        out_i[out_stride << 1] = cvii + cvir;
+        tv3ir = (CRTM_9_6 * cv5rr) + (CRTM_9_5 * cv5ii);
+        tv4ir = (CRTM_9_4 * cv8rr) + (CRTM_9_3 * cv8ii);
+        tv3rr = CRTM_9_8 * (tv4ir - tv3ir);
+        tv1rr = tv3ir + tv4ir;
 
-        // output point 8 : X(7)
-        out_r[out_stride * 7] = cvrr + cvri;
-        out_i[out_stride * 7] = cvii - cvir;
+        tv3ir = (CRTM_9_6 * cv5ii) - (CRTM_9_5 * cv5rr);
+        tv4ir = (CRTM_9_4 * cv8ii) - (CRTM_9_3 * cv8rr);
+        tv3ii = CRTM_9_8 * (tv3ir - tv4ir);
+        tv1ii = tv3ir + tv4ir;
 
-        tv1rr = CRTM_9_7 * (cv47rr);
-        tv1ri = CRTM_9_8 * (av1ri + av4ri - av2ri);
-        tv1ii = CRTM_9_7 * (cv47ir);
-        tv1ir = CRTM_9_8 * (av1ii + av4ii - av2ii);
+        //Output point 1: X[1]
+        out_r[out_stride] = cv2rr + tv1rr;
+        out_i[out_stride] = cv2ii + tv1ii;
 
-        cvrr = cv47r - tv1rr;
-        cvii = cv47i - tv1ii;
-        cvri = tv1ri;
-        cvir = tv1ir;
+        tv2rr = cv2rr - CRTM_9_7 * (tv1rr);
+        tv2ii = cv2ii - CRTM_9_7 * (tv1ii);
 
-        // output point 4 : X(3)
-        out_r[out_stride * 3] = cvrr - cvri;
-        out_i[out_stride * 3] = cvii + cvir;
+        //Output point 4: X[4]
+        out_r[out_stride << 2] = tv2rr + tv3ii;
+        out_i[out_stride << 2] = tv2ii + tv3rr;
 
-        // output point 7 : X(6)
-        out_r[out_stride * 6] = cvrr + cvri;
-        out_i[out_stride * 6] = cvii - cvir;
+        //Output point 7: X[7]
+        out_r[out_stride * 7] = tv2rr - tv3ii;
+        out_i[out_stride * 7] = tv2ii - tv3rr;
 
-        tv1rr = CRTM_9_1 * av1rr;
-        tv2rr = CRTM_9_6 * av2rr;
-        tv4rr = CRTM_9_4 * av4rr;
-        tv1ri = CRTM_9_2 * av1ri;
-        tv2ri = CRTM_9_5 * av2ri;
-        tv4ri = CRTM_9_3 * av4ri;
+        tv3ir = (CRTM_9_4 * cv6rr) + (CRTM_9_3 * cv6ii);
+        tv4ir = (CRTM_9_2 * cv9ii) - (CRTM_9_1 * cv9rr);
+        tv3rr = CRTM_9_8 * (tv4ir - tv3ir);
+        tv1rr = tv3ir + tv4ir;
 
-        tv1ii = CRTM_9_1 * av1ir;
-        tv2ii = CRTM_9_6 * av2ir;
-        tv4ii = CRTM_9_4 * av4ir;
-        tv1ir = CRTM_9_2 * av1ii;
-        tv2ir = CRTM_9_5 * av2ii;
-        tv4ir = CRTM_9_3 * av4ii;
+        tv3ir = (CRTM_9_4 * cv6ii) - (CRTM_9_3 * cv6rr);
+        tv4ir = (CRTM_9_1 * cv9ii) + (CRTM_9_2 * cv9rr);
+        tv3ii = CRTM_9_8 * (tv3ir + tv4ir);
+        tv1ii = tv3ir - tv4ir;
 
-        cvrr = mvrr - tv1rr + tv2rr + tv4rr;
-        cvri = tv1ri - tv2ri + tv3ri - tv4ri;
-        cvir = tv1ir - tv2ir + tv3ir - tv4ir;
-        cvii = mvii - tv1ii + tv2ii + tv4ii;
+        //Output point 3: X[2]
+        out_r[out_stride << 1] = cv3rr + tv1rr;
+        out_i[out_stride << 1] = cv3ii + tv1ii;
 
-        // output point 5 : X(4)
-        out_r[out_stride << 2] = cvrr - cvri;
-        out_i[out_stride << 2] = cvii + cvir;
+        tv2rr = cv3rr - CRTM_9_7 * (tv1rr);
+        tv2ii = cv3ii - CRTM_9_7 * (tv1ii);
 
-        // output point 6 : X(5)
-        out_r[out_stride * 5] = cvrr + cvri;
-        out_i[out_stride * 5] = cvii - cvir;
+        //Output point 6: X[5]
+        out_r[out_stride * 5] = tv2rr + tv3ii;
+        out_i[out_stride * 5] = tv2ii + tv3rr;
+
+        //Output point 9: X[8]
+        out_r[out_stride << 3] = tv2rr - tv3ii;
+        out_i[out_stride << 3] = tv2ii - tv3rr;
 
         in_r = in_r + v_in_stride;
         in_i = in_i + v_in_stride;
