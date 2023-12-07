@@ -263,5 +263,27 @@ static const union zero_conj_256
 #define CONJ_256_S(x) _mm256_xor_ps(_conj_256_f.s, x)
 #define CONJ_256_D(x) _mm256_xor_pd(_conj_256_d.d, x)
 
+/**
+ * @brief alternatively performs addition & subtraction in a 128 bit register
+ * for single precision floating point.
+ * Operation : 2 PERM, 1 ADD
+ */
+#define SUBADD_128_S(a, b, c)                                                 \
+{                                                                             \
+    a = SWAP_RI_128_S(a);                                                     \
+    c = SWAP_RI_128_S(_mm_addsub_ps(a, b));                                   \
+}
+
+
+/**
+ * @brief alternatively performs addition & subtraction in a 128 bit register
+ * for double precision floating point.
+ * Operation : 2 PERM, 1 ADD
+ */
+#define SUBADD_128_D(a, b, c)                                                 \
+{                                                                             \
+    a = SWAP_RI_128_D(a);                                                     \
+    c = SWAP_RI_128_D(_mm_addsub_pd(a, b));                                   \
+}
 
 #endif // AOCLFFTZ_SIMD_COMMON_H
