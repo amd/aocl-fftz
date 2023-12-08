@@ -105,6 +105,7 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE], INT32 dt,
 
 // Kernel function declarations for different floating point precision types
 // supported in scalar and vector compute variants
+//C get_ops_cnt
 ops_cycles_t get_ops_cnt_fft2c(INT32 precision);
 ops_cycles_t get_ops_cnt_fft3c(INT32 precision);
 ops_cycles_t get_ops_cnt_fft4c(INT32 precision);
@@ -124,6 +125,10 @@ ops_cycles_t get_ops_cnt_fft16c(INT32 precision);
 #ifdef ENABLE_AVX128
 //AVX128 get_ops_cnt
 ops_cycles_t get_ops_cnt_fft2avx128(INT32 precision);
+#endif
+#ifdef ENABLE_AVX256
+//AVX256 get_ops_cnt
+ops_cycles_t get_ops_cnt_fft2avx256(INT32 precision);
 #endif
 
 //C register kernels
@@ -146,9 +151,12 @@ kfft_ register_kernel_fft16c(INT32 precision);
 //AVX128 register kernel
 kfft_ register_kernel_fft2avx128(INT32 precision);
 #endif
+#ifdef ENABLE_AVX256
+//AVX256 register kernel
+kfft_ register_kernel_fft2avx256(INT32 precision);
+#endif
 
 //C kernels
-
 VOID fft2c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft2c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
@@ -218,6 +226,13 @@ VOID fft2avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 VOID fft2avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                     UINT8 flag);
+#endif
+#ifdef ENABLE_AVX256
+//AVX256 kernels
+VOID fft2avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
+VOID fft2avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 #endif
 
 // Permuted copy kernels

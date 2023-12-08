@@ -108,6 +108,13 @@ ops_cycles_t get_ops_cnt_fft2avx128_wrapper(INT32 precision)
     return get_ops_cnt_fft2avx128(precision);
 }
 #endif
+#ifdef ENABLE_AVX256
+//AVX256 get ops count wrappers
+ops_cycles_t get_ops_cnt_fft2avx256_wrapper(INT32 precision)
+{
+    return get_ops_cnt_fft2avx256(precision);
+}
+#endif
 
 /* ---------------- kernels : register_kernel_fft* ---------------- */
 
@@ -178,7 +185,13 @@ kfft_ register_kernel_fft2avx128_wrapper(INT32 precision)
     return register_kernel_fft2avx128(precision);
 }
 #endif
-
+#ifdef ENABLE_AVX256
+//AVX256 register kernel wrappers
+kfft_ register_kernel_fft2avx256_wrapper(INT32 precision)
+{
+    return register_kernel_fft2avx256(precision);
+}
+#endif
 
 /* ---------------- kernels : permuted_copy_* ---------------- */
 

@@ -99,7 +99,7 @@ kernel_fp_list kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] = {
 #ifdef ENABLE_AVX256
 kernel_fp_list kernels_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
-    {NULL, NULL, 2},   // radix-2
+    {register_kernel_fft2avx256, get_ops_cnt_fft2avx256, 2},   // radix-2
     {NULL, NULL, 3},   // radix-3
     {NULL, NULL, 4},   // radix-4
     {NULL, NULL, 5},   // radix-5

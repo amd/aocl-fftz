@@ -43,8 +43,8 @@
 
 #include <immintrin.h>
 #include "api/types.h"
-
 /************************ MACRO FUNCTIONS ************************/
+
 /**
  * @brief load two complex numbers(real,imaginary) of 32 bit single precision
  * floating point number from memory addresses specified by base address
@@ -108,6 +108,70 @@
         _mm_storeu_pd(base, src);                                              \
     }
 
+/**
+ * @brief load four complex numbers(real,imaginary) of 32 bit single precision
+ * floating point number from memory addresses specified by base address
+ * and index vector, into 256 bit register.
+ */
+#define GATHER4_256_S(base, offset, dest)                                      \
+    {                                                                          \
+        __m128 _low, _high, _tmp;                                              \
+        _low = _mm_loadu_ps(base);                                             \
+        base += offset;                                                        \
+        _tmp = _mm_loadu_ps(base);                                             \
+        _low = _mm_shuffle_ps(_low, _tmp, 68);                                 \
+        base += offset;                                                        \
+        _high = _mm_loadu_ps(base);                                            \
+        base += offset;                                                        \
+        _high = _mm_loadh_pi(_high, (__m64 *)base);                            \
+        dest = _mm256_insertf128_ps(_mm256_castps128_ps256(_low),_high,1);     \
+    }
+
+/**
+ * @brief store four complex numbers(real,imaginary) of 32 bit single precision
+ * floating point number from 256 bit register into memory addresses
+ * specified by base address and offset(v_out_stride).
+ */
+#define SCATTER4_256_S(base, offset, src)                                      \
+    {                                                                          \
+        __m128 _high = _mm256_extractf128_ps(src, 1);                          \
+        __m128 _low = _mm256_castps256_ps128(src);                             \
+        _mm_storel_pi((__m64 *)base, _low);                                    \
+        base += offset;                                                        \
+        _mm_storeh_pi((__m64 *)base, _low);                                    \
+        base += offset;                                                        \
+        _mm_storel_pi((__m64 *)base, _high);                                   \
+        base += offset;                                                        \
+        _mm_storeh_pi((__m64 *)base, _high);                                   \
+    }
+
+/**
+ * @brief load two complex numbers(real,imaginary) of 64 bit double precision
+ * floating point number from memory addresses specified by base address
+ * and offset(v_in_stride) into 256 bit register.
+ */
+#define GATHER2_256_D(base, offset, dest)                                      \
+    {                                                                          \
+        __m128d _low, _high;                                                   \
+        _low = _mm_loadu_pd(base);                                             \
+        base += offset;                                                        \
+        _high = _mm_loadu_pd(base);                                            \
+        dest = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low),_high,1);     \
+    }
+
+/**
+ * @brief store two complex numbers(real,imaginary) of 64 bit double precision
+ * floating point number from 256 bit register into memory addresses
+ * specified by base address and offset(v_out_stride).
+ */
+#define SCATTER2_256_D(base, offset, src)                                      \
+    {                                                                          \
+        __m128d _high = _mm256_extractf128_pd(src, 1);                         \
+        __m128d _low = _mm256_castpd256_pd128(src);                            \
+        _mm_storeu_pd(base, _low);                                             \
+        base += offset;                                                        \
+        _mm_storeu_pd(base, _high);                                            \
+    }
 
 /**
  * @brief interchanges the real and imaginary values in a 128 bit register
@@ -122,11 +186,27 @@
 #define SWAP_RI_128_D(val) _mm_shuffle_pd(val, val, 1)
 
 /**
+ * @brief interchanges the real and imaginary values in a 256 bit register
+ * for single precision floating point using the control value in the last
+ * integer argument(b 10 11 00 01)
+ */
+#define SWAP_RI_256_S(val) _mm256_permute_ps(val, 177)
+
+/**
+ * @brief interchanges the real and imaginary values in a 256 bit register
+ * for double precision floating point using the control value in the last
+ * integer argument(b 01 01)
+ */
+#define SWAP_RI_256_D(val) _mm256_permute_pd(val, 5)
+
+/**
  * @brief implies the number of sets that can be processed parallely.
  * Computed using Register width /(2* sizeof(floating point)
  */
 #define NUM_SETS_128_S 2
 #define NUM_SETS_128_D 1
+#define NUM_SETS_256_S 4
+#define NUM_SETS_256_D 2
 
 /**
  * @brief prepare -0.0 for complex conjucate.
@@ -136,16 +216,31 @@ union zero_conj_128 {
     __m128 s;
     __m128d d;
 };
+union zero_conj_256 {
+    unsigned u[8];
+    __m256 s;
+    __m256d d;
+};
 
 static const union zero_conj_128
             _conj_128_f = {{ 0x00000000, 0x80000000, 0x00000000, 0x80000000 }};
 static const union zero_conj_128
             _conj_128_d = {{ 0x00000000, 0x00000000, 0x00000000, 0x80000000 }};
 
+static const union zero_conj_256
+            _conj_256_f = {{ 0x00000000, 0x80000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x80000000, 0x00000000, 0x80000000 }};
+static const union zero_conj_256
+            _conj_256_d = {{ 0x00000000, 0x00000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x00000000, 0x00000000, 0x80000000 }};
+
 /**
  * @brief take conjucate of the complex number A+Bi => A-Bi
  */
 #define CONJ_128_S(x) _mm_xor_ps(_conj_128_f.s, x)
 #define CONJ_128_D(x) _mm_xor_pd(_conj_128_d.d, x)
+#define CONJ_256_S(x) _mm256_xor_ps(_conj_256_f.s, x)
+#define CONJ_256_D(x) _mm256_xor_pd(_conj_256_d.d, x)
+
 
 #endif // AOCLFFTZ_SIMD_COMMON_H
