@@ -88,8 +88,8 @@ kernel_fp_list_t kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_fft10avx128, get_ops_cnt_fft10avx128, 10},// radix-10
     {register_kernel_fft11avx128, get_ops_cnt_fft11avx128, 11},// radix-11
     {register_kernel_fft12avx128, get_ops_cnt_fft12avx128, 12},// radix-12
+    {register_kernel_fft14avx128, get_ops_cnt_fft14avx128, 14},// radix-14
     {NULL, NULL, 13},                                        // radix-13
-    {NULL, NULL, 14},                                        // radix-14
     {NULL, NULL, 15},                                        // radix-15
     {NULL, NULL, 16},                                        // radix-16
     {NULL, NULL, 20},                                        // radix-20
