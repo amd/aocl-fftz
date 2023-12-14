@@ -51,14 +51,14 @@
 #define USE_OPT_KERNEL_VARIANT
 
 // Constants related to radix sizes
-#define RADIX_2  2
-#define RADIX_3  3
-#define RADIX_4  4
-#define RADIX_5  5
-#define RADIX_6  6
-#define RADIX_7  7
-#define RADIX_8  8
-#define RADIX_9  9
+#define RADIX_2 2
+#define RADIX_3 3
+#define RADIX_4 4
+#define RADIX_5 5
+#define RADIX_6 6
+#define RADIX_7 7
+#define RADIX_8 8
+#define RADIX_9 9
 #define RADIX_10 10
 #define RADIX_11 11
 #define RADIX_12 12
@@ -105,7 +105,7 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE], INT32 dt,
 
 // Kernel function declarations for different floating point precision types
 // supported in scalar and vector compute variants
-//C get_ops_cnt
+// C get_ops_cnt
 ops_cycles_t get_ops_cnt_fft2c(INT32 precision);
 ops_cycles_t get_ops_cnt_fft3c(INT32 precision);
 ops_cycles_t get_ops_cnt_fft4c(INT32 precision);
@@ -122,7 +122,6 @@ ops_cycles_t get_ops_cnt_fft14c(INT32 precision);
 ops_cycles_t get_ops_cnt_fft15c(INT32 precision);
 ops_cycles_t get_ops_cnt_fft16c(INT32 precision);
 
-//AVX128
 #ifdef ENABLE_AVX128
 //AVX128 get_ops_cnt
 ops_cycles_t get_ops_cnt_fft2avx128(INT32 precision);
@@ -143,10 +142,11 @@ ops_cycles_t get_ops_cnt_fft16avx128(INT32 precision);
 #ifdef ENABLE_AVX256
 //AVX256 get_ops_cnt
 ops_cycles_t get_ops_cnt_fft2avx256(INT32 precision);
+ops_cycles_t get_ops_cnt_fft3avx256(INT32 precision);
 ops_cycles_t get_ops_cnt_fft5avx256(INT32 precision);
 #endif
 
-//C register kernels
+// C register kernels
 kfft_ register_kernel_fft2c(INT32 precision);
 kfft_ register_kernel_fft3c(INT32 precision);
 kfft_ register_kernel_fft4c(INT32 precision);
@@ -182,10 +182,11 @@ kfft_ register_kernel_fft16avx128(INT32 precision);
 #ifdef ENABLE_AVX256
 //AVX256 register kernel
 kfft_ register_kernel_fft2avx256(INT32 precision);
+kfft_ register_kernel_fft3avx256(INT32 precision);
 kfft_ register_kernel_fft5avx256(INT32 precision);
 #endif
 
-//C kernels
+// C kernels
 VOID fft2c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft2c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
@@ -298,53 +299,63 @@ VOID fft9avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                     UINT8 flag);
 VOID fft10avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag);
+                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                     UINT8 flag);
 VOID fft10avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag);
+                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                     UINT8 flag);
 VOID fft11avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag);
+                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                     UINT8 flag);
 VOID fft11avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag);
+                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                     UINT8 flag);
 VOID fft12avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag);
+                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                     UINT8 flag);
 VOID fft12avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag);
+                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                     UINT8 flag);
 VOID fft14avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag);
+                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                     UINT8 flag);
 VOID fft14avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag);
+                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                     UINT8 flag);
 VOID fft15avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag);
+                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                     UINT8 flag);
 VOID fft15avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag);
+                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                     UINT8 flag);
 VOID fft16avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag);
+                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                     UINT8 flag);
 VOID fft16avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag);
+                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                     UINT8 flag);
 #endif
 
 #ifdef ENABLE_AVX256
 //AVX256 kernels
-VOID fft2avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
-VOID fft2avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
-VOID fft5avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
-VOID fft5avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
+VOID fft2avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                    UINT8 flag);
+VOID fft2avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                    UINT8 flag);
+VOID fft3avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                    UINT8 flag);
+VOID fft3avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                    UINT8 flag);
+VOID fft5avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                    UINT8 flag);
+VOID fft5avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                    UINT8 flag);
 #endif
 
 // Permuted copy kernels
