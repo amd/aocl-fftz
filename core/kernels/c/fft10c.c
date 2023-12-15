@@ -468,7 +468,7 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 }
 #else
 /* --------------- non-optimized C kernel variant --------------- */
-#include "core/kernels/kernel_utils.h"
+#include "utils/complex_utils.h"
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {
     {0, 148, 620, 100, 0, 496}, {0, 148, 620, 100, 0, 496}};

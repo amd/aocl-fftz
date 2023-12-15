@@ -42,12 +42,12 @@
 
 #include <string>
 #include <typeinfo>
-#include "core/kernels/kernel_utils.h"
 extern "C"
 {
 #include "gtest/aoclfftz_core_wrapper.h"
 }
 #include "gtest/gtest_types.h"
+#include "utils/complex_utils.h"
 
 #define TOLERANCE_F 1E-3
 #define TOLERANCE_D 1E-10

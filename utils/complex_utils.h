@@ -26,9 +26,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file kernel_utils.h
+/** @file complex_utils.h
  *
- *  @brief Utility functions for FFT kernels.
+ *  @brief Utility functions for complex operations.
  *
  *  This file contains the utility functions (function-like macros) used to do
  *  complex arithmetic and to print complex numbers.
@@ -37,8 +37,8 @@
  *
  */
 
-#ifndef AOCLFFTZ_KERNEL_UTILS_H
-#define AOCLFFTZ_KERNEL_UTILS_H
+#ifndef AOCLFFTZ_COMPLEX_UTILS_H
+#define AOCLFFTZ_COMPLEX_UTILS_H
 
 #include <math.h>
 #include <stdio.h>
@@ -193,4 +193,4 @@
         printf("%20.14lf + %20.14lfj", (val)[0], (val)[1]);                    \
     }
 
-#endif // AOCLFFTZ_KERNEL_UTILS_H
+#endif // AOCLFFTZ_COMPLEX_UTILS_H

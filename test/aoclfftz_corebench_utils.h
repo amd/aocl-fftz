@@ -46,6 +46,7 @@
 #include <string.h>
 #include "test/aoclfftz_corebench.h"
 #include "utils/allocator.h"
+#include "utils/complex_utils.h"
 #include "utils/utils.h"
 
 // Defining DATA_STRIDE in corebench internally to avoid using internal headers
@@ -318,71 +319,6 @@
         AOCLFFTZ_LOG_FORMATTED(                                                \
             INFO, params->logger_mode, "bit_reproducibility : %s",             \
             params->bit_reproducibility ? "TRUE" : "FALSE");                   \
-    }
-
-/**
- * @brief euler's formula: res = exp(ix), i.e. res = cos(x) + i sin(x)
- *
- */
-#define EULER(x, res)                                                          \
-    {                                                                          \
-        (res)[0] = cos(x);                                                     \
-        (res)[1] = sin(x);                                                     \
-    }
-
-/**
- * @brief complex addition: res = c1 + c2
- *
- */
-#define CADD(c1, c2, res)                                                      \
-    {                                                                          \
-        (res)[0] = (c1)[0] + (c2)[0];                                          \
-        (res)[1] = (c1)[1] + (c2)[1];                                          \
-    }
-
-/**
- * @brief complex multiplication: res = c1 * c2 (NOTE: mtemp is used to store
- * the temporary result)
- *
- */
-#define CMUL(c1, c2, res, mtemp)                                               \
-    {                                                                          \
-        (mtemp)[0] = (c1)[0] * (c2)[0] - (c1)[1] * (c2)[1];                    \
-        (mtemp)[1] = (c1)[0] * (c2)[1] + (c1)[1] * (c2)[0];                    \
-        (res)[0] = (mtemp)[0];                                                 \
-        (res)[1] = (mtemp)[1];                                                 \
-    }
-
-/**
- * @brief prints the float complex array `arr` of length `length`
- *
- */
-#define PRINT_CARRAY_FP32(arr, size)                                           \
-    {                                                                          \
-        FLOAT *arr_f = (FLOAT *)arr;                                           \
-        for (INTP i = 0; i < size; ++i)                                        \
-        {                                                                      \
-            printf("%td: %12.6f + %12.6fj\n", (INTP)i,                         \
-                   (arr_f)[i * T_DATA_STRIDE],                                 \
-                   (arr_f)[i * T_DATA_STRIDE + 1]);                            \
-        }                                                                      \
-        printf("\n");                                                          \
-    }
-
-/**
- * @brief prints the double complex array `arr` of size `length`
- *
- */
-#define PRINT_CARRAY_FP64(arr, size)                                           \
-    {                                                                          \
-        DOUBLE *arr_d = (DOUBLE *)arr;                                         \
-        for (INTP i = 0; i < size; ++i)                                        \
-        {                                                                      \
-            printf("%td: %20.14lf + %20.14lfj\n", (INTP)i,                     \
-                   (arr_d)[i * T_DATA_STRIDE],                                 \
-                   (arr_d)[i * T_DATA_STRIDE + 1]);                            \
-        }                                                                      \
-        printf("\n");                                                          \
     }
 
 #define PREPARE_LINEAR_TEST_INPUTS(in1, in2, in_combined, size, factors,       \

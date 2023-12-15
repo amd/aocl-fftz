@@ -416,10 +416,9 @@ VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         out_i = out_i + v_out_stride;
     }
 }
-
-#else // Basic version
-
-#include "core/kernels/kernel_utils.h"
+#else
+/* --------------- non-optimized C kernel variant --------------- */
+#include "utils/complex_utils.h"
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 116, 488, 90, 0, 361},
                                                      {0, 116, 488, 90, 0, 361}};

@@ -134,7 +134,7 @@ VOID fft2c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 }
 #else
 /* --------------- non-optimized C kernel variant --------------- */
-#include "core/kernels/kernel_utils.h"
+#include "utils/complex_utils.h"
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 5, 12, 16, 0, 0},
                                                      {0, 5, 12, 16, 0, 0}};

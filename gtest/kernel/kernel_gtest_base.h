@@ -42,7 +42,6 @@
 
 #include <gtest/gtest.h>
 #include <math.h>
-#include "core/kernels/kernel_utils.h" /* for CMUL, CADD, EULER functions */
 #include "gtest/kernel/kernel_gtest_utils.h"
 #include "gtest/gtest_types.h"
 #include "utils/allocator.h"

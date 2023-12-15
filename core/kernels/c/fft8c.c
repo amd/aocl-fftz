@@ -342,7 +342,7 @@ VOID fft8c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 }
 #else
 /* --------------- non-optimized C kernel variant --------------- */
-#include "core/kernels/kernel_utils.h"
+#include "utils/complex_utils.h"
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 88, 372, 80, 0, 253},
                                                      {0, 88, 372, 80, 0, 253}};

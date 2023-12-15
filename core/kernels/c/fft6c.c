@@ -51,6 +51,7 @@ kfft_ register_kernel_fft6c(INT32 precision)
 }
 
 #ifdef USE_OPT_KERNEL_VARIANT
+/* --------------- optimized C kernel variant --------------- */
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 8, 36, 24, 0, 0},
                                                      {0, 8, 36, 24, 0, 0}};
 
@@ -259,9 +260,9 @@ VOID fft6c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         out_i += v_out_stride;
     }
 }
-
-#else // USE_OPT_KERNEL_VARIANT
-#include "core/kernels/kernel_utils.h"
+#else
+/* --------------- non-optimized C kernel variant --------------- */
+#include "utils/complex_utils.h"
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 44, 188, 60, 0, 106},
                                                      {0, 44, 188, 60, 0, 106}};

@@ -50,6 +50,7 @@ kfft_ register_kernel_fft15c(INT32 precision)
     else
         return NULL;
 }
+
 #ifdef USE_OPT_KERNEL_VARIANT
 /* --------------- optimized C kernel variant --------------- */
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 56, 156, 60, 0, 0},
@@ -694,7 +695,7 @@ VOID fft15c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 }
 #else
 /* --------------- non-optimized C kernel variant --------------- */
-#include "core/kernels/kernel_utils.h"
+#include "utils/complex_utils.h"
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {
     {0, 368, 1520, 150, 0, 1681}, {0, 368, 1520, 150, 0, 1681}};
