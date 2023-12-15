@@ -52,7 +52,7 @@ extern "C"
 #define TOLERANCE_F 1E-3
 #define TOLERANCE_D 1E-10
 
-#if ((defined(__STDC_VERSION__) && (__STDC_VERSION__ < 201112L)) && \
+#if ((defined(__STDC_VERSION__) && (__STDC_VERSION__ < 201112L)) || \
     (defined(__cplusplus) && (__cplusplus < 201703L)))
     #define DBL_TRUE_MIN 4.9406564584124654e-324
     #define FLT_TRUE_MIN 1.40129846e-45F
