@@ -201,8 +201,12 @@ class AoclfftzSelectorTestBase
         // destroy problem descriptor
         if (p_desc != NULL)
         {
+            INT32 is_out_place = IS_OUT_OF_PLACE(p_desc->flags);
             FREE_ALLOCATED_MEM(p_desc->in);
-            FREE_ALLOCATED_MEM(p_desc->out);
+            if (is_out_place)
+            {
+                FREE_ALLOCATED_MEM(p_desc->out);
+            }
             FREE_ALLOCATED_MEM(p_desc->dims);
             FREE_ALLOCATED_MEM(p_desc->vecs);
             FREE_ALLOCATED_MEM(p_desc);
@@ -273,6 +277,7 @@ class AoclfftzSelectorTestBase
         INT32 status = PARSER_SUCCESS;
         INT32 dim_rank = 0;
         INT32 vec_rank = 0;
+        INT32 is_in_place = !IS_OUT_OF_PLACE(flags);
         status = find_dim_vec_ranks((CHAR *)dims_and_vecs.c_str(), &dim_rank,
                                     &vec_rank);
         if (status != PARSER_SUCCESS)
@@ -300,14 +305,30 @@ class AoclfftzSelectorTestBase
         {
             p_desc->dims[i].n = (dm_t)dims[i].n;
             p_desc->dims[i].in_stride = (dm_t)dims[i].in_stride;
-            p_desc->dims[i].out_stride = (dm_t)dims[i].out_stride;
+            //Strides must be equal for inplace problems
+            if (is_in_place)
+            {
+                p_desc->dims[i].out_stride = (dm_t)dims[i].in_stride;
+            }
+            else
+            {
+                p_desc->dims[i].out_stride = (dm_t)dims[i].out_stride;
+            }
         }
         p_desc->vecs = (dim_t *)ALLOC_UNALIGN_UNINIT(vec_rank * sizeof(dim_t));
         for (INT32 i = 0; i < vec_rank; i++)
         {
             p_desc->vecs[i].n = (dm_t)vecs[i].n;
             p_desc->vecs[i].in_stride = (dm_t)vecs[i].in_stride;
-            p_desc->vecs[i].out_stride = (dm_t)vecs[i].out_stride;
+            //Strides must be equal for inplace problems
+            if (is_in_place)
+            {
+                p_desc->vecs[i].out_stride = (dm_t)vecs[i].in_stride;
+            }
+            else
+            {
+                p_desc->vecs[i].out_stride = (dm_t)vecs[i].out_stride;
+            }
         }
         FREE_ALLOCATED_MEM(dims);
         FREE_ALLOCATED_MEM(vecs);
@@ -317,8 +338,17 @@ class AoclfftzSelectorTestBase
                                                   &output_size);
         dt_t *in = (dt_t *)ALLOC_UNALIGN_UNINIT(
                         input_size * DATA_STRIDE * sizeof(dt_t));
-        dt_t *out = (dt_t *)ALLOC_UNALIGN_INIT(
+        dt_t *out = NULL;
+        //input and output buffers must be same for inplace problems
+        if (is_in_place)
+        {
+            out = in;
+        }
+        else
+        {
+            out = (dt_t *)ALLOC_UNALIGN_INIT(
                         output_size * DATA_STRIDE, sizeof(dt_t));
+        }
         for (int i = 0; i < input_size * DATA_STRIDE; i++)
             in[i] = (rand() % 1000) / 100.0;
 
@@ -367,6 +397,7 @@ class AoclfftzSelectorTestBase
         INT32 status = PARSER_SUCCESS;
         INT32 dim_rank = 0;
         INT32 vec_rank = 0;
+        INT32 is_in_place = !IS_OUT_OF_PLACE(flags);
         status = find_dim_vec_ranks((CHAR *)dims_and_vecs.c_str(), &dim_rank,
                                     &vec_rank);
         if (status != PARSER_SUCCESS)
@@ -400,14 +431,30 @@ class AoclfftzSelectorTestBase
         {
             sol->decomp_scheme->dims[idx].n = dims[idx].n;
             sol->decomp_scheme->dims[idx].in_stride = dims[idx].in_stride;
-            sol->decomp_scheme->dims[idx].out_stride = dims[idx].out_stride;
+            //Strides must be equal for inplace problems
+            if (is_in_place)
+            {
+                sol->decomp_scheme->dims[idx].out_stride = dims[idx].in_stride;
+            }
+            else
+            {
+                sol->decomp_scheme->dims[idx].out_stride = dims[idx].out_stride;
+            }
         }
         sol->decomp_scheme->vec_rank = vec_rank;
         for (INT32 idx = 0; idx < sol->decomp_scheme->vec_rank; ++idx)
         {
             sol->decomp_scheme->vecs[idx].n = vecs[idx].n;
             sol->decomp_scheme->vecs[idx].in_stride = vecs[idx].in_stride;
-            sol->decomp_scheme->vecs[idx].out_stride = vecs[idx].out_stride;
+            //Strides must be equal for inplace problems
+            if (is_in_place)
+            {
+                sol->decomp_scheme->vecs[idx].out_stride = vecs[idx].in_stride;
+            }
+            else
+            {
+                sol->decomp_scheme->vecs[idx].out_stride = vecs[idx].out_stride;
+            }
         }
         FREE_ALLOCATED_MEM(dims);
         FREE_ALLOCATED_MEM(vecs);
