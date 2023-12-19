@@ -148,6 +148,7 @@ ops_cycles_t get_ops_cnt_fft5avx256(INT32 precision);
 ops_cycles_t get_ops_cnt_fft6avx256(INT32 precision);
 ops_cycles_t get_ops_cnt_fft7avx256(INT32 precision);
 ops_cycles_t get_ops_cnt_fft8avx256(INT32 precision);
+ops_cycles_t get_ops_cnt_fft9avx256(INT32 precision);
 #endif
 
 // C register kernels
@@ -192,6 +193,7 @@ kfft_ register_kernel_fft5avx256(INT32 precision);
 kfft_ register_kernel_fft6avx256(INT32 precision);
 kfft_ register_kernel_fft7avx256(INT32 precision);
 kfft_ register_kernel_fft8avx256(INT32 precision);
+kfft_ register_kernel_fft9avx256(INT32 precision);
 #endif
 
 // C kernels
@@ -386,6 +388,12 @@ VOID fft8avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                     UINT8 flag);
 VOID fft8avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                    UINT8 flag);
+VOID fft9avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                    UINT8 flag);
+VOID fft9avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                     UINT8 flag);
 #endif

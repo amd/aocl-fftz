@@ -285,5 +285,26 @@ static const union zero_conj_256
     a = SWAP_RI_128_D(a);                                                     \
     c = SWAP_RI_128_D(_mm_addsub_pd(a, b));                                   \
 }
+/**
+ * @brief alternatively performs addition & subtraction in a 256 bit register
+ * for single precision floating point.
+ * Operation : 2 PERM, 1 ADD
+ */
+#define SUBADD_256_S(a, b, c)                                                 \
+{                                                                             \
+    a = SWAP_RI_256_S(a);                                                     \
+    c = SWAP_RI_256_S(_mm256_addsub_ps(a, b));                                \
+}
+
+/**
+ * @brief alternatively performs addition & subtraction in a 256 bit register
+ * for double precision floating point.
+ * Operation : 2 PERM, 1 ADD
+ */
+#define SUBADD_256_D(a, b, c)                                                 \
+{                                                                             \
+    a = SWAP_RI_256_D(a);                                                     \
+    c = SWAP_RI_256_D(_mm256_addsub_pd(a, b));                                \
+}
 
 #endif // AOCLFFTZ_SIMD_COMMON_H
