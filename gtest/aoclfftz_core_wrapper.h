@@ -94,6 +94,7 @@ EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft6avx256_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft7avx256_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft8avx256_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft9avx256_wrapper(INT32 precision);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft10avx256_wrapper(INT32 precision);
 
 /* ---------------- kernels : register_kernel_fft* ---------------- */
 
@@ -136,6 +137,7 @@ EXPORT_SYM_DYN kfft_ register_kernel_fft6avx256_wrapper(INT32 precision);
 EXPORT_SYM_DYN kfft_ register_kernel_fft7avx256_wrapper(INT32 precision);
 EXPORT_SYM_DYN kfft_ register_kernel_fft8avx256_wrapper(INT32 precision);
 EXPORT_SYM_DYN kfft_ register_kernel_fft9avx256_wrapper(INT32 precision);
+EXPORT_SYM_DYN kfft_ register_kernel_fft10avx256_wrapper(INT32 precision);
 
 /* ---------------- kernels : permuted_copy_* ---------------- */
 
@@ -225,7 +227,7 @@ static wrapper_kernel_fp_list_t
     {register_kernel_fft7avx256_wrapper, get_ops_cnt_fft7avx256_wrapper, 7},  // radix-7
     {register_kernel_fft8avx256_wrapper, get_ops_cnt_fft8avx256_wrapper, 8},  // radix-8
     {register_kernel_fft9avx256_wrapper, get_ops_cnt_fft9avx256_wrapper, 9},  // radix-9
-    {NULL, NULL, 10}, // radix-10
+    {register_kernel_fft10avx256_wrapper, get_ops_cnt_fft10avx256_wrapper, 10},// radix-10
     {NULL, NULL, 11}, // radix-11
     {NULL, NULL, 12}, // radix-12
     {NULL, NULL, 13}, // radix-13
