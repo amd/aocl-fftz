@@ -63,7 +63,7 @@ ops_cycles_t get_ops_cnt_fft4c(INT32 precision)
 }
 
 VOID fft4c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides)
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     DOUBLE *in_r = (DOUBLE *)in_real;
     DOUBLE *in_i = (DOUBLE *)in_imag;
@@ -134,7 +134,7 @@ VOID fft4c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 }
 
 VOID fft4c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides)
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     FLOAT *in_r = (FLOAT *)in_real;
     FLOAT *in_i = (FLOAT *)in_imag;
@@ -222,7 +222,7 @@ const DOUBLE CRTM_4[RADIX_4][2] = {
     {1.0, 0.0}, {0.0, -1.0}, {-1.0, 0.0}, {0.0, 1.0}};
 
 VOID fft4c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides)
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     // All strides values are mutliplied with DATA_STRIDE for complex data
     INTP in_stride = strides->in_stride * DATA_STRIDE;
@@ -327,7 +327,7 @@ VOID fft4c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 }
 
 VOID fft4c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides)
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     // All strides values are mutliplied with DATA_STRIDE for complex data
     INTP in_stride = strides->in_stride * DATA_STRIDE;

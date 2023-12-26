@@ -63,7 +63,7 @@ ops_cycles_t get_ops_cnt_fft5c(INT32 precision)
 }
 
 VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides)
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     const DOUBLE CRTM_5_1 = +0.55901699437494742410229341718281905886015458990288;
     const DOUBLE CRTM_5_2 = +0.95105651629515357211643933337938214340569863400000;
@@ -165,7 +165,7 @@ VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 }
 
 VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides)
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     const FLOAT CRTM_5_1 = +0.55901699437494742410229341718281905886015458990288;
     const FLOAT CRTM_5_2 = +0.95105651629515357211643933337938214340569863400000;
@@ -285,7 +285,7 @@ const DOUBLE CRTM_5[RADIX_5][2] = {{1.0, 0.0},
                                    {0.309016994374947, 0.951056516295154}};
 
 VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides)
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     // All strides values are mutliplied with DATA_STRIDE for complex data
     INTP in_stride = strides->in_stride * DATA_STRIDE;
@@ -413,7 +413,7 @@ VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 }
 
 VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides)
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     // All strides values are mutliplied with DATA_STRIDE for complex data
     INTP in_stride = strides->in_stride * DATA_STRIDE;

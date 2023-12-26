@@ -65,7 +65,7 @@ ops_cycles_t get_ops_cnt_fft15c(INT32 precision)
 }
 
 VOID fft15c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides)
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     const DOUBLE CRTM_15_1 =
         +0.55901699437494742410229341718281905886015458990288;
@@ -375,7 +375,7 @@ VOID fft15c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 }
 
 VOID fft15c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides)
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     const FLOAT CRTM_15_1 =
         +0.55901699437494742410229341718281905886015458990288;
@@ -725,7 +725,7 @@ const DOUBLE CRTM_15[RADIX_15][2] = {{1.0, 0.0},
                                      {0.913545457642601, 0.4067366430758}};
 
 VOID fft15c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides)
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     // All strides values are mutliplied with DATA_STRIDE for complex data
     INTP in_stride = strides->in_stride * DATA_STRIDE;
@@ -1311,7 +1311,7 @@ VOID fft15c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 }
 
 VOID fft15c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides)
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     // All strides values are mutliplied with DATA_STRIDE for complex data
     INTP in_stride = strides->in_stride * DATA_STRIDE;

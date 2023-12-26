@@ -64,7 +64,7 @@ ops_cycles_t get_ops_cnt_fft6c(INT32 precision)
 }
 
 VOID fft6c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides)
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     const DOUBLE CRTM_6_1 = +0.500000000000000000000000000000000000000000000;
     const DOUBLE CRTM_6_2 = +0.866025403784438646763723170752936183471402627;
@@ -78,6 +78,7 @@ VOID fft6c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
     INTP v_in_stride  = (strides->v_in_stride << 1);
     INTP v_out_stride = (strides->v_out_stride << 1);
     INTP cnt;
+
     for (cnt = 0; cnt < n; cnt++)
     {
         DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v6r, v6i,
@@ -163,7 +164,7 @@ VOID fft6c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 }
 
 VOID fft6c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides)
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     const FLOAT CRTM_6_1 = +0.500000000000000000000000000000000000000000000;
     const FLOAT CRTM_6_2 = +0.866025403784438646763723170752936183471402627;
@@ -177,6 +178,7 @@ VOID fft6c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
     INTP v_in_stride  = (strides->v_in_stride << 1);
     INTP v_out_stride = (strides->v_out_stride << 1);
     INTP cnt;
+
     for (cnt = 0; cnt < n; cnt++)
     {
         FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v6r, v6i,
@@ -280,7 +282,7 @@ const DOUBLE CRTM_6[RADIX_6][2] = {
     {-1.0, 0.0}, {-0.5, 0.866025403784439}, {0.5, 0.866025403784439}};
 
 VOID fft6c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides)
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     // All strides values are mutliplied with DATA_STRIDE for complex data
     INTP in_stride = strides->in_stride * DATA_STRIDE;
@@ -436,7 +438,7 @@ VOID fft6c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 }
 
 VOID fft6c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides)
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     // All strides values are mutliplied with DATA_STRIDE for complex data
     INTP in_stride = strides->in_stride * DATA_STRIDE;

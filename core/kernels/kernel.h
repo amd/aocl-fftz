@@ -136,65 +136,65 @@ kfft_ register_kernel_fft14c(INT32 precision);
 kfft_ register_kernel_fft15c(INT32 precision);
 kfft_ register_kernel_fft16c(INT32 precision);
 VOID fft2c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft2c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft3c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft3c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft4c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft4c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft6c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft6c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft7c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft7c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft8c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft8c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft9c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides);
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides);
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides);
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft11c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides);
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft11c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides);
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft12c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides);
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft12c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides);
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides);
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides);
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides);
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides);
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft15c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides);
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft15c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides);
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft16c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides);
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft16c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides);
+                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 
 // Permuted copy kernels
 VOID permuted_copy_c_fp32(VOID *in, VOID *out, INTP n, INTP size,

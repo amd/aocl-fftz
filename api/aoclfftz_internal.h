@@ -120,7 +120,7 @@ typedef struct cost_analysis
 typedef VOID (*kfft_) (VOID *in_real, VOID *in_imag,
                        VOID *out_real, VOID *out_imag,
                        ptrdiff_t n,
-                       aoclfftz_strides_t *strides);
+                       aoclfftz_strides_t *strides, UINT8 flag);
 
 //Solver execute template function pointer
 typedef INT32 (*dft_solver_) (aoclfftz_solution_t* solution);

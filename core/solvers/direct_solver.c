@@ -88,7 +88,7 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol,
                      sol->decomp_scheme->out_real,
                      sol->decomp_scheme->out_imag,
                      n,
-                     strides);
+                     strides, FFT_DIR(sol->decomp_scheme->flags));
 
         getTime(endTime);
         cost->time = diffTime(clkTick, startTime, endTime);
@@ -127,7 +127,7 @@ INT32 execute_direct_solver(aoclfftz_solution_t *sol)
            sol->decomp_scheme->out_real,
            sol->decomp_scheme->out_imag,
            sol->decomp_scheme->vecs[0].n,
-           strides);
+           strides, FFT_DIR(sol->decomp_scheme->flags));
 
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
     return SOLVER_SUCCESS;

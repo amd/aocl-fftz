@@ -376,10 +376,10 @@ class AoclfftzKernelTestBase
         T *out_combined_r = (is_bwd) ? (out_combined + 1) : (out_combined);
         T *out_combined_i = (is_bwd) ? (out_combined) : (out_combined + 1);
 
-        fft_kernel(in1_r, in1_i, out1_r, out1_i, offset, &kernel_stride);
-        fft_kernel(in2_r, in2_i, out2_r, out2_i, offset, &kernel_stride);
+        fft_kernel(in1_r, in1_i, out1_r, out1_i, offset, &kernel_stride, is_bwd);
+        fft_kernel(in2_r, in2_i, out2_r, out2_i, offset, &kernel_stride, is_bwd);
         fft_kernel(in_combined_r, in_combined_i, out_combined_r, out_combined_i,
-                   offset, &kernel_stride);
+                   offset, &kernel_stride, is_bwd);
 
         for (INTP idx = 0; idx < output_length; ++idx)
         {
@@ -494,7 +494,7 @@ class AoclfftzKernelTestBase
         T *out_r = (is_bwd) ? (out + 1) : (out);
         T *out_i = (is_bwd) ? (out) : (out + 1);
 
-        fft_kernel(in_r, in_i, out_r, out_i, offset, &kernel_stride);
+        fft_kernel(in_r, in_i, out_r, out_i, offset, &kernel_stride, is_bwd);
         // convert the FFT kernel output from in-order to out-of-order for
         // standard kernel and vise versa for permuted kernel
         permuted_copy<T>(out, perm_out, offset, radix, &permuted_copy_stride);
@@ -505,7 +505,7 @@ class AoclfftzKernelTestBase
         T *perm_inv_out_i = (!is_bwd) ? (perm_inv_out) : (perm_inv_out + 1);
 
         fft_kernel(perm_out_r, perm_out_i, perm_inv_out_r, perm_inv_out_i,
-                   offset, &kernel_stride_reverse);
+                   offset, &kernel_stride_reverse, !is_bwd);
         // convert the reverse FFT kernel output from in-order to out-of-order
         // for standard kernel and vise versa for permuted kernel
         permuted_copy<T>(perm_inv_out, inv_out, offset, radix,
@@ -630,8 +630,8 @@ class AoclfftzKernelTestBase
         // permuted kernel
         if (kernel_type & 0x1)
         {
-            fft_kernel(in1_r, in1_i, out1_r, out1_i, offset, &kernel_stride);
-            fft_kernel(in2_r, in2_i, out2_r, out2_i, offset, &kernel_stride);
+            fft_kernel(in1_r, in1_i, out1_r, out1_i, offset, &kernel_stride, is_bwd);
+            fft_kernel(in2_r, in2_i, out2_r, out2_i, offset, &kernel_stride, is_bwd);
             // convert the FFT kernel outputs from out-of-order to in-order
             permuted_copy<T>(out1, temp, offset, radix, &permuted_copy_stride);
             memcpy(out1, temp, sizeof(T) * output_length * DATA_STRIDE);
@@ -646,8 +646,8 @@ class AoclfftzKernelTestBase
             memcpy(in1, temp, sizeof(T) * input_length * DATA_STRIDE);
             permuted_copy<T>(in2, temp, offset, radix, &permuted_copy_stride);
             memcpy(in2, temp, sizeof(T) * input_length * DATA_STRIDE);
-            fft_kernel(in1_r, in1_i, out1_r, out1_i, offset, &kernel_stride);
-            fft_kernel(in2_r, in2_i, out2_r, out2_i, offset, &kernel_stride);
+            fft_kernel(in1_r, in1_i, out1_r, out1_i, offset, &kernel_stride, is_bwd);
+            fft_kernel(in2_r, in2_i, out2_r, out2_i, offset, &kernel_stride, is_bwd);
         }
 
         T cmul_temp[DATA_STRIDE] = {0.0, 0.0};
