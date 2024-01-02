@@ -67,6 +67,9 @@ option (BUILD_STATIC_LIBS "Build static library (Default build type is shared li
 #option (ENABLE_AVX512 "Compile with AVX512 instruction set support" OFF)
 #option (ENABLE_MPI "Compile with distributed MPI FFTZ support" OFF)
 option (AOCL_TEST_COVERAGE "Enable GTest and AOCL test bench based CTest suite (Disabled by default)" OFF)
+option (CODE_COVERAGE "Enable source code coverage (only on Linux with GCC compiler)" OFF)
+option (ASAN "Enable Address Sanitizer checks (only on Linux/Debug build)" OFF)
+option (VALGRIND "Enable Valgrind checks (only on Linux/Debug. Incompatible with ASAN=ON)" OFF)
 #option (BUILD_DOC "Build documentation for aocl-fftz (Disabled by default)" OFF)
 option (ENABLE_STRICT_WARNINGS "Enable compiler flags to treat all warnings as errors (Enabled by default)" ON)
 
@@ -181,6 +184,37 @@ if (WIN32)
 add_compile_definitions(_USE_MATH_DEFINES)
 endif()
 
+# setup to get source code coverage(GCOV)
+if (CODE_COVERAGE)
+    if (NOT (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND ${CMAKE_C_COMPILER_ID} STREQUAL "GNU"))
+        # Switch off GCOV: target not supported
+        set(CODE_COVERAGE OFF)
+        message(WARNING "Target not supported. Code coverage is only supported on Linux OS with GCC compiler")
+    endif()
+endif()
+
+# setup to run memory check using AddressSanitizer 
+if (ASAN)
+    if (NOT (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND CMAKE_BUILD_TYPE MATCHES "Debug"))
+        # Switch off ASAN: target not supported
+        set(ASAN OFF)
+        message(WARNING "Target not supported. ASAN is only supported on Linux/Debug build")
+    endif()
+endif()
+
+# setup to run memory check using Valgrind
+if (VALGRIND)
+    if ((NOT (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND CMAKE_BUILD_TYPE MATCHES "Debug")) OR ASAN)
+        set(VALGRIND OFF)
+        message(WARNING "Target not supported. VALGRIND is only supported with Linux/Debug build and incompatible with ASAN=ON")
+    endif()
+endif()
+
+# Enable CTest for any of the cases
+if(VALGRIND OR ASAN OR CODE_COVERAGE)
+    set(AOCL_TEST_COVERAGE ON)
+endif()
+
 #setup CTest for GoogleTest and test bench
 if (AOCL_TEST_COVERAGE)
     # enabling ctest
@@ -209,6 +243,18 @@ if (BUILD_STATIC_LIBS)
 else ()
 	add_library(${lib_name} SHARED ${SRC_FILES})
 	message(STATUS "Library type being built is: Shared")
+endif()
+
+# add the compiler and linker flags for code coverage
+if (CODE_COVERAGE)
+    target_compile_options(${lib_name} PUBLIC --coverage -fprofile-abs-path)
+    target_link_options(${lib_name} PUBLIC --coverage)
+endif()
+
+# add the compiler and linker flags for AddressSanitizer
+if (ASAN)
+    target_compile_options(${lib_name} PUBLIC -fsanitize=address -O0 -gdwarf-5 -g3 )
+    target_link_options(${lib_name} PUBLIC -fsanitize=address)
 endif()
 
 set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)

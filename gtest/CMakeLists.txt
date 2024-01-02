@@ -30,6 +30,19 @@ else ()
     add_library(${gtest_lib_name} SHARED ${SRC_FILES} ${CORE_WRAPPER_FILES})
 endif()
 
+# add the compiler and linker flags for code coverage
+if (CODE_COVERAGE)
+    target_compile_options(${gtest_lib_name} PUBLIC --coverage -fprofile-abs-path)
+    target_link_options(${gtest_lib_name} PUBLIC --coverage)
+endif()
+
+# add the compiler and linker flags for AddressSanitizer
+if (ASAN)
+    target_compile_options(${gtest_lib_name} PUBLIC -fsanitize=address -O0 -gdwarf-5 -g3 )
+    target_link_options(${gtest_lib_name} PUBLIC -fsanitize=address)
+endif()
+
+
 file(GLOB GTEST_SRC_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/gtest/*/*.cpp)
 
 foreach(FILE ${GTEST_SRC_FILES})
