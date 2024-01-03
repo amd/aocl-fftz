@@ -115,6 +115,8 @@ VOID show_help_menu(VOID)
         "                            4 = trace\n"
         "--selector-time          '1' to print the time taken for preparing "
         "the solution, '0' to disable it [default: 0]\n"
+        "--min-bench-time          'set minimum time to calculate performance "
+        "iterations [default: 10ms]\n"
         "--measure-stats          '1' to measure selector stats, '0' to "
         "disable it [default: 0]\n"
         "--bit-reproducibility    '1' to use bit reproducibility mode, '0' to "
@@ -202,6 +204,10 @@ INT32 get_option(CHAR **argv, INT32 arg_idx)
         {
             return 305;
         }
+        else if (strcmp(arg, "--min-bench-time") == 0)
+        {
+            return 307;
+        }
         else
         {
             // Unsupported option
@@ -252,6 +258,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     UCHAR selector_time = 0;
     INT32 measure_stats = 0;
     INT32 bit_reproducibility = 0;
+    DOUBLE min_bench_time = 10000;
     INT32 status = PARSER_SUCCESS;
     INT32 ret = PARSER_SUCCESS;
     // check for the dependent arguments
@@ -543,6 +550,19 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             // should not move arg_idx by 2 places if it is a non option arg
             arg_idx--;
             break;
+        case 307:
+            if (atof(optarg) < 10)
+            {
+                printf("WARNING: min_bench_time value must be at least 10ms, "
+                       "running bench with default value(10ms)\n");
+                min_bench_time = 10;
+            }
+            else
+            {
+                min_bench_time = atof(optarg);
+            }
+            min_bench_time *= 1000;
+            break;
         case '?':
             status = MAX(status, INVALID_ARGUMENT_ERROR);
             break;
@@ -628,6 +648,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         bench_params->opt_level = opt_level;
         bench_params->logger_mode = logger_mode;
         bench_params->selector_time = selector_time;
+        bench_params->min_bench_time = min_bench_time;
         bench_params->measure_stats = measure_stats;
         bench_params->bit_reproducibility = bit_reproducibility;
         bench_params->seed = seed;
@@ -742,7 +763,7 @@ VOID *setup_problem_f(aoclfftz_bench_params_t *params)
     timer clk_tick;
 #endif
     timeVal start_time, end_time;
-    UINT64 time_taken = 0.0;
+    DOUBLE time_taken = 0.0;
 
     aoclfftz_prob_desc_f *p_desc =
         ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_prob_desc_f));
@@ -759,12 +780,14 @@ VOID *setup_problem_f(aoclfftz_bench_params_t *params)
         getTime(start_time);
         handle = aoclfftz_setup_f(p_desc);
         getTime(end_time);
-        time_taken = diffTime(clk_tick, start_time, end_time);
+        time_taken = (DOUBLE)diffTime(clk_tick, start_time, end_time);
         if (handle != NULL)
         {
-            printf("\n====================================\n");
-            printf("    Selector time : %9.6lf ms\n", time_taken * 1E-6);
-            printf("====================================\n");
+            CHAR time_unit[3];
+            ADJUST_SELECTOR_TIME_UNIT(time_taken, time_unit);
+            printf("\n=====================================\n");
+            printf("      Selector time : %6.3lf %s\n", time_taken, time_unit);
+            printf("=====================================\n");
         }
     }
     else
@@ -789,7 +812,7 @@ VOID *setup_problem_d(aoclfftz_bench_params_t *params)
     timer clk_tick;
 #endif
     timeVal start_time, end_time;
-    UINT64 time_taken = 0.0;
+    DOUBLE time_taken = 0.0;
 
     aoclfftz_prob_desc_d *p_desc =
         ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_prob_desc_d));
@@ -806,12 +829,14 @@ VOID *setup_problem_d(aoclfftz_bench_params_t *params)
         getTime(start_time);
         handle = aoclfftz_setup_d(p_desc);
         getTime(end_time);
-        time_taken = diffTime(clk_tick, start_time, end_time);
+        time_taken = (DOUBLE)diffTime(clk_tick, start_time, end_time);
         if (handle != NULL)
         {
-            printf("\n====================================\n");
-            printf("    Selector time : %9.6lf ms\n", time_taken * 1E-6);
-            printf("====================================\n");
+            CHAR time_unit[3];
+            ADJUST_SELECTOR_TIME_UNIT(time_taken, time_unit);
+            printf("\n=====================================\n");
+            printf("      Selector time : %6.3lf %s\n", time_taken, time_unit);
+            printf("=====================================\n");
         }
     }
     else
@@ -836,7 +861,7 @@ VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
     timer clk_tick;
 #endif
     timeVal start_time, end_time;
-    UINT64 time_taken = 0.0;
+    DOUBLE time_taken = 0.0;
 
     aoclfftz_prob_desc_f_64_ *p_desc =
         ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_prob_desc_f_64_));
@@ -853,12 +878,14 @@ VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
         getTime(start_time);
         handle = aoclfftz_setup_f_64_(p_desc);
         getTime(end_time);
-        time_taken = diffTime(clk_tick, start_time, end_time);
+        time_taken = (DOUBLE)diffTime(clk_tick, start_time, end_time);
         if (handle != NULL)
         {
-            printf("\n====================================\n");
-            printf("    Selector time : %9.6lf ms\n", time_taken * 1E-6);
-            printf("====================================\n");
+            CHAR time_unit[3];
+            ADJUST_SELECTOR_TIME_UNIT(time_taken, time_unit);
+            printf("\n=====================================\n");
+            printf("      Selector time : %6.3lf %s\n", time_taken, time_unit);
+            printf("=====================================\n");
         }
     }
     else
@@ -883,7 +910,7 @@ VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params)
     timer clk_tick;
 #endif
     timeVal start_time, end_time;
-    UINT64 time_taken = 0.0;
+    DOUBLE time_taken = 0.0;
 
     aoclfftz_prob_desc_d_64_ *p_desc =
         ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_prob_desc_d_64_));
@@ -900,12 +927,14 @@ VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params)
         getTime(start_time);
         handle = aoclfftz_setup_d_64_(p_desc);
         getTime(end_time);
-        time_taken = diffTime(clk_tick, start_time, end_time);
+        time_taken = (DOUBLE)diffTime(clk_tick, start_time, end_time);
         if (handle != NULL)
         {
-            printf("\n====================================\n");
-            printf("    Selector time : %9.6lf ms\n", time_taken * 1E-6);
-            printf("====================================\n");
+            CHAR time_unit[3];
+            ADJUST_SELECTOR_TIME_UNIT(time_taken, time_unit);
+            printf("\n=====================================\n");
+            printf("      Selector time : %6.3lf %s\n", time_taken, time_unit);
+            printf("=====================================\n");
         }
     }
     else
@@ -934,8 +963,8 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
 #endif
     // all time values are in nano seconds
     timeVal start_time, end_time;
-    UINT64 min_time = INT64_MAX, avg_time = 0, cur_time = 0;
-    DOUBLE avg_mflops, max_mflops;
+    UINT64 min_time = INT64_MAX, tot_time = 0, cur_time = 0;
+    DOUBLE avg_time = 0.0, avg_mflops = 0.0, max_mflops = 0.0;
     INTP n = calculate_size(params->dims, params->dim_rank);
     INTP batches = calculate_size(params->vecs, params->vec_rank);
     INTP input_size = 0;
@@ -949,7 +978,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     }
 
     AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode, "seed   : %d",
-                           params->seed);
+                          params->seed);
 
     // prepare random input data
     prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT);
@@ -964,56 +993,68 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     }
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "WARM-UP END");
 
+    INT32 iter = caliberate_iterations(handle, params->min_bench_time);
+    avg_time = 0.0;
+    cur_time = 0;
+    tot_time = 0;
+    min_time = INT64_MAX;
+
     initTimer(clk_tick);
-    for (INT32 i = 0; i < params->num_iterations; ++i)
+    for (INT32 i = 0; i < params->num_iterations; i++)
     {
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode, "Iteration: %d", i);
+        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode, "Iteration: %d",
+                               i);
         getTime(start_time);
-        status = aoclfftz_execute(handle);
-        if (status != 0)
+        for(INT32 j = 0; j < iter; j++)
         {
-            return EXECUTION_FAILURE;
+                status = aoclfftz_execute(handle);
+                if (status != 0)
+                {
+                    return EXECUTION_FAILURE;
+                }
         }
         getTime(end_time);
         cur_time = diffTime(clk_tick, start_time, end_time);
-        avg_time = avg_time + cur_time;
+        cur_time = cur_time / iter;
+        tot_time = tot_time + cur_time;
         if (cur_time < min_time)
         {
             min_time = cur_time;
         }
     }
-    avg_time = avg_time / params->num_iterations;
+    avg_time = (DOUBLE)tot_time / params->num_iterations;
+    // compute MFLOPS from execution time
     max_mflops = (5.0 * n * batches * log2(n)) / (min_time * 1E-3);
     avg_mflops = (5.0 * n * batches * log2(n)) / (avg_time * 1E-3);
 
     // prepare suitable execution time unit
     DOUBLE time_multiplier = 1.0;
-    CHAR time_unit[4];
-    // units will be decided based on minimum of min_time and avg_time which is
-    // min_time
+    CHAR time_unit[3];
+    // units will be decided based on minimum of min_time and avg_time
+    // which is min_time
     // print time in seconds
     if (min_time > 1E9)
     {
         time_multiplier = 1E-9;
-        STRCPY(time_unit, 4, "s");
+        STRCPY(time_unit, 3, "s");
     }
     // print time in milli-seconds
     else if (min_time > 1E6)
     {
         time_multiplier = 1E-6;
-        STRCPY(time_unit, 4, "ms");
+        STRCPY(time_unit, 3, "ms");
     }
     // print time in micro-seconds
     else if (min_time > 1E3)
     {
         time_multiplier = 1E-3;
-        STRCPY(time_unit, 4, "µs");
+        STRCPY(time_unit, 3, "us");
     }
     // print time in nano-seconds
     else
     {
         time_multiplier = 1.0;
-        STRCPY(time_unit, 4, "ns");
+        STRCPY(time_unit, 3, "ns");
     }
 
     printf("\n=====================================\n");

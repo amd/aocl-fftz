@@ -148,6 +148,7 @@ typedef struct
     INT32 num_threads;
     INT32 dynamic_load_model;
     UCHAR selector_time;
+    DOUBLE min_bench_time;
     INT32 measure_stats;
     INT32 bit_reproducibility;
 } aoclfftz_bench_params_t;

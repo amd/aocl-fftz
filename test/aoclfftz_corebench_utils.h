@@ -562,6 +562,37 @@
         }                                                                      \
     }
 
+/**
+ * @brief prepare suitable selector time unit
+ *
+ */
+#define ADJUST_SELECTOR_TIME_UNIT(time_taken, time_unit)                       \
+    {                                                                          \
+        /* print time in seconds */                                            \
+        if (time_taken > 1E9)                                                  \
+        {                                                                      \
+            time_taken *= 1E-9;                                                \
+            STRCPY(time_unit, 3, "s");                                         \
+        }                                                                      \
+        /* print time in milli-seconds */                                      \
+        else if (time_taken > 1E6)                                             \
+        {                                                                      \
+            time_taken *= 1E-6;                                                \
+            STRCPY(time_unit, 3, "ms");                                        \
+        }                                                                      \
+        /* print time in micro-seconds */                                      \
+        else if (time_taken > 1E3)                                             \
+        {                                                                      \
+            time_taken *= 1E-3;                                                \
+            STRCPY(time_unit, 3, "us");                                        \
+        }                                                                      \
+        /* print time in nano-seconds */                                       \
+        else                                                                   \
+        {                                                                      \
+            STRCPY(time_unit, 3, "ns");                                        \
+        }                                                                      \
+    }
+
 // Function pointers
 VOID (*prepare_input_data)(VOID *, INTP, INTP *, INT32);
 VOID (*dft_ref)(aoclfftz_bench_params_t *, VOID *, INTP *, INTP *);
@@ -595,6 +626,7 @@ VOID prepare_index_map(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
                        INTP dst_in_idx, INTP dst_out_idx,
                        aoclfftz_dim_t_64_ *dims, INT32 rank);
+INT32 caliberate_iterations(VOID *handle, DOUBLE min_bench_time);
 
 // Function definitions
 
@@ -1635,6 +1667,49 @@ VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
             dst_out_idx += out_stride;
         }
     }
+}
+
+/**
+ * @brief Computes the number of iterations for benchmarking
+ *
+ * @return INT32 iterations
+ */
+INT32 caliberate_iterations(VOID *handle, DOUBLE min_bench_time)
+{
+    DOUBLE minq_time = 1000; // minimum quantifiable time 1 us
+    DOUBLE min_acceptable_time = min_bench_time; //min_acceptable_time 10 ms
+    INT32 increase_iterations = 1;
+    DOUBLE cur_time = 0;
+#ifdef WIN32
+    timer clk_tick;
+#endif
+    timeVal start_time, end_time;
+    initTimer(clk_tick);
+    INT32 iters = 1;
+    for(iters = 1; increase_iterations && iters < INT32_MAX; iters *= 5)
+    {
+        getTime(start_time);
+        for (INT32 j = 0; j < iters; j++)
+        {
+            aoclfftz_execute(handle);
+        }
+        getTime(end_time);
+        cur_time = (DOUBLE)diffTime(clk_tick, start_time, end_time);
+        // if execution time is above the minimum quantifiable limit,
+        // then stop the iterations
+        if (cur_time >= minq_time)
+        {
+            increase_iterations = 0;
+            cur_time = cur_time / 1000;   //change time unit from ns to us
+            if(cur_time > min_acceptable_time)
+            {
+                return iters;
+            }
+            //Scaling the iteration for min_acceptable_time
+            return (iters * min_acceptable_time / cur_time);
+        }
+    }
+    return iters;
 }
 
 #endif // AOCLFFTZ_COREBENCH_UTILS_H
