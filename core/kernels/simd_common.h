@@ -49,6 +49,7 @@
  * @brief load two complex numbers(real,imaginary) of 32 bit single precision
  * floating point number from memory addresses specified by base address
  * and offset(v_in_stride) into 128 bit register.
+ * Operations : 2 MOV(load)
  */
 #define GATHER2_128_S(base, offset, dest)                                      \
     {                                                                          \
@@ -60,6 +61,7 @@
  * @brief store two complex numbers(real,imaginary) of 32 bit single precision
  * floating point number from 128 bit register into memory addresses
  * specified by base address and offset(v_out_stride).
+ * Operations : 2 MOV(store)
  */
 #define SCATTER2_128_S(base, offset, src)                                      \
     {                                                                          \
@@ -72,6 +74,7 @@
  * @brief load a complex number(real,imaginary) of 32 bit single precision
  * floating point number from memory addresses specified by base address
  * into 128 bit register.
+ * Operation : 1 MOV(load)
  */
 #define LD_LOW_128_S(base, dest)                                               \
     {                                                                          \
@@ -82,6 +85,7 @@
  * @brief store a complex number(real,imaginary) of 32 bit single precision
  * floating point number from 128 bit register into memory addresses
  * specified by base address.
+ * Operation : 1 MOV(store)
  */
 #define ST_LOW_128_S(base, src)                                                \
     {                                                                          \
@@ -92,6 +96,7 @@
  * @brief load a complex number(real,imaginary) of 64 bit double precision
  * floating point number from memory addresses specified by base address
  * into 128 bit register.
+ * Operation : 1 MOV(load)
  */
 #define LD_128_D(base, dest)                                                   \
     {                                                                          \
@@ -102,6 +107,7 @@
  * @brief store a complex number(real,imaginary) of 64 bit double precision
  * floating point number from 128 bit register into memory addresses
  * specified by base address.
+ * Operation : 1 MOV(store)
  */
 #define ST_128_D(base, src)                                                    \
     {                                                                          \
@@ -112,6 +118,8 @@
  * @brief load four complex numbers(real,imaginary) of 32 bit single precision
  * floating point number from memory addresses specified by base address
  * and index vector, into 256 bit register.
+ * Operations : 4 MOV(load), 1 PERM(shuffle), 1 OTHERS(insert).Cast is excluded
+ * as it will be a compile time operation.
  */
 #define GATHER4_256_S(base, offset, dest)                                      \
     {                                                                          \
@@ -131,6 +139,8 @@
  * @brief store four complex numbers(real,imaginary) of 32 bit single precision
  * floating point number from 256 bit register into memory addresses
  * specified by base address and offset(v_out_stride).
+ * Operations : 4 MOV(store), 1 OTHERS(extract). Cast is excluded as it
+ * will be a compile time operation.
  */
 #define SCATTER4_256_S(base, offset, src)                                      \
     {                                                                          \
@@ -149,6 +159,8 @@
  * @brief load two complex numbers(real,imaginary) of 64 bit double precision
  * floating point number from memory addresses specified by base address
  * and offset(v_in_stride) into 256 bit register.
+ * Operations : 2 MOV(load), 1 OTHERS(insert). Cast is excluded as it
+ * will be a compile time operation.
  */
 #define GATHER2_256_D(base, offset, dest)                                      \
     {                                                                          \
@@ -163,6 +175,8 @@
  * @brief store two complex numbers(real,imaginary) of 64 bit double precision
  * floating point number from 256 bit register into memory addresses
  * specified by base address and offset(v_out_stride).
+ * Operations : 2 MOV(store), 1 OTHERS(extract). Cast is excluded as it
+ * will be a compile time operation.
  */
 #define SCATTER2_256_D(base, offset, src)                                      \
     {                                                                          \
@@ -176,12 +190,14 @@
 /**
  * @brief interchanges the real and imaginary values in a 128 bit register
  * for single precision floating point.
+ * Operation : 1 PERM(shuffle)
  */
 #define SWAP_RI_128_S(val) _mm_shuffle_ps(val, val, 177)
 
 /**
  * @brief interchanges the real and imaginary values in a 128 bit register
  * for double precision floating point.
+ * Operation : 1 PERM(shuffle)
  */
 #define SWAP_RI_128_D(val) _mm_shuffle_pd(val, val, 1)
 
@@ -189,6 +205,7 @@
  * @brief interchanges the real and imaginary values in a 256 bit register
  * for single precision floating point using the control value in the last
  * integer argument(b 10 11 00 01)
+ * Operation : 1 PERM
  */
 #define SWAP_RI_256_S(val) _mm256_permute_ps(val, 177)
 
@@ -196,11 +213,12 @@
  * @brief interchanges the real and imaginary values in a 256 bit register
  * for double precision floating point using the control value in the last
  * integer argument(b 01 01)
+ * Operation : 1 PERM
  */
 #define SWAP_RI_256_D(val) _mm256_permute_pd(val, 5)
 
 /**
- * @brief implies the number of sets that can be processed parallely.
+ * @brief implies the number of sets that can be processed in parallel.
  * Computed using Register width /(2* sizeof(floating point)
  */
 #define NUM_SETS_128_S 2
@@ -209,7 +227,7 @@
 #define NUM_SETS_256_D 2
 
 /**
- * @brief prepare -0.0 for complex conjucate.
+ * @brief prepare -0.0 for complex conjugate.
  */
 union zero_conj_128
 {
@@ -237,7 +255,8 @@ static const union zero_conj_256
                              0x00000000, 0x00000000, 0x00000000, 0x80000000 }};
 
 /**
- * @brief take conjucate of the complex number A+Bi => A-Bi
+ * @brief take conjugate of the complex number A+Bi => A-Bi
+ * Operation : 1 OTHERS(xor)
  */
 #define CONJ_128_S(x) _mm_xor_ps(_conj_128_f.s, x)
 #define CONJ_128_D(x) _mm_xor_pd(_conj_128_d.d, x)

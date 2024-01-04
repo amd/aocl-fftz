@@ -130,6 +130,7 @@ ops_cycles_t get_ops_cnt_fft5avx128(INT32 precision);
 #ifdef ENABLE_AVX256
 //AVX256 get_ops_cnt
 ops_cycles_t get_ops_cnt_fft2avx256(INT32 precision);
+ops_cycles_t get_ops_cnt_fft5avx256(INT32 precision);
 #endif
 
 //C register kernels
@@ -156,6 +157,7 @@ kfft_ register_kernel_fft5avx128(INT32 precision);
 #ifdef ENABLE_AVX256
 //AVX256 register kernel
 kfft_ register_kernel_fft2avx256(INT32 precision);
+kfft_ register_kernel_fft5avx256(INT32 precision);
 #endif
 
 //C kernels
@@ -241,6 +243,10 @@ VOID fft5avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 VOID fft2avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,VOID *out_imag,
                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft2avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
+VOID fft5avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,VOID *out_imag,
+                INTP n, aoclfftz_strides_t *strides, UINT8 flag);
+VOID fft5avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,VOID *out_imag,
                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 #endif
 
