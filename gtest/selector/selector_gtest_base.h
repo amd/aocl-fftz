@@ -124,6 +124,39 @@ VOID prepare_bluestein_sequence_ref(VOID *B, INTP m, INTP n, UINT32 precision)
     }
 }
 
+template <class prob_desc_t>
+VOID calculate_input_output_sizes(prob_desc_t *p_desc,
+                            INTP *in_buffer_size, INTP *out_buffer_size)
+{
+    // Data arrangement considered :
+    // [1, 2, 3, 4]<0, 0>[5, 6, 7, 8]<0, 0>[9, 10, 11, 12]
+    // <---vec stride--->
+    // <-------------(Batches -1)---------><--- Problem size * dim stride --->
+    // ((Batches -1) * (vec_stride)) + (Problem size * dim stride)
+
+    INT32 dim_rank = p_desc->dim_rank;
+    INT32 vec_rank = p_desc->vec_rank;
+    in_buffer_size[0] = 0;
+    out_buffer_size[0] = 0;
+    INT32 in_size = 1; // rank-0 problem where its a constant ?
+    INT32 out_size = 1;
+
+    for (INT32 i = 0; i < dim_rank; i++)
+    {
+        in_size += ((p_desc->dims[i].n - 1) * (p_desc->dims[i].in_stride));
+        out_size += ((p_desc->dims[i].n - 1) * (p_desc->dims[i].out_stride));
+    }
+
+    for (INT32 i = 0; i < vec_rank; i++)
+    {
+        in_size += ((p_desc->vecs[i].n - 1) * (p_desc->vecs[i].in_stride));
+        out_size += ((p_desc->vecs[i].n - 1) * (p_desc->vecs[i].out_stride));
+    }
+
+    in_buffer_size[0] = in_size;
+    out_buffer_size[0] = out_size;
+}
+
 /**
  * @brief Base class for the AOCLFFTZ Selector GTest
  *
@@ -269,7 +302,7 @@ class AoclfftzSelectorTestBase
             p_desc->dims[i].in_stride = (dm_t)dims[i].in_stride;
             p_desc->dims[i].out_stride = (dm_t)dims[i].out_stride;
         }
-        p_desc->vecs = (dim_t *)ALLOC_UNALIGN_UNINIT(dim_rank * sizeof(dim_t));
+        p_desc->vecs = (dim_t *)ALLOC_UNALIGN_UNINIT(vec_rank * sizeof(dim_t));
         for (INT32 i = 0; i < vec_rank; i++)
         {
             p_desc->vecs[i].n = (dm_t)vecs[i].n;
@@ -279,10 +312,14 @@ class AoclfftzSelectorTestBase
         FREE_ALLOCATED_MEM(dims);
         FREE_ALLOCATED_MEM(vecs);
 
-        dm_t n = p_desc->dims[0].n;
-        dt_t *in = (dt_t *)ALLOC_UNALIGN_UNINIT(n * DATA_STRIDE * sizeof(dt_t));
-        dt_t *out = (dt_t *)ALLOC_UNALIGN_INIT(n * DATA_STRIDE, sizeof(dt_t));
-        for (int i = 0; i < n * DATA_STRIDE; i++)
+        INTP input_size, output_size;
+        calculate_input_output_sizes<prob_desc_t>(p_desc, &input_size,
+                                                  &output_size);
+        dt_t *in = (dt_t *)ALLOC_UNALIGN_UNINIT(
+                        input_size * DATA_STRIDE * sizeof(dt_t));
+        dt_t *out = (dt_t *)ALLOC_UNALIGN_INIT(
+                        output_size * DATA_STRIDE, sizeof(dt_t));
+        for (int i = 0; i < input_size * DATA_STRIDE; i++)
             in[i] = (rand() % 1000) / 100.0;
 
         p_desc->in = in;
@@ -397,6 +434,288 @@ class AoclfftzSelectorTestBase
     }
 
     /**
+     * @brief Verify the properties of solvers for all the child solutions
+     * in `sol`
+     *
+     * @param sol solution to verify
+     * @return bool
+     */
+    bool verify_properties(aoclfftz_solution_t *sol)
+    {
+        bool ret = true;
+        aoclfftz_solution_t *cur_a = sol;
+
+        while (cur_a != NULL)
+        {
+            if (cur_a->solver->solver_type == SOLVER_DIRECT)
+            {
+                ret &= cur_a->strides->in_stride ==
+                       cur_a->decomp_scheme->dims[0].in_stride;
+                ret &= cur_a->strides->out_stride ==
+                       cur_a->decomp_scheme->dims[0].out_stride;
+                ret &= cur_a->strides->v_in_stride ==
+                       cur_a->decomp_scheme->vecs[0].in_stride;
+                ret &= cur_a->strides->v_out_stride ==
+                       cur_a->decomp_scheme->vecs[0].out_stride;
+                if (ret == false)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "Strides do not match !"
+                        "Failed at level 2 compare [Direct solver]");
+                    return false;
+                }
+                cur_a = cur_a->next_sol;
+            }
+            else if (cur_a->solver->solver_type == SOLVER_BATCHED)
+            {
+                aoclfftz_solution_t *next_sol = cur_a->next_sol;
+                if (next_sol == NULL)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "No solution after Batched ! "
+                            "Failed at level 2 compare [Batched solver]");
+                    return false;
+                }
+                ret &= ((next_sol->solver->solver_type == SOLVER_CT) ||
+                        (next_sol->solver->solver_type == SOLVER_BLUESTEIN) ||
+                        (next_sol->solver->solver_type == SOLVER_NDIM ||
+                        (next_sol->solver->solver_type == SOLVER_DIRECT)));
+                ret &= next_sol->decomp_scheme->vec_rank == 1;
+                ret &= next_sol->decomp_scheme->vecs[0].n == 1;
+                if (ret == false)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "Failed at level 2 compare [Batched solver]");
+                    return false;
+                }
+                cur_a = next_sol;
+            }
+            else if (cur_a->solver->solver_type == SOLVER_CT)
+            {
+                aoclfftz_solution_t *sol_r = cur_a->next_sol;
+                if (sol_r == NULL)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "Solution-r not present !"
+                        "Failed at level 2 compare [CT solver]");
+                    return false;
+                }
+                aoclfftz_solution_t *sol_m = cur_a->next_sol->next_sol;
+                if (sol_m == NULL)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "Solution-m not present !"
+                        "Failed at level 2 compare [CT solver]");
+                    return false;
+                }
+                ret &= (sol_r->solver->solver_type == SOLVER_DIRECT);
+                ret &= ((sol_m->solver->solver_type == SOLVER_DIRECT) ||
+                        (sol_m->solver->solver_type == SOLVER_BATCHED));
+
+                // verify the dims and vecs values of solution-r and solution-m
+                ret &= (cur_a->decomp_scheme->dims[0].n ==
+                        sol_r->decomp_scheme->dims[0].n *
+                            sol_m->decomp_scheme->dims[0].n);
+                ret &= (sol_r->decomp_scheme->dims[0].n ==
+                        sol_m->decomp_scheme->vecs[0].n);
+                ret &= (sol_m->decomp_scheme->dims[0].n ==
+                        sol_r->decomp_scheme->vecs[0].n);
+
+                // verify the strides and vec strides of solution-r
+                ret &= (sol_r->decomp_scheme->dims[0].in_stride ==
+                        sol_m->decomp_scheme->dims[0].n *
+                            cur_a->decomp_scheme->dims[0].out_stride);
+                ret &= (sol_r->decomp_scheme->dims[0].out_stride ==
+                        sol_m->decomp_scheme->dims[0].n *
+                            cur_a->decomp_scheme->dims[0].out_stride);
+                ret &= (sol_r->decomp_scheme->vecs[0].in_stride ==
+                        cur_a->decomp_scheme->dims[0].out_stride);
+                ret &= (sol_r->decomp_scheme->vecs[0].out_stride ==
+                        cur_a->decomp_scheme->dims[0].out_stride);
+
+                // verify the strides and vec strides of solution-m
+                ret &= (sol_m->decomp_scheme->dims[0].in_stride ==
+                        sol_r->decomp_scheme->dims[0].n *
+                            cur_a->decomp_scheme->dims[0].in_stride);
+                ret &= (sol_m->decomp_scheme->dims[0].out_stride ==
+                        (IS_OUT_OF_PLACE(cur_a->decomp_scheme->flags)
+                             ? cur_a->decomp_scheme->dims[0].out_stride
+                             : sol_r->decomp_scheme->dims[0].n *
+                                   cur_a->decomp_scheme->dims[0].out_stride));
+                ret &= (sol_m->decomp_scheme->vecs[0].in_stride ==
+                        cur_a->decomp_scheme->dims[0].in_stride);
+                ret &= (sol_m->decomp_scheme->vecs[0].out_stride ==
+                        (IS_OUT_OF_PLACE(cur_a->decomp_scheme->flags)
+                             ? sol_m->decomp_scheme->dims[0].n *
+                                   cur_a->decomp_scheme->dims[0].out_stride
+                             : cur_a->decomp_scheme->dims[0].out_stride));
+
+                if (ret == false)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "Failed at level 2 compare [CT solver]");
+                    return false;
+                }
+                cur_a = sol_m;
+            }
+            else if (cur_a->solver->solver_type == SOLVER_BLUESTEIN)
+            {
+                INTP n = cur_a->decomp_scheme->dims[0].n;
+                if (cur_a->next_sol == NULL)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "No solution after Bluestein !"
+                        "Failed at level 2 compare [Bluestein solver]");
+                }
+                UINT32 dt_prec, dt_bytes;
+                dt_prec = DT_PRECISION_FLAG(cur_a->decomp_scheme->flags);
+                DT_PRECISION_BYTES(dt_prec);
+                INTP m = cur_a->next_sol->decomp_scheme->dims[0].n;
+                VOID *B = cur_a->bluestein->B;
+                VOID *B_ref = ALLOC_UNALIGN_UNINIT(m * DATA_STRIDE * dt_bytes);
+                prepare_bluestein_sequence_ref(B_ref, m, n, dt_prec);
+                ret &= get_extended_length_ref(n) == m;
+                ret &= ((B != NULL) &&
+                        (memcmp(B, B_ref, m * DATA_STRIDE * dt_bytes) == 0));
+                FREE_ALLOCATED_MEM(B_ref);
+                if (ret == false)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR,
+                        "Failed at level 2 compare [Bluestein solver]");
+                    return false;
+                }
+                cur_a = cur_a->next_sol;
+            }
+            else if (cur_a->solver->solver_type == SOLVER_NDIM)
+            {
+                aoclfftz_solution_t *sol_1d = cur_a->next_sol;
+                if (sol_1d == NULL)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "sol_1d is NULL [NDim solver]");
+                    return false;
+                }
+                aoclfftz_solution_t *sol_nd = cur_a->nd_sol;
+                if (sol_nd == NULL)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "sol_nd is NULL [NDim solver]");
+                    return false;
+                }
+
+                // sol_nd can only be either Direct (if parent is 2D) or
+                // Batched (parent > 2D case)
+                ret &= ((sol_nd->solver->solver_type == SOLVER_DIRECT) ||
+                        (sol_nd->solver->solver_type == SOLVER_BATCHED));
+
+                // sol_1d can only be Direct in contiguous memory scenario
+                ret &= ((sol_1d->solver->solver_type == SOLVER_DIRECT) ||
+                        (sol_1d->solver->solver_type == SOLVER_BATCHED));
+
+                INT32 cur_dim_rank = cur_a->decomp_scheme->dim_rank;
+                INT32 rank_nd = sol_nd->decomp_scheme->dim_rank;
+                INT32 rank_1d = sol_1d->decomp_scheme->dim_rank;
+
+                // verify the dims & vecs of solution-nd
+                ret &= (sol_nd->decomp_scheme->dim_rank ==
+                            cur_a->decomp_scheme->dim_rank - 1);
+                ret &= (sol_nd->decomp_scheme->vec_rank == 1);
+
+                ret &= (sol_nd->decomp_scheme->vecs[0].n ==
+                        cur_a->decomp_scheme->dims[cur_dim_rank - 1].n);
+                ret &= (sol_nd->decomp_scheme->vecs[0].in_stride ==
+                        cur_a->decomp_scheme->dims[cur_dim_rank - 1].in_stride);
+                ret &= (sol_nd->decomp_scheme->vecs[0].out_stride ==
+                    cur_a->decomp_scheme->dims[cur_dim_rank - 1].out_stride);
+
+                ret &= (memcmp(sol_nd->decomp_scheme->dims,
+                        cur_a->decomp_scheme->dims,
+                        sizeof(aoclfftz_dim_t_64_) * rank_nd) == 0);
+
+                // verify the dims & vecs of solution-1d
+                ret &= !(IS_OUT_OF_PLACE(sol_1d->decomp_scheme->flags));
+
+                ret &= (sol_1d->decomp_scheme->dim_rank == 1);
+                ret &= (sol_1d->decomp_scheme->dims[0].n ==
+                            cur_a->decomp_scheme->dims[cur_dim_rank - 1].n);
+                ret &= (sol_1d->decomp_scheme->dims[0].in_stride ==
+                            sol_1d->decomp_scheme->dims[0].out_stride);
+                ret &= (sol_1d->decomp_scheme->dims[0].in_stride ==
+                        cur_a->decomp_scheme->dims[cur_dim_rank - 1].out_stride);
+
+                INTP total_size = 1;
+                for(INT32 i = 0; i < cur_dim_rank; i++)
+                {
+                    total_size *= cur_a->decomp_scheme->dims[i].n;
+                }
+
+                // TODO : add a different simple logic for fusable_dims ?
+                ret &= ((sol_1d->decomp_scheme->vec_rank == 1) ||
+                        (sol_1d->decomp_scheme->vec_rank <
+                            cur_a->decomp_scheme->dim_rank));
+
+                // combined size of dims & vecs of 1D should be equal to
+                // the combined size of dims of cur solution
+                INTP total_len_1d = sol_1d->decomp_scheme->dims[0].n;
+                for(INT32 i = 0; i < sol_1d->decomp_scheme->vec_rank; i++)
+                {
+                    total_len_1d *= sol_1d->decomp_scheme->vecs[i].n;
+                }
+
+                ret &= (total_len_1d == total_size);
+
+                if(sol_1d->decomp_scheme->vec_rank == 1)
+                {
+                    // since contiguous memory
+                    ret &= ((sol_1d->decomp_scheme->vecs[0].in_stride ==
+                            cur_a->decomp_scheme->dims[0].out_stride));
+                    ret &= ((sol_1d->decomp_scheme->vecs[0].out_stride ==
+                            cur_a->decomp_scheme->dims[0].out_stride));
+                }
+                else
+                {
+                    // validating the last vec stride alone
+                    INT32 vec_rank = sol_1d->decomp_scheme->vec_rank;
+                    ret &=
+                        ((sol_1d->decomp_scheme->vecs[vec_rank - 1].in_stride ==
+                    cur_a->decomp_scheme->dims[cur_dim_rank - 2].out_stride));
+
+                    ret &=
+                        ((sol_1d->decomp_scheme->vecs[vec_rank - 1].out_stride ==
+                    cur_a->decomp_scheme->dims[cur_dim_rank - 2].out_stride));
+                }
+
+                if (ret == false)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "Failed at level 2 compare [NDim solver]");
+                    return false;
+                }
+
+                // traverse along ND solution and verify all of its children
+                cur_a = sol_nd;
+                ret = verify_properties(cur_a);
+                if (ret == false)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "Error along ND solution [NDim solver]");
+                    return false;
+                }
+
+                // traverse along 1D solution and verify its children
+                cur_a = sol_1d;
+            }
+            else
+            {
+                cur_a = cur_a->next_sol;
+            }
+        };
+
+        return ret;
+    }
+
+    /**
      * @brief compare the first solutions of two solution lists `a` and `b`
      * and verify the properties of solvers for all the each child solutions
      * in `a` belonging to the decomposed sub-problems
@@ -422,7 +741,6 @@ class AoclfftzSelectorTestBase
 
         // ********** check solver **********
         ret &= (cur_a->solver->solver_type == cur_b->solver->solver_type);
-
         // ********** decomp scheme **********
         // dims and vecs
         ret &=
@@ -468,149 +786,18 @@ class AoclfftzSelectorTestBase
             (((cur_a->twiddle->TW != NULL) && (cur_b->twiddle->TW != NULL)) ||
              ((cur_a->twiddle->TW == NULL) && (cur_b->twiddle->TW == NULL)));
 
+         if (ret == false)
+        {
+            AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "Level 1 compare failed");
+            return false;
+        }
+
         /*****************************************************************
          * Level 2: Verify the properties of solvers for all the child   *
          *          solutions belonging to the decomposed sub-problems.  *
          *****************************************************************/
-        while (cur_a != NULL)
-        {
-            if (cur_a->solver->solver_type == SOLVER_DIRECT)
-            {
-                ret &= cur_a->strides->in_stride ==
-                       cur_a->decomp_scheme->dims[0].in_stride;
-                ret &= cur_a->strides->out_stride ==
-                       cur_a->decomp_scheme->dims[0].out_stride;
-                ret &= cur_a->strides->v_in_stride ==
-                       cur_a->decomp_scheme->vecs[0].in_stride;
-                ret &= cur_a->strides->v_out_stride ==
-                       cur_a->decomp_scheme->vecs[0].out_stride;
-                if (ret == false)
-                {
-                    AOCLFFTZ_LOG_UNFORMATTED(
-                        ERR, ERR, "Failed at level 2 compare [Direct solver]");
-                    return false;
-                }
-                cur_a = cur_a->next_sol;
-            }
-            else if (cur_a->solver->solver_type == SOLVER_BATCHED)
-            {
-                aoclfftz_solution_t *next_sol = cur_a->next_sol;
-                if (next_sol == NULL)
-                {
-                    AOCLFFTZ_LOG_UNFORMATTED(
-                        ERR, ERR, "Failed at level 2 compare [Batched solver]");
-                    return false;
-                }
-                ret &= ((next_sol->solver->solver_type == SOLVER_CT) ||
-                        (next_sol->solver->solver_type == SOLVER_BLUESTEIN));
-                ret &= next_sol->decomp_scheme->vec_rank == 1;
-                ret &= next_sol->decomp_scheme->vecs[0].n == 1;
-                if (ret == false)
-                {
-                    AOCLFFTZ_LOG_UNFORMATTED(
-                        ERR, ERR, "Failed at level 2 compare [Batched solver]");
-                    return false;
-                }
-                cur_a = next_sol;
-            }
-            else if (cur_a->solver->solver_type == SOLVER_CT)
-            {
-                aoclfftz_solution_t *sol_r = cur_a->next_sol;
-                if (sol_r == NULL)
-                {
-                    AOCLFFTZ_LOG_UNFORMATTED(
-                        ERR, ERR, "Failed at level 2 compare [CT solver]");
-                    return false;
-                }
-                aoclfftz_solution_t *sol_m = cur_a->next_sol->next_sol;
-                if (sol_m == NULL)
-                {
-                    AOCLFFTZ_LOG_UNFORMATTED(
-                        ERR, ERR, "Failed at level 2 compare [CT solver]");
-                    return false;
-                }
-                ret &= sol_r->solver->solver_type == SOLVER_DIRECT;
-                ret &= ((sol_m->solver->solver_type == SOLVER_DIRECT) ||
-                        (sol_m->solver->solver_type == SOLVER_BATCHED));
+        ret &= verify_properties(cur_a);
 
-                // verify the dims and vecs values of solution-r and solution-m
-                ret &= (cur_a->decomp_scheme->dims[0].n ==
-                        sol_r->decomp_scheme->dims[0].n *
-                            sol_m->decomp_scheme->dims[0].n);
-                ret &= (sol_r->decomp_scheme->dims[0].n ==
-                        sol_m->decomp_scheme->vecs[0].n);
-                ret &= (sol_m->decomp_scheme->dims[0].n ==
-                        sol_r->decomp_scheme->vecs[0].n);
-                // verify the strides and vec strides of solution-r
-                ret &= (sol_r->decomp_scheme->dims[0].in_stride ==
-                        sol_m->decomp_scheme->dims[0].n *
-                            cur_a->decomp_scheme->dims[0].out_stride);
-                ret &= (sol_r->decomp_scheme->dims[0].out_stride ==
-                        sol_m->decomp_scheme->dims[0].n *
-                            cur_a->decomp_scheme->dims[0].out_stride);
-                ret &= (sol_r->decomp_scheme->vecs[0].in_stride ==
-                        cur_a->decomp_scheme->dims[0].out_stride);
-                ret &= (sol_r->decomp_scheme->vecs[0].out_stride ==
-                        cur_a->decomp_scheme->dims[0].out_stride);
-                // verify the strides and vec strides of solution-m
-                ret &= (sol_m->decomp_scheme->dims[0].in_stride ==
-                        sol_r->decomp_scheme->dims[0].n *
-                            cur_a->decomp_scheme->dims[0].in_stride);
-                ret &= (sol_m->decomp_scheme->dims[0].out_stride ==
-                        (IS_OUT_OF_PLACE(cur_a->decomp_scheme->flags)
-                             ? cur_a->decomp_scheme->dims[0].out_stride
-                             : sol_r->decomp_scheme->dims[0].n *
-                                   cur_a->decomp_scheme->dims[0].out_stride));
-                ret &= (sol_m->decomp_scheme->vecs[0].in_stride ==
-                        cur_a->decomp_scheme->dims[0].in_stride);
-                ret &= (sol_m->decomp_scheme->vecs[0].out_stride ==
-                        (IS_OUT_OF_PLACE(cur_a->decomp_scheme->flags)
-                             ? sol_m->decomp_scheme->dims[0].n *
-                                   cur_a->decomp_scheme->dims[0].out_stride
-                             : cur_a->decomp_scheme->dims[0].out_stride));
-
-                if (ret == false)
-                {
-                    AOCLFFTZ_LOG_UNFORMATTED(
-                        ERR, ERR, "Failed at level 2 compare [CT solver]");
-                    return false;
-                }
-                cur_a = sol_m;
-            }
-            else if (cur_a->solver->solver_type == SOLVER_BLUESTEIN)
-            {
-                INTP n = cur_a->decomp_scheme->dims[0].n;
-                if (cur_a->next_sol == NULL)
-                {
-                    AOCLFFTZ_LOG_UNFORMATTED(
-                        ERR, ERR,
-                        "Failed at level 2 compare [Bluestein solver]");
-                }
-                UINT32 dt_prec, dt_bytes;
-                dt_prec = DT_PRECISION_FLAG(cur_a->decomp_scheme->flags);
-                DT_PRECISION_BYTES(dt_prec);
-                INTP m = cur_a->next_sol->decomp_scheme->dims[0].n;
-                VOID *B = cur_a->bluestein->B;
-                VOID *B_ref = ALLOC_UNALIGN_UNINIT(m * DATA_STRIDE * dt_bytes);
-                prepare_bluestein_sequence_ref(B_ref, m, n, dt_prec);
-                ret &= get_extended_length_ref(n) == m;
-                ret &= ((B != NULL) &&
-                        (memcmp(B, B_ref, m * DATA_STRIDE * dt_bytes) == 0));
-                FREE_ALLOCATED_MEM(B_ref);
-                if (ret == false)
-                {
-                    AOCLFFTZ_LOG_UNFORMATTED(
-                        ERR, ERR,
-                        "Failed at level 2 compare [Bluestein solver]");
-                    return false;
-                }
-                cur_a = cur_a->next_sol;
-            }
-            else
-            {
-                cur_a = cur_a->next_sol;
-            }
-        };
         return ret;
     }
 
@@ -633,29 +820,41 @@ class AoclfftzSelectorTestBase
         bool ret = true;
         UINT32 node_count = 0;
         aoclfftz_solution_t *cur_sol = sol;
-        while (cur_sol != NULL)
+        aoclfftz_solution_t *nd_sol = NULL;
+        do //for ND support
         {
-            switch (solver_list[node_count])
-            {
-            case SOLVER_DIRECT:
-                ret &= (cur_sol->solver->solver_type == SOLVER_DIRECT);
-                break;
-            case SOLVER_BATCHED:
-                ret &= (cur_sol->solver->solver_type == SOLVER_BATCHED);
-                break;
-            case SOLVER_CT:
-                ret &= (cur_sol->solver->solver_type == SOLVER_CT);
-                break;
-            case SOLVER_BLUESTEIN:
-                ret &= (cur_sol->solver->solver_type == SOLVER_BLUESTEIN);
-                break;
-            default:
-                ret = false;
-                break;
+            if(nd_sol != NULL){
+                cur_sol = nd_sol;
+                nd_sol = NULL;
             }
-            node_count++;
-            cur_sol = cur_sol->next_sol;
-        }
+            while (cur_sol != NULL && ret && node_count <= solver_list.size())
+            {
+                switch (solver_list[node_count])
+                {
+                case SOLVER_DIRECT:
+                    ret &= (cur_sol->solver->solver_type == SOLVER_DIRECT);
+                    break;
+                case SOLVER_BATCHED:
+                    ret &= (cur_sol->solver->solver_type == SOLVER_BATCHED);
+                    break;
+                case SOLVER_CT:
+                    ret &= (cur_sol->solver->solver_type == SOLVER_CT);
+                    break;
+                case SOLVER_BLUESTEIN:
+                    ret &= (cur_sol->solver->solver_type == SOLVER_BLUESTEIN);
+                    break;
+                case SOLVER_NDIM:
+                    ret &= (cur_sol->solver->solver_type == SOLVER_NDIM);
+                    nd_sol = cur_sol->nd_sol;
+                    break;
+                default:
+                    ret = false;
+                    break;
+                }
+                node_count++;
+                cur_sol = cur_sol->next_sol;
+            }
+        } while (nd_sol != NULL && ret);
         return ret && (node_count == solver_list.size());
     }
 };

@@ -71,7 +71,21 @@ aoclfftz_selector_test_params_t selector_params[] = {
     // 1 level CT; factors: 3, 17; bluestein: 19 -> 39 (factors: 3, 13)
     {"3v51:1:2", 0b0000, -1,
      {SOLVER_BATCHED, SOLVER_CT, SOLVER_DIRECT, SOLVER_BATCHED,
-      SOLVER_BLUESTEIN, SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT}}};
+      SOLVER_BLUESTEIN, SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT}},
+    // The solution list for ND tramsform is in the format:
+    // SOLVER_NDIM,{solution list for 1D sol},{solution list for nD sol}
+    // multi dimesional (2D) transform;
+    {"2x6", 0b0000, -1, {SOLVER_NDIM, SOLVER_DIRECT, SOLVER_DIRECT}},
+    // multi dimesional (2D) transform composite problem;
+    {"18x21", 0b0000, -1,
+     {SOLVER_NDIM, SOLVER_BATCHED, SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT,
+      SOLVER_BATCHED, SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT}},
+    // multi dimesional batched ND(3D) strided transform;*/
+    {"4v6x2:3:8x2", 0b0000, -1,
+    {SOLVER_BATCHED, SOLVER_NDIM, SOLVER_BATCHED, SOLVER_DIRECT, SOLVER_BATCHED, SOLVER_NDIM, SOLVER_DIRECT, SOLVER_DIRECT}},
+    // multi dimesional batched (3D) transform;
+    {"2x6v2x3x4", 0b0000, -1,
+     {SOLVER_BATCHED, SOLVER_NDIM, SOLVER_DIRECT, SOLVER_BATCHED, SOLVER_NDIM, SOLVER_DIRECT, SOLVER_DIRECT}}};
 
 TEST_P(AoclfftzSelectorTestFloatLP64, TEST_SELECTOR_FLOAT_LP64)
 {
