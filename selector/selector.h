@@ -97,9 +97,18 @@ typedef struct
         sel_obj->solution->decomp_scheme->out_real = problem->out+1; \
         sel_obj->solution->decomp_scheme->out_imag = problem->out; \
     } \
-    sel_obj->solution->decomp_scheme->cntrl_params = \
-                                            &(problem->cntrl_params); \
-    sel_obj->solution->decomp_scheme->pthr_fft = &(problem->pthr_fft); \
+    sel_obj->solution->decomp_scheme->cntrl_params->opt_level = \
+                                        problem->cntrl_params.opt_level; \
+    sel_obj->solution->decomp_scheme->cntrl_params->opt_off = \
+                                        problem->cntrl_params.opt_off; \
+    sel_obj->solution->decomp_scheme->cntrl_params->logger_mode = \
+                                        problem->cntrl_params.logger_mode; \
+    sel_obj->solution->decomp_scheme->cntrl_params->measure_stats = \
+                                        problem->cntrl_params.measure_stats; \
+    sel_obj->solution->decomp_scheme->pthr_fft->num_threads = \
+                                        problem->pthr_fft.num_threads; \
+    sel_obj->solution->decomp_scheme->pthr_fft->dynamic_load_model = \
+                                        problem->pthr_fft.dynamic_load_model; \
     sel_obj->solution->decomp_scheme->flags = problem->flags; \
 }
 
@@ -145,10 +154,18 @@ typedef struct
         from_sol_obj->decomp_scheme->out_real; \
     to_sol_obj->decomp_scheme->out_imag = \
         from_sol_obj->decomp_scheme->out_imag; \
-    to_sol_obj->decomp_scheme->cntrl_params = \
-        from_sol_obj->decomp_scheme->cntrl_params; \
-    to_sol_obj->decomp_scheme->pthr_fft = \
-        from_sol_obj->decomp_scheme->pthr_fft; \
+    to_sol_obj->decomp_scheme->cntrl_params->opt_level = \
+        from_sol_obj->decomp_scheme->cntrl_params->opt_level; \
+    to_sol_obj->decomp_scheme->cntrl_params->opt_off = \
+        from_sol_obj->decomp_scheme->cntrl_params->opt_off; \
+    to_sol_obj->decomp_scheme->cntrl_params->logger_mode = \
+        from_sol_obj->decomp_scheme->cntrl_params->logger_mode; \
+    to_sol_obj->decomp_scheme->cntrl_params->measure_stats = \
+        from_sol_obj->decomp_scheme->cntrl_params->measure_stats; \
+    to_sol_obj->decomp_scheme->pthr_fft->num_threads = \
+        from_sol_obj->decomp_scheme->pthr_fft->num_threads; \
+    to_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model = \
+        from_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model; \
     to_sol_obj->decomp_scheme->flags = \
         from_sol_obj->decomp_scheme->flags; \
     to_sol_obj->strides->in_stride = \
@@ -230,10 +247,18 @@ typedef struct
         from_sol_obj->decomp_scheme->out_real; \
     to_sol_obj->decomp_scheme->out_imag = \
         from_sol_obj->decomp_scheme->out_imag; \
-    to_sol_obj->decomp_scheme->cntrl_params = \
-        from_sol_obj->decomp_scheme->cntrl_params; \
-    to_sol_obj->decomp_scheme->pthr_fft = \
-        from_sol_obj->decomp_scheme->pthr_fft; \
+    to_sol_obj->decomp_scheme->cntrl_params->opt_level = \
+        from_sol_obj->decomp_scheme->cntrl_params->opt_level; \
+    to_sol_obj->decomp_scheme->cntrl_params->opt_off = \
+        from_sol_obj->decomp_scheme->cntrl_params->opt_off; \
+    to_sol_obj->decomp_scheme->cntrl_params->logger_mode = \
+        from_sol_obj->decomp_scheme->cntrl_params->logger_mode; \
+    to_sol_obj->decomp_scheme->cntrl_params->measure_stats = \
+        from_sol_obj->decomp_scheme->cntrl_params->measure_stats; \
+    to_sol_obj->decomp_scheme->pthr_fft->num_threads = \
+        from_sol_obj->decomp_scheme->pthr_fft->num_threads; \
+    to_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model = \
+        from_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model; \
     to_sol_obj->decomp_scheme->flags = \
         from_sol_obj->decomp_scheme->flags; \
     to_sol_obj->strides->in_stride = \

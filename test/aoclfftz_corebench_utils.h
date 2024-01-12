@@ -749,10 +749,10 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
                                   aoclfftz_dim_t_64_ **vecs,
                                   INTP default_stride)
 {
-    ALLOC_ALIGN_UNINIT((*dims), aoclfftz_dim_t_64_,
-                        dim_rank * sizeof(aoclfftz_dim_t_64_));
-    ALLOC_ALIGN_UNINIT((*vecs), aoclfftz_dim_t_64_,
-                        vec_rank * sizeof(aoclfftz_dim_t_64_));
+    ALLOC_ALIGN_INIT((*dims),
+        aoclfftz_dim_t_64_, dim_rank * sizeof(aoclfftz_dim_t_64_));
+    ALLOC_ALIGN_INIT((*vecs),
+        aoclfftz_dim_t_64_, vec_rank * sizeof(aoclfftz_dim_t_64_));
     INT32 max_rank = dim_rank > vec_rank ? dim_rank : vec_rank;
     aoclfftz_dim_t_64_ *desc = NULL;
     ALLOC_ALIGN_INIT(desc, aoclfftz_dim_t_64_,
@@ -764,7 +764,7 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
     INT32 vec_count = 0;
     CHAR last_char = '\0';
     INT32 start = 0;
-    CHAR val_str[strlen(arg)];
+    CHAR val_str[strlen(arg) + 1];
     INT32 status = PARSER_SUCCESS;
     for (INT32 i = 0; i < strlen(arg); ++i)
     {
@@ -1510,8 +1510,8 @@ VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
 
     for (INT32 i = 0; i < dim_rank; i++)
     {
-        in_size += (params->dims[i].n - 1) * (params[0].dims[i].in_stride);
-        out_size += (params->dims[i].n - 1) * (params[0].dims[i].out_stride);
+        in_size += ((params->dims[i].n - 1) * (params->dims[i].in_stride));
+        out_size += ((params->dims[i].n - 1) * (params->dims[i].out_stride));
     }
 
     for (INT32 i = 0; i < vec_rank; i++)
@@ -1634,6 +1634,8 @@ VOID prepare_index_map(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     INTP dst_out_idx = 0;
     compute_index_map(in_idx_map, out_idx_map, &src_idx, dst_in_idx,
                       dst_out_idx, combined_dims, combined_rank);
+
+    FREE_ALLOCATED_MEM(combined_dims, params->aligned_alloc);
 }
 
 /**

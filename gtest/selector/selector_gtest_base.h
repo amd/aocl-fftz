@@ -182,16 +182,12 @@ class AoclfftzSelectorTestBase
     VOID *handle;        // to store the handle object returns from setup API
     prob_desc_t *p_desc; // to store the problem descriptor
     aoclfftz_solution_t *ref_solution; // to store the reference solution object
-    aoclfftz_cntrl_params cntrl_params; // control params object
-    aoclfftz_smp_pfft pthr_fft;         // SMP FFT object
 
     AoclfftzSelectorTestBase()
     {
         p_desc = NULL;
         handle = NULL;
         ref_solution = NULL;
-        cntrl_params = {0x0};
-        pthr_fft = {0x0};
     }
 
     ~AoclfftzSelectorTestBase()
@@ -459,12 +455,10 @@ class AoclfftzSelectorTestBase
         FREE_ALIGN_ALLOCATED_MEM(dims);
         FREE_ALIGN_ALLOCATED_MEM(vecs);
         sol->decomp_scheme->flags = flags;
-        sol->decomp_scheme->cntrl_params = &cntrl_params;
         sol->decomp_scheme->cntrl_params->opt_level = opt_level;
         sol->decomp_scheme->cntrl_params->opt_off = opt_level == -1 ? 1 : 0;
         sol->decomp_scheme->cntrl_params->logger_mode = 0;
         sol->decomp_scheme->cntrl_params->measure_stats = 0;
-        sol->decomp_scheme->pthr_fft = &pthr_fft;
         sol->decomp_scheme->pthr_fft->num_threads = 1;
         sol->decomp_scheme->pthr_fft->dynamic_load_model = 0;
         sol->solver->solver_type = solver_type;

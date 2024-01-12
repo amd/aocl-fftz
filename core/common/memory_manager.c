@@ -50,7 +50,13 @@ aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank)
                              dim_rank * sizeof(aoclfftz_dim_t_64_));
         ALLOC_ALIGN_UNINIT(decomp_scheme->vecs, aoclfftz_dim_t_64_,
                              vec_rank * sizeof(aoclfftz_dim_t_64_));
-        if (decomp_scheme->dims == NULL || decomp_scheme->vecs == NULL)
+        ALLOC_ALIGN_UNINIT(decomp_scheme->cntrl_params, aoclfftz_cntrl_params,
+                             sizeof(aoclfftz_cntrl_params));
+        ALLOC_ALIGN_UNINIT(decomp_scheme->pthr_fft, aoclfftz_smp_pfft,
+                             sizeof(aoclfftz_smp_pfft));
+        if (decomp_scheme->dims == NULL || decomp_scheme->vecs == NULL ||
+            decomp_scheme->cntrl_params == NULL ||
+            decomp_scheme->pthr_fft == NULL)
         {
             destroy_decomp_scheme(decomp_scheme);
             return NULL;
@@ -84,8 +90,10 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         ALLOC_ALIGN_UNINIT(sol->bluestein, aoclfftz_bluestein_t,
                              sizeof(aoclfftz_bluestein_t));
         sol->next_sol = NULL;
+        sol->nd_sol = NULL;
         if (sol->solver == NULL || sol->decomp_scheme == NULL ||
-            sol->strides == NULL || sol->bluestein == NULL || sol->twiddle == NULL)
+            sol->strides == NULL || sol->bluestein == NULL ||
+            sol->twiddle == NULL)
         {
             FREE_ALIGN_ALLOCATED_MEM(sol->solver);
             destroy_decomp_scheme(sol->decomp_scheme);
@@ -159,6 +167,8 @@ VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme)
     {
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->dims);
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->vecs);
+        FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->cntrl_params);
+        FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->pthr_fft);
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme);
     }
     return;
@@ -177,6 +187,7 @@ VOID destroy_solution(aoclfftz_solution_t *sol)
         destroy_bluestein(cur_sol->bluestein);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->twiddle->TW);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->twiddle);
+        destroy_solution(cur_sol->nd_sol);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol);
     }
     return;

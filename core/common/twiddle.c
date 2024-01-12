@@ -219,6 +219,7 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t* sol)
                 src_idx = dst_idx;
             } while (count != N && start_idx != src_idx);
         }
+        FREE_ALIGN_ALLOCATED_MEM(visited);
     }
     else
     {
@@ -233,7 +234,7 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t* sol)
         INTP N = sets * radix;
 
         // buffer to mark processed index
-        INT8 *visited = NULL;;
+        INT8 *visited = NULL;
         ALLOC_ALIGN_INIT(visited, INT8, N * sizeof(INT8));
 
         INTP in_stride =
@@ -285,7 +286,7 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t* sol)
                 src_idx = dst_idx;
             } while (count != N && start_idx != src_idx);
         }
-
+        FREE_ALIGN_ALLOCATED_MEM(visited);
     }
 
     return TW_SUCCESS;
