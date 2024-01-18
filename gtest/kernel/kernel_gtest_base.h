@@ -190,8 +190,8 @@ class AoclfftzKernelTestBase
      */
     T *prepare_random_input()
     {
-        T *input =
-            (T *)ALLOC_UNALIGN_UNINIT(sizeof(T) * input_length * DATA_STRIDE);
+        T *input = NULL;
+        ALLOC_ALIGN_UNINIT(input, T, sizeof(T) * input_length * DATA_STRIDE);
         for (INTP idx = 0; idx < input_length * DATA_STRIDE; ++idx)
         {
             // range: [-10.0, 10.0) with 3 decimal precision
@@ -207,8 +207,8 @@ class AoclfftzKernelTestBase
      */
     T *prepare_impulse_input()
     {
-        T *input =
-            (T *)ALLOC_UNALIGN_INIT(input_length * DATA_STRIDE, sizeof(T));
+        T *input;
+        ALLOC_ALIGN_INIT(input, T, input_length * DATA_STRIDE * sizeof(T));
         INTP idx = (INTP)(rand() % length) * stride.in_stride;
         // range: [-10.0, 10.0) with 3 decimal precision
         input[idx * DATA_STRIDE] = (T)((rand() % 2000) / 200.0 - 10.0);
@@ -233,8 +233,8 @@ class AoclfftzKernelTestBase
         // scale the amplitude of the wave by `scale` times, scale range:
         // [0.0 5.0)
         T scale = ((T)rand() / (T)RAND_MAX) * 5.0;
-        T *input =
-            (T *)ALLOC_UNALIGN_UNINIT(sizeof(T) * input_length * DATA_STRIDE);
+        T *input = NULL;
+        ALLOC_ALIGN_UNINIT(input, T, sizeof(T) * input_length * DATA_STRIDE);
         for (INTP i = 0; i < input_length; i++)
         {
             input[((i + shift) % input_length) * DATA_STRIDE] =
@@ -254,8 +254,8 @@ class AoclfftzKernelTestBase
      */
     T *prepare_random_input_with_special()
     {
-        T *input =
-            (T *)ALLOC_UNALIGN_UNINIT(sizeof(T) * input_length * DATA_STRIDE);
+        T *input = NULL;
+        ALLOC_ALIGN_UNINIT(input, T, sizeof(T) * input_length * DATA_STRIDE);
         for (INTP idx = 0; idx < length; idx += stride.in_stride)
         {
             input[idx * DATA_STRIDE] = get_maybe_special_value<T>(rand());
@@ -313,16 +313,17 @@ class AoclfftzKernelTestBase
         T *in2 = prepare_input(input_type);
         if (in1 == nullptr || in2 == nullptr)
             return;
-        T *in_combined =
-            (T *)ALLOC_UNALIGN_UNINIT(sizeof(T) * input_length * DATA_STRIDE);
-        T *out1 =
-            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
-        T *out2 =
-            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
-        T *out_combined =
-            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
-        T *out_added =
-            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
+        T *in_combined = NULL;
+        ALLOC_ALIGN_UNINIT(in_combined, T, sizeof(T) * input_length * DATA_STRIDE);
+        T *out1;
+        ALLOC_ALIGN_INIT(out1, T, output_length * DATA_STRIDE * sizeof(T));
+        T *out2;
+        ALLOC_ALIGN_INIT(out2, T, output_length * DATA_STRIDE * sizeof(T));
+        T *out_combined;
+        ALLOC_ALIGN_INIT(out_combined, T,
+                         output_length * DATA_STRIDE * sizeof(T));
+        T *out_added;
+        ALLOC_ALIGN_INIT(out_added, T, output_length * DATA_STRIDE * sizeof(T));
 
         // Constant multiplier a1 and a2 will range from [-10.0 to 10.0)
         // with one digit precision
@@ -402,13 +403,13 @@ class AoclfftzKernelTestBase
             }
         }
 
-        FREE_ALLOCATED_MEM(in1);
-        FREE_ALLOCATED_MEM(in2);
-        FREE_ALLOCATED_MEM(out1);
-        FREE_ALLOCATED_MEM(out2);
-        FREE_ALLOCATED_MEM(in_combined);
-        FREE_ALLOCATED_MEM(out_combined);
-        FREE_ALLOCATED_MEM(out_added);
+        FREE_ALIGN_ALLOCATED_MEM(in1);
+        FREE_ALIGN_ALLOCATED_MEM(in2);
+        FREE_ALIGN_ALLOCATED_MEM(out1);
+        FREE_ALIGN_ALLOCATED_MEM(out2);
+        FREE_ALIGN_ALLOCATED_MEM(in_combined);
+        FREE_ALIGN_ALLOCATED_MEM(out_combined);
+        FREE_ALIGN_ALLOCATED_MEM(out_added);
     } // run_linearity_test
 
     /**
@@ -422,14 +423,15 @@ class AoclfftzKernelTestBase
         T *in = prepare_input(input_type);
         if (in == nullptr)
             return;
-        T *out =
-            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
-        T *inv_out =
-            (T *)ALLOC_UNALIGN_INIT(input_length * DATA_STRIDE, sizeof(T));
-        T *perm_out =
-            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
-        T *perm_inv_out =
-            (T *)ALLOC_UNALIGN_INIT(input_length * DATA_STRIDE, sizeof(T));
+        T *out;
+        ALLOC_ALIGN_INIT(out, T, output_length * DATA_STRIDE * sizeof(T));
+        T *inv_out;
+        ALLOC_ALIGN_INIT(inv_out, T, input_length * DATA_STRIDE * sizeof(T));
+        T *perm_out;
+        ALLOC_ALIGN_INIT(perm_out, T, output_length * DATA_STRIDE * sizeof(T));
+        T *perm_inv_out;
+        ALLOC_ALIGN_INIT(perm_inv_out, T,
+                         input_length * DATA_STRIDE * sizeof(T));
 
         // prepare local strides
         aoclfftz_strides_t kernel_stride;
@@ -534,11 +536,11 @@ class AoclfftzKernelTestBase
             }
         }
 
-        FREE_ALLOCATED_MEM(in);
-        FREE_ALLOCATED_MEM(out);
-        FREE_ALLOCATED_MEM(inv_out);
-        FREE_ALLOCATED_MEM(perm_out);
-        FREE_ALLOCATED_MEM(perm_inv_out);
+        FREE_ALIGN_ALLOCATED_MEM(in);
+        FREE_ALIGN_ALLOCATED_MEM(out);
+        FREE_ALIGN_ALLOCATED_MEM(inv_out);
+        FREE_ALIGN_ALLOCATED_MEM(perm_out);
+        FREE_ALIGN_ALLOCATED_MEM(perm_inv_out);
     } // run_unit_impulse_transform_test
 
     /**
@@ -551,16 +553,17 @@ class AoclfftzKernelTestBase
         T *in1 = prepare_input(input_type);
         if (in1 == nullptr)
             return;
-        T *in2 =
-            (T *)ALLOC_UNALIGN_UNINIT(sizeof(T) * input_length * DATA_STRIDE);
-        T *out1 =
-            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
-        T *out2 =
-            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
-        T *out_comp =
-            (T *)ALLOC_UNALIGN_INIT(output_length * DATA_STRIDE, sizeof(T));
-        T *temp = (T *)ALLOC_UNALIGN_INIT(
-            std::max(input_length, output_length) * DATA_STRIDE, sizeof(T));
+        T *in2 = NULL;
+        ALLOC_ALIGN_UNINIT(in2, T, sizeof(T) * input_length * DATA_STRIDE);
+        T *out1;
+        ALLOC_ALIGN_INIT(out1, T, output_length * DATA_STRIDE * sizeof(T));
+        T *out2;
+        ALLOC_ALIGN_INIT(out2, T, output_length * DATA_STRIDE * sizeof(T));
+        T *out_comp;
+        ALLOC_ALIGN_INIT(out_comp, T, output_length * DATA_STRIDE * sizeof(T));
+        T *temp;
+        ALLOC_ALIGN_INIT(temp, T,
+            std::max(input_length, output_length) * DATA_STRIDE * sizeof(T));
 
         // Perform circular right shift by `m` times
         // range of m => [1, radix)
@@ -678,12 +681,12 @@ class AoclfftzKernelTestBase
             }
         }
 
-        FREE_ALLOCATED_MEM(in1);
-        FREE_ALLOCATED_MEM(in2);
-        FREE_ALLOCATED_MEM(out1);
-        FREE_ALLOCATED_MEM(out2);
-        FREE_ALLOCATED_MEM(out_comp);
-        FREE_ALLOCATED_MEM(temp);
+        FREE_ALIGN_ALLOCATED_MEM(in1);
+        FREE_ALIGN_ALLOCATED_MEM(in2);
+        FREE_ALIGN_ALLOCATED_MEM(out1);
+        FREE_ALIGN_ALLOCATED_MEM(out2);
+        FREE_ALIGN_ALLOCATED_MEM(out_comp);
+        FREE_ALIGN_ALLOCATED_MEM(temp);
     } // run_timeshift_test
 };
 

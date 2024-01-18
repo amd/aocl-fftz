@@ -42,13 +42,14 @@ aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank)
 {
     aoclfftz_decomp_scheme_t* decomp_scheme = NULL;
 
-    decomp_scheme = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_decomp_scheme_t));
+    ALLOC_ALIGN_UNINIT(decomp_scheme, aoclfftz_decomp_scheme_t,
+                         sizeof(aoclfftz_decomp_scheme_t));
     if (decomp_scheme)
     {
-        decomp_scheme->dims =
-            ALLOC_UNALIGN_UNINIT(dim_rank * sizeof(aoclfftz_dim_t_64_));
-        decomp_scheme->vecs =
-            ALLOC_UNALIGN_UNINIT(vec_rank * sizeof(aoclfftz_dim_t_64_));
+        ALLOC_ALIGN_UNINIT(decomp_scheme->dims, aoclfftz_dim_t_64_,
+                             dim_rank * sizeof(aoclfftz_dim_t_64_));
+        ALLOC_ALIGN_UNINIT(decomp_scheme->vecs, aoclfftz_dim_t_64_,
+                             vec_rank * sizeof(aoclfftz_dim_t_64_));
         if (decomp_scheme->dims == NULL || decomp_scheme->vecs == NULL)
         {
             destroy_decomp_scheme(decomp_scheme);
@@ -66,28 +67,32 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
 {
     aoclfftz_solution_t *sol = NULL;
 
-    sol = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_solution_t));
+    ALLOC_ALIGN_UNINIT(sol, aoclfftz_solution_t, sizeof(aoclfftz_solution_t));
     if (sol)
     {
-        sol->solver = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_generic_solver_t));
+        ALLOC_ALIGN_UNINIT(sol->solver, aoclfftz_generic_solver_t,
+                            sizeof(aoclfftz_generic_solver_t));
         sol->solver->execute_solver = NULL;
         sol->solver->kernel_r = NULL;
         sol->solver->kernel_m = NULL;
         sol->solver->destroy_solver = NULL;
         sol->decomp_scheme = alloc_decomp_scheme(vec_rank, dim_rank);
-        sol->strides = ALLOC_UNALIGN_INIT(1, sizeof(aoclfftz_strides_t));
-        sol->twiddle = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_twiddle_t));
-        sol->bluestein = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_bluestein_t));
+        ALLOC_ALIGN_INIT(sol->strides, aoclfftz_strides_t,
+                         sizeof(aoclfftz_strides_t));
+        ALLOC_ALIGN_UNINIT(sol->twiddle, aoclfftz_twiddle_t,
+                                sizeof(aoclfftz_twiddle_t));
+        ALLOC_ALIGN_UNINIT(sol->bluestein, aoclfftz_bluestein_t,
+                             sizeof(aoclfftz_bluestein_t));
         sol->next_sol = NULL;
         if (sol->solver == NULL || sol->decomp_scheme == NULL ||
             sol->strides == NULL || sol->bluestein == NULL || sol->twiddle == NULL)
         {
-            FREE_ALLOCATED_MEM(sol->solver);
+            FREE_ALIGN_ALLOCATED_MEM(sol->solver);
             destroy_decomp_scheme(sol->decomp_scheme);
-            FREE_ALLOCATED_MEM(sol->strides);
+            FREE_ALIGN_ALLOCATED_MEM(sol->strides);
             destroy_bluestein(sol->bluestein);
-            FREE_ALLOCATED_MEM(sol->twiddle);
-            FREE_ALLOCATED_MEM(sol);
+            FREE_ALIGN_ALLOCATED_MEM(sol->twiddle);
+            FREE_ALIGN_ALLOCATED_MEM(sol);
             return NULL;
         }
         sol->twiddle->TW = NULL;
@@ -108,12 +113,13 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank)
 {
     aoclfftz_selector_t *selector = NULL;
 
-    selector = ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_selector_t));
+    ALLOC_ALIGN_UNINIT(selector, aoclfftz_selector_t,
+                         sizeof(aoclfftz_selector_t));
     if (selector)
     {
         selector->solution = alloc_solution(vec_rank, dim_rank);
-        selector->cost_analysis =
-            ALLOC_UNALIGN_UNINIT(sizeof(cost_analysis_t));
+        ALLOC_ALIGN_UNINIT(selector->cost_analysis, cost_analysis_t,
+                             sizeof(cost_analysis_t));
         if (selector->solution == NULL || selector->cost_analysis == NULL)
         {
             destroy_selector(selector);
@@ -133,23 +139,27 @@ VOID *alloc_bluestein_sequence(INTP n, UINT32 dt_prec)
 {
     UINT32 dt_bytes;
     DT_PRECISION_BYTES(dt_prec);
-    return ALLOC_UNALIGN_UNINIT(n * dt_bytes);
+    VOID *buffer = NULL;
+    ALLOC_ALIGN_UNINIT(buffer, VOID, n * dt_bytes);
+    return buffer;
 }
 
 VOID *alloc_twiddle_for_solution(UINT32 rad_size, UINT32 dt_prec)
 {
     UINT32 dt_bytes;
     DT_PRECISION_BYTES(dt_prec);
-    return ALLOC_UNALIGN_UNINIT(rad_size * dt_bytes);
+    VOID *buffer = NULL;
+    ALLOC_ALIGN_UNINIT(buffer, VOID, rad_size * dt_bytes);
+    return buffer;
 }
 
 VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
     if (decomp_scheme != NULL)
     {
-        FREE_ALLOCATED_MEM(decomp_scheme->dims);
-        FREE_ALLOCATED_MEM(decomp_scheme->vecs);
-        FREE_ALLOCATED_MEM(decomp_scheme);
+        FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->dims);
+        FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->vecs);
+        FREE_ALIGN_ALLOCATED_MEM(decomp_scheme);
     }
     return;
 }
@@ -161,13 +171,13 @@ VOID destroy_solution(aoclfftz_solution_t *sol)
     {
         cur_sol = sol;
         sol = sol->next_sol;
-        FREE_ALLOCATED_MEM(cur_sol->solver);
+        FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver);
         destroy_decomp_scheme(cur_sol->decomp_scheme);
-        FREE_ALLOCATED_MEM(cur_sol->strides);
+        FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides);
         destroy_bluestein(cur_sol->bluestein);
-        FREE_ALLOCATED_MEM(cur_sol->twiddle->TW);
-        FREE_ALLOCATED_MEM(cur_sol->twiddle);
-        FREE_ALLOCATED_MEM(cur_sol);
+        FREE_ALIGN_ALLOCATED_MEM(cur_sol->twiddle->TW);
+        FREE_ALIGN_ALLOCATED_MEM(cur_sol->twiddle);
+        FREE_ALIGN_ALLOCATED_MEM(cur_sol);
     }
     return;
 }
@@ -176,8 +186,8 @@ VOID destroy_selector_without_solution(aoclfftz_selector_t *sel)
 {
     if (sel != NULL)
     {
-        FREE_ALLOCATED_MEM(sel->cost_analysis);
-        FREE_ALLOCATED_MEM(sel);
+        FREE_ALIGN_ALLOCATED_MEM(sel->cost_analysis);
+        FREE_ALIGN_ALLOCATED_MEM(sel);
     }
     return;
 }
@@ -196,10 +206,10 @@ VOID destroy_bluestein(aoclfftz_bluestein_t *bluestein)
 {
     if (bluestein != NULL)
     {
-        FREE_ALLOCATED_MEM(bluestein->B);
-        FREE_ALLOCATED_MEM(bluestein->B_out);
-        FREE_ALLOCATED_MEM(bluestein->in);
-        FREE_ALLOCATED_MEM(bluestein->out);
-        FREE_ALLOCATED_MEM(bluestein);
+        FREE_ALIGN_ALLOCATED_MEM(bluestein->B);
+        FREE_ALIGN_ALLOCATED_MEM(bluestein->B_out);
+        FREE_ALIGN_ALLOCATED_MEM(bluestein->in);
+        FREE_ALIGN_ALLOCATED_MEM(bluestein->out);
+        FREE_ALIGN_ALLOCATED_MEM(bluestein);
     }
 }

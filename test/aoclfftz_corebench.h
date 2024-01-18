@@ -151,6 +151,7 @@ typedef struct
     DOUBLE min_bench_time;
     INT32 measure_stats;
     INT32 bit_reproducibility;
+    UINT32 aligned_alloc;
 } aoclfftz_bench_params_t;
 
 typedef struct

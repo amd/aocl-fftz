@@ -246,7 +246,7 @@ exit_ct_dft:
     destroy_selector(cur_sel_m);
     destroy_solution(org_sol);
 #if IN_MEMORY_TWIDDLE_FACTORS==1
-    FREE_ALLOCATED_MEM(TW);
+    FREE_ALIGN_ALLOCATED_MEM(TW);
 #endif
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 

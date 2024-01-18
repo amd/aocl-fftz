@@ -180,14 +180,17 @@
     {                                                                          \
         p_desc->dim_rank = params->dim_rank;                                   \
         p_desc->vec_rank = params->vec_rank;                                   \
-        p_desc->dims = (dim_t *)malloc(sizeof(dim_t) * p_desc->dim_rank);      \
+        UINT32 is_align = params->aligned_alloc;                                \
+        ALLOC_UNINIT(p_desc->dims, dim_t, sizeof(dim_t) * p_desc->dim_rank,    \
+                        is_align);                                             \
         for (INT32 i = 0; i < p_desc->dim_rank; i++)                           \
         {                                                                      \
             p_desc->dims[i].n = (dt_t)params->dims[i].n;                       \
             p_desc->dims[i].in_stride = (dt_t)params->dims[i].in_stride;       \
             p_desc->dims[i].out_stride = (dt_t)params->dims[i].out_stride;     \
         }                                                                      \
-        p_desc->vecs = (dim_t *)malloc(sizeof(dim_t) * p_desc->vec_rank);      \
+        ALLOC_UNINIT(p_desc->vecs, dim_t, sizeof(dim_t) * p_desc->vec_rank,    \
+                        is_align);                                             \
         for (INT32 i = 0; i < p_desc->vec_rank; i++)                           \
         {                                                                      \
             p_desc->vecs[i].n = (dt_t)params->vecs[i].n;                       \
@@ -218,13 +221,13 @@
  * @brief Destroy the problem descriptor
  *
  */
-#define DESTROY_PD(p_desc)                                                     \
+#define DESTROY_PD(p_desc, is_align)                                                     \
     {                                                                          \
         if (p_desc != NULL)                                                    \
         {                                                                      \
-            FREE_ALLOCATED_MEM(p_desc->dims);                                  \
-            FREE_ALLOCATED_MEM(p_desc->vecs);                                  \
-            FREE_ALLOCATED_MEM(p_desc);                                        \
+            FREE_ALLOCATED_MEM(p_desc->dims, is_align);                        \
+            FREE_ALLOCATED_MEM(p_desc->vecs, is_align);                        \
+            FREE_ALLOCATED_MEM(p_desc, is_align);                              \
         }                                                                      \
     }
 
@@ -236,13 +239,14 @@
  */
 #define ALLOC_AND_COPY_PARAMS(dst, src)                                        \
     {                                                                          \
-        dst = (aoclfftz_bench_params_t *)ALLOC_UNALIGN_UNINIT(                 \
-            sizeof(aoclfftz_bench_params_t));                                  \
+        UINT32 is_align = src->aligned_alloc;                                  \
+        ALLOC_UNINIT(dst, aoclfftz_bench_params_t,                             \
+                        sizeof(aoclfftz_bench_params_t), is_align);            \
         memcpy(dst, src, sizeof(aoclfftz_bench_params_t));                     \
-        dst->dims = (aoclfftz_dim_t_64_ *)ALLOC_UNALIGN_UNINIT(                \
-            sizeof(aoclfftz_dim_t_64_) * src->dim_rank);                       \
-        dst->vecs = (aoclfftz_dim_t_64_ *)ALLOC_UNALIGN_UNINIT(                \
-            sizeof(aoclfftz_dim_t_64_) * src->vec_rank);                       \
+        ALLOC_UNINIT(dst->dims, aoclfftz_dim_t_64_,                            \
+                        sizeof(aoclfftz_dim_t_64_) * src->dim_rank, is_align); \
+        ALLOC_UNINIT(dst->vecs, aoclfftz_dim_t_64_,                            \
+                        sizeof(aoclfftz_dim_t_64_) * src->vec_rank, is_align); \
         memcpy(dst->dims, src->dims,                                           \
                sizeof(aoclfftz_dim_t_64_) * src->dim_rank);                    \
         memcpy(dst->vecs, src->vecs,                                           \
@@ -640,14 +644,15 @@ VOID destroy_bench_param(aoclfftz_bench_params_t *params)
 {
     if (params != NULL)
     {
-        FREE_ALLOCATED_MEM(params->in);
+        UINT32 is_align = params->aligned_alloc;
+        FREE_ALLOCATED_MEM(params->in, is_align);
         if(params->res_placement == OUT_OF_PLACE)
         {
-            FREE_ALLOCATED_MEM(params->out);
+            FREE_ALLOCATED_MEM(params->out, is_align);
         }
-        FREE_ALLOCATED_MEM(params->dims);
-        FREE_ALLOCATED_MEM(params->vecs);
-        FREE_ALLOCATED_MEM(params);
+        FREE_ALIGN_ALLOCATED_MEM(params->dims);
+        FREE_ALIGN_ALLOCATED_MEM(params->vecs);
+        FREE_ALIGN_ALLOCATED_MEM(params);
     }
 }
 
@@ -744,14 +749,14 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
                                   aoclfftz_dim_t_64_ **vecs,
                                   INTP default_stride)
 {
-
-    (*dims) = (aoclfftz_dim_t_64_ *)ALLOC_UNALIGN_UNINIT(
-        dim_rank * sizeof(aoclfftz_dim_t_64_));
-    (*vecs) = (aoclfftz_dim_t_64_ *)ALLOC_UNALIGN_UNINIT(
-        vec_rank * sizeof(aoclfftz_dim_t_64_));
+    ALLOC_ALIGN_UNINIT((*dims), aoclfftz_dim_t_64_,
+                        dim_rank * sizeof(aoclfftz_dim_t_64_));
+    ALLOC_ALIGN_UNINIT((*vecs), aoclfftz_dim_t_64_,
+                        vec_rank * sizeof(aoclfftz_dim_t_64_));
     INT32 max_rank = dim_rank > vec_rank ? dim_rank : vec_rank;
-    aoclfftz_dim_t_64_ *desc = (aoclfftz_dim_t_64_ *)ALLOC_UNALIGN_INIT(
-        max_rank, sizeof(aoclfftz_dim_t_64_));
+    aoclfftz_dim_t_64_ *desc = NULL;
+    ALLOC_ALIGN_INIT(desc, aoclfftz_dim_t_64_,
+                     max_rank * sizeof(aoclfftz_dim_t_64_));
 
     INT32 is_stride = 0;
     INT32 is_vec_stride = 0;
@@ -956,7 +961,7 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
     CHECK_SUPPORTED_DIMS(dims, vecs, dim_rank, vec_rank, status);
 
 exit_func :
-    FREE_ALLOCATED_MEM(desc);
+    FREE_ALIGN_ALLOCATED_MEM(desc);
     return status;
 }
 
@@ -1154,9 +1159,12 @@ VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
     aoclfftz_dim_t_64_ *dims = params->dims;
     INTP n = calculate_size(params->dims, params->dim_rank);
     INTP batches = calculate_size(params->vecs, params->vec_rank);
+    UINT32 is_align = params->aligned_alloc;
 
-    INTP *in_counter = (INTP *)ALLOC_UNALIGN_INIT(rank, sizeof(INTP));
-    INTP *out_counter = (INTP *)ALLOC_UNALIGN_INIT(rank, sizeof(INTP));
+    INTP *in_counter = NULL;
+    ALLOC_INIT(in_counter, INTP, rank * sizeof(INTP), is_align);
+    INTP *out_counter = NULL;
+    ALLOC_INIT(out_counter, INTP, rank * sizeof(INTP), is_align);
 
     // iterate over the total batches
     for (INTP b = 0; b < batches; b++)
@@ -1188,8 +1196,8 @@ VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
             INCREMENT_ND_COUNTER(out_counter, dims, rank);
         }
     }
-    FREE_ALLOCATED_MEM(in_counter);
-    FREE_ALLOCATED_MEM(out_counter);
+    FREE_ALLOCATED_MEM(in_counter, is_align);
+    FREE_ALLOCATED_MEM(out_counter, is_align);
 }
 
 /**
@@ -1212,9 +1220,12 @@ VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
     aoclfftz_dim_t_64_ *dims = params->dims;
     INTP n = calculate_size(params->dims, params->dim_rank);
     INTP batches = calculate_size(params->vecs, params->vec_rank);
+    UINT32 is_align = params->aligned_alloc;
 
-    INTP *in_counter = (INTP *)ALLOC_UNALIGN_INIT(rank, sizeof(INTP));
-    INTP *out_counter = (INTP *)ALLOC_UNALIGN_INIT(rank, sizeof(INTP));
+    INTP *in_counter = NULL;
+    ALLOC_INIT(in_counter, INTP, rank * sizeof(INTP), is_align);
+    INTP *out_counter = NULL;
+    ALLOC_INIT(out_counter, INTP, rank * sizeof(INTP), is_align);
 
     // iterate over the total batches
     for (INTP b = 0; b < batches; b++)
@@ -1247,8 +1258,8 @@ VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
             INCREMENT_ND_COUNTER(out_counter, dims, rank);
         }
     }
-    FREE_ALLOCATED_MEM(in_counter);
-    FREE_ALLOCATED_MEM(out_counter);
+    FREE_ALLOCATED_MEM(in_counter, is_align);
+    FREE_ALLOCATED_MEM(out_counter, is_align);
 }
 
 /**
@@ -1616,9 +1627,10 @@ VOID prepare_index_map(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                        INTP *out_idx_map)
 {
     // combine dims and vecs
-    aoclfftz_dim_t_64_ *combined_dims =
-        (aoclfftz_dim_t_64_ *)ALLOC_UNALIGN_UNINIT(
-            sizeof(aoclfftz_dim_t_64_) * (params->dim_rank + params->vec_rank));
+    aoclfftz_dim_t_64_ *combined_dims = NULL;
+    ALLOC_UNINIT(combined_dims, aoclfftz_dim_t_64_,
+            sizeof(aoclfftz_dim_t_64_) * (params->dim_rank + params->vec_rank),
+            params->aligned_alloc);
     memcpy(combined_dims, params->dims,
            (sizeof(aoclfftz_dim_t_64_) * params->dim_rank));
     memcpy((combined_dims + params->dim_rank), params->vecs,
@@ -1677,7 +1689,7 @@ VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
 INT32 caliberate_iterations(VOID *handle, DOUBLE min_bench_time)
 {
     DOUBLE minq_time = 1000; // minimum quantifiable time 1 us
-    DOUBLE min_acceptable_time = min_bench_time; //min_acceptable_time 10 ms
+    DOUBLE min_acceptable_time = min_bench_time; //min_acceptable_time
     INT32 increase_iterations = 1;
     DOUBLE cur_time = 0;
 #ifdef WIN32

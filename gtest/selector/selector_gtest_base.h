@@ -202,14 +202,14 @@ class AoclfftzSelectorTestBase
         if (p_desc != NULL)
         {
             INT32 is_out_place = IS_OUT_OF_PLACE(p_desc->flags);
-            FREE_ALLOCATED_MEM(p_desc->in);
+            FREE_ALIGN_ALLOCATED_MEM(p_desc->in);
             if (is_out_place)
             {
-                FREE_ALLOCATED_MEM(p_desc->out);
+                FREE_ALIGN_ALLOCATED_MEM(p_desc->out);
             }
-            FREE_ALLOCATED_MEM(p_desc->dims);
-            FREE_ALLOCATED_MEM(p_desc->vecs);
-            FREE_ALLOCATED_MEM(p_desc);
+            FREE_ALIGN_ALLOCATED_MEM(p_desc->dims);
+            FREE_ALIGN_ALLOCATED_MEM(p_desc->vecs);
+            FREE_ALIGN_ALLOCATED_MEM(p_desc);
         }
     }
 
@@ -292,15 +292,15 @@ class AoclfftzSelectorTestBase
         if (status != PARSER_SUCCESS)
         {
             AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "dims and vecs parsing failed");
-            FREE_ALLOCATED_MEM(dims);
-            FREE_ALLOCATED_MEM(vecs);
+            FREE_ALIGN_ALLOCATED_MEM(dims);
+            FREE_ALIGN_ALLOCATED_MEM(vecs);
             return NULL;
         }
 
-        p_desc = (prob_desc_t *)ALLOC_UNALIGN_UNINIT(sizeof(prob_desc_t));
+        ALLOC_ALIGN_UNINIT(p_desc, prob_desc_t, sizeof(prob_desc_t));
         p_desc->dim_rank = dim_rank;
         p_desc->vec_rank = vec_rank;
-        p_desc->dims = (dim_t *)ALLOC_UNALIGN_UNINIT(dim_rank * sizeof(dim_t));
+        ALLOC_ALIGN_UNINIT(p_desc->dims, dim_t, dim_rank * sizeof(dim_t));
         for (INT32 i = 0; i < dim_rank; i++)
         {
             p_desc->dims[i].n = (dm_t)dims[i].n;
@@ -315,7 +315,7 @@ class AoclfftzSelectorTestBase
                 p_desc->dims[i].out_stride = (dm_t)dims[i].out_stride;
             }
         }
-        p_desc->vecs = (dim_t *)ALLOC_UNALIGN_UNINIT(vec_rank * sizeof(dim_t));
+        ALLOC_ALIGN_UNINIT(p_desc->vecs, dim_t, vec_rank * sizeof(dim_t));
         for (INT32 i = 0; i < vec_rank; i++)
         {
             p_desc->vecs[i].n = (dm_t)vecs[i].n;
@@ -330,15 +330,15 @@ class AoclfftzSelectorTestBase
                 p_desc->vecs[i].out_stride = (dm_t)vecs[i].out_stride;
             }
         }
-        FREE_ALLOCATED_MEM(dims);
-        FREE_ALLOCATED_MEM(vecs);
+        FREE_ALIGN_ALLOCATED_MEM(dims);
+        FREE_ALIGN_ALLOCATED_MEM(vecs);
 
         INTP input_size, output_size;
         calculate_input_output_sizes<prob_desc_t>(p_desc, &input_size,
                                                   &output_size);
-        dt_t *in = (dt_t *)ALLOC_UNALIGN_UNINIT(
-                        input_size * DATA_STRIDE * sizeof(dt_t));
+        dt_t *in = NULL;
         dt_t *out = NULL;
+        ALLOC_ALIGN_UNINIT(in, dt_t, input_size * DATA_STRIDE * sizeof(dt_t));
         //input and output buffers must be same for inplace problems
         if (is_in_place)
         {
@@ -346,8 +346,8 @@ class AoclfftzSelectorTestBase
         }
         else
         {
-            out = (dt_t *)ALLOC_UNALIGN_INIT(
-                        output_size * DATA_STRIDE, sizeof(dt_t));
+            ALLOC_ALIGN_INIT(out, dt_t,
+                output_size * DATA_STRIDE * sizeof(dt_t));
         }
         for (int i = 0; i < input_size * DATA_STRIDE; i++)
             in[i] = (rand() % 1000) / 100.0;
@@ -412,8 +412,8 @@ class AoclfftzSelectorTestBase
         if (status != PARSER_SUCCESS)
         {
             AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "dims and vecs parsing failed");
-            FREE_ALLOCATED_MEM(dims);
-            FREE_ALLOCATED_MEM(vecs);
+            FREE_ALIGN_ALLOCATED_MEM(dims);
+            FREE_ALIGN_ALLOCATED_MEM(vecs);
             return;
         }
         // creating a solution object to store the reference values
@@ -422,8 +422,8 @@ class AoclfftzSelectorTestBase
         if (sol == NULL)
         {
             AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "sol creation failed");
-            FREE_ALLOCATED_MEM(dims);
-            FREE_ALLOCATED_MEM(vecs);
+            FREE_ALIGN_ALLOCATED_MEM(dims);
+            FREE_ALIGN_ALLOCATED_MEM(vecs);
             return;
         }
         sol->decomp_scheme->dim_rank = dim_rank;
@@ -456,8 +456,8 @@ class AoclfftzSelectorTestBase
                 sol->decomp_scheme->vecs[idx].out_stride = vecs[idx].out_stride;
             }
         }
-        FREE_ALLOCATED_MEM(dims);
-        FREE_ALLOCATED_MEM(vecs);
+        FREE_ALIGN_ALLOCATED_MEM(dims);
+        FREE_ALIGN_ALLOCATED_MEM(vecs);
         sol->decomp_scheme->flags = flags;
         sol->decomp_scheme->cntrl_params = &cntrl_params;
         sol->decomp_scheme->cntrl_params->opt_level = opt_level;
@@ -619,12 +619,13 @@ class AoclfftzSelectorTestBase
                 DT_PRECISION_BYTES(dt_prec);
                 INTP m = cur_a->next_sol->decomp_scheme->dims[0].n;
                 VOID *B = cur_a->bluestein->B;
-                VOID *B_ref = ALLOC_UNALIGN_UNINIT(m * DATA_STRIDE * dt_bytes);
+                VOID *B_ref = NULL;
+                ALLOC_ALIGN_UNINIT(B_ref, VOID, m * DATA_STRIDE * dt_bytes);
                 prepare_bluestein_sequence_ref(B_ref, m, n, dt_prec);
                 ret &= get_extended_length_ref(n) == m;
                 ret &= ((B != NULL) &&
                         (memcmp(B, B_ref, m * DATA_STRIDE * dt_bytes) == 0));
-                FREE_ALLOCATED_MEM(B_ref);
+                FREE_ALIGN_ALLOCATED_MEM(B_ref);
                 if (ret == false)
                 {
                     AOCLFFTZ_LOG_UNFORMATTED(

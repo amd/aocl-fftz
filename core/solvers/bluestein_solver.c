@@ -57,18 +57,18 @@ INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
     DT_PRECISION_BYTES(dt_prec);
 
     // Allocate Bluestein related buffers
-    sol->bluestein->B = ALLOC_UNALIGN_UNINIT(m * DATA_STRIDE * dt_bytes);
+    ALLOC_ALIGN_UNINIT(sol->bluestein->B, VOID, m * DATA_STRIDE * dt_bytes);
     if (sol->bluestein->B == NULL)
         return SOLVER_FAILURE;
-    sol->bluestein->B_out = ALLOC_UNALIGN_INIT(m * DATA_STRIDE, dt_bytes);
+    ALLOC_ALIGN_INIT(sol->bluestein->B_out, VOID, m * DATA_STRIDE * dt_bytes);
     if (sol->bluestein->B_out == NULL)
         return SOLVER_FAILURE;
 
     // Allocate internal in, out buffers
-    sol->bluestein->in = ALLOC_UNALIGN_UNINIT(m * DATA_STRIDE * dt_bytes);
+    ALLOC_ALIGN_UNINIT(sol->bluestein->in, VOID, m * DATA_STRIDE * dt_bytes);
     if (sol->bluestein->in == NULL)
         return SOLVER_FAILURE;
-    sol->bluestein->out = ALLOC_UNALIGN_UNINIT(m * DATA_STRIDE * dt_bytes);
+    ALLOC_ALIGN_UNINIT(sol->bluestein->out, VOID,  m * DATA_STRIDE * dt_bytes);
     if (sol->bluestein->out == NULL)
         return SOLVER_FAILURE;
 

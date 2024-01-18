@@ -167,7 +167,8 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t* sol)
         INTP N = sets * radix;
 
         // buffer to mark processed index
-        INT8 *visited =  ALLOC_UNALIGN_INIT(N, sizeof(INT8));
+        INT8 *visited = NULL;
+        ALLOC_ALIGN_INIT(visited, INT8, N * sizeof(INT8));
 
         INTP in_stride =
                 (sol->decomp_scheme->dims[0].in_stride / sets) * DATA_STRIDE;
@@ -232,7 +233,8 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t* sol)
         INTP N = sets * radix;
 
         // buffer to mark processed index
-        INT8 *visited =  ALLOC_UNALIGN_INIT(N, sizeof(INT8));
+        INT8 *visited = NULL;;
+        ALLOC_ALIGN_INIT(visited, INT8, N * sizeof(INT8));
 
         INTP in_stride =
                 (sol->decomp_scheme->dims[0].in_stride / sets) * DATA_STRIDE;

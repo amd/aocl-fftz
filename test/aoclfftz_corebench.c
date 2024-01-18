@@ -115,12 +115,14 @@ VOID show_help_menu(VOID)
         "                            4 = trace\n"
         "--selector-time          '1' to print the time taken for preparing "
         "the solution, '0' to disable it [default: 0]\n"
-        "--min-bench-time          'set minimum time to calculate performance "
+        "--min-bench-time         set minimum time to calculate performance "
         "iterations [default: 10ms]\n"
         "--measure-stats          '1' to measure selector stats, '0' to "
         "disable it [default: 0]\n"
         "--bit-reproducibility    '1' to use bit reproducibility mode, '0' to "
-        "disable it [default: 0]\n");
+        "disable it [default: 0]\n"
+        "--aligned-alloc          '1' to use aligned memory allocation, '0' to "
+        "disable it [default: 1]\n");
 }
 
 INT32 get_option(CHAR **argv, INT32 arg_idx)
@@ -206,6 +208,10 @@ INT32 get_option(CHAR **argv, INT32 arg_idx)
         }
         else if (strcmp(arg, "--min-bench-time") == 0)
         {
+            return 306;
+        }
+        else if (strcmp(arg, "--aligned-alloc") == 0)
+        {
             return 307;
         }
         else
@@ -217,7 +223,7 @@ INT32 get_option(CHAR **argv, INT32 arg_idx)
     else
     {
         // Non option argument
-        return 306;
+        return 308;
     }
 }
 
@@ -259,13 +265,15 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     INT32 measure_stats = 0;
     INT32 bit_reproducibility = 0;
     DOUBLE min_bench_time = 10000;
+    UINT32 aligned_alloc = 1;
     INT32 status = PARSER_SUCCESS;
     INT32 ret = PARSER_SUCCESS;
     // check for the dependent arguments
     UCHAR valid_iters_arg_found = 0;
     UCHAR warmup_iters_arg_found = 0;
 
-    CHAR *str_buff = (CHAR *)ALLOC_UNALIGN_UNINIT(sizeof(CHAR) * 50);
+    CHAR *str_buff = NULL;
+    ALLOC_ALIGN_UNINIT(str_buff, CHAR, sizeof(CHAR) * 50);
 
     INT32 arg_idx = 1;
     INT32 non_opt_arg_cnt = 0;
@@ -276,9 +284,9 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         switch (c)
         {
         case 'h':
-            FREE_ALLOCATED_MEM(str_buff);
-            FREE_ALLOCATED_MEM(dims);
-            FREE_ALLOCATED_MEM(vecs);
+            FREE_ALIGN_ALLOCATED_MEM(str_buff);
+            FREE_ALIGN_ALLOCATED_MEM(dims);
+            FREE_ALIGN_ALLOCATED_MEM(vecs);
             return HELP_MENU;
         case 'p':
             if (!strcmp(optarg, "f"))
@@ -520,6 +528,35 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                    "supported, running bench without bit-reproducibility\n");
             break;
         case 306:
+            if (atof(optarg) < 10)
+            {
+                printf("WARNING: min_bench_time value must be at least 10ms, "
+                       "running bench with default value(10ms)\n");
+                min_bench_time = 10;
+            }
+            else
+            {
+                min_bench_time = atof(optarg);
+            }
+            min_bench_time *= 1000;
+            break;
+        case 307:
+            if (atoi(optarg) == 0)
+            {
+                aligned_alloc = 0;
+            }
+            else if (atoi(optarg) == 1)
+            {
+                aligned_alloc = 1;
+            }
+            else
+            {
+                printf("WARNING: Unknown value provided for aligned memory"
+                         " allocation, defaulting to 1\n");
+                aligned_alloc = 1;
+            }
+            break;
+        case 308:
             if (non_opt_arg_cnt == 0)
             {
                 // Parse dimension sizes and vector sizes
@@ -534,8 +571,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                         argv[arg_idx], dim_rank, vec_rank, &dims, &vecs, 1);
                     if (ret != PARSER_SUCCESS)
                     {
-                        FREE_ALLOCATED_MEM(dims);
-                        FREE_ALLOCATED_MEM(vecs);
+                        FREE_ALIGN_ALLOCATED_MEM(dims);
+                        FREE_ALIGN_ALLOCATED_MEM(vecs);
                         status = MAX(status, ret);
                     }
                 }
@@ -550,19 +587,6 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             // should not move arg_idx by 2 places if it is a non option arg
             arg_idx--;
             break;
-        case 307:
-            if (atof(optarg) < 10)
-            {
-                printf("WARNING: min_bench_time value must be at least 10ms, "
-                       "running bench with default value(10ms)\n");
-                min_bench_time = 10;
-            }
-            else
-            {
-                min_bench_time = atof(optarg);
-            }
-            min_bench_time *= 1000;
-            break;
         case '?':
             status = MAX(status, INVALID_ARGUMENT_ERROR);
             break;
@@ -572,7 +596,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         arg_idx += 2;
     }
 
-    FREE_ALLOCATED_MEM(str_buff);
+    FREE_ALIGN_ALLOCATED_MEM(str_buff);
 
     // Problem size argument must be present
     if (non_opt_arg_cnt == 0)
@@ -586,8 +610,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     }
     if (status != PARSER_SUCCESS)
     {
-        FREE_ALLOCATED_MEM(dims);
-        FREE_ALLOCATED_MEM(vecs);
+        FREE_ALIGN_ALLOCATED_MEM(dims);
+        FREE_ALIGN_ALLOCATED_MEM(vecs);
         return status;
     }
     if(res_placement == IN_PLACE)
@@ -595,8 +619,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         status = check_inplace_strides(dims, vecs, dim_rank, vec_rank);
         if (status != PARSER_SUCCESS)
         {
-            FREE_ALLOCATED_MEM(dims);
-            FREE_ALLOCATED_MEM(vecs);
+            FREE_ALIGN_ALLOCATED_MEM(dims);
+            FREE_ALIGN_ALLOCATED_MEM(vecs);
             return status;
         }
     }
@@ -648,9 +672,10 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         bench_params->opt_level = opt_level;
         bench_params->logger_mode = logger_mode;
         bench_params->selector_time = selector_time;
-        bench_params->min_bench_time = min_bench_time;
         bench_params->measure_stats = measure_stats;
         bench_params->bit_reproducibility = bit_reproducibility;
+        bench_params->min_bench_time = min_bench_time;
+        bench_params->aligned_alloc = aligned_alloc;
         bench_params->seed = seed;
         bench_params->use_random_seed = use_random_seed;
         if (use_cust_tolerance)
@@ -674,17 +699,19 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
 
         INTP in_buffer_size = 0;
         INTP out_buffer_size = 0;
+        UINT32 is_align = bench_params->aligned_alloc;
         calculate_buffer_sizes(bench_params, &in_buffer_size, &out_buffer_size);
         in_buffer_size = in_buffer_size * T_DATA_STRIDE;
         out_buffer_size = out_buffer_size * T_DATA_STRIDE;
-        bench_params->in  = ALLOC_UNALIGN_UNINIT(in_buffer_size * dt_bytes);
+        ALLOC_UNINIT(bench_params->in, VOID, in_buffer_size * dt_bytes, is_align);
         if(res_placement == IN_PLACE)
         {
             bench_params->out = bench_params->in;
         }
         else
         {
-            bench_params->out = ALLOC_UNALIGN_INIT(out_buffer_size, dt_bytes);
+            ALLOC_INIT(bench_params->out, VOID,
+                        out_buffer_size * dt_bytes, is_align);
         }
     }
     else
@@ -764,9 +791,11 @@ VOID *setup_problem_f(aoclfftz_bench_params_t *params)
 #endif
     timeVal start_time, end_time;
     DOUBLE time_taken = 0.0;
+    UINT32 is_align = params->aligned_alloc;
 
-    aoclfftz_prob_desc_f *p_desc =
-        ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_prob_desc_f));
+    aoclfftz_prob_desc_f *p_desc = NULL;
+    ALLOC_UNINIT(p_desc, aoclfftz_prob_desc_f,
+                    sizeof(aoclfftz_prob_desc_f), is_align);
     INIT_PD(params, p_desc, INT32, aoclfftz_dim_t);
 
     p_desc->in = (FLOAT *)params->in;
@@ -794,7 +823,7 @@ VOID *setup_problem_f(aoclfftz_bench_params_t *params)
     {
         handle = aoclfftz_setup_f(p_desc);
     }
-    DESTROY_PD(p_desc);
+    DESTROY_PD(p_desc, is_align);
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
     return handle;
 }
@@ -813,9 +842,11 @@ VOID *setup_problem_d(aoclfftz_bench_params_t *params)
 #endif
     timeVal start_time, end_time;
     DOUBLE time_taken = 0.0;
+    UINT32 is_align = params->aligned_alloc;
 
-    aoclfftz_prob_desc_d *p_desc =
-        ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_prob_desc_d));
+    aoclfftz_prob_desc_d *p_desc = NULL;
+    ALLOC_UNINIT(p_desc, aoclfftz_prob_desc_d,
+                    sizeof(aoclfftz_prob_desc_d), is_align);
     INIT_PD(params, p_desc, INT32, aoclfftz_dim_t);
 
     p_desc->in = (DOUBLE *)params->in;
@@ -843,7 +874,7 @@ VOID *setup_problem_d(aoclfftz_bench_params_t *params)
     {
         handle = aoclfftz_setup_d(p_desc);
     }
-    DESTROY_PD(p_desc);
+    DESTROY_PD(p_desc, is_align);
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
     return handle;
 }
@@ -862,9 +893,11 @@ VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
 #endif
     timeVal start_time, end_time;
     DOUBLE time_taken = 0.0;
+    UINT32 is_align = params->aligned_alloc;
 
-    aoclfftz_prob_desc_f_64_ *p_desc =
-        ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_prob_desc_f_64_));
+    aoclfftz_prob_desc_f_64_ *p_desc = NULL;
+    ALLOC_UNINIT(p_desc, aoclfftz_prob_desc_f_64_,
+                    sizeof(aoclfftz_prob_desc_f_64_), is_align);
     INIT_PD(params, p_desc, INTP, aoclfftz_dim_t_64_);
 
     p_desc->in = (FLOAT *)params->in;
@@ -892,7 +925,7 @@ VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
     {
         handle = aoclfftz_setup_f_64_(p_desc);
     }
-    DESTROY_PD(p_desc);
+    DESTROY_PD(p_desc, is_align);
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
     return handle;
 }
@@ -911,9 +944,11 @@ VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params)
 #endif
     timeVal start_time, end_time;
     DOUBLE time_taken = 0.0;
+    UINT32 is_align = params->aligned_alloc;
 
-    aoclfftz_prob_desc_d_64_ *p_desc =
-        ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_prob_desc_d_64_));
+    aoclfftz_prob_desc_d_64_ *p_desc = NULL;
+    ALLOC_UNINIT(p_desc, aoclfftz_prob_desc_d_64_,
+                    sizeof(aoclfftz_prob_desc_d_64_), params->aligned_alloc);
     INIT_PD(params, p_desc, INTP, aoclfftz_dim_t_64_);
 
     p_desc->in = (DOUBLE *)params->in;
@@ -941,7 +976,7 @@ VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params)
     {
         handle = aoclfftz_setup_d_64_(p_desc);
     }
-    DESTROY_PD(p_desc);
+    DESTROY_PD(p_desc, is_align);
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
     return handle;
 }
@@ -961,7 +996,6 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
 #ifdef WIN32
     timer clk_tick;
 #endif
-    // all time values are in nano seconds
     timeVal start_time, end_time;
     UINT64 min_time = INT64_MAX, tot_time = 0, cur_time = 0;
     DOUBLE avg_time = 0.0, avg_mflops = 0.0, max_mflops = 0.0;
@@ -1021,8 +1055,8 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
         {
             min_time = cur_time;
         }
+        avg_time = (DOUBLE)tot_time / params->num_iterations;
     }
-    avg_time = (DOUBLE)tot_time / params->num_iterations;
     // compute MFLOPS from execution time
     max_mflops = (5.0 * n * batches * log2(n)) / (min_time * 1E-3);
     avg_mflops = (5.0 * n * batches * log2(n)) / (avg_time * 1E-3);
@@ -1100,8 +1134,9 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, 
     }
 
     // create local buffer to store DFT reference output
-    VOID *out_ref =
-        ALLOC_UNALIGN_INIT(output_size * T_DATA_STRIDE, dt_bytes);
+    VOID *out_ref;
+    ALLOC_INIT(out_ref, VOID, output_size * T_DATA_STRIDE * dt_bytes,
+                 params->aligned_alloc);
 
     // initialize the random seed value based on current time
     if (params->use_random_seed)
@@ -1179,6 +1214,7 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, INTP
 
     INTP n = calculate_size(params->dims, params->dim_rank);
     INTP batches = calculate_size(params->vecs, params->vec_rank);
+    UINT32 is_align = params->aligned_alloc;
 
     calculate_buffer_sizes(params, &input_size, &output_size);
 
@@ -1186,20 +1222,20 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, INTP
     factors = in1 = in2 = out1 = out2 = out_combined = handle = NULL;
 
     // create buffer to store 2 complex constant values
-    factors = ALLOC_UNALIGN_INIT(4, dt_bytes);
+    ALLOC_INIT(factors, VOID, 4 * dt_bytes, is_align);
     // create locals buffer to store inputs and outputs
-    in1 = ALLOC_UNALIGN_UNINIT(dt_bytes * input_size * T_DATA_STRIDE);
-    in2 = ALLOC_UNALIGN_UNINIT(dt_bytes * input_size * T_DATA_STRIDE);
+    ALLOC_UNINIT(in1, VOID, dt_bytes * input_size * T_DATA_STRIDE, is_align);
+    ALLOC_UNINIT(in2, VOID, dt_bytes * input_size * T_DATA_STRIDE, is_align);
     if (factors == NULL || in1 == NULL || in2 == NULL)
     {
         printf("run_linearity_test : input buffer creation failed\n");
         status = SETUP_FAILURE;
         goto exit_linearity_test;
     }
-    out1 = ALLOC_UNALIGN_INIT(output_size * T_DATA_STRIDE, dt_bytes);
-    out2 = ALLOC_UNALIGN_INIT(output_size * T_DATA_STRIDE, dt_bytes);
-    out_combined =
-        ALLOC_UNALIGN_INIT(output_size * T_DATA_STRIDE, dt_bytes);
+    ALLOC_INIT(out1, VOID, output_size * T_DATA_STRIDE * dt_bytes, is_align);
+    ALLOC_INIT(out2, VOID, output_size * T_DATA_STRIDE * dt_bytes, is_align);
+    ALLOC_INIT(out_combined, VOID,
+                     output_size * T_DATA_STRIDE * dt_bytes, is_align);
     if (out1 == NULL || out2 == NULL || out_combined == NULL)
     {
         printf("run_linearity_test : output buffer creation failed\n");
@@ -1291,12 +1327,12 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, INTP
 
 exit_linearity_test:
     // destroy internal buffers
-    FREE_ALLOCATED_MEM(in1);
-    FREE_ALLOCATED_MEM(in2);
-    FREE_ALLOCATED_MEM(out1);
-    FREE_ALLOCATED_MEM(out2);
-    FREE_ALLOCATED_MEM(out_combined);
-    FREE_ALLOCATED_MEM(factors);
+    FREE_ALLOCATED_MEM(in1, is_align);
+    FREE_ALLOCATED_MEM(in2, is_align);
+    FREE_ALLOCATED_MEM(out1, is_align);
+    FREE_ALLOCATED_MEM(out2, is_align);
+    FREE_ALLOCATED_MEM(out_combined, is_align);
+    FREE_ALLOCATED_MEM(factors, is_align);
     // destroy handle
     aoclfftz_destroy(handle);
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
@@ -1319,6 +1355,7 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params, INTP *in_
                      sizeof(FLOAT) : sizeof(DOUBLE);
     INTP input_size = 0;
     INTP output_size = 0;
+    UINT32 is_align = params->aligned_alloc;
 
     calculate_buffer_sizes(params, &input_size, &output_size);
     // create a new bench params for reverse FFT direction
@@ -1335,7 +1372,7 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params, INTP *in_
     handle = handle_reverse = in = NULL;
 
     // create buffer to store input
-    in = ALLOC_UNALIGN_INIT(input_size * T_DATA_STRIDE, dt_bytes);
+    ALLOC_INIT(in, VOID, input_size * T_DATA_STRIDE * dt_bytes, is_align);
     if (in == NULL)
     {
         printf(
@@ -1353,8 +1390,8 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params, INTP *in_
         params_reverse->dir = FORWARD;
     }
     // create in and out buffers for params_reverse object
-    params_reverse->in =
-        ALLOC_UNALIGN_INIT(output_size * T_DATA_STRIDE, dt_bytes);
+    ALLOC_INIT(params_reverse->in, VOID,
+                     output_size * T_DATA_STRIDE * dt_bytes, is_align);
 
     if(params->res_placement == IN_PLACE)
     {
@@ -1362,8 +1399,8 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params, INTP *in_
     }
     else
     {
-        params_reverse->out =
-            ALLOC_UNALIGN_INIT(input_size * T_DATA_STRIDE, dt_bytes);
+        ALLOC_INIT(params_reverse->out, VOID,
+                         input_size * T_DATA_STRIDE * dt_bytes, is_align);
 
         for(INT32 i = 0; i < params->dim_rank; i++)
         {
@@ -1451,7 +1488,7 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params, INTP *in_
 
 exit_unit_impulse_transform_test:
     // destroy local buffer
-    FREE_ALLOCATED_MEM(in);
+    FREE_ALLOCATED_MEM(in, is_align);
     // destroy handles
     aoclfftz_destroy(handle);
     aoclfftz_destroy(handle_reverse);
@@ -1478,22 +1515,23 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, INTP
                      sizeof(FLOAT) : sizeof(DOUBLE);
     INTP input_size = 0;
     INTP output_size = 0;
+    UINT32 is_align = params->aligned_alloc;
 
     calculate_buffer_sizes(params, &input_size, &output_size);
 
     VOID *in1, *in2, *out1, *out2, *handle;
     in1 = in2 = out1 = out2 = handle = NULL;
     // create buffers for inputs and outputs
-    in1 = ALLOC_UNALIGN_UNINIT(dt_bytes * input_size * T_DATA_STRIDE);
-    in2 = ALLOC_UNALIGN_UNINIT(dt_bytes * input_size * T_DATA_STRIDE);
+    ALLOC_UNINIT(in1, VOID, dt_bytes * input_size * T_DATA_STRIDE, is_align);
+    ALLOC_UNINIT(in2, VOID, dt_bytes * input_size * T_DATA_STRIDE, is_align);
     if (in1 == NULL || in2 == NULL)
     {
         printf("run_timeshift_test : input buffer creation failed\n");
         status = SETUP_FAILURE;
         goto exit_timeshift_test;
     }
-    out1 = ALLOC_UNALIGN_INIT(output_size * T_DATA_STRIDE, dt_bytes);
-    out2 = ALLOC_UNALIGN_INIT(output_size * T_DATA_STRIDE, dt_bytes);
+    ALLOC_INIT(out1, VOID, output_size * T_DATA_STRIDE * dt_bytes, is_align);
+    ALLOC_INIT(out2, VOID, output_size * T_DATA_STRIDE * dt_bytes, is_align);
     if (out1 == NULL || out2 == NULL)
     {
         printf("run_timeshift_test : output buffer creation failed\n");
@@ -1601,10 +1639,10 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, INTP
 
 exit_timeshift_test:
     // destroy internal buffers
-    FREE_ALLOCATED_MEM(in1);
-    FREE_ALLOCATED_MEM(in2);
-    FREE_ALLOCATED_MEM(out1);
-    FREE_ALLOCATED_MEM(out2);
+    FREE_ALLOCATED_MEM(in1, is_align);
+    FREE_ALLOCATED_MEM(in2, is_align);
+    FREE_ALLOCATED_MEM(out1, is_align);
+    FREE_ALLOCATED_MEM(out2, is_align);
     // destroy handle
     aoclfftz_destroy(handle);
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
@@ -1628,8 +1666,11 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     // prepare the index map which maps the strided indices with non strided ones
     INTP n = calculate_size(params->dims, params->dim_rank);
     INTP batches = calculate_size(params->vecs, params->vec_rank);
-    INTP *in_idx_map = (INTP *)ALLOC_UNALIGN_UNINIT(n * batches * sizeof(INTP));
-    INTP *out_idx_map = (INTP *)ALLOC_UNALIGN_UNINIT(n * batches * sizeof(INTP));
+    UINT32 is_align = params->aligned_alloc;
+    INTP *in_idx_map = NULL;
+    ALLOC_UNINIT(in_idx_map, INTP, n * batches * sizeof(INTP), is_align);
+    INTP *out_idx_map = NULL;
+    ALLOC_UNINIT(out_idx_map, INTP, n * batches * sizeof(INTP), is_align);
     prepare_index_map(params, in_idx_map, out_idx_map);
 
 #ifdef ENABLE_DFT_REFERENCE
@@ -1669,8 +1710,8 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     PRINT_SUCCESS("\nTest bench completed on accuracy mode\n\n");
 
 exit_accuracy_mode:
-    FREE_ALLOCATED_MEM(in_idx_map);
-    FREE_ALLOCATED_MEM(out_idx_map);
+    FREE_ALLOCATED_MEM(in_idx_map, is_align);
+    FREE_ALLOCATED_MEM(out_idx_map, is_align);
     return status;
 }
 
@@ -1727,14 +1768,14 @@ INT32 main(INT32 argc, CHAR **argv)
     INT32 status = BENCH_SUCCESS;
 
     // prepare bench params from user inputs
-    aoclfftz_bench_params_t *params =
-        ALLOC_UNALIGN_UNINIT(sizeof(aoclfftz_bench_params_t));
+    aoclfftz_bench_params_t *params = NULL;
+    ALLOC_ALIGN_UNINIT(params, aoclfftz_bench_params_t,
+                         sizeof(aoclfftz_bench_params_t));
     if (params == NULL)
     {
         status = MEMORY_FAILURE;
         goto exit_main;
     }
-
     status = prepare_bench_params(argc, argv, params);
     HANDLE_PARSER_ERROR_MESSAGE(status);
     if (status != PARSER_SUCCESS)
