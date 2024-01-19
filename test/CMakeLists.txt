@@ -29,3 +29,36 @@ if (VALGRIND)
     # To run all registered tests with valgrind use "ctest -T memcheck"
     include(CTest) # Default to using valgrind
 endif()
+
+# Add testcases to the list as 'testcase_name testcase_command'
+set(TEST_SUITE
+    "DIRECT_PERFORMANCE ./aocl_fftz_bench 7"                            # performance
+    "BATCHED_CT_WITH_SAME_STRIDE ./aocl_fftz_bench 7v18:2:2 -b a"       # accuracy
+    "MULTILEVEL_CT_WITH_STRIDES ./aocl_fftz_bench 128:3:2 -b a -m i"    # ILP64 data model
+    "CT_WITH_BLUESTEIN ./aocl_fftz_bench 38:4:4 -b a -r i"              # Inplace
+    "BLUESTEIN_WITH_STRIDES ./aocl_fftz_bench 23:5:7 -b a -p f"         # Float
+    "DIRECT_AVX_WITH_SAME_STRIDE ./aocl_fftz_bench 15:5:5 -b a -o 2"    # AVX128
+    "DIRECT_AVX2_WITH_SAME_STRIDE ./aocl_fftz_bench 8:2:2 -b a -o 3"    # AVX256
+    "2D_BATCH_3D_DIM ./aocl_fftz_bench 3x2v17x19x8 -b a --dir b"        # Inverse FFT
+    "3D_WITH_STRIDE_GREATER_THAN_DIM ./aocl_fftz_bench 2x3:4:5x3 -b a"
+    "4D_WITH_STRIDE ./aocl_fftz_bench 2x72x37x13:2:3 -b a"
+    "2D_BATCHED_3D_PERFORMANCE ./aocl_fftz_bench 2x4v200x17x2")
+
+list(LENGTH TEST_SUITE N)
+math(EXPR N "${N} - 1")  # Adjust length to get zero-based index
+# Iterate over the test cases and add them dynamically
+foreach(index RANGE ${N})
+
+    list(GET TEST_SUITE ${index} TEST_CASE)
+    # Use separate_arguments to split the string into a list
+    set(TEST_CASE_ARGS)
+    separate_arguments(TEST_CASE_ARGS NATIVE_COMMAND "${TEST_CASE}")
+    list(GET TEST_CASE_ARGS 0 TEST_CASE_NAME)
+    list(REMOVE_AT TEST_CASE_ARGS 0)
+    # Add the test
+    add_test(
+        NAME AOCL_FFTZ_TESTBENCH_${TEST_CASE_NAME}
+        COMMAND ${TEST_CASE_ARGS}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+endforeach()
