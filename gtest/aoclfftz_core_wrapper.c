@@ -107,6 +107,10 @@ ops_cycles_t get_ops_cnt_fft2avx128_wrapper(INT32 precision)
 {
     return get_ops_cnt_fft2avx128(precision);
 }
+ops_cycles_t get_ops_cnt_fft5avx128_wrapper(INT32 precision)
+{
+    return get_ops_cnt_fft5avx128(precision);
+}
 #endif
 #ifdef ENABLE_AVX256
 //AVX256 get ops count wrappers
@@ -183,6 +187,10 @@ kfft_ register_kernel_fft16c_wrapper(INT32 precision)
 kfft_ register_kernel_fft2avx128_wrapper(INT32 precision)
 {
     return register_kernel_fft2avx128(precision);
+}
+kfft_ register_kernel_fft5avx128_wrapper(INT32 precision)
+{
+    return register_kernel_fft5avx128(precision);
 }
 #endif
 #ifdef ENABLE_AVX256

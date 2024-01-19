@@ -72,6 +72,7 @@ EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft15c_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft16c_wrapper(INT32 precision);
 //AVX-128
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft2avx128_wrapper(INT32 precision);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft5avx128_wrapper(INT32 precision);
 //AVX256
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft2avx256_wrapper(INT32 precision);
 
@@ -94,6 +95,7 @@ EXPORT_SYM_DYN kfft_ register_kernel_fft15c_wrapper(INT32 precision);
 EXPORT_SYM_DYN kfft_ register_kernel_fft16c_wrapper(INT32 precision);
 //AVX-128
 EXPORT_SYM_DYN kfft_ register_kernel_fft2avx128_wrapper(INT32 precision);
+EXPORT_SYM_DYN kfft_ register_kernel_fft5avx128_wrapper(INT32 precision);
 //AVX256
 EXPORT_SYM_DYN kfft_ register_kernel_fft2avx256_wrapper(INT32 precision);
 
@@ -153,9 +155,9 @@ static wrapper_kernel_fp_list_t
     wrapper_kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2avx128_wrapper, get_ops_cnt_fft2avx128_wrapper, 2}, // radix-2
+    {register_kernel_fft5avx128_wrapper, get_ops_cnt_fft5avx128_wrapper, 5}, // radix-5
     {NULL, NULL, 3},  // radix-3
     {NULL, NULL, 4},  // radix-4
-    {NULL, NULL, 5},  // radix-5
     {NULL, NULL, 6},  // radix-6
     {NULL, NULL, 7},  // radix-7
     {NULL, NULL, 8},  // radix-8
