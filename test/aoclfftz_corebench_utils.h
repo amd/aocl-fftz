@@ -762,7 +762,6 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
     INT32 is_vec_stride = 0;
     INT32 rank_count = 0;
     INT32 vec_count = 0;
-    INT32 def_stride_rank = -1;
     CHAR last_char = '\0';
     INT32 start = 0;
     CHAR val_str[strlen(arg)];
@@ -777,10 +776,6 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
             {
                 status = SIZE_PARSING_ERROR;
                 goto exit_func;
-            }
-            if (is_stride != 2)
-            {
-                def_stride_rank = rank_count;
             }
             is_stride = 0;
             rank_count++;
@@ -802,7 +797,6 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
             // reset buffer to store dims config
             memset(desc, 0, max_rank * sizeof(aoclfftz_dim_t_64_));
             rank_count = 0;
-            def_stride_rank = 0;
             is_vec_stride = 0;
             vec_count++;
             last_char = 'v';
@@ -842,12 +836,10 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
                 else if (is_vec_stride == 1)
                 {
                     desc[rank_count].in_stride = val;
-                    def_stride_rank++;
                 }
                 else if (is_vec_stride == 2)
                 {
                     desc[rank_count].out_stride = val;
-                    def_stride_rank++;
                 }
             }
             else
@@ -859,12 +851,10 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
                 else if (is_stride == 1)
                 {
                     desc[rank_count].in_stride = val;
-                    def_stride_rank++;
                 }
                 else if (is_stride == 2)
                 {
                     desc[rank_count].out_stride = val;
-                    def_stride_rank++;
                 }
             }
             i--;
@@ -987,9 +977,9 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
             for (idx = 0; idx < n; ++idx)
             {
                 input_f[idx + T_DATA_STRIDE] =
-                    (20.0f / RAND_MAX) * rand() - 10.0f;
+                    (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
                 input_f[idx + T_DATA_STRIDE + 1] =
-                    (20.0f / RAND_MAX) * rand() - 10.0f;
+                    (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
             }
         }
         else
@@ -997,9 +987,9 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
             for (idx = 0; idx < n; ++idx)
             {
                 input_f[idx_map[idx] + T_DATA_STRIDE] =
-                    (20.0f / RAND_MAX) * rand() - 10.0f;
+                    (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
                 input_f[idx_map[idx] + T_DATA_STRIDE + 1] =
-                    (20.0f / RAND_MAX) * rand() - 10.0f;
+                    (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
             }
         }
     }
@@ -1016,8 +1006,10 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
             idx = idx_map[rand() % n];
         }
         memset(input_f, 0, n * T_DATA_STRIDE);
-        input_f[idx * T_DATA_STRIDE] = (20.0f / RAND_MAX) * rand() - 10.0f;
-        input_f[idx * T_DATA_STRIDE + 1] = (20.0f / RAND_MAX) * rand() - 10.0f;
+        input_f[idx * T_DATA_STRIDE] =
+            (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
+        input_f[idx * T_DATA_STRIDE + 1] =
+            (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
     }
     // sinusoidal signal input
     else if (input_type == SINUSOIDAL_SIGNAL_INPUT)
@@ -1030,7 +1022,7 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
         INTP shift = rand() % n;
         // scale the amplitude of the wave by `scale` times,
         // scale range: [0.0, 5.0)
-        FLOAT scale = ((FLOAT)rand() / RAND_MAX) * 5.0f;
+        FLOAT scale = ((FLOAT)rand() / (FLOAT)RAND_MAX) * 5.0f;
         if (idx_map == NULL)
         {
             for (INTP i = 0; i < n; i++)

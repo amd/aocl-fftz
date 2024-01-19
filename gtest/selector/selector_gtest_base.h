@@ -663,7 +663,6 @@ class AoclfftzSelectorTestBase
 
                 INT32 cur_dim_rank = cur_a->decomp_scheme->dim_rank;
                 INT32 rank_nd = sol_nd->decomp_scheme->dim_rank;
-                INT32 rank_1d = sol_1d->decomp_scheme->dim_rank;
 
                 // verify the dims & vecs of solution-nd
                 ret &= (sol_nd->decomp_scheme->dim_rank ==
