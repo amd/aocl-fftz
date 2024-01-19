@@ -104,15 +104,16 @@ typedef enum
     UNSUPPORTED_SIZE_ERROR,
     UNSUPPORTED_OPTION_ERROR,
     INVALID_ARGUMENT_ERROR,
-    HELP_MENU
+    HELP_MENU = 100
 } aoclfftz_bench_parser_status_t;
 
 typedef enum
 {
-    BENCH_SUCCESS = 0,
-    SETUP_FAILURE,
+    SETUP_FAILURE = -4,
     EXECUTION_FAILURE,
-    VERIFICATION_FAILURE
+    VERIFICATION_FAILURE,
+    MEMORY_FAILURE,
+    BENCH_SUCCESS
 } aoclfftz_bench_status_t;
 
 typedef enum
@@ -151,6 +152,15 @@ typedef struct
     INT32 bit_reproducibility;
 } aoclfftz_bench_params_t;
 
+typedef struct
+{
+    DOUBLE max_abs_err;
+    DOUBLE max_mag;
+    INTP *max_err_coords;
+    INTP *first_err_coords;
+}aoclfftz_bench_error_t;
+
+
 VOID *(*setup_problem)(aoclfftz_bench_params_t *);
 INT32 (*aoclfftz_execute)(VOID *);
 VOID (*aoclfftz_destroy)(VOID *);
@@ -162,6 +172,7 @@ VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params);
 VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params);
 INT32 run_problem(aoclfftz_bench_params_t *params, VOID *handle);
 VOID destroy_problem(aoclfftz_bench_params_t *params, VOID *handle);
+VOID destroy_bench_param(aoclfftz_bench_params_t *params);
 INT32 register_functions(INT32 precision, INT32 data_model);
 
 #endif // AOCLFFTZ_COREBENCH_H
