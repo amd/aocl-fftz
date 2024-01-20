@@ -63,6 +63,7 @@
 #define FFT_DIR(flags) (flags & 0x4)
 #define IS_REAL(flags) (flags & 0x8)
 #define SET_PRECISION(flags, val) (flags |= (val << 30))
+#define SET_INPLACE(flags) (flags &= ~(0x1))
 #define DT_PRECISION_FLAG(flags) (flags >> 30)
 #define DT_PRECISION_BYTES(dt_prec) \
     UINT32 _dt = dt_prec;           \
@@ -197,6 +198,7 @@ typedef struct aoclfftz_solution
     aoclfftz_strides_t *strides;
     aoclfftz_twiddle_t *twiddle;
     aoclfftz_bluestein_t *bluestein;
+    aoclfftz_solution_t *nd_sol; // holds one of the solutions of ND, NULL otherwise
     aoclfftz_solution_t *next_sol;
 } aoclfftz_solution_t;
 

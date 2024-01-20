@@ -143,12 +143,17 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
     SET_SELECTOR_MODE(sel->solution->decomp_scheme->flags,
                       AOCLFFTZ_FIXED_SELECTOR_MODE);
 
-    //SOLVER_BATCHED
+    // TODO : ND Batched need not always go to Batched solver. In cases, where
+    // Batches are contiguous in memory, they can be clubbed.
 
-    // if 1D & n > 1, only composite problems will invoke Batched solver
-    level1_cond1 = ((vec_rank > 1) ||
-                   ((sel->solution->decomp_scheme->vecs[0].n > 1) &&
-                     !is_FFT_ker_supported));
+    //SOLVER_BATCHED
+    level1_cond1 = ((vec_rank > 1) ||  /* ND Batched */
+                    /* 1D Batched 1D Non-direct cases*/
+                    ((sel->solution->decomp_scheme->vecs[0].n > 1) &&
+                                            !is_FFT_ker_supported) ||
+                    /* 1D Batched ND case*/
+                    (dim_rank > 1 &&
+                        sel->solution->decomp_scheme->vecs[0].n > 1));
     //SOLVER_NDIM
     level1_cond1 |= ((dim_rank > 1) << 1);
     //SOLVER_BLUESTEIN

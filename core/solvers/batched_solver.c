@@ -65,9 +65,9 @@ INT32 execute_batched_solver(aoclfftz_solution_t *sol)
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
     aoclfftz_solution_t *next_sol = sol->next_sol;
-    INT32 batch_size;
-    INT32 rnk_offset;
-    INT32 rnk;
+    INTP batch_size;
+    INTP rnk_offset;
+    INTP rnk;
     INT32 status = SOLVER_SUCCESS;
     UINT32 dt, dt_bytes;
     ptrdiff_t v_in_stride_0;
@@ -185,6 +185,12 @@ INT32 execute_batched_solver(aoclfftz_solution_t *sol)
             next_sol->decomp_scheme->out_imag =
                 (VOID *)((CHAR *)sol->decomp_scheme->out_imag + v_out_stride_2);
 
+            // save pointer to restore it below since they will be moved while execution
+            VOID *in_real = next_sol->decomp_scheme->in_real;
+            VOID *in_imag = next_sol->decomp_scheme->in_imag;
+            VOID *out_real = next_sol->decomp_scheme->out_real;
+            VOID *out_imag = next_sol->decomp_scheme->out_imag;
+
             for (rnk_offset = 0; rnk_offset < sol->decomp_scheme->vecs[1].n;
                  rnk_offset++)
             {
@@ -194,6 +200,12 @@ INT32 execute_batched_solver(aoclfftz_solution_t *sol)
                 v_out_stride_1 =
                     rnk_offset * sol->decomp_scheme->vecs[1].out_stride *
                     DATA_STRIDE * dt_bytes;
+
+                // restore to start location
+                next_sol->decomp_scheme->in_real = in_real;
+                next_sol->decomp_scheme->in_imag = in_imag;
+                next_sol->decomp_scheme->out_real = out_real;
+                next_sol->decomp_scheme->out_imag = out_imag;
 
                 next_sol->decomp_scheme->in_real =
                     (VOID *)((CHAR *)next_sol->decomp_scheme->in_real +

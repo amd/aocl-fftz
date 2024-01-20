@@ -209,6 +209,57 @@ typedef struct
         from_sol_obj->decomp_scheme->out_imag; \
 }
 
+// copy all contents except dims & vecs
+// necessary in ND setup where dim_rank & vec_rank will differ for the sub-problem
+#define COPY_SOLUTION_OBJ_WO_DIMS(to_sol_obj, from_sol_obj) { \
+    to_sol_obj->solver->solver_type = \
+            from_sol_obj->solver->solver_type; \
+    to_sol_obj->solver->execute_solver = \
+            from_sol_obj->solver->execute_solver; \
+    to_sol_obj->solver->destroy_solver = \
+            from_sol_obj->solver->destroy_solver; \
+    to_sol_obj->solver->kernel_r = \
+            from_sol_obj->solver->kernel_r; \
+    to_sol_obj->solver->kernel_m = \
+            from_sol_obj->solver->kernel_m; \
+    to_sol_obj->decomp_scheme->in_real = \
+        from_sol_obj->decomp_scheme->in_real; \
+    to_sol_obj->decomp_scheme->in_imag = \
+        from_sol_obj->decomp_scheme->in_imag; \
+    to_sol_obj->decomp_scheme->out_real = \
+        from_sol_obj->decomp_scheme->out_real; \
+    to_sol_obj->decomp_scheme->out_imag = \
+        from_sol_obj->decomp_scheme->out_imag; \
+    to_sol_obj->decomp_scheme->cntrl_params = \
+        from_sol_obj->decomp_scheme->cntrl_params; \
+    to_sol_obj->decomp_scheme->pthr_fft = \
+        from_sol_obj->decomp_scheme->pthr_fft; \
+    to_sol_obj->decomp_scheme->flags = \
+        from_sol_obj->decomp_scheme->flags; \
+    to_sol_obj->strides->in_stride = \
+        from_sol_obj->strides->in_stride; \
+    to_sol_obj->strides->out_stride = \
+        from_sol_obj->strides->out_stride; \
+    to_sol_obj->strides->v_in_stride = \
+        from_sol_obj->strides->v_in_stride; \
+    to_sol_obj->strides->v_out_stride = \
+        from_sol_obj->strides->v_out_stride; \
+    to_sol_obj->twiddle->TW = \
+        from_sol_obj->twiddle->TW; \
+    to_sol_obj->bluestein->B = \
+        from_sol_obj->bluestein->B; \
+    to_sol_obj->bluestein->B_out = \
+        from_sol_obj->bluestein->B_out; \
+    to_sol_obj->bluestein->in = \
+        from_sol_obj->bluestein->in; \
+    to_sol_obj->bluestein->out = \
+        from_sol_obj->bluestein->out; \
+    to_sol_obj->bluestein->is_B_out_valid = \
+        from_sol_obj->bluestein->is_B_out_valid; \
+    to_sol_obj->next_sol = \
+        from_sol_obj->next_sol; \
+}
+
 #define RESET_COST(sol) {\
     sol->cost_analysis->ops = 0; \
     sol->cost_analysis->time = 0; \

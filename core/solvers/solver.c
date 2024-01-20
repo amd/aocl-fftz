@@ -56,6 +56,7 @@ INT32 register_solvers(INT32 dt, INT32 cpu_flags)
 	solvers_table[SOLVER_CT] = executor_ct_dft;
 	solvers_table[SOLVER_BATCHED] = executor_batched_dft;
 	solvers_table[SOLVER_BLUESTEIN] = executor_bluestein_dft;
+	solvers_table[SOLVER_NDIM] = executor_ndim_dft;
 
 	return SOLVER_SUCCESS;
 }
@@ -92,4 +93,9 @@ INT32 executor_batched_dft(aoclfftz_solution_t* solution)
 INT32 executor_bluestein_dft(aoclfftz_solution_t* solution)
 {
 	return execute_bluestein_solver(solution);
+}
+
+INT32 executor_ndim_dft(aoclfftz_solution_t* solution)
+{
+	return execute_ndim_solver(solution);
 }
