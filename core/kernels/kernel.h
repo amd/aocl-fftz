@@ -120,6 +120,8 @@ ops_cycles_t get_ops_cnt_fft13c(INT32 precision);
 ops_cycles_t get_ops_cnt_fft14c(INT32 precision);
 ops_cycles_t get_ops_cnt_fft15c(INT32 precision);
 ops_cycles_t get_ops_cnt_fft16c(INT32 precision);
+
+//C register kernels
 kfft_ register_kernel_fft2c(INT32 precision);
 kfft_ register_kernel_fft3c(INT32 precision);
 kfft_ register_kernel_fft4c(INT32 precision);
@@ -135,6 +137,8 @@ kfft_ register_kernel_fft13c(INT32 precision);
 kfft_ register_kernel_fft14c(INT32 precision);
 kfft_ register_kernel_fft15c(INT32 precision);
 kfft_ register_kernel_fft16c(INT32 precision);
+
+//C kernels
 VOID fft2c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                 INTP n, aoclfftz_strides_t *strides, UINT8 flag);
 VOID fft2c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,

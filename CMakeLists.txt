@@ -62,8 +62,8 @@ endif ()
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
 
 option (BUILD_STATIC_LIBS "Build static library (Default build type is shared library)" OFF)
-#option (ENABLE_AVX "Compile with AVX instruction set support" OFF)
-#option (ENABLE_AVX2 "Compile with AVX2 instruction set support" OFF)
+# option (ENABLE_AVX128 "Compile with AVX 128-bit register support" OFF)
+# option (ENABLE_AVX256 "Compile with AVX 256-bit register support" OFF)
 #option (ENABLE_AVX512 "Compile with AVX512 instruction set support" OFF)
 #option (ENABLE_MPI "Compile with distributed MPI FFTZ support" OFF)
 option (AOCL_TEST_COVERAGE "Enable GTest and AOCL test bench based CTest suite (Disabled by default)" OFF)
@@ -81,10 +81,29 @@ file(GLOB CORE_SRC_FILES CONFIGURE_DEPENDS ${CORE_PATH}/*.c ${CORE_PATH}/*.h
                         ${CORE_PATH}/common/*.c ${CORE_PATH}/common/*.h
                         ${CORE_PATH}/kernels/*.c ${CORE_PATH}/kernels/*.h
                         ${CORE_PATH}/kernels/c/*.c ${CORE_PATH}/kernels/c/*.h
-                        ${CORE_PATH}/kernels/avx128/*.c ${CORE_PATH}/kernels/avx128/*.h
-                        ${CORE_PATH}/kernels/avx256/*.c ${CORE_PATH}/kernels/avx256/*.h
-                        ${CORE_PATH}/kernels/avx512/*.c ${CORE_PATH}/kernels/avx512/*.h
                         ${CORE_PATH}/solvers/*.c ${CORE_PATH}/solvers/*.h)
+#Add AVX Kernels based on the flags ENABLE_AVX128, ENABLE_AVX256 & ENABLE_AVX512
+if (ENABLE_AVX512)
+    set(ENABLE_AVX256 ON)
+    add_compile_definitions(ENABLE_AVX512)
+    file(GLOB CORE_AVX512_FILES CONFIGURE_DEPENDS
+                            ${CORE_PATH}/kernels/avx512/*.c ${CORE_PATH}/kernels/avx512/*.h)
+    list (APPEND CORE_SRC_FILES ${CORE_AVX512_FILES})
+endif ()
+if (ENABLE_AVX256)
+    set(ENABLE_AVX128 ON)
+    add_compile_definitions(ENABLE_AVX256)
+    file(GLOB CORE_AVX256_FILES CONFIGURE_DEPENDS
+                            ${CORE_PATH}/kernels/avx256/*.c ${CORE_PATH}/kernels/avx256/*.h)
+    list (APPEND CORE_SRC_FILES ${CORE_AVX256_FILES})
+endif ()
+if (ENABLE_AVX128)
+    add_compile_definitions(ENABLE_AVX128)
+    file(GLOB CORE_AVX128_FILES CONFIGURE_DEPENDS
+                            ${CORE_PATH}/kernels/avx128/*.c ${CORE_PATH}/kernels/avx128/*.h)
+    list (APPEND CORE_SRC_FILES ${CORE_AVX128_FILES})
+endif ()
+
 file(GLOB SELECTOR_SRC_FILES selector/*.c selector/*.h)
 file(GLOB THREADS_SRC_FILES threads/*.c threads/*.h)
 file(GLOB UTILS_SRC_FILES utils/*.c utils/*.cpp utils/*.h)
@@ -115,8 +134,8 @@ endif()
 #set(USER_DEBUG_ON "-g")
 message(STATUS "C Compiler used: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ Compiler used: ${CMAKE_CXX_COMPILER}")
-message(ENABLE_AVX : ${ENABLE_AVX})
-message(ENABLE_AVX2 : ${ENABLE_AVX2})
+message(ENABLE_AVX128 : ${ENABLE_AVX128})
+message(ENABLE_AVX256 : ${ENABLE_AVX256})
 message(ENABLE_AVX512 : ${ENABLE_AVX512})
 
 if (WIN32)
@@ -124,12 +143,8 @@ if (ENABLE_AVX512)
     set (AVX512_FLAG /arch:AVX512)
     message(STATUS "Enabling AVX512 instructions")
 endif()
-if (ENABLE_AVX2)
-    set (AVX2_FLAG /arch:AVX2)
-    message(STATUS "Enabling AVX2 instructions")
-endif()
-if (ENABLE_AVX)
-    set (AVX512_FLAG /arch:AVX)
+if (ENABLE_AVX128)
+    set (AVX_FLAG /arch:AVX)
     message(STATUS "Enabling AVX instructions")
 endif()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${USER_DEBUG_ON} /O2 /DNDEBUG /Oy")
@@ -140,19 +155,15 @@ if (ENABLE_AVX512)
     set (AVX512_FLAG -mavx512f)
     message(STATUS "Enabling AVX512 instructions")
 endif()
-if (ENABLE_AVX2)
-    set (AVX2_FLAG -mavx2)
-    message(STATUS "Enabling AVX2 instructions")
-endif()
-if (ENABLE_AVX)
-    set (AVX512_FLAG -mavx)
+if (ENABLE_AVX128 OR ENABLE_AVX256)
+    set (AVX_FLAG -mavx)
     message(STATUS "Enabling AVX instructions")
 endif()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${USER_DEBUG_ON} -fomit-frame-pointer -fstrict-aliasing")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USER_DEBUG_ON} -fomit-frame-pointer -fstrict-aliasing")
 endif()
 
-add_compile_options(${AVX_FLAG} ${AVX2_FLAG} ${AVX512_FLAG})
+add_compile_options(${AVX_FLAG} ${AVX512_FLAG})
 
 add_compile_definitions(CCompiler="${CMAKE_C_COMPILER}")
 add_compile_definitions(CXXCompiler="${CMAKE_CXX_COMPILER}")
@@ -193,7 +204,7 @@ if (CODE_COVERAGE)
     endif()
 endif()
 
-# setup to run memory check using AddressSanitizer 
+# setup to run memory check using AddressSanitizer
 if (ASAN)
     if (NOT (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND CMAKE_BUILD_TYPE MATCHES "Debug"))
         # Switch off ASAN: target not supported

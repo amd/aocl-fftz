@@ -73,7 +73,7 @@ kernel_fp_list kernels_c[NUM_KERNELS_IN_EACH_CATEGORY] =
     {NULL, NULL, 32},                                 // radix-32
     {NULL, NULL, 64}                                  // radix-64
 };
-
+#ifdef ENABLE_AVX128
 kernel_fp_list kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {NULL, NULL, 2 }, //radix-2
@@ -96,7 +96,8 @@ kernel_fp_list kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
     {NULL, NULL, 32}, //radix-32
     {NULL, NULL, 64}  //radix-64
 };
-
+#endif
+#ifdef ENABLE_AVX256
 kernel_fp_list kernels_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {NULL, NULL, 2},   // radix-2
@@ -119,7 +120,8 @@ kernel_fp_list kernels_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
     {NULL, NULL, 32},  // radix-32
     {NULL, NULL, 64}   // radix-64
 };
-
+#endif
+#ifdef ENABLE_AVX512
 kernel_fp_list kernels_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {NULL, NULL, 2 }, //radix-2
@@ -142,5 +144,6 @@ kernel_fp_list kernels_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
     {NULL, NULL, 32}, //radix-32
     {NULL, NULL, 64}  //radix-64
 };
+#endif
 
 #endif // AOCLFFTZ_KERNEL_LIST_H

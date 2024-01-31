@@ -140,7 +140,7 @@ static wrapper_kernel_fp_list
     {NULL, NULL, 32},                                                 // radix-32
     {NULL, NULL, 64}                                                  // radix-64
 };
-
+#ifdef ENABLE_AVX128
 static wrapper_kernel_fp_list
     wrapper_kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
@@ -164,7 +164,8 @@ static wrapper_kernel_fp_list
     {NULL, NULL, 32}, // radix-32
     {NULL, NULL, 64}  // radix-64
 };
-
+#endif
+#ifdef ENABLE_AVX256
 static wrapper_kernel_fp_list
     wrapper_kernels_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
@@ -188,7 +189,8 @@ static wrapper_kernel_fp_list
     {NULL, NULL, 32}, // radix-32
     {NULL, NULL, 64}  // radix-64
 };
-
+#endif
+#ifdef ENABLE_AVX512
 static wrapper_kernel_fp_list
     wrapper_kernels_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
@@ -212,5 +214,6 @@ static wrapper_kernel_fp_list
     {NULL, NULL, 32}, // radix-32
     {NULL, NULL, 64}  // radix-64
 };
+#endif
 
 #endif // AOCLFFTZ_CORE_WRAPPER_H

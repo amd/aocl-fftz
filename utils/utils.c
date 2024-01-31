@@ -147,18 +147,20 @@ INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level, INT32 logger_mode
 
     if (opt_level == 0)
         return 0;
-
     if (opt_level > 0) //opt_level == 1
         cpu_flags = is_SSE2_supported(logger_mode);
-
+    #ifdef ENABLE_AVX128
     if (opt_level > 1) //opt_level == 2
         cpu_flags += is_AVX_supported(logger_mode);
-
+    #endif
+    #ifdef ENABLE_AVX256
     if (opt_level > 2) //opt_level == 3
         cpu_flags += is_AVX2_supported(logger_mode);
-
+    #endif
+    #ifdef ENABLE_AVX512
     if (opt_level > 3) //opt_level == 4
         cpu_flags += is_AVX512_supported(logger_mode);
+    #endif
 
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 

@@ -100,15 +100,21 @@ wrapper_kernel_fp_list *get_kernel_table(UINT8 kernel_type)
     case aocl_fftz_kernel_type::STANDARD_C:
     case aocl_fftz_kernel_type::PERMUTED_C:
         return wrapper_kernels_c;
+#ifdef ENABLE_AVX128
     case aocl_fftz_kernel_type::STANDARD_AVX128:
     case aocl_fftz_kernel_type::PERMUTED_AVX128:
         return wrapper_kernels_avx128;
+#endif
+#ifdef ENABLE_AVX256
     case aocl_fftz_kernel_type::STANDARD_AVX256:
     case aocl_fftz_kernel_type::PERMUTED_AVX256:
         return wrapper_kernels_avx256;
+#endif
+#ifdef ENABLE_AVX512
     case aocl_fftz_kernel_type::STANDARD_AVX512:
     case aocl_fftz_kernel_type::PERMUTED_AVX512:
         return wrapper_kernels_avx512;
+#endif
     default:
         return {};
     }

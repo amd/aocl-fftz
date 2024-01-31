@@ -63,7 +63,7 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
             }
         }
     }
-
+#ifdef ENABLE_AVX128
     if (cpu_flags >= 2) //AVX ISA is supported, 128-bit SIMD kernels applicable
     {
         for (num_list_kernels = 0;
@@ -83,7 +83,8 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
             }
         }
     }
-
+#endif
+#ifdef ENABLE_AVX256
     if (cpu_flags >= 3) //AVX2 ISA is supported, 256-bit SIMD kernels applicable
     {
         for (num_list_kernels = 0;
@@ -103,7 +104,8 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
             }
         }
     }
-
+#endif
+#ifdef ENABLE_AVX512
     if (cpu_flags >= 4) //AVX512 ISA is supported, 512-bit SIMD kernels applicable
     {
         for (num_list_kernels = 0;
@@ -123,6 +125,6 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
             }
         }
     }
-
+#endif
     return KERNEL_SUCCESS;
 }
