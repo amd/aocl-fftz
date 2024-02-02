@@ -749,7 +749,8 @@ class AoclfftzSelectorTestBase
             }
             else
             {
-                cur_a = cur_a->next_sol;
+                AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "Invalid solver type");
+                return false;
             }
         };
 

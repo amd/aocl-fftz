@@ -14,7 +14,7 @@ if (CODE_COVERAGE)
     # add custom target for running ctest and generating code coverage report
     add_custom_target(code-coverage
         COMMAND ${CMAKE_COMMAND} -E make_directory coverage/
-        COMMAND ctest -j
+        COMMAND ctest -j `nproc`
         COMMAND ${LCOV} --rc branch_coverage=1 --capture --directory . --output-file coverage/coverage.info
         COMMAND ${LCOV} --rc branch_coverage=1 --remove  coverage/coverage.info ${LCOV_FILTERS} --output-file coverage/coverage_filtered.info
         COMMAND ${LCOV} --list coverage/coverage_filtered.info
@@ -37,10 +37,12 @@ set(TEST_SUITE
     "MULTILEVEL_CT_WITH_STRIDES ./aocl_fftz_bench 128:3:2 -b a -m i"    # ILP64 data model
     "CT_WITH_BLUESTEIN ./aocl_fftz_bench 38:4:4 -b a -r i"              # Inplace
     "BLUESTEIN_WITH_STRIDES ./aocl_fftz_bench 23:5:7 -b a -p f"         # Float
-    "DIRECT_AVX_WITH_SAME_STRIDE ./aocl_fftz_bench 15:5:5 -b a -o 2"    # AVX128
-    "DIRECT_AVX2_WITH_SAME_STRIDE ./aocl_fftz_bench 8:2:2 -b a -o 3"    # AVX256
+    "DIRECT_AVX_WITH_SAME_STRIDE_D ./aocl_fftz_bench 15:5:5 -b a -o 2"    # AVX128
+    "DIRECT_AVX_WITH_SAME_STRIDE_F ./aocl_fftz_bench 18:5:5 -b a -p f -m i -r i -o 2"  # AVX128, Float, ILP64, Inplace
+    "DIRECT_AVX2_WITH_SAME_STRIDE_D ./aocl_fftz_bench 8:2:2 -b a -o 3"    # AVX256
+    "DIRECT_AVX2_WITH_SAME_STRIDE_F ./aocl_fftz_bench 22:2:2 -b a -p f -o 3" # AVX256, Float
     "2D_BATCH_3D_DIM ./aocl_fftz_bench 3x2v17x19x8 -b a --dir b"        # Inverse FFT
-    "3D_WITH_STRIDE_GREATER_THAN_DIM ./aocl_fftz_bench 2x3:4:5x3 -b a"
+    "3D_WITH_STRIDE_GREATER_THAN_DIM ./aocl_fftz_bench 2x14:4:5x3 -b a"
     "4D_WITH_STRIDE ./aocl_fftz_bench 2x72x37x13:2:3 -b a"
     "2D_BATCHED_3D_PERFORMANCE ./aocl_fftz_bench 2x4v200x17x2")
 

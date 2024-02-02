@@ -741,7 +741,9 @@ INT32 register_functions(INT32 precision, INT32 data_model)
     if (precision == FLOAT_P)
     {
         prepare_input_data = prepare_input_data_f;
+#ifdef ENABLE_DFT_REFERENCE
         dft_ref = dft_ref_f;
+#endif
         compare = compare_f;
         if (data_model == LP64)
         {
@@ -759,7 +761,9 @@ INT32 register_functions(INT32 precision, INT32 data_model)
     else // precision == DOUBLE_P
     {
         prepare_input_data = prepare_input_data_d;
+#ifdef ENABLE_DFT_REFERENCE
         dft_ref = dft_ref_d;
+#endif
         compare = compare_d;
         if (data_model == LP64)
         {

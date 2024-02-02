@@ -143,15 +143,28 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank)
     }
 }
 
-VOID *alloc_bluestein_sequence(INTP n, UINT32 dt_prec)
+INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein, INTP size)
 {
-    UINT32 dt_bytes;
-    DT_PRECISION_BYTES(dt_prec);
-    VOID *buffer = NULL;
-    ALLOC_ALIGN_UNINIT(buffer, VOID, n * dt_bytes);
-    return buffer;
+    // Allocate bluestein sequence buffers
+    ALLOC_ALIGN_UNINIT(bluestein->B, VOID, size);
+    if (bluestein->B == NULL)
+        return AOCLFFTZ_MEMORY_FAILURE;
+    ALLOC_ALIGN_INIT(bluestein->B_out, VOID, size);
+    if (bluestein->B_out == NULL)
+        return AOCLFFTZ_MEMORY_FAILURE;
+
+    // Allocate bluestein in and out buffers
+    ALLOC_ALIGN_UNINIT(bluestein->in, VOID, size);
+    if (bluestein->in == NULL)
+        return AOCLFFTZ_MEMORY_FAILURE;
+    ALLOC_ALIGN_UNINIT(bluestein->out, VOID,  size);
+    if (bluestein->out == NULL)
+        return AOCLFFTZ_MEMORY_FAILURE;
+
+    return AOCLFFTZ_SUCCESS;
 }
 
+#if IN_MEMORY_TWIDDLE_FACTORS==1
 VOID *alloc_twiddle_for_solution(UINT32 rad_size, UINT32 dt_prec)
 {
     UINT32 dt_bytes;
@@ -160,6 +173,7 @@ VOID *alloc_twiddle_for_solution(UINT32 rad_size, UINT32 dt_prec)
     ALLOC_ALIGN_UNINIT(buffer, VOID, rad_size * dt_bytes);
     return buffer;
 }
+#endif
 
 VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme)
 {

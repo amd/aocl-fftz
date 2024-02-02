@@ -43,17 +43,10 @@
 
 UINT32 check_radix_applicable(ptrdiff_t n, UINT32 r)
 {
-    if (r > 0)
-    {
-        if ((n % r) == 0)
-            return 1;
-        else
-            return 0;
-    }
+    if ((n % r) == 0)
+        return 1;
     else
-    {
         return 0;
-    }
 }
 
 INT32 selector_ct_dft(aoclfftz_selector_t *sel,

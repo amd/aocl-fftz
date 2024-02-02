@@ -599,7 +599,9 @@
 
 // Function pointers
 VOID (*prepare_input_data)(VOID *, INTP, INTP *, INT32);
+#ifdef ENABLE_DFT_REFERENCE
 VOID (*dft_ref)(aoclfftz_bench_params_t *, VOID *, INTP *, INTP *);
+#endif
 INT32 (*compare)(VOID *, VOID *, INTP, INTP *, DOUBLE tol, INT32);
 
 // Function declarations
@@ -611,15 +613,16 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
                                   INTP default_stride);
 VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type);
 VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type);
+#ifdef ENABLE_DFT_REFERENCE
 VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
                INTP *out_idx_map);
 VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
                INTP *out_idx_map);
+#endif
 INT32 compare_f(VOID *a, VOID *b, INTP n, INTP *idx_map, DOUBLE tol,
                 INT32 logger_mode);
 INT32 compare_d(VOID *a, VOID *b, INTP n, INTP *idx_map, DOUBLE tol,
                 INT32 logger_mode);
-INT32 get_fusable_dims_ref(aoclfftz_bench_params_t *params, INT32 dim_rank);
 INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank);
 VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
                             INTP *in_buffer_size, INTP *out_buffer_size);
@@ -1065,9 +1068,9 @@ VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
         {
             for (idx = 0; idx < n; ++idx)
             {
-                input_d[idx + T_DATA_STRIDE] =
+                input_d[idx * T_DATA_STRIDE] =
                     (20.0 / RAND_MAX) * rand() - 10.0;
-                input_d[idx + T_DATA_STRIDE + 1] =
+                input_d[idx * T_DATA_STRIDE + 1] =
                     (20.0 / RAND_MAX) * rand() - 10.0;
             }
         }
@@ -1075,9 +1078,9 @@ VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
         {
             for (idx = 0; idx < n; ++idx)
             {
-                input_d[idx_map[idx] + T_DATA_STRIDE] =
+                input_d[idx_map[idx] * T_DATA_STRIDE] =
                     (20.0 / RAND_MAX) * rand() - 10.0;
-                input_d[idx_map[idx] + T_DATA_STRIDE + 1] =
+                input_d[idx_map[idx] * T_DATA_STRIDE + 1] =
                     (20.0 / RAND_MAX) * rand() - 10.0;
             }
         }
@@ -1131,6 +1134,7 @@ VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
     }
 }
 
+#ifdef ENABLE_DFT_REFERENCE
 /**
  * @brief DFT reference implementation for FLOAT type
  *
@@ -1253,6 +1257,7 @@ VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
     FREE_ALLOCATED_MEM(in_counter, is_align);
     FREE_ALLOCATED_MEM(out_counter, is_align);
 }
+#endif
 
 /**
  * @brief Compare the two data of length n (DOUBLE type)
@@ -1522,36 +1527,6 @@ VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
 
     in_buffer_size[0] = in_size;
     out_buffer_size[0] = out_size;
-}
-
-INT32 get_fusable_dims_ref(aoclfftz_bench_params_t *params, INT32 dim_rank)
-{
-    // FIXME : considered only cases where instride == outstride
-
-    INT32 fusable_dims = 1; // default append batch to 1D
-
-    if (params->dims[0].in_stride != params->dims[0].out_stride)
-    {
-        return fusable_dims;
-    }
-    INTP expected_stride = params->dims[0].n * params->dims[0].in_stride;
-    for (INT32 i = 1; i < dim_rank; i++)
-    {
-        if (params->dims[i].in_stride != params->dims[i].out_stride)
-        {
-            break;
-        }
-
-        INTP actual_stride = params->dims[i].in_stride;
-        if (expected_stride != actual_stride)
-        {
-            break;
-        }
-        fusable_dims += 1;
-        expected_stride = expected_stride * params->dims[i].n;
-    }
-
-    return fusable_dims;
 }
 
 /**

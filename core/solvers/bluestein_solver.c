@@ -56,21 +56,7 @@ INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     DT_PRECISION_BYTES(dt_prec);
 
-    // Allocate Bluestein related buffers
-    ALLOC_ALIGN_UNINIT(sol->bluestein->B, VOID, m * DATA_STRIDE * dt_bytes);
-    if (sol->bluestein->B == NULL)
-        return SOLVER_FAILURE;
-    ALLOC_ALIGN_INIT(sol->bluestein->B_out, VOID, m * DATA_STRIDE * dt_bytes);
-    if (sol->bluestein->B_out == NULL)
-        return SOLVER_FAILURE;
-
-    // Allocate internal in, out buffers
-    ALLOC_ALIGN_UNINIT(sol->bluestein->in, VOID, m * DATA_STRIDE * dt_bytes);
-    if (sol->bluestein->in == NULL)
-        return SOLVER_FAILURE;
-    ALLOC_ALIGN_UNINIT(sol->bluestein->out, VOID,  m * DATA_STRIDE * dt_bytes);
-    if (sol->bluestein->out == NULL)
-        return SOLVER_FAILURE;
+    alloc_bluestein_buffers(sol->bluestein, m * DATA_STRIDE * dt_bytes);
 
     // Map the internal in, out buffers to the next solution
     next_sol->decomp_scheme->in_real = sol->bluestein->in;
