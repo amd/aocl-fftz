@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file executor.h
+/** @file executor.h
  *
  *  @brief Functions and data structures for executor module.
  *
@@ -52,13 +52,13 @@ typedef enum
 
 //Executor data structure that is used to hold the solution and cost analysis
 // at each decomposition level for the associated sub-problem
-typedef struct
+typedef struct aoclfftz_executor
 {
     aoclfftz_solution_t *solution;
     //cost_analysis_t *cost_analysis;
 } aoclfftz_executor_t;
 
 //Function declarations
-INT32 execute_dft(aoclfftz_executor_t *);
+INT32 execute_dft(aoclfftz_executor_t *executor_obj);
 
 #endif //AOCLFFTZ_EXECUTOR_H

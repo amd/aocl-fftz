@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file aoclfftz_api.c
+/** @file aoclfftz_api.c
  *
  *  @brief APIs and data structures implementaion of the core (ST, MT) library.
  *
@@ -78,7 +78,7 @@ VOID aoclfftz_destroy_f(VOID *handle)
 }
 
 //Setup function for double LP64 based Single-threaded and multi-threaded FFT
-VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d* problem)
+VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem)
 {
     if (problem == NULL)
         return NULL;

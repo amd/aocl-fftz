@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file selector_buffered_dft.c
+/** @file selector_buffered_dft.c
  *
  *  @brief Wrapper that acts on the buffered solver as guided by the selector.
  *
@@ -38,8 +38,7 @@
 
 #include "selector/selector.h"
 
-INT32 selector_buffered_dft(aoclfftz_selector_t *sel,
-                            kernel_t *kertab)
+INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     return SELECTOR_SUCCESS;
 }

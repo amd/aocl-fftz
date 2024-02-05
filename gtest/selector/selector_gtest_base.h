@@ -172,8 +172,8 @@ class AoclfftzSelectorTestBase
 {
   protected:
     // function pointers for aoclfftz_setup_* and aoclfftz_execute_* APIs
-    VOID *(*aoclfftz_setup)(prob_desc_t *);
-    INT32 (*aoclfftz_execute)(VOID *);
+    VOID *(*aoclfftz_setup)(prob_desc_t *problem);
+    INT32 (*aoclfftz_execute)(VOID *handle);
 
     UINT64 random_seed; // random seed value used for random data generation
     // following pointers are created in class level scope to hold the objects
@@ -682,11 +682,12 @@ class AoclfftzSelectorTestBase
                             cur_a->decomp_scheme->dims[cur_dim_rank - 1].n);
                 ret &= (sol_1d->decomp_scheme->dims[0].in_stride ==
                             sol_1d->decomp_scheme->dims[0].out_stride);
-                ret &= (sol_1d->decomp_scheme->dims[0].in_stride ==
-                        cur_a->decomp_scheme->dims[cur_dim_rank - 1].out_stride);
+                ret &=
+                    (sol_1d->decomp_scheme->dims[0].in_stride ==
+                     cur_a->decomp_scheme->dims[cur_dim_rank - 1].out_stride);
 
                 INTP total_size = 1;
-                for(INT32 i = 0; i < cur_dim_rank; i++)
+                for (INT32 i = 0; i < cur_dim_rank; i++)
                 {
                     total_size *= cur_a->decomp_scheme->dims[i].n;
                 }
@@ -699,32 +700,34 @@ class AoclfftzSelectorTestBase
                 // combined size of dims & vecs of 1D should be equal to
                 // the combined size of dims of cur solution
                 INTP total_len_1d = sol_1d->decomp_scheme->dims[0].n;
-                for(INT32 i = 0; i < sol_1d->decomp_scheme->vec_rank; i++)
+                for (INT32 i = 0; i < sol_1d->decomp_scheme->vec_rank; i++)
                 {
                     total_len_1d *= sol_1d->decomp_scheme->vecs[i].n;
                 }
 
                 ret &= (total_len_1d == total_size);
 
-                if(sol_1d->decomp_scheme->vec_rank == 1)
+                if (sol_1d->decomp_scheme->vec_rank == 1)
                 {
                     // since contiguous memory
-                    ret &= ((sol_1d->decomp_scheme->vecs[0].in_stride ==
-                            cur_a->decomp_scheme->dims[0].out_stride));
-                    ret &= ((sol_1d->decomp_scheme->vecs[0].out_stride ==
-                            cur_a->decomp_scheme->dims[0].out_stride));
+                    ret &= (sol_1d->decomp_scheme->vecs[0].in_stride ==
+                            cur_a->decomp_scheme->dims[0].out_stride);
+                    ret &= (sol_1d->decomp_scheme->vecs[0].out_stride ==
+                            cur_a->decomp_scheme->dims[0].out_stride);
                 }
                 else
                 {
                     // validating the last vec stride alone
                     INT32 vec_rank = sol_1d->decomp_scheme->vec_rank;
-                    ret &=
-                        ((sol_1d->decomp_scheme->vecs[vec_rank - 1].in_stride ==
-                    cur_a->decomp_scheme->dims[cur_dim_rank - 2].out_stride));
+                    ret &= (
+                        sol_1d->decomp_scheme->vecs[vec_rank - 1].in_stride ==
+                        cur_a->decomp_scheme->dims[cur_dim_rank - 2].out_stride
+                    );
 
-                    ret &=
-                        ((sol_1d->decomp_scheme->vecs[vec_rank - 1].out_stride ==
-                    cur_a->decomp_scheme->dims[cur_dim_rank - 2].out_stride));
+                    ret &= (
+                        sol_1d->decomp_scheme->vecs[vec_rank - 1].out_stride ==
+                        cur_a->decomp_scheme->dims[cur_dim_rank - 2].out_stride
+                    );
                 }
 
                 if (ret == false)
@@ -865,7 +868,8 @@ class AoclfftzSelectorTestBase
         aoclfftz_solution_t *nd_sol = NULL;
         do //for ND support
         {
-            if(nd_sol != NULL){
+            if (nd_sol != NULL)
+            {
                 cur_sol = nd_sol;
                 nd_sol = NULL;
             }

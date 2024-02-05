@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file twiddle.h
+/** @file twiddle.h
  *
  *  @brief Declarations for routines that computes and applies Twiddle factor.
  *
@@ -51,7 +51,7 @@ typedef enum
     TW_SUCCESS         //Successful operation
 } twiddle_status;
 
-INT32 twiddle_multiplier(aoclfftz_solution_t* sol);
-INT32 twiddle_multiplier_inplace(aoclfftz_solution_t* sol);
+INT32 twiddle_multiplier(aoclfftz_solution_t *sol);
+INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol);
 
 #endif //TWIDDLE_H

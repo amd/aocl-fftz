@@ -165,7 +165,7 @@ std::string get_kernel_type_as_string(UINT8 kernel_type)
  * @param strides data stride values (in-stride for dir 0, out-stride for dir 1)
  */
 template <class T>
-void permuted_copy(T *in, T *out, ptrdiff_t n, ptrdiff_t size,
+void permuted_copy(T *in, T *out, INTP n, INTP size,
                    aoclfftz_strides_t *strides)
 {
     if (typeid(T) == typeid(FLOAT32))

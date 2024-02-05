@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file solver.h
+/** @file solver.h
  *
  *  @brief Solver data strcture and types.
  *
@@ -81,36 +81,32 @@ INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj);
 //Function declarations of all the supported solvers
 //(called by selector and executor)
 INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
-                          kernel_t *);
-INT32 setup_ct_solver(aoclfftz_solution_t *sol,
-                      aoclfftz_solution_t *sol_r,
-                      aoclfftz_solution_t *sol_m,
-                      UINT32 radix_r,
+                          kernel_t *kernel);
+INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
+                      aoclfftz_solution_t *sol_m, UINT32 radix_r,
                       UINT32 radix_m);
 INT32 setup_batched_solver(aoclfftz_solution_t *sol);
 INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
-                             aoclfftz_solution_t *next_sol,
-                             INTP m);
+                             aoclfftz_solution_t *next_sol, INTP m);
 INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
-                        aoclfftz_solution_t *sol_nd,
-                        aoclfftz_solution_t *sol_1d,
-                        INT32 fusable_dims);
+                        aoclfftz_solution_t *n_minus1_sol,
+                        aoclfftz_solution_t *outer_dim_sol, INT32 fusable_dims);
 #if 0
-INT32 setup_permuted_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost\,
-                            kernel_t *);
+INT32 setup_permuted_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
+                            kernel_t *kernel);
 INT32 setup_buffered_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
-                            kernel_t *);
+                            kernel_t *kernel);
 #endif
 
 INT32 executor_direct_dft(aoclfftz_solution_t *solution);
 INT32 executor_ct_dft(aoclfftz_solution_t *solution);
-INT32 executor_batched_dft(aoclfftz_solution_t* solution);
-INT32 executor_bluestein_dft(aoclfftz_solution_t* solution);
-INT32 executor_ndim_dft(aoclfftz_solution_t* solution);
-INT32 execute_direct_solver(aoclfftz_solution_t* sol);
-INT32 execute_ct_solver(aoclfftz_solution_t* sol);
-INT32 execute_batched_solver(aoclfftz_solution_t* solution);
-INT32 execute_bluestein_solver(aoclfftz_solution_t* solution);
-INT32 execute_ndim_solver(aoclfftz_solution_t* solution);
+INT32 executor_batched_dft(aoclfftz_solution_t *solution);
+INT32 executor_bluestein_dft(aoclfftz_solution_t *solution);
+INT32 executor_ndim_dft(aoclfftz_solution_t *solution);
+INT32 execute_direct_solver(aoclfftz_solution_t *sol);
+INT32 execute_ct_solver(aoclfftz_solution_t *sol);
+INT32 execute_batched_solver(aoclfftz_solution_t *sol);
+INT32 execute_bluestein_solver(aoclfftz_solution_t *sol);
+INT32 execute_ndim_solver(aoclfftz_solution_t *sol);
 
 #endif //AOCLFFTZ_SOLVER_H

@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file selector_ndim_dft.c
+/** @file selector_ndim_dft.c
  *
  *  @brief Wrapper that invokes the ND solver as guided by the selector.
  *
@@ -53,7 +53,7 @@ INT32 get_fusable_dims(aoclfftz_solution_t *sol, INT32 dim_rank)
 
     // FIXME : this needs to be revisited for optimization
     // do not club cases where in_stride != out_stride
-    if(sol->decomp_scheme->dims[0].in_stride !=
+    if (sol->decomp_scheme->dims[0].in_stride !=
         sol->decomp_scheme->dims[0].out_stride)
     {
         return fusable_dims;
@@ -62,9 +62,9 @@ INT32 get_fusable_dims(aoclfftz_solution_t *sol, INT32 dim_rank)
     // expected stride is the regular stride we obtain by n * stride of prev dim
     INTP expected_stride = sol->decomp_scheme->dims[0].n *
                            sol->decomp_scheme->dims[0].in_stride;
-    for(INT32 i = 1; i < dim_rank; i++)
+    for (INT32 i = 1; i < dim_rank; i++)
     {
-        if(sol->decomp_scheme->dims[i].in_stride !=
+        if (sol->decomp_scheme->dims[i].in_stride !=
             sol->decomp_scheme->dims[i].out_stride)
         {
             break;
@@ -72,7 +72,7 @@ INT32 get_fusable_dims(aoclfftz_solution_t *sol, INT32 dim_rank)
 
         INTP actual_stride = sol->decomp_scheme->dims[i].in_stride;
         // we can no longer club
-        if(expected_stride != actual_stride)
+        if (expected_stride != actual_stride)
         {
             break;
         }
@@ -83,8 +83,7 @@ INT32 get_fusable_dims(aoclfftz_solution_t *sol, INT32 dim_rank)
     return fusable_dims;
 }
 
-INT32 selector_ndim_dft(aoclfftz_selector_t *sel,
-                        kernel_t *kertab)
+INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     aoclfftz_selector_t *n_minus1_sel = NULL;
     aoclfftz_selector_t *outer_dim_sel = NULL;
@@ -99,7 +98,7 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel,
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 
     INT32 fusable_dims = get_fusable_dims(sel->solution, dim_rank - 1);
-    if(fusable_dims == (dim_rank - 1))
+    if (fusable_dims == (dim_rank - 1))
     {
         vec_rank = 1; // all dims fusable into one
     }
@@ -114,10 +113,8 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel,
     if (n_minus1_sel == NULL || outer_dim_sel == NULL)
         goto exit_nd_dft;
 
-    ret = setup_ndim_solver(sel->solution,
-                          n_minus1_sel->solution,
-                          outer_dim_sel->solution,
-                          fusable_dims);
+    ret = setup_ndim_solver(sel->solution, n_minus1_sel->solution,
+                            outer_dim_sel->solution, fusable_dims);
     if (ret != SELECTOR_SUCCESS)
         goto exit_nd_dft;
 
@@ -153,7 +150,7 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel,
 exit_nd_dft:
     destroy_selector(n_minus1_sel);
     destroy_selector(outer_dim_sel);
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
     return ret;
 }

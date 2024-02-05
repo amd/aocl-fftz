@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file memory_manager.h
+/** @file memory_manager.h
  *
  *  @brief Declares memory allocation and management functions of AOCL-FFTZ.
  *
@@ -40,7 +40,7 @@
 
 aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank)
 {
-    aoclfftz_decomp_scheme_t* decomp_scheme = NULL;
+    aoclfftz_decomp_scheme_t *decomp_scheme = NULL;
 
     ALLOC_ALIGN_UNINIT(decomp_scheme, aoclfftz_decomp_scheme_t,
                          sizeof(aoclfftz_decomp_scheme_t));
@@ -50,10 +50,10 @@ aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank)
                              dim_rank * sizeof(aoclfftz_dim_t_64_));
         ALLOC_ALIGN_UNINIT(decomp_scheme->vecs, aoclfftz_dim_t_64_,
                              vec_rank * sizeof(aoclfftz_dim_t_64_));
-        ALLOC_ALIGN_UNINIT(decomp_scheme->cntrl_params, aoclfftz_cntrl_params,
-                             sizeof(aoclfftz_cntrl_params));
-        ALLOC_ALIGN_UNINIT(decomp_scheme->pthr_fft, aoclfftz_smp_pfft,
-                             sizeof(aoclfftz_smp_pfft));
+        ALLOC_ALIGN_UNINIT(decomp_scheme->cntrl_params, aoclfftz_cntrl_params_t,
+                             sizeof(aoclfftz_cntrl_params_t));
+        ALLOC_ALIGN_UNINIT(decomp_scheme->pthr_fft, aoclfftz_smp_pfft_t,
+                             sizeof(aoclfftz_smp_pfft_t));
         if (decomp_scheme->dims == NULL || decomp_scheme->vecs == NULL ||
             decomp_scheme->cntrl_params == NULL ||
             decomp_scheme->pthr_fft == NULL)
@@ -164,7 +164,7 @@ INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein, INTP size)
     return AOCLFFTZ_SUCCESS;
 }
 
-#if IN_MEMORY_TWIDDLE_FACTORS==1
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
 VOID *alloc_twiddle_for_solution(UINT32 rad_size, UINT32 dt_prec)
 {
     UINT32 dt_bytes;

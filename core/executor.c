@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file executor.c
+/** @file executor.c
  *
  *  @brief Executes the DFT problem based on the solution found by selector.
  *
@@ -48,7 +48,8 @@ INT32 execute_dft(aoclfftz_executor_t *executor_obj)
 
     aoclfftz_solution_t *sol = executor_obj->solution;
 
-    if(sol != NULL && sol->solver != NULL && sol->solver->execute_solver != NULL)
+    if (sol != NULL && sol->solver != NULL &&
+        sol->solver->execute_solver != NULL)
     {
         ret = sol->solver->execute_solver(sol);
     }

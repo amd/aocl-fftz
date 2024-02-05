@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file ct_solver.c
+/** @file ct_solver.c
  *
  *  @brief Cooley Tukey Solver that decomposes and solves an input problem
  *
@@ -41,10 +41,8 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 setup_ct_solver(aoclfftz_solution_t *sol,
-                      aoclfftz_solution_t *sol_r,
-                      aoclfftz_solution_t *sol_m,
-                      UINT32 radix_r,
+INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
+                      aoclfftz_solution_t *sol_m, UINT32 radix_r,
                       UINT32 radix_m)
 {
     // Setup radix-m sub-problem
@@ -83,7 +81,7 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol,
 	return SOLVER_SUCCESS;
 }
 
-INT32 execute_ct_solver(aoclfftz_solution_t* sol)
+INT32 execute_ct_solver(aoclfftz_solution_t *sol)
 {
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
@@ -103,12 +101,12 @@ INT32 execute_ct_solver(aoclfftz_solution_t* sol)
     radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
 
     // execute radix-m sub-problem
-    if(radix_m_sol->solver->execute_solver(radix_m_sol) != SOLVER_SUCCESS)
+    if (radix_m_sol->solver->execute_solver(radix_m_sol) != SOLVER_SUCCESS)
     {
         return SOLVER_FAILURE;
     }
 
-    if(IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
+    if (IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
     {
         status = twiddle_multiplier(radix_r_sol);
     }
@@ -117,18 +115,17 @@ INT32 execute_ct_solver(aoclfftz_solution_t* sol)
         status = twiddle_multiplier_inplace(radix_r_sol);
     }
 
-    if(status != SOLVER_SUCCESS)
+    if (status != SOLVER_SUCCESS)
     {
         return SOLVER_FAILURE;
     }
 
     // execute radix-r DFT
-    if(radix_r_sol->solver->execute_solver(radix_r_sol) != SOLVER_SUCCESS)
+    if (radix_r_sol->solver->execute_solver(radix_r_sol) != SOLVER_SUCCESS)
     {
         return SOLVER_FAILURE;
     }
 
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-
     return status;
 }

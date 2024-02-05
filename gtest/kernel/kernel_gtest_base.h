@@ -314,7 +314,8 @@ class AoclfftzKernelTestBase
         if (in1 == nullptr || in2 == nullptr)
             return;
         T *in_combined = NULL;
-        ALLOC_ALIGN_UNINIT(in_combined, T, sizeof(T) * input_length * DATA_STRIDE);
+        ALLOC_ALIGN_UNINIT(in_combined, T,
+                           sizeof(T) * input_length * DATA_STRIDE);
         T *out1;
         ALLOC_ALIGN_INIT(out1, T, output_length * DATA_STRIDE * sizeof(T));
         T *out2;
@@ -377,8 +378,10 @@ class AoclfftzKernelTestBase
         T *out_combined_r = (is_bwd) ? (out_combined + 1) : (out_combined);
         T *out_combined_i = (is_bwd) ? (out_combined) : (out_combined + 1);
 
-        fft_kernel(in1_r, in1_i, out1_r, out1_i, offset, &kernel_stride, is_bwd);
-        fft_kernel(in2_r, in2_i, out2_r, out2_i, offset, &kernel_stride, is_bwd);
+        fft_kernel(in1_r, in1_i, out1_r, out1_i, offset, &kernel_stride,
+                   is_bwd);
+        fft_kernel(in2_r, in2_i, out2_r, out2_i, offset, &kernel_stride,
+                   is_bwd);
         fft_kernel(in_combined_r, in_combined_i, out_combined_r, out_combined_i,
                    offset, &kernel_stride, is_bwd);
 
@@ -633,8 +636,10 @@ class AoclfftzKernelTestBase
         // permuted kernel
         if (kernel_type & 0x1)
         {
-            fft_kernel(in1_r, in1_i, out1_r, out1_i, offset, &kernel_stride, is_bwd);
-            fft_kernel(in2_r, in2_i, out2_r, out2_i, offset, &kernel_stride, is_bwd);
+            fft_kernel(in1_r, in1_i, out1_r, out1_i, offset, &kernel_stride,
+                       is_bwd);
+            fft_kernel(in2_r, in2_i, out2_r, out2_i, offset, &kernel_stride,
+                       is_bwd);
             // convert the FFT kernel outputs from out-of-order to in-order
             permuted_copy<T>(out1, temp, offset, radix, &permuted_copy_stride);
             memcpy(out1, temp, sizeof(T) * output_length * DATA_STRIDE);
@@ -649,8 +654,10 @@ class AoclfftzKernelTestBase
             memcpy(in1, temp, sizeof(T) * input_length * DATA_STRIDE);
             permuted_copy<T>(in2, temp, offset, radix, &permuted_copy_stride);
             memcpy(in2, temp, sizeof(T) * input_length * DATA_STRIDE);
-            fft_kernel(in1_r, in1_i, out1_r, out1_i, offset, &kernel_stride, is_bwd);
-            fft_kernel(in2_r, in2_i, out2_r, out2_i, offset, &kernel_stride, is_bwd);
+            fft_kernel(in1_r, in1_i, out1_r, out1_i, offset, &kernel_stride,
+                       is_bwd);
+            fft_kernel(in2_r, in2_i, out2_r, out2_i, offset, &kernel_stride,
+                       is_bwd);
         }
 
         T cmul_temp[DATA_STRIDE] = {0.0, 0.0};

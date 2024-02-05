@@ -487,7 +487,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             else if (opt_level != -1 && opt_level != 2 && opt_level != 3)
             {
                 printf(
-                    "WARNING: only opt-level -1, 2 and 3 are currently supported, "
+                    "WARNING: only opt-level -1, 2, 3 are currently supported, "
                     "running bench with defaultvalue (-1: no-optimization)\n");
                 opt_level = -1;
             }
@@ -614,7 +614,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         FREE_ALIGN_ALLOCATED_MEM(vecs);
         return status;
     }
-    if(res_placement == IN_PLACE)
+    if (res_placement == IN_PLACE)
     {
         status = check_inplace_strides(dims, vecs, dim_rank, vec_rank);
         if (status != PARSER_SUCCESS)
@@ -703,8 +703,9 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         calculate_buffer_sizes(bench_params, &in_buffer_size, &out_buffer_size);
         in_buffer_size = in_buffer_size * T_DATA_STRIDE;
         out_buffer_size = out_buffer_size * T_DATA_STRIDE;
-        ALLOC_UNINIT(bench_params->in, VOID, in_buffer_size * dt_bytes, is_align);
-        if(res_placement == IN_PLACE)
+        ALLOC_UNINIT(bench_params->in, VOID, in_buffer_size * dt_bytes,
+                     is_align);
+        if (res_placement == IN_PLACE)
         {
             bench_params->out = bench_params->in;
         }
@@ -986,6 +987,28 @@ VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params)
 }
 
 /**
+ * @brief Free the structures used for FFT problem
+ *
+ * @param params aoclfftz_bench_params_t type contains parsed arguments
+ * @return VOID
+ */
+VOID destroy_bench_param(aoclfftz_bench_params_t *params)
+{
+    if (params != NULL)
+    {
+        UINT32 is_align = params->aligned_alloc;
+        FREE_ALLOCATED_MEM(params->in, is_align);
+        if (params->res_placement == OUT_OF_PLACE)
+        {
+            FREE_ALLOCATED_MEM(params->out, is_align);
+        }
+        FREE_ALIGN_ALLOCATED_MEM(params->dims);
+        FREE_ALIGN_ALLOCATED_MEM(params->vecs);
+        FREE_ALIGN_ALLOCATED_MEM(params);
+    }
+}
+
+/**
  * @brief Run and benchmark the FFT problem
  *
  * @param params aoclfftz_bench_params_t type contains parsed arguments
@@ -1043,7 +1066,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
         AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode, "Iteration: %d",
                                i);
         getTime(start_time);
-        for(INT32 j = 0; j < iter; j++)
+        for (INT32 j = 0; j < iter; j++)
         {
                 status = aoclfftz_execute(handle);
                 if (status != 0)
@@ -1116,7 +1139,8 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
  * @param params bench params object
  * @return INT32 bench status code
  */
-INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, INTP *out_idx_map)
+INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
+                             INTP *out_idx_map)
 {
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
     INT32 status = BENCH_SUCCESS;
@@ -1129,6 +1153,7 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, 
 
     INTP n = calculate_size(params->dims, params->dim_rank);
     INTP batches = calculate_size(params->vecs, params->vec_rank);
+    UINT32 is_align = params->aligned_alloc;
 
     // setup FFT problem
     VOID *handle = setup_problem(params);
@@ -1139,8 +1164,7 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, 
 
     // create local buffer to store DFT reference output
     VOID *out_ref;
-    ALLOC_INIT(out_ref, VOID, output_size * T_DATA_STRIDE * dt_bytes,
-                 params->aligned_alloc);
+    ALLOC_INIT(out_ref, VOID, output_size * T_DATA_STRIDE * dt_bytes, is_align);
 
     // initialize the random seed value based on current time
     if (params->use_random_seed)
@@ -1170,7 +1194,7 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, 
         if (status != BENCH_SUCCESS)
         {
             // destroy reference output buffer
-            FREE_ALLOCATED_MEM(out_ref);
+            FREE_ALLOCATED_MEM(out_ref, is_align);
             // destroy handle
             aoclfftz_destroy(handle);
             return EXECUTION_FAILURE;
@@ -1185,14 +1209,14 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, 
                    "iteration: %d/%d, seed: %d\n",
                    i, params->num_iterations, params->seed);
             // destroy reference output buffer
-            FREE_ALLOCATED_MEM(out_ref);
+            FREE_ALLOCATED_MEM(out_ref, is_align);
             // destroy handle
             aoclfftz_destroy(handle);
             return VERIFICATION_FAILURE;
         }
     }
     // destroy reference output buffer
-    FREE_ALLOCATED_MEM(out_ref);
+    FREE_ALLOCATED_MEM(out_ref, is_align);
     // destroy handle
     aoclfftz_destroy(handle);
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
@@ -1206,7 +1230,8 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, 
  * @param params bench params object
  * @return INT32 bench status code
  */
-INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, INTP *out_idx_map)
+INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
+                         INTP *out_idx_map)
 {
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
     INT32 status = BENCH_SUCCESS;
@@ -1349,7 +1374,8 @@ exit_linearity_test:
  * @param params bench params object
  * @return INT32 bench status code
  */
-INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, INTP *out_idx_map)
+INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params,
+                                      INTP *in_idx_map, INTP *out_idx_map)
 {
     INT32 status = BENCH_SUCCESS;
     INT32 ret = AOCLFFTZ_SUCCESS;
@@ -1397,7 +1423,7 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params, INTP *in_
     ALLOC_INIT(params_reverse->in, VOID,
                      output_size * T_DATA_STRIDE * dt_bytes, is_align);
 
-    if(params->res_placement == IN_PLACE)
+    if (params->res_placement == IN_PLACE)
     {
         params_reverse->out = params_reverse->in;
     }
@@ -1406,7 +1432,7 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params, INTP *in_
         ALLOC_INIT(params_reverse->out, VOID,
                          input_size * T_DATA_STRIDE * dt_bytes, is_align);
 
-        for(INT32 i = 0; i < params->dim_rank; i++)
+        for (INT32 i = 0; i < params->dim_rank; i++)
         {
             params_reverse->dims[i].in_stride = params->dims[i].out_stride;
             params_reverse->dims[i].out_stride = params->dims[i].in_stride;
@@ -1415,7 +1441,7 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params, INTP *in_
         // TODO : make this ND
         // params_reverse->vecs[0].in_stride = params->vecs[0].out_stride;
         // params_reverse->vecs[0].out_stride = params->vecs[0].in_stride;
-        for(INT32 i = 0; i < params->vec_rank; i++)
+        for (INT32 i = 0; i < params->vec_rank; i++)
         {
             params_reverse->vecs[i].in_stride = params->vecs[i].out_stride;
             params_reverse->vecs[i].out_stride = params->vecs[i].in_stride;
@@ -1508,7 +1534,8 @@ exit_unit_impulse_transform_test:
  * @param params bench params object
  * @return INT32 bench status code
  */
-INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map, INTP *out_idx_map)
+INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
+                         INTP *out_idx_map)
 {
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
     INT32 status = BENCH_SUCCESS;
@@ -1667,7 +1694,6 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
 {
     INT32 status = BENCH_SUCCESS;
 
-    // prepare the index map which maps the strided indices with non strided ones
     INTP n = calculate_size(params->dims, params->dim_rank);
     INTP batches = calculate_size(params->vecs, params->vec_rank);
     UINT32 is_align = params->aligned_alloc;
@@ -1675,6 +1701,7 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     ALLOC_UNINIT(in_idx_map, INTP, n * batches * sizeof(INTP), is_align);
     INTP *out_idx_map = NULL;
     ALLOC_UNINIT(out_idx_map, INTP, n * batches * sizeof(INTP), is_align);
+    // prepare index map which maps the strided indices with non-strided ones
     prepare_index_map(params, in_idx_map, out_idx_map);
 
 #ifdef ENABLE_DFT_REFERENCE

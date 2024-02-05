@@ -46,12 +46,12 @@
 #include "selector/selector.h"
 
 // Re-delcaring this struct to avoid using core/kernels/kernel_list.h file
-typedef struct
+typedef struct wrapper_kernel_fp_list
 {
     k_register_kernel_ k_register_kernel;
     k_ops_cnt_ k_ops_cnt;
     UINT32 radix;
-} wrapper_kernel_fp_list;
+} wrapper_kernel_fp_list_t;
 
 /* ---------------- kernels : get_opt_cnt_fft* ---------------- */
 
@@ -125,7 +125,7 @@ EXPORT_SYM_DYN VOID destroy_handle_wrapper(VOID *handle);
 
 /* ---------------- wrapper kernel tables ---------------- */
 
-static wrapper_kernel_fp_list
+static wrapper_kernel_fp_list_t
     wrapper_kernels_c[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2c_wrapper, get_ops_cnt_fft2c_wrapper, 2},    // radix-2
@@ -149,7 +149,7 @@ static wrapper_kernel_fp_list
     {NULL, NULL, 64}                                                  // radix-64
 };
 #ifdef ENABLE_AVX128
-static wrapper_kernel_fp_list
+static wrapper_kernel_fp_list_t
     wrapper_kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2avx128_wrapper, get_ops_cnt_fft2avx128_wrapper, 2}, // radix-2
@@ -174,7 +174,7 @@ static wrapper_kernel_fp_list
 };
 #endif
 #ifdef ENABLE_AVX256
-static wrapper_kernel_fp_list
+static wrapper_kernel_fp_list_t
     wrapper_kernels_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2avx256_wrapper, get_ops_cnt_fft2avx256_wrapper, 2},   // radix-2
@@ -199,7 +199,7 @@ static wrapper_kernel_fp_list
 };
 #endif
 #ifdef ENABLE_AVX512
-static wrapper_kernel_fp_list
+static wrapper_kernel_fp_list_t
     wrapper_kernels_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {NULL, NULL, 2},  // radix-2

@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file selector_direct_dft.c
+/** @file selector_direct_dft.c
  *
  *  @brief Wrapper that acts on the direct solver as guided by the selector.
  *
@@ -40,11 +40,10 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 selector_direct_dft(aoclfftz_selector_t *sel,
-                          kernel_t *kertab)
+INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     aoclfftz_selector_t *cur_sel = NULL;
-    ptrdiff_t n = sel->solution->decomp_scheme->dims[0].n;
+    INTP n = sel->solution->decomp_scheme->dims[0].n;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->
@@ -53,7 +52,8 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel,
                             measure_stats;
     UINT32 radix = 0;
     INT32 ker_cat = 0;
-    UINT32 selector_mode = GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags);
+    UINT32 selector_mode =
+        GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags);
     INT32 ret = SELECTOR_FAILURE;
 
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
@@ -86,10 +86,9 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel,
 
             if (SELECTOR_SUCCESS == ret)
             {
-                if (selector_mode ==
-                    AOCLFFTZ_FIXED_SELECTOR_MODE)
+                if (selector_mode == AOCLFFTZ_FIXED_SELECTOR_MODE)
                 {
-                    if(!sel->cost_analysis->ops)
+                    if (!sel->cost_analysis->ops)
                     {
                         sel->cost_analysis->ops =
                             cur_sel->cost_analysis->ops;
@@ -98,8 +97,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel,
                         //copy solution object from cur_sel to sel
                         COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
                     }
-                    if (cur_sel->cost_analysis->ops <
-                        sel->cost_analysis->ops)
+                    if (cur_sel->cost_analysis->ops < sel->cost_analysis->ops)
                     {
                         sel->cost_analysis->ops =
                             cur_sel->cost_analysis->ops;
@@ -111,8 +109,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel,
                 }
                 else
                 {
-                    if (cur_sel->cost_analysis->time <
-                        sel->cost_analysis->time)
+                    if (cur_sel->cost_analysis->time < sel->cost_analysis->time)
                     {
                         sel->cost_analysis->ops =
                             cur_sel->cost_analysis->ops;
@@ -133,6 +130,5 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel,
     destroy_selector(cur_sel);
 
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-
     return SELECTOR_SUCCESS;
 }

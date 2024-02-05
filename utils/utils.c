@@ -122,8 +122,8 @@ inline VOID cpu_features_detection(INTP fn, INTP optVal,
 #else
 #include <intrin.h>
 inline VOID cpu_features_detection(INTP fn, INTP optVal,
-    INTP* eax, INTP* ebx,
-    INTP* ecx, INTP* edx)
+                                   INTP *eax, INTP *ebx,
+                                   INTP *ecx, INTP *edx)
 {
     INT32 CPUInfo[4];
 
@@ -137,7 +137,8 @@ inline VOID cpu_features_detection(INTP fn, INTP optVal,
 #endif
 #endif
 
-INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level, INT32 logger_mode)
+INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
+                               INT32 logger_mode)
 {
     INT32 cpu_flags = 0;
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");

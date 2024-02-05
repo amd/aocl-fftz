@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file twiddle.c
+/** @file twiddle.c
  *
  *  @brief Computes and applies Twiddle factor.
  *
@@ -42,11 +42,11 @@
 #include "utils/allocator.h"
 
 // TODO : Add support for In-Place problems
-INT32 twiddle_multiplier(aoclfftz_solution_t* sol)
+INT32 twiddle_multiplier(aoclfftz_solution_t *sol)
 {
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
 
-    if(precision == DT_FLOAT)
+    if (precision == DT_FLOAT)
     {
         FLOAT *in_real  = (FLOAT *)sol->decomp_scheme->in_real;
         FLOAT *in_imag  = (FLOAT *)sol->decomp_scheme->in_imag;
@@ -62,13 +62,14 @@ INT32 twiddle_multiplier(aoclfftz_solution_t* sol)
         INTP in_stride = sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE;
         INTP out_stride = sol->decomp_scheme->dims[0].out_stride * DATA_STRIDE;
         INTP v_in_stride = sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
-        INTP v_out_stride = sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
+        INTP v_out_stride =
+            sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
 
-        for(INTP s = 0; s < sets; s++)
+        for (INTP s = 0; s < sets; s++)
         {
             INTP out_idx = 0;
             INTP in_idx = 0;
-            for(INTP r = 0; r < radix; r++)
+            for (INTP r = 0; r < radix; r++)
             {
                 FLOAT x = (-AOCLFFTZ_2_PIf * r * s) / ((FLOAT)(N));
                 FLOAT TW_real = cosf(x);
@@ -105,13 +106,14 @@ INT32 twiddle_multiplier(aoclfftz_solution_t* sol)
         INTP in_stride = sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE;
         INTP out_stride = sol->decomp_scheme->dims[0].out_stride * DATA_STRIDE;
         INTP v_in_stride = sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
-        INTP v_out_stride = sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
+        INTP v_out_stride =
+            sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
 
-        for(INTP s = 0; s < sets; s++)
+        for (INTP s = 0; s < sets; s++)
         {
             INTP out_idx = 0;
             INTP in_idx = 0;
-            for(INTP r = 0; r < radix; r++)
+            for (INTP r = 0; r < radix; r++)
             {
                 DOUBLE x = (-AOCLFFTZ_2_PI * r * s) / ((DOUBLE)(N));
                 DOUBLE TW_real = cos(x);
@@ -150,11 +152,11 @@ INT32 twiddle_multiplier(aoclfftz_solution_t* sol)
  * Step 2 : Traverse along the 'visited' buffer to find the next unprocessed idx
  * Step 3 : Repeat Step 0 - 2 until the entire buffer is processed.
 */
-INT32 twiddle_multiplier_inplace(aoclfftz_solution_t* sol)
+INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol)
 {
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
 
-    if(precision == DT_FLOAT)
+    if (precision == DT_FLOAT)
     {
         // both buffers point to same memory location in an inplace problem
         FLOAT *in_real  = (FLOAT *)sol->decomp_scheme->out_real;
@@ -177,7 +179,7 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t* sol)
 
         INTP count = 0;
         INTP start_idx = 0;
-        while(count != N)
+        while (count != N)
         {
             // find the unprocessed index
             for (INTP i = start_idx; i < N; i++)
@@ -244,7 +246,7 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t* sol)
 
         INTP count = 0;
         INTP start_idx = 0;
-        while(count != N)
+        while (count != N)
         {
             // find the unprocessed index
             for (INTP i = start_idx; i < N; i++)

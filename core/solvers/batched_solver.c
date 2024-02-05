@@ -43,7 +43,6 @@
 
 INT32 setup_batched_solver(aoclfftz_solution_t *sol)
 {
-
     // Turn the vector problem into a single set/unit problem to find its
     // solution
     sol->decomp_scheme->vec_rank = 1;
@@ -70,12 +69,12 @@ INT32 execute_batched_solver(aoclfftz_solution_t *sol)
     INTP rnk;
     INT32 status = SOLVER_SUCCESS;
     UINT32 dt, dt_bytes;
-    ptrdiff_t v_in_stride_0;
-    ptrdiff_t v_out_stride_0;
-    ptrdiff_t v_in_stride_1;
-    ptrdiff_t v_out_stride_1;
-    ptrdiff_t v_in_stride_2;
-    ptrdiff_t v_out_stride_2;
+    INTP v_in_stride_0;
+    INTP v_out_stride_0;
+    INTP v_in_stride_1;
+    INTP v_out_stride_1;
+    INTP v_in_stride_2;
+    INTP v_out_stride_2;
 
     dt = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     DT_PRECISION_BYTES(dt);

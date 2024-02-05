@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file selector_permuted_dft.c
+/** @file selector_permuted_dft.c
  *
  *  @brief Wrapper that acts on the permuted solver as guided by the selector.
  *
@@ -38,8 +38,7 @@
 
 #include "selector/selector.h"
 
-INT32 selector_permuted_dft(aoclfftz_selector_t *sel,
-                            kernel_t *kertab)
+INT32 selector_permuted_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     return SELECTOR_SUCCESS;
 }

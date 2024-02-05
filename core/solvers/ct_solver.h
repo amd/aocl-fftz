@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file ct_solver.h
+/** @file ct_solver.h
  *
  *  @brief Interface header file of the Cooley Tukey Solver
  *
@@ -41,7 +41,7 @@
 
 #include "core/solvers/solver.h"
 
- //Solver data structure that holds solver object/pointer and its type
+//Solver data structure that holds solver object/pointer and its type
 typedef struct ct_solver
 {
     solver_t *ct_solver;

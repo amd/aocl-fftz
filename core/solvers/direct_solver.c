@@ -42,15 +42,14 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 setup_direct_solver(aoclfftz_solution_t *sol,
-                          cost_analysis_t *cost,
+INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                           kernel_t *kernel)
 {
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 
     aoclfftz_strides_t *strides = sol->strides;
-    ptrdiff_t n = sol->decomp_scheme->vecs[0].n;
+    INTP n = sol->decomp_scheme->vecs[0].n;
     ops_cycles_t ops_cycles;
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     INT32 status = SOLVER_SUCCESS;
@@ -60,7 +59,8 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol,
     strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
     strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
 
-    if (GET_SELECTOR_MODE(sol->decomp_scheme->flags) == AOCLFFTZ_FIXED_SELECTOR_MODE)
+    if (GET_SELECTOR_MODE(sol->decomp_scheme->flags) ==
+        AOCLFFTZ_FIXED_SELECTOR_MODE)
     {
         /** Fixed mode **/
         cost->time = 0;

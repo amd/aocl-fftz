@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file ndim_solver.h
+/** @file ndim_solver.h
  *
  *  @brief Interface header file of the N-Dimensional Solver
  *

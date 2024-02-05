@@ -163,18 +163,31 @@ typedef struct
 }aoclfftz_bench_error_t;
 
 
-VOID *(*setup_problem)(aoclfftz_bench_params_t *);
-INT32 (*aoclfftz_execute)(VOID *);
-VOID (*aoclfftz_destroy)(VOID *);
+VOID *(*setup_problem) (aoclfftz_bench_params_t *params);
+INT32 (*aoclfftz_execute) (VOID *handle);
+VOID (*aoclfftz_destroy) (VOID *handle);
 
-aoclfftz_bench_params_t *fftzbench_parse_cmd_line_args(INT32 argc, CHAR **argv);
+// Function declarations
+
+INT32 prepare_bench_params(INT32 argc, CHAR **argv,
+                           aoclfftz_bench_params_t *bench_params);
+INT32 register_functions(INT32 precision, INT32 data_model);
 VOID *setup_problem_f(aoclfftz_bench_params_t *params);
 VOID *setup_problem_d(aoclfftz_bench_params_t *params);
 VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params);
 VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params);
-INT32 run_problem(aoclfftz_bench_params_t *params, VOID *handle);
-VOID destroy_problem(aoclfftz_bench_params_t *params, VOID *handle);
 VOID destroy_bench_param(aoclfftz_bench_params_t *params);
-INT32 register_functions(INT32 precision, INT32 data_model);
+INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
+                                      VOID *handle);
+INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params);
+INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params);
+INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
+                         INTP *out_idx_map);
+INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params,
+                                      INTP *in_idx_map, INTP *out_idx_map);
+INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
+                         INTP *out_idx_map);
+VOID show_help_menu(VOID);
+INT32 get_option(CHAR **argv, INT32 arg_idx);
 
 #endif // AOCLFFTZ_COREBENCH_H

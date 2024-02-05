@@ -41,7 +41,8 @@
 #include "kernel_gtest_base.h"
 
 // FLOAT test params consisting of radix, kernel-type and test-type
-aoclfftz_kernel_test_params_t param_float_kernels[] = {
+aoclfftz_kernel_test_params_t param_float_kernels[] =
+{
     {2, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
     {3, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
     {4, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
@@ -71,10 +72,12 @@ aoclfftz_kernel_test_params_t param_float_kernels[] = {
     {13, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
     {14, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
     {15, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
-    {16, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL}};
+    {16, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL}
+};
 
 // DOUBLE test params consisting of radix, kernel-type and test-type
-aoclfftz_kernel_test_params_t param_double_kernels[] = {
+aoclfftz_kernel_test_params_t param_double_kernels[] =
+{
     {2, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
     {3, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
     {4, aocl_fftz_kernel_type::STANDARD_C, aoclfftz_kernel_test_type::ALL},
@@ -104,31 +107,41 @@ aoclfftz_kernel_test_params_t param_double_kernels[] = {
     {13, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
     {14, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
     {15, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL},
-    {16, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL}};
+    {16, aocl_fftz_kernel_type::PERMUTED_C, aoclfftz_kernel_test_type::ALL}
+};
 
-aoclfftz_kernel_test_params_t param_float_avx128_kernels[] = {
+aoclfftz_kernel_test_params_t param_float_avx128_kernels[] =
+{
     {2, aocl_fftz_kernel_type::STANDARD_AVX128,
     aoclfftz_kernel_test_type::ALL},
     {2, aocl_fftz_kernel_type::PERMUTED_AVX128,
-    aoclfftz_kernel_test_type::ALL}};
+    aoclfftz_kernel_test_type::ALL}
+};
 
-aoclfftz_kernel_test_params_t param_double_avx128_kernels[] = {
+aoclfftz_kernel_test_params_t param_double_avx128_kernels[] =
+{
     {2, aocl_fftz_kernel_type::STANDARD_AVX128,
     aoclfftz_kernel_test_type::ALL},
     {2, aocl_fftz_kernel_type::PERMUTED_AVX128,
-    aoclfftz_kernel_test_type::ALL}};
+    aoclfftz_kernel_test_type::ALL}
+};
+
 //AVX256 kernels
-aoclfftz_kernel_test_params_t param_float_avx256_kernels[] = {
+aoclfftz_kernel_test_params_t param_float_avx256_kernels[] =
+{
     {2, aocl_fftz_kernel_type::STANDARD_AVX256,
      aoclfftz_kernel_test_type::ALL},
     {2, aocl_fftz_kernel_type::PERMUTED_AVX256,
-     aoclfftz_kernel_test_type::ALL}};
+     aoclfftz_kernel_test_type::ALL}
+};
 
-aoclfftz_kernel_test_params_t param_double_avx256_kernels[] = {
+aoclfftz_kernel_test_params_t param_double_avx256_kernels[] =
+{
     {2, aocl_fftz_kernel_type::STANDARD_AVX256,
      aoclfftz_kernel_test_type::ALL},
     {2, aocl_fftz_kernel_type::PERMUTED_AVX256,
-     aoclfftz_kernel_test_type::ALL}};
+     aoclfftz_kernel_test_type::ALL}
+};
 
 // stride values as in-stride, out-stride pairs
 std::vector<std::pair<INTP, INTP>> strides = {{1, 1}, {2, 9},  {7, 3},
@@ -171,7 +184,8 @@ TEST_P(AoclfftzKernelTestDouble, TEST_DOUBLE_KERNEL_SPECIAL)
 auto name_generator =
     [](const ::testing::TestParamInfo<
         std::tuple<aoclfftz_kernel_test_params_t, std::pair<INTP, INTP>, UINT8>>
-           &info) {
+           &info)
+    {
         auto param = std::get<0>(info.param);
         INTP istride = std::get<1>(info.param).first;
         INTP ostride = std::get<1>(info.param).second;

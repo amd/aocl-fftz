@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file aoclfftz.h
+/** @file aoclfftz.h
  *
  *  @brief Interface APIs and data structures of AOCL FFTZ library.
  *
@@ -72,7 +72,7 @@ typedef enum
 } aoclfftz_error_type;
 
 //tensor dimension for LP64
-typedef struct
+typedef struct aoclfftz_dim
 {
     INT32 n;
     INT32 in_stride;
@@ -80,24 +80,24 @@ typedef struct
 } aoclfftz_dim_t;
 
 //tensor dimension for ILP64
-typedef struct
+typedef struct aoclfftz_dim_64_
 {
-    ptrdiff_t n;
-    ptrdiff_t in_stride;
-    ptrdiff_t out_stride;
+    INTP n;
+    INTP in_stride;
+    INTP out_stride;
 } aoclfftz_dim_t_64_;
 
 //params for parallel SMP fft computation
-typedef struct
+typedef struct aoclfftz_smp_pfft
 {
     //Number of max threads to granted for use
     INT32 num_threads;
     //Allow the library to determine how many threads to be used
     INT32 dynamic_load_model;
-} aoclfftz_smp_pfft;
+} aoclfftz_smp_pfft_t;
 
 //control params for optimizations, logs, stats and others
-typedef struct
+typedef struct aoclfftz_cntrl_params
 {
     //Levels: 0 - non-SIMD algorithmic optimizations, 1 - SSE2 optimizations,
     //2 - AVX optimizations, 3 - AVX2 optimizations, 4 - AVX512 optimizations
@@ -105,13 +105,13 @@ typedef struct
     INT32 opt_off; //Turn off all optimizations
     INT32 logger_mode;
     INT32 measure_stats;
-} aoclfftz_cntrl_params;
+} aoclfftz_cntrl_params_t;
 
 //float LP64
 typedef struct
 {
-    FLOAT*in;
-    FLOAT*out;
+    FLOAT *in;
+    FLOAT *out;
     INT32 vec_rank;
     INT32 dim_rank;
     aoclfftz_dim_t *dims;
@@ -121,8 +121,8 @@ typedef struct
     //       2 : forward(0) or backward(1),
     //       3 : complex(0) or real
     UINT32 flags;
-    aoclfftz_smp_pfft pthr_fft;
-    aoclfftz_cntrl_params cntrl_params;
+    aoclfftz_smp_pfft_t pthr_fft;
+    aoclfftz_cntrl_params_t cntrl_params;
 } aoclfftz_prob_desc_f;
 
 //double LP64
@@ -139,15 +139,15 @@ typedef struct
     //       2 : forward(0) or backward(1),
     //       3 : complex(0) or real
     UINT32 flags;
-    aoclfftz_smp_pfft pthr_fft;
-    aoclfftz_cntrl_params cntrl_params;
+    aoclfftz_smp_pfft_t pthr_fft;
+    aoclfftz_cntrl_params_t cntrl_params;
 } aoclfftz_prob_desc_d;
 
 //float ILP64
 typedef struct
 {
-    FLOAT*in;
-    FLOAT*out;
+    FLOAT *in;
+    FLOAT *out;
     INT32 vec_rank;
     INT32 dim_rank;
     aoclfftz_dim_t_64_ *dims;
@@ -157,15 +157,15 @@ typedef struct
     //       2 : forward(0) or backward(1),
     //       3 : complex(0) or real
     UINT32 flags;
-    aoclfftz_smp_pfft pthr_fft;
-    aoclfftz_cntrl_params cntrl_params;
+    aoclfftz_smp_pfft_t pthr_fft;
+    aoclfftz_cntrl_params_t cntrl_params;
 } aoclfftz_prob_desc_f_64_;
 
 //double LP64
 typedef struct
 {
     DOUBLE *in;
-    DOUBLE*out;
+    DOUBLE *out;
     INT32 vec_rank;
     INT32 dim_rank;
     aoclfftz_dim_t_64_ *dims;
@@ -175,8 +175,8 @@ typedef struct
     //       2 : forward(0) or backward(1),
     //       3 : complex(0) or real
     UINT32 flags;
-    aoclfftz_smp_pfft pthr_fft;
-    aoclfftz_cntrl_params cntrl_params;
+    aoclfftz_smp_pfft_t pthr_fft;
+    aoclfftz_cntrl_params_t cntrl_params;
 } aoclfftz_prob_desc_d_64_;
 
 /* Single-threaded and multi-threaded FFT unified APIs */

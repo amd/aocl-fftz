@@ -45,7 +45,6 @@
 INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
                              aoclfftz_solution_t *next_sol, INTP m)
 {
-
     // Setup next_sol with extended length m
     COPY_SOLUTION_OBJ(next_sol, sol);
     next_sol->decomp_scheme->dims[0].n = m;

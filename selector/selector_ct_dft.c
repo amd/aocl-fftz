@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file selector_ct_dft.c
+/** @file selector_ct_dft.c
  *
  *  @brief Wrapper that invokes the CT solver as guided by the selector.
  *
@@ -41,34 +41,25 @@
 #include "utils/utils.h"
 #include "core/common/twiddle.h"
 
-UINT32 check_radix_applicable(ptrdiff_t n, UINT32 r)
-{
-    if ((n % r) == 0)
-        return 1;
-    else
-        return 0;
-}
-
-INT32 selector_ct_dft(aoclfftz_selector_t *sel,
-                      kernel_t *kertab)
+INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     aoclfftz_selector_t *cur_sel = NULL;
     aoclfftz_selector_t *cur_sel_m = NULL;
 
-    // holds the original sub-problem. 'sel' would get overwritten while updating cost
+    // holds the original sub-problem. 'sel' would get overwritten while
+    // updating cost
     aoclfftz_solution_t *org_sol = NULL;
 
-#if IN_MEMORY_TWIDDLE_FACTORS==1
-    VOID* TW = NULL;
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+    VOID *TW = NULL;
     UINT32 dt_prec = 0;
 #endif
-    ptrdiff_t n = sel->solution->decomp_scheme->dims[0].n;
+    INTP n = sel->solution->decomp_scheme->dims[0].n;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->
-        logger_mode;
-    INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
-        measure_stats;
+    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
+    INT32 stats_mode =
+        sel->solution->decomp_scheme->cntrl_params->measure_stats;
     UINT32 radix_r = 0;
     UINT32 radix_m = 0;
     INT32 ker_cat = 0;
@@ -79,7 +70,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
     if (vec_rank != 1 || dim_rank != 1)
         return ret;
 
-#if IN_MEMORY_TWIDDLE_FACTORS==1
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
     dt_prec = DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags);
 #endif
 
@@ -96,7 +87,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
     sel->solution->next_sol = alloc_solution(vec_rank, dim_rank);
     sel->solution->next_sol->next_sol = alloc_solution(vec_rank, dim_rank);
 
-#if IN_MEMORY_TWIDDLE_FACTORS==1
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
     TW = alloc_twiddle_for_solution(n, dt_prec);
     if (TW == NULL)
         goto exit_ct_dft;
@@ -116,7 +107,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
             break;
 
         //Check if this radix can factorize the problem
-        if (check_radix_applicable(n, radix_r) == 0)
+        if ((n % radix_r) != 0)
             continue;
 
         //choose the other radix m
@@ -135,11 +126,8 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
             is_previous_solution_selected = 0;
         }
 
-        ret = setup_ct_solver(org_sol,
-            cur_sel->solution,
-            cur_sel_m->solution,
-            radix_r,
-            radix_m);
+        ret = setup_ct_solver(org_sol, cur_sel->solution, cur_sel_m->solution,
+                              radix_r, radix_m);
         if (ret != SELECTOR_SUCCESS)
             goto exit_ct_dft;
 
@@ -193,7 +181,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
                 cur_sel->solution->next_sol = NULL;
                 cur_sel_m->solution->next_sol = NULL;
                 is_previous_solution_selected = 1;
-#if IN_MEMORY_TWIDDLE_FACTORS==1
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
                 sel->solution->twiddle->TW = TW;
 #endif
             }
@@ -223,7 +211,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel,
                     cur_sel_m->cost_analysis->time;
                 sel->solution->next_sol = cur_sel->solution;
                 sel->solution->next_sol->next_sol = cur_sel_m->solution;
-#if IN_MEMORY_TWIDDLE_FACTORS==1
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
                 sel->solution->twiddle->TW = TW;
 #endif
             }
@@ -238,7 +226,7 @@ exit_ct_dft:
     destroy_selector(cur_sel);
     destroy_selector(cur_sel_m);
     destroy_solution(org_sol);
-#if IN_MEMORY_TWIDDLE_FACTORS==1
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
     FREE_ALIGN_ALLOCATED_MEM(TW);
 #endif
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");

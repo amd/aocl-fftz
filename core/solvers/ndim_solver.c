@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file ndim_solver.c
+/** @file ndim_solver.c
  *
  *  @brief N-Dimensional solver that solves an ND problem
  *
@@ -41,21 +41,20 @@
 #include "utils/utils.h"
 
 INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
-                      aoclfftz_solution_t *n_minus1_sol,
-                      aoclfftz_solution_t *outer_dim_sol,
-                      INT32 fusable_dims)
+                        aoclfftz_solution_t *n_minus1_sol,
+                        aoclfftz_solution_t *outer_dim_sol, INT32 fusable_dims)
 {
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 
     COPY_SOLUTION_OBJ_WO_DIMS(n_minus1_sol, sol);
-    INTP dim_rank = sol->decomp_scheme->dim_rank;
+    INT32 dim_rank = sol->decomp_scheme->dim_rank;
 
     // setup ND - 1 solution
     n_minus1_sol->decomp_scheme->dim_rank = dim_rank - 1;
 
     // FIXME : memcpy instead ?
-    for(INT32 i = 0; i < dim_rank - 1; i++)
+    for (INT32 i = 0; i < dim_rank - 1; i++)
     {
         n_minus1_sol->decomp_scheme->dims[i].n = sol->decomp_scheme->dims[i].n;
         n_minus1_sol->decomp_scheme->dims[i].in_stride =
@@ -91,10 +90,10 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     outer_dim_sol->decomp_scheme->dims[0].out_stride =
         sol->decomp_scheme->dims[dim_rank - 1].out_stride;
 
-    if(fusable_dims == (dim_rank - 1)) // all dims fusable
+    if (fusable_dims == (dim_rank - 1)) // all dims fusable
     {
-        INTP fused_dim_size = 1;
-        for(INTP i = 0; i < dim_rank - 1; i++)
+        INT32 fused_dim_size = 1;
+        for (INT32 i = 0; i < dim_rank - 1; i++)
         {
             fused_dim_size = fused_dim_size * sol->decomp_scheme->dims[i].n;
         }
@@ -110,8 +109,8 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     {
         outer_dim_sol->decomp_scheme->vec_rank = (dim_rank - fusable_dims);
 
-        INTP fused_dim_size = 1;
-        for(INTP i = 0; i < fusable_dims; i++)
+        INT32 fused_dim_size = 1;
+        for (INT32 i = 0; i < fusable_dims; i++)
         {
             fused_dim_size = fused_dim_size * sol->decomp_scheme->dims[i].n;
         }
@@ -122,7 +121,7 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
         outer_dim_sol->decomp_scheme->vecs[0].out_stride =
                     sol->decomp_scheme->dims[0].out_stride;
 
-        for(INTP j = fusable_dims, i = 1;
+        for (INT32 j = fusable_dims, i = 1;
                     i < outer_dim_sol->decomp_scheme->vec_rank; j++, i++)
         {
             outer_dim_sol->decomp_scheme->vecs[i].n =
@@ -138,7 +137,7 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
-INT32 execute_ndim_solver(aoclfftz_solution_t* sol)
+INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
 {
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
@@ -156,14 +155,14 @@ INT32 execute_ndim_solver(aoclfftz_solution_t* sol)
     outer_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
     outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
 
-    // execute n_minus1_sol sub-problem
-    if(n_minus1_sol->solver->execute_solver(n_minus1_sol) != SOLVER_SUCCESS)
+    // execute nd sub-problem
+    if (n_minus1_sol->solver->execute_solver(n_minus1_sol) != SOLVER_SUCCESS)
     {
         return SOLVER_FAILURE;
     }
 
-    // execute outer_dim_sol sub-problem
-    if(outer_dim_sol->solver->execute_solver(outer_dim_sol) != SOLVER_SUCCESS)
+    // execute 1d sub-problem
+    if (outer_dim_sol->solver->execute_solver(outer_dim_sol) != SOLVER_SUCCESS)
     {
         return SOLVER_FAILURE;
     }

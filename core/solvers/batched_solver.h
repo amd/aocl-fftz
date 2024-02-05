@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file batched_solver.h
+/** @file batched_solver.h
  *
  *  @brief Interface header file of the batched Solver that solves a vector problem
  *
@@ -41,7 +41,7 @@
 
 #include "core/solvers/solver.h"
 
- //Solver data structure that holds solver object/pointer and its type
+//Solver data structure that holds solver object/pointer and its type
 typedef struct batched_solver
 {
     solver_t *batched_solver;

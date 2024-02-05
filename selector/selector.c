@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file selector.c
+/** @file selector.c
  *
  *  @brief Selects and returns a suitable solution for the input problem.
  *
@@ -49,9 +49,8 @@ kernel_t kernels_table[NUM_KERNELS_IN_TABLE] = {{0x0}};
 
 //Register all applicable solvers and kernels into the respective tables
 //based on the input problem and cpu arch flags
-INT32 register_solvers_kernels(
-                    kernel_t kertab[NUM_KERNELS_IN_TABLE],
-                    INT32 dt, INT32 cpu_flags)
+INT32 register_solvers_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
+                               INT32 dt, INT32 cpu_flags)
 {
     INT32 ret = SELECTOR_FAILURE;
 
@@ -66,7 +65,7 @@ INT32 register_solvers_kernels(
     return ret;
 }
 
-INT32 check_FFT_kernel_support(INT32 n)
+INT32 check_FFT_kernel_support(INTP n)
 {
     INT32 is_supported = 0, i;
     for (i = 0; i < NUM_KERNELS_IN_TABLE; i++)
@@ -83,7 +82,7 @@ INT32 check_FFT_kernel_support(INT32 n)
     return is_supported;
 }
 
-INT32 check_CT_solvability(INT32 n, kernel_t *kertab)
+INTP check_CT_solvability(INTP n, kernel_t *kertab)
 {
     INT32 ker_cat = 0;
     UINT32 radix = 0;
@@ -105,8 +104,8 @@ INT32 check_prime_solvability_bluestein(
                             aoclfftz_decomp_scheme_t *decomp_scheme,
                             INT32 is_FFT_ker_supported, kernel_t *kertab)
 {
-    INT32 n = decomp_scheme->dims[0].n;
-    INT32 batch = decomp_scheme->vecs[0].n;
+    INTP n = decomp_scheme->dims[0].n;
+    INTP batch = decomp_scheme->vecs[0].n;
     INT32 dim_rank = decomp_scheme->dim_rank;
     INT32 vec_rank = decomp_scheme->vec_rank;
 
@@ -127,7 +126,7 @@ INT32 check_prime_solvability_bluestein(
 //of solvers and kernels
 INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
-    aoclfftz_generic_solver_t* solver_obj = sel->solution->solver;
+    aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
     INT32 ret = SELECTOR_FAILURE;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
@@ -166,8 +165,7 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
                      (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
                             AOCLFFTZ_AUTO_SELECTOR_MODE));
     //SOLVER_PERM_KER
-    level1_cond2 |=
-                   (IS_OUT_OF_ORDER(sel->solution->decomp_scheme->flags) << 1);
+    level1_cond2 |= (IS_OUT_OF_ORDER(sel->solution->decomp_scheme->flags) << 1);
     //SOLVER_DIRECT
     level2_cond = is_FFT_ker_supported;
     //SOLVER_PFA
@@ -279,8 +277,8 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
 {
     INT32 ret = 0;
     INT32 cpu_flags = 0;
-    aoclfftz_cntrl_params cntrl_params = problem->cntrl_params;
-    aoclfftz_selector_t* sel_obj = NULL;
+    aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
+    aoclfftz_selector_t *sel_obj = NULL;
 
     //allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, problem->dim_rank);
@@ -289,13 +287,12 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
 
     //Find CPU feature flags that will be used by dynamic dispatcher
     cpu_flags = setup_dynamic_dispatcher(cntrl_params.opt_off,
-                                  cntrl_params.opt_level,
-                                  cntrl_params.logger_mode);
+                                         cntrl_params.opt_level,
+                                         cntrl_params.logger_mode);
 
     //Register solvers and kernels for solving the problem based on
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(kernels_table,
-                                   DT_FLOAT, cpu_flags);
+    ret = register_solvers_kernels(kernels_table, DT_FLOAT, cpu_flags);
     if (ret != 0)
         goto exit_setup_dft_f;
 
@@ -321,8 +318,8 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
 {
     INT32 ret = 0;
     INT32 cpu_flags = 0;
-    aoclfftz_cntrl_params cntrl_params = problem->cntrl_params;
-    aoclfftz_selector_t* sel_obj = NULL;
+    aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
+    aoclfftz_selector_t *sel_obj = NULL;
 
     //allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, problem->dim_rank);
@@ -331,13 +328,12 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
 
     //Find CPU feature flags that will be used by dynamic dispatcher
     cpu_flags = setup_dynamic_dispatcher(cntrl_params.opt_off,
-        cntrl_params.opt_level,
-        cntrl_params.logger_mode);
+                                         cntrl_params.opt_level,
+                                         cntrl_params.logger_mode);
 
     //Register solvers and kernels for solving the problem based on
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(kernels_table,
-                                   DT_DOUBLE, cpu_flags);
+    ret = register_solvers_kernels(kernels_table, DT_DOUBLE, cpu_flags);
     if (ret != 0)
         goto exit_setup_dft_d;
 
@@ -363,8 +359,8 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
 {
     INT32 ret = 0;
     INT32 cpu_flags = 0;
-    aoclfftz_cntrl_params cntrl_params = problem->cntrl_params;
-    aoclfftz_selector_t* sel_obj = NULL;
+    aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
+    aoclfftz_selector_t *sel_obj = NULL;
 
     //allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, problem->dim_rank);
@@ -373,13 +369,12 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
 
     //Find CPU feature flags that will be used by dynamic dispatcher
     cpu_flags = setup_dynamic_dispatcher(cntrl_params.opt_off,
-        cntrl_params.opt_level,
-        cntrl_params.logger_mode);
+                                         cntrl_params.opt_level,
+                                         cntrl_params.logger_mode);
 
     //Register solvers and kernels for solving the problem based on
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(kernels_table,
-                                   DT_FLOAT, cpu_flags);
+    ret = register_solvers_kernels(kernels_table, DT_FLOAT, cpu_flags);
     if (ret != 0)
         goto exit_setup_dft_f_64_;
 
@@ -405,8 +400,8 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
 {
     INT32 ret = 0;
     INT32 cpu_flags = 0;
-    aoclfftz_cntrl_params cntrl_params = problem->cntrl_params;
-    aoclfftz_selector_t* sel_obj = NULL;
+    aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
+    aoclfftz_selector_t *sel_obj = NULL;
 
     //allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, problem->dim_rank);
@@ -415,13 +410,12 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
 
     //Find CPU feature flags that will be used by dynamic dispatcher
     cpu_flags = setup_dynamic_dispatcher(cntrl_params.opt_off,
-        cntrl_params.opt_level,
-        cntrl_params.logger_mode);
+                                         cntrl_params.opt_level,
+                                         cntrl_params.logger_mode);
 
     //Register solvers and kernels for solving the problem based on
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(kernels_table,
-                                   DT_DOUBLE, cpu_flags);
+    ret = register_solvers_kernels(kernels_table, DT_DOUBLE, cpu_flags);
     if (ret != 0)
         goto exit_setup_dft_d_64_;
 

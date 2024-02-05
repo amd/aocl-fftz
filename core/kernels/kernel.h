@@ -227,6 +227,7 @@ VOID fft2avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                     UINT8 flag);
 #endif
+
 #ifdef ENABLE_AVX256
 //AVX256 kernels
 VOID fft2avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,VOID *out_imag,

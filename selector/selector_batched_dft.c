@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file selector_batched_dft.c
+/** @file selector_batched_dft.c
  *
  *  @brief Wrapper that acts on the batched solver as guided by the selector.
  *
@@ -40,8 +40,7 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 selector_batched_dft(aoclfftz_selector_t *sel,
-                           kernel_t *kertab)
+INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     aoclfftz_selector_t *cur_sel = NULL;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
@@ -50,7 +49,6 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel,
         logger_mode;
     INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
         measure_stats;
-    //UINT32 selector_mode = GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags);
     INT32 rnk = 0;
     INT32 batch_size = 0;
     INT32 ret = SELECTOR_FAILURE;

@@ -39,7 +39,8 @@
 #include <gtest/gtest.h>
 #include "gtest/selector/selector_gtest_base.h"
 
-std::string dims_and_vecs[] = {
+std::string dims_and_vecs[] =
+{
     // CT problems
     "18:1:1",
     "48:2:5",
@@ -49,13 +50,15 @@ std::string dims_and_vecs[] = {
     "170:3:5"
 };
 
-INT32 flags[] = {
+INT32 flags[] =
+{
     0b0000, // complex, forward, in-order, in-place problem
     0b0001, // complex, forward, in-order, out-of-place problem
     0b0100  // complex, backward, in-order, in-place problem
 };
 
-INT32 opt_levels[] = {
+INT32 opt_levels[] =
+{
     -1 // no optimization at all
 };
 

@@ -61,7 +61,7 @@ ops_cycles_t get_ops_cnt_fft9c(INT32 precision)
         return ops_cnt[1];
 }
 
-VOID fft9c_fp64(VOID* in_real, VOID* in_imag, VOID* out_real, VOID* out_imag,
+VOID fft9c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
     const DOUBLE CRTM_9_1 = +0.939692620785908384054109277324731469936208134;

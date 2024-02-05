@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file aoclfftz_internal.h
+/** @file aoclfftz_internal.h
  *
  *  @brief Top-level data structures used across different modules that are not
  *  publicly exposed but are internal to the AOCL FFTZ library.
@@ -65,22 +65,26 @@
 #define SET_PRECISION(flags, val) (flags |= (val << 30))
 #define SET_INPLACE(flags) (flags &= ~(0x1))
 #define DT_PRECISION_FLAG(flags) (flags >> 30)
-#define DT_PRECISION_BYTES(dt_prec) \
-    UINT32 _dt = dt_prec;           \
-    dt_bytes = 1;                   \
-    while (_dt > 0)                 \
-    {                               \
-        dt_bytes *= 2;              \
-        _dt--;                      \
+#define DT_PRECISION_BYTES(dt_prec)                                            \
+    {                                                                          \
+        UINT32 _dt = dt_prec;                                                  \
+        dt_bytes = 1;                                                          \
+        while (_dt > 0)                                                        \
+        {                                                                      \
+            dt_bytes *= 2;                                                     \
+            _dt--;                                                             \
+        }                                                                      \
     }
-#define SET_SELECTOR_MODE(flags, val) \
-    if (val == 0)                     \
-    {                                 \
-        flags &= (~(1 << 16));        \
-    }                                 \
-    else                              \
-    {                                 \
-        flags |= (1 << 16);           \
+#define SET_SELECTOR_MODE(flags, val)                                          \
+    {                                                                          \
+        if (val == 0)                                                          \
+        {                                                                      \
+            flags &= (~(1 << 16));                                             \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
+            flags |= (1 << 16);                                                \
+        }                                                                      \
     }
 #define GET_SELECTOR_MODE(flags) ((flags << 15) >> 31)
 //Move the base address of void pointer by adding offset
@@ -120,25 +124,26 @@ typedef struct cost_analysis
 //Kernel template function pointer for performing FFT
 typedef VOID (*kfft_) (VOID *in_real, VOID *in_imag,
                        VOID *out_real, VOID *out_imag,
-                       ptrdiff_t n,
+                       INTP n,
                        aoclfftz_strides_t *strides, UINT8 flag);
 
 //Solver execute template function pointer
-typedef INT32 (*dft_solver_) (aoclfftz_solution_t* solution);
+typedef INT32 (*dft_solver_) (aoclfftz_solution_t *solution);
 
 //Base data structure acting as an abstract class that is derived by the
 //top-level DFT data structure and implemented by all the solvers
-struct aoclfftz_generic_solver
+typedef struct aoclfftz_generic_solver
 {
     INT32 solver_type;
     dft_solver_ execute_solver;
     VOID (*destroy_solver) (aoclfftz_solution_t *solution);
     kfft_ kernel_r;
     kfft_ kernel_m;
-};
+} aoclfftz_generic_solver_t;
 
 //Holds info on the main problem or decomposed sub-problem in current dimension
-typedef struct {
+typedef struct aoclfftz_decomp_scheme
+{
     INT32 vec_rank;
     INT32 dim_rank;
     aoclfftz_dim_t_64_ *dims;
@@ -149,8 +154,8 @@ typedef struct {
     //VOID *out;
     VOID *out_real;
     VOID *out_imag;
-    aoclfftz_cntrl_params *cntrl_params;
-    aoclfftz_smp_pfft *pthr_fft;
+    aoclfftz_cntrl_params_t *cntrl_params;
+    aoclfftz_smp_pfft_t *pthr_fft;
     //Application side flag bits =>
     //  in/out-of place:0-bit, in/out-of order:1-bit, dir:2-bit, real/comp:3-bit..
     //Library side internal flag bits =>
@@ -164,10 +169,10 @@ typedef struct {
 //that is acted upon by a specific kernel
 typedef struct aoclfftz_strides
 {
-    ptrdiff_t in_stride;
-    ptrdiff_t out_stride;
-    ptrdiff_t v_in_stride;
-    ptrdiff_t v_out_stride;
+    INTP in_stride;
+    INTP out_stride;
+    INTP v_in_stride;
+    INTP v_out_stride;
 } aoclfftz_strides_t;
 
 //Holds twiddle factors used by a specific kernel for the given problem

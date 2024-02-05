@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file selector.h
+/** @file selector.h
  *
  *  @brief Functions and data structures of the selector module.
  *
@@ -54,253 +54,232 @@ typedef enum
 
 //Selector data structure that is used to hold the solution and cost analysis
 // at each decomposition level for the associated sub-problem
-typedef struct
+typedef struct aoclfftz_selector
 {
     aoclfftz_solution_t *solution;
     cost_analysis_t *cost_analysis;
- } aoclfftz_selector_t;
+} aoclfftz_selector_t;
 
-//macro functions
-#define INIT_DECOMP_SCHEME(sel_obj, problem) { \
-    sel_obj->solution->decomp_scheme->vec_rank = problem->vec_rank; \
-    sel_obj->solution->decomp_scheme->dim_rank = problem->dim_rank; \
-    UINT32 cnt; \
-    for (cnt = 0; cnt < problem->dim_rank; cnt++) \
-    { \
-        sel_obj->solution->decomp_scheme->dims[cnt].n = \
-                                            problem->dims[cnt].n; \
-        sel_obj->solution->decomp_scheme->dims[cnt].in_stride = \
-                                            problem->dims[cnt].in_stride; \
-        sel_obj->solution->decomp_scheme->dims[cnt].out_stride = \
-                                            problem->dims[cnt].out_stride; \
-    } \
-    for (cnt = 0; cnt < problem->vec_rank; cnt++) \
-    { \
-        sel_obj->solution->decomp_scheme->vecs[cnt].n = \
-                                            problem->vecs[cnt].n; \
-        sel_obj->solution->decomp_scheme->vecs[cnt].in_stride = \
-                                            problem->vecs[cnt].in_stride; \
-        sel_obj->solution->decomp_scheme->vecs[cnt].out_stride = \
-                                            problem->vecs[cnt].out_stride; \
-    } \
-    if (FFT_DIR(problem->flags) == FORWARD_FFT_DIR) \
-    { \
-        sel_obj->solution->decomp_scheme->in_real = problem->in; \
-        sel_obj->solution->decomp_scheme->in_imag = problem->in+1; \
-        sel_obj->solution->decomp_scheme->out_real = problem->out; \
-        sel_obj->solution->decomp_scheme->out_imag = problem->out+1; \
-    } \
-    else \
-    { \
-        sel_obj->solution->decomp_scheme->in_real = problem->in+1; \
-        sel_obj->solution->decomp_scheme->in_imag = problem->in; \
-        sel_obj->solution->decomp_scheme->out_real = problem->out+1; \
-        sel_obj->solution->decomp_scheme->out_imag = problem->out; \
-    } \
-    sel_obj->solution->decomp_scheme->cntrl_params->opt_level = \
-                                        problem->cntrl_params.opt_level; \
-    sel_obj->solution->decomp_scheme->cntrl_params->opt_off = \
-                                        problem->cntrl_params.opt_off; \
-    sel_obj->solution->decomp_scheme->cntrl_params->logger_mode = \
-                                        problem->cntrl_params.logger_mode; \
-    sel_obj->solution->decomp_scheme->cntrl_params->measure_stats = \
-                                        problem->cntrl_params.measure_stats; \
-    sel_obj->solution->decomp_scheme->pthr_fft->num_threads = \
-                                        problem->pthr_fft.num_threads; \
-    sel_obj->solution->decomp_scheme->pthr_fft->dynamic_load_model = \
-                                        problem->pthr_fft.dynamic_load_model; \
-    sel_obj->solution->decomp_scheme->flags = problem->flags; \
-}
+// macro functions
+#define INIT_DECOMP_SCHEME(sel_obj, problem)                                   \
+    {                                                                          \
+        sel_obj->solution->decomp_scheme->vec_rank = problem->vec_rank;        \
+        sel_obj->solution->decomp_scheme->dim_rank = problem->dim_rank;        \
+        UINT32 cnt;                                                            \
+        for (cnt = 0; cnt < problem->dim_rank; cnt++)                          \
+        {                                                                      \
+            sel_obj->solution->decomp_scheme->dims[cnt].n =                    \
+                problem->dims[cnt].n;                                          \
+            sel_obj->solution->decomp_scheme->dims[cnt].in_stride =            \
+                problem->dims[cnt].in_stride;                                  \
+            sel_obj->solution->decomp_scheme->dims[cnt].out_stride =           \
+                problem->dims[cnt].out_stride;                                 \
+        }                                                                      \
+        for (cnt = 0; cnt < problem->vec_rank; cnt++)                          \
+        {                                                                      \
+            sel_obj->solution->decomp_scheme->vecs[cnt].n =                    \
+                problem->vecs[cnt].n;                                          \
+            sel_obj->solution->decomp_scheme->vecs[cnt].in_stride =            \
+                problem->vecs[cnt].in_stride;                                  \
+            sel_obj->solution->decomp_scheme->vecs[cnt].out_stride =           \
+                problem->vecs[cnt].out_stride;                                 \
+        }                                                                      \
+        if (FFT_DIR(problem->flags) == FORWARD_FFT_DIR)                        \
+        {                                                                      \
+            sel_obj->solution->decomp_scheme->in_real = problem->in;           \
+            sel_obj->solution->decomp_scheme->in_imag = problem->in + 1;       \
+            sel_obj->solution->decomp_scheme->out_real = problem->out;         \
+            sel_obj->solution->decomp_scheme->out_imag = problem->out + 1;     \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
+            sel_obj->solution->decomp_scheme->in_real = problem->in + 1;       \
+            sel_obj->solution->decomp_scheme->in_imag = problem->in;           \
+            sel_obj->solution->decomp_scheme->out_real = problem->out + 1;     \
+            sel_obj->solution->decomp_scheme->out_imag = problem->out;         \
+        }                                                                      \
+        sel_obj->solution->decomp_scheme->cntrl_params->opt_level =            \
+            problem->cntrl_params.opt_level;                                   \
+        sel_obj->solution->decomp_scheme->cntrl_params->opt_off =              \
+            problem->cntrl_params.opt_off;                                     \
+        sel_obj->solution->decomp_scheme->cntrl_params->logger_mode =          \
+            problem->cntrl_params.logger_mode;                                 \
+        sel_obj->solution->decomp_scheme->cntrl_params->measure_stats =        \
+            problem->cntrl_params.measure_stats;                               \
+        sel_obj->solution->decomp_scheme->pthr_fft->num_threads =              \
+            problem->pthr_fft.num_threads;                                     \
+        sel_obj->solution->decomp_scheme->pthr_fft->dynamic_load_model =       \
+            problem->pthr_fft.dynamic_load_model;                              \
+        sel_obj->solution->decomp_scheme->flags = problem->flags;              \
+    }
 
-#define COPY_SOLUTION_OBJ(to_sol_obj, from_sol_obj) { \
-    to_sol_obj->solver->solver_type = \
-            from_sol_obj->solver->solver_type; \
-    to_sol_obj->solver->execute_solver = \
-            from_sol_obj->solver->execute_solver; \
-    to_sol_obj->solver->destroy_solver = \
-            from_sol_obj->solver->destroy_solver; \
-    to_sol_obj->solver->kernel_r = \
-            from_sol_obj->solver->kernel_r; \
-    to_sol_obj->solver->kernel_m = \
-            from_sol_obj->solver->kernel_m; \
-    to_sol_obj->decomp_scheme->vec_rank = \
-        from_sol_obj->decomp_scheme->vec_rank; \
-    to_sol_obj->decomp_scheme->dim_rank = \
-        from_sol_obj->decomp_scheme->dim_rank; \
-    UINT32 cnt; \
-    for (cnt = 0; cnt < to_sol_obj->decomp_scheme->dim_rank; cnt++) \
-    { \
-        to_sol_obj->decomp_scheme->dims[cnt].n = \
-            from_sol_obj->decomp_scheme->dims[cnt].n; \
-        to_sol_obj->decomp_scheme->dims[cnt].in_stride = \
-            from_sol_obj->decomp_scheme->dims[cnt].in_stride; \
-        to_sol_obj->decomp_scheme->dims[cnt].out_stride = \
-            from_sol_obj->decomp_scheme->dims[cnt].out_stride; \
-    } \
-    for (cnt = 0; cnt < to_sol_obj->decomp_scheme->vec_rank; cnt++) \
-    { \
-        to_sol_obj->decomp_scheme->vecs[cnt].n = \
-            from_sol_obj->decomp_scheme->vecs[cnt].n; \
-        to_sol_obj->decomp_scheme->vecs[cnt].in_stride = \
-            from_sol_obj->decomp_scheme->vecs[cnt].in_stride; \
-        to_sol_obj->decomp_scheme->vecs[cnt].out_stride = \
-            from_sol_obj->decomp_scheme->vecs[cnt].out_stride; \
-    } \
-    to_sol_obj->decomp_scheme->in_real = \
-        from_sol_obj->decomp_scheme->in_real; \
-    to_sol_obj->decomp_scheme->in_imag = \
-        from_sol_obj->decomp_scheme->in_imag; \
-    to_sol_obj->decomp_scheme->out_real = \
-        from_sol_obj->decomp_scheme->out_real; \
-    to_sol_obj->decomp_scheme->out_imag = \
-        from_sol_obj->decomp_scheme->out_imag; \
-    to_sol_obj->decomp_scheme->cntrl_params->opt_level = \
-        from_sol_obj->decomp_scheme->cntrl_params->opt_level; \
-    to_sol_obj->decomp_scheme->cntrl_params->opt_off = \
-        from_sol_obj->decomp_scheme->cntrl_params->opt_off; \
-    to_sol_obj->decomp_scheme->cntrl_params->logger_mode = \
-        from_sol_obj->decomp_scheme->cntrl_params->logger_mode; \
-    to_sol_obj->decomp_scheme->cntrl_params->measure_stats = \
-        from_sol_obj->decomp_scheme->cntrl_params->measure_stats; \
-    to_sol_obj->decomp_scheme->pthr_fft->num_threads = \
-        from_sol_obj->decomp_scheme->pthr_fft->num_threads; \
-    to_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model = \
-        from_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model; \
-    to_sol_obj->decomp_scheme->flags = \
-        from_sol_obj->decomp_scheme->flags; \
-    to_sol_obj->strides->in_stride = \
-        from_sol_obj->strides->in_stride; \
-    to_sol_obj->strides->out_stride = \
-        from_sol_obj->strides->out_stride; \
-    to_sol_obj->strides->v_in_stride = \
-        from_sol_obj->strides->v_in_stride; \
-    to_sol_obj->strides->v_out_stride = \
-        from_sol_obj->strides->v_out_stride; \
-    to_sol_obj->twiddle->TW = \
-        from_sol_obj->twiddle->TW; \
-    to_sol_obj->bluestein->B = \
-        from_sol_obj->bluestein->B; \
-    to_sol_obj->bluestein->B_out = \
-        from_sol_obj->bluestein->B_out; \
-    to_sol_obj->bluestein->in = \
-        from_sol_obj->bluestein->in; \
-    to_sol_obj->bluestein->out = \
-        from_sol_obj->bluestein->out; \
-    to_sol_obj->bluestein->is_B_out_valid = \
-        from_sol_obj->bluestein->is_B_out_valid; \
-    to_sol_obj->next_sol = \
-        from_sol_obj->next_sol; \
-}
+#define COPY_SOLUTION_OBJ(to_sol_obj, from_sol_obj)                            \
+    {                                                                          \
+        to_sol_obj->solver->solver_type = from_sol_obj->solver->solver_type;   \
+        to_sol_obj->solver->execute_solver =                                   \
+            from_sol_obj->solver->execute_solver;                              \
+        to_sol_obj->solver->destroy_solver =                                   \
+            from_sol_obj->solver->destroy_solver;                              \
+        to_sol_obj->solver->kernel_r = from_sol_obj->solver->kernel_r;         \
+        to_sol_obj->solver->kernel_m = from_sol_obj->solver->kernel_m;         \
+        to_sol_obj->decomp_scheme->vec_rank =                                  \
+            from_sol_obj->decomp_scheme->vec_rank;                             \
+        to_sol_obj->decomp_scheme->dim_rank =                                  \
+            from_sol_obj->decomp_scheme->dim_rank;                             \
+        UINT32 cnt;                                                            \
+        for (cnt = 0; cnt < to_sol_obj->decomp_scheme->dim_rank; cnt++)        \
+        {                                                                      \
+            to_sol_obj->decomp_scheme->dims[cnt].n =                           \
+                from_sol_obj->decomp_scheme->dims[cnt].n;                      \
+            to_sol_obj->decomp_scheme->dims[cnt].in_stride =                   \
+                from_sol_obj->decomp_scheme->dims[cnt].in_stride;              \
+            to_sol_obj->decomp_scheme->dims[cnt].out_stride =                  \
+                from_sol_obj->decomp_scheme->dims[cnt].out_stride;             \
+        }                                                                      \
+        for (cnt = 0; cnt < to_sol_obj->decomp_scheme->vec_rank; cnt++)        \
+        {                                                                      \
+            to_sol_obj->decomp_scheme->vecs[cnt].n =                           \
+                from_sol_obj->decomp_scheme->vecs[cnt].n;                      \
+            to_sol_obj->decomp_scheme->vecs[cnt].in_stride =                   \
+                from_sol_obj->decomp_scheme->vecs[cnt].in_stride;              \
+            to_sol_obj->decomp_scheme->vecs[cnt].out_stride =                  \
+                from_sol_obj->decomp_scheme->vecs[cnt].out_stride;             \
+        }                                                                      \
+        to_sol_obj->decomp_scheme->in_real =                                   \
+            from_sol_obj->decomp_scheme->in_real;                              \
+        to_sol_obj->decomp_scheme->in_imag =                                   \
+            from_sol_obj->decomp_scheme->in_imag;                              \
+        to_sol_obj->decomp_scheme->out_real =                                  \
+            from_sol_obj->decomp_scheme->out_real;                             \
+        to_sol_obj->decomp_scheme->out_imag =                                  \
+            from_sol_obj->decomp_scheme->out_imag;                             \
+        to_sol_obj->decomp_scheme->cntrl_params->opt_level =                   \
+            from_sol_obj->decomp_scheme->cntrl_params->opt_level;              \
+        to_sol_obj->decomp_scheme->cntrl_params->opt_off =                     \
+            from_sol_obj->decomp_scheme->cntrl_params->opt_off;                \
+        to_sol_obj->decomp_scheme->cntrl_params->logger_mode =                 \
+            from_sol_obj->decomp_scheme->cntrl_params->logger_mode;            \
+        to_sol_obj->decomp_scheme->cntrl_params->measure_stats =               \
+            from_sol_obj->decomp_scheme->cntrl_params->measure_stats;          \
+        to_sol_obj->decomp_scheme->pthr_fft->num_threads =                     \
+            from_sol_obj->decomp_scheme->pthr_fft->num_threads;                \
+        to_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model =              \
+            from_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model;         \
+        to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags; \
+        to_sol_obj->strides->in_stride = from_sol_obj->strides->in_stride;     \
+        to_sol_obj->strides->out_stride = from_sol_obj->strides->out_stride;   \
+        to_sol_obj->strides->v_in_stride = from_sol_obj->strides->v_in_stride; \
+        to_sol_obj->strides->v_out_stride =                                    \
+            from_sol_obj->strides->v_out_stride;                               \
+        to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;                   \
+        to_sol_obj->bluestein->B = from_sol_obj->bluestein->B;                 \
+        to_sol_obj->bluestein->B_out = from_sol_obj->bluestein->B_out;         \
+        to_sol_obj->bluestein->in = from_sol_obj->bluestein->in;               \
+        to_sol_obj->bluestein->out = from_sol_obj->bluestein->out;             \
+        to_sol_obj->bluestein->is_B_out_valid =                                \
+            from_sol_obj->bluestein->is_B_out_valid;                           \
+        to_sol_obj->next_sol = from_sol_obj->next_sol;                         \
+    }
 
 // maps both in & out pointers to out pointer
 // incase of out-of-place problems, except the first DFT, other DFTs happen
 // in-place ie., in the output buffer.
-#define COPY_SOLUTION_OBJ_OUT_P(to_sol_obj, from_sol_obj) { \
-    COPY_SOLUTION_OBJ(to_sol_obj, from_sol_obj) \
-    UINT32 cnt; \
-    for (cnt = 0; cnt < to_sol_obj->decomp_scheme->dim_rank; cnt++) \
-    { \
-        to_sol_obj->decomp_scheme->dims[cnt].n = \
-            from_sol_obj->decomp_scheme->dims[cnt].n; \
-        to_sol_obj->decomp_scheme->dims[cnt].in_stride = \
-            from_sol_obj->decomp_scheme->dims[cnt].out_stride; \
-        to_sol_obj->decomp_scheme->dims[cnt].out_stride = \
-            from_sol_obj->decomp_scheme->dims[cnt].out_stride; \
-    } \
-    for (cnt = 0; cnt < to_sol_obj->decomp_scheme->vec_rank; cnt++) \
-    { \
-        to_sol_obj->decomp_scheme->vecs[cnt].n = \
-            from_sol_obj->decomp_scheme->vecs[cnt].n; \
-        to_sol_obj->decomp_scheme->vecs[cnt].in_stride = \
-            from_sol_obj->decomp_scheme->vecs[cnt].out_stride; \
-        to_sol_obj->decomp_scheme->vecs[cnt].out_stride = \
-            from_sol_obj->decomp_scheme->vecs[cnt].out_stride; \
-    } \
-    to_sol_obj->decomp_scheme->in_real = \
-        from_sol_obj->decomp_scheme->out_real; \
-    to_sol_obj->decomp_scheme->in_imag = \
-        from_sol_obj->decomp_scheme->out_imag; \
-    to_sol_obj->decomp_scheme->out_real = \
-        from_sol_obj->decomp_scheme->out_real; \
-    to_sol_obj->decomp_scheme->out_imag = \
-        from_sol_obj->decomp_scheme->out_imag; \
-}
+#define COPY_SOLUTION_OBJ_OUT_P(to_sol_obj, from_sol_obj)                      \
+    {                                                                          \
+        COPY_SOLUTION_OBJ(to_sol_obj, from_sol_obj)                            \
+        UINT32 cnt;                                                            \
+        for (cnt = 0; cnt < to_sol_obj->decomp_scheme->dim_rank; cnt++)        \
+        {                                                                      \
+            to_sol_obj->decomp_scheme->dims[cnt].n =                           \
+                from_sol_obj->decomp_scheme->dims[cnt].n;                      \
+            to_sol_obj->decomp_scheme->dims[cnt].in_stride =                   \
+                from_sol_obj->decomp_scheme->dims[cnt].out_stride;             \
+            to_sol_obj->decomp_scheme->dims[cnt].out_stride =                  \
+                from_sol_obj->decomp_scheme->dims[cnt].out_stride;             \
+        }                                                                      \
+        for (cnt = 0; cnt < to_sol_obj->decomp_scheme->vec_rank; cnt++)        \
+        {                                                                      \
+            to_sol_obj->decomp_scheme->vecs[cnt].n =                           \
+                from_sol_obj->decomp_scheme->vecs[cnt].n;                      \
+            to_sol_obj->decomp_scheme->vecs[cnt].in_stride =                   \
+                from_sol_obj->decomp_scheme->vecs[cnt].out_stride;             \
+            to_sol_obj->decomp_scheme->vecs[cnt].out_stride =                  \
+                from_sol_obj->decomp_scheme->vecs[cnt].out_stride;             \
+        }                                                                      \
+        to_sol_obj->decomp_scheme->in_real =                                   \
+            from_sol_obj->decomp_scheme->out_real;                             \
+        to_sol_obj->decomp_scheme->in_imag =                                   \
+            from_sol_obj->decomp_scheme->out_imag;                             \
+        to_sol_obj->decomp_scheme->out_real =                                  \
+            from_sol_obj->decomp_scheme->out_real;                             \
+        to_sol_obj->decomp_scheme->out_imag =                                  \
+            from_sol_obj->decomp_scheme->out_imag;                             \
+    }
 
 // copy all contents except dims & vecs
-// necessary in ND setup where dim_rank & vec_rank will differ for the sub-problem
-#define COPY_SOLUTION_OBJ_WO_DIMS(to_sol_obj, from_sol_obj) { \
-    to_sol_obj->solver->solver_type = \
-            from_sol_obj->solver->solver_type; \
-    to_sol_obj->solver->execute_solver = \
-            from_sol_obj->solver->execute_solver; \
-    to_sol_obj->solver->destroy_solver = \
-            from_sol_obj->solver->destroy_solver; \
-    to_sol_obj->solver->kernel_r = \
-            from_sol_obj->solver->kernel_r; \
-    to_sol_obj->solver->kernel_m = \
-            from_sol_obj->solver->kernel_m; \
-    to_sol_obj->decomp_scheme->in_real = \
-        from_sol_obj->decomp_scheme->in_real; \
-    to_sol_obj->decomp_scheme->in_imag = \
-        from_sol_obj->decomp_scheme->in_imag; \
-    to_sol_obj->decomp_scheme->out_real = \
-        from_sol_obj->decomp_scheme->out_real; \
-    to_sol_obj->decomp_scheme->out_imag = \
-        from_sol_obj->decomp_scheme->out_imag; \
-    to_sol_obj->decomp_scheme->cntrl_params->opt_level = \
-        from_sol_obj->decomp_scheme->cntrl_params->opt_level; \
-    to_sol_obj->decomp_scheme->cntrl_params->opt_off = \
-        from_sol_obj->decomp_scheme->cntrl_params->opt_off; \
-    to_sol_obj->decomp_scheme->cntrl_params->logger_mode = \
-        from_sol_obj->decomp_scheme->cntrl_params->logger_mode; \
-    to_sol_obj->decomp_scheme->cntrl_params->measure_stats = \
-        from_sol_obj->decomp_scheme->cntrl_params->measure_stats; \
-    to_sol_obj->decomp_scheme->pthr_fft->num_threads = \
-        from_sol_obj->decomp_scheme->pthr_fft->num_threads; \
-    to_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model = \
-        from_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model; \
-    to_sol_obj->decomp_scheme->flags = \
-        from_sol_obj->decomp_scheme->flags; \
-    to_sol_obj->strides->in_stride = \
-        from_sol_obj->strides->in_stride; \
-    to_sol_obj->strides->out_stride = \
-        from_sol_obj->strides->out_stride; \
-    to_sol_obj->strides->v_in_stride = \
-        from_sol_obj->strides->v_in_stride; \
-    to_sol_obj->strides->v_out_stride = \
-        from_sol_obj->strides->v_out_stride; \
-    to_sol_obj->twiddle->TW = \
-        from_sol_obj->twiddle->TW; \
-    to_sol_obj->bluestein->B = \
-        from_sol_obj->bluestein->B; \
-    to_sol_obj->bluestein->B_out = \
-        from_sol_obj->bluestein->B_out; \
-    to_sol_obj->bluestein->in = \
-        from_sol_obj->bluestein->in; \
-    to_sol_obj->bluestein->out = \
-        from_sol_obj->bluestein->out; \
-    to_sol_obj->bluestein->is_B_out_valid = \
-        from_sol_obj->bluestein->is_B_out_valid; \
-    to_sol_obj->next_sol = \
-        from_sol_obj->next_sol; \
-}
+// necessary in ND setup where dim_rank & vec_rank will differ for the
+// sub-problem
+#define COPY_SOLUTION_OBJ_WO_DIMS(to_sol_obj, from_sol_obj)                    \
+    {                                                                          \
+        to_sol_obj->solver->solver_type = from_sol_obj->solver->solver_type;   \
+        to_sol_obj->solver->execute_solver =                                   \
+            from_sol_obj->solver->execute_solver;                              \
+        to_sol_obj->solver->destroy_solver =                                   \
+            from_sol_obj->solver->destroy_solver;                              \
+        to_sol_obj->solver->kernel_r = from_sol_obj->solver->kernel_r;         \
+        to_sol_obj->solver->kernel_m = from_sol_obj->solver->kernel_m;         \
+        to_sol_obj->decomp_scheme->in_real =                                   \
+            from_sol_obj->decomp_scheme->in_real;                              \
+        to_sol_obj->decomp_scheme->in_imag =                                   \
+            from_sol_obj->decomp_scheme->in_imag;                              \
+        to_sol_obj->decomp_scheme->out_real =                                  \
+            from_sol_obj->decomp_scheme->out_real;                             \
+        to_sol_obj->decomp_scheme->out_imag =                                  \
+            from_sol_obj->decomp_scheme->out_imag;                             \
+        to_sol_obj->decomp_scheme->cntrl_params->opt_level =                   \
+            from_sol_obj->decomp_scheme->cntrl_params->opt_level;              \
+        to_sol_obj->decomp_scheme->cntrl_params->opt_off =                     \
+            from_sol_obj->decomp_scheme->cntrl_params->opt_off;                \
+        to_sol_obj->decomp_scheme->cntrl_params->logger_mode =                 \
+            from_sol_obj->decomp_scheme->cntrl_params->logger_mode;            \
+        to_sol_obj->decomp_scheme->cntrl_params->measure_stats =               \
+            from_sol_obj->decomp_scheme->cntrl_params->measure_stats;          \
+        to_sol_obj->decomp_scheme->pthr_fft->num_threads =                     \
+            from_sol_obj->decomp_scheme->pthr_fft->num_threads;                \
+        to_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model =              \
+            from_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model;         \
+        to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags; \
+        to_sol_obj->strides->in_stride = from_sol_obj->strides->in_stride;     \
+        to_sol_obj->strides->out_stride = from_sol_obj->strides->out_stride;   \
+        to_sol_obj->strides->v_in_stride = from_sol_obj->strides->v_in_stride; \
+        to_sol_obj->strides->v_out_stride =                                    \
+            from_sol_obj->strides->v_out_stride;                               \
+        to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;                   \
+        to_sol_obj->bluestein->B = from_sol_obj->bluestein->B;                 \
+        to_sol_obj->bluestein->B_out = from_sol_obj->bluestein->B_out;         \
+        to_sol_obj->bluestein->in = from_sol_obj->bluestein->in;               \
+        to_sol_obj->bluestein->out = from_sol_obj->bluestein->out;             \
+        to_sol_obj->bluestein->is_B_out_valid =                                \
+            from_sol_obj->bluestein->is_B_out_valid;                           \
+        to_sol_obj->next_sol = from_sol_obj->next_sol;                         \
+    }
 
-#define RESET_COST(sol) {\
-    sol->cost_analysis->ops = 0; \
-    sol->cost_analysis->time = 0; \
-}
+#define RESET_COST(sol)                                                        \
+    {                                                                          \
+        sol->cost_analysis->ops = 0;                                           \
+        sol->cost_analysis->time = 0;                                          \
+    }
 
-//Function declarations
-INT32 register_solvers_kernels(
-                            kernel_t [NUM_KERNELS_IN_TABLE],
-                            INT32 dt, INT32 cpu_flags);
+// Function declarations
+INT32 register_solvers_kernels(kernel_t[NUM_KERNELS_IN_TABLE], INT32 dt,
+                               INT32 cpu_flags);
 INT32 setup_dft_(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 setup_dft_f_(aoclfftz_selector_t *, kernel_t *);
-INT32 setup_dft_d_(aoclfftz_selector_t *, kernel_t *);
-VOID *setup_dft_f(aoclfftz_prob_desc_f *);
-VOID *setup_dft_d(aoclfftz_prob_desc_d *);
-VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *);
-VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *);
+INT32 setup_dft_f_(aoclfftz_selector_t *sel, kernel_t *kertab);
+INT32 setup_dft_d_(aoclfftz_selector_t *sel, kernel_t *kertab);
+VOID *setup_dft_f(aoclfftz_prob_desc_f *problem);
+VOID *setup_dft_d(aoclfftz_prob_desc_d *problem);
+VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem);
+VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem);
 INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
@@ -310,4 +289,4 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 VOID destroy_handle(VOID *handle);
 
-#endif //AOCLFFTZ_SELECTOR_H
+#endif // AOCLFFTZ_SELECTOR_H

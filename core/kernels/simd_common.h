@@ -211,12 +211,14 @@
 /**
  * @brief prepare -0.0 for complex conjucate.
  */
-union zero_conj_128 {
+union zero_conj_128
+{
     unsigned u[4];
     __m128 s;
     __m128d d;
 };
-union zero_conj_256 {
+union zero_conj_256
+{
     unsigned u[8];
     __m256 s;
     __m256d d;

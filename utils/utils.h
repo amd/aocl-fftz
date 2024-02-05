@@ -83,65 +83,73 @@ typedef struct timespec timeVal;
 //Logger - DTL
 #ifdef AOCLFFTZ_DTL
 #include <stdio.h>
-#define AOCLFFTZ_LOG_UNFORMATTED(logType, enableLog, str)     do {\
-                            if (enableLog)\
-                            {\
-                                const char *type=NULL;\
-                                if (logType == ERR)\
-                                    type = "ERR";\
-                                else if (logType == INFO)\
-                                    type = "INFO";\
-                                else if (logType == DEBUG)\
-                                    type = "DEBUG";\
-                                else if (logType == TRACE)\
-                                    type = "TRACE";\
-                                if (logType <= enableLog)\
-                                    printf ("[%s] : %s : %s : %d : " str"\n",\
-                                    type, __FILE__, FUNC_NAME, __LINE__);\
-                            }\
-                        } while (0)
-#define AOCLFFTZ_LOG_FORMATTED(logType, enableLog, str, ...)     do {\
-                            if (enableLog)\
-                            {\
-                                const char *type=NULL;\
-                                if (logType == ERR)\
-                                    type = "ERR";\
-                                else if (logType == INFO)\
-                                    type = "INFO";\
-                                else if (logType == DEBUG)\
-                                    type = "DEBUG";\
-                                else if (logType == TRACE)\
-                                    type = "TRACE";\
-                                if (logType <= enableLog)\
-                                    printf ("[%s] : %s : %s : %d : " str"\n",\
-                                    type, __FILE__, FUNC_NAME, __LINE__, __VA_ARGS__);\
-                            }\
-                        } while (0)
+#define AOCLFFTZ_LOG_UNFORMATTED(logType, enableLog, str)                      \
+    do                                                                         \
+    {                                                                          \
+        if (enableLog)                                                         \
+        {                                                                      \
+            const char *type = NULL;                                           \
+            if (logType == ERR)                                                \
+                type = "ERR";                                                  \
+            else if (logType == INFO)                                          \
+                type = "INFO";                                                 \
+            else if (logType == DEBUG)                                         \
+                type = "DEBUG";                                                \
+            else if (logType == TRACE)                                         \
+                type = "TRACE";                                                \
+            if (logType <= enableLog)                                          \
+                printf("[%s] : %s : %s : %d : " str "\n", type, __FILE__,      \
+                       FUNC_NAME, __LINE__);                                   \
+        }                                                                      \
+    } while (0)
+#define AOCLFFTZ_LOG_FORMATTED(logType, enableLog, str, ...)                   \
+    do                                                                         \
+    {                                                                          \
+        if (enableLog)                                                         \
+        {                                                                      \
+            const char *type = NULL;                                           \
+            if (logType == ERR)                                                \
+                type = "ERR";                                                  \
+            else if (logType == INFO)                                          \
+                type = "INFO";                                                 \
+            else if (logType == DEBUG)                                         \
+                type = "DEBUG";                                                \
+            else if (logType == TRACE)                                         \
+                type = "TRACE";                                                \
+            if (logType <= enableLog)                                          \
+                printf("[%s] : %s : %s : %d : " str "\n", type, __FILE__,      \
+                       FUNC_NAME, __LINE__, __VA_ARGS__);                      \
+        }                                                                      \
+    } while (0)
 #else
 #define AOCLFFTZ_LOG_UNFORMATTED(logType, enableLog, str)
 #define AOCLFFTZ_LOG_FORMATTED(logType, enableLog, str, ...)
 #endif
 
-//Timer and stats keeping
+// Timer and stats keeping
 #ifdef AOCLFFTZ_STATS
 #ifdef _WINDOWS
-#define initTimer(timerClk) if(!QueryPerformanceFrequency(&timerClk))\
-                         {\
-                             AOCLFFTZ_LOG_UNFORMATTED(ERR, 1, \
-                             "QueryPerformanceFrequency based Timer failed.");\
-                         }
+#define initTimer(timerClk)                                                    \
+    {                                                                          \
+        if (!QueryPerformanceFrequency(&timerClk))                             \
+        {                                                                      \
+            AOCLFFTZ_LOG_UNFORMATTED(                                          \
+                ERR, 1, "QueryPerformanceFrequency based Timer failed.");      \
+        }                                                                      \
+    }
 #define getTime(timeVal) QueryPerformanceCounter(&timeVal)
-#define diffTime(timerClk, startTime, endTime) ((1000000000ULL * \
-                (endTime.QuadPart - startTime.QuadPart))/timerClk.QuadPart)
+#define diffTime(timerClk, startTime, endTime)                                 \
+    ((1000000000ULL * (endTime.QuadPart - startTime.QuadPart)) /               \
+     timerClk.QuadPart)
 #else
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
 #define initTimer(timer)
 #define getTime(timeVal) clock_gettime(CLOCK_REALTIME, &timeVal)
-#define diffTime(timer, startTime, endTime) (1000000000ULL * \
-                (endTime.tv_sec - startTime.tv_sec) + \
-                endTime.tv_nsec - startTime.tv_nsec)
+#define diffTime(timer, startTime, endTime)                                    \
+    (1000000000ULL * (endTime.tv_sec - startTime.tv_sec) +                     \
+     endTime.tv_nsec - startTime.tv_nsec)
 #endif
 #endif
 
@@ -149,6 +157,7 @@ VOID cpu_features_detection(INTP fn, INTP optVal,
                             INTP *eax, INTP *ebx,
                             INTP *ecx, INTP *edx);
 
-INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level, INT32 logger_mode);
+INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
+                               INT32 logger_mode);
 
 #endif //AOCLFFTZ_UTILS_H

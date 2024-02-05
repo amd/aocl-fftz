@@ -180,7 +180,7 @@
     {                                                                          \
         p_desc->dim_rank = params->dim_rank;                                   \
         p_desc->vec_rank = params->vec_rank;                                   \
-        UINT32 is_align = params->aligned_alloc;                                \
+        UINT32 is_align = params->aligned_alloc;                               \
         ALLOC_UNINIT(p_desc->dims, dim_t, sizeof(dim_t) * p_desc->dim_rank,    \
                         is_align);                                             \
         for (INT32 i = 0; i < p_desc->dim_rank; i++)                           \
@@ -221,7 +221,7 @@
  * @brief Destroy the problem descriptor
  *
  */
-#define DESTROY_PD(p_desc, is_align)                                                     \
+#define DESTROY_PD(p_desc, is_align)                                           \
     {                                                                          \
         if (p_desc != NULL)                                                    \
         {                                                                      \
@@ -497,7 +497,7 @@
 
 #define PRINT_ERR_COORDS(enablelog, arr, dim_length, vec_length)               \
     {                                                                          \
-        if(DEBUG <= enablelog)                                                 \
+        if (DEBUG <= enablelog)                                                \
         {                                                                      \
             INTP idx;                                                          \
             for (idx = vec_length-1; idx > 0; idx--)                           \
@@ -598,11 +598,13 @@
     }
 
 // Function pointers
-VOID (*prepare_input_data)(VOID *, INTP, INTP *, INT32);
+VOID (*prepare_input_data) (VOID *input, INTP n, INTP *idx_map,
+                            INT32 input_type);
 #ifdef ENABLE_DFT_REFERENCE
-VOID (*dft_ref)(aoclfftz_bench_params_t *, VOID *, INTP *, INTP *);
+VOID (*dft_ref) (aoclfftz_bench_params_t *params, VOID *out_buf,
+                 INTP *in_idx_map, INTP *out_idx_map);
 #endif
-INT32 (*compare)(VOID *, VOID *, INTP, INTP *, DOUBLE tol, INT32);
+INT32 (*compare) (VOID *a, VOID *b, INTP n, INTP *idx_map, DOUBLE tol, INT32);
 
 // Function declarations
 INT32 set_flag(aoclfftz_bench_params_t *params);
@@ -627,7 +629,7 @@ INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank);
 VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
                             INTP *in_buffer_size, INTP *out_buffer_size);
 INT32 check_inplace_strides(aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                            INTP dim_rank, INTP vec_rank);
+                            INT32 dim_rank, INT32 vec_rank);
 VOID prepare_index_map(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                        INTP *out_idx_map);
 VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
@@ -636,28 +638,6 @@ VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
 INT32 caliberate_iterations(VOID *handle, DOUBLE min_bench_time);
 
 // Function definitions
-
-/**
- * @brief Free the structures used for FFT problem
- *
- * @param params aoclfftz_bench_params_t type contains parsed arguments
- * @return VOID
- */
-VOID destroy_bench_param(aoclfftz_bench_params_t *params)
-{
-    if (params != NULL)
-    {
-        UINT32 is_align = params->aligned_alloc;
-        FREE_ALLOCATED_MEM(params->in, is_align);
-        if(params->res_placement == OUT_OF_PLACE)
-        {
-            FREE_ALLOCATED_MEM(params->out, is_align);
-        }
-        FREE_ALIGN_ALLOCATED_MEM(params->dims);
-        FREE_ALIGN_ALLOCATED_MEM(params->vecs);
-        FREE_ALIGN_ALLOCATED_MEM(params);
-    }
-}
 
 /**
  * @brief set the flag value based on bench params
@@ -789,7 +769,7 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
             // by default the data is stored in dims always
             // once "v" is encountered, its moved to vecs and then dims is reset
             // FIXME : this needs to be fixed properly
-            for(INT32 i = vec_rank - 1, j = 0; i >= 0; i--, j++)
+            for (INT32 i = vec_rank - 1, j = 0; i >= 0; i--, j++)
             {
                 (*vecs)[i].n = desc[j].n;
                 (*vecs)[i].in_stride =
@@ -870,7 +850,7 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
     }
 
     // copy desc to dims in reverse
-    for(INT32 i = dim_rank - 1, j = 0; i >= 0; i--, j++)
+    for (INT32 i = dim_rank - 1, j = 0; i >= 0; i--, j++)
     {
         (*dims)[i].n = desc[j].n;
         (*dims)[i].in_stride = desc[j].in_stride;
@@ -889,11 +869,11 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
 
     // TODO : this needs to be moved at the last and done for ND
     // if both strides are provided, check if vec strides are as expected
-    // if(is_stride == 2 && is_vec_stride == 2)
+    // if (is_stride == 2 && is_vec_stride == 2)
     // {
-    //     for(INT32 i = 0; i < dim_rank; i++)
+    //     for (INT32 i = 0; i < dim_rank; i++)
     //     {
-    //         if( ((*vecs)[i].in_stride < ((*dims)[i].in_stride *
+    //         if ( ((*vecs)[i].in_stride < ((*dims)[i].in_stride *
     //         (*dims)[i].n)) ||
     //             ((*vecs)[i].out_stride < ((*dims)[i].out_stride *
     //             (*dims)[i].n)))
@@ -905,14 +885,14 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
     // }
 
     // set strides for dims if not provided
-    for(INT32 i = 0; i < dim_rank; i++)
+    for (INT32 i = 0; i < dim_rank; i++)
     {
-        if((*dims)[i].in_stride == 0)
+        if ((*dims)[i].in_stride == 0)
         {
             (*dims)[i].in_stride = (i == 0) ?
                 1 : ((*dims)[i - 1]. n * (*dims)[i - 1].in_stride);
         }
-        if((*dims)[i].out_stride == 0)
+        if ((*dims)[i].out_stride == 0)
         {
             (*dims)[i].out_stride = (i == 0) ?
                 1 : ((*dims)[i - 1]. n * (*dims)[i - 1].out_stride);
@@ -920,16 +900,16 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
     }
 
     // set strides for vecs if not provided
-    for(INT32 i = 0; i < vec_rank; i++)
+    for (INT32 i = 0; i < vec_rank; i++)
     {
-        if((*vecs)[i].in_stride == 0)
+        if ((*vecs)[i].in_stride == 0)
         {
             // stride of fcd should atleast be the length of dims
             (*vecs)[i].in_stride = (i == 0) ?
                 (*dims)[dim_rank -1].n * (*dims)[dim_rank - 1].in_stride :
                     ((*vecs) [i - 1]. n * (*vecs) [i - 1].in_stride);
         }
-        if((*vecs)[i].out_stride == 0)
+        if ((*vecs)[i].out_stride == 0)
         {
             // stride of fcd should atleast be the length of dims
             (*vecs)[i].out_stride = (i == 0) ?
@@ -1480,7 +1460,7 @@ INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank)
 {
     INTP len = 1;
 
-    for (INTP i = 0; i < rank; i++)
+    for (INT32 i = 0; i < rank; i++)
     {
         len = len * dims[i].n;
     }
@@ -1540,16 +1520,16 @@ VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
  * @return INT32
  */
 INT32 check_inplace_strides(aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                            INTP dim_rank, INTP vec_rank)
+                            INT32 dim_rank, INT32 vec_rank)
 {
-    for (INTP i = 0; i < dim_rank; i++)
+    for (INT32 i = 0; i < dim_rank; i++)
     {
         if (dims[i].in_stride != dims[i].out_stride)
         {
             return SIZE_PARSING_ERROR;
         }
     }
-    for (INTP i = 0; i < vec_rank; i++)
+    for (INT32 i = 0; i < vec_rank; i++)
     {
         if (vecs[i].in_stride != vecs[i].out_stride)
         {
@@ -1667,7 +1647,7 @@ INT32 caliberate_iterations(VOID *handle, DOUBLE min_bench_time)
     timeVal start_time, end_time;
     initTimer(clk_tick);
     INT32 iters = 1;
-    for(iters = 1; increase_iterations && iters < INT32_MAX; iters *= 5)
+    for (iters = 1; increase_iterations && iters < INT32_MAX; iters *= 5)
     {
         getTime(start_time);
         for (INT32 j = 0; j < iters; j++)
@@ -1682,7 +1662,7 @@ INT32 caliberate_iterations(VOID *handle, DOUBLE min_bench_time)
         {
             increase_iterations = 0;
             cur_time = cur_time / 1000;   //change time unit from ns to us
-            if(cur_time > min_acceptable_time)
+            if (cur_time > min_acceptable_time)
             {
                 return iters;
             }

@@ -38,7 +38,8 @@
 #include <gtest/gtest.h>
 #include "gtest/selector/selector_gtest_base.h"
 
-aoclfftz_selector_test_params_t selector_params[] = {
+aoclfftz_selector_test_params_t selector_params[] =
+{
     // flag: 0b0000 => complex, forward, in-order, in-place problem
     {"2:1:1", 0b0000, -1, {SOLVER_DIRECT}},
     {"15:3:4", 0b0000, -1, {SOLVER_DIRECT}},
@@ -82,10 +83,13 @@ aoclfftz_selector_test_params_t selector_params[] = {
       SOLVER_BATCHED, SOLVER_CT, SOLVER_DIRECT, SOLVER_DIRECT}},
     // multi dimesional batched ND(3D) strided transform;*/
     {"4v6x2:3:8x2", 0b0000, -1,
-    {SOLVER_BATCHED, SOLVER_NDIM, SOLVER_BATCHED, SOLVER_DIRECT, SOLVER_BATCHED, SOLVER_NDIM, SOLVER_DIRECT, SOLVER_DIRECT}},
+    {SOLVER_BATCHED, SOLVER_NDIM, SOLVER_BATCHED, SOLVER_DIRECT,
+     SOLVER_BATCHED, SOLVER_NDIM, SOLVER_DIRECT, SOLVER_DIRECT}},
     // multi dimesional batched (3D) transform;
     {"2x6v2x3x4", 0b0000, -1,
-     {SOLVER_BATCHED, SOLVER_NDIM, SOLVER_DIRECT, SOLVER_BATCHED, SOLVER_NDIM, SOLVER_DIRECT, SOLVER_DIRECT}}};
+     {SOLVER_BATCHED, SOLVER_NDIM, SOLVER_DIRECT, SOLVER_BATCHED,
+      SOLVER_NDIM, SOLVER_DIRECT, SOLVER_DIRECT}}
+};
 
 TEST_P(AoclfftzSelectorTestFloatLP64, TEST_SELECTOR_FLOAT_LP64)
 {

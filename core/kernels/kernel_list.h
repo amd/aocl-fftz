@@ -44,14 +44,14 @@
 
 // Data structure containing kernel function pointers corresponding to the
 // registration, and operation count of the kernel
-typedef struct
+typedef struct kernel_fp_list
 {
     k_register_kernel_ k_register_kernel;
     k_ops_cnt_ k_ops_cnt;
     UINT32 radix;
-} kernel_fp_list;
+} kernel_fp_list_t;
 
-kernel_fp_list kernels_c[NUM_KERNELS_IN_EACH_CATEGORY] =
+kernel_fp_list_t kernels_c[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2c, get_ops_cnt_fft2c, 2},    // radix-2
     {register_kernel_fft3c, get_ops_cnt_fft3c, 3},    // radix-3
@@ -73,8 +73,10 @@ kernel_fp_list kernels_c[NUM_KERNELS_IN_EACH_CATEGORY] =
     {NULL, NULL, 32},                                 // radix-32
     {NULL, NULL, 64}                                  // radix-64
 };
+
 #ifdef ENABLE_AVX128
-kernel_fp_list kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] = {
+kernel_fp_list_t kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
+{
     {register_kernel_fft2avx128, get_ops_cnt_fft2avx128, 2},  // radix-2
     {NULL, NULL, 3},                                          // radix-3
     {NULL, NULL, 4},                                          // radix-4
@@ -96,8 +98,9 @@ kernel_fp_list kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] = {
     {NULL, NULL, 64}                                          // radix-64
 };
 #endif
+
 #ifdef ENABLE_AVX256
-kernel_fp_list kernels_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
+kernel_fp_list_t kernels_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2avx256, get_ops_cnt_fft2avx256, 2},   // radix-2
     {NULL, NULL, 3},   // radix-3
@@ -120,8 +123,9 @@ kernel_fp_list kernels_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
     {NULL, NULL, 64}   // radix-64
 };
 #endif
+
 #ifdef ENABLE_AVX512
-kernel_fp_list kernels_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
+kernel_fp_list_t kernels_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {NULL, NULL, 2 }, //radix-2
     {NULL, NULL, 3 }, //radix-3
