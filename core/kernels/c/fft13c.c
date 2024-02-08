@@ -36,31 +36,16 @@
  *  @author Varun Sanjay
  *  @author S. Biplab Raut
  *  @author Ashwin K. Godbole
+ *  @author Jeya R
  */
 
 #include "core/kernels/kernel.h"
 
 #ifdef USE_OPT_KERNEL_VARIANT
 
-// complex multiplication (double) (in-place) in var form: A = A * B
-#define CMUL_INPLACE_FP64(c1r, c1i, c2r, c2i)                                  \
-    {                                                                          \
-        DOUBLE copy_c1r = c1r;                                                 \
-        c1r = (copy_c1r * c2r) - (c1i * c2i);                                  \
-        c1i = (copy_c1r * c2i) + (c1i * c2r);                                  \
-    }
-
-// complex multiplication (float) (in-place) in var form: A = A * B
-#define CMUL_INPLACE_FP32(c1r, c1i, c2r, c2i)                                  \
-    {                                                                          \
-        FLOAT copy_c1r = c1r;                                                  \
-        c1r = (copy_c1r * c2r) - (c1i * c2i);                                  \
-        c1i = (copy_c1r * c2i) + (c1i * c2r);                                  \
-    }
-
 /* --------------- optimized C kernel variant --------------- */
-static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 78, 216, 230, 0, 0},
-                                                     {0, 78, 216, 230, 0, 0}};
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 68, 176, 52, 0, 0},
+                                                     {0, 68, 176, 52, 0, 0}};
 
 ops_cycles_t get_ops_cnt_fft13c(INT32 precision)
 {
@@ -92,21 +77,33 @@ static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP v_out_stride = (strides->v_out_stride);
     INTP cnt;
 
-    const DOUBLE CRTM_12_1 =
-        0.86602540378443864676372317075293618347140262700000;
-    const DOUBLE CRTM_12_2 =
-        0.50000000000000000000000000000000000000000000000000;
+    const DOUBLE CRTM_13_1 =
+        +1.73205080756887719317660412343684583902359008789060;
+    const DOUBLE CRTM_13_2 =
+        +0.38739058546761714712838513245787843298017865366345;
+    const DOUBLE CRTM_13_3 =
+        +0.13298312460741867056777367279491668244720145803175;
+    const DOUBLE CRTM_13_4 =
+        +0.11385447905579067614456922127652058891458054833493;
+    const DOUBLE CRTM_13_5 =
+        +0.25176851643188325619942540855595308576560112726050;
+    const DOUBLE CRTM_13_6 =
+        +0.86602540378443864676372317075293618347140262700000;
+    const DOUBLE CRTM_13_7 =
+        +0.50000000000000000000000000000000000000000000000000;
+    const DOUBLE CRTM_13_8 =
+        +2.00000000000000000000000000000000000000000000000000;
 
     // DGC - constants(C) of the diagonal(DG) matrix used in rader's algorithm
     const DOUBLE DGC_1 = -0.08333333333333341693177688718872429763576971755296;
     const DOUBLE DGC_2 = +0.25624767158293663769405689230781736686616059890980;
     const DOUBLE DGC_3 = +0.15689139105158457352993666120753768234094124525375;
     const DOUBLE DGC_4 = +0.25826039031174479484752691274654956353060547073611;
-    const DOUBLE DGC_5 = +0.15355568557954144041605893849125243204698762637388;
-    const DOUBLE DGC_6 = +0.28757036473700157031322574591241948572798864686781;
-    const DOUBLE DGC_7 = +0.08706930057606790908049634621971372668862591093985;
+    const DOUBLE DGC_5 = +0.26596624921483734113554734558983336489440291606351;
+    const DOUBLE DGC_6 = +0.57514072947400312136838554745545338846100160800000;
+    const DOUBLE DGC_7 = +0.17413860115213590500566079492926474261696467600000;
     const DOUBLE DGC_8 = +0.07590298603719379320004091411468632874055721777845;
-    const DOUBLE DGC_9 = +0.29071724147084106396127254528701896403545620197956;
+    const DOUBLE DGC_9 = +0.50353703286376651239885081711190617153120225452101;
     const DOUBLE DGC_10 = +0.3002386359663325979287571057309917466781880617299;
     const DOUBLE DGC_11 = +0.0115991056057681999237624507209650002461566663358;
     const DOUBLE DGC_12 = +0.3004626062886657229721584869768537486323029264720;
@@ -122,10 +119,10 @@ static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
             v711r, v711i;
 
         {
-            DOUBLE adr1, adr2, adr3, adr4, adr5, adi1, adi2, adi3, adi4, adi5,
-                sbi1, sbi2, sbi3, sbi4, sbi5, sbr1, sbr2, sbr3, sbr4, sbr5,
-                adr24, adi24, adr15, adi15, adr51, adi51, adr42, adi42, sbi15,
-                sbi51, sbr15, sbr51, sbi24, sbr24, v17r, v71r, v17i, v71i;
+            DOUBLE cv1, cv13, cv9, cv17, cv7, cv3, cv15, cv11, cv19, cv5,
+                cv4, cv16, cv12, cv20, cv6, cv2, cv14, cv10, cv18, cv8, ad6,
+                ad5, ad3, ad1, sb6, sb5, ad2, sb2, ad4, sb4, sb1, sb3, v17r,
+                v71r, v17i, v71i;
 
             DOUBLE adr1_DFT1, adr2_DFT1, adr3_DFT1, adr4_DFT1, adr5_DFT1,
                 adi1_DFT1, adi2_DFT1, adi3_DFT1, adi4_DFT1, adi5_DFT1,
@@ -137,8 +134,7 @@ static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                 sbr51_DFT1, sbi24_DFT1, sbr24_DFT1, v17r_DFT1, v71r_DFT1,
                 v17i_DFT1, v71i_DFT1, tv1_DFT1, tv2_DFT1, tv3_DFT1, tv4_DFT1,
                 tv5_DFT1, tv6_DFT1, tv7_DFT1, tv8_DFT1, v711r_DFT1, v711i_DFT1,
-                early_tvii_DFT1, early_tvrr_DFT1, early_tvii_2_DFT1,
-                early_tvrr_2_DFT1;
+                tvii_DFT1, tvrr_DFT1, tvii_2_DFT1, tvrr_2_DFT1;
 
             {
                 vr[1] = in_r[in_strides[1]];
@@ -167,7 +163,7 @@ static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                     adr24_DFT1 = adr2_DFT1 + adr4_DFT1;
                     cv1rr_DFT1 = v17r_DFT1 + adr3_DFT1;
                     cv1ri_DFT1 = adr15_DFT1 + adr24_DFT1;
-                    early_tvrr_2_DFT1 = cv1rr_DFT1 - (CRTM_12_2 * cv1ri_DFT1);
+                    tvrr_2_DFT1 = cv1rr_DFT1 - (CRTM_13_7 * cv1ri_DFT1);
 
                     // [[ DFT1 ]] Output point 1: X(0) / V(1)
                     vr[1] = cv1rr_DFT1 + cv1ri_DFT1;
@@ -177,11 +173,11 @@ static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                     // of the point vr[1]
                     vr[0] = in_r[0];
                     out_r[0] = vr[1] + in_r[0];
-                    vr[1] = (vr[1] - (12 * vr[0])) * DGC_1;
+                    vr[1] = vr[1] * DGC_1 + vr[0];
 
                     cv2rr_DFT1 = v17r_DFT1 - adr3_DFT1;
                     cv2ri_DFT1 = adr15_DFT1 - adr24_DFT1;
-                    early_tvrr_DFT1 = cv2rr_DFT1 + (CRTM_12_2 * cv2ri_DFT1);
+                    tvrr_DFT1 = cv2rr_DFT1 + (CRTM_13_7 * cv2ri_DFT1);
 
                     // [[ DFT1 ]] Output point 7: X(6) / V(7)
                     vr[7] = (cv2rr_DFT1 - cv2ri_DFT1) * DGC_12;
@@ -231,7 +227,7 @@ static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                     adi24_DFT1 = adi2_DFT1 + adi4_DFT1;
                     cv1ir_DFT1 = v17i_DFT1 + adi3_DFT1;
                     cv1ii_DFT1 = adi15_DFT1 + adi24_DFT1;
-                    early_tvii_2_DFT1 = cv1ir_DFT1 - (CRTM_12_2 * cv1ii_DFT1);
+                    tvii_2_DFT1 = cv1ir_DFT1 - (CRTM_13_7 * cv1ii_DFT1);
 
                     // [[ DFT1 ]] Output point 1: X(0) / V(1)
                     vi[1] = cv1ii_DFT1 + cv1ir_DFT1;
@@ -241,11 +237,11 @@ static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                     // of the point vi[1]
                     vi[0] = in_i[0];
                     out_i[0] = vi[1] + in_i[0];
-                    vi[1] = (vi[1] - (12 * vi[0])) * DGC_1;
+                    vi[1] = vi[1] * DGC_1 + vi[0];
 
                     cv2ir_DFT1 = v17i_DFT1 - adi3_DFT1;
                     cv2ii_DFT1 = adi15_DFT1 - adi24_DFT1;
-                    early_tvii_DFT1 = cv2ir_DFT1 + (CRTM_12_2 * cv2ii_DFT1);
+                    tvii_DFT1 = cv2ir_DFT1 + (CRTM_13_7 * cv2ii_DFT1);
 
                     // [[ DFT1 ]] Output point 7: X(6) / V(7)
                     vi[7] = (cv2ir_DFT1 - cv2ii_DFT1) * DGC_12;
@@ -269,17 +265,17 @@ static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
             }
 
             {
-                tv1_DFT1 = CRTM_12_2 * adr2_DFT1;
-                tv4_DFT1 = CRTM_12_2 * sbr15_DFT1 + sbr3_DFT1;
-                tv2_DFT1 = CRTM_12_2 * sbi15_DFT1 + sbi3_DFT1;
-                tv6_DFT1 = CRTM_12_2 * adi4_DFT1;
+                tv1_DFT1 = CRTM_13_7 * adr2_DFT1;
+                tv4_DFT1 = (CRTM_13_7 * sbr15_DFT1) + sbr3_DFT1;
+                tv2_DFT1 = (CRTM_13_7 * sbi15_DFT1) + sbi3_DFT1;
+                tv6_DFT1 = CRTM_13_7 * adi4_DFT1;
             }
 
             {
-                tv7_DFT1 = CRTM_12_1 * adr1_DFT1;
-                tv5_DFT1 = CRTM_12_1 * (sbr2_DFT1 + sbr4_DFT1);
-                tv3_DFT1 = CRTM_12_1 * (sbi2_DFT1 + sbi4_DFT1);
-                tv8_DFT1 = CRTM_12_1 * adi1_DFT1;
+                tv7_DFT1 = CRTM_13_6 * adr1_DFT1;
+                tv5_DFT1 = CRTM_13_6 * (sbr2_DFT1 + sbr4_DFT1);
+                tv3_DFT1 = CRTM_13_6 * (sbi2_DFT1 + sbi4_DFT1);
+                tv8_DFT1 = CRTM_13_6 * adi1_DFT1;
             }
 
             v711r_DFT1 = v71r_DFT1 + tv1_DFT1;
@@ -299,170 +295,106 @@ static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                 tvii = v711i_DFT1 + tv8_DFT1;
                 tvii2 = v711i_DFT1 - tv8_DFT1;
 
-                // [[ DFT1 ]] Output point 2: X(1) / V(2)
-                vr[2] = tvrr - tvri;
-                vi[2] = tvii + tvir;
-
-                // [[ DFT1 ]] Output point 12: X(11) / V(12)
-                vr[12] = tvrr + tvri;
-                vi[12] = tvii - tvir;
-
-                // [[ DFT1 ]] Output point 6: X(5) / V(6)
-                vr[6] = tvrr2 - tvri2;
-                vi[6] = tvii2 + tvir2;
-
-                // [[ DFT1 ]] Output point 8: X(7) / V(8)
-                vr[8] = tvrr2 + tvri2;
-                vi[8] = tvii2 - tvir2;
-
-                CMUL_INPLACE_FP64(vr[2], vi[2], DGC_2, -DGC_3);
-                CMUL_INPLACE_FP64(vr[12], vi[12], -DGC_2, -DGC_3);
-
-                adr1 = vr[2] + vr[12];
-                sbr1 = vr[12] - vr[2];
-                adi1 = vi[2] + vi[12];
-                sbi1 = vi[12] - vi[2];
-
-                CMUL_INPLACE_FP64(vr[8], vi[8], DGC_10, DGC_11);
-                CMUL_INPLACE_FP64(vr[6], vi[6], -DGC_10, DGC_11);
-
-                adi5 = vi[6] + vi[8];
-                sbi5 = vi[8] - vi[6];
-                adr5 = vr[6] + vr[8];
-                sbr5 = vr[8] - vr[6];
+                cv1 = -DGC_2 * tvri + DGC_3 * tvii;
+                cv2 = -DGC_2 * tvrr - DGC_3 * tvir;
+                cv3 = DGC_2 * tvir - DGC_3 * tvrr;
+                cv4 = -DGC_2 * tvii - DGC_3 * tvri;
+                cv5 = -DGC_10 * tvir2 + DGC_11 * tvrr2;
+                cv6 = DGC_10 * tvii2 + DGC_11 * tvri2;
+                cv7 = DGC_10 * tvri2 - DGC_11 * tvii2;
+                cv8 = DGC_10 * tvrr2 + DGC_11 * tvir2;
             }
 
             DOUBLE tvrr, tvri, tvir, tvii;
 
-            adi51 = adi1 - adi5;
-            adi15 = adi1 + adi5;
-            sbi15 = sbi1 + sbi5;
-            sbi51 = sbi1 - sbi5;
-            adr51 = adr1 - adr5;
-            adr15 = adr1 + adr5;
-            sbr15 = sbr1 + sbr5;
-            sbr51 = sbr1 - sbr5;
+            ad1 = cv3 + cv5;
+            ad2 = cv4 + cv6;
+            sb2 = CRTM_13_1 * (cv4 - cv6);
+            ad3 = cv1 + cv7;
+            ad4 = cv2 + cv8;
+            sb4 = CRTM_13_1 * (cv2 - cv8);
 
-            tv7 = CRTM_12_1 * adr51;
-            tv8 = CRTM_12_1 * adi51;
-
+            tv7 = CRTM_13_1 * (cv1 - cv7);
+            tv8 = CRTM_13_1 * (cv3 - cv5);
             {
                 tvrr = v71r_DFT1 - adr2_DFT1;
                 tvri = sbi15_DFT1 - sbi3_DFT1;
                 tvir = sbr15_DFT1 - sbr3_DFT1;
                 tvii = v71i_DFT1 - adi4_DFT1;
 
-                // [[ DFT1 ]] Output point 4: X(3) / V(4)
-                vr[4] = tvrr - tvri;
-                vi[4] = tvii + tvir;
-
-                // [[ DFT1 ]] Output point 10: X(9) / V(10)
-                vr[10] = tvrr + tvri;
-                vi[10] = tvii - tvir;
-
-                CMUL_INPLACE_FP64(vr[10], vi[10], -DGC_6, -DGC_7);
-                CMUL_INPLACE_FP64(vr[4], vi[4], DGC_6, -DGC_7);
+                cv9 = -DGC_6 * tvri + DGC_7 * tvii;
+                cv10 = -DGC_6 * tvrr - DGC_7 * tvir;
+                cv11 = DGC_6 * tvir - DGC_7 * tvrr;
+                cv12 = -DGC_6 * tvii - DGC_7 * tvri;
             }
 
-            adr3 = vr[4] + vr[10];
-            sbr3 = vr[10] - vr[4];
-            adi3 = vi[4] + vi[10];
-            sbi3 = vi[10] - vi[4];
-            tv2 = CRTM_12_2 * sbi15 + sbi3;
-            tv4 = CRTM_12_2 * sbr15 + sbr3;
-            cv1rr = v17r + adr3;
-            cv1ir = v17i + adi3;
-            cv2rr = v17r - adr3;
-            cv2ir = v17i - adi3;
-            tvri_5o = sbi15 - sbi3;
-            tvir_5o = sbr15 - sbr3;
-
+            tv2 = ad2 + cv12;
+            tv4 = ad4 + cv10;
+            cv1rr = v17r + cv9;
+            cv1ir = v17i + cv11;
+            cv2rr = v17r - cv9;
+            cv2ir = v17i - cv11;
+            tvri_5o = (CRTM_13_8 * ad2) - cv12;
+            tvir_5o = (CRTM_13_8 * ad4) - cv10;
             {
-                // [[ DFT1 ]] Output point 3: X(2) / V(3)
-                tvrr = early_tvrr_DFT1;
-                tvii = early_tvii_DFT1;
-                tvri = CRTM_12_1 * (sbi51_DFT1 + sbi24_DFT1);
-                tvir = CRTM_12_1 * (sbr51_DFT1 + sbr24_DFT1);
+                tvrr = tvrr_DFT1;
+                tvii = tvii_DFT1;
+                tvri = sbi51_DFT1 + sbi24_DFT1;
+                tvir = sbr51_DFT1 + sbr24_DFT1;
 
-                vr[3] = tvrr - tvri;
-                vi[3] = tvii + tvir;
-
-                // [[ DFT1 ]] Output point 11: X(10) / V(11)
-                vr[11] = tvrr + tvri;
-                vi[11] = tvii - tvir;
-
-                CMUL_INPLACE_FP64(vr[11], vi[11], DGC_4, -DGC_5);
-                CMUL_INPLACE_FP64(vr[3], vi[3], DGC_4, DGC_5);
-            }
-
-            adr2 = vr[3] + vr[11];
-            sbr2 = vr[11] - vr[3];
-            adi2 = vi[3] + vi[11];
-            sbi2 = vi[11] - vi[3];
-
-            {
-                tvrr = early_tvrr_2_DFT1;
-                tvii = early_tvii_2_DFT1;
-                tvri = CRTM_12_1 * (sbi51_DFT1 - sbi24_DFT1);
-                tvir = CRTM_12_1 * (sbr51_DFT1 - sbr24_DFT1);
-
-                // [[ DFT1 ]] Output point 5: X(4) / V(5)
-                vr[5] = tvrr - tvri;
-                vi[5] = tvii + tvir;
-
-                // [[ DFT1 ]] Output point 9: X(8) / V(9)
-                vr[9] = tvrr + tvri;
-                vi[9] = tvii - tvir;
-
-                CMUL_INPLACE_FP64(vr[9], vi[9], DGC_8, -DGC_9);
-                CMUL_INPLACE_FP64(vr[5], vi[5], DGC_8, DGC_9);
-            }
-
-            adr4 = vr[5] + vr[9];
-            sbr4 = vr[9] - vr[5];
-            adi4 = vi[5] + vi[9];
-            sbi4 = vi[9] - vi[5];
-            adi42 = adi2 - adi4;
-            adi24 = adi2 + adi4;
-            sbi24 = sbi2 - sbi4;
-            adr24 = adr2 + adr4;
-            adr42 = adr2 - adr4;
-            sbr24 = sbr2 - sbr4;
-            tvrr_5o = v71r - adr42;
-            tvii_5o = v71i - adi42;
-            cv1ri = adr15 + adr24;
-            cv1ii = adi15 + adi24;
-            cv2ri = adr15 - adr24;
-            cv2ii = adi15 - adi24;
-
-            {
-                v711r = v71r + (CRTM_12_2 * adr42);
-                v711i = v71i + (CRTM_12_2 * adi42);
-                tvrr_1o = cv2rr + (CRTM_12_2 * cv2ri);
-                tvii_1o = cv2ir + (CRTM_12_2 * cv2ii);
-                tvrr_2o = cv1rr - (CRTM_12_2 * cv1ri);
-                tvii_2o = cv1ir - (CRTM_12_2 * cv1ii);
+                cv13 = DGC_4 * tvrr - CRTM_13_3 * tvir;
+                cv14 = CRTM_13_2 * tvri + DGC_5 * tvii;
+                cv15 = DGC_4 * tvii - CRTM_13_3 * tvri;
+                cv16 = -CRTM_13_2 * tvir - DGC_5 * tvrr;
             }
 
             {
-                tv3 = CRTM_12_1 * (sbi2 + sbi4);
-                tv5 = CRTM_12_1 * (sbr2 + sbr4);
-                tvri_2o = CRTM_12_1 * (sbi51 - sbi24);
-                tvir_2o = CRTM_12_1 * (sbr51 - sbr24);
-                tvri_1o = CRTM_12_1 * (sbi51 + sbi24);
-                tvir_1o = CRTM_12_1 * (sbr51 + sbr24);
+                tvrr = tvrr_2_DFT1;
+                tvii = tvii_2_DFT1;
+                tvri = sbi51_DFT1 - sbi24_DFT1;
+                tvir = sbr51_DFT1 - sbr24_DFT1;
+
+                cv17 = DGC_8 * tvrr - CRTM_13_5 * tvir;
+                cv18 = CRTM_13_4 * tvri  + DGC_9 * tvii;
+                cv19 = DGC_8 * tvii - CRTM_13_5 * tvri;
+                cv20 = -CRTM_13_4 * tvir - DGC_9 * tvrr;
             }
+
+            tv3 = cv16 + cv20;
+            tv5 = cv14 + cv18;
+            sb5 = cv15 - cv19;
+            ad5 = cv15 + cv19;
+            sb1 = cv16 - cv20;
+            ad6 = cv13 + cv17;
+            sb6 = cv13 - cv17;
+            sb3 = cv14 - cv18;
+            tvrr_5o = v71r - CRTM_13_8 * sb6;
+            tvii_5o = v71i - CRTM_13_8 * sb5;
+            v711r = v71r + sb6;
+            v711i = v71i + sb5;
+            cv1ri = ad3 + ad6;
+            cv1ii = ad1 + ad5;
+            cv2ri = ad3 - ad6;
+            cv2ii = ad1 - ad5;
+            tvrr_1o = cv2rr + cv2ri;
+            tvii_1o = cv2ir + cv2ii;
+            tvrr_2o = cv1rr - cv1ri;
+            tvii_2o = cv1ir - cv1ii;
+            tvri_2o = sb2 - sb1;
+            tvir_2o = sb4 - sb3;
+            tvri_1o = sb2 + sb1;
+            tvir_1o = sb4 + sb3;
         }
 
         {
             {
                 // Output point 1, post permutation point 1
-                out_r[out_strides[1]] = cv1rr + cv1ri;
-                out_i[out_strides[1]] = cv1ii + cv1ir;
+                out_r[out_strides[1]] = cv1rr + (CRTM_13_8 * cv1ri);
+                out_i[out_strides[1]] = cv1ir + (CRTM_13_8 * cv1ii);
 
                 // Output point 7: post permutation point 12
-                out_r[out_strides[12]] = cv2rr - cv2ri;
-                out_i[out_strides[12]] = cv2ir - cv2ii;
+                out_r[out_strides[12]] = cv2rr - (CRTM_13_8 * cv2ri);
+                out_i[out_strides[12]] = cv2ir - (CRTM_13_8 * cv2ii);
             }
 
             {
@@ -555,21 +487,33 @@ static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP v_out_stride = (strides->v_out_stride);
     INTP cnt;
 
-    const FLOAT CRTM_12_1 =
-        0.86602540378443864676372317075293618347140262700000;
-    const FLOAT CRTM_12_2 =
-        0.50000000000000000000000000000000000000000000000000;
+    const FLOAT CRTM_13_1 =
+        +1.73205080756887719317660412343684583902359008789060;
+    const FLOAT CRTM_13_2 =
+        +0.38739058546761714712838513245787843298017865366345;
+    const FLOAT CRTM_13_3 =
+        +0.13298312460741867056777367279491668244720145803175;
+    const FLOAT CRTM_13_4 =
+        +0.11385447905579067614456922127652058891458054833493;
+    const FLOAT CRTM_13_5 =
+        +0.25176851643188325619942540855595308576560112726050;
+    const FLOAT CRTM_13_6 =
+        +0.86602540378443864676372317075293618347140262700000;
+    const FLOAT CRTM_13_7 =
+        +0.50000000000000000000000000000000000000000000000000;
+    const FLOAT CRTM_13_8 =
+        +2.00000000000000000000000000000000000000000000000000;
 
     // DGC - constants(C) of the diagonal(DG) matrix used in rader's algorithm
     const FLOAT DGC_1 = -0.08333333333333341693177688718872429763576971755296;
     const FLOAT DGC_2 = +0.25624767158293663769405689230781736686616059890980;
     const FLOAT DGC_3 = +0.15689139105158457352993666120753768234094124525375;
     const FLOAT DGC_4 = +0.25826039031174479484752691274654956353060547073611;
-    const FLOAT DGC_5 = +0.15355568557954144041605893849125243204698762637388;
-    const FLOAT DGC_6 = +0.28757036473700157031322574591241948572798864686781;
-    const FLOAT DGC_7 = +0.08706930057606790908049634621971372668862591093985;
+    const FLOAT DGC_5 = +0.26596624921483734113554734558983336489440291606351;
+    const FLOAT DGC_6 = +0.57514072947400312136838554745545338846100160800000;
+    const FLOAT DGC_7 = +0.17413860115213590500566079492926474261696467600000;
     const FLOAT DGC_8 = +0.07590298603719379320004091411468632874055721777845;
-    const FLOAT DGC_9 = +0.29071724147084106396127254528701896403545620197956;
+    const FLOAT DGC_9 = +0.50353703286376651239885081711190617153120225452101;
     const FLOAT DGC_10 = +0.3002386359663325979287571057309917466781880617299;
     const FLOAT DGC_11 = +0.0115991056057681999237624507209650002461566663358;
     const FLOAT DGC_12 = +0.3004626062886657229721584869768537486323029264720;
@@ -585,10 +529,10 @@ static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
             v711r, v711i;
 
         {
-            FLOAT adr1, adr2, adr3, adr4, adr5, adi1, adi2, adi3, adi4, adi5,
-                sbi1, sbi2, sbi3, sbi4, sbi5, sbr1, sbr2, sbr3, sbr4, sbr5,
-                adr24, adi24, adr15, adi15, adr51, adi51, adr42, adi42, sbi15,
-                sbi51, sbr15, sbr51, sbi24, sbr24, v17r, v71r, v17i, v71i;
+            FLOAT cv1, cv13, cv9, cv17, cv7, cv3, cv15, cv11, cv19, cv5,
+                cv4, cv16, cv12, cv20, cv6, cv2, cv14, cv10, cv18, cv8, ad6,
+                ad5, ad3, ad1, sb6, sb5, ad2, sb2, ad4, sb4, sb1, sb3, v17r,
+                v71r, v17i, v71i;
 
             FLOAT adr1_DFT1, adr2_DFT1, adr3_DFT1, adr4_DFT1, adr5_DFT1,
                 adi1_DFT1, adi2_DFT1, adi3_DFT1, adi4_DFT1, adi5_DFT1,
@@ -600,8 +544,7 @@ static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                 sbr51_DFT1, sbi24_DFT1, sbr24_DFT1, v17r_DFT1, v71r_DFT1,
                 v17i_DFT1, v71i_DFT1, tv1_DFT1, tv2_DFT1, tv3_DFT1, tv4_DFT1,
                 tv5_DFT1, tv6_DFT1, tv7_DFT1, tv8_DFT1, v711r_DFT1, v711i_DFT1,
-                early_tvii_DFT1, early_tvrr_DFT1, early_tvii_2_DFT1,
-                early_tvrr_2_DFT1;
+                tvii_DFT1, tvrr_DFT1, tvii_2_DFT1, tvrr_2_DFT1;
 
             {
                 vr[1] = in_r[in_strides[1]];
@@ -630,7 +573,7 @@ static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                     adr24_DFT1 = adr2_DFT1 + adr4_DFT1;
                     cv1rr_DFT1 = v17r_DFT1 + adr3_DFT1;
                     cv1ri_DFT1 = adr15_DFT1 + adr24_DFT1;
-                    early_tvrr_2_DFT1 = cv1rr_DFT1 - (CRTM_12_2 * cv1ri_DFT1);
+                    tvrr_2_DFT1 = cv1rr_DFT1 - (CRTM_13_7 * cv1ri_DFT1);
 
                     // [[ DFT1 ]] Output point 1: X(0) / V(1)
                     vr[1] = cv1rr_DFT1 + cv1ri_DFT1;
@@ -640,11 +583,11 @@ static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                     // of the point vr[1]
                     vr[0] = in_r[0];
                     out_r[0] = vr[1] + in_r[0];
-                    vr[1] = (vr[1] - (12 * vr[0])) * DGC_1;
+                    vr[1] = vr[1] * DGC_1 + vr[0];
 
                     cv2rr_DFT1 = v17r_DFT1 - adr3_DFT1;
                     cv2ri_DFT1 = adr15_DFT1 - adr24_DFT1;
-                    early_tvrr_DFT1 = cv2rr_DFT1 + (CRTM_12_2 * cv2ri_DFT1);
+                    tvrr_DFT1 = cv2rr_DFT1 + (CRTM_13_7 * cv2ri_DFT1);
 
                     // [[ DFT1 ]] Output point 7: X(6) / V(7)
                     vr[7] = (cv2rr_DFT1 - cv2ri_DFT1) * DGC_12;
@@ -694,7 +637,7 @@ static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                     adi24_DFT1 = adi2_DFT1 + adi4_DFT1;
                     cv1ir_DFT1 = v17i_DFT1 + adi3_DFT1;
                     cv1ii_DFT1 = adi15_DFT1 + adi24_DFT1;
-                    early_tvii_2_DFT1 = cv1ir_DFT1 - (CRTM_12_2 * cv1ii_DFT1);
+                    tvii_2_DFT1 = cv1ir_DFT1 - (CRTM_13_7 * cv1ii_DFT1);
 
                     // [[ DFT1 ]] Output point 1: X(0) / V(1)
                     vi[1] = cv1ii_DFT1 + cv1ir_DFT1;
@@ -704,11 +647,11 @@ static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                     // of the point vi[1]
                     vi[0] = in_i[0];
                     out_i[0] = vi[1] + in_i[0];
-                    vi[1] = (vi[1] - (12 * vi[0])) * DGC_1;
+                    vi[1] = vi[1] * DGC_1 + vi[0];
 
                     cv2ir_DFT1 = v17i_DFT1 - adi3_DFT1;
                     cv2ii_DFT1 = adi15_DFT1 - adi24_DFT1;
-                    early_tvii_DFT1 = cv2ir_DFT1 + (CRTM_12_2 * cv2ii_DFT1);
+                    tvii_DFT1 = cv2ir_DFT1 + (CRTM_13_7 * cv2ii_DFT1);
 
                     // [[ DFT1 ]] Output point 7: X(6) / V(7)
                     vi[7] = (cv2ir_DFT1 - cv2ii_DFT1) * DGC_12;
@@ -732,17 +675,17 @@ static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
             }
 
             {
-                tv1_DFT1 = CRTM_12_2 * adr2_DFT1;
-                tv4_DFT1 = CRTM_12_2 * sbr15_DFT1 + sbr3_DFT1;
-                tv2_DFT1 = CRTM_12_2 * sbi15_DFT1 + sbi3_DFT1;
-                tv6_DFT1 = CRTM_12_2 * adi4_DFT1;
+                tv1_DFT1 = CRTM_13_7 * adr2_DFT1;
+                tv4_DFT1 = (CRTM_13_7 * sbr15_DFT1) + sbr3_DFT1;
+                tv2_DFT1 = (CRTM_13_7 * sbi15_DFT1) + sbi3_DFT1;
+                tv6_DFT1 = CRTM_13_7 * adi4_DFT1;
             }
 
             {
-                tv7_DFT1 = CRTM_12_1 * adr1_DFT1;
-                tv5_DFT1 = CRTM_12_1 * (sbr2_DFT1 + sbr4_DFT1);
-                tv3_DFT1 = CRTM_12_1 * (sbi2_DFT1 + sbi4_DFT1);
-                tv8_DFT1 = CRTM_12_1 * adi1_DFT1;
+                tv7_DFT1 = CRTM_13_6 * adr1_DFT1;
+                tv5_DFT1 = CRTM_13_6 * (sbr2_DFT1 + sbr4_DFT1);
+                tv3_DFT1 = CRTM_13_6 * (sbi2_DFT1 + sbi4_DFT1);
+                tv8_DFT1 = CRTM_13_6 * adi1_DFT1;
             }
 
             v711r_DFT1 = v71r_DFT1 + tv1_DFT1;
@@ -762,170 +705,106 @@ static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                 tvii = v711i_DFT1 + tv8_DFT1;
                 tvii2 = v711i_DFT1 - tv8_DFT1;
 
-                // [[ DFT1 ]] Output point 2: X(1) / V(2)
-                vr[2] = tvrr - tvri;
-                vi[2] = tvii + tvir;
-
-                // [[ DFT1 ]] Output point 12: X(11) / V(12)
-                vr[12] = tvrr + tvri;
-                vi[12] = tvii - tvir;
-
-                // [[ DFT1 ]] Output point 6: X(5) / V(6)
-                vr[6] = tvrr2 - tvri2;
-                vi[6] = tvii2 + tvir2;
-
-                // [[ DFT1 ]] Output point 8: X(7) / V(8)
-                vr[8] = tvrr2 + tvri2;
-                vi[8] = tvii2 - tvir2;
-
-                CMUL_INPLACE_FP64(vr[2], vi[2], DGC_2, -DGC_3);
-                CMUL_INPLACE_FP64(vr[12], vi[12], -DGC_2, -DGC_3);
-
-                adr1 = vr[2] + vr[12];
-                sbr1 = vr[12] - vr[2];
-                adi1 = vi[2] + vi[12];
-                sbi1 = vi[12] - vi[2];
-
-                CMUL_INPLACE_FP64(vr[8], vi[8], DGC_10, DGC_11);
-                CMUL_INPLACE_FP64(vr[6], vi[6], -DGC_10, DGC_11);
-
-                adi5 = vi[6] + vi[8];
-                sbi5 = vi[8] - vi[6];
-                adr5 = vr[6] + vr[8];
-                sbr5 = vr[8] - vr[6];
+                cv1 = -DGC_2 * tvri + DGC_3 * tvii;
+                cv2 = -DGC_2 * tvrr - DGC_3 * tvir;
+                cv3 = DGC_2 * tvir - DGC_3 * tvrr;
+                cv4 = -DGC_2 * tvii - DGC_3 * tvri;
+                cv5 = -DGC_10 * tvir2 + DGC_11 * tvrr2;
+                cv6 = DGC_10 * tvii2 + DGC_11 * tvri2;
+                cv7 = DGC_10 * tvri2 - DGC_11 * tvii2;
+                cv8 = DGC_10 * tvrr2 + DGC_11 * tvir2;
             }
 
             FLOAT tvrr, tvri, tvir, tvii;
 
-            adi51 = adi1 - adi5;
-            adi15 = adi1 + adi5;
-            sbi15 = sbi1 + sbi5;
-            sbi51 = sbi1 - sbi5;
-            adr51 = adr1 - adr5;
-            adr15 = adr1 + adr5;
-            sbr15 = sbr1 + sbr5;
-            sbr51 = sbr1 - sbr5;
+            ad1 = cv3 + cv5;
+            ad2 = cv4 + cv6;
+            sb2 = CRTM_13_1 * (cv4 - cv6);
+            ad3 = cv1 + cv7;
+            ad4 = cv2 + cv8;
+            sb4 = CRTM_13_1 * (cv2 - cv8);
 
-            tv7 = CRTM_12_1 * adr51;
-            tv8 = CRTM_12_1 * adi51;
-
+            tv7 = CRTM_13_1 * (cv1 - cv7);
+            tv8 = CRTM_13_1 * (cv3 - cv5);
             {
                 tvrr = v71r_DFT1 - adr2_DFT1;
                 tvri = sbi15_DFT1 - sbi3_DFT1;
                 tvir = sbr15_DFT1 - sbr3_DFT1;
                 tvii = v71i_DFT1 - adi4_DFT1;
 
-                // [[ DFT1 ]] Output point 4: X(3) / V(4)
-                vr[4] = tvrr - tvri;
-                vi[4] = tvii + tvir;
-
-                // [[ DFT1 ]] Output point 10: X(9) / V(10)
-                vr[10] = tvrr + tvri;
-                vi[10] = tvii - tvir;
-
-                CMUL_INPLACE_FP64(vr[10], vi[10], -DGC_6, -DGC_7);
-                CMUL_INPLACE_FP64(vr[4], vi[4], DGC_6, -DGC_7);
+                cv9 = -DGC_6 * tvri + DGC_7 * tvii;
+                cv10 = -DGC_6 * tvrr - DGC_7 * tvir;
+                cv11 = DGC_6 * tvir - DGC_7 * tvrr;
+                cv12 = -DGC_6 * tvii - DGC_7 * tvri;
             }
 
-            adr3 = vr[4] + vr[10];
-            sbr3 = vr[10] - vr[4];
-            adi3 = vi[4] + vi[10];
-            sbi3 = vi[10] - vi[4];
-            tv2 = CRTM_12_2 * sbi15 + sbi3;
-            tv4 = CRTM_12_2 * sbr15 + sbr3;
-            cv1rr = v17r + adr3;
-            cv1ir = v17i + adi3;
-            cv2rr = v17r - adr3;
-            cv2ir = v17i - adi3;
-            tvri_5o = sbi15 - sbi3;
-            tvir_5o = sbr15 - sbr3;
-
+            tv2 = ad2 + cv12;
+            tv4 = ad4 + cv10;
+            cv1rr = v17r + cv9;
+            cv1ir = v17i + cv11;
+            cv2rr = v17r - cv9;
+            cv2ir = v17i - cv11;
+            tvri_5o = (CRTM_13_8 * ad2) - cv12;
+            tvir_5o = (CRTM_13_8 * ad4) - cv10;
             {
-                // [[ DFT1 ]] Output point 3: X(2) / V(3)
-                tvrr = early_tvrr_DFT1;
-                tvii = early_tvii_DFT1;
-                tvri = CRTM_12_1 * (sbi51_DFT1 + sbi24_DFT1);
-                tvir = CRTM_12_1 * (sbr51_DFT1 + sbr24_DFT1);
+                tvrr = tvrr_DFT1;
+                tvii = tvii_DFT1;
+                tvri = sbi51_DFT1 + sbi24_DFT1;
+                tvir = sbr51_DFT1 + sbr24_DFT1;
 
-                vr[3] = tvrr - tvri;
-                vi[3] = tvii + tvir;
-
-                // [[ DFT1 ]] Output point 11: X(10) / V(11)
-                vr[11] = tvrr + tvri;
-                vi[11] = tvii - tvir;
-
-                CMUL_INPLACE_FP64(vr[11], vi[11], DGC_4, -DGC_5);
-                CMUL_INPLACE_FP64(vr[3], vi[3], DGC_4, DGC_5);
-            }
-
-            adr2 = vr[3] + vr[11];
-            sbr2 = vr[11] - vr[3];
-            adi2 = vi[3] + vi[11];
-            sbi2 = vi[11] - vi[3];
-
-            {
-                tvrr = early_tvrr_2_DFT1;
-                tvii = early_tvii_2_DFT1;
-                tvri = CRTM_12_1 * (sbi51_DFT1 - sbi24_DFT1);
-                tvir = CRTM_12_1 * (sbr51_DFT1 - sbr24_DFT1);
-
-                // [[ DFT1 ]] Output point 5: X(4) / V(5)
-                vr[5] = tvrr - tvri;
-                vi[5] = tvii + tvir;
-
-                // [[ DFT1 ]] Output point 9: X(8) / V(9)
-                vr[9] = tvrr + tvri;
-                vi[9] = tvii - tvir;
-
-                CMUL_INPLACE_FP64(vr[9], vi[9], DGC_8, -DGC_9);
-                CMUL_INPLACE_FP64(vr[5], vi[5], DGC_8, DGC_9);
-            }
-
-            adr4 = vr[5] + vr[9];
-            sbr4 = vr[9] - vr[5];
-            adi4 = vi[5] + vi[9];
-            sbi4 = vi[9] - vi[5];
-            adi42 = adi2 - adi4;
-            adi24 = adi2 + adi4;
-            sbi24 = sbi2 - sbi4;
-            adr24 = adr2 + adr4;
-            adr42 = adr2 - adr4;
-            sbr24 = sbr2 - sbr4;
-            tvrr_5o = v71r - adr42;
-            tvii_5o = v71i - adi42;
-            cv1ri = adr15 + adr24;
-            cv1ii = adi15 + adi24;
-            cv2ri = adr15 - adr24;
-            cv2ii = adi15 - adi24;
-
-            {
-                v711r = v71r + (CRTM_12_2 * adr42);
-                v711i = v71i + (CRTM_12_2 * adi42);
-                tvrr_1o = cv2rr + (CRTM_12_2 * cv2ri);
-                tvii_1o = cv2ir + (CRTM_12_2 * cv2ii);
-                tvrr_2o = cv1rr - (CRTM_12_2 * cv1ri);
-                tvii_2o = cv1ir - (CRTM_12_2 * cv1ii);
+                cv13 = DGC_4 * tvrr - CRTM_13_3 * tvir;
+                cv14 = CRTM_13_2 * tvri + DGC_5 * tvii;
+                cv15 = DGC_4 * tvii - CRTM_13_3 * tvri;
+                cv16 = -CRTM_13_2 * tvir - DGC_5 * tvrr;
             }
 
             {
-                tv3 = CRTM_12_1 * (sbi2 + sbi4);
-                tv5 = CRTM_12_1 * (sbr2 + sbr4);
-                tvri_2o = CRTM_12_1 * (sbi51 - sbi24);
-                tvir_2o = CRTM_12_1 * (sbr51 - sbr24);
-                tvri_1o = CRTM_12_1 * (sbi51 + sbi24);
-                tvir_1o = CRTM_12_1 * (sbr51 + sbr24);
+                tvrr = tvrr_2_DFT1;
+                tvii = tvii_2_DFT1;
+                tvri = sbi51_DFT1 - sbi24_DFT1;
+                tvir = sbr51_DFT1 - sbr24_DFT1;
+
+                cv17 = DGC_8 * tvrr - CRTM_13_5 * tvir;
+                cv18 = CRTM_13_4 * tvri  + DGC_9 * tvii;
+                cv19 = DGC_8 * tvii - CRTM_13_5 * tvri;
+                cv20 = -CRTM_13_4 * tvir - DGC_9 * tvrr;
             }
+
+            tv3 = cv16 + cv20;
+            tv5 = cv14 + cv18;
+            sb5 = cv15 - cv19;
+            ad5 = cv15 + cv19;
+            sb1 = cv16 - cv20;
+            ad6 = cv13 + cv17;
+            sb6 = cv13 - cv17;
+            sb3 = cv14 - cv18;
+            tvrr_5o = v71r - CRTM_13_8 * sb6;
+            tvii_5o = v71i - CRTM_13_8 * sb5;
+            v711r = v71r + sb6;
+            v711i = v71i + sb5;
+            cv1ri = ad3 + ad6;
+            cv1ii = ad1 + ad5;
+            cv2ri = ad3 - ad6;
+            cv2ii = ad1 - ad5;
+            tvrr_1o = cv2rr + cv2ri;
+            tvii_1o = cv2ir + cv2ii;
+            tvrr_2o = cv1rr - cv1ri;
+            tvii_2o = cv1ir - cv1ii;
+            tvri_2o = sb2 - sb1;
+            tvir_2o = sb4 - sb3;
+            tvri_1o = sb2 + sb1;
+            tvir_1o = sb4 + sb3;
         }
 
         {
             {
                 // Output point 1, post permutation point 1
-                out_r[out_strides[1]] = cv1rr + cv1ri;
-                out_i[out_strides[1]] = cv1ii + cv1ir;
+                out_r[out_strides[1]] = cv1rr + (CRTM_13_8 * cv1ri);
+                out_i[out_strides[1]] = cv1ir + (CRTM_13_8 * cv1ii);
 
                 // Output point 7: post permutation point 12
-                out_r[out_strides[12]] = cv2rr - cv2ri;
-                out_i[out_strides[12]] = cv2ir - cv2ii;
+                out_r[out_strides[12]] = cv2rr - (CRTM_13_8 * cv2ri);
+                out_i[out_strides[12]] = cv2ir - (CRTM_13_8 * cv2ii);
             }
 
             {
