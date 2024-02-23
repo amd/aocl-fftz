@@ -726,7 +726,7 @@ INT32 find_dim_vec_ranks(CHAR *arg, INT32 *dim_rank, INT32 *vec_rank)
  * @param default_stride default stride value to be used for dims and vecs
  * @return INT32
  */
-// FIXME : multi-dimension support
+
 INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
                                   aoclfftz_dim_t_64_ **dims,
                                   aoclfftz_dim_t_64_ **vecs,
@@ -742,10 +742,8 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
                      max_rank * sizeof(aoclfftz_dim_t_64_));
 
     INT32 is_stride = 0;
-    INT32 is_vec_stride = 0;
     INT32 rank_count = 0;
     INT32 vec_count = 0;
-    CHAR last_char = '\0';
     INT32 start = 0;
     CHAR val_str[strlen(arg) + 1];
     INT32 status = PARSER_SUCCESS;
@@ -753,21 +751,30 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
     {
         if (arg[i] == 'x' || arg[i] == 'X')
         {
-            // TODO: Fix this code to support more dimensions
-            if ((is_stride != 0 && is_stride != 2) ||
-                (is_vec_stride != 0 && is_vec_stride != 2))
+            if (i + 1 >= strlen(arg) || !isdigit(arg[i + 1]))
+            {
+                printf("Integer value expected after 'x' character.\n");
+                status = SIZE_PARSING_ERROR;
+                goto exit_func;
+            }
+            if ((is_stride != 0 && is_stride != 2))
             {
                 status = SIZE_PARSING_ERROR;
                 goto exit_func;
             }
             is_stride = 0;
             rank_count++;
-            last_char = 'x';
         }
         else if (arg[i] == 'v' || arg[i] == 'V')
         {
-            // by default the data is stored in dims always
-            // once "v" is encountered, its moved to vecs and then dims is reset
+            if (i + 1 >= strlen(arg) || !isdigit(arg[i + 1]))
+            {
+                printf("Integer value expected after 'v' character.\n");
+                status = SIZE_PARSING_ERROR;
+                goto exit_func;
+            }
+            // by default the data is stored in desc always
+            // once "v" is encountered, its moved to vecs and then desc is reset
             // FIXME : this needs to be fixed properly
             for (INT32 i = vec_rank - 1, j = 0; i >= 0; i--, j++)
             {
@@ -780,20 +787,18 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
             // reset buffer to store dims config
             memset(desc, 0, max_rank * sizeof(aoclfftz_dim_t_64_));
             rank_count = 0;
-            is_vec_stride = 0;
+            is_stride = 0;
             vec_count++;
-            last_char = 'v';
         }
         else if (arg[i] == ':')
         {
-            if (last_char == 'v')
+            if (i + 1 >= strlen(arg) || !isdigit(arg[i + 1]))
             {
-                is_vec_stride++;
+                printf("Integer value expected after ':' character.\n");
+                status = SIZE_PARSING_ERROR;
+                goto exit_func;
             }
-            else
-            {
-                is_stride++;
-            }
+            is_stride++;
         }
         else if (isdigit(arg[i]))
         {
@@ -810,35 +815,23 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
                 status = SIZE_PARSING_ERROR;
                 goto exit_func;
             }
-            if (last_char == 'v')
+            if (is_stride == 0)
             {
-                if (is_vec_stride == 0) // no strides encountered till now
+                if (val == 0)
                 {
-                    desc[rank_count].n = val;
+                    printf("Invalid dim/vec size (zero) at rank %d", rank_count);
+                    status = SIZE_PARSING_ERROR;
+                    goto exit_func;
                 }
-                else if (is_vec_stride == 1)
-                {
-                    desc[rank_count].in_stride = val;
-                }
-                else if (is_vec_stride == 2)
-                {
-                    desc[rank_count].out_stride = val;
-                }
+                desc[rank_count].n = val;
             }
-            else
+            else if (is_stride == 1)
             {
-                if (is_stride == 0)
-                {
-                    desc[rank_count].n = val;
-                }
-                else if (is_stride == 1)
-                {
-                    desc[rank_count].in_stride = val;
-                }
-                else if (is_stride == 2)
-                {
-                    desc[rank_count].out_stride = val;
-                }
+                desc[rank_count].in_stride = val;
+            }
+            else if (is_stride == 2)
+            {
+                desc[rank_count].out_stride = val;
             }
             i--;
         }
@@ -857,78 +850,82 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         (*dims)[i].out_stride = desc[j].out_stride;
     }
 
-    // TODO: if only one stride value is provided, then use it for in-stride and out-stride
-    // for now, either no stride or both in/out strides should be provided
-    // only in_stride will not be parsed
-    if ((is_stride != 0 && is_stride != 2) ||
-        (is_vec_stride != 0 && is_vec_stride != 2))
-    {
-        status = SIZE_PARSING_ERROR;
-        goto exit_func;
-    }
-
-    // TODO : this needs to be moved at the last and done for ND
-    // if both strides are provided, check if vec strides are as expected
-    // if (is_stride == 2 && is_vec_stride == 2)
-    // {
-    //     for (INT32 i = 0; i < dim_rank; i++)
-    //     {
-    //         if ( ((*vecs)[i].in_stride < ((*dims)[i].in_stride *
-    //         (*dims)[i].n)) ||
-    //             ((*vecs)[i].out_stride < ((*dims)[i].out_stride *
-    //             (*dims)[i].n)))
-    //         {
-    //             status = SIZE_PARSING_ERROR;
-    //             goto exit_func;
-    //         }
-    //     }
-    // }
-
-    // set strides for dims if not provided
+    // validate & set strides for dims if not provided
     for (INT32 i = 0; i < dim_rank; i++)
     {
+        INTP min_stride = (i == 0) ?
+                1 : ((*dims)[i - 1]. n * (*dims)[i - 1].in_stride);
         if ((*dims)[i].in_stride == 0)
         {
-            (*dims)[i].in_stride = (i == 0) ?
-                1 : ((*dims)[i - 1]. n * (*dims)[i - 1].in_stride);
+            (*dims)[i].in_stride = min_stride;
         }
+        else if ((*dims)[i].in_stride < min_stride)
+        {
+            printf("Invalid in stride value : %td provided for (%d) dim."
+                    "minimum value expected : %td\n",
+                    (*dims)[i].in_stride, i+1, min_stride);
+            status = SIZE_PARSING_ERROR;
+            goto exit_func;
+        }
+        min_stride = (i == 0) ?
+                1 : ((*dims)[i - 1]. n * (*dims)[i - 1].out_stride);
         if ((*dims)[i].out_stride == 0)
         {
-            (*dims)[i].out_stride = (i == 0) ?
-                1 : ((*dims)[i - 1]. n * (*dims)[i - 1].out_stride);
+            (*dims)[i].out_stride = min_stride;
+        }
+        else if ((*dims)[i].out_stride < min_stride)
+        {
+            printf("Invalid out stride value : %td provided for (%d) dim."
+                    "minimum value expected : %td\n",
+                    (*dims)[i].out_stride, i+1, min_stride);
+            status = SIZE_PARSING_ERROR;
+            goto exit_func;
         }
     }
 
-    // set strides for vecs if not provided
+    // validate & set strides for vecs if not provided
     for (INT32 i = 0; i < vec_rank; i++)
     {
+        INTP min_stride = (i == 0) ?
+                (*dims)[dim_rank -1].n * (*dims)[dim_rank - 1].in_stride :
+                    ((*vecs) [i - 1]. n * (*vecs) [i - 1].in_stride);
         if ((*vecs)[i].in_stride == 0)
         {
             // stride of fcd should atleast be the length of dims
-            (*vecs)[i].in_stride = (i == 0) ?
-                (*dims)[dim_rank -1].n * (*dims)[dim_rank - 1].in_stride :
-                    ((*vecs) [i - 1]. n * (*vecs) [i - 1].in_stride);
+            (*vecs)[i].in_stride = min_stride;
         }
+        else if ((*vecs)[i].in_stride < min_stride)
+        {
+            printf("Invalid in stride value : %td provided for (%d) vec."
+                    "minimum value expected : %td\n",
+                    (*vecs)[i].in_stride, i+1, min_stride);
+            status = SIZE_PARSING_ERROR;
+            goto exit_func;
+        }
+        min_stride = (i == 0) ?
+                (*dims)[dim_rank -1].n * (*dims)[dim_rank - 1].out_stride :
+                    ((*vecs) [i - 1]. n * (*vecs) [i - 1].out_stride);
         if ((*vecs)[i].out_stride == 0)
         {
             // stride of fcd should atleast be the length of dims
-            (*vecs)[i].out_stride = (i == 0) ?
-                (*dims)[dim_rank -1].n * (*dims)[dim_rank - 1].out_stride :
-                    ((*vecs) [i - 1]. n * (*vecs) [i - 1].out_stride);
+            (*vecs)[i].out_stride = min_stride;
+        }
+        else if ((*vecs)[i].out_stride < min_stride)
+        {
+            printf("Invalid out stride value : %td provided for (%d) vec."
+                    "minimum value expected : %td\n",
+                    (*vecs)[i].out_stride, i+1, min_stride);
+            status = SIZE_PARSING_ERROR;
+            goto exit_func;
         }
     }
 
-    // FIXME : this may not be necessary ?
-    // Move the vecs to dims and fill the default values for vecs if they are
-    // not provided
-    if (vec_count == 0 && vec_rank > 0)
+    // Initialize vector size to default value when no vector is encountered.
+    if (vec_count == 0)
     {
-        for (INT32 i = 0; i < vec_rank; ++i)
-        {
-            (*vecs)[i].n = 1;
-            (*vecs)[i].in_stride = default_stride;
-            (*vecs)[i].out_stride = default_stride;
-        }
+        (*vecs)[0].n = 1;
+        (*vecs)[0].in_stride = default_stride;
+        (*vecs)[0].out_stride = default_stride;
     }
 
     CHECK_SUPPORTED_DIMS(dims, vecs, dim_rank, vec_rank, status);

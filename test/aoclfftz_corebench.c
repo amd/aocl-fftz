@@ -274,13 +274,19 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
 
     CHAR *str_buff = NULL;
     ALLOC_ALIGN_UNINIT(str_buff, CHAR, sizeof(CHAR) * 50);
+    CHAR NULL_CHAR = '\0', *optarg = &NULL_CHAR;
 
     INT32 arg_idx = 1;
     INT32 non_opt_arg_cnt = 0;
     while (arg_idx < argc)
     {
         c = get_option(argv, arg_idx);
-        CHAR *optarg = argv[arg_idx + 1];
+        // Check if there is at least one more command-line argument available
+        // before accessing it.
+        if(arg_idx + 1 < argc)
+        {
+           optarg = argv[arg_idx + 1];
+        }
         switch (c)
         {
         case 'h':
@@ -514,6 +520,11 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         case 303:
             if (atoi(optarg) != 0)
             {
+                if(selector_time != 1)
+                {
+                    printf("WARNING: The provided value for selector_time is "
+                    "not 1. Running the bench with selector_time set to 1.\n");
+                }
                 selector_time = 1;
             }
             break;
