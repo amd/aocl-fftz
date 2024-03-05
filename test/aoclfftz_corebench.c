@@ -1194,8 +1194,8 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
         }
 
         // compare the FFT output with DFT reference output
-        compare_status = compare(params->out, out_ref, n * batches, out_idx_map,
-                           params->tolerance, params->logger_mode);
+        compare_status =
+            compare(params, out_ref, params->out, batches, n, out_idx_map);
         if (compare_status != AOCLFFTZ_SUCCESS)
         {
             printf("\nResults mismatch on accuracy mode => DFT reference, "
@@ -1335,8 +1335,7 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                                     params->precision);
 
         // compare the outputs
-        ret = compare(out1, out_combined, n * batches, out_idx_map,
-                params->tolerance, params->logger_mode);
+        ret = compare(params, out1, out_combined, batches, n, out_idx_map);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             printf("\nResults mismatch on accuracy mode => property: "
@@ -1497,8 +1496,7 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params,
         NORMALIZE_DATA(params_reverse->out, input_size, n, params->precision);
 
         // compare reversed output with the input
-        ret = compare(in, params_reverse->out, n * batches, in_idx_map,
-                params->tolerance, params->logger_mode);
+        ret = compare(params, in, params_reverse->out, batches, n, in_idx_map);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             printf("\nResults mismatch on accuracy mode => property: "
@@ -1648,8 +1646,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             outer_n *= cur_n;
 
             // compare the outputs
-            ret = compare(out1, out2, n * batches, out_idx_map,
-                    params->tolerance, params->logger_mode);
+            ret = compare(params, out1, out2, batches, n, out_idx_map);
             if (ret != AOCLFFTZ_SUCCESS)
             {
                 printf("\nResults mismatch on accuracy mode => property: "

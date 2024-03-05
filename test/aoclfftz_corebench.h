@@ -56,6 +56,8 @@
 // sized problems.
 #define WARMUP_ITERATIONS 2
 
+#define OUTPUT_LOG_FILE "output_dump.txt"
+
 typedef enum
 {
     COMPLEX_TO_COMPLEX = 0,
