@@ -61,13 +61,8 @@ INT32 aoclfftz_execute_f(VOID *handle)
     {
         return AOCLFFTZ_EXECUTION_FAILURE;
     }
-    INT32 ret = AOCLFFTZ_SUCCESS;
-    ret = execute_dft(handle);
-    if (ret != 0)
-    {
-        return AOCLFFTZ_EXECUTION_FAILURE;
-    }
-    return AOCLFFTZ_SUCCESS;
+    aoclfftz_executor_t *executor_obj = (aoclfftz_executor_t *)handle;
+    return executor_obj->execute(executor_obj);
 }
 
 //Destroy function for float LP64 based Single-threaded and multi-threaded FFT
@@ -93,12 +88,8 @@ INT32 aoclfftz_execute_d(VOID *handle)
     {
         return AOCLFFTZ_EXECUTION_FAILURE;
     }
-    INT32 ret = execute_dft(handle);
-    if (ret != 0)
-    {
-        return AOCLFFTZ_EXECUTION_FAILURE;
-    }
-    return AOCLFFTZ_SUCCESS;
+    aoclfftz_executor_t *executor_obj = (aoclfftz_executor_t *)handle;
+    return executor_obj->execute(executor_obj);
 }
 
 //Destroy function for double LP64 based Single-threaded and multi-threaded FFT
@@ -124,12 +115,8 @@ INT32 aoclfftz_execute_f_64_(VOID *handle)
     {
         return AOCLFFTZ_EXECUTION_FAILURE;
     }
-    INT32 ret = execute_dft(handle);
-    if (ret != 0)
-    {
-        return AOCLFFTZ_EXECUTION_FAILURE;
-    }
-    return AOCLFFTZ_SUCCESS;
+    aoclfftz_executor_t *executor_obj = (aoclfftz_executor_t *)handle;
+    return executor_obj->execute(executor_obj);
 }
 
 //Destroy function for float ILP64 based Single-threaded and multi-threaded FFT
@@ -157,12 +144,8 @@ INT32 aoclfftz_execute_d_64_(VOID *handle)
     {
         return AOCLFFTZ_EXECUTION_FAILURE;
     }
-    INT32 ret = execute_dft(handle);
-    if (ret != 0)
-    {
-        return AOCLFFTZ_EXECUTION_FAILURE;
-    }
-    return AOCLFFTZ_SUCCESS;
+    aoclfftz_executor_t *executor_obj = (aoclfftz_executor_t *)handle;
+    return executor_obj->execute(executor_obj);
 }
 
 //Destroy function for double ILP64 based Single-threaded and

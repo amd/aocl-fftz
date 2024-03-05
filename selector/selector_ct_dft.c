@@ -171,10 +171,13 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 aoclfftz_solution_t *sel_next_sol =
                     sel->solution->next_sol->next_sol;
                 COPY_SOLUTION_OBJ(sel->solution->next_sol, cur_sel->solution);
+                COPY_STRIDES(sel->solution->next_sol, cur_sel->solution);
                 //Restore the original next_sol after copy
                 sel->solution->next_sol->next_sol = sel_next_sol;
                 COPY_SOLUTION_OBJ(sel->solution->next_sol->next_sol,
                                   cur_sel_m->solution);
+                COPY_STRIDES(sel->solution->next_sol->next_sol,
+                             cur_sel_m->solution);
 
                 //Break the link from cur_sel and cur_sel_m
                 //it can be still accessed through sel object

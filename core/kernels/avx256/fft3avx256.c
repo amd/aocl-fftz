@@ -40,16 +40,6 @@
 #include "core/kernels/kernel.h"
 #include "core/kernels/simd_common.h"
 
-kfft_ register_kernel_fft3avx256(INT32 precision)
-{
-    if (precision == DT_FLOAT)
-        return fft3avx256fp32;
-    else if (precision == DT_DOUBLE)
-        return fft3avx256fp64;
-    else
-        return NULL;
-}
-
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 2, 6, 24, 4, 7},
                                                      {0, 2, 6, 12, 1, 7}};
 ops_cycles_t get_ops_cnt_fft3avx256(INT32 precision)
@@ -60,19 +50,27 @@ ops_cycles_t get_ops_cnt_fft3avx256(INT32 precision)
         return ops_cnt[1];
 }
 
-VOID fft3avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+static VOID fft3avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                     UINT8 flag)
 {
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
     const FLOAT CRTM_3[2] = {0.500000000000000000000000000000000000000000000,
                              0.866025403784438646763723170752936183471402627};
 
     FLOAT *in_r = (FLOAT *)in_real;
     FLOAT *out_r = (FLOAT *)out_real;
-    INTP in_stride = (strides->in_stride << 1);
-    INTP out_stride = (strides->out_stride << 1);
-    INTP v_in_stride = (strides->v_in_stride << 1);
-    INTP v_out_stride = (strides->v_out_stride << 1);
+    #ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+    #else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+    #endif
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_256_S;
     INTP remaining_sets = n % NUM_SETS_256_S;
     INTP count;
@@ -98,9 +96,9 @@ VOID fft3avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_out = out_r;
 
         GATHER4_256_S(curr_in, v_in_stride, v_in0);
-        curr_in = in_r + in_stride;
+        curr_in = in_r + in_strides[1];
         GATHER4_256_S(curr_in, v_in_stride, v_in1);
-        curr_in = in_r + (in_stride << 1);
+        curr_in = in_r + in_strides[2];
         GATHER4_256_S(curr_in, v_in_stride, v_in2);
 
         v_av0 = _mm256_add_ps(v_in1, v_in2);
@@ -120,9 +118,9 @@ VOID fft3avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out2 = _mm256_add_ps(v_tv0, v_tv1);
 
         SCATTER4_256_S(curr_out, v_out_stride, v_out0);
-        curr_out = out_r + out_stride;
+        curr_out = out_r + out_strides[1];
         SCATTER4_256_S(curr_out, v_out_stride, v_out1);
-        curr_out = out_r + (out_stride << 1);
+        curr_out = out_r + out_strides[2];
         SCATTER4_256_S(curr_out, v_out_stride, v_out2);
 
         in_r += NUM_SETS_256_S * v_in_stride;
@@ -142,9 +140,9 @@ VOID fft3avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_out = out_r;
 
         GATHER2_128_S(curr_in, v_in_stride, v_in0);
-        curr_in = in_r + in_stride;
+        curr_in = in_r + in_strides[1];
         GATHER2_128_S(curr_in, v_in_stride, v_in1);
-        curr_in = in_r + (in_stride << 1);
+        curr_in = in_r + in_strides[2];
         GATHER2_128_S(curr_in, v_in_stride, v_in2);
 
         v_av0 = _mm_add_ps(v_in1, v_in2);
@@ -164,9 +162,9 @@ VOID fft3avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out2 = _mm_add_ps(v_tv0, v_tv1);
 
         SCATTER2_128_S(curr_out, v_out_stride, v_out0);
-        curr_out = out_r + out_stride;
+        curr_out = out_r + out_strides[1];
         SCATTER2_128_S(curr_out, v_out_stride, v_out1);
-        curr_out = out_r + (out_stride << 1);
+        curr_out = out_r + out_strides[2];
         SCATTER2_128_S(curr_out, v_out_stride, v_out2);
 
         in_r = in_r + (v_in_stride << 1);
@@ -185,9 +183,9 @@ VOID fft3avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_out = out_r;
 
         LD_LOW_128_S(curr_in, v_in0);
-        curr_in = in_r + in_stride;
+        curr_in = in_r + in_strides[1];
         LD_LOW_128_S(curr_in, v_in1);
-        curr_in = in_r + (in_stride << 1);
+        curr_in = in_r + in_strides[2];
         LD_LOW_128_S(curr_in, v_in2);
 
         v_av0 = _mm_add_ps(v_in1, v_in2);
@@ -207,27 +205,37 @@ VOID fft3avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out2 = _mm_add_ps(v_tv0, v_tv1);
 
         ST_LOW_128_S(curr_out, v_out0);
-        curr_out = out_r + out_stride;
+        curr_out = out_r + out_strides[1];
         ST_LOW_128_S(curr_out, v_out1);
-        curr_out = out_r + (out_stride << 1);
+        curr_out = out_r + out_strides[2];
         ST_LOW_128_S(curr_out, v_out2);
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 
-VOID fft3avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+static VOID fft3avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                     UINT8 flag)
 {
-
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
     const DOUBLE CRTM_3[2] = {0.500000000000000000000000000000000000000000000,
                               0.866025403784438646763723170752936183471402627};
 
     DOUBLE *in_r = (DOUBLE *)in_real;
     DOUBLE *out_r = (DOUBLE *)out_real;
-    INTP in_stride = (strides->in_stride << 1);
-    INTP out_stride = (strides->out_stride << 1);
-    INTP v_in_stride = (strides->v_in_stride << 1);
-    INTP v_out_stride = (strides->v_out_stride << 1);
+    #ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+    #else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+    #endif
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_256_D;
     INTP count;
     DOUBLE *curr_in, *curr_out;
@@ -252,9 +260,9 @@ VOID fft3avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_out = out_r;
 
         GATHER2_256_D(curr_in, v_in_stride, v_in0);
-        curr_in = in_r + in_stride;
+        curr_in = in_r + in_strides[1];
         GATHER2_256_D(curr_in, v_in_stride, v_in1);
-        curr_in = in_r + (in_stride << 1);
+        curr_in = in_r + in_strides[2];
         GATHER2_256_D(curr_in, v_in_stride, v_in2);
 
         v_av0 = _mm256_add_pd(v_in1, v_in2);
@@ -274,9 +282,9 @@ VOID fft3avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out2 = _mm256_add_pd(v_tv0, v_tv1);
 
         SCATTER2_256_D(curr_out, v_out_stride, v_out0);
-        curr_out = out_r + out_stride;
+        curr_out = out_r + out_strides[1];
         SCATTER2_256_D(curr_out, v_out_stride, v_out1);
-        curr_out = out_r + (out_stride << 1);
+        curr_out = out_r + out_strides[2];
         SCATTER2_256_D(curr_out, v_out_stride, v_out2);
 
         in_r += NUM_SETS_256_D * v_in_stride;
@@ -294,9 +302,9 @@ VOID fft3avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         curr_in = in_r;
         LD_128_D(curr_in, v_in0);
-        curr_in = in_r + in_stride;
+        curr_in = in_r + in_strides[1];
         LD_128_D(curr_in, v_in1);
-        curr_in = in_r + (in_stride << 1);
+        curr_in = in_r + in_strides[2];
         LD_128_D(curr_in, v_in2);
 
         v_av0 = _mm_add_pd(v_in1, v_in2);
@@ -317,9 +325,22 @@ VOID fft3avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         curr_out = out_r;
         ST_128_D(curr_out, v_out0);
-        curr_out = out_r + out_stride;
+        curr_out = out_r + out_strides[1];
         ST_128_D(curr_out, v_out1);
-        curr_out = out_r + (out_stride << 1);
+        curr_out = out_r + out_strides[2];
         ST_128_D(curr_out, v_out2);
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
+}
+
+kfft_ register_kernel_fft3avx256(INT32 precision)
+{
+    if (precision == DT_FLOAT)
+        return fft3avx256fp32;
+    else if (precision == DT_DOUBLE)
+        return fft3avx256fp64;
+    else
+        return NULL;
 }

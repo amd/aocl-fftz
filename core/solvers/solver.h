@@ -99,17 +99,11 @@ INT32 setup_buffered_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                             kernel_t *kernel);
 #endif
 
-INT32 executor_direct_dft(aoclfftz_solution_t *solution);
-INT32 executor_ct_dft(aoclfftz_solution_t *solution);
-INT32 executor_batched_dft(aoclfftz_solution_t *solution);
-INT32 executor_bluestein_dft(aoclfftz_solution_t *solution);
-INT32 executor_ndim_dft(aoclfftz_solution_t *solution);
-INT32 executor_sizeone_dft(aoclfftz_solution_t *solution);
-INT32 execute_direct_solver(aoclfftz_solution_t *sol);
-INT32 execute_ct_solver(aoclfftz_solution_t *sol);
-INT32 execute_batched_solver(aoclfftz_solution_t *sol);
-INT32 execute_bluestein_solver(aoclfftz_solution_t *sol);
-INT32 execute_ndim_solver(aoclfftz_solution_t *sol);
-INT32 execute_sizeone_solver(aoclfftz_solution_t *solution);
+dft_solver_ register_execute_direct_solver();
+dft_solver_ register_execute_ct_solver();
+dft_solver_ register_execute_batched_solver();
+dft_solver_ register_execute_bluestein_solver();
+dft_solver_ register_execute_ndim_solver();
+dft_solver_ register_execute_sizeone_solver();
 
 #endif //AOCLFFTZ_SOLVER_H

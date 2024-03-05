@@ -40,16 +40,6 @@
 #include "core/kernels/kernel.h"
 #include "core/kernels/simd_common.h"
 
-kfft_ register_kernel_fft8avx128(INT32 precision)
-{
-    if (precision == DT_FLOAT)
-        return fft8avx128fp32;
-    else if (precision == DT_DOUBLE)
-        return fft8avx128fp64;
-    else
-        return NULL;
-}
-
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 4, 26, 32, 3, 3},
                                                      {0, 4, 26, 16, 3, 3}};
 ops_cycles_t get_ops_cnt_fft8avx128(INT32 precision)
@@ -60,19 +50,27 @@ ops_cycles_t get_ops_cnt_fft8avx128(INT32 precision)
         return ops_cnt[1];
 }
 
-VOID fft8avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+static VOID fft8avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                     UINT8 flag)
 {
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
     const FLOAT CRTM_8[2] = {1.0,
                              0.707106781186547524400844362104849039284835938};
 
     FLOAT *in_r = (FLOAT *)in_real;
     FLOAT *out_r = (FLOAT *)out_real;
-    INTP in_stride = (strides->in_stride << 1);
-    INTP out_stride = (strides->out_stride << 1);
-    INTP v_in_stride = (strides->v_in_stride << 1);
-    INTP v_out_stride = (strides->v_out_stride << 1);
+    #ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+    #else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+    #endif
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_128_S;
     INTP count;
     FLOAT *curr_in, *curr_out;
@@ -101,19 +99,19 @@ VOID fft8avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_out = out_r;
 
         GATHER2_128_S(curr_in, v_in_stride, v_in0);
-        curr_in = in_r + in_stride;
+        curr_in = in_r + in_strides[1];
         GATHER2_128_S(curr_in, v_in_stride, v_in1);
-        curr_in = in_r + (in_stride << 1);
+        curr_in = in_r + in_strides[2];
         GATHER2_128_S(curr_in, v_in_stride, v_in2);
-        curr_in = in_r + (in_stride * 3);
+        curr_in = in_r + in_strides[3];
         GATHER2_128_S(curr_in, v_in_stride, v_in3);
-        curr_in = in_r + (in_stride << 2);
+        curr_in = in_r + in_strides[4];
         GATHER2_128_S(curr_in, v_in_stride, v_in4);
-        curr_in = in_r + (in_stride * 5);
+        curr_in = in_r + in_strides[5];
         GATHER2_128_S(curr_in, v_in_stride, v_in5);
-        curr_in = in_r + (in_stride * 6);
+        curr_in = in_r + in_strides[6];
         GATHER2_128_S(curr_in, v_in_stride, v_in6);
-        curr_in = in_r + (in_stride * 7);
+        curr_in = in_r + in_strides[7];
         GATHER2_128_S(curr_in, v_in_stride, v_in7);
 
         // common operations
@@ -176,19 +174,19 @@ VOID fft8avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out3 = _mm_add_ps(v_cv3, v_cv1);
 
         SCATTER2_128_S(curr_out, v_out_stride, v_out0);
-        curr_out = out_r + out_stride;
+        curr_out = out_r + out_strides[1];
         SCATTER2_128_S(curr_out, v_out_stride, v_out1);
-        curr_out = out_r + (out_stride << 1);
+        curr_out = out_r + out_strides[2];
         SCATTER2_128_S(curr_out, v_out_stride, v_out2);
-        curr_out = out_r + (out_stride * 3);
+        curr_out = out_r + out_strides[3];
         SCATTER2_128_S(curr_out, v_out_stride, v_out3);
-        curr_out = out_r + (out_stride << 2);
+        curr_out = out_r + out_strides[4];
         SCATTER2_128_S(curr_out, v_out_stride, v_out4);
-        curr_out = out_r + (out_stride * 5);
+        curr_out = out_r + out_strides[5];
         SCATTER2_128_S(curr_out, v_out_stride, v_out5);
-        curr_out = out_r + (out_stride * 6);
+        curr_out = out_r + out_strides[6];
         SCATTER2_128_S(curr_out, v_out_stride, v_out6);
-        curr_out = out_r + (out_stride * 7);
+        curr_out = out_r + out_strides[7];
         SCATTER2_128_S(curr_out, v_out_stride, v_out7);
 
         in_r += NUM_SETS_128_S * v_in_stride;
@@ -201,19 +199,19 @@ VOID fft8avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_out = out_r;
 
         LD_LOW_128_S(curr_in, v_in0);
-        curr_in = in_r + in_stride;
+        curr_in = in_r + in_strides[1];
         LD_LOW_128_S(curr_in, v_in1);
-        curr_in = in_r + (in_stride << 1);
+        curr_in = in_r + in_strides[2];
         LD_LOW_128_S(curr_in, v_in2);
-        curr_in = in_r + (in_stride * 3);
+        curr_in = in_r + in_strides[3];
         LD_LOW_128_S(curr_in, v_in3);
-        curr_in = in_r + (in_stride << 2);
+        curr_in = in_r + in_strides[4];
         LD_LOW_128_S(curr_in, v_in4);
-        curr_in = in_r + (in_stride * 5);
+        curr_in = in_r + in_strides[5];
         LD_LOW_128_S(curr_in, v_in5);
-        curr_in = in_r + (in_stride * 6);
+        curr_in = in_r + in_strides[6];
         LD_LOW_128_S(curr_in, v_in6);
-        curr_in = in_r + (in_stride * 7);
+        curr_in = in_r + in_strides[7];
         LD_LOW_128_S(curr_in, v_in7);
 
         // common operations
@@ -276,36 +274,47 @@ VOID fft8avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out3 = _mm_add_ps(v_cv3, v_cv1);
 
         ST_LOW_128_S(curr_out, v_out0);
-        curr_out = out_r + out_stride;
+        curr_out = out_r + out_strides[1];
         ST_LOW_128_S(curr_out, v_out1);
-        curr_out = out_r + (out_stride << 1);
+        curr_out = out_r + out_strides[2];
         ST_LOW_128_S(curr_out, v_out2);
-        curr_out = out_r + (out_stride * 3);
+        curr_out = out_r + out_strides[3];
         ST_LOW_128_S(curr_out, v_out3);
-        curr_out = out_r + (out_stride << 2);
+        curr_out = out_r + out_strides[4];
         ST_LOW_128_S(curr_out, v_out4);
-        curr_out = out_r + (out_stride * 5);
+        curr_out = out_r + out_strides[5];
         ST_LOW_128_S(curr_out, v_out5);
-        curr_out = out_r + (out_stride * 6);
+        curr_out = out_r + out_strides[6];
         ST_LOW_128_S(curr_out, v_out6);
-        curr_out = out_r + (out_stride * 7);
+        curr_out = out_r + out_strides[7];
         ST_LOW_128_S(curr_out, v_out7);
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 
-VOID fft8avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+static VOID fft8avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                     UINT8 flag)
 {
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
     const DOUBLE CRTM_8[2] = {1.0,
                               0.707106781186547524400844362104849039284835938};
 
     DOUBLE *in_r = (DOUBLE *)in_real;
     DOUBLE *out_r = (DOUBLE *)out_real;
-    INTP in_stride = (strides->in_stride << 1);
-    INTP out_stride = (strides->out_stride << 1);
-    INTP v_in_stride = (strides->v_in_stride << 1);
-    INTP v_out_stride = (strides->v_out_stride << 1);
+    #ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+    #else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+    #endif
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
     INTP count;
     DOUBLE *curr_in, *curr_out;
 
@@ -333,19 +342,19 @@ VOID fft8avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_out = out_r;
 
         LD_128_D(curr_in, v_in0);
-        curr_in = in_r + in_stride;
+        curr_in = in_r + in_strides[1];
         LD_128_D(curr_in, v_in1);
-        curr_in = in_r + (in_stride << 1);
+        curr_in = in_r + in_strides[2];
         LD_128_D(curr_in, v_in2);
-        curr_in = in_r + (in_stride * 3);
+        curr_in = in_r + in_strides[3];
         LD_128_D(curr_in, v_in3);
-        curr_in = in_r + (in_stride << 2);
+        curr_in = in_r + in_strides[4];
         LD_128_D(curr_in, v_in4);
-        curr_in = in_r + (in_stride * 5);
+        curr_in = in_r + in_strides[5];
         LD_128_D(curr_in, v_in5);
-        curr_in = in_r + (in_stride * 6);
+        curr_in = in_r + in_strides[6];
         LD_128_D(curr_in, v_in6);
-        curr_in = in_r + (in_stride * 7);
+        curr_in = in_r + in_strides[7];
         LD_128_D(curr_in, v_in7);
 
         // common operations
@@ -408,22 +417,35 @@ VOID fft8avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out3 = _mm_add_pd(v_cv3, v_cv1);
 
         ST_128_D(curr_out, v_out0);
-        curr_out = out_r + out_stride;
+        curr_out = out_r + out_strides[1];
         ST_128_D(curr_out, v_out1);
-        curr_out = out_r + (out_stride << 1);
+        curr_out = out_r + out_strides[2];
         ST_128_D(curr_out, v_out2);
-        curr_out = out_r + (out_stride * 3);
+        curr_out = out_r + out_strides[3];
         ST_128_D(curr_out, v_out3);
-        curr_out = out_r + (out_stride << 2);
+        curr_out = out_r + out_strides[4];
         ST_128_D(curr_out, v_out4);
-        curr_out = out_r + (out_stride * 5);
+        curr_out = out_r + out_strides[5];
         ST_128_D(curr_out, v_out5);
-        curr_out = out_r + (out_stride * 6);
+        curr_out = out_r + out_strides[6];
         ST_128_D(curr_out, v_out6);
-        curr_out = out_r + (out_stride * 7);
+        curr_out = out_r + out_strides[7];
         ST_128_D(curr_out, v_out7);
 
         in_r += v_in_stride;
         out_r += v_out_stride;
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
+}
+
+kfft_ register_kernel_fft8avx128(INT32 precision)
+{
+    if (precision == DT_FLOAT)
+        return fft8avx128fp32;
+    else if (precision == DT_DOUBLE)
+        return fft8avx128fp64;
+    else
+        return NULL;
 }

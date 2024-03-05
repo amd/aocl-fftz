@@ -269,6 +269,7 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
 INT32 setup_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     INT32 ret;
+    sel->execute = register_execute_dft();
 
 #if AOCLFFTZ_SELECTOR_AUTO_TUNER_MODE == 0
     //Fixed decision logic and CPI based selector mode

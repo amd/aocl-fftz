@@ -39,20 +39,13 @@
 
 #include "core/executor.h"
 
-INT32 execute_dft(aoclfftz_executor_t *executor_obj)
+static INT32 execute_dft(aoclfftz_executor_t *executor_obj)
 {
-    INT32 ret = EXECUTOR_FAILURE;
-
-    if (executor_obj == NULL)
-        return EXECUTOR_FAILURE;
-
     aoclfftz_solution_t *sol = executor_obj->solution;
+    return sol->solver->execute_solver(sol);
+}
 
-    if (sol != NULL && sol->solver != NULL &&
-        sol->solver->execute_solver != NULL)
-    {
-        ret = sol->solver->execute_solver(sol);
-    }
-
-    return ret;
+execute_ register_execute_dft()
+{
+    return execute_dft;
 }

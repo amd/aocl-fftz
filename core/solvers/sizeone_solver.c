@@ -39,15 +39,17 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 execute_sizeone_solver(aoclfftz_solution_t *sol)
+static INT32 execute_sizeone_solver(aoclfftz_solution_t *sol)
 {
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
     // inplace check
     if (!IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
     {
         return SOLVER_SUCCESS;
     }
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
     UINT32 dt_prec, dt_bytes;
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     DT_PRECISION_BYTES(dt_prec);
@@ -73,6 +75,13 @@ INT32 execute_sizeone_solver(aoclfftz_solution_t *sol)
         out = (VOID *)((CHAR *)out + v_out_stride);
     }
 
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
     return SOLVER_SUCCESS;
+}
+
+dft_solver_ register_execute_sizeone_solver()
+{
+    return execute_sizeone_solver;
 }

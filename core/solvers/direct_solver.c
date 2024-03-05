@@ -45,20 +45,32 @@
 INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                           kernel_t *kernel)
 {
+#ifdef AOCL_ENABLE_LOG
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
 
     aoclfftz_strides_t *strides = sol->strides;
     INTP n = sol->decomp_scheme->vecs[0].n;
+    INTP radix = sol->decomp_scheme->dims[0].n;
     ops_cycles_t ops_cycles;
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     INT32 status = SOLVER_SUCCESS;
     UINT8 sets = kernel->sets[precision - 2];
 
-    strides->in_stride = sol->decomp_scheme->dims[0].in_stride;
-    strides->out_stride = sol->decomp_scheme->dims[0].out_stride;
-    strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
-    strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
+    ALLOC_ALIGN_UNINIT(strides->in_strides, INTP, radix * sizeof(INTP));
+    ALLOC_ALIGN_UNINIT(strides->out_strides, INTP, radix * sizeof(INTP));
+    INTP in_stride = sol->decomp_scheme->dims[0].in_stride;
+    INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
+    for (INTP i = 0; i < radix; i++)
+    {
+        strides->in_strides[i] = i * in_stride * DATA_STRIDE;
+        strides->out_strides[i] = i * out_stride * DATA_STRIDE;
+    }
+
+    strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
+    strides->v_out_stride =
+        sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
 
     if (GET_SELECTOR_MODE(sol->decomp_scheme->flags) ==
         AOCLFFTZ_FIXED_SELECTOR_MODE)
@@ -89,12 +101,9 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         getTime(startTime);
 
         // execute the direct kernel
-        kernel->kfft(sol->decomp_scheme->in_real,
-                     sol->decomp_scheme->in_imag,
-                     sol->decomp_scheme->out_real,
-                     sol->decomp_scheme->out_imag,
-                     n,
-                     strides, FFT_DIR(sol->decomp_scheme->flags));
+        kernel->kfft(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
+                     sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
+                     n, strides, FFT_DIR(sol->decomp_scheme->flags));
 
         getTime(endTime);
         cost->time = diffTime(clkTick, startTime, endTime);
@@ -112,26 +121,22 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         cost->ops = cost->ops * n;
     }
 
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
     return status;
 }
 
-INT32 execute_direct_solver(aoclfftz_solution_t *sol)
+static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
 {
+#ifdef AOCL_ENABLE_LOG
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
 
     kfft_ kernel = sol->solver->kernel_r;
     aoclfftz_strides_t *strides = sol->strides;
-    if (strides == NULL)
-    {
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, logger_mode, "Invalid Strides");
-        return SOLVER_FAILURE;
-    }
 
-    AOCLFFTZ_LOG_FORMATTED(TRACE, logger_mode,
-        "Executing Radix-%td kernel with Offset - %td",
-        sol->decomp_scheme->dims[0].n, sol->decomp_scheme->vecs[0].n);
     // execute the direct kernel
     kernel(sol->decomp_scheme->in_real,
            sol->decomp_scheme->in_imag,
@@ -140,6 +145,13 @@ INT32 execute_direct_solver(aoclfftz_solution_t *sol)
            sol->decomp_scheme->vecs[0].n,
            strides, FFT_DIR(sol->decomp_scheme->flags));
 
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
     return SOLVER_SUCCESS;
+}
+
+dft_solver_ register_execute_direct_solver()
+{
+    return execute_direct_solver;
 }

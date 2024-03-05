@@ -45,6 +45,11 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
                       aoclfftz_solution_t *sol_m, UINT32 radix_r,
                       UINT32 radix_m)
 {
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+
     // Setup radix-m sub-problem
     // out-of-order -> in-order for out-of-place problems
     // out-of-order -> out-of-order for inplace problems
@@ -78,13 +83,19 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
     sol_r->decomp_scheme->vecs[0].out_stride =
         sol->decomp_scheme->dims[0].out_stride;
 
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
 	return SOLVER_SUCCESS;
 }
 
-INT32 execute_ct_solver(aoclfftz_solution_t *sol)
+static INT32 execute_ct_solver(aoclfftz_solution_t *sol)
 {
+#ifdef AOCL_ENABLE_LOG
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+
     INT32 status = SOLVER_SUCCESS;
     aoclfftz_solution_t *radix_r_sol = sol->next_sol;
     aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol;
@@ -101,10 +112,7 @@ INT32 execute_ct_solver(aoclfftz_solution_t *sol)
     radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
 
     // execute radix-m sub-problem
-    if (radix_m_sol->solver->execute_solver(radix_m_sol) != SOLVER_SUCCESS)
-    {
-        return SOLVER_FAILURE;
-    }
+    radix_m_sol->solver->execute_solver(radix_m_sol);
 
     if (IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
     {
@@ -121,11 +129,15 @@ INT32 execute_ct_solver(aoclfftz_solution_t *sol)
     }
 
     // execute radix-r DFT
-    if (radix_r_sol->solver->execute_solver(radix_r_sol) != SOLVER_SUCCESS)
-    {
-        return SOLVER_FAILURE;
-    }
+    radix_r_sol->solver->execute_solver(radix_r_sol);
 
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
     return status;
+}
+
+dft_solver_ register_execute_ct_solver()
+{
+    return execute_ct_solver;
 }

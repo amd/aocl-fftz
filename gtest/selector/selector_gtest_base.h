@@ -518,14 +518,14 @@ class AoclfftzSelectorTestBase
         {
             if (cur_a->solver->solver_type == SOLVER_DIRECT)
             {
-                ret &= cur_a->strides->in_stride ==
-                       cur_a->decomp_scheme->dims[0].in_stride;
-                ret &= cur_a->strides->out_stride ==
-                       cur_a->decomp_scheme->dims[0].out_stride;
+                ret &= (cur_a->strides->in_strides[1]) ==
+                       (cur_a->decomp_scheme->dims[0].in_stride * DATA_STRIDE);
+                ret &= (cur_a->strides->out_strides[1]) ==
+                       (cur_a->decomp_scheme->dims[0].out_stride * DATA_STRIDE);
                 ret &= cur_a->strides->v_in_stride ==
-                       cur_a->decomp_scheme->vecs[0].in_stride;
+                       cur_a->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
                 ret &= cur_a->strides->v_out_stride ==
-                       cur_a->decomp_scheme->vecs[0].out_stride;
+                       cur_a->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
                 if (ret == false)
                 {
                     AOCLFFTZ_LOG_UNFORMATTED(

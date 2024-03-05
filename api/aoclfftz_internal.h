@@ -113,6 +113,7 @@ typedef struct aoclfftz_generic_solver aoclfftz_generic_solver_t;
 typedef struct aoclfftz_strides aoclfftz_strides_t;
 typedef struct aoclfftz_twiddle aoclfftz_twiddle_t;
 typedef struct aoclfftz_bluestein aoclfftz_bluestein_t;
+typedef struct aoclfftz_executor aoclfftz_executor_t;
 
 //Computational cost analysis of solution of an executed problem/sub-problem
 typedef struct cost_analysis
@@ -129,6 +130,9 @@ typedef VOID (*kfft_) (VOID *in_real, VOID *in_imag,
 
 //Solver execute template function pointer
 typedef INT32 (*dft_solver_) (aoclfftz_solution_t *solution);
+
+//Executor function pointer
+typedef INT32 (*execute_) (aoclfftz_executor_t *executor_obj);
 
 //Base data structure acting as an abstract class that is derived by the
 //top-level DFT data structure and implemented by all the solvers
@@ -169,8 +173,8 @@ typedef struct aoclfftz_decomp_scheme
 //that is acted upon by a specific kernel
 typedef struct aoclfftz_strides
 {
-    INTP in_stride;
-    INTP out_stride;
+    INTP *in_strides;
+    INTP *out_strides;
     INTP v_in_stride;
     INTP v_out_stride;
 } aoclfftz_strides_t;
@@ -242,5 +246,7 @@ typedef struct
     aoclfftz_prob_desc_d_64_ *prob_desc;
     aoclfftz_solution_t *sol_handle;
 } aoclfftz_dft_d_64_;
+
+execute_ register_execute_dft();
 
 #endif //AOCLFFTZ_INTERNAL_H

@@ -43,11 +43,19 @@
 
 INT32 setup_batched_solver(aoclfftz_solution_t *sol)
 {
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+
     // Turn the vector problem into a single set/unit problem to find its
     // solution
     sol->decomp_scheme->vec_rank = 1;
     sol->decomp_scheme->vecs[0].n = 1;
 
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
     return SOLVER_SUCCESS;
 }
 
@@ -59,10 +67,13 @@ INT32 setup_batched_solver(aoclfftz_solution_t *sol)
  * sol->decomp_scheme->vecs[rnk].out_stride gives the offset at which
  * output buffer starts for the current rank/position in the vector array.
  */
-INT32 execute_batched_solver(aoclfftz_solution_t *sol)
+static INT32 execute_batched_solver(aoclfftz_solution_t *sol)
 {
+#ifdef AOCL_ENABLE_LOG
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+
     aoclfftz_solution_t *next_sol = sol->next_sol;
     INTP batch_size;
     INTP rnk_offset;
@@ -247,6 +258,13 @@ INT32 execute_batched_solver(aoclfftz_solution_t *sol)
         return SOLVER_FAILURE;
     }
 
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
     return status;
+}
+
+dft_solver_ register_execute_batched_solver()
+{
+    return execute_batched_solver;
 }

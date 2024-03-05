@@ -63,11 +63,14 @@ class AoclfftzKernelTestBase
     INTP input_length;         // length with input strides
     INTP output_length;        // length with output strides
     kfft_ fft_kernel;          // pointer to the kernel function
-    aoclfftz_strides_t stride; // stride values
+    INTP in_stride;            // input stride value
+    INTP out_stride;           // output stride value
     UINT8 kernel_type;         // kernel type
     UINT8 is_bwd;              // direction, 1 -> BWD, 0 -> FWD
     INTP offset;               // no. of sets (1 offset size = radix)
     UINT32 random_seed;        // seed value of random number generator
+    INTP in_stride_w_ds;
+    INTP out_stride_w_ds;
 
     void SetUp() override
     {
@@ -94,10 +97,8 @@ class AoclfftzKernelTestBase
         use_special = special;
         auto param = std::get<0>(GetParam());
         auto io_param = std::get<1>(GetParam());
-        stride.in_stride  = std::get<0>(io_param);
-        stride.out_stride = std::get<1>(io_param);
-        stride.v_in_stride  = 1;
-        stride.v_out_stride = 1;
+        in_stride = std::get<0>(io_param);
+        out_stride = std::get<1>(io_param);
         offset = std::get<2>(io_param);
         is_bwd = std::get<3>(io_param);
         radix  = std::get<0>(param);
@@ -124,8 +125,11 @@ class AoclfftzKernelTestBase
             return;
         }
 
-        input_length = length * stride.in_stride;
-        output_length = length * stride.out_stride;
+        input_length = length * in_stride;
+        output_length = length * out_stride;
+        //precompute strides with data stride
+        in_stride_w_ds = in_stride * DATA_STRIDE;
+        out_stride_w_ds = out_stride * DATA_STRIDE;
 
         if (test_type & aoclfftz_kernel_test_type::LINEARITY)
         {
@@ -197,7 +201,7 @@ class AoclfftzKernelTestBase
     {
         T *input;
         ALLOC_ALIGN_INIT(input, T, input_length * DATA_STRIDE * sizeof(T));
-        INTP idx = (INTP)(rand() % length) * stride.in_stride;
+        INTP idx = (INTP)(rand() % length) * in_stride;
         // range: [-10.0, 10.0) with 3 decimal precision
         input[idx * DATA_STRIDE] = (T)((rand() % 2000) / 200.0 - 10.0);
         input[idx * DATA_STRIDE + 1] = (T)((rand() % 2000) / 200.0 - 10.0);
@@ -244,7 +248,7 @@ class AoclfftzKernelTestBase
     {
         T *input = NULL;
         ALLOC_ALIGN_UNINIT(input, T, sizeof(T) * input_length * DATA_STRIDE);
-        for (INTP idx = 0; idx < length; idx += stride.in_stride)
+        for (INTP idx = 0; idx < length; idx += in_stride)
         {
             input[idx * DATA_STRIDE] = get_maybe_special_value<T>(rand());
             input[idx * DATA_STRIDE + 1] = get_maybe_special_value<T>(rand());
@@ -266,7 +270,7 @@ class AoclfftzKernelTestBase
         T max_e = 0.0;
         T max_mag = 0.0;
         INTP _length = use_input_params ? input_length : output_length;
-        INT32 _stride = use_input_params ? stride.in_stride : stride.out_stride;
+        INT32 _stride = use_input_params ? in_stride : out_stride;
         for (int idx = 0; idx < _length; idx += _stride)
         {
             T e = std::max(
@@ -336,19 +340,33 @@ class AoclfftzKernelTestBase
         if (kernel_type & 0x1)
         {
             // strides for FFT kernel
-            kernel_stride.in_stride = stride.in_stride;
-            kernel_stride.out_stride = offset * stride.out_stride;
-            kernel_stride.v_in_stride = radix * stride.in_stride;
-            kernel_stride.v_out_stride = stride.out_stride;
+            ALLOC_ALIGN_UNINIT(kernel_stride.in_strides, INTP,
+                                 radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(kernel_stride.out_strides, INTP,
+                                 radix * sizeof(INTP));
+            for (INTP i = 0; i < radix; i++)
+            {
+                kernel_stride.in_strides[i] = i * in_stride_w_ds;
+                kernel_stride.out_strides[i] = offset * i * out_stride_w_ds;
+            }
+            kernel_stride.v_in_stride = radix * in_stride_w_ds;;
+            kernel_stride.v_out_stride = out_stride_w_ds;;
         }
         // standard kernel
         else
         {
             // strides for FFT kernel
-            kernel_stride.in_stride = offset * stride.in_stride;
-            kernel_stride.out_stride = stride.out_stride;
-            kernel_stride.v_in_stride = stride.in_stride;
-            kernel_stride.v_out_stride = radix * stride.out_stride;
+            ALLOC_ALIGN_UNINIT(kernel_stride.in_strides, INTP,
+                                 radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(kernel_stride.out_strides, INTP,
+                                 radix * sizeof(INTP));
+            for (INTP i = 0; i < radix; i++)
+            {
+                kernel_stride.in_strides[i] = offset * i * in_stride_w_ds;
+                kernel_stride.out_strides[i] = i * out_stride_w_ds;
+            }
+            kernel_stride.v_in_stride = in_stride_w_ds;
+            kernel_stride.v_out_stride = radix * out_stride_w_ds;
         }
 
         // Initialize kernel input/output variables
@@ -401,6 +419,8 @@ class AoclfftzKernelTestBase
         FREE_ALIGN_ALLOCATED_MEM(in_combined);
         FREE_ALIGN_ALLOCATED_MEM(out_combined);
         FREE_ALIGN_ALLOCATED_MEM(out_added);
+        FREE_ALIGN_ALLOCATED_MEM(kernel_stride.in_strides);
+        FREE_ALIGN_ALLOCATED_MEM(kernel_stride.out_strides);
     } // run_linearity_test
 
     /**
@@ -434,50 +454,116 @@ class AoclfftzKernelTestBase
         if (kernel_type & 0x1)
         {
             // strides for FFT kernel
-            kernel_stride.in_stride = stride.in_stride;
-            kernel_stride.out_stride = stride.out_stride * offset;
-            kernel_stride.v_in_stride = stride.in_stride * radix;
-            kernel_stride.v_out_stride = stride.out_stride;
+            ALLOC_ALIGN_UNINIT(kernel_stride.in_strides, INTP,
+                                 radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(kernel_stride.out_strides, INTP,
+                                 radix * sizeof(INTP));
+            for (INTP i = 0; i < radix; i++)
+            {
+                kernel_stride.in_strides[i] = i * in_stride_w_ds;
+                kernel_stride.out_strides[i] = offset * i * out_stride_w_ds;
+            }
+            kernel_stride.v_in_stride = in_stride_w_ds * radix;
+            kernel_stride.v_out_stride = out_stride_w_ds;
             // strides for reverse FFT kernel
-            kernel_stride_reverse.in_stride = stride.out_stride;
-            kernel_stride_reverse.out_stride = stride.in_stride * offset;
-            kernel_stride_reverse.v_in_stride = stride.out_stride * radix;
-            kernel_stride_reverse.v_out_stride = stride.in_stride;
+            ALLOC_ALIGN_UNINIT(kernel_stride_reverse.in_strides, INTP,
+                                 radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(kernel_stride_reverse.out_strides, INTP,
+                                 radix * sizeof(INTP));
+            for (INTP i = 0; i < radix; i++)
+            {
+                kernel_stride_reverse.in_strides[i] = i * out_stride_w_ds;
+                kernel_stride_reverse.out_strides[i] = offset * i *
+                                                         in_stride_w_ds;
+            }
+            kernel_stride_reverse.v_in_stride = out_stride_w_ds * radix;
+            kernel_stride_reverse.v_out_stride = in_stride_w_ds;
             // strides for permuted copy on reverse FFT output
-            permuted_copy_stride.in_stride = stride.out_stride * offset;
-            permuted_copy_stride.out_stride = stride.out_stride;
-            permuted_copy_stride.v_in_stride = stride.out_stride;
-            permuted_copy_stride.v_out_stride = stride.out_stride * radix;
+            ALLOC_ALIGN_UNINIT(permuted_copy_stride.in_strides, INTP,
+                                 radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(permuted_copy_stride.out_strides, INTP,
+                                 radix * sizeof(INTP));
+            for (INTP i = 0; i < radix; i++)
+            {
+                permuted_copy_stride.in_strides[i] = offset * i *
+                                                     out_stride_w_ds;
+                permuted_copy_stride.out_strides[i] = i * out_stride_w_ds;
+            }
+            permuted_copy_stride.v_in_stride = out_stride_w_ds;
+            permuted_copy_stride.v_out_stride = out_stride_w_ds * radix;
             // strides for permuted copy on FFT output
-            permuted_copy_stride_reverse.in_stride = stride.in_stride * offset;
-            permuted_copy_stride_reverse.out_stride = stride.in_stride;
-            permuted_copy_stride_reverse.v_in_stride = stride.in_stride;
+            ALLOC_ALIGN_UNINIT(permuted_copy_stride_reverse.in_strides, INTP,
+                                 radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(permuted_copy_stride_reverse.out_strides, INTP,
+                                 radix * sizeof(INTP));
+            for (INTP i = 0; i < radix; i++)
+            {
+                permuted_copy_stride_reverse.in_strides[i] = offset * i *
+                                                             in_stride_w_ds;
+                permuted_copy_stride_reverse.out_strides[i] = i *
+                                                             in_stride_w_ds;
+            }
+            permuted_copy_stride_reverse.v_in_stride = in_stride_w_ds;
             permuted_copy_stride_reverse.v_out_stride =
-                stride.in_stride * radix;
+                in_stride_w_ds * radix;
         }
         // standard kernel
         else
         {
             // strides for FFT kernel
-            kernel_stride.in_stride = stride.in_stride * offset;
-            kernel_stride.out_stride = stride.out_stride;
-            kernel_stride.v_in_stride = stride.in_stride;
-            kernel_stride.v_out_stride = stride.out_stride * radix;
+            ALLOC_ALIGN_UNINIT(kernel_stride.in_strides, INTP,
+                                 radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(kernel_stride.out_strides, INTP,
+                                 radix * sizeof(INTP));
+            for (INTP i = 0; i < radix; i++)
+            {
+                kernel_stride.in_strides[i] = offset * i * in_stride_w_ds;
+                kernel_stride.out_strides[i] = i * out_stride_w_ds;
+            }
+            kernel_stride.v_in_stride = in_stride_w_ds;
+            kernel_stride.v_out_stride = out_stride_w_ds * radix;
+
             // strides for reverse FFT kernel
-            kernel_stride_reverse.in_stride = stride.out_stride * offset;
-            kernel_stride_reverse.out_stride = stride.in_stride;
-            kernel_stride_reverse.v_in_stride = stride.out_stride;
-            kernel_stride_reverse.v_out_stride = stride.in_stride * radix;
+            ALLOC_ALIGN_UNINIT(kernel_stride_reverse.in_strides, INTP,
+                                 radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(kernel_stride_reverse.out_strides, INTP,
+                                 radix * sizeof(INTP));
+            for (INTP i = 0; i < radix; i++)
+            {
+                kernel_stride_reverse.in_strides[i] = offset * i *
+                                                     out_stride_w_ds;
+                kernel_stride_reverse.out_strides[i] = i * in_stride_w_ds;
+            }
+            kernel_stride_reverse.v_in_stride = out_stride_w_ds;
+            kernel_stride_reverse.v_out_stride = in_stride_w_ds * radix;
+
             // strides for permuted copy on reverse FFT output
-            permuted_copy_stride.in_stride = stride.out_stride;
-            permuted_copy_stride.out_stride = stride.out_stride * offset;
-            permuted_copy_stride.v_in_stride = stride.out_stride * radix;
-            permuted_copy_stride.v_out_stride = stride.out_stride;
+            ALLOC_ALIGN_UNINIT(permuted_copy_stride.in_strides, INTP,
+                                 radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(permuted_copy_stride.out_strides, INTP,
+                                 radix * sizeof(INTP));
+            for (INTP i = 0; i < radix; i++)
+            {
+                permuted_copy_stride.in_strides[i] = i * out_stride_w_ds;
+                permuted_copy_stride.out_strides[i] = offset * i *
+                                                     out_stride_w_ds;
+            }
+            permuted_copy_stride.v_in_stride = out_stride_w_ds * radix;
+            permuted_copy_stride.v_out_stride = out_stride_w_ds;
+
             // strides for permuted copy on FFT output
-            permuted_copy_stride_reverse.in_stride = stride.in_stride;
-            permuted_copy_stride_reverse.out_stride = stride.in_stride * offset;
-            permuted_copy_stride_reverse.v_in_stride = stride.in_stride * radix;
-            permuted_copy_stride_reverse.v_out_stride = stride.in_stride;
+            ALLOC_ALIGN_UNINIT(permuted_copy_stride_reverse.in_strides, INTP,
+                                 radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(permuted_copy_stride_reverse.out_strides, INTP,
+                                 radix * sizeof(INTP));
+            for (INTP i = 0; i < radix; i++)
+            {
+                permuted_copy_stride_reverse.in_strides[i] = i * in_stride_w_ds;
+                permuted_copy_stride_reverse.out_strides[i] = offset * i *
+                                                             in_stride_w_ds;
+            }
+            permuted_copy_stride_reverse.v_in_stride = in_stride_w_ds * radix;
+            permuted_copy_stride_reverse.v_out_stride = in_stride_w_ds;
         }
 
         // Initialize kernel input/output variables
@@ -510,7 +596,6 @@ class AoclfftzKernelTestBase
             inv_out[idx * DATA_STRIDE] /= radix;
             inv_out[idx * DATA_STRIDE + 1] /= radix;
         }
-
         if (!use_special)
         {
             if (typeid(T) == typeid(FLOAT))
@@ -532,6 +617,14 @@ class AoclfftzKernelTestBase
         FREE_ALIGN_ALLOCATED_MEM(inv_out);
         FREE_ALIGN_ALLOCATED_MEM(perm_out);
         FREE_ALIGN_ALLOCATED_MEM(perm_inv_out);
+        FREE_ALIGN_ALLOCATED_MEM(kernel_stride.in_strides);
+        FREE_ALIGN_ALLOCATED_MEM(kernel_stride.out_strides);
+        FREE_ALIGN_ALLOCATED_MEM(kernel_stride_reverse.in_strides);
+        FREE_ALIGN_ALLOCATED_MEM(kernel_stride_reverse.out_strides);
+        FREE_ALIGN_ALLOCATED_MEM(permuted_copy_stride.in_strides);
+        FREE_ALIGN_ALLOCATED_MEM(permuted_copy_stride.out_strides);
+        FREE_ALIGN_ALLOCATED_MEM(permuted_copy_stride_reverse.in_strides);
+        FREE_ALIGN_ALLOCATED_MEM(permuted_copy_stride_reverse.out_strides);
     } // run_unit_impulse_transform_test
 
     /**
@@ -563,14 +656,14 @@ class AoclfftzKernelTestBase
         {
             for (INTP idx = 0; idx < radix; idx++)
             {
-                for (INTP is = 0; is < stride.in_stride; is++)
+                for (INTP is = 0; is < in_stride; is++)
                 {
-                    INTP src = (itr * radix * stride.in_stride +
-                                ((idx + (radix - m)) * stride.in_stride) %
-                                    (radix * stride.in_stride) +
+                    INTP src = (itr * radix * in_stride +
+                                ((idx + (radix - m)) * in_stride) %
+                                    (radix * in_stride) +
                                 is) *
                                DATA_STRIDE;
-                    INTP dst = ((itr * radix + idx) * stride.in_stride + is) *
+                    INTP dst = ((itr * radix + idx) * in_stride + is) *
                                DATA_STRIDE;
                     in2[dst] = in1[src];
                     in2[dst + 1] = in1[src + 1];
@@ -586,29 +679,59 @@ class AoclfftzKernelTestBase
         if (kernel_type & 0x1)
         {
             // strides for FFT kernel
-            kernel_stride.in_stride = stride.in_stride;
-            kernel_stride.out_stride = stride.out_stride * offset;
-            kernel_stride.v_in_stride = stride.in_stride * radix;
-            kernel_stride.v_out_stride = stride.out_stride;
+            ALLOC_ALIGN_UNINIT(kernel_stride.in_strides, INTP,
+                                 radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(kernel_stride.out_strides, INTP,
+                                 radix * sizeof(INTP));
+            for (INTP i = 0; i < radix; i++)
+            {
+                kernel_stride.in_strides[i] = i * in_stride_w_ds;
+                kernel_stride.out_strides[i] = offset * i * out_stride_w_ds;
+            }
+            kernel_stride.v_in_stride = in_stride_w_ds * radix;
+            kernel_stride.v_out_stride = out_stride_w_ds;
             // strides for permuted copy on FFT output
-            permuted_copy_stride.in_stride = stride.out_stride * offset;
-            permuted_copy_stride.out_stride = stride.out_stride;
-            permuted_copy_stride.v_in_stride = stride.out_stride;
-            permuted_copy_stride.v_out_stride = stride.out_stride * radix;
+            ALLOC_ALIGN_UNINIT(permuted_copy_stride.in_strides, INTP,
+                                 radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(permuted_copy_stride.out_strides, INTP,
+                                 radix * sizeof(INTP));
+            for (INTP i = 0; i < radix; i++)
+            {
+                permuted_copy_stride.in_strides[i] = offset * i *
+                                                     out_stride_w_ds;
+                permuted_copy_stride.out_strides[i] = i * out_stride_w_ds;
+            }
+            permuted_copy_stride.v_in_stride = out_stride_w_ds;
+            permuted_copy_stride.v_out_stride = out_stride_w_ds * radix;
         }
         // standard kernel
         else
         {
             // strides for FFT kernel
-            kernel_stride.in_stride = stride.in_stride * offset;
-            kernel_stride.out_stride = stride.out_stride;
-            kernel_stride.v_in_stride = stride.in_stride;
-            kernel_stride.v_out_stride = stride.out_stride * radix;
+            ALLOC_ALIGN_UNINIT(kernel_stride.in_strides, INTP,
+                                 radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(kernel_stride.out_strides, INTP,
+                                 radix * sizeof(INTP));
+            for (INTP i = 0; i < radix; i++)
+            {
+                kernel_stride.in_strides[i] = offset * i * in_stride_w_ds;
+                kernel_stride.out_strides[i] = i * out_stride_w_ds;
+            }
+            kernel_stride.v_in_stride = in_stride_w_ds;
+            kernel_stride.v_out_stride = out_stride_w_ds * radix;
             // strides for permuted copy on input
-            permuted_copy_stride.in_stride = stride.in_stride;
-            permuted_copy_stride.out_stride = stride.in_stride * offset;
-            permuted_copy_stride.v_in_stride = stride.in_stride * radix;
-            permuted_copy_stride.v_out_stride = stride.in_stride;
+            ALLOC_ALIGN_UNINIT(permuted_copy_stride.in_strides, INTP,
+                                 radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(permuted_copy_stride.out_strides, INTP,
+                                 radix * sizeof(INTP));
+            for (INTP i = 0; i < radix; i++)
+            {
+                permuted_copy_stride.in_strides[i] = i * in_stride_w_ds;
+                permuted_copy_stride.out_strides[i] = offset * i *
+                                                         in_stride_w_ds;
+            }
+            permuted_copy_stride.v_in_stride = in_stride_w_ds * radix;
+            permuted_copy_stride.v_out_stride = in_stride_w_ds;
         }
 
         // Initialize kernel input/output variables
@@ -658,8 +781,8 @@ class AoclfftzKernelTestBase
             INTP mk = (m * k) % radix;
             T angle = sign * AOCLFFTZ_2_PI * mk / radix;
             EULER(angle, e_k);
-            CMUL(out1 + k * stride.out_stride * DATA_STRIDE, e_k,
-                 out_comp + k * stride.out_stride * DATA_STRIDE, cmul_temp);
+            CMUL(out1 + k * out_stride_w_ds, e_k,
+                 out_comp + k * out_stride_w_ds, cmul_temp);
         }
 
         if (!use_special)
@@ -682,6 +805,10 @@ class AoclfftzKernelTestBase
         FREE_ALIGN_ALLOCATED_MEM(out2);
         FREE_ALIGN_ALLOCATED_MEM(out_comp);
         FREE_ALIGN_ALLOCATED_MEM(temp);
+        FREE_ALIGN_ALLOCATED_MEM(kernel_stride.in_strides);
+        FREE_ALIGN_ALLOCATED_MEM(kernel_stride.out_strides);
+        FREE_ALIGN_ALLOCATED_MEM(permuted_copy_stride.in_strides);
+        FREE_ALIGN_ALLOCATED_MEM(permuted_copy_stride.out_strides);
     } // run_timeshift_test
 };
 

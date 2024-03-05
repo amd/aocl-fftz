@@ -40,16 +40,6 @@
 #include "core/kernels/kernel.h"
 #include "core/kernels/simd_common.h"
 
-kfft_ register_kernel_fft16avx256(INT32 precision)
-{
-    if (precision == DT_FLOAT)
-        return fft16avx256fp32;
-    else if (precision == DT_DOUBLE)
-        return fft16avx256fp64;
-    else
-        return NULL;
-}
-
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 15, 72, 128, 23, 39},
                                                      {0, 15, 72, 64,   7, 39}};
 ops_cycles_t get_ops_cnt_fft16avx256(INT32 precision)
@@ -60,10 +50,13 @@ ops_cycles_t get_ops_cnt_fft16avx256(INT32 precision)
         return ops_cnt[1];
 }
 
-VOID fft16avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+static VOID fft16avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                      VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                      UINT8 flag)
 {
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
     const FLOAT CRTM_16[7] =
         {0.92387953251128675612818318939678828682241662586364,
          0.38268343236508977172845998403039886676134456248563,
@@ -75,10 +68,15 @@ VOID fft16avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     FLOAT *in_r = (FLOAT *)in_real;
     FLOAT *out_r = (FLOAT *)out_real;
-    INTP in_stride = (strides->in_stride << 1);
-    INTP out_stride = (strides->out_stride << 1);
-    INTP v_in_stride = (strides->v_in_stride << 1);
-    INTP v_out_stride = (strides->v_out_stride << 1);
+    #ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+    #else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+    #endif
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_256_S;
     INTP remaining_sets = n % NUM_SETS_256_S;
     INTP count;
@@ -127,35 +125,35 @@ VOID fft16avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_out = out_r;
 
         GATHER4_256_S(curr_in, v_in_stride, v_in0);
-        curr_in = in_r + in_stride;
+        curr_in = in_r + in_strides[1];
         GATHER4_256_S(curr_in, v_in_stride, v_in1);
-        curr_in = in_r + (in_stride << 1);
+        curr_in = in_r + in_strides[2];
         GATHER4_256_S(curr_in, v_in_stride, v_in2);
-        curr_in = in_r + (in_stride * 3);
+        curr_in = in_r + in_strides[3];
         GATHER4_256_S(curr_in, v_in_stride, v_in3);
-        curr_in = in_r + (in_stride << 2);
+        curr_in = in_r + in_strides[4];
         GATHER4_256_S(curr_in, v_in_stride, v_in4);
-        curr_in = in_r + (in_stride * 5);
+        curr_in = in_r + in_strides[5];
         GATHER4_256_S(curr_in, v_in_stride, v_in5);
-        curr_in = in_r + (in_stride * 6);
+        curr_in = in_r + in_strides[6];
         GATHER4_256_S(curr_in, v_in_stride, v_in6);
-        curr_in = in_r + (in_stride * 7);
+        curr_in = in_r + in_strides[7];
         GATHER4_256_S(curr_in, v_in_stride, v_in7);
-        curr_in = in_r + (in_stride << 3);
+        curr_in = in_r + in_strides[8];
         GATHER4_256_S(curr_in, v_in_stride, v_in8);
-        curr_in = in_r + (in_stride * 9);
+        curr_in = in_r + in_strides[9];
         GATHER4_256_S(curr_in, v_in_stride, v_in9);
-        curr_in = in_r + (in_stride * 10);
+        curr_in = in_r + in_strides[10];
         GATHER4_256_S(curr_in, v_in_stride, v_in10);
-        curr_in = in_r + (in_stride * 11);
+        curr_in = in_r + in_strides[11];
         GATHER4_256_S(curr_in, v_in_stride, v_in11);
-        curr_in = in_r + (in_stride * 12);
+        curr_in = in_r + in_strides[12];
         GATHER4_256_S(curr_in, v_in_stride, v_in12);
-        curr_in = in_r + (in_stride * 13);
+        curr_in = in_r + in_strides[13];
         GATHER4_256_S(curr_in, v_in_stride, v_in13);
-        curr_in = in_r + (in_stride * 14);
+        curr_in = in_r + in_strides[14];
         GATHER4_256_S(curr_in, v_in_stride, v_in14);
-        curr_in = in_r + (in_stride * 15);
+        curr_in = in_r + in_strides[15];
         GATHER4_256_S(curr_in, v_in_stride, v_in15);
 
         // common calculations
@@ -285,35 +283,35 @@ VOID fft16avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out8 = _mm256_sub_ps(v_av39, v_av40);
 
         SCATTER4_256_S(curr_out, v_out_stride, v_out0);
-        curr_out = out_r + out_stride;
+        curr_out = out_r + out_strides[1];
         SCATTER4_256_S(curr_out, v_out_stride, v_out1);
-        curr_out = out_r + (out_stride << 1);
+        curr_out = out_r + out_strides[2];
         SCATTER4_256_S(curr_out, v_out_stride, v_out2);
-        curr_out = out_r + (out_stride * 3);
+        curr_out = out_r + out_strides[3];
         SCATTER4_256_S(curr_out, v_out_stride, v_out3);
-        curr_out = out_r + (out_stride << 2);
+        curr_out = out_r + out_strides[4];
         SCATTER4_256_S(curr_out, v_out_stride, v_out4);
-        curr_out = out_r + (out_stride * 5);
+        curr_out = out_r + out_strides[5];
         SCATTER4_256_S(curr_out, v_out_stride, v_out5);
-        curr_out = out_r + (out_stride * 6);
+        curr_out = out_r + out_strides[6];
         SCATTER4_256_S(curr_out, v_out_stride, v_out6);
-        curr_out = out_r + (out_stride * 7);
+        curr_out = out_r + out_strides[7];
         SCATTER4_256_S(curr_out, v_out_stride, v_out7);
-        curr_out = out_r + (out_stride << 3);
+        curr_out = out_r + out_strides[8];
         SCATTER4_256_S(curr_out, v_out_stride, v_out8);
-        curr_out = out_r + (out_stride * 9);
+        curr_out = out_r + out_strides[9];
         SCATTER4_256_S(curr_out, v_out_stride, v_out9);
-        curr_out = out_r + (out_stride * 10);
+        curr_out = out_r + out_strides[10];
         SCATTER4_256_S(curr_out, v_out_stride, v_out10);
-        curr_out = out_r + (out_stride * 11);
+        curr_out = out_r + out_strides[11];
         SCATTER4_256_S(curr_out, v_out_stride, v_out11);
-        curr_out = out_r + (out_stride * 12);
+        curr_out = out_r + out_strides[12];
         SCATTER4_256_S(curr_out, v_out_stride, v_out12);
-        curr_out = out_r + (out_stride * 13);
+        curr_out = out_r + out_strides[13];
         SCATTER4_256_S(curr_out, v_out_stride, v_out13);
-        curr_out = out_r + (out_stride * 14);
+        curr_out = out_r + out_strides[14];
         SCATTER4_256_S(curr_out, v_out_stride, v_out14);
-        curr_out = out_r + (out_stride * 15);
+        curr_out = out_r + out_strides[15];
         SCATTER4_256_S(curr_out, v_out_stride, v_out15);
 
         in_r += NUM_SETS_256_S * v_in_stride;
@@ -353,35 +351,35 @@ VOID fft16avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_out = out_r;
 
         GATHER2_128_S(curr_in, v_in_stride, v_in0);
-        curr_in = in_r + in_stride;
+        curr_in = in_r + in_strides[1];
         GATHER2_128_S(curr_in, v_in_stride, v_in1);
-        curr_in = in_r + (in_stride << 1);
+        curr_in = in_r + in_strides[2];
         GATHER2_128_S(curr_in, v_in_stride, v_in2);
-        curr_in = in_r + (in_stride * 3);
+        curr_in = in_r + in_strides[3];
         GATHER2_128_S(curr_in, v_in_stride, v_in3);
-        curr_in = in_r + (in_stride << 2);
+        curr_in = in_r + in_strides[4];
         GATHER2_128_S(curr_in, v_in_stride, v_in4);
-        curr_in = in_r + (in_stride * 5);
+        curr_in = in_r + in_strides[5];
         GATHER2_128_S(curr_in, v_in_stride, v_in5);
-        curr_in = in_r + (in_stride * 6);
+        curr_in = in_r + in_strides[6];
         GATHER2_128_S(curr_in, v_in_stride, v_in6);
-        curr_in = in_r + (in_stride * 7);
+        curr_in = in_r + in_strides[7];
         GATHER2_128_S(curr_in, v_in_stride, v_in7);
-        curr_in = in_r + (in_stride << 3);
+        curr_in = in_r + in_strides[8];
         GATHER2_128_S(curr_in, v_in_stride, v_in8);
-        curr_in = in_r + (in_stride * 9);
+        curr_in = in_r + in_strides[9];
         GATHER2_128_S(curr_in, v_in_stride, v_in9);
-        curr_in = in_r + (in_stride * 10);
+        curr_in = in_r + in_strides[10];
         GATHER2_128_S(curr_in, v_in_stride, v_in10);
-        curr_in = in_r + (in_stride * 11);
+        curr_in = in_r + in_strides[11];
         GATHER2_128_S(curr_in, v_in_stride, v_in11);
-        curr_in = in_r + (in_stride * 12);
+        curr_in = in_r + in_strides[12];
         GATHER2_128_S(curr_in, v_in_stride, v_in12);
-        curr_in = in_r + (in_stride * 13);
+        curr_in = in_r + in_strides[13];
         GATHER2_128_S(curr_in, v_in_stride, v_in13);
-        curr_in = in_r + (in_stride * 14);
+        curr_in = in_r + in_strides[14];
         GATHER2_128_S(curr_in, v_in_stride, v_in14);
-        curr_in = in_r + (in_stride * 15);
+        curr_in = in_r + in_strides[15];
         GATHER2_128_S(curr_in, v_in_stride, v_in15);
 
         // common calculations
@@ -509,35 +507,35 @@ VOID fft16avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out8 = _mm_sub_ps(v_av39, v_av40);
 
         SCATTER2_128_S(curr_out, v_out_stride, v_out0);
-        curr_out = out_r + out_stride;
+        curr_out = out_r + out_strides[1];
         SCATTER2_128_S(curr_out, v_out_stride, v_out1);
-        curr_out = out_r + (out_stride << 1);
+        curr_out = out_r + out_strides[2];
         SCATTER2_128_S(curr_out, v_out_stride, v_out2);
-        curr_out = out_r + (out_stride * 3);
+        curr_out = out_r + out_strides[3];
         SCATTER2_128_S(curr_out, v_out_stride, v_out3);
-        curr_out = out_r + (out_stride << 2);
+        curr_out = out_r + out_strides[4];
         SCATTER2_128_S(curr_out, v_out_stride, v_out4);
-        curr_out = out_r + (out_stride * 5);
+        curr_out = out_r + out_strides[5];
         SCATTER2_128_S(curr_out, v_out_stride, v_out5);
-        curr_out = out_r + (out_stride * 6);
+        curr_out = out_r + out_strides[6];
         SCATTER2_128_S(curr_out, v_out_stride, v_out6);
-        curr_out = out_r + (out_stride * 7);
+        curr_out = out_r + out_strides[7];
         SCATTER2_128_S(curr_out, v_out_stride, v_out7);
-        curr_out = out_r + (out_stride << 3);
+        curr_out = out_r + out_strides[8];
         SCATTER2_128_S(curr_out, v_out_stride, v_out8);
-        curr_out = out_r + (out_stride * 9);
+        curr_out = out_r + out_strides[9];
         SCATTER2_128_S(curr_out, v_out_stride, v_out9);
-        curr_out = out_r + (out_stride * 10);
+        curr_out = out_r + out_strides[10];
         SCATTER2_128_S(curr_out, v_out_stride, v_out10);
-        curr_out = out_r + (out_stride * 11);
+        curr_out = out_r + out_strides[11];
         SCATTER2_128_S(curr_out, v_out_stride, v_out11);
-        curr_out = out_r + (out_stride * 12);
+        curr_out = out_r + out_strides[12];
         SCATTER2_128_S(curr_out, v_out_stride, v_out12);
-        curr_out = out_r + (out_stride * 13);
+        curr_out = out_r + out_strides[13];
         SCATTER2_128_S(curr_out, v_out_stride, v_out13);
-        curr_out = out_r + (out_stride * 14);
+        curr_out = out_r + out_strides[14];
         SCATTER2_128_S(curr_out, v_out_stride, v_out14);
-        curr_out = out_r + (out_stride * 15);
+        curr_out = out_r + out_strides[15];
         SCATTER2_128_S(curr_out, v_out_stride, v_out15);
 
         in_r = in_r + (v_in_stride << 1);
@@ -576,35 +574,35 @@ VOID fft16avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_out = out_r;
 
         LD_LOW_128_S(curr_in, v_in0);
-        curr_in = in_r + in_stride;
+        curr_in = in_r + in_strides[1];
         LD_LOW_128_S(curr_in, v_in1);
-        curr_in = in_r + (in_stride << 1);
+        curr_in = in_r + in_strides[2];
         LD_LOW_128_S(curr_in, v_in2);
-        curr_in = in_r + (in_stride * 3);
+        curr_in = in_r + in_strides[3];
         LD_LOW_128_S(curr_in, v_in3);
-        curr_in = in_r + (in_stride << 2);
+        curr_in = in_r + in_strides[4];
         LD_LOW_128_S(curr_in, v_in4);
-        curr_in = in_r + (in_stride * 5);
+        curr_in = in_r + in_strides[5];
         LD_LOW_128_S(curr_in, v_in5);
-        curr_in = in_r + (in_stride * 6);
+        curr_in = in_r + in_strides[6];
         LD_LOW_128_S(curr_in, v_in6);
-        curr_in = in_r + (in_stride * 7);
+        curr_in = in_r + in_strides[7];
         LD_LOW_128_S(curr_in, v_in7);
-        curr_in = in_r + (in_stride << 3);
+        curr_in = in_r + in_strides[8];
         LD_LOW_128_S(curr_in, v_in8);
-        curr_in = in_r + (in_stride * 9);
+        curr_in = in_r + in_strides[9];
         LD_LOW_128_S(curr_in, v_in9);
-        curr_in = in_r + (in_stride * 10);
+        curr_in = in_r + in_strides[10];
         LD_LOW_128_S(curr_in, v_in10);
-        curr_in = in_r + (in_stride * 11);
+        curr_in = in_r + in_strides[11];
         LD_LOW_128_S(curr_in, v_in11);
-        curr_in = in_r + (in_stride * 12);
+        curr_in = in_r + in_strides[12];
         LD_LOW_128_S(curr_in, v_in12);
-        curr_in = in_r + (in_stride * 13);
+        curr_in = in_r + in_strides[13];
         LD_LOW_128_S(curr_in, v_in13);
-        curr_in = in_r + (in_stride * 14);
+        curr_in = in_r + in_strides[14];
         LD_LOW_128_S(curr_in, v_in14);
-        curr_in = in_r + (in_stride * 15);
+        curr_in = in_r + in_strides[15];
         LD_LOW_128_S(curr_in, v_in15);
 
         // common calculations
@@ -732,43 +730,49 @@ VOID fft16avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out8 = _mm_sub_ps(v_av39, v_av40);
 
         ST_LOW_128_S(curr_out, v_out0);
-        curr_out = out_r + out_stride;
+        curr_out = out_r + out_strides[1];
         ST_LOW_128_S(curr_out, v_out1);
-        curr_out = out_r + (out_stride << 1);
+        curr_out = out_r + out_strides[2];
         ST_LOW_128_S(curr_out, v_out2);
-        curr_out = out_r + (out_stride * 3);
+        curr_out = out_r + out_strides[3];
         ST_LOW_128_S(curr_out, v_out3);
-        curr_out = out_r + (out_stride << 2);
+        curr_out = out_r + out_strides[4];
         ST_LOW_128_S(curr_out, v_out4);
-        curr_out = out_r + (out_stride * 5);
+        curr_out = out_r + out_strides[5];
         ST_LOW_128_S(curr_out, v_out5);
-        curr_out = out_r + (out_stride * 6);
+        curr_out = out_r + out_strides[6];
         ST_LOW_128_S(curr_out, v_out6);
-        curr_out = out_r + (out_stride * 7);
+        curr_out = out_r + out_strides[7];
         ST_LOW_128_S(curr_out, v_out7);
-        curr_out = out_r + (out_stride << 3);
+        curr_out = out_r + out_strides[8];
         ST_LOW_128_S(curr_out, v_out8);
-        curr_out = out_r + (out_stride * 9);
+        curr_out = out_r + out_strides[9];
         ST_LOW_128_S(curr_out, v_out9);
-        curr_out = out_r + (out_stride * 10);
+        curr_out = out_r + out_strides[10];
         ST_LOW_128_S(curr_out, v_out10);
-        curr_out = out_r + (out_stride * 11);
+        curr_out = out_r + out_strides[11];
         ST_LOW_128_S(curr_out, v_out11);
-        curr_out = out_r + (out_stride * 12);
+        curr_out = out_r + out_strides[12];
         ST_LOW_128_S(curr_out, v_out12);
-        curr_out = out_r + (out_stride * 13);
+        curr_out = out_r + out_strides[13];
         ST_LOW_128_S(curr_out, v_out13);
-        curr_out = out_r + (out_stride * 14);
+        curr_out = out_r + out_strides[14];
         ST_LOW_128_S(curr_out, v_out14);
-        curr_out = out_r + (out_stride * 15);
+        curr_out = out_r + out_strides[15];
         ST_LOW_128_S(curr_out, v_out15);
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 
-VOID fft16avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+static VOID fft16avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                      VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                      UINT8 flag)
 {
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
     const DOUBLE CRTM_16[7] =
         {0.92387953251128675612818318939678828682241662586364,
          0.38268343236508977172845998403039886676134456248563,
@@ -780,10 +784,15 @@ VOID fft16avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     DOUBLE *in_r = (DOUBLE *)in_real;
     DOUBLE *out_r = (DOUBLE *)out_real;
-    INTP in_stride = (strides->in_stride << 1);
-    INTP out_stride = (strides->out_stride << 1);
-    INTP v_in_stride = (strides->v_in_stride << 1);
-    INTP v_out_stride = (strides->v_out_stride << 1);
+    #ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+    #else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+    #endif
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_256_D;
     INTP count;
     DOUBLE *curr_in, *curr_out;
@@ -831,35 +840,35 @@ VOID fft16avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_out = out_r;
 
         GATHER2_256_D(curr_in, v_in_stride, v_in0);
-        curr_in = in_r + in_stride;
+        curr_in = in_r + in_strides[1];
         GATHER2_256_D(curr_in, v_in_stride, v_in1);
-        curr_in = in_r + (in_stride << 1);
+        curr_in = in_r + in_strides[2];
         GATHER2_256_D(curr_in, v_in_stride, v_in2);
-        curr_in = in_r + (in_stride * 3);
+        curr_in = in_r + in_strides[3];
         GATHER2_256_D(curr_in, v_in_stride, v_in3);
-        curr_in = in_r + (in_stride << 2);
+        curr_in = in_r + in_strides[4];
         GATHER2_256_D(curr_in, v_in_stride, v_in4);
-        curr_in = in_r + (in_stride * 5);
+        curr_in = in_r + in_strides[5];
         GATHER2_256_D(curr_in, v_in_stride, v_in5);
-        curr_in = in_r + (in_stride * 6);
+        curr_in = in_r + in_strides[6];
         GATHER2_256_D(curr_in, v_in_stride, v_in6);
-        curr_in = in_r + (in_stride * 7);
+        curr_in = in_r + in_strides[7];
         GATHER2_256_D(curr_in, v_in_stride, v_in7);
-        curr_in = in_r + (in_stride << 3);
+        curr_in = in_r + in_strides[8];
         GATHER2_256_D(curr_in, v_in_stride, v_in8);
-        curr_in = in_r + (in_stride * 9);
+        curr_in = in_r + in_strides[9];
         GATHER2_256_D(curr_in, v_in_stride, v_in9);
-        curr_in = in_r + (in_stride * 10);
+        curr_in = in_r + in_strides[10];
         GATHER2_256_D(curr_in, v_in_stride, v_in10);
-        curr_in = in_r + (in_stride * 11);
+        curr_in = in_r + in_strides[11];
         GATHER2_256_D(curr_in, v_in_stride, v_in11);
-        curr_in = in_r + (in_stride * 12);
+        curr_in = in_r + in_strides[12];
         GATHER2_256_D(curr_in, v_in_stride, v_in12);
-        curr_in = in_r + (in_stride * 13);
+        curr_in = in_r + in_strides[13];
         GATHER2_256_D(curr_in, v_in_stride, v_in13);
-        curr_in = in_r + (in_stride * 14);
+        curr_in = in_r + in_strides[14];
         GATHER2_256_D(curr_in, v_in_stride, v_in14);
-        curr_in = in_r + (in_stride * 15);
+        curr_in = in_r + in_strides[15];
         GATHER2_256_D(curr_in, v_in_stride, v_in15);
 
         // common calculations
@@ -988,35 +997,35 @@ VOID fft16avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out8 = _mm256_sub_pd(v_av39, v_av40);
 
         SCATTER2_256_D(curr_out, v_out_stride, v_out0);
-        curr_out = out_r + out_stride;
+        curr_out = out_r + out_strides[1];
         SCATTER2_256_D(curr_out, v_out_stride, v_out1);
-        curr_out = out_r + (out_stride << 1);
+        curr_out = out_r + out_strides[2];
         SCATTER2_256_D(curr_out, v_out_stride, v_out2);
-        curr_out = out_r + (out_stride * 3);
+        curr_out = out_r + out_strides[3];
         SCATTER2_256_D(curr_out, v_out_stride, v_out3);
-        curr_out = out_r + (out_stride << 2);
+        curr_out = out_r + out_strides[4];
         SCATTER2_256_D(curr_out, v_out_stride, v_out4);
-        curr_out = out_r + (out_stride * 5);
+        curr_out = out_r + out_strides[5];
         SCATTER2_256_D(curr_out, v_out_stride, v_out5);
-        curr_out = out_r + (out_stride * 6);
+        curr_out = out_r + out_strides[6];
         SCATTER2_256_D(curr_out, v_out_stride, v_out6);
-        curr_out = out_r + (out_stride * 7);
+        curr_out = out_r + out_strides[7];
         SCATTER2_256_D(curr_out, v_out_stride, v_out7);
-        curr_out = out_r + (out_stride << 3);
+        curr_out = out_r + out_strides[8];
         SCATTER2_256_D(curr_out, v_out_stride, v_out8);
-        curr_out = out_r + (out_stride * 9);
+        curr_out = out_r + out_strides[9];
         SCATTER2_256_D(curr_out, v_out_stride, v_out9);
-        curr_out = out_r + (out_stride * 10);
+        curr_out = out_r + out_strides[10];
         SCATTER2_256_D(curr_out, v_out_stride, v_out10);
-        curr_out = out_r + (out_stride * 11);
+        curr_out = out_r + out_strides[11];
         SCATTER2_256_D(curr_out, v_out_stride, v_out11);
-        curr_out = out_r + (out_stride * 12);
+        curr_out = out_r + out_strides[12];
         SCATTER2_256_D(curr_out, v_out_stride, v_out12);
-        curr_out = out_r + (out_stride * 13);
+        curr_out = out_r + out_strides[13];
         SCATTER2_256_D(curr_out, v_out_stride, v_out13);
-        curr_out = out_r + (out_stride * 14);
+        curr_out = out_r + out_strides[14];
         SCATTER2_256_D(curr_out, v_out_stride, v_out14);
-        curr_out = out_r + (out_stride * 15);
+        curr_out = out_r + out_strides[15];
         SCATTER2_256_D(curr_out, v_out_stride, v_out15);
 
         in_r += NUM_SETS_256_D * v_in_stride;
@@ -1056,35 +1065,35 @@ VOID fft16avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_out = out_r;
 
         LD_128_D(curr_in, v_in0);
-        curr_in = in_r + in_stride;
+        curr_in = in_r + in_strides[1];
         LD_128_D(curr_in, v_in1);
-        curr_in = in_r + (in_stride << 1);
+        curr_in = in_r + in_strides[2];
         LD_128_D(curr_in, v_in2);
-        curr_in = in_r + (in_stride * 3);
+        curr_in = in_r + in_strides[3];
         LD_128_D(curr_in, v_in3);
-        curr_in = in_r + (in_stride << 2);
+        curr_in = in_r + in_strides[4];
         LD_128_D(curr_in, v_in4);
-        curr_in = in_r + (in_stride * 5);
+        curr_in = in_r + in_strides[5];
         LD_128_D(curr_in, v_in5);
-        curr_in = in_r + (in_stride * 6);
+        curr_in = in_r + in_strides[6];
         LD_128_D(curr_in, v_in6);
-        curr_in = in_r + (in_stride * 7);
+        curr_in = in_r + in_strides[7];
         LD_128_D(curr_in, v_in7);
-        curr_in = in_r + (in_stride << 3);
+        curr_in = in_r + in_strides[8];
         LD_128_D(curr_in, v_in8);
-        curr_in = in_r + (in_stride * 9);
+        curr_in = in_r + in_strides[9];
         LD_128_D(curr_in, v_in9);
-        curr_in = in_r + (in_stride * 10);
+        curr_in = in_r + in_strides[10];
         LD_128_D(curr_in, v_in10);
-        curr_in = in_r + (in_stride * 11);
+        curr_in = in_r + in_strides[11];
         LD_128_D(curr_in, v_in11);
-        curr_in = in_r + (in_stride * 12);
+        curr_in = in_r + in_strides[12];
         LD_128_D(curr_in, v_in12);
-        curr_in = in_r + (in_stride * 13);
+        curr_in = in_r + in_strides[13];
         LD_128_D(curr_in, v_in13);
-        curr_in = in_r + (in_stride * 14);
+        curr_in = in_r + in_strides[14];
         LD_128_D(curr_in, v_in14);
-        curr_in = in_r + (in_stride * 15);
+        curr_in = in_r + in_strides[15];
         LD_128_D(curr_in, v_in15);
 
         // common calculations
@@ -1214,35 +1223,48 @@ VOID fft16avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out8 = _mm_sub_pd(v_av39, v_av40);
 
         ST_128_D(curr_out, v_out0);
-        curr_out = out_r + out_stride;
+        curr_out = out_r + out_strides[1];
         ST_128_D(curr_out, v_out1);
-        curr_out = out_r + (out_stride << 1);
+        curr_out = out_r + out_strides[2];
         ST_128_D(curr_out, v_out2);
-        curr_out = out_r + (out_stride * 3);
+        curr_out = out_r + out_strides[3];
         ST_128_D(curr_out, v_out3);
-        curr_out = out_r + (out_stride << 2);
+        curr_out = out_r + out_strides[4];
         ST_128_D(curr_out, v_out4);
-        curr_out = out_r + (out_stride * 5);
+        curr_out = out_r + out_strides[5];
         ST_128_D(curr_out, v_out5);
-        curr_out = out_r + (out_stride * 6);
+        curr_out = out_r + out_strides[6];
         ST_128_D(curr_out, v_out6);
-        curr_out = out_r + (out_stride * 7);
+        curr_out = out_r + out_strides[7];
         ST_128_D(curr_out, v_out7);
-        curr_out = out_r + (out_stride << 3);
+        curr_out = out_r + out_strides[8];
         ST_128_D(curr_out, v_out8);
-        curr_out = out_r + (out_stride * 9);
+        curr_out = out_r + out_strides[9];
         ST_128_D(curr_out, v_out9);
-        curr_out = out_r + (out_stride * 10);
+        curr_out = out_r + out_strides[10];
         ST_128_D(curr_out, v_out10);
-        curr_out = out_r + (out_stride * 11);
+        curr_out = out_r + out_strides[11];
         ST_128_D(curr_out, v_out11);
-        curr_out = out_r + (out_stride * 12);
+        curr_out = out_r + out_strides[12];
         ST_128_D(curr_out, v_out12);
-        curr_out = out_r + (out_stride * 13);
+        curr_out = out_r + out_strides[13];
         ST_128_D(curr_out, v_out13);
-        curr_out = out_r + (out_stride * 14);
+        curr_out = out_r + out_strides[14];
         ST_128_D(curr_out, v_out14);
-        curr_out = out_r + (out_stride * 15);
+        curr_out = out_r + out_strides[15];
         ST_128_D(curr_out, v_out15);
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
+}
+
+kfft_ register_kernel_fft16avx256(INT32 precision)
+{
+    if (precision == DT_FLOAT)
+        return fft16avx256fp32;
+    else if (precision == DT_DOUBLE)
+        return fft16avx256fp64;
+    else
+        return NULL;
 }

@@ -96,6 +96,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                             cur_sel->cost_analysis->time;
                         //copy solution object from cur_sel to sel
                         COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
+                        COPY_STRIDES(sel->solution, cur_sel->solution);
                     }
                     if (cur_sel->cost_analysis->ops < sel->cost_analysis->ops)
                     {
@@ -105,6 +106,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                             cur_sel->cost_analysis->time;
                         //copy solution object from cur_sel to sel
                         COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
+                        COPY_STRIDES(sel->solution, cur_sel->solution);
                     }
                 }
                 else
@@ -117,6 +119,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                             cur_sel->cost_analysis->time;
                         //copy solution object from cur_sel to sel
                         COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
+                        COPY_STRIDES(sel->solution, cur_sel->solution);
                     }
                 }
                 if (stats_mode)

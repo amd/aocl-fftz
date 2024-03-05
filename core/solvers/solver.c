@@ -52,12 +52,12 @@ INT32 register_solvers(INT32 dt, INT32 cpu_flags)
     }
 
     //Add all the available solvers
-    solvers_table[SOLVER_DIRECT] = executor_direct_dft;
-    solvers_table[SOLVER_CT] = executor_ct_dft;
-    solvers_table[SOLVER_BATCHED] = executor_batched_dft;
-    solvers_table[SOLVER_BLUESTEIN] = executor_bluestein_dft;
-    solvers_table[SOLVER_NDIM] = executor_ndim_dft;
-    solvers_table[SOLVER_SIZEONE] = executor_sizeone_dft;
+    solvers_table[SOLVER_DIRECT] = register_execute_direct_solver();
+    solvers_table[SOLVER_CT] = register_execute_ct_solver();
+    solvers_table[SOLVER_BATCHED] = register_execute_batched_solver();
+    solvers_table[SOLVER_BLUESTEIN] = register_execute_bluestein_solver();
+    solvers_table[SOLVER_NDIM] = register_execute_ndim_solver();
+    solvers_table[SOLVER_SIZEONE] = register_execute_sizeone_solver();
 
     return SOLVER_SUCCESS;
 }
@@ -74,33 +74,4 @@ INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj)
 
     solver_obj->execute_solver = solvers_table[solver_obj->solver_type];
     return SOLVER_SUCCESS;
-}
-
-INT32 executor_direct_dft(aoclfftz_solution_t *solution)
-{
-    return execute_direct_solver(solution);
-}
-
-INT32 executor_ct_dft(aoclfftz_solution_t *solution)
-{
-    return execute_ct_solver(solution);
-}
-
-INT32 executor_batched_dft(aoclfftz_solution_t *solution)
-{
-    return execute_batched_solver(solution);
-}
-
-INT32 executor_bluestein_dft(aoclfftz_solution_t *solution)
-{
-    return execute_bluestein_solver(solution);
-}
-
-INT32 executor_ndim_dft(aoclfftz_solution_t *solution)
-{
-    return execute_ndim_solver(solution);
-}
-INT32 executor_sizeone_dft(aoclfftz_solution_t *solution)
-{
-    return execute_sizeone_solver(solution);
 }

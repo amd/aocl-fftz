@@ -40,23 +40,25 @@
 #define AOCLFFTZ_SELECTOR_H
 
 #include "core/solvers/solver.h"
+#include "core/executor.h"
 
-#define AOCLFFTZ_FIXED_SELECTOR_MODE 0    //Fixed decision logic
-#define AOCLFFTZ_AUTO_SELECTOR_MODE  1    //Auto tuner
+#define AOCLFFTZ_FIXED_SELECTOR_MODE 0 // Fixed decision logic
+#define AOCLFFTZ_AUTO_SELECTOR_MODE 1  // Auto tuner
 
-//Error return codes related to selector
-//Add more codes at the top
+// Error return codes related to selector
+// Add more codes at the top
 typedef enum
 {
     SELECTOR_FAILURE = -1,
-    SELECTOR_SUCCESS         //Successful operation
+    SELECTOR_SUCCESS // Successful operation
 } aoclfftz_selector_status;
 
-//Selector data structure that is used to hold the solution and cost analysis
+// Selector data structure that is used to hold the solution and cost analysis
 // at each decomposition level for the associated sub-problem
 typedef struct aoclfftz_selector
 {
     aoclfftz_solution_t *solution;
+    execute_ execute;
     cost_analysis_t *cost_analysis;
 } aoclfftz_selector_t;
 
@@ -182,11 +184,6 @@ typedef struct aoclfftz_selector
         to_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model =              \
             from_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model;         \
         to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags; \
-        to_sol_obj->strides->in_stride = from_sol_obj->strides->in_stride;     \
-        to_sol_obj->strides->out_stride = from_sol_obj->strides->out_stride;   \
-        to_sol_obj->strides->v_in_stride = from_sol_obj->strides->v_in_stride; \
-        to_sol_obj->strides->v_out_stride =                                    \
-            from_sol_obj->strides->v_out_stride;                               \
         to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;                   \
         to_sol_obj->bluestein->B = from_sol_obj->bluestein->B;                 \
         to_sol_obj->bluestein->B_out = from_sol_obj->bluestein->B_out;         \
@@ -265,11 +262,6 @@ typedef struct aoclfftz_selector
         to_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model =              \
             from_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model;         \
         to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags; \
-        to_sol_obj->strides->in_stride = from_sol_obj->strides->in_stride;     \
-        to_sol_obj->strides->out_stride = from_sol_obj->strides->out_stride;   \
-        to_sol_obj->strides->v_in_stride = from_sol_obj->strides->v_in_stride; \
-        to_sol_obj->strides->v_out_stride =                                    \
-            from_sol_obj->strides->v_out_stride;                               \
         to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;                   \
         to_sol_obj->bluestein->B = from_sol_obj->bluestein->B;                 \
         to_sol_obj->bluestein->B_out = from_sol_obj->bluestein->B_out;         \
@@ -278,6 +270,31 @@ typedef struct aoclfftz_selector
         to_sol_obj->bluestein->is_B_out_valid =                                \
             from_sol_obj->bluestein->is_B_out_valid;                           \
         to_sol_obj->next_sol = from_sol_obj->next_sol;                         \
+    }
+
+#define COPY_STRIDES(to_sol_obj, from_sol_obj)                                 \
+    {                                                                          \
+        if (from_sol_obj->strides->in_strides != NULL)                         \
+        {                                                                      \
+            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides->in_strides);         \
+            ALLOC_ALIGN_UNINIT(to_sol_obj->strides->in_strides, INTP,          \
+                        from_sol_obj->decomp_scheme->dims[0].n *sizeof(INTP)); \
+            memcpy(to_sol_obj->strides->in_strides,                            \
+                   from_sol_obj->strides->in_strides,                          \
+                   from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));     \
+        }                                                                      \
+        if (from_sol_obj->strides->out_strides != NULL)                        \
+        {                                                                      \
+            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides->out_strides);        \
+            ALLOC_ALIGN_UNINIT(to_sol_obj->strides->out_strides, INTP,         \
+                        from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));\
+            memcpy(to_sol_obj->strides->out_strides,                           \
+                   from_sol_obj->strides->out_strides,                         \
+                   from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));     \
+        }                                                                      \
+        to_sol_obj->strides->v_in_stride = from_sol_obj->strides->v_in_stride; \
+        to_sol_obj->strides->v_out_stride =                                    \
+            from_sol_obj->strides->v_out_stride;                               \
     }
 
 #define RESET_COST(sol)                                                        \

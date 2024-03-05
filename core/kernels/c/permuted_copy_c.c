@@ -37,6 +37,7 @@
  */
 
 #include "core/kernels/kernel.h"
+#include "utils/utils.h"
 
 // TODO: Make it common for transpose kernels and move this to
 // aoclfftz_internal.h file
@@ -58,10 +59,14 @@ VOID permuted_copy_c_fp64(VOID *in, VOID *out, INTP n, INTP size,
 {
     DOUBLE *in_d = (DOUBLE *)in;
     DOUBLE *out_d = (DOUBLE *)out;
-    INTP in_stride = strides->in_stride * DATA_STRIDE;
-    INTP out_stride = strides->out_stride * DATA_STRIDE;
-    INTP v_in_stride = strides->v_in_stride * DATA_STRIDE;
-    INTP v_out_stride = strides->v_out_stride * DATA_STRIDE;
+    //FIXME: remove the condition to pick the strides, will be revamped in
+    // permute solver patch
+    INTP in_stride = strides->in_strides[0] ?
+             strides->in_strides[0] * DATA_STRIDE : strides->in_strides[1];
+    INTP out_stride = strides->out_strides[0] ?
+             strides->out_strides[0] * DATA_STRIDE : strides->out_strides[1];
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
     // iterates over the number of offsets (n)
     for (INTP i = 0; i < n; i++)
     {
@@ -81,10 +86,14 @@ VOID permuted_copy_c_fp32(VOID *in, VOID *out, INTP n, INTP size,
 {
     FLOAT *in_f = (FLOAT *)in;
     FLOAT *out_f = (FLOAT *)out;
-    INTP in_stride = strides->in_stride * DATA_STRIDE;
-    INTP out_stride = strides->out_stride * DATA_STRIDE;
-    INTP v_in_stride = strides->v_in_stride * DATA_STRIDE;
-    INTP v_out_stride = strides->v_out_stride * DATA_STRIDE;
+    //FIXME: remove the condition to pick the strides, will be revamped in
+    // permute solver patch
+    INTP in_stride = strides->in_strides[0] ?
+             strides->in_strides[0] * DATA_STRIDE : strides->in_strides[1];
+    INTP out_stride = strides->out_strides[0] ?
+             strides->out_strides[0] * DATA_STRIDE : strides->out_strides[1];
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
     // iterates over the number of offsets (n)
     for (INTP i = 0; i < n; i++)
     {

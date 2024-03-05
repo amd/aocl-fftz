@@ -40,16 +40,6 @@
 
 #include "core/kernels/kernel.h"
 
-kfft_ register_kernel_fft10c(INT32 precision)
-{
-    if (precision == DT_FLOAT)
-        return fft10c_fp32;
-    else if (precision == DT_DOUBLE)
-        return fft10c_fp64;
-    else
-        return NULL;
-}
-
 #ifdef USE_OPT_KERNEL_VARIANT
 /* --------------- optimized C kernel variant --------------- */
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 24, 84, 40, 0, 0},
@@ -62,9 +52,12 @@ ops_cycles_t get_ops_cnt_fft10c(INT32 precision)
         return ops_cnt[1];
 }
 
-VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+static VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                  INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
     const DOUBLE CRTM_10_1 =
         +0.55901699437494742410229341718281905886015458990288;
     const DOUBLE CRTM_10_2 =
@@ -78,10 +71,15 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
     DOUBLE *in_i = (DOUBLE *)in_imag;
     DOUBLE *out_r = (DOUBLE *)out_real;
     DOUBLE *out_i = (DOUBLE *)out_imag;
-    INTP in_stride = (strides->in_stride << 1);
-    INTP out_stride = (strides->out_stride << 1);
-    INTP v_in_stride = (strides->v_in_stride << 1);
-    INTP v_out_stride = (strides->v_out_stride << 1);
+    #ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+    #else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+    #endif
+    INTP v_in_stride = (strides->v_in_stride);
+    INTP v_out_stride = (strides->v_out_stride);
     INTP cnt;
 
     for (cnt = 0; cnt < n; cnt++)
@@ -98,40 +96,40 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         v1i = *in_i;
 
         // Input point 2: x(1)
-        v2r = in_r[in_stride];
-        v2i = in_i[in_stride];
+        v2r = in_r[in_strides[1]];
+        v2i = in_i[in_strides[1]];
 
         // Input point 3: x(2)
-        v3r = in_r[(in_stride << 1)];
-        v3i = in_i[(in_stride << 1)];
+        v3r = in_r[in_strides[2]];
+        v3i = in_i[in_strides[2]];
 
         // Input point 4: x(3)
-        v4r = in_r[in_stride * 3];
-        v4i = in_i[in_stride * 3];
+        v4r = in_r[in_strides[3]];
+        v4i = in_i[in_strides[3]];
 
         // Input point 5: x(4)
-        v5r = in_r[(in_stride << 2)];
-        v5i = in_i[(in_stride << 2)];
+        v5r = in_r[in_strides[4]];
+        v5i = in_i[in_strides[4]];
 
         // Input point 6: x(5)
-        v6r = in_r[in_stride * 5];
-        v6i = in_i[in_stride * 5];
+        v6r = in_r[in_strides[5]];
+        v6i = in_i[in_strides[5]];
 
         // Input point 7: x(6)
-        v7r = in_r[in_stride * 6];
-        v7i = in_i[in_stride * 6];
+        v7r = in_r[in_strides[6]];
+        v7i = in_i[in_strides[6]];
 
         // Input point 8: x(7)
-        v8r = in_r[in_stride * 7];
-        v8i = in_i[in_stride * 7];
+        v8r = in_r[in_strides[7]];
+        v8i = in_i[in_strides[7]];
 
         // Input point 9: x(8)
-        v9r = in_r[(in_stride << 3)];
-        v9i = in_i[(in_stride << 3)];
+        v9r = in_r[in_strides[8]];
+        v9i = in_i[in_strides[8]];
 
         // Input point 10: x(9)
-        v10r = in_r[in_stride * 9];
-        v10i = in_i[in_stride * 9];
+        v10r = in_r[in_strides[9]];
+        v10i = in_i[in_strides[9]];
 
         // common operations
         v210r = v2r + v10r;
@@ -172,8 +170,8 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         tv3ii = tv1ir + tv2ir;
         tv4ii = tv1ir - tv2ir;
 
-        out_r[(out_stride * 5)] = v16r + tv4rr;
-        out_i[(out_stride * 5)] = v16i + tv4ii;
+        out_r[out_strides[5]] = v16r + tv4rr;
+        out_i[out_strides[5]] = v16i + tv4ii;
 
         // Output point 2: X(1)
         cv1rr = CRTM_10_1 * tv3rr;
@@ -185,12 +183,12 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         cv3ii = cv2ii + cv1ii;
         cv4ii = (CRTM_10_2 * tv1rr) + (CRTM_10_4 * tv2rr);
 
-        out_r[out_stride] = cv3rr + cv4rr;
-        out_i[out_stride] = cv3ii + cv4ii;
+        out_r[out_strides[1]] = cv3rr + cv4rr;
+        out_i[out_strides[1]] = cv3ii + cv4ii;
 
         // Output point 10: X(9)
-        out_r[(out_stride * 9)] = cv3rr - cv4rr;
-        out_i[(out_stride * 9)] = cv3ii - cv4ii;
+        out_r[out_strides[9]] = cv3rr - cv4rr;
+        out_i[out_strides[9]] = cv3ii - cv4ii;
 
         // Output point 4: X(3)
         cv3rr = cv2rr - cv1rr;
@@ -198,13 +196,13 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         cv3ii = cv2ii - cv1ii;
         cv4ii = (CRTM_10_2 * -tv2rr) + (CRTM_10_4 * tv1rr);
 
-        out_r[out_stride * 3] = cv3rr + cv4rr;
-        out_i[out_stride * 3] = cv3ii + cv4ii;
+        out_r[out_strides[3]] = cv3rr + cv4rr;
+        out_i[out_strides[3]] = cv3ii + cv4ii;
 
         // Output point 8: X(7)
-        out_r[(out_stride * 7)] = cv3rr - cv4rr;
-        out_i[(out_stride * 7)] = cv3ii - cv4ii;
-     
+        out_r[out_strides[7]] = cv3rr - cv4rr;
+        out_i[out_strides[7]] = cv3ii - cv4ii;
+
         // Output point 1: X(0)
         v16r = v1r + v6r;
         v16i = v1i + v6i;
@@ -237,12 +235,12 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         cv3ii = cv2ii + cv1ii;
         cv4ii = (CRTM_10_2 * tv1rr) + (CRTM_10_4 * tv2rr);
 
-        out_r[(out_stride << 1)] = cv3rr + cv4rr;
-        out_i[(out_stride << 1)] = cv3ii + cv4ii;
+        out_r[out_strides[2]] = cv3rr + cv4rr;
+        out_i[out_strides[2]] = cv3ii + cv4ii;
 
         // Output point 9: X(8)
-        out_r[(out_stride << 3)] = cv3rr - cv4rr;
-        out_i[(out_stride << 3)] = cv3ii - cv4ii;
+        out_r[out_strides[8]] = cv3rr - cv4rr;
+        out_i[out_strides[8]] = cv3ii - cv4ii;
 
         // Output point 5: X(4)
         cv3rr = cv2rr - cv1rr;
@@ -250,23 +248,29 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         cv3ii = cv2ii - cv1ii;
         cv4ii = (CRTM_10_2 * tv2rr) + (CRTM_10_4 * -tv1rr);
 
-        out_r[(out_stride << 2)] = cv3rr + cv4rr;
-        out_i[(out_stride << 2)] = cv3ii + cv4ii;
+        out_r[out_strides[4]] = cv3rr + cv4rr;
+        out_i[out_strides[4]] = cv3ii + cv4ii;
 
         // Output point 7: X(6)
-        out_r[(out_stride * 6)] = cv3rr - cv4rr;
-        out_i[(out_stride * 6)] = cv3ii - cv4ii;
+        out_r[out_strides[6]] = cv3rr - cv4rr;
+        out_i[out_strides[6]] = cv3ii - cv4ii;
 
         in_r += v_in_stride;
         in_i += v_in_stride;
         out_r += v_out_stride;
         out_i += v_out_stride;
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 
-VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+static VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                  INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
 
     const FLOAT CRTM_10_1 =
         +0.55901699437494742410229341718281905886015458990288;
@@ -281,10 +285,15 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
     FLOAT *in_i = (FLOAT *)in_imag;
     FLOAT *out_r = (FLOAT *)out_real;
     FLOAT *out_i = (FLOAT *)out_imag;
-    INTP in_stride = (strides->in_stride << 1);
-    INTP out_stride = (strides->out_stride << 1);
-    INTP v_in_stride = (strides->v_in_stride << 1);
-    INTP v_out_stride = (strides->v_out_stride << 1);
+    #ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+    #else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+    #endif
+    INTP v_in_stride = (strides->v_in_stride);
+    INTP v_out_stride = (strides->v_out_stride);
     INTP cnt;
 
     for (cnt = 0; cnt < n; cnt++)
@@ -301,40 +310,40 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         v1i = *in_i;
 
         // Input point 2: x(1)
-        v2r = in_r[in_stride];
-        v2i = in_i[in_stride];
+        v2r = in_r[in_strides[1]];
+        v2i = in_i[in_strides[1]];
 
         // Input point 3: x(2)
-        v3r = in_r[(in_stride << 1)];
-        v3i = in_i[(in_stride << 1)];
+        v3r = in_r[in_strides[2]];
+        v3i = in_i[in_strides[2]];
 
         // Input point 4: x(3)
-        v4r = in_r[in_stride * 3];
-        v4i = in_i[in_stride * 3];
+        v4r = in_r[in_strides[3]];
+        v4i = in_i[in_strides[3]];
 
         // Input point 5: x(4)
-        v5r = in_r[(in_stride << 2)];
-        v5i = in_i[(in_stride << 2)];
+        v5r = in_r[in_strides[4]];
+        v5i = in_i[in_strides[4]];
 
         // Input point 6: x(5)
-        v6r = in_r[in_stride * 5];
-        v6i = in_i[in_stride * 5];
+        v6r = in_r[in_strides[5]];
+        v6i = in_i[in_strides[5]];
 
         // Input point 7: x(6)
-        v7r = in_r[in_stride * 6];
-        v7i = in_i[in_stride * 6];
+        v7r = in_r[in_strides[6]];
+        v7i = in_i[in_strides[6]];
 
         // Input point 8: x(7)
-        v8r = in_r[in_stride * 7];
-        v8i = in_i[in_stride * 7];
+        v8r = in_r[in_strides[7]];
+        v8i = in_i[in_strides[7]];
 
         // Input point 9: x(8)
-        v9r = in_r[(in_stride << 3)];
-        v9i = in_i[(in_stride << 3)];
+        v9r = in_r[in_strides[8]];
+        v9i = in_i[in_strides[8]];
 
         // Input point 10: x(9)
-        v10r = in_r[in_stride * 9];
-        v10i = in_i[in_stride * 9];
+        v10r = in_r[in_strides[9]];
+        v10i = in_i[in_strides[9]];
 
         // common operations
         v210r = v2r + v10r;
@@ -375,8 +384,8 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         tv3ii = tv1ir + tv2ir;
         tv4ii = tv1ir - tv2ir;
 
-        out_r[(out_stride * 5)] = v16r + tv4rr;
-        out_i[(out_stride * 5)] = v16i + tv4ii;
+        out_r[out_strides[5]] = v16r + tv4rr;
+        out_i[out_strides[5]] = v16i + tv4ii;
 
         // Output point 2: X(1)
         cv1rr = CRTM_10_1 * tv3rr;
@@ -388,12 +397,12 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         cv3ii = cv2ii + cv1ii;
         cv4ii = (CRTM_10_2 * tv1rr) + (CRTM_10_4 * tv2rr);
 
-        out_r[out_stride] = cv3rr + cv4rr;
-        out_i[out_stride] = cv3ii + cv4ii;
+        out_r[out_strides[1]] = cv3rr + cv4rr;
+        out_i[out_strides[1]] = cv3ii + cv4ii;
 
         // Output point 10: X(9)
-        out_r[(out_stride * 9)] = cv3rr - cv4rr;
-        out_i[(out_stride * 9)] = cv3ii - cv4ii;
+        out_r[out_strides[9]] = cv3rr - cv4rr;
+        out_i[out_strides[9]] = cv3ii - cv4ii;
 
         // Output point 4: X(3)
         cv3rr = cv2rr - cv1rr;
@@ -401,13 +410,13 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         cv3ii = cv2ii - cv1ii;
         cv4ii = (CRTM_10_2 * -tv2rr) + (CRTM_10_4 * tv1rr);
 
-        out_r[out_stride * 3] = cv3rr + cv4rr;
-        out_i[out_stride * 3] = cv3ii + cv4ii;
+        out_r[out_strides[3]] = cv3rr + cv4rr;
+        out_i[out_strides[3]] = cv3ii + cv4ii;
 
         // Output point 8: X(7)
-        out_r[(out_stride * 7)] = cv3rr - cv4rr;
-        out_i[(out_stride * 7)] = cv3ii - cv4ii;
-     
+        out_r[out_strides[7]] = cv3rr - cv4rr;
+        out_i[out_strides[7]] = cv3ii - cv4ii;
+
         // Output point 1: X(0)
         v16r = v1r + v6r;
         v16i = v1i + v6i;
@@ -440,12 +449,12 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         cv3ii = cv2ii + cv1ii;
         cv4ii = (CRTM_10_2 * tv1rr) + (CRTM_10_4 * tv2rr);
 
-        out_r[(out_stride << 1)] = cv3rr + cv4rr;
-        out_i[(out_stride << 1)] = cv3ii + cv4ii;
+        out_r[out_strides[2]] = cv3rr + cv4rr;
+        out_i[out_strides[2]] = cv3ii + cv4ii;
 
         // Output point 9: X(8)
-        out_r[(out_stride << 3)] = cv3rr - cv4rr;
-        out_i[(out_stride << 3)] = cv3ii - cv4ii;
+        out_r[out_strides[8]] = cv3rr - cv4rr;
+        out_i[out_strides[8]] = cv3ii - cv4ii;
 
         // Output point 5: X(4)
         cv3rr = cv2rr - cv1rr;
@@ -453,18 +462,21 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         cv3ii = cv2ii - cv1ii;
         cv4ii = (CRTM_10_2 * tv2rr) + (CRTM_10_4 * -tv1rr);
 
-        out_r[(out_stride << 2)] = cv3rr + cv4rr;
-        out_i[(out_stride << 2)] = cv3ii + cv4ii;
+        out_r[out_strides[4]] = cv3rr + cv4rr;
+        out_i[out_strides[4]] = cv3ii + cv4ii;
 
         // Output point 7: X(6)
-        out_r[(out_stride * 6)] = cv3rr - cv4rr;
-        out_i[(out_stride * 6)] = cv3ii - cv4ii;
+        out_r[out_strides[6]] = cv3rr - cv4rr;
+        out_i[out_strides[6]] = cv3ii - cv4ii;
 
         in_r += v_in_stride;
         in_i += v_in_stride;
         out_r += v_out_stride;
         out_i += v_out_stride;
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 #else
 /* --------------- non-optimized C kernel variant --------------- */
@@ -492,14 +504,16 @@ const DOUBLE CRTM_10[RADIX_10][2] = {{1.0, 0.0},
                                      {0.309016994374947, 0.951056516295154},
                                      {0.809016994374947, 0.587785252292473}};
 
-VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+static VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                  INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
-    // All strides values are mutliplied with DATA_STRIDE for complex data
-    INTP in_stride = strides->in_stride * DATA_STRIDE;
-    INTP out_stride = strides->out_stride * DATA_STRIDE;
-    INTP v_in_stride = strides->v_in_stride * DATA_STRIDE;
-    INTP v_out_stride = strides->v_out_stride * DATA_STRIDE;
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
     // temp variable to store power (constant_multiplier)
     DOUBLE pow_cm[2] = {0.0, 0.0};
     // temp variable to store pow_cm * input
@@ -527,33 +541,24 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         input_r = in_dr;
         input_i = in_di;
         LOAD_INPUT(input_r, input_i, local_in[0]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[1]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[2]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[3]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[4]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[5]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[6]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[7]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[8]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[9]);
+        LOAD_INPUT(input_r + in_strides[1], input_i + in_strides[1],
+                   local_in[1]);
+        LOAD_INPUT(input_r + in_strides[2], input_i + in_strides[2],
+                   local_in[2]);
+        LOAD_INPUT(input_r + in_strides[3], input_i + in_strides[3],
+                   local_in[3]);
+        LOAD_INPUT(input_r + in_strides[4], input_i + in_strides[4],
+                   local_in[4]);
+        LOAD_INPUT(input_r + in_strides[5], input_i + in_strides[5],
+                   local_in[5]);
+        LOAD_INPUT(input_r + in_strides[6], input_i + in_strides[6],
+                   local_in[6]);
+        LOAD_INPUT(input_r + in_strides[7], input_i + in_strides[7],
+                   local_in[7]);
+        LOAD_INPUT(input_r + in_strides[8], input_i + in_strides[8],
+                   local_in[8]);
+        LOAD_INPUT(input_r + in_strides[9], input_i + in_strides[9],
+                   local_in[9]);
 
         output_r = out_dr;
         output_i = out_di;
@@ -571,8 +576,6 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CADD(local_in[8], temp_out, temp_out);
         CADD(local_in[9], temp_out, temp_out);
         STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
 
         /******************** Output 10i+1 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -588,9 +591,8 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD(local_in[7], CRTM_10[7], pow_cm, temp_out, cmul_temp);
         CMUL_CADD(local_in[8], CRTM_10[8], pow_cm, temp_out, cmul_temp);
         CMUL_CADD(local_in[9], CRTM_10[9], pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[1],
+                     output_i + out_strides[1]);
 
         /******************** Output 10i+2 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -613,9 +615,8 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 2, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[2],
+                     output_i + out_strides[2]);
 
         /******************** Output 10i+3 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -638,9 +639,8 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 3, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[3],
+                     output_i + out_strides[3]);
 
         /******************** Output 10i+4 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -663,9 +663,8 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 4, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[4],
+                     output_i + out_strides[4]);
 
         /******************** Output 10i+5 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -688,9 +687,8 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 5, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[5],
+                     output_i + out_strides[5]);
 
         /******************** Output 10i+6 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -713,9 +711,8 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 6, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[6],
+                     output_i + out_strides[6]);
 
         /******************** Output 10i+7 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -738,9 +735,8 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 7, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[7],
+                     output_i + out_strides[7]);
 
         /******************** Output 10i+8 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -763,9 +759,8 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 8, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[8],
+                     output_i + out_strides[8]);
 
         /******************** Output 10i+9 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -788,7 +783,8 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 9, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
+        STORE_OUTPUT(temp_out, output_r + out_strides[9],
+                     output_i + out_strides[9]);
 
         // next set
         in_dr += v_in_stride;
@@ -796,16 +792,21 @@ VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         out_dr += v_out_stride;
         out_di += v_out_stride;
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 
-VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+static VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                  INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
-    // All strides values are mutliplied with DATA_STRIDE for complex data
-    INTP in_stride = strides->in_stride * DATA_STRIDE;
-    INTP out_stride = strides->out_stride * DATA_STRIDE;
-    INTP v_in_stride = strides->v_in_stride * DATA_STRIDE;
-    INTP v_out_stride = strides->v_out_stride * DATA_STRIDE;
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
 
     // temp variable to store power (constant_multiplier)
     FLOAT pow_cm[2] = {0.0, 0.0};
@@ -834,33 +835,24 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         input_r = in_fr;
         input_i = in_fi;
         LOAD_INPUT(input_r, input_i, local_in[0]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[1]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[2]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[3]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[4]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[5]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[6]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[7]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[8]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[9]);
+        LOAD_INPUT(input_r + in_strides[1], input_i + in_strides[1],
+                   local_in[1]);
+        LOAD_INPUT(input_r + in_strides[2], input_i + in_strides[2],
+                   local_in[2]);
+        LOAD_INPUT(input_r + in_strides[3], input_i + in_strides[3],
+                   local_in[3]);
+        LOAD_INPUT(input_r + in_strides[4], input_i + in_strides[4],
+                   local_in[4]);
+        LOAD_INPUT(input_r + in_strides[5], input_i + in_strides[5],
+                   local_in[5]);
+        LOAD_INPUT(input_r + in_strides[6], input_i + in_strides[6],
+                   local_in[6]);
+        LOAD_INPUT(input_r + in_strides[7], input_i + in_strides[7],
+                   local_in[7]);
+        LOAD_INPUT(input_r + in_strides[8], input_i + in_strides[8],
+                   local_in[8]);
+        LOAD_INPUT(input_r + in_strides[9], input_i + in_strides[9],
+                   local_in[9]);
 
         output_r = out_fr;
         output_i = out_fi;
@@ -878,8 +870,6 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CADD(local_in[8], temp_out, temp_out);
         CADD(local_in[9], temp_out, temp_out);
         STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
 
         /******************** Output 10i+1 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -895,9 +885,8 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD(local_in[7], CRTM_10[7], pow_cm, temp_out, cmul_temp);
         CMUL_CADD(local_in[8], CRTM_10[8], pow_cm, temp_out, cmul_temp);
         CMUL_CADD(local_in[9], CRTM_10[9], pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[1],
+                     output_i + out_strides[1]);
 
         /******************** Output 10i+2 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -920,9 +909,8 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 2, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[2],
+                     output_i + out_strides[2]);
 
         /******************** Output 10i+3 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -945,9 +933,8 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 3, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[3],
+                     output_i + out_strides[3]);
         /******************** Output 10i+4 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
         CADD(local_in[0], temp_out, temp_out);
@@ -969,9 +956,8 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 4, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[4],
+                     output_i + out_strides[4]);
 
         /******************** Output 10i+5 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -994,9 +980,8 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 5, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[5],
+                     output_i + out_strides[5]);
         /******************** Output 10i+6 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
         CADD(local_in[0], temp_out, temp_out);
@@ -1018,9 +1003,8 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 6, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[6],
+                     output_i + out_strides[6]);
         /******************** Output 10i+7 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
         CADD(local_in[0], temp_out, temp_out);
@@ -1042,9 +1026,8 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 7, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[7],
+                     output_i + out_strides[7]);
 
         /******************** Output 10i+8 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1067,9 +1050,8 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 8, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[8],
+                     output_i + out_strides[8]);
 
         /******************** Output 10i+9 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1092,7 +1074,8 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[8], CRTM_10[9], 9, pow_cm, temp_out, cmul_temp,
                        cpow_temp);
         CMUL_CADD(local_in[9], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
+        STORE_OUTPUT(temp_out, output_r + out_strides[9],
+                     output_i + out_strides[9]);
 
         // next set
         in_fr += v_in_stride;
@@ -1100,5 +1083,18 @@ VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         out_fr += v_out_stride;
         out_fi += v_out_stride;
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 #endif // USE_OPT_KERNEL_VARIANT
+
+kfft_ register_kernel_fft10c(INT32 precision)
+{
+    if (precision == DT_FLOAT)
+        return fft10c_fp32;
+    else if (precision == DT_DOUBLE)
+        return fft10c_fp64;
+    else
+        return NULL;
+}

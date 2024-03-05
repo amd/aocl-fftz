@@ -55,10 +55,8 @@ typedef enum
 typedef struct aoclfftz_executor
 {
     aoclfftz_solution_t *solution;
+    execute_ execute;
     //cost_analysis_t *cost_analysis;
 } aoclfftz_executor_t;
-
-//Function declarations
-INT32 execute_dft(aoclfftz_executor_t *executor_obj);
 
 #endif //AOCLFFTZ_EXECUTOR_H

@@ -45,6 +45,11 @@
 INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
                              aoclfftz_solution_t *next_sol, INTP m)
 {
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+
     // Setup next_sol with extended length m
     COPY_SOLUTION_OBJ(next_sol, sol);
     next_sol->decomp_scheme->dims[0].n = m;
@@ -64,13 +69,19 @@ INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
     next_sol->decomp_scheme->out_imag =
         MOVE_ADDR(sol->bluestein->out, dt_bytes);
 
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
     return SOLVER_SUCCESS;
 }
 
-INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
+static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
 {
+#ifdef AOCL_ENABLE_LOG
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+
     UINT32 dt_prec, dt_bytes;
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     DT_PRECISION_BYTES(dt_prec);
@@ -82,9 +93,13 @@ INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     INTP in_stride = sol->decomp_scheme->dims[0].in_stride;
     INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
 
+    INTP unit_val = 1;
+
     // Using sol->strides for permuted copy
-    sol->strides->in_stride = 1;
-    sol->strides->out_stride = 1;
+    // FIX: A variable is referenced to stride pointer instead of using array
+    // TODO: Revamp the permuted copy function to avoid this fix
+    sol->strides->in_strides = &unit_val;
+    sol->strides->out_strides = &unit_val;
     sol->strides->v_in_stride = 1;
     sol->strides->v_out_stride = 1;
 
@@ -111,8 +126,8 @@ INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     // with stride 1.
     if (in_stride > 1)
     {
-        sol->strides->in_stride = in_stride;
-        sol->strides->out_stride = 1;
+        sol->strides->in_strides = &in_stride;
+        sol->strides->out_strides = &unit_val;
         // TODO: Use registered function to avoid precision based condition
         if (dt_prec == DT_FLOAT)
         {
@@ -141,7 +156,6 @@ INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     /****** convolution starts here ******/
     // 1. Perform FFT forward for bluestein sequence A
 
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Execution of FFT_forward(A)");
     // input  : in_real
     // output : out_real
     status = sol->next_sol->solver->execute_solver(sol->next_sol);
@@ -161,8 +175,6 @@ INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
         sol->next_sol->decomp_scheme->out_imag =
             MOVE_ADDR(sol->bluestein->B_out, dt_bytes);
 
-        AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode,
-                                 "Execution of FFT_forward(B)");
         // input  : sol->bluestein->B
         // output : sol->bluestein->B_out
         status = sol->next_sol->solver->execute_solver(sol->next_sol);
@@ -185,8 +197,6 @@ INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     sol->next_sol->decomp_scheme->out_real = in_imag;
     sol->next_sol->decomp_scheme->out_imag = in_real;
 
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode,
-                             "Execution of FFT_backward(AB_out)");
     // input  : out_imag
     // output : in_imag
     status = sol->next_sol->solver->execute_solver(sol->next_sol);
@@ -205,8 +215,8 @@ INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     // output stride.
     if (out_stride > 1)
     {
-        sol->strides->in_stride = 1;
-        sol->strides->out_stride = out_stride;
+        sol->strides->in_strides = &unit_val;
+        sol->strides->out_strides = &out_stride;
         status = elementwise_multiplication(in_real, in_real, sol->bluestein->B,
                                             n, mul_sign, dt_prec);
         // TODO: Use registered function to avoid precision based condition
@@ -225,15 +235,23 @@ INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
                                             n, mul_sign, dt_prec);
     }
 
+    // Reset the stride pointers to NULL
+    sol->strides->in_strides = NULL;
+    sol->strides->out_strides = NULL;
+
     // Reset the in, out buffers of next solution to the original state
     sol->next_sol->decomp_scheme->in_real = in_real;
     sol->next_sol->decomp_scheme->in_imag = in_imag;
     sol->next_sol->decomp_scheme->out_real = out_real;
     sol->next_sol->decomp_scheme->out_imag = out_imag;
 
-    if (status != BLUESTEIN_SUCCESS)
-        return SOLVER_FAILURE;
-
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
     return status;
+}
+
+dft_solver_ register_execute_bluestein_solver()
+{
+    return execute_bluestein_solver;
 }

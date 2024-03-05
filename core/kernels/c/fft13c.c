@@ -40,16 +40,6 @@
 
 #include "core/kernels/kernel.h"
 
-kfft_ register_kernel_fft13c(INT32 precision)
-{
-    if (precision == DT_FLOAT)
-        return fft13c_fp32;
-    else if (precision == DT_DOUBLE)
-        return fft13c_fp64;
-    else
-        return NULL;
-}
-
 #ifdef USE_OPT_KERNEL_VARIANT
 
 // complex multiplication (double) (in-place) in var form: A = A * B
@@ -80,17 +70,26 @@ ops_cycles_t get_ops_cnt_fft13c(INT32 precision)
         return ops_cnt[1];
 }
 
-VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                        UINT8 flag)
 {
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
     DOUBLE *in_r = (DOUBLE *)in_real;
     DOUBLE *in_i = (DOUBLE *)in_imag;
     DOUBLE *out_r = (DOUBLE *)out_real;
     DOUBLE *out_i = (DOUBLE *)out_imag;
-    INTP in_stride = (strides->in_stride << 1);
-    INTP out_stride = (strides->out_stride << 1);
-    INTP v_in_stride = (strides->v_in_stride << 1);
-    INTP v_out_stride = (strides->v_out_stride << 1);
+    #ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+    #else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+    #endif
+    INTP v_in_stride = (strides->v_in_stride);
+    INTP v_out_stride = (strides->v_out_stride);
     INTP cnt;
 
     const DOUBLE CRTM_12_1 =
@@ -142,18 +141,18 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                 early_tvrr_2_DFT1;
 
             {
-                vr[1] = in_r[in_stride];
-                vr[2] = in_r[in_stride * 2];
-                vr[3] = in_r[in_stride * 4];
-                vr[4] = in_r[in_stride * 8];
-                vr[5] = in_r[in_stride * 3];
-                vr[6] = in_r[in_stride * 6];
-                vr[7] = in_r[in_stride * 12];
-                vr[8] = in_r[in_stride * 11];
-                vr[9] = in_r[in_stride * 9];
-                vr[10] = in_r[in_stride * 5];
-                vr[11] = in_r[in_stride * 10];
-                vr[12] = in_r[in_stride * 7];
+                vr[1] = in_r[in_strides[1]];
+                vr[2] = in_r[in_strides[2]];
+                vr[3] = in_r[in_strides[4]];
+                vr[4] = in_r[in_strides[8]];
+                vr[5] = in_r[in_strides[3]];
+                vr[6] = in_r[in_strides[6]];
+                vr[7] = in_r[in_strides[12]];
+                vr[8] = in_r[in_strides[11]];
+                vr[9] = in_r[in_strides[9]];
+                vr[10] = in_r[in_strides[5]];
+                vr[11] = in_r[in_strides[10]];
+                vr[12] = in_r[in_strides[7]];
 
                 v71r_DFT1 = vr[1] - vr[7];
 
@@ -206,18 +205,18 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
             }
 
             {
-                vi[1] = in_i[in_stride];
-                vi[2] = in_i[in_stride * 2];
-                vi[3] = in_i[in_stride * 4];
-                vi[4] = in_i[in_stride * 8];
-                vi[5] = in_i[in_stride * 3];
-                vi[6] = in_i[in_stride * 6];
-                vi[7] = in_i[in_stride * 12];
-                vi[8] = in_i[in_stride * 11];
-                vi[9] = in_i[in_stride * 9];
-                vi[10] = in_i[in_stride * 5];
-                vi[11] = in_i[in_stride * 10];
-                vi[12] = in_i[in_stride * 7];
+                vi[1] = in_i[in_strides[1]];
+                vi[2] = in_i[in_strides[2]];
+                vi[3] = in_i[in_strides[4]];
+                vi[4] = in_i[in_strides[8]];
+                vi[5] = in_i[in_strides[3]];
+                vi[6] = in_i[in_strides[6]];
+                vi[7] = in_i[in_strides[12]];
+                vi[8] = in_i[in_strides[11]];
+                vi[9] = in_i[in_strides[9]];
+                vi[10] = in_i[in_strides[5]];
+                vi[11] = in_i[in_strides[10]];
+                vi[12] = in_i[in_strides[7]];
 
                 v71i_DFT1 = vi[1] - vi[7];
 
@@ -458,42 +457,42 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         {
             {
                 // Output point 1, post permutation point 1
-                out_r[out_stride] = cv1rr + cv1ri;
-                out_i[out_stride] = cv1ii + cv1ir;
+                out_r[out_strides[1]] = cv1rr + cv1ri;
+                out_i[out_strides[1]] = cv1ii + cv1ir;
 
                 // Output point 7: post permutation point 12
-                out_r[out_stride * 12] = cv2rr - cv2ri;
-                out_i[out_stride * 12] = cv2ir - cv2ii;
+                out_r[out_strides[12]] = cv2rr - cv2ri;
+                out_i[out_strides[12]] = cv2ir - cv2ii;
             }
 
             {
                 // Output point 5, post permutation point 3
-                out_r[out_stride * 3] = tvrr_2o - tvri_2o;
-                out_i[out_stride * 3] = tvii_2o + tvir_2o;
+                out_r[out_strides[3]] = tvrr_2o - tvri_2o;
+                out_i[out_strides[3]] = tvii_2o + tvir_2o;
 
                 // Output point 9, post permutation point 9
-                out_r[out_stride * 9] = tvrr_2o + tvri_2o;
-                out_i[out_stride * 9] = tvii_2o - tvir_2o;
+                out_r[out_strides[9]] = tvrr_2o + tvri_2o;
+                out_i[out_strides[9]] = tvii_2o - tvir_2o;
             }
 
             {
                 // Output point 3, post permutation point 4
-                out_r[out_stride * 4] = tvrr_1o - tvri_1o;
-                out_i[out_stride * 4] = tvii_1o + tvir_1o;
+                out_r[out_strides[4]] = tvrr_1o - tvri_1o;
+                out_i[out_strides[4]] = tvii_1o + tvir_1o;
 
                 // Output point 11, post permutation point 10
-                out_r[out_stride * 10] = tvrr_1o + tvri_1o;
-                out_i[out_stride * 10] = tvii_1o - tvir_1o;
+                out_r[out_strides[10]] = tvrr_1o + tvri_1o;
+                out_i[out_strides[10]] = tvii_1o - tvir_1o;
             }
 
             {
                 // Output point 4, post permutation point 8
-                out_r[out_stride * 8] = tvrr_5o - tvri_5o;
-                out_i[out_stride * 8] = tvii_5o + tvir_5o;
+                out_r[out_strides[8]] = tvrr_5o - tvri_5o;
+                out_i[out_strides[8]] = tvii_5o + tvir_5o;
 
                 // Output point 10, post permutation point 5
-                out_r[out_stride * 5] = tvrr_5o + tvri_5o;
-                out_i[out_stride * 5] = tvii_5o - tvir_5o;
+                out_r[out_strides[5]] = tvrr_5o + tvri_5o;
+                out_i[out_strides[5]] = tvii_5o - tvir_5o;
             }
 
             {
@@ -507,20 +506,20 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                 DOUBLE tvii_4o = v711i - tv8;
 
                 // Output point 2, post permutation point 2
-                out_r[out_stride * 2] = tvrr_3o - tvri_3o;
-                out_i[out_stride * 2] = tvii_3o + tvir_3o;
+                out_r[out_strides[2]] = tvrr_3o - tvri_3o;
+                out_i[out_strides[2]] = tvii_3o + tvir_3o;
 
                 // Output point 12, post permutation point 7
-                out_r[out_stride * 7] = tvrr_3o + tvri_3o;
-                out_i[out_stride * 7] = tvii_3o - tvir_3o;
+                out_r[out_strides[7]] = tvrr_3o + tvri_3o;
+                out_i[out_strides[7]] = tvii_3o - tvir_3o;
 
                 // Output point 6, post permutation point 6
-                out_r[out_stride * 6] = tvrr_4o - tvri_4o;
-                out_i[out_stride * 6] = tvii_4o + tvir_4o;
+                out_r[out_strides[6]] = tvrr_4o - tvri_4o;
+                out_i[out_strides[6]] = tvii_4o + tvir_4o;
 
                 // Output point 8, post permutation point 11
-                out_r[out_stride * 11] = tvrr_4o + tvri_4o;
-                out_i[out_stride * 11] = tvii_4o - tvir_4o;
+                out_r[out_strides[11]] = tvrr_4o + tvri_4o;
+                out_i[out_strides[11]] = tvii_4o - tvir_4o;
             }
         }
 
@@ -529,19 +528,31 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         out_r += v_out_stride;
         out_i += v_out_stride;
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 
-VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                        UINT8 flag)
 {
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
     FLOAT *in_r = (FLOAT *)in_real;
     FLOAT *in_i = (FLOAT *)in_imag;
     FLOAT *out_r = (FLOAT *)out_real;
     FLOAT *out_i = (FLOAT *)out_imag;
-    INTP in_stride = (strides->in_stride << 1);
-    INTP out_stride = (strides->out_stride << 1);
-    INTP v_in_stride = (strides->v_in_stride << 1);
-    INTP v_out_stride = (strides->v_out_stride << 1);
+    #ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+    #else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+    #endif
+    INTP v_in_stride = (strides->v_in_stride);
+    INTP v_out_stride = (strides->v_out_stride);
     INTP cnt;
 
     const FLOAT CRTM_12_1 =
@@ -593,18 +604,18 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                 early_tvrr_2_DFT1;
 
             {
-                vr[1] = in_r[in_stride];
-                vr[2] = in_r[in_stride * 2];
-                vr[3] = in_r[in_stride * 4];
-                vr[4] = in_r[in_stride * 8];
-                vr[5] = in_r[in_stride * 3];
-                vr[6] = in_r[in_stride * 6];
-                vr[7] = in_r[in_stride * 12];
-                vr[8] = in_r[in_stride * 11];
-                vr[9] = in_r[in_stride * 9];
-                vr[10] = in_r[in_stride * 5];
-                vr[11] = in_r[in_stride * 10];
-                vr[12] = in_r[in_stride * 7];
+                vr[1] = in_r[in_strides[1]];
+                vr[2] = in_r[in_strides[2]];
+                vr[3] = in_r[in_strides[4]];
+                vr[4] = in_r[in_strides[8]];
+                vr[5] = in_r[in_strides[3]];
+                vr[6] = in_r[in_strides[6]];
+                vr[7] = in_r[in_strides[12]];
+                vr[8] = in_r[in_strides[11]];
+                vr[9] = in_r[in_strides[9]];
+                vr[10] = in_r[in_strides[5]];
+                vr[11] = in_r[in_strides[10]];
+                vr[12] = in_r[in_strides[7]];
 
                 v71r_DFT1 = vr[1] - vr[7];
 
@@ -657,18 +668,18 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
             }
 
             {
-                vi[1] = in_i[in_stride];
-                vi[2] = in_i[in_stride * 2];
-                vi[3] = in_i[in_stride * 4];
-                vi[4] = in_i[in_stride * 8];
-                vi[5] = in_i[in_stride * 3];
-                vi[6] = in_i[in_stride * 6];
-                vi[7] = in_i[in_stride * 12];
-                vi[8] = in_i[in_stride * 11];
-                vi[9] = in_i[in_stride * 9];
-                vi[10] = in_i[in_stride * 5];
-                vi[11] = in_i[in_stride * 10];
-                vi[12] = in_i[in_stride * 7];
+                vi[1] = in_i[in_strides[1]];
+                vi[2] = in_i[in_strides[2]];
+                vi[3] = in_i[in_strides[4]];
+                vi[4] = in_i[in_strides[8]];
+                vi[5] = in_i[in_strides[3]];
+                vi[6] = in_i[in_strides[6]];
+                vi[7] = in_i[in_strides[12]];
+                vi[8] = in_i[in_strides[11]];
+                vi[9] = in_i[in_strides[9]];
+                vi[10] = in_i[in_strides[5]];
+                vi[11] = in_i[in_strides[10]];
+                vi[12] = in_i[in_strides[7]];
 
                 v71i_DFT1 = vi[1] - vi[7];
 
@@ -909,42 +920,42 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         {
             {
                 // Output point 1, post permutation point 1
-                out_r[out_stride] = cv1rr + cv1ri;
-                out_i[out_stride] = cv1ii + cv1ir;
+                out_r[out_strides[1]] = cv1rr + cv1ri;
+                out_i[out_strides[1]] = cv1ii + cv1ir;
 
                 // Output point 7: post permutation point 12
-                out_r[out_stride * 12] = cv2rr - cv2ri;
-                out_i[out_stride * 12] = cv2ir - cv2ii;
+                out_r[out_strides[12]] = cv2rr - cv2ri;
+                out_i[out_strides[12]] = cv2ir - cv2ii;
             }
 
             {
                 // Output point 5, post permutation point 3
-                out_r[out_stride * 3] = tvrr_2o - tvri_2o;
-                out_i[out_stride * 3] = tvii_2o + tvir_2o;
+                out_r[out_strides[3]] = tvrr_2o - tvri_2o;
+                out_i[out_strides[3]] = tvii_2o + tvir_2o;
 
                 // Output point 9, post permutation point 9
-                out_r[out_stride * 9] = tvrr_2o + tvri_2o;
-                out_i[out_stride * 9] = tvii_2o - tvir_2o;
+                out_r[out_strides[9]] = tvrr_2o + tvri_2o;
+                out_i[out_strides[9]] = tvii_2o - tvir_2o;
             }
 
             {
                 // Output point 3, post permutation point 4
-                out_r[out_stride * 4] = tvrr_1o - tvri_1o;
-                out_i[out_stride * 4] = tvii_1o + tvir_1o;
+                out_r[out_strides[4]] = tvrr_1o - tvri_1o;
+                out_i[out_strides[4]] = tvii_1o + tvir_1o;
 
                 // Output point 11, post permutation point 10
-                out_r[out_stride * 10] = tvrr_1o + tvri_1o;
-                out_i[out_stride * 10] = tvii_1o - tvir_1o;
+                out_r[out_strides[10]] = tvrr_1o + tvri_1o;
+                out_i[out_strides[10]] = tvii_1o - tvir_1o;
             }
 
             {
                 // Output point 4, post permutation point 8
-                out_r[out_stride * 8] = tvrr_5o - tvri_5o;
-                out_i[out_stride * 8] = tvii_5o + tvir_5o;
+                out_r[out_strides[8]] = tvrr_5o - tvri_5o;
+                out_i[out_strides[8]] = tvii_5o + tvir_5o;
 
                 // Output point 10, post permutation point 5
-                out_r[out_stride * 5] = tvrr_5o + tvri_5o;
-                out_i[out_stride * 5] = tvii_5o - tvir_5o;
+                out_r[out_strides[5]] = tvrr_5o + tvri_5o;
+                out_i[out_strides[5]] = tvii_5o - tvir_5o;
             }
 
             {
@@ -958,20 +969,20 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                 FLOAT tvii_4o = v711i - tv8;
 
                 // Output point 2, post permutation point 2
-                out_r[out_stride * 2] = tvrr_3o - tvri_3o;
-                out_i[out_stride * 2] = tvii_3o + tvir_3o;
+                out_r[out_strides[2]] = tvrr_3o - tvri_3o;
+                out_i[out_strides[2]] = tvii_3o + tvir_3o;
 
                 // Output point 12, post permutation point 7
-                out_r[out_stride * 7] = tvrr_3o + tvri_3o;
-                out_i[out_stride * 7] = tvii_3o - tvir_3o;
+                out_r[out_strides[7]] = tvrr_3o + tvri_3o;
+                out_i[out_strides[7]] = tvii_3o - tvir_3o;
 
                 // Output point 6, post permutation point 6
-                out_r[out_stride * 6] = tvrr_4o - tvri_4o;
-                out_i[out_stride * 6] = tvii_4o + tvir_4o;
+                out_r[out_strides[6]] = tvrr_4o - tvri_4o;
+                out_i[out_strides[6]] = tvii_4o + tvir_4o;
 
                 // Output point 8, post permutation point 11
-                out_r[out_stride * 11] = tvrr_4o + tvri_4o;
-                out_i[out_stride * 11] = tvii_4o - tvir_4o;
+                out_r[out_strides[11]] = tvrr_4o + tvri_4o;
+                out_i[out_strides[11]] = tvii_4o - tvir_4o;
             }
         }
 
@@ -980,6 +991,9 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         out_r += v_out_stride;
         out_i += v_out_stride;
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 #else
 /* --------------- non-optimized C kernel variant --------------- */
@@ -1010,14 +1024,16 @@ const DOUBLE CRTM_13[RADIX_13][2] = {{1.0, 0.0},
                                      {0.568064746731156, 0.822983865893657},
                                      {0.88545602565321, 0.464723172043768}};
 
-VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                  INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
-    // All strides values are mutliplied with DATA_STRIDE for complex data
-    INTP in_stride = strides->in_stride * DATA_STRIDE;
-    INTP out_stride = strides->out_stride * DATA_STRIDE;
-    INTP v_in_stride = strides->v_in_stride * DATA_STRIDE;
-    INTP v_out_stride = strides->v_out_stride * DATA_STRIDE;
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
     // temp variable to store power (constant_multiplier)
     DOUBLE pow_cm[2] = {0.0, 0.0};
     // temp variable to store pow_cm * input
@@ -1045,42 +1061,30 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         input_r = in_dr;
         input_i = in_di;
         LOAD_INPUT(input_r, input_i, local_in[0]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[1]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[2]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[3]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[4]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[5]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[6]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[7]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[8]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[9]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[10]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[11]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[12]);
+        LOAD_INPUT(input_r + in_strides[1], input_i + in_strides[1],
+                   local_in[1]);
+        LOAD_INPUT(input_r + in_strides[2], input_i + in_strides[2],
+                   local_in[2]);
+        LOAD_INPUT(input_r + in_strides[3], input_i + in_strides[3],
+                   local_in[3]);
+        LOAD_INPUT(input_r + in_strides[4], input_i + in_strides[4],
+                   local_in[4]);
+        LOAD_INPUT(input_r + in_strides[5], input_i + in_strides[5],
+                   local_in[5]);
+        LOAD_INPUT(input_r + in_strides[6], input_i + in_strides[6],
+                   local_in[6]);
+        LOAD_INPUT(input_r + in_strides[7], input_i + in_strides[7],
+                   local_in[7]);
+        LOAD_INPUT(input_r + in_strides[8], input_i + in_strides[8],
+                   local_in[8]);
+        LOAD_INPUT(input_r + in_strides[9], input_i + in_strides[9],
+                   local_in[9]);
+        LOAD_INPUT(input_r + in_strides[10], input_i + in_strides[10],
+                   local_in[10]);
+        LOAD_INPUT(input_r + in_strides[11], input_i + in_strides[11],
+                   local_in[11]);
+        LOAD_INPUT(input_r + in_strides[12], input_i + in_strides[12],
+                   local_in[12]);
 
         output_r = out_dr;
         output_i = out_di;
@@ -1101,8 +1105,6 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CADD(local_in[11], temp_out, temp_out);
         CADD(local_in[12], temp_out, temp_out);
         STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
 
         /******************** Output 13i+1 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1121,9 +1123,8 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD(local_in[10], CRTM_13[10], pow_cm, temp_out, cmul_temp);
         CMUL_CADD(local_in[11], CRTM_13[11], pow_cm, temp_out, cmul_temp);
         CMUL_CADD(local_in[12], CRTM_13[12], pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[1],
+                     output_i + out_strides[1]);
 
         /******************** Output 13i+2 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1152,9 +1153,8 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 2, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[2],
+                     output_i + out_strides[2]);
 
         /******************** Output 13i+3 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1183,9 +1183,8 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 3, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[3],
+                     output_i + out_strides[3]);
 
         /******************** Output 13i+4 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1214,9 +1213,8 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 4, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[4],
+                     output_i + out_strides[4]);
 
         /******************** Output 13i+5 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1245,9 +1243,8 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 5, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[5],
+                     output_i + out_strides[5]);
 
         /******************** Output 13i+6 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1276,9 +1273,8 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 6, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[6],
+                     output_i + out_strides[6]);
 
         /******************** Output 13i+7 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1307,9 +1303,8 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 7, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[7],
+                     output_i + out_strides[7]);
 
         /******************** Output 13i+8 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1338,9 +1333,8 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 8, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[8],
+                     output_i + out_strides[8]);
 
         /******************** Output 13i+9 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1369,9 +1363,8 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 9, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[9],
+                     output_i + out_strides[9]);
 
         /******************** Output 13i+10 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1400,9 +1393,8 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 10, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[10],
+                     output_i + out_strides[10]);
 
         /******************** Output 13i+11 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1431,9 +1423,8 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 11, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[11],
+                     output_i + out_strides[11]);
 
         /******************** Output 13i+12 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1462,7 +1453,8 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 12, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
+        STORE_OUTPUT(temp_out, output_r + out_strides[12],
+                     output_i + out_strides[12]);
 
         // next set
         in_dr += v_in_stride;
@@ -1470,16 +1462,21 @@ VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         out_dr += v_out_stride;
         out_di += v_out_stride;
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 
-VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
+static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
                  INTP n, aoclfftz_strides_t *strides, UINT8 flag)
 {
-    // All strides values are mutliplied with DATA_STRIDE for complex data
-    INTP in_stride = strides->in_stride * DATA_STRIDE;
-    INTP out_stride = strides->out_stride * DATA_STRIDE;
-    INTP v_in_stride = strides->v_in_stride * DATA_STRIDE;
-    INTP v_out_stride = strides->v_out_stride * DATA_STRIDE;
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
 
     // temp variable to store power (constant_multiplier)
     FLOAT pow_cm[2] = {0.0, 0.0};
@@ -1508,42 +1505,30 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         input_r = in_fr;
         input_i = in_fi;
         LOAD_INPUT(input_r, input_i, local_in[0]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[1]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[2]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[3]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[4]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[5]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[6]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[7]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[8]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[9]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[10]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[11]);
-        input_r += in_stride;
-        input_i += in_stride;
-        LOAD_INPUT(input_r, input_i, local_in[12]);
+        LOAD_INPUT(input_r + in_strides[1], input_i + in_strides[1],
+                   local_in[1]);
+        LOAD_INPUT(input_r + in_strides[2], input_i + in_strides[2],
+                   local_in[2]);
+        LOAD_INPUT(input_r + in_strides[3], input_i + in_strides[3],
+                   local_in[3]);
+        LOAD_INPUT(input_r + in_strides[4], input_i + in_strides[4],
+                   local_in[4]);
+        LOAD_INPUT(input_r + in_strides[5], input_i + in_strides[5],
+                   local_in[5]);
+        LOAD_INPUT(input_r + in_strides[6], input_i + in_strides[6],
+                   local_in[6]);
+        LOAD_INPUT(input_r + in_strides[7], input_i + in_strides[7],
+                   local_in[7]);
+        LOAD_INPUT(input_r + in_strides[8], input_i + in_strides[8],
+                   local_in[8]);
+        LOAD_INPUT(input_r + in_strides[9], input_i + in_strides[9],
+                   local_in[9]);
+        LOAD_INPUT(input_r + in_strides[10], input_i + in_strides[10],
+                   local_in[10]);
+        LOAD_INPUT(input_r + in_strides[11], input_i + in_strides[11],
+                   local_in[11]);
+        LOAD_INPUT(input_r + in_strides[12], input_i + in_strides[12],
+                   local_in[12]);
 
         output_r = out_fr;
         output_i = out_fi;
@@ -1564,8 +1549,6 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CADD(local_in[11], temp_out, temp_out);
         CADD(local_in[12], temp_out, temp_out);
         STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
 
         /******************** Output 13i+1 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1584,9 +1567,8 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD(local_in[10], CRTM_13[10], pow_cm, temp_out, cmul_temp);
         CMUL_CADD(local_in[11], CRTM_13[11], pow_cm, temp_out, cmul_temp);
         CMUL_CADD(local_in[12], CRTM_13[12], pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[1],
+                     output_i + out_strides[1]);
 
         /******************** Output 13i+2 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1615,9 +1597,8 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 2, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[2],
+                     output_i + out_strides[2]);
 
         /******************** Output 13i+3 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1646,9 +1627,8 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 3, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[3],
+                     output_i + out_strides[3]);
 
         /******************** Output 13i+4 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1677,9 +1657,8 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 4, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[4],
+                     output_i + out_strides[4]);
 
         /******************** Output 13i+5 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1708,9 +1687,8 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 5, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[5],
+                     output_i + out_strides[5]);
 
         /******************** Output 13i+6 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1739,9 +1717,8 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 6, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[6],
+                     output_i + out_strides[6]);
 
         /******************** Output 13i+7 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1770,9 +1747,8 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 7, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[7],
+                     output_i + out_strides[7]);
 
         /******************** Output 13i+8 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1801,9 +1777,8 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 8, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[8],
+                     output_i + out_strides[8]);
 
         /******************** Output 13i+9 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1832,9 +1807,8 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 9, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[9],
+                     output_i + out_strides[9]);
 
         /******************** Output 13i+10 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1863,9 +1837,8 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 10, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[10],
+                     output_i + out_strides[10]);
 
         /******************** Output 13i+11 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1894,9 +1867,8 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 11, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
-        output_r += out_stride;
-        output_i += out_stride;
+        STORE_OUTPUT(temp_out, output_r + out_strides[11],
+                     output_i + out_strides[11]);
 
         /******************** Output 13i+12 ********************/
         pow_cm[0] = pow_cm[1] = temp_out[0] = temp_out[1] = 0.0;
@@ -1925,7 +1897,8 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         CMUL_CADD_CPOW(local_in[11], CRTM_13[12], 12, pow_cm, temp_out,
                        cmul_temp, cpow_temp);
         CMUL_CADD(local_in[12], pow_cm, pow_cm, temp_out, cmul_temp);
-        STORE_OUTPUT(temp_out, output_r, output_i);
+        STORE_OUTPUT(temp_out, output_r + out_strides[12],
+                     output_i + out_strides[12]);
 
         // next set
         in_fr += v_in_stride;
@@ -1933,5 +1906,18 @@ VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
         out_fr += v_out_stride;
         out_fi += v_out_stride;
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 #endif // USE_OPT_KERNEL_VARIANT
+
+kfft_ register_kernel_fft13c(INT32 precision)
+{
+    if (precision == DT_FLOAT)
+        return fft13c_fp32;
+    else if (precision == DT_DOUBLE)
+        return fft13c_fp64;
+    else
+        return NULL;
+}
