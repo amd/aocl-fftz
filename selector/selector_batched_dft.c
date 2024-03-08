@@ -55,11 +55,6 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     INTP batch_size = 1;
     INT32 ret = SELECTOR_FAILURE;
 
-    if (vec_rank > 3) // Currently vector rank till 3 only supported
-    {
-        goto exit_batched_dft;
-    }
-
     cur_sel = alloc_selector(vec_rank, dim_rank);
     if (cur_sel == NULL)
     {

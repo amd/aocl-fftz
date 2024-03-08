@@ -141,10 +141,6 @@
             case SIZE_PARSING_ERROR:                                           \
                 printf("\nInvalid problem size provided.\n");                  \
                 break;                                                         \
-            case UNSUPPORTED_SIZE_ERROR:                                       \
-                printf("\nUnsupported problem size provided.\nOnly 1D vec is " \
-                       "supported.\n");                                        \
-                break;                                                         \
             case UNSUPPORTED_OPTION_ERROR:                                     \
                 printf("\nUnsupported option provided.\n");                    \
                 break;                                                         \

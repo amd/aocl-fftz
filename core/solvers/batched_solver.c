@@ -34,6 +34,7 @@
  *  the solver.
  *
  *  @author S. Biplab Raut
+ *  @author Jeya R
  */
 
 #include "core/solvers/ct_solver.h"
@@ -59,9 +60,92 @@ INT32 setup_batched_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
+// Recursively solves batched FFT by handling the innermost dimension first.
+INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
+                              aoclfftz_solution_t *next_sol, INTP vec_rank)
+{
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+
+    INT32 status = SOLVER_SUCCESS;
+    UINT32 dt_prec, dt_bytes;
+    INTP rnk_offset;
+    INTP v_in_stride;
+    INTP v_out_stride;
+
+    dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    dt_bytes = DT_PRECISION_BYTES(dt_prec);
+
+    v_in_stride = sol->decomp_scheme->vecs[vec_rank-1].in_stride *
+                  DATA_STRIDE * dt_bytes;
+    v_out_stride = sol->decomp_scheme->vecs[vec_rank-1].out_stride *
+                   DATA_STRIDE * dt_bytes;
+
+    if (vec_rank == 1)
+    {
+        // For innermost vector rank, execute the solver
+        INTP batches = sol->decomp_scheme->vecs[0].n;
+        for (INTP b = 0; b < batches; b++)
+        {
+            status = next_sol->solver->execute_solver(next_sol);
+            if (status != SOLVER_SUCCESS)
+            {
+                return status;
+            }
+
+            next_sol->decomp_scheme->in_real =
+                    MOVE_ADDR(next_sol->decomp_scheme->in_real, v_in_stride);
+            next_sol->decomp_scheme->in_imag =
+                    MOVE_ADDR(next_sol->decomp_scheme->in_imag, v_in_stride);
+            next_sol->decomp_scheme->out_real =
+                    MOVE_ADDR(next_sol->decomp_scheme->out_real, v_out_stride);
+            next_sol->decomp_scheme->out_imag =
+                    MOVE_ADDR(next_sol->decomp_scheme->out_imag, v_out_stride);
+        }
+    }
+    else
+    {
+        for (rnk_offset = 0;
+             rnk_offset < sol->decomp_scheme->vecs[vec_rank-1].n; rnk_offset++)
+        {
+            // save pointer to restore it below since
+            // they will be moved while execution
+            VOID *in_real = next_sol->decomp_scheme->in_real;
+            VOID *in_imag = next_sol->decomp_scheme->in_imag;
+            VOID *out_real = next_sol->decomp_scheme->out_real;
+            VOID *out_imag = next_sol->decomp_scheme->out_imag;
+
+            //recursive call to solve the inner batches
+            status = execute_batched_solver_internal(sol, next_sol,
+                                                     vec_rank - 1);
+            if (status != SOLVER_SUCCESS)
+            {
+                return status;
+            }
+
+            // Adjust pointers for the next iteration
+            next_sol->decomp_scheme->in_real =
+                (VOID *)((CHAR *)in_real + v_in_stride);
+            next_sol->decomp_scheme->in_imag =
+                (VOID *)((CHAR *)in_imag + v_in_stride);
+            next_sol->decomp_scheme->out_real =
+                (VOID *)((CHAR *)out_real + v_out_stride);
+            next_sol->decomp_scheme->out_imag =
+                (VOID *)((CHAR *)out_imag + v_out_stride);
+        }
+    }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
+    return status;
+}
+
+
 /*
  * Considerations and assumptions for execute_batched_solver():
- * For a multi-dimentional vector array (up to rank 3) of the DFT tranforms,
+ * For a multi-dimensional vector array of the DFT transforms,
  * sol->decomp_scheme->vecs[rnk].in_stride gives the offset at which
  * input buffer starts for the current rank/position in the vector array,
  * sol->decomp_scheme->vecs[rnk].out_stride gives the offset at which
@@ -74,193 +158,16 @@ static INT32 execute_batched_solver(aoclfftz_solution_t *sol)
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 #endif
 
-    aoclfftz_solution_t *next_sol = sol->next_sol;
-    INTP batch_size;
-    INTP rnk_offset;
-    INTP rnk;
     INT32 status = SOLVER_SUCCESS;
-    UINT32 dt, dt_bytes;
-    INTP v_in_stride_0;
-    INTP v_out_stride_0;
-    INTP v_in_stride_1;
-    INTP v_out_stride_1;
-    INTP v_in_stride_2;
-    INTP v_out_stride_2;
+    aoclfftz_solution_t *next_sol = sol->next_sol;
 
-    dt = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    dt_bytes = DT_PRECISION_BYTES(dt);
+    next_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
+    next_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
+    next_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+    next_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
 
-    switch (sol->decomp_scheme->vec_rank)
-    {
-    case 1:
-        v_in_stride_0 =
-            sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE * dt_bytes;
-        v_out_stride_0 =
-            sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE * dt_bytes;
-
-        next_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
-        next_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
-        next_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-        next_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-        next_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
-
-        for (batch_size = 0; batch_size < sol->decomp_scheme->vecs[0].n;
-             batch_size++)
-        {
-            status = next_sol->solver->execute_solver(next_sol);
-            if (status != SOLVER_SUCCESS)
-            {
-                return status;
-            }
-
-            next_sol->decomp_scheme->in_real =
-                (VOID *)((CHAR *)next_sol->decomp_scheme->in_real +
-                         v_in_stride_0);
-            next_sol->decomp_scheme->in_imag =
-                (VOID *)((CHAR *)next_sol->decomp_scheme->in_imag +
-                         v_in_stride_0);
-            next_sol->decomp_scheme->out_real =
-                (VOID *)((CHAR *)next_sol->decomp_scheme->out_real +
-                         v_out_stride_0);
-            next_sol->decomp_scheme->out_imag =
-                (VOID *)((CHAR *)next_sol->decomp_scheme->out_imag +
-                         v_out_stride_0);
-        }
-        break;
-    case 2:
-        v_in_stride_0 =
-            sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE * dt_bytes;
-        v_out_stride_0 =
-            sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE * dt_bytes;
-
-        for (rnk_offset = 0; rnk_offset < sol->decomp_scheme->vecs[1].n;
-             rnk_offset++)
-        {
-            v_in_stride_1 = rnk_offset * sol->decomp_scheme->vecs[1].in_stride *
-                            DATA_STRIDE * dt_bytes;
-            v_out_stride_1 = rnk_offset *
-                             sol->decomp_scheme->vecs[1].out_stride *
-                             DATA_STRIDE * dt_bytes;
-
-            next_sol->decomp_scheme->in_real =
-                (VOID *)((CHAR *)sol->decomp_scheme->in_real + v_in_stride_1);
-            next_sol->decomp_scheme->in_imag =
-                (VOID *)((CHAR *)sol->decomp_scheme->in_imag + v_in_stride_1);
-            next_sol->decomp_scheme->out_real =
-                (VOID *)((CHAR *)sol->decomp_scheme->out_real + v_out_stride_1);
-            next_sol->decomp_scheme->out_imag =
-                (VOID *)((CHAR *)sol->decomp_scheme->out_imag + v_out_stride_1);
-
-            for (batch_size = 0; batch_size < sol->decomp_scheme->vecs[0].n;
-                 batch_size++)
-            {
-                status = next_sol->solver->execute_solver(next_sol);
-                if (status != SOLVER_SUCCESS)
-                {
-                    return status;
-                }
-
-                next_sol->decomp_scheme->in_real =
-                    (VOID *)((CHAR *)next_sol->decomp_scheme->in_real +
-                             v_in_stride_0);
-                next_sol->decomp_scheme->in_imag =
-                    (VOID *)((CHAR *)next_sol->decomp_scheme->in_imag +
-                             v_in_stride_0);
-                next_sol->decomp_scheme->out_real =
-                    (VOID *)((CHAR *)next_sol->decomp_scheme->out_real +
-                             v_out_stride_0);
-                next_sol->decomp_scheme->out_imag =
-                    (VOID *)((CHAR *)next_sol->decomp_scheme->out_imag +
-                             v_out_stride_0);
-            }
-        }
-        break;
-    case 3:
-        v_in_stride_0 =
-            sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE * dt_bytes;
-        v_out_stride_0 =
-            sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE * dt_bytes;
-
-        for (rnk = 0; rnk < sol->decomp_scheme->vecs[2].n; rnk++)
-        {
-            v_in_stride_2 = rnk * sol->decomp_scheme->vecs[2].in_stride *
-                            DATA_STRIDE * dt_bytes;
-            v_out_stride_2 = rnk * sol->decomp_scheme->vecs[2].out_stride *
-                             DATA_STRIDE * dt_bytes;
-
-            next_sol->decomp_scheme->in_real =
-                (VOID *)((CHAR *)sol->decomp_scheme->in_real + v_in_stride_2);
-            next_sol->decomp_scheme->in_imag =
-                (VOID *)((CHAR *)sol->decomp_scheme->in_imag + v_in_stride_2);
-            next_sol->decomp_scheme->out_real =
-                (VOID *)((CHAR *)sol->decomp_scheme->out_real + v_out_stride_2);
-            next_sol->decomp_scheme->out_imag =
-                (VOID *)((CHAR *)sol->decomp_scheme->out_imag + v_out_stride_2);
-
-            // save pointer to restore it below since they will be moved while
-            // execution
-            VOID *in_real = next_sol->decomp_scheme->in_real;
-            VOID *in_imag = next_sol->decomp_scheme->in_imag;
-            VOID *out_real = next_sol->decomp_scheme->out_real;
-            VOID *out_imag = next_sol->decomp_scheme->out_imag;
-
-            for (rnk_offset = 0; rnk_offset < sol->decomp_scheme->vecs[1].n;
-                 rnk_offset++)
-            {
-                v_in_stride_1 = rnk_offset *
-                                sol->decomp_scheme->vecs[1].in_stride *
-                                DATA_STRIDE * dt_bytes;
-                v_out_stride_1 = rnk_offset *
-                                 sol->decomp_scheme->vecs[1].out_stride *
-                                 DATA_STRIDE * dt_bytes;
-
-                // restore to start location
-                next_sol->decomp_scheme->in_real = in_real;
-                next_sol->decomp_scheme->in_imag = in_imag;
-                next_sol->decomp_scheme->out_real = out_real;
-                next_sol->decomp_scheme->out_imag = out_imag;
-
-                next_sol->decomp_scheme->in_real =
-                    (VOID *)((CHAR *)next_sol->decomp_scheme->in_real +
-                             v_in_stride_1);
-                next_sol->decomp_scheme->in_imag =
-                    (VOID *)((CHAR *)next_sol->decomp_scheme->in_imag +
-                             v_in_stride_1);
-                next_sol->decomp_scheme->out_real =
-                    (VOID *)((CHAR *)next_sol->decomp_scheme->out_real +
-                             v_out_stride_1);
-                next_sol->decomp_scheme->out_imag =
-                    (VOID *)((CHAR *)next_sol->decomp_scheme->out_imag +
-                             v_out_stride_1);
-
-                for (batch_size = 0; batch_size < sol->decomp_scheme->vecs[0].n;
-                     batch_size++)
-                {
-                    status = next_sol->solver->execute_solver(next_sol);
-                    if (status != SOLVER_SUCCESS)
-                    {
-                        return status;
-                    }
-
-                    next_sol->decomp_scheme->in_real =
-                        (VOID *)((CHAR *)next_sol->decomp_scheme->in_real +
-                                 v_in_stride_0);
-                    next_sol->decomp_scheme->in_imag =
-                        (VOID *)((CHAR *)next_sol->decomp_scheme->in_imag +
-                                 v_in_stride_0);
-                    next_sol->decomp_scheme->out_real =
-                        (VOID *)((CHAR *)next_sol->decomp_scheme->out_real +
-                                 v_out_stride_0);
-                    next_sol->decomp_scheme->out_imag =
-                        (VOID *)((CHAR *)next_sol->decomp_scheme->out_imag +
-                                 v_out_stride_0);
-                }
-            }
-        }
-        break;
-    default:
-        return SOLVER_FAILURE;
-    }
+    status = execute_batched_solver_internal(sol, next_sol,
+                                             sol->decomp_scheme->vec_rank);
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");

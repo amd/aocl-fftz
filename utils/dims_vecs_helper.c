@@ -288,8 +288,6 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         (*vecs)[0].out_stride = default_stride;
     }
 
-    CHECK_SUPPORTED_DIMS(dims, vecs, dim_rank, vec_rank, status);
-
 exit_func :
     FREE_ALIGN_ALLOCATED_MEM(desc);
     return status;
