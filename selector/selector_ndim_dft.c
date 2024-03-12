@@ -93,25 +93,13 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     aoclfftz_selector_t *n_minus1_sel = NULL;
     aoclfftz_selector_t *outer_dim_sel = NULL;
 
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
                        measure_stats;
     INT32 ret = SELECTOR_FAILURE;
 
-    INT32 fusable_dims = get_fusable_dims(sel->solution, dim_rank - 1);
-    if (fusable_dims == (dim_rank - 1))
-    {
-        vec_rank = 1; // all dims fusable into one
-    }
-    else
-    {
-        // dims not fusable has to be processed individually
-        vec_rank = (dim_rank - fusable_dims);
-    }
-
     n_minus1_sel = alloc_selector(1, dim_rank - 1);
-    outer_dim_sel = alloc_selector(vec_rank, 1);
+    outer_dim_sel = alloc_selector(dim_rank - 1, 1);
 
     if (n_minus1_sel == NULL || outer_dim_sel == NULL)
     {
@@ -119,7 +107,7 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     ret = setup_ndim_solver(sel->solution, n_minus1_sel->solution,
-                            outer_dim_sel->solution, fusable_dims);
+                            outer_dim_sel->solution);
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_nd_dft;

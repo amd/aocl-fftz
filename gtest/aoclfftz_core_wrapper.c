@@ -466,6 +466,12 @@ VOID destroy_handle_wrapper(VOID *handle)
     destroy_handle(handle);
 }
 
+/* ---------------- fuse vector wrapper ---------------- */
+VOID fuse_vecs_wrapper(aoclfftz_solution_t *sol)
+{
+    fuse_vecs(sol);
+}
+
 // Transpose wrappers
 #define TRANSPOSE_WRAPPER_DEFN(kernel_name, TYPE, isa)                         \
     VOID CONCAT(FUNC(kernel_name, TYPE, isa), _wrapper)(TRANSPOSE_KERNEL_ARGS) \

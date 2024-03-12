@@ -487,6 +487,7 @@ class AoclfftzSelectorTestBase
         }
         FREE_ALIGN_ALLOCATED_MEM(dims);
         FREE_ALIGN_ALLOCATED_MEM(vecs);
+        fuse_vecs_wrapper(sol);
         sol->decomp_scheme->flags = flags;
         sol->decomp_scheme->cntrl_params->opt_level = opt_level;
         sol->decomp_scheme->cntrl_params->opt_off = opt_level == -1 ? 1 : 0;
@@ -742,29 +743,76 @@ class AoclfftzSelectorTestBase
 
                 ret &= (total_len_1d == total_size);
 
-                if (sol_1d->decomp_scheme->vec_rank == 1)
-                {
-                    // since contiguous memory
-                    ret &= (sol_1d->decomp_scheme->vecs[0].in_stride ==
-                            cur_a->decomp_scheme->dims[0].out_stride);
-                    ret &= (sol_1d->decomp_scheme->vecs[0].out_stride ==
-                            cur_a->decomp_scheme->dims[0].out_stride);
-                }
-                else
-                {
-                    // validating the last vec stride alone
-                    INT32 vec_rank = sol_1d->decomp_scheme->vec_rank;
-                    ret &= (
-                        sol_1d->decomp_scheme->vecs[vec_rank - 1].in_stride ==
-                        cur_a->decomp_scheme->dims[cur_dim_rank - 2].out_stride
-                    );
+                // combined size of vecs of 1D should be equal to
+                // the combined size of dims of cur solution/outermost
+                // dimension size
+                ret &= (total_len_1d / sol_1d->decomp_scheme->dims[0].n ==
+                        total_size /
+                        cur_a->decomp_scheme->dims[cur_dim_rank - 1].n);
+                ret &= ((sol_1d->decomp_scheme->vecs[0].in_stride ==
+                        cur_a->decomp_scheme->dims[0].out_stride));
+                ret &= ((sol_1d->decomp_scheme->vecs[0].out_stride ==
+                        cur_a->decomp_scheme->dims[0].out_stride));
 
-                    ret &= (
-                        sol_1d->decomp_scheme->vecs[vec_rank - 1].out_stride ==
-                        cur_a->decomp_scheme->dims[cur_dim_rank - 2].out_stride
-                    );
+                INT32 i,j;
+                // for every vector in 1D solution
+                for (i = 0, j = 0;
+                     i < sol_1d->decomp_scheme->vec_rank && j < cur_dim_rank -1
+                     && ret; i++)
+                {
+                    INT32 k;
+                    // if the current solution dimension does not match the 1D
+                    // solution vector check if it was fused by the library
+                    if (cur_a->decomp_scheme->dims[j].n !=
+                         sol_1d->decomp_scheme->vecs[i].n)
+                    {
+                        // check for fused dimension size:
+                        INTP fused_dim_size = cur_a->decomp_scheme->dims[j].n;
+                        for (k = j+1; k < cur_dim_rank - 1; k++)
+                        {
+                            fused_dim_size = fused_dim_size *
+                                             cur_a->decomp_scheme->dims[k].n;
+                            if (sol_1d->decomp_scheme->vecs[i].n ==
+                                                                fused_dim_size)
+                            {
+                                // break if the size of the fused dim matches the
+                                // size of the 1D solution vector size (which would
+                                // have probably be fused in the library)
+                                break;
+                            }
+                        }
+                        if (k == cur_dim_rank -1)
+                        {
+                            //vector size didnt match
+                            ret = false;
+                        }
+                        else
+                        {
+                            //check if its fusable
+                            if ((sol_1d->decomp_scheme->vecs[i].n *
+                                 sol_1d->decomp_scheme->vecs[i].in_stride ==
+                                cur_a->decomp_scheme->dims[k].n *
+                                 cur_a->decomp_scheme->dims[k].out_stride) &&
+                                (sol_1d->decomp_scheme->vecs[i].n *
+                                 sol_1d->decomp_scheme->vecs[i].out_stride ==
+                                cur_a->decomp_scheme->dims[k].n *
+                                 cur_a->decomp_scheme->dims[k].out_stride))
+                            {
+                                j = k+1;
+                            }
+                            else
+                            {
+                                ret = false;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        j++;
+                    }
                 }
-
+                ret &= (i == sol_1d->decomp_scheme->vec_rank);
+                ret &= (j == cur_dim_rank - 1);
                 if (ret == false)
                 {
                     AOCLFFTZ_LOG_UNFORMATTED(

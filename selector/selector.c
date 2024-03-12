@@ -139,7 +139,6 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
     INT32 ret = SELECTOR_FAILURE;
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 is_FFT_ker_supported =
             check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n);
@@ -153,13 +152,14 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
     SET_SELECTOR_MODE(sel->solution->decomp_scheme->flags,
                       AOCLFFTZ_FIXED_SELECTOR_MODE);
 
-    // TODO: ND Batched need not always go to Batched solver. In cases, where
-    // Batches are contiguous in memory, they can be clubbed.
-
-    // SOLVER_BATCHED
+    if (sel->solution->decomp_scheme->vec_rank > 1)
+    {
+        fuse_vecs(sel->solution);
+    }
+    //SOLVER_BATCHED
     level1_cond1 =
             ((sel->solution->decomp_scheme->dims[0].n != 1) && /* size one */
-            ((vec_rank > 1) ||  /* ND Batched */
+            ((sel->solution->decomp_scheme->vec_rank > 1) ||  /* ND Batched */
             /* 1D Batched 1D Non-direct cases*/
             ((sel->solution->decomp_scheme->vecs[0].n > 1) &&
                                     !is_FFT_ker_supported) ||
@@ -522,4 +522,49 @@ exit_setup_dft_d_64_:
 VOID destroy_handle(VOID *handle)
 {
     destroy_selector((aoclfftz_selector_t *)handle);
+}
+
+VOID fuse_vecs(aoclfftz_solution_t *sol)
+{
+    INT32 last_fused_idx = 0, is_fusable = 0, fused_rank = 0;
+    INTP fused_size = sol->decomp_scheme->vecs[0].n;
+    INT32 vec_rank = sol->decomp_scheme->vec_rank;
+    aoclfftz_dim_t_64_ *vecs = sol->decomp_scheme->vecs;
+    for (INT32 i = 1; i < vec_rank; i++)
+    {
+        // expected stride is the regular stride we obtain by n * stride of prev dim
+        INTP expected_in_stride = vecs[i-1].n * vecs[i-1].in_stride;
+        INTP expected_out_stride = vecs[i-1].n * vecs[i-1].out_stride;
+        INTP actual_in_stride = vecs[i].in_stride;
+        INTP actual_out_stride = vecs[i].out_stride;
+        // mark the vector for fusing and compute the new size for the fused vector
+        if (expected_in_stride == actual_in_stride &&
+             expected_out_stride == actual_out_stride)
+        {
+            is_fusable = 1;
+            fused_size = fused_size * vecs[i].n;
+        }
+        else
+        {
+            if (is_fusable)
+            {
+                vecs[fused_rank].n = fused_size;
+            }
+            else
+            {
+                vecs[fused_rank].n = vecs[last_fused_idx].n;
+            }
+            vecs[fused_rank].in_stride = vecs[last_fused_idx].in_stride;
+            vecs[fused_rank].out_stride = vecs[last_fused_idx].out_stride;
+            fused_size = vecs[i].n;
+            last_fused_idx = i;
+            fused_rank++;
+            is_fusable = 0;
+        }
+    }
+    //initalize last vector
+    vecs[fused_rank].n = fused_size;
+    vecs[fused_rank].out_stride = vecs[last_fused_idx].out_stride;
+    vecs[fused_rank].in_stride = vecs[last_fused_idx].in_stride;
+    sol->decomp_scheme->vec_rank = fused_rank + 1;
 }

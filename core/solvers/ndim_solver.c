@@ -42,7 +42,7 @@
 
 INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
                         aoclfftz_solution_t *n_minus1_sol,
-                        aoclfftz_solution_t *outer_dim_sol, INT32 fusable_dims)
+                        aoclfftz_solution_t *outer_dim_sol)
 {
 #ifdef AOCL_ENABLE_LOG
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
@@ -92,47 +92,16 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     outer_dim_sol->decomp_scheme->dims[0].out_stride =
         sol->decomp_scheme->dims[dim_rank - 1].out_stride;
 
-    if (fusable_dims == (dim_rank - 1)) // all dims fusable
+    outer_dim_sol->decomp_scheme->vec_rank = dim_rank - 1;
+
+    for (INT32 i = 0; i < dim_rank - 1; i++)
     {
-        INT32 fused_dim_size = 1;
-        for (INT32 i = 0; i < dim_rank - 1; i++)
-        {
-            fused_dim_size = fused_dim_size * sol->decomp_scheme->dims[i].n;
-        }
-
-        outer_dim_sol->decomp_scheme->vec_rank = 1;
-        outer_dim_sol->decomp_scheme->vecs[0].n = fused_dim_size;
-        outer_dim_sol->decomp_scheme->vecs[0].in_stride =
-                    sol->decomp_scheme->dims[0].out_stride;
-        outer_dim_sol->decomp_scheme->vecs[0].out_stride =
-                    sol->decomp_scheme->dims[0].out_stride;
-    }
-    else
-    {
-        outer_dim_sol->decomp_scheme->vec_rank = (dim_rank - fusable_dims);
-
-        INT32 fused_dim_size = 1;
-        for (INT32 i = 0; i < fusable_dims; i++)
-        {
-            fused_dim_size = fused_dim_size * sol->decomp_scheme->dims[i].n;
-        }
-
-        outer_dim_sol->decomp_scheme->vecs[0].n = fused_dim_size;
-        outer_dim_sol->decomp_scheme->vecs[0].in_stride =
-                    sol->decomp_scheme->dims[0].out_stride;
-        outer_dim_sol->decomp_scheme->vecs[0].out_stride =
-                    sol->decomp_scheme->dims[0].out_stride;
-
-        for (INT32 j = fusable_dims, i = 1;
-                    i < outer_dim_sol->decomp_scheme->vec_rank; j++, i++)
-        {
-            outer_dim_sol->decomp_scheme->vecs[i].n =
-                    sol->decomp_scheme->dims[j].n;
-            outer_dim_sol->decomp_scheme->vecs[i].in_stride =
-                    sol->decomp_scheme->dims[j].out_stride;
-            outer_dim_sol->decomp_scheme->vecs[i].out_stride =
-                    sol->decomp_scheme->dims[j].out_stride;
-        }
+        outer_dim_sol->decomp_scheme->vecs[i].n =
+                sol->decomp_scheme->dims[i].n;
+        outer_dim_sol->decomp_scheme->vecs[i].in_stride =
+                sol->decomp_scheme->dims[i].out_stride;
+        outer_dim_sol->decomp_scheme->vecs[i].out_stride =
+                sol->decomp_scheme->dims[i].out_stride;
     }
 
 #ifdef AOCL_ENABLE_LOG
