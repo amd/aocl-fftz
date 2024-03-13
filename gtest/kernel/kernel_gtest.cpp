@@ -158,38 +158,34 @@ aoclfftz_kernel_test_params_t param_double_avx256_kernels[] =
      aoclfftz_kernel_test_type::ALL}
 };
 
-// stride values as in-stride, out-stride pairs
-std::vector<std::pair<INTP, INTP>> strides = {{1, 1}, {2, 9},  {7, 3},
-                                              {4, 4}, {11, 1}, {1, 6}};
+// IO params as {in-stride, out-stride , batch size, dir of FFT(0->FWD/1-> BWD)}
+// Batch size fixed as 1-7 to cover all the tail case in AVX128 & AVX256 kernels
+std::vector<std::tuple<INTP, INTP, INTP, UINT8>> io_params = {{1,  1, 1, 0},
+                                                              {2,  9, 2, 1},
+                                                              {7,  3, 3, 0},
+                                                              {4,  4, 4, 1},
+                                                              {11, 1, 5, 0},
+                                                              {1,  6, 6, 1},
+                                                              {10, 5, 7, 0}};
 
 TEST_P(AoclfftzKernelTestFloat, TEST_FLOAT_KERNEL)
 {
-    run_kernel_test(1); // run test with normal values and with 1 set
+    run_kernel_test(); // run test with normal values
 }
 
 TEST_P(AoclfftzKernelTestDouble, TEST_DOUBLE_KERNEL)
 {
-    run_kernel_test(1); // run test with normal values and with 1 set
-}
-
-TEST_P(AoclfftzKernelTestFloat, TEST_FLOAT_KERNEL_BATCHED)
-{
-    run_kernel_test(0); // run test with normal values and with multiple sets
-}
-
-TEST_P(AoclfftzKernelTestDouble, TEST_DOUBLE_KERNEL_BATCHED)
-{
-    run_kernel_test(0); // run test with normal values and with multiple sets
+    run_kernel_test(); // run test with normal values
 }
 
 TEST_P(AoclfftzKernelTestFloat, TEST_FLOAT_KERNEL_SPECIAL)
 {
-    run_kernel_test(1, true); // run test with normal and special values
+    run_kernel_test(true); // run test with normal and special values
 }
 
 TEST_P(AoclfftzKernelTestDouble, TEST_DOUBLE_KERNEL_SPECIAL)
 {
-    run_kernel_test(1, true); // run test with normal and special values
+    run_kernel_test(true); // run test with normal and special values
 }
 
 /**
@@ -198,14 +194,16 @@ TEST_P(AoclfftzKernelTestDouble, TEST_DOUBLE_KERNEL_SPECIAL)
  */
 auto name_generator =
     [](const ::testing::TestParamInfo<
-        std::tuple<aoclfftz_kernel_test_params_t, std::pair<INTP, INTP>, UINT8>>
-           &info)
+        std::tuple<aoclfftz_kernel_test_params_t,
+        std::tuple<INTP, INTP, INTP, UINT8>>> &info)
     {
         auto param = std::get<0>(info.param);
-        INTP istride = std::get<1>(info.param).first;
-        INTP ostride = std::get<1>(info.param).second;
-        UINT8 is_bwd = std::get<2>(info.param);
-        UINT32 radix = std::get<0>(param);
+        auto io_param = std::get<1>(info.param);
+        INTP istride  = std::get<0>(io_param);
+        INTP ostride  = std::get<1>(io_param);
+        INTP batch_sz = std::get<2>(io_param);
+        UINT8 is_bwd  = std::get<3>(io_param);
+        UINT32 radix  = std::get<0>(param);
         UINT8 kernel_type = std::get<1>(param);
         UINT8 test_type = std::get<2>(param);
 
@@ -218,8 +216,9 @@ auto name_generator =
         {
             test_name += "_FWD";
         }
-        test_name += "_IS" + std::to_string(istride);
-        test_name += "_OS" + std::to_string(ostride);
+        test_name += "_IS_" + std::to_string(istride);
+        test_name += "_OS_" + std::to_string(ostride);
+        test_name += "_BATCH_" + std::to_string(batch_sz);
         test_name += get_kernel_type_as_string(kernel_type);
         if (test_type == aoclfftz_kernel_test_type::ALL)
         {
@@ -240,15 +239,13 @@ auto name_generator =
 INSTANTIATE_TEST_SUITE_P(
     KernelTest, AoclfftzKernelTestFloat,
     ::testing::Combine(::testing::ValuesIn(param_float_kernels),
-                       ::testing::ValuesIn(strides),
-                       ::testing::Values(0, 1)), // 0 -> FWD, 1 -> BWD
+                       ::testing::ValuesIn(io_params)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     KernelTest, AoclfftzKernelTestDouble,
     ::testing::Combine(::testing::ValuesIn(param_double_kernels),
-                       ::testing::ValuesIn(strides),
-                       ::testing::Values(0, 1)), // 0 -> FWD, 1 -> BWD
+                       ::testing::ValuesIn(io_params)),
     name_generator);
 
 #ifdef ENABLE_AVX128
@@ -256,15 +253,13 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     AVXKernelTest, AoclfftzKernelTestFloat,
     ::testing::Combine(::testing::ValuesIn(param_float_avx128_kernels),
-                       ::testing::ValuesIn(strides),
-                       ::testing::Values(0, 1)), // 0 -> FWD, 1 -> BWD
+                       ::testing::ValuesIn(io_params)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     AVXKernelTest, AoclfftzKernelTestDouble,
     ::testing::Combine(::testing::ValuesIn(param_double_avx128_kernels),
-                       ::testing::ValuesIn(strides),
-                       ::testing::Values(0, 1)), // 0 -> FWD, 1 -> BWD
+                       ::testing::ValuesIn(io_params)),
     name_generator);
 #endif
 #ifdef ENABLE_AVX256
@@ -272,14 +267,12 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     AVX256KernelTest, AoclfftzKernelTestFloat,
     ::testing::Combine(::testing::ValuesIn(param_float_avx256_kernels),
-                       ::testing::ValuesIn(strides),
-                       ::testing::Values(0, 1)), // 0 -> FWD, 1 -> BWD
+                       ::testing::ValuesIn(io_params)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     AVX256KernelTest, AoclfftzKernelTestDouble,
     ::testing::Combine(::testing::ValuesIn(param_double_avx256_kernels),
-                       ::testing::ValuesIn(strides),
-                       ::testing::Values(0, 1)), // 0 -> FWD, 1 -> BWD
+                       ::testing::ValuesIn(io_params)),
     name_generator);
 #endif

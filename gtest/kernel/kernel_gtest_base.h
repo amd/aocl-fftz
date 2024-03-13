@@ -54,7 +54,7 @@
 template <class T>
 class AoclfftzKernelTestBase
     : public ::testing::TestWithParam<std::tuple<aoclfftz_kernel_test_params_t,
-                                                 std::pair<INTP, INTP>, UINT8>>
+                                      std::tuple<INTP, INTP, INTP, UINT8>>>
 {
   protected:
     bool use_special;          // whether to use special inputs or not
@@ -85,39 +85,27 @@ class AoclfftzKernelTestBase
      * @brief A high level function to run the kernel tests based on the given
      * test parameter (aoclfftz_kernel_test_params_t)
      *
-     * @param num_sets number of sets (batches) of the data, if num_sets <= 0,
-     * then random sets will be used between range [2, 10]
      * @param special if true, special values like NaN, infinity and
      * sub-normals values will be used in input data (default: false)
      *
      */
-    void run_kernel_test(INT32 num_sets, bool special = false)
+    void run_kernel_test(bool special = false)
     {
         use_special = special;
         auto param = std::get<0>(GetParam());
-        stride.in_stride = std::get<1>(GetParam()).first;
-        stride.out_stride = std::get<1>(GetParam()).second;
-        stride.v_in_stride = 1;
+        auto io_param = std::get<1>(GetParam());
+        stride.in_stride  = std::get<0>(io_param);
+        stride.out_stride = std::get<1>(io_param);
+        stride.v_in_stride  = 1;
         stride.v_out_stride = 1;
-        is_bwd = std::get<2>(GetParam());
-        radix = std::get<0>(param);
+        offset = std::get<2>(io_param);
+        is_bwd = std::get<3>(io_param);
+        radix  = std::get<0>(param);
         kernel_type = std::get<1>(param);
         UINT8 test_type = std::get<2>(param);
 
         // Each set represents a data of size `radix`
         // hence, data length = radix * offset
-
-        // Use the offset from argument
-        if (num_sets > 0)
-        {
-            offset = num_sets;
-        }
-        // Use random offset when num_sets <= 0
-        // Random of offset ranges between [2, 10]
-        else
-        {
-            offset = (rand() % 9) + 2;
-        }
         length = radix * offset;
         wrapper_kernel_fp_list *table = get_kernel_table(kernel_type);
         if (table == nullptr)
