@@ -61,6 +61,20 @@ if(NOT googletest_POPULATED)
     add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
+find_package(benchmark QUIET)
+
+if(NOT benchmark_FOUND)
+    message("Fetching and Configuring Google Benchmark")
+    FetchContent_Declare(
+        benchmark
+        GIT_REPOSITORY "https://github.com/google/benchmark.git"
+        GIT_TAG v1.8.3 # Latest release
+    )
+    FetchContent_MakeAvailable(benchmark)
+endif()
+
+set(BENCHMARK_ENABLE_LIBPFM ON)
+
 # gtest/aoclfftz_core_wrapper.h and gtest/aoclfftz_core_wrapper.c files
 # will be added to a separately built core library for gtest
 # since it uses the core functions directly to create wrapper version of
@@ -92,11 +106,20 @@ file(GLOB GTEST_SRC_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/gtest/*/*.cpp)
 
 foreach(FILE ${GTEST_SRC_FILES})
     string(REGEX MATCH "[A-Za-z0-9_]*_gtest" TNAME ${FILE})
+    if("${TNAME}" STREQUAL "")
+        continue()
+    endif()
     add_executable(${TNAME} ${FILE})
     target_link_libraries(${TNAME} ${gtest_lib_name} GTest::gtest_main)
 endforeach()
 
 foreach(FILE ${GTEST_SRC_FILES})
     string(REGEX MATCH "[A-Za-z0-9_]*_gtest" TNAME ${FILE})
+    if("${TNAME}" STREQUAL "")
+        continue()
+    endif()
     gtest_discover_tests(${TNAME})
 endforeach()
+
+add_executable(kernel_perf_test ${CMAKE_SOURCE_DIR}/gtest/kernel/kernel_perf_test.cpp)
+target_link_libraries(kernel_perf_test ${gtest_lib_name} GTest::gtest_main benchmark::benchmark)
