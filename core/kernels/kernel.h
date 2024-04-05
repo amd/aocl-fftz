@@ -67,6 +67,17 @@
 #define RADIX_15 15
 #define RADIX_16 16
 
+// Implies the number of sets that can be processed in parallel.
+// Computed using - (register_width / (2 * 8 * sizeof(floating point)))
+#define NUM_SETS_C_S 1
+#define NUM_SETS_C_D 1
+#define NUM_SETS_128_S 2
+#define NUM_SETS_128_D 1
+#define NUM_SETS_256_S 4
+#define NUM_SETS_256_D 2
+#define NUM_SETS_512_S 8
+#define NUM_SETS_512_D 4
+
 // Error return codes related to Kernel
 // Add more codes at the top
 typedef enum
@@ -97,6 +108,7 @@ typedef struct kernel
     kfft_ kfft;
     k_ops_cnt_ k_ops_cnt;
     UINT32 radix;
+    UINT8 sets[NUM_PRECISIONS];
 } kernel_t;
 
 // Function declarations for the common routines

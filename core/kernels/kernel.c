@@ -59,6 +59,8 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
                     kernels_c[num_list_kernels].k_ops_cnt;
                 kertab[num_kernels].radix =
                     kernels_c[num_list_kernels].radix;
+                kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_C_S; // float
+                kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_C_D; // double
                 num_kernels++;
             }
         }
@@ -80,6 +82,8 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
                     kernels_avx128[num_list_kernels].k_ops_cnt;
                 kertab[num_kernels].radix =
                     kernels_avx128[num_list_kernels].radix;
+                kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_128_S; // float
+                kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_128_D; // double
                 num_kernels++;
             }
         }
@@ -102,6 +106,8 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
                     kernels_avx256[num_list_kernels].k_ops_cnt;
                 kertab[num_kernels].radix =
                     kernels_avx256[num_list_kernels].radix;
+                kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_256_S; // float
+                kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_256_D; // double
                 num_kernels++;
             }
         }
@@ -124,6 +130,8 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
                     kernels_avx512[num_list_kernels].k_ops_cnt;
                 kertab[num_kernels].radix =
                     kernels_avx512[num_list_kernels].radix;
+                kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_512_S; // float
+                kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_512_D; // double
                 num_kernels++;
             }
         }

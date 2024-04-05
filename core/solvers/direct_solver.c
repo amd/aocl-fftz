@@ -53,6 +53,7 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     ops_cycles_t ops_cycles;
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     INT32 status = SOLVER_SUCCESS;
+    UINT8 sets = kernel->sets[precision - 2];
 
     strides->in_stride = sol->decomp_scheme->dims[0].in_stride;
     strides->out_stride = sol->decomp_scheme->dims[0].out_stride;
@@ -65,12 +66,17 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         /** Fixed mode **/
         cost->time = 0;
         ops_cycles = kernel->k_ops_cnt(precision);
-        cost->ops = n * ((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
-                         (ops_cycles.mul * AMD_ZEN_FP_FMA_CYCLES) +
-                         (ops_cycles.add * AMD_ZEN_FP_FMA_CYCLES) +
-                         (ops_cycles.move * AMD_ZEN_FP_FMA_CYCLES) +
-                         (ops_cycles.perm * AMD_ZEN_FP_FMA_CYCLES) +
-                         (ops_cycles.other * AMD_ZEN_FP_FMA_CYCLES));
+        cost->ops = ((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
+                     (ops_cycles.mul * AMD_ZEN_FP_MUL_CYCLES) +
+                     (ops_cycles.add * AMD_ZEN_FP_ADD_CYCLES) +
+                     (ops_cycles.move * AMD_ZEN_FP_MOVE_CYCLES) +
+                     (ops_cycles.perm * AMD_ZEN_FP_PERM_CYCLES) +
+                     (ops_cycles.other * AMD_ZEN_FP_OTHER_CYCLES));
+        if (n >= sets)
+        {
+            cost->ops = (cost->ops + sets - 1) / sets; // ceil div
+        }
+        cost->ops = cost->ops * n;
     }
     else
     {
@@ -93,12 +99,17 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         getTime(endTime);
         cost->time = diffTime(clkTick, startTime, endTime);
         ops_cycles = kernel->k_ops_cnt(precision);
-        cost->ops = n * ((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
-                         (ops_cycles.mul * AMD_ZEN_FP_FMA_CYCLES) +
-                         (ops_cycles.add * AMD_ZEN_FP_FMA_CYCLES) +
-                         (ops_cycles.move * AMD_ZEN_FP_FMA_CYCLES) +
-                         (ops_cycles.perm * AMD_ZEN_FP_FMA_CYCLES) +
-                         (ops_cycles.other * AMD_ZEN_FP_FMA_CYCLES));
+        cost->ops = ((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
+                     (ops_cycles.mul * AMD_ZEN_FP_MUL_CYCLES) +
+                     (ops_cycles.add * AMD_ZEN_FP_ADD_CYCLES) +
+                     (ops_cycles.move * AMD_ZEN_FP_MOVE_CYCLES) +
+                     (ops_cycles.perm * AMD_ZEN_FP_PERM_CYCLES) +
+                     (ops_cycles.other * AMD_ZEN_FP_OTHER_CYCLES));
+        if (n >= sets)
+        {
+            cost->ops = (cost->ops + sets - 1) / sets; // ceil div
+        }
+        cost->ops = cost->ops * n;
     }
 
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
