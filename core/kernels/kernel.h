@@ -178,6 +178,7 @@ ops_cycles_t get_ops_cnt_fft16avx256(INT32 precision);
 
 #ifdef ENABLE_AVX512
 ops_cycles_t get_ops_cnt_fft2avx512(INT32 precision);
+ops_cycles_t get_ops_cnt_fft3avx512(INT32 precision);
 #endif
 
 // C register kernels
@@ -233,6 +234,7 @@ kfft_ register_kernel_fft16avx256(INT32 precision);
 
 #ifdef ENABLE_AVX512
 kfft_ register_kernel_fft2avx512(INT32 precision);
+kfft_ register_kernel_fft3avx512(INT32 precision);
 #endif
 
 // Permuted copy kernels
