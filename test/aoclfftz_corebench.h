@@ -51,6 +51,11 @@
 /* enable this to compare against DFT reference in accuracy mode */
 // #define ENABLE_DFT_REFERENCE
 
+// warmup iterations are set to 2 since each iteration will internally
+// run calibrated no. of iterations which will be sufficient for different
+// sized problems.
+#define WARMUP_ITERATIONS 2
+
 typedef enum
 {
     COMPLEX_TO_COMPLEX = 0,
@@ -139,7 +144,6 @@ typedef struct
     aoclfftz_dim_t_64_ *dims;
     aoclfftz_dim_t_64_ *vecs;
     INT32 num_iterations;
-    INT32 warmup_iterations;
     INT32 seed;
     UCHAR use_random_seed;
     INT32 opt_level;

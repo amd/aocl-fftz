@@ -39,6 +39,7 @@
  *  @author Srirammaswamy Srinivasan
  */
 
+#include <float.h>
 #include <math.h>
 #include <time.h>
 #include "aoclfftz_corebench.h"
@@ -85,8 +86,6 @@ VOID show_help_menu(VOID)
         "complex, 'c2r' for complex to real [default: c2c]\n"
         "-i, --iters              number of iterations [default: 50 for "
         "`performance` mode and 1 for `accuracy` mode]\n"
-        "-w, --warmup-iters       number of warmup iterations, only used in "
-        "performance mode [default: 10]\n"
         "-s, --seed               specify manual seed value, random seed will "
         "be used if this option is not specified\n"
         "                           NOTE: iters will set to 1 if seed is "
@@ -165,10 +164,6 @@ INT32 get_option(CHAR **argv, INT32 arg_idx)
         else if (strcmp(arg, "--iters") == 0 || arg[1] == 'i')
         {
             return 'i';
-        }
-        else if (strcmp(arg, "--warmup-iters") == 0 || arg[1] == 'w')
-        {
-            return 'w';
         }
         else if (strcmp(arg, "--seed") == 0 || arg[1] == 's')
         {
@@ -251,8 +246,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     INT32 vec_rank = 0;
     aoclfftz_dim_t_64_ *dims = NULL;
     aoclfftz_dim_t_64_ *vecs = NULL;
-    INT32 iters = 50;
-    INT32 warmup_iters = 10;
+    INT32 iters = 10;
     INT32 seed = 0;
     UCHAR use_random_seed = 1;
     INT32 opt_level = -1;
@@ -264,13 +258,12 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     UCHAR selector_time = 0;
     INT32 measure_stats = 0;
     INT32 bit_reproducibility = 0;
-    DOUBLE min_bench_time = 10000;
+    DOUBLE min_bench_time = 100; // 100 ms
     UINT32 aligned_alloc = 1;
     INT32 status = PARSER_SUCCESS;
     INT32 ret = PARSER_SUCCESS;
     // check for the dependent arguments
     UCHAR valid_iters_arg_found = 0;
-    UCHAR warmup_iters_arg_found = 0;
 
     CHAR *str_buff = NULL;
     ALLOC_ALIGN_UNINIT(str_buff, CHAR, sizeof(CHAR) * 50);
@@ -428,17 +421,6 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                 valid_iters_arg_found = 0;
             }
             break;
-        case 'w':
-            warmup_iters_arg_found = 1;
-            VALIDATE_AND_GET_INT(optarg, str_buff, warmup_iters, ret, 0);
-            if (ret != 0)
-            {
-                printf("WARNING: Invalid warmup iterations value given, "
-                       "iterations should be 0 or a positive integer, running "
-                       "bench with default value\n");
-                warmup_iters = 10;
-            }
-            break;
         case 's':
             VALIDATE_AND_GET_INT(optarg, str_buff, seed, ret, 0);
             if (ret != 0)
@@ -541,15 +523,14 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         case 306:
             if (atof(optarg) < 10)
             {
-                printf("WARNING: min_bench_time value must be at least 10ms, "
-                       "running bench with default value(10ms)\n");
+                printf("WARNING: min_bench_time value must be at least 10 ms, "
+                       "running bench with default value(10 ms)\n");
                 min_bench_time = 10;
             }
             else
             {
                 min_bench_time = atof(optarg);
             }
-            min_bench_time *= 1000;
             break;
         case 307:
             if (atoi(optarg) == 0)
@@ -643,13 +624,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         }
         else // bench_type == PERFORMANCE
         {
-            iters = 50;
+            iters = 10;
         }
-    }
-    if (warmup_iters_arg_found != 0 && bench_type == ACCURACY)
-    {
-        printf("WARNING: warmup iterations won't be used in ACCURACY mode\n");
-        warmup_iters = 0;
     }
     if (selector_time != 0 && bench_type == ACCURACY)
     {
@@ -662,6 +638,9 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                "provided\n");
         iters = 1;
     }
+
+    // change the min_bench_time unit from ms to ns
+    min_bench_time *= 1e6;
 
     if (bench_params)
     {
@@ -677,7 +656,6 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         bench_params->dir = dir;
         bench_params->fft_type = fft_type;
         bench_params->num_iterations = iters;
-        bench_params->warmup_iterations = warmup_iters;
         bench_params->num_threads = num_threads;
         bench_params->dynamic_load_model = dynamic_load_model;
         bench_params->opt_level = opt_level;
@@ -1035,8 +1013,8 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     timer clk_tick;
 #endif
     timeVal start_time, end_time;
-    UINT64 min_time = INT64_MAX, tot_time = 0, cur_time = 0;
-    DOUBLE avg_time = 0.0, avg_mflops = 0.0, max_mflops = 0.0;
+    DOUBLE min_time = DBL_MAX, avg_time = 0.0, tot_time = 0.0, cur_time = 0.0;
+    DOUBLE avg_mflops = 0.0, max_mflops = 0.0;
     INTP n = calculate_size(params->dims, params->dim_rank);
     INTP batches = calculate_size(params->vecs, params->vec_rank);
     INTP input_size = 0;
@@ -1055,35 +1033,37 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     // prepare random input data
     prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT);
 
-    // warmup iterations (skipped from profiling)
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "WARM-UP START");
-    for (INT32 i = 0; i < params->warmup_iterations; ++i)
+    status = aoclfftz_execute(handle);
+    if (status != AOCLFFTZ_SUCCESS)
     {
-        AOCLFFTZ_LOG_FORMATTED(TRACE, params->logger_mode,
-                               "WARM-UP Iteration: %d", i);
-        status = aoclfftz_execute(handle);
+        return EXECUTION_FAILURE;
+    }
+
+    INT32 iter = calibrate_iterations(handle, params->min_bench_time);
+
+    // warmup iterations (skipped from profiling)
+    // TODO: improvise this logic
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "WARM-UP START");
+    for (INT32 i = 0; i < WARMUP_ITERATIONS; ++i)
+    {
+        INT32 j = iter + 1;
+        while (--j)
+        {
+            aoclfftz_execute(handle);
+        }
     }
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "WARM-UP END");
-
-    INT32 iter = caliberate_iterations(handle, params->min_bench_time);
-    avg_time = 0.0;
-    cur_time = 0;
-    tot_time = 0;
-    min_time = INT64_MAX;
 
     initTimer(clk_tick);
     for (INT32 i = 0; i < params->num_iterations; i++)
     {
         AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode, "Iteration: %d",
-                               i);
+                               i + 1);
+        INT32 j = iter + 1;
         getTime(start_time);
-        for (INT32 j = 0; j < iter; j++)
+        while (--j)
         {
-                status = aoclfftz_execute(handle);
-                if (status != 0)
-                {
-                    return EXECUTION_FAILURE;
-                }
+                aoclfftz_execute(handle);
         }
         getTime(end_time);
         cur_time = diffTime(clk_tick, start_time, end_time);
@@ -1094,7 +1074,9 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
             min_time = cur_time;
         }
         avg_time = (DOUBLE)tot_time / params->num_iterations;
+        bench_sleep(1e8); // 0.1 seconds
     }
+
     // compute MFLOPS from execution time
     max_mflops = (5.0 * n * batches * log2(n)) / (min_time * 1E-3);
     avg_mflops = (5.0 * n * batches * log2(n)) / (avg_time * 1E-3);

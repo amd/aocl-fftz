@@ -303,12 +303,6 @@
                                                        : "COMPLEX_TO_REAL"));  \
         AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
                                "iterations    : %d", params->num_iterations);  \
-        if (params->bench_type == PERFORMANCE)                                 \
-        {                                                                      \
-            AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                  \
-                                   "warmup-iters  : %d",                       \
-                                   params->warmup_iterations);                 \
-        }                                                                      \
         AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
                                "random_seed   : %s",                           \
                                params->use_random_seed ? "TRUE" : "FALSE");    \
@@ -635,7 +629,8 @@ VOID prepare_index_map(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
                        INTP dst_in_idx, INTP dst_out_idx,
                        aoclfftz_dim_t_64_ *dims, INT32 rank);
-INT32 caliberate_iterations(VOID *handle, DOUBLE min_bench_time);
+INT32 calibrate_iterations(VOID *handle, DOUBLE min_bench_time);
+VOID bench_sleep(INT64 nano_seconds);
 
 // Function definitions
 
@@ -759,6 +754,8 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
             }
             if ((is_stride != 0 && is_stride != 2))
             {
+                printf("Only in_stride is not accepted. "
+                       "Please pass both in & out strides (or) no strides.\n");
                 status = SIZE_PARSING_ERROR;
                 goto exit_func;
             }
@@ -1630,12 +1627,13 @@ VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
 /**
  * @brief Computes the number of iterations for benchmarking
  *
+ * @param handle handle object of VOID* type
+ * @param min_bench_time minimum time to run benchmark
  * @return INT32 iterations
  */
-INT32 caliberate_iterations(VOID *handle, DOUBLE min_bench_time)
+INT32 calibrate_iterations(VOID *handle, DOUBLE min_bench_time)
 {
-    DOUBLE minq_time = 1000; // minimum quantifiable time 1 us
-    DOUBLE min_acceptable_time = min_bench_time; //min_acceptable_time
+    DOUBLE minq_time = 1e5; // minimum quantifiable time 100 us
     INT32 increase_iterations = 1;
     DOUBLE cur_time = 0;
 #ifdef WIN32
@@ -1644,10 +1642,12 @@ INT32 caliberate_iterations(VOID *handle, DOUBLE min_bench_time)
     timeVal start_time, end_time;
     initTimer(clk_tick);
     INT32 iters = 1;
+
     for (iters = 1; increase_iterations && iters < INT32_MAX; iters *= 5)
     {
+        INT32 j = iters + 1;
         getTime(start_time);
-        for (INT32 j = 0; j < iters; j++)
+        while (--j)
         {
             aoclfftz_execute(handle);
         }
@@ -1658,16 +1658,30 @@ INT32 caliberate_iterations(VOID *handle, DOUBLE min_bench_time)
         if (cur_time >= minq_time)
         {
             increase_iterations = 0;
-            cur_time = cur_time / 1000;   //change time unit from ns to us
-            if (cur_time > min_acceptable_time)
+            if (cur_time > min_bench_time)
             {
                 return iters;
             }
             //Scaling the iteration for min_acceptable_time
-            return (iters * min_acceptable_time / cur_time);
+            return (iters * min_bench_time / cur_time);
         }
+        bench_sleep(1e8); // 0.1 seconds
     }
     return iters;
+}
+
+/**
+ * @brief Wrapper function for nanosleep
+ *
+ * @param nano_seconds sleep time in nano seconds
+ * @return VOID
+ */
+VOID bench_sleep(INT64 nano_seconds)
+{
+    timeVal t;
+    t.tv_sec = nano_seconds / (INT64)1e9; // 1 second
+    t.tv_nsec = nano_seconds % (INT64)1e9; // 1 second
+    nanosleep(&t, &t);
 }
 
 #endif // AOCLFFTZ_COREBENCH_UTILS_H
