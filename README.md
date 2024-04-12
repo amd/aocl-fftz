@@ -27,7 +27,7 @@ PreRequisites
         GCC compiler - Version 7.1 or above (or)
         AOCC compiler - Version 2.0 or above
 3. Windows :
-        Visual Studio with Clang
+        Visual Studio with Clang 12 or above
 
 Building on Linux
 -----------------
@@ -109,6 +109,14 @@ Option                              |  Description
 ------------------------------------|----------------------------------------------------------------------------------------
 AOCL_TEST_COVERAGE                  |  Enables GTest and AOCL test bench based CTest suite (Disabled by default)
 ENABLE_STRICT_WARNINGS              |  Enables strict warnings (Enabled by default)
+ENABLE_AVX128                       |  Compiles library with AVX 128-bit kernels support (Disabled by default)
+ENABLE_AVX256                       |  Compiles library with AVX 256-bit kernels support (Disabled by default)
+CODE_COVERAGE                       |  Enables source code coverage and generates coverage report. Only supported on Linux with GCC compiler (Disabled by default)
+ASAN                                |  Enables address sanitizer checks. Supported only on Linux Debug build (Disabled by default)
+VALGRIND                            |  Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)
+
+
+Note : Enabling ENABLE_AVX256 turns on ENABLE_AVX128 implicitly.
 
 Running Test Bench On Linux & Windows
 -------------------------------------
@@ -142,8 +150,61 @@ Here are a few sample commands that can be executed within the build directory t
  To run all the tests<br>
  `ctest`
 
+ To run only TestBench<br>
+
+ Linux  : `ctest -R TESTBENCH`<br>
+ Windows : `ctest -C <Release/Debug> -R TESTBENCH`
+
  To run GTest test cases for a specific test case<br>
  `ctest -R <TEST CASE>`
+
+Running source code coverage using GCOV
+---------------------------------------
+
+**Prerequisites :** <br>
+1. gcov
+2. lcov
+3. genhtml
+
+To measure source code coverage, set `CODE_COVERAGE=ON` while configuring the CMake build.<br>
+Build with the custom target option 'code-coverage' to execute tests and generate code coverage data.
+The code coverage reports are generated in the build directory under subdirectory called 'coverage/html_report'. Open the HTML files in browser to view the coverage information.
+
+Sample command to obtain code coverage report :
+```
+cmake --build <build directory> --target install code-coverage
+```
+
+Running Valgrind and ASAN memory checks using CTest
+---------------------------------------------------
+
+To perform memory checks using Valgrind/ASAN, enable the relevant build options `VALGRIND` or `ASAN` while configuring CMake.<br>
+Please note that Valgrind and ASAN options cannot be enabled together and they are supported only in **Linux Debug build** mode.
+
+Sample commands for Valgrind :
+
+Build :
+```
+cmake -B <build directory> <CMakeList.txt filepath> -DCMAKE_BUILD_TYPE=Debug -DVALGRIND=ON
+```
+
+Run :
+```
+ctest -T memcheck
+```
+
+Sample commands for ASAN :
+
+Build :
+```
+cmake -B <build directory> <CMakeList.txt filepath> -DCMAKE_BUILD_TYPE=Debug -DASAN=ON
+```
+
+Run :
+```
+ctest
+```
+
 
 Running Performance Benchmark test
 ----------------------------------
