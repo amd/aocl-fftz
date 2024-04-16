@@ -127,15 +127,15 @@ kernel_fp_list_t kernels_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
 #ifdef ENABLE_AVX512
 kernel_fp_list_t kernels_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
-    {register_kernel_fft2avx512, get_ops_cnt_fft2avx512, 2},  // radix-2
-    {register_kernel_fft3avx512, get_ops_cnt_fft3avx512, 3},  // radix-3
-    {register_kernel_fft4avx512, get_ops_cnt_fft4avx512, 4},  // radix-4
-    {register_kernel_fft5avx512, get_ops_cnt_fft5avx512, 5},  // radix-5
-    {register_kernel_fft6avx512, get_ops_cnt_fft6avx512, 6},  // radix-6
-    {register_kernel_fft7avx512, get_ops_cnt_fft7avx512, 7},  // radix-7
-    {register_kernel_fft8avx512, get_ops_cnt_fft8avx512, 8},  // radix-8
-    {register_kernel_fft9avx512, get_ops_cnt_fft9avx512, 9},  // radix-9
-    {NULL, NULL, 10}, // radix-10
+    {register_kernel_fft2avx512, get_ops_cnt_fft2avx512, 2},    // radix-2
+    {register_kernel_fft3avx512, get_ops_cnt_fft3avx512, 3},    // radix-3
+    {register_kernel_fft4avx512, get_ops_cnt_fft4avx512, 4},    // radix-4
+    {register_kernel_fft5avx512, get_ops_cnt_fft5avx512, 5},    // radix-5
+    {register_kernel_fft6avx512, get_ops_cnt_fft6avx512, 6},    // radix-6
+    {register_kernel_fft7avx512, get_ops_cnt_fft7avx512, 7},    // radix-7
+    {register_kernel_fft8avx512, get_ops_cnt_fft8avx512, 8},    // radix-8
+    {register_kernel_fft9avx512, get_ops_cnt_fft9avx512, 9},    // radix-9
+    {register_kernel_fft10avx512, get_ops_cnt_fft10avx512, 10}, // radix-10
     {NULL, NULL, 11}, // radix-11
     {NULL, NULL, 12}, // radix-12
     {NULL, NULL, 13}, // radix-13
