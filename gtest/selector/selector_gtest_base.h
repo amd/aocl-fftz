@@ -412,9 +412,13 @@ class AoclfftzSelectorTestBase
             FREE_ALIGN_ALLOCATED_MEM(vecs);
             return;
         }
+
+        INT32 new_dim_rank = 1;
+        SHRINK_DIM_RANK(dims, dim_rank, new_dim_rank);
+
         // creating a solution object to store the reference values
         aoclfftz_solution_t *sol;
-        sol = alloc_solution_wrapper(vec_rank, dim_rank);
+        sol = alloc_solution_wrapper(vec_rank, new_dim_rank);
         if (sol == NULL)
         {
             AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "sol creation failed");
@@ -422,19 +426,43 @@ class AoclfftzSelectorTestBase
             FREE_ALIGN_ALLOCATED_MEM(vecs);
             return;
         }
-        sol->decomp_scheme->dim_rank = dim_rank;
-        for (INT32 idx = 0; idx < sol->decomp_scheme->dim_rank; ++idx)
+        sol->decomp_scheme->dim_rank = new_dim_rank;
+        INT32 cnt = 0;
+        for (INT32 idx = 0; idx < dim_rank; ++idx)
         {
-            sol->decomp_scheme->dims[idx].n = dims[idx].n;
-            sol->decomp_scheme->dims[idx].in_stride = dims[idx].in_stride;
+            if (dims[idx].n != 1)
+            {
+                sol->decomp_scheme->dims[cnt].n = dims[idx].n;
+                sol->decomp_scheme->dims[cnt].in_stride = dims[idx].in_stride;
+                //Strides must be equal for inplace problems
+                if (is_in_place)
+                {
+                    sol->decomp_scheme->dims[cnt].out_stride =
+                                        dims[idx].in_stride;
+                }
+                else
+                {
+                    sol->decomp_scheme->dims[cnt].out_stride =
+                                        dims[idx].out_stride;
+                }
+                cnt++;
+            }
+        }
+        // Sets value for atleast one of dims array element in a 1D problem or ND problem
+        // where the dim rank is reduced to one and the size of the dimensions are one.
+        // Example dims:1x1x1  or dims:1
+        if (cnt == 0)
+        {
+            sol->decomp_scheme->dims[0].n = dims[0].n;
+            sol->decomp_scheme->dims[0].in_stride = dims[0].in_stride;
             //Strides must be equal for inplace problems
             if (is_in_place)
             {
-                sol->decomp_scheme->dims[idx].out_stride = dims[idx].in_stride;
+                sol->decomp_scheme->dims[0].out_stride = dims[0].in_stride;
             }
             else
             {
-                sol->decomp_scheme->dims[idx].out_stride = dims[idx].out_stride;
+                sol->decomp_scheme->dims[0].out_stride = dims[0].out_stride;
             }
         }
         sol->decomp_scheme->vec_rank = vec_rank;
@@ -519,8 +547,9 @@ class AoclfftzSelectorTestBase
                 }
                 ret &= ((next_sol->solver->solver_type == SOLVER_CT) ||
                         (next_sol->solver->solver_type == SOLVER_BLUESTEIN) ||
-                        (next_sol->solver->solver_type == SOLVER_NDIM ||
-                        (next_sol->solver->solver_type == SOLVER_DIRECT)));
+                        (next_sol->solver->solver_type == SOLVER_NDIM) ||
+                        (next_sol->solver->solver_type == SOLVER_SIZEONE) ||
+                        (next_sol->solver->solver_type == SOLVER_DIRECT));
                 ret &= next_sol->decomp_scheme->vec_rank == 1;
                 ret &= next_sol->decomp_scheme->vecs[0].n == 1;
                 if (ret == false)
@@ -750,6 +779,18 @@ class AoclfftzSelectorTestBase
                 // traverse along 1D solution and verify its children
                 cur_a = sol_1d;
             }
+            else if (cur_a->solver->solver_type == SOLVER_SIZEONE)
+            {
+                ret &= (cur_a->decomp_scheme->dims[0].n == 1);
+                ret &= (cur_a->next_sol == NULL);
+                if (ret == false)
+                {
+                    AOCLFFTZ_LOG_UNFORMATTED(
+                        ERR, ERR, "Failed at Level 2 compare [SizeOne solver]");
+                    return false;
+                }
+                cur_a = cur_a->next_sol;
+            }
             else
             {
                 AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "Invalid solver type");
@@ -831,7 +872,7 @@ class AoclfftzSelectorTestBase
             (((cur_a->twiddle->TW != NULL) && (cur_b->twiddle->TW != NULL)) ||
              ((cur_a->twiddle->TW == NULL) && (cur_b->twiddle->TW == NULL)));
 
-         if (ret == false)
+        if (ret == false)
         {
             AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "Level 1 compare failed");
             return false;
@@ -892,6 +933,9 @@ class AoclfftzSelectorTestBase
                 case SOLVER_NDIM:
                     ret &= (cur_sol->solver->solver_type == SOLVER_NDIM);
                     nd_sol = cur_sol->nd_sol;
+                    break;
+                case SOLVER_SIZEONE:
+                    ret &= (cur_sol->solver->solver_type == SOLVER_SIZEONE);
                     break;
                 default:
                     ret = false;

@@ -76,6 +76,8 @@ endif()
 set(TEST_SUITE
     "DIRECT_PERFORMANCE ./aocl_fftz_bench 7"                                       # performance
     "BATCHED_CT_WITH_SAME_STRIDE ./aocl_fftz_bench 7v18:2:2 -b a"                  # accuracy
+    "SIZE_ONE ./aocl_fftz_bench 1 -b a"                                            # size one accuracy
+    "SIZE_ONE_BATCHED ./aocl_fftz_bench 5v1:2:3 -b a"                              # size one batched
     "MULTILEVEL_CT_WITH_STRIDES ./aocl_fftz_bench 128:3:2 -b a -m i"               # ILP64 data model
     "CT_WITH_BLUESTEIN ./aocl_fftz_bench 38:4:4 -b a -r i"                         # Inplace
     "BLUESTEIN_WITH_STRIDES ./aocl_fftz_bench 23:5:7 -b a -p f"                    # Float

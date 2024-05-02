@@ -49,7 +49,10 @@ std::string dims_and_vecs[] =
     "7v2:1:1",
     "4v15:1:4",
     "4:60:24v12:5:1",
-    "10:45:24v3:5:2"
+    "10:45:24v3:5:2",
+    //ND problem in which dimensions of size one are reduced and run as direct problem
+    "4:2:3x1",
+    "1x1x1x12x1"
 };
 
 INT32 flags[] =

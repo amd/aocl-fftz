@@ -88,7 +88,9 @@ aoclfftz_selector_test_params_t selector_params[] =
     // multi dimesional batched (3D) transform;
     {"2x6v2x3x4", 0b0000, -1,
      {SOLVER_BATCHED, SOLVER_NDIM, SOLVER_DIRECT, SOLVER_BATCHED,
-      SOLVER_NDIM, SOLVER_DIRECT, SOLVER_DIRECT}}
+      SOLVER_NDIM, SOLVER_DIRECT, SOLVER_DIRECT}},
+    // size one solver test
+    {"6v1", 0b0000, -1, {SOLVER_SIZEONE}}
 };
 
 TEST_P(AoclfftzSelectorTestFloatLP64, TEST_SELECTOR_FLOAT_LP64)

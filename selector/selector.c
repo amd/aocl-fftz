@@ -109,7 +109,7 @@ INT32 check_prime_solvability_bluestein(
     INT32 dim_rank = decomp_scheme->dim_rank;
     INT32 vec_rank = decomp_scheme->vec_rank;
 
-    if (dim_rank != 1 || vec_rank != 1 || batch != 1)
+    if (n == 1 || dim_rank != 1 || vec_rank != 1 || batch != 1)
         return 0;
 
     // n is solvable by bluestein solver if is not solvable by direct
@@ -146,13 +146,14 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
     // Batches are contiguous in memory, they can be clubbed.
 
     //SOLVER_BATCHED
-    level1_cond1 = ((vec_rank > 1) ||  /* ND Batched */
+    level1_cond1 = ((sel->solution->decomp_scheme->dims[0].n != 1) && /* size one */
+                    ((vec_rank > 1) ||  /* ND Batched */
                     /* 1D Batched 1D Non-direct cases*/
                     ((sel->solution->decomp_scheme->vecs[0].n > 1) &&
                                             !is_FFT_ker_supported) ||
                     /* 1D Batched ND case*/
                     (dim_rank > 1 &&
-                        sel->solution->decomp_scheme->vecs[0].n > 1));
+                        sel->solution->decomp_scheme->vecs[0].n > 1)));
     //SOLVER_NDIM
     level1_cond1 |= ((dim_rank > 1) << 1);
     //SOLVER_BLUESTEIN
@@ -227,9 +228,18 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
         ret = selector_permuted_dft(sel, kertab);
         return ret;
     }
-
     /** Level 2 decisions : CT Solver and Kernels **/
-    if (level2_cond & 0x1)
+    //Size one problem
+    if (sel->solution->decomp_scheme->dims[0].n == 1)
+    {
+        solver_obj->solver_type = SOLVER_SIZEONE;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+            return SELECTOR_FAILURE;
+
+        //No setup for SizeOne problem
+        return SELECTOR_SUCCESS;
+    }
+    else if (level2_cond & 0x1)
     {
         solver_obj->solver_type = SOLVER_DIRECT;
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
@@ -280,8 +290,13 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
     aoclfftz_selector_t *sel_obj = NULL;
 
+    //shrink dim_rank
+    //used in n dim case where size one problems are removed
+    INT32 dim_rank = 1;
+    SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
+
     //allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, problem->dim_rank);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank);
     if (sel_obj == NULL)
         return NULL;
 
@@ -297,7 +312,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
         goto exit_setup_dft_f;
 
     //Initialize decomposition scheme data object
-    INIT_DECOMP_SCHEME(sel_obj, problem);
+    INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_FLOAT);
 
     //Select the best solution for the given input problem
@@ -321,8 +336,13 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
     aoclfftz_selector_t *sel_obj = NULL;
 
+    //shrink dim_rank
+    //used in n dim case where size one problems are removed
+    INT32 dim_rank = 1;
+    SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
+
     //allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, problem->dim_rank);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank);
     if (sel_obj == NULL)
         return NULL;
 
@@ -338,7 +358,7 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
         goto exit_setup_dft_d;
 
     //Initialize decomposition scheme data object
-    INIT_DECOMP_SCHEME(sel_obj, problem);
+    INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_DOUBLE);
 
     //Select the best solution for the given input problem
@@ -362,8 +382,13 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
     aoclfftz_selector_t *sel_obj = NULL;
 
+    //shrink dim_rank
+    //used in n dim case where size one problems are removed
+    INT32 dim_rank = 1;
+    SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
+
     //allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, problem->dim_rank);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank);
     if (sel_obj == NULL)
         return NULL;
 
@@ -379,7 +404,7 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
         goto exit_setup_dft_f_64_;
 
     //Initialize decomposition scheme data object
-    INIT_DECOMP_SCHEME(sel_obj, problem);
+    INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_FLOAT);
 
     //Select the best solution for the given input problem
@@ -403,8 +428,13 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
     aoclfftz_selector_t *sel_obj = NULL;
 
+    //shrink dim_rank
+    //used in n dim case where size one problems are removed
+    INT32 dim_rank = 1;
+    SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
+
     //allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, problem->dim_rank);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank);
     if (sel_obj == NULL)
         return NULL;
 
@@ -420,7 +450,7 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
         goto exit_setup_dft_d_64_;
 
     //Initialize decomposition scheme data object
-    INIT_DECOMP_SCHEME(sel_obj, problem);
+    INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_DOUBLE);
 
     //Select the best solution for the given input problem

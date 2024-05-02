@@ -61,19 +61,35 @@ typedef struct aoclfftz_selector
 } aoclfftz_selector_t;
 
 // macro functions
-#define INIT_DECOMP_SCHEME(sel_obj, problem)                                   \
+#define INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank)                         \
     {                                                                          \
         sel_obj->solution->decomp_scheme->vec_rank = problem->vec_rank;        \
-        sel_obj->solution->decomp_scheme->dim_rank = problem->dim_rank;        \
-        UINT32 cnt;                                                            \
+        sel_obj->solution->decomp_scheme->dim_rank = dim_rank;                 \
+        UINT32 cnt, idx = 0;                                                   \
         for (cnt = 0; cnt < problem->dim_rank; cnt++)                          \
         {                                                                      \
-            sel_obj->solution->decomp_scheme->dims[cnt].n =                    \
-                problem->dims[cnt].n;                                          \
-            sel_obj->solution->decomp_scheme->dims[cnt].in_stride =            \
-                problem->dims[cnt].in_stride;                                  \
-            sel_obj->solution->decomp_scheme->dims[cnt].out_stride =           \
-                problem->dims[cnt].out_stride;                                 \
+            if (problem->dims[cnt].n != 1 )                                    \
+            {                                                                  \
+                sel_obj->solution->decomp_scheme->dims[idx].n =                \
+                    problem->dims[cnt].n;                                      \
+                sel_obj->solution->decomp_scheme->dims[idx].in_stride =        \
+                    problem->dims[cnt].in_stride;                              \
+                sel_obj->solution->decomp_scheme->dims[idx].out_stride =       \
+                    problem->dims[cnt].out_stride;                             \
+                idx++;                                                         \
+            }                                                                  \
+        }                                                                      \
+        /* Gets Executed in scenario where the shrinked dim_rank is one and the\
+           problem size is also one.                                           \
+           Example: 1x1x1 or 1 */                                              \
+        if (idx == 0)                                                          \
+        {                                                                      \
+            sel_obj->solution->decomp_scheme->dims[0].n =                      \
+                problem->dims[0].n;                                            \
+            sel_obj->solution->decomp_scheme->dims[0].in_stride =              \
+                problem->dims[0].in_stride;                                    \
+            sel_obj->solution->decomp_scheme->dims[0].out_stride =             \
+                problem->dims[0].out_stride;                                   \
         }                                                                      \
         for (cnt = 0; cnt < problem->vec_rank; cnt++)                          \
         {                                                                      \
@@ -268,6 +284,29 @@ typedef struct aoclfftz_selector
     {                                                                          \
         sol->cost_analysis->ops = 0;                                           \
         sol->cost_analysis->time = 0;                                          \
+    }
+
+// Shrink_dim_rank : returns the new dim rank by adding the no of dimentions
+// those size is not equal to one.
+// Ex:- 2x1x3x1, returns 2
+#define SHRINK_DIM_RANK(dims, dim_rank, ret)                                   \
+    {                                                                          \
+        if (dim_rank == 1)                                                     \
+        {                                                                      \
+            ret = 1;                                                           \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
+            INT32 dim_rank_counter = 0;                                        \
+            for(INT32 i = 0; i < dim_rank; i++)                                \
+            {                                                                  \
+                if (dims[i].n != 1)                                            \
+                {                                                              \
+                    dim_rank_counter++;                                        \
+                }                                                              \
+            }                                                                  \
+            ret = dim_rank_counter > 0 ? dim_rank_counter : 1;                 \
+        }                                                                      \
     }
 
 // Function declarations
