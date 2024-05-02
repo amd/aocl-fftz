@@ -38,7 +38,6 @@
  * @author Jeya R
  *
  */
-
 #include "core/kernels/kernel.h"
 
 #ifdef USE_OPT_KERNEL_VARIANT
@@ -109,282 +108,246 @@ static VOID fft15c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v6r, v6i, v7r,
-               v7i, v8r, v8i, v9r, v9i, v10r, v10i, v11r, v11i, v12r, v12i,
-               v13r, v13i, v14r, v14i, v15r, v15i,
+        DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, av1, av2, av3, av4, av5, av6, av7,
+               av8, av9, av10, av11, av12, av13, av14, av15, av16, av17, av18,
+               av19, tv1, tv2, tv3, tv4, tv5, tv6, tv7, tv8, tv9, tv10, tv11,
+               tv12, cv1r, cv1i, cv1, cv2, cv3, cv4, cv5, cv6, cv7, cv8, cv9,
+               cv10, cv11, cv12, cv13, cv14, cv15, cv16;
 
-               tv1, tv2, tv3, tv4, tv5, tv6, tv7, tv8, tv9, tv10, tv11, tv12,
-               tv13, tv14, tv15, tv16, tv17, tv18, cv1r, cv1i, cv2r, cv2i, av3,
-               av4, av5, av6, av7, av8, av9, av10, av11, av12, av13, av14,
-               av15, av16, av17, av18, av19, av20, av21, av22, av23, av24, av25,
-               av26, av27, av28, av29, av30, av31, av32, av33, av34, cv1, cv2,
-               cv19, cv25, cv7, cv8, cv13, cv14, cv20, cv26, cv4, cv5, cv12,
-               cv16, cv10;
+        v1r = in_r[in_strides[2]];
+        v2r = in_r[in_strides[7]];
+        v3r = in_r[in_strides[12]];
 
-        // Input point 1: x(0)
-        v1r = *in_r;
-        v1i = *in_i;
+        av1 = v1r + v2r;
+        av2 = v1r - v2r;
+        av3 = v3r + av1;
+        av4 = v3r - (CRTM_15_5 * av1);
 
-        // Input point 2: x(1)
-        v2r = in_r[in_strides[1]];
-        v2i = in_i[in_strides[1]];
+        v1i = in_i[in_strides[2]];
+        v2i = in_i[in_strides[7]];
+        v3i = in_i[in_strides[12]];
 
-        // Input point 3: x(2)
-        v3r = in_r[in_strides[2]];
-        v3i = in_i[in_strides[2]];
+        av1 = v1i + v2i;
+        av5 = v1i - v2i;
+        av6 = v3i + av1;
+        av7 = v3i - (CRTM_15_5 * av1);
 
-        // Input point 4: x(3)
-        v4r = in_r[in_strides[3]];
-        v4i = in_i[in_strides[3]];
+        v1r = in_r[in_strides[8]];
+        v2r = in_r[in_strides[13]];
+        v3r = in_r[in_strides[3]];
 
-        // Input point 5: x(4)
-        v5r = in_r[in_strides[4]];
-        v5i = in_i[in_strides[4]];
+        av1 = v1r + v2r;
+        av8 = v2r - v1r;
+        av9 = v3r + av1;
+        av10 = v3r - (CRTM_15_5 * av1);
 
-        // Input point 6: x(5)
-        v6r = in_r[in_strides[5]];
-        v6i = in_i[in_strides[5]];
+        v1i = in_i[in_strides[8]];
+        v2i = in_i[in_strides[13]];
+        v3i = in_i[in_strides[3]];
 
-        // Input point 7: x(6)
-        v7r = in_r[in_strides[6]];
-        v7i = in_i[in_strides[6]];
+        av1 = v1i + v2i;
+        av11 = v2i - v1i;
+        av12 = v3i + av1;
+        av13 = v3i - (CRTM_15_5 * av1);
 
-        // Input point 8: x(7)
-        v8r = in_r[in_strides[7]];
-        v8i = in_i[in_strides[7]];
+        cv1 = av10 + av4;
+        cv2 = av10 - av4;
+        cv3 = av13 + av7;
+        cv4 = av13 - av7;
+        cv5 = av8 + av2;
+        cv6 = av8 - av2;
+        cv7 = av11 + av5;
+        cv8 = av11 - av5;
 
-        // Input point 9: x(8)
-        v9r = in_r[in_strides[8]];
-        v9i = in_i[in_strides[8]];
+        v1r = in_r[in_strides[1]];
+        v2r = in_r[in_strides[11]];
+        v3r = in_r[in_strides[6]];
 
-        // Input point 10: x(9)
-        v10r = in_r[in_strides[9]];
-        v10i = in_i[in_strides[9]];
+        av1 = v1r + v2r;
+        av2 = v2r - v1r;
+        av14 = v3r + av1;
+        av4 = v3r - (CRTM_15_5 * av1);
 
-        // Input point 11: x(10)
-        v11r = in_r[in_strides[10]];
-        v11i = in_i[in_strides[10]];
+        v1i = in_i[in_strides[1]];
+        v2i = in_i[in_strides[11]];
+        v3i = in_i[in_strides[6]];
 
-        // Input point 12: x(11)
-        v12r = in_r[in_strides[11]];
-        v12i = in_i[in_strides[11]];
+        av1 = v1i + v2i;
+        av5 = v2i - v1i;
+        av15 = v3i + av1;
+        av7 = v3i - (CRTM_15_5 * av1);
 
-        // Input point 13: x(12)
-        v13r = in_r[in_strides[12]];
-        v13i = in_i[in_strides[12]];
+        v1r = in_r[in_strides[4]];
+        v2r = in_r[in_strides[14]];
+        v3r = in_r[in_strides[9]];
 
-        // Input point 14: x(13)
-        v14r = in_r[in_strides[13]];
-        v14i = in_i[in_strides[13]];
+        av1 = v1r + v2r;
+        av8 = v2r - v1r;
+        av16 = v3r + av1;
+        av10 = v3r - (CRTM_15_5 * av1);
 
-        // Input point 15: x(14)
-        v15r = in_r[in_strides[14]];
-        v15i = in_i[in_strides[14]];
+        v1i = in_i[in_strides[4]];
+        v2i = in_i[in_strides[14]];
+        v3i = in_i[in_strides[9]];
 
-        // common calculations
-        tv1 = v11r + v6r;
-        tv2 = v11i + v6i;
-        cv1 = v1r + tv1;
-        cv2 = v1i + tv2;
-        av3 = v1r - (CRTM_15_5 * tv1);
-        av4 = v1i - (CRTM_15_5 * tv2);
+        av1 = v1i + v2i;
+        av11 = v2i - v1i;
+        av17 = v3i + av1;
+        av13 = v3i - (CRTM_15_5 * av1);
 
-        av5 = CRTM_15_6 * (v11r - v6r);
-        av6 = CRTM_15_6 * (v11i - v6i);
+        cv9 = av10 + av4;
+        cv10 = av4 - av10;
+        cv11 = av13 + av7;
+        cv12 = av7 - av13;
+        cv13 = av8 + av2;
+        cv14 = av2 - av8;
+        cv15 = av11 + av5;
+        cv16 = av5 - av11;
 
-        tv1 = v3r + v8r;
-        tv2 = v3i + v8i;
-        cv7 = v13r + tv1;
-        cv8 = v13i + tv2;
-        av7 = v13r - (CRTM_15_5 * tv1);
-        av8 = v13i - (CRTM_15_5 * tv2);
+        v1r = in_r[in_strides[5]];
+        v2r = in_r[in_strides[10]];
+        v3r = *in_r;
 
-        av9 = v3r - v8r;
-        av10 = v3i - v8i;
+        av1 = v1r + v2r;
+        av2 = CRTM_15_6 * (v2r - v1r);
+        av18 = v3r + av1;
+        av4 = v3r - (CRTM_15_5 * av1);
 
-        tv1 = v14r + v9r;
-        tv2 = v14i + v9i;
-        cv13 = v4r + tv1;
-        cv14 = v4i + tv2;
-        av11 = v4r - (CRTM_15_5 * tv1);
-        av12 = v4i - (CRTM_15_5 * tv2);
+        v1i = in_i[in_strides[5]];
+        v2i = in_i[in_strides[10]];
+        v3i = *in_i;
 
-        av13 = v14r - v9r;
-        av14 = v14i - v9i;
+        av1 = v1i + v2i;
+        av5 = CRTM_15_6 * (v2i - v1i);
+        av19 = v3i + av1;
+        av7 = v3i - (CRTM_15_5 * av1);
 
-        tv1 = v12r + v2r;
-        tv2 = v12i + v2i;
-        cv19 = v7r + tv1;
-        cv20 = v7i + tv2;
-        av15 = v7r - (CRTM_15_5 * tv1);
-        av16 = v7i - (CRTM_15_5 * tv2);
-
-        av17 = v12r - v2r;
-        av18 = v12i - v2i;
-
-        tv1 = v15r + v5r;
-        tv2 = v15i + v5i;
-        cv25 = v10r + tv1;
-        cv26 = v10i + tv2;
-        av19 = v10r - (CRTM_15_5 * tv1);
-        av20 = v10i - (CRTM_15_5 * tv2);
-
-        av21 = v15r - v5r;
-        av22 = v15i - v5i;
-
-        tv1 = cv25 + cv19;
-        tv2 = cv7 + cv13;
+        tv1 = av16 + av14;
+        tv2 = av3 + av9;
+        tv11 = av9 - av3;
+        tv12 = av16 - av14;
         tv3 = tv1 + tv2;
         tv4 = CRTM_15_1 * (tv1 - tv2);
-        tv5 = cv1 - (CRTM_15_2 * tv3);
-        tv6 = cv8 - cv14;
-        tv1 = cv20 - cv26;
+        tv5 = av18 - (CRTM_15_2 * tv3);
+
+        *out_r = av18 + tv3;
+
+        tv6 = av6 - av12;
+        tv8 = av6 + av12;
+        tv1 = av15 - av17;
+        tv7 = av17 + av15;
         tv2 = (CRTM_15_3 * tv1) + (CRTM_15_4 * tv6);
         cv1r = tv5 + tv4;
 
-        tv7 = cv26 + cv20;
-        tv8 = cv8 + cv14;
-        tv9 = tv7 + tv8;
-        tv10 = CRTM_15_1 * (tv7 - tv8);
-        tv11 = cv2 - (CRTM_15_2 * tv9);
-        tv12 = cv13 - cv7;
-        tv7 = cv25 - cv19;
-        tv8 = (CRTM_15_3 * tv7) + (CRTM_15_4 * tv12);
-        cv1i = tv11 + tv10;
-
-        // Output point 1: X(0)
-        *out_r = cv1 + tv3;
-        *out_i = cv2 + tv9;
-
-        // Output point 4: X(3)
         out_r[out_strides[3]] = cv1r + tv2;
-        out_i[out_strides[3]] = cv1i + tv8;
-
-        // Output point 13: X(12)
         out_r[out_strides[12]] = cv1r - tv2;
+
+        tv3 = tv7 + tv8;
+        tv9 = CRTM_15_1 * (tv7 - tv8);
+        tv10 = av19 - (CRTM_15_2 * tv3);
+
+        *out_i = av19 + tv3;
+
+        tv8 = (CRTM_15_3 * tv12) + (CRTM_15_4 * tv11);
+        cv1i = tv10 + tv9;
+        out_i[out_strides[3]] = cv1i + tv8;
         out_i[out_strides[12]] = cv1i - tv8;
 
         cv1r = tv5 - tv4;
-        cv1i = tv11 - tv10;
         tv2 = (CRTM_15_4 * tv1) - (CRTM_15_3 * tv6);
-        tv8 = (CRTM_15_4 * tv7) - (CRTM_15_3 * tv12);
+        cv1i = tv10 - tv9;
+        tv8 = (CRTM_15_4 * tv12) - (CRTM_15_3 * tv11);
 
-        // Output point 7: X(6)
         out_r[out_strides[6]] = cv1r + tv2;
-        out_i[out_strides[6]] = cv1i + tv8;
-
-        // Output point 10: X(9)
         out_r[out_strides[9]] = cv1r - tv2;
+        out_i[out_strides[6]] = cv1i + tv8;
         out_i[out_strides[9]] = cv1i - tv8;
 
-        av23 = av19 + av15;
-        av24 = av11 + av7;
-        av25 = av20 + av16;
-        av26 = av12 + av8;
-        av27 = av23 + av24;
-        av28 = av25 + av26;
+        tv1 = CRTM_15_1 * (cv9 - cv1);
+        tv2 = CRTM_15_9 * (cv15 + cv8);
+        tv3 = cv9 + cv1;
+        tv4 = cv8 - cv15;
+        tv5 = tv3 + av4;
+        tv6 = CRTM_15_6 * tv4 + av5;
 
-        av29 = av14 - av10;
-        av30 = av22 + av18;
-        av31 = av29 - av30;
-        av32 = av21 + av17;
-        av33 = av13 - av9;
-        av34 = av32 - av33;
+        out_r[out_strides[5]] = tv5 + tv6;
+        out_r[out_strides[10]] = tv5 - tv6;
 
-        cv1r = av27 + av3;
-        cv1i = av28 + av4;
-        cv2r = (CRTM_15_6 * av31) + av6;
-        cv2i = (CRTM_15_6 * av34) - av5;
-        // Output point 6: X(5)
-        out_r[out_strides[5]] = cv1r + cv2r;
-        out_i[out_strides[5]] = cv1i + cv2i;
-        // Output point 11: X(10)
-        out_r[out_strides[10]] = cv1r - cv2r;
-        out_i[out_strides[10]] = cv1i - cv2i;
+        tv7 = CRTM_15_1 * (cv11 - cv3);
+        tv8 = CRTM_15_9 * (cv13 + cv6);
+        tv9 = cv11 + cv3;
+        tv10 = cv13 - cv6;
+        tv5 = tv9 + av7;
+        tv6 = CRTM_15_6 * tv10 - av2;
 
-        tv1 = av3 - (CRTM_15_2 * av27);
-        tv2 = (CRTM_15_10 * av31) - av6;
-        tv3 = tv2 + tv1;
-        tv4 = tv1 - tv2;
-        tv1 = CRTM_15_1 * (av23 - av24);
-        tv2 = CRTM_15_9 * (av30 + av29);
-        tv5 = tv2 - tv1;
-        tv6 = tv1 + tv2;
+        out_i[out_strides[5]] = tv5 + tv6;
+        out_i[out_strides[10]] = tv5 - tv6;
 
-        cv1r = tv3 - tv6;
-        tv1  = av5 + (CRTM_15_10 * av34);
-        tv2  = av4 - (CRTM_15_2 * av28);
-        tv11 = tv1 + tv2;
-        tv12 = tv2 - tv1;
-        tv1  = CRTM_15_1 * (av25 - av26);
-        tv2  = CRTM_15_9 * (av32 + av33);
-        tv13 = tv1 - tv2;
-        tv14 = tv2 + tv1;
-        cv1i = tv11 - tv13;
+        tv5 = av4 - (CRTM_15_2 * tv3);
+        tv6 = (CRTM_15_10 * tv4) - av5;
+        tv11 = av7 - (CRTM_15_2 * tv9);
+        tv12 = av2 + (CRTM_15_10 * tv10);
+        tv3 = tv6 + tv5;
+        tv4 = tv5 - tv6;
+        tv9 = tv2 - tv1;
+        tv10 = tv1 + tv2;
 
-        cv2 = av11 - av7;
-        cv4 = av12 - av8;
-        cv5 = av13 + av9;
-        cv7 = av14 + av10;
+        cv1r = tv3 - tv10;
+        cv1 = (CRTM_15_4 * cv12) + (CRTM_15_3 * cv4);
+        cv3 = (CRTM_15_8 * cv5) - (CRTM_15_7 * cv14);
+        cv6 = cv1 + cv3;
+        cv8 = cv1 - cv3;
 
-        cv14 = av17 - av21;
-        cv10 = av15 - av19;
-        cv12 = av16 - av20;
-        cv16 = av18 - av22;
+        out_r[out_strides[1]] = cv1r + cv6;
+        out_r[out_strides[4]] = cv1r - cv6;
 
-        tv7  = (CRTM_15_4 * cv12) + (CRTM_15_3 * cv4);
-        tv8  = (CRTM_15_8 * cv5) - (CRTM_15_7 * cv14);
-        cv2r = tv7 + tv8;
-        tv15 = (CRTM_15_4 * cv10) + (CRTM_15_3 * cv2);
-        tv16 = (CRTM_15_8 * cv7) - (CRTM_15_7 * cv16);
-        cv2i = tv16 - tv15;
+        cv1r = tv3 + tv10;
+        cv1 = (CRTM_15_8 * cv14) + (CRTM_15_7 * cv5);
+        cv3 = (CRTM_15_4 * cv4) - (CRTM_15_3 * cv12);
+        cv6 = cv3 + cv1;
 
-        // Output point 2: X(1)
-        out_r[out_strides[1]] = cv1r + cv2r;
-        out_i[out_strides[1]] = cv1i + cv2i;
-        // Output point 5: X(4)
-        out_r[out_strides[4]] = cv1r - cv2r;
-        out_i[out_strides[4]] = cv1i - cv2i;
+        out_r[out_strides[7]] = cv1r + cv6;
+        out_r[out_strides[13]] = cv1r - cv6;
 
-        cv1r = tv3 + tv6;
-        tv9  = (CRTM_15_8 * cv14) + (CRTM_15_7 * cv5);
-        tv10 = (CRTM_15_4 * cv4) - (CRTM_15_3 * cv12);
-        cv2r = tv9 + tv10;
+        tv1 = tv12 + tv11;
+        tv2 = tv11 - tv12;
+        tv3 = tv7 - tv8;
+        tv5 = tv8 + tv7;
+        cv1i = tv1 - tv3;
 
-        cv1i = tv11 + tv13;
-        tv17 = (CRTM_15_8 * cv16) + (CRTM_15_7 * cv7);
-        tv18 = (CRTM_15_3 * cv10) - (CRTM_15_4 * cv2);
-        cv2i = tv18 + tv17;
-        // Output point 8: X(7)
-        out_r[out_strides[7]] = cv1r + cv2r;
-        out_i[out_strides[7]] = cv1i + cv2i;
-        // Output point 14: X(13)
-        out_r[out_strides[13]] = cv1r - cv2r;
-        out_i[out_strides[13]] = cv1i - cv2i;
+        tv6 = (CRTM_15_4 * cv10) + (CRTM_15_3 * cv2);
+        tv10 = (CRTM_15_8 * cv7) - (CRTM_15_7 * cv16);
+        cv6 = tv10 - tv6;
+        tv7 = tv6 + tv10;
 
-        cv2i = tv18 - tv17;
-        cv1r = tv4 - tv5;
-        cv1i = tv12 + tv14;
-        cv2r = tv10 - tv9;
+        out_i[out_strides[1]] = cv1i + cv6;
+        out_i[out_strides[4]] = cv1i - cv6;
 
-        // Output point 3: X(2)
-        out_r[out_strides[2]] = cv1r + cv2r;
-        out_i[out_strides[2]] = cv1i + cv2i;
-        // Output point 9: X(8)
-        out_r[out_strides[8]] = cv1r - cv2r;
-        out_i[out_strides[8]] = cv1i - cv2i;
+        cv1i = tv1 + tv3;
+        tv8 = (CRTM_15_8 * cv16) + (CRTM_15_7 * cv7);
+        tv1 = (CRTM_15_3 * cv10) - (CRTM_15_4 * cv2);
+        tv3 = tv1 + tv8;
 
-        cv1r = tv4 + tv5;
-        cv1i = tv12 - tv14;
-        cv2r = tv7 - tv8;
-        cv2i = tv15 + tv16;
+        out_i[out_strides[7]] = cv1i + tv3;
+        out_i[out_strides[13]] = cv1i - tv3;
 
-        // Output point 12: X(11)
-        out_r[out_strides[11]] = cv1r + cv2r;
-        out_i[out_strides[11]] = cv1i - cv2i;
-        // Output point 15: X(14)
-        out_r[out_strides[14]] = cv1r - cv2r;
-        out_i[out_strides[14]] = cv1i + cv2i;
+        tv3 = tv1 - tv8;
+        cv1r = tv4 - tv9;
+        cv6 = cv3 - cv1;
+        out_r[out_strides[2]] = cv1r + cv6;
+        out_r[out_strides[8]] = cv1r - cv6;
+
+        cv1i = tv2 + tv5;
+        out_i[out_strides[2]] = cv1i + tv3;
+        out_i[out_strides[8]] = cv1i - tv3;
+
+        cv1r = tv4 + tv9;
+        cv1i = tv2 - tv5;
+
+        out_r[out_strides[11]] = cv1r + cv8;
+        out_i[out_strides[11]] = cv1i - tv7;
+        out_r[out_strides[14]] = cv1r - cv8;
+        out_i[out_strides[14]] = cv1i + tv7;
 
         in_r += v_in_stride;
         in_i += v_in_stride;
@@ -447,282 +410,246 @@ static VOID fft15c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v6r, v6i, v7r,
-              v7i, v8r, v8i, v9r, v9i, v10r, v10i, v11r, v11i, v12r, v12i, v13r,
-              v13i, v14r, v14i, v15r, v15i,
+        FLOAT v1r, v1i, v2r, v2i, v3r, v3i, av1, av2, av3, av4, av5, av6, av7,
+              av8, av9, av10, av11, av12, av13, av14, av15, av16, av17, av18,
+              av19, tv1, tv2, tv3, tv4, tv5, tv6, tv7, tv8, tv9, tv10, tv11,
+              tv12, cv1r, cv1i, cv1, cv2, cv3, cv4, cv5, cv6, cv7, cv8, cv9,
+              cv10, cv11, cv12, cv13, cv14, cv15, cv16;
 
-              tv1, tv2, tv3, tv4, tv5, tv6, tv7, tv8, tv9, tv10, tv11, tv12,
-              tv13, tv14, tv15, tv16, tv17, tv18, cv1r, cv1i, cv2r, cv2i,
-              av3, av4, av5, av6, av7, av8, av9, av10, av11, av12, av13, av14,
-              av15, av16, av17, av18, av19, av20, av21, av22, av23, av24, av25,
-              av26, av27, av28, av29, av30, av31, av32, av33, av34, cv1, cv2,
-              cv19, cv25, cv7, cv8, cv13, cv14, cv20, cv26, cv4, cv5, cv12,
-              cv16, cv10;
+        v1r = in_r[in_strides[2]];
+        v2r = in_r[in_strides[7]];
+        v3r = in_r[in_strides[12]];
 
-        // Input point 1: x(0)
-        v1r = *in_r;
-        v1i = *in_i;
+        av1 = v1r + v2r;
+        av2 = v1r - v2r;
+        av3 = v3r + av1;
+        av4 = v3r - (CRTM_15_5 * av1);
 
-        // Input point 2: x(1)
-        v2r = in_r[in_strides[1]];
-        v2i = in_i[in_strides[1]];
+        v1i = in_i[in_strides[2]];
+        v2i = in_i[in_strides[7]];
+        v3i = in_i[in_strides[12]];
 
-        // Input point 3: x(2)
-        v3r = in_r[in_strides[2]];
-        v3i = in_i[in_strides[2]];
+        av1 = v1i + v2i;
+        av5 = v1i - v2i;
+        av6 = v3i + av1;
+        av7 = v3i - (CRTM_15_5 * av1);
 
-        // Input point 4: x(3)
-        v4r = in_r[in_strides[3]];
-        v4i = in_i[in_strides[3]];
+        v1r = in_r[in_strides[8]];
+        v2r = in_r[in_strides[13]];
+        v3r = in_r[in_strides[3]];
 
-        // Input point 5: x(4)
-        v5r = in_r[in_strides[4]];
-        v5i = in_i[in_strides[4]];
+        av1 = v1r + v2r;
+        av8 = v2r - v1r;
+        av9 = v3r + av1;
+        av10 = v3r - (CRTM_15_5 * av1);
 
-        // Input point 6: x(5)
-        v6r = in_r[in_strides[5]];
-        v6i = in_i[in_strides[5]];
+        v1i = in_i[in_strides[8]];
+        v2i = in_i[in_strides[13]];
+        v3i = in_i[in_strides[3]];
 
-        // Input point 7: x(6)
-        v7r = in_r[in_strides[6]];
-        v7i = in_i[in_strides[6]];
+        av1 = v1i + v2i;
+        av11 = v2i - v1i;
+        av12 = v3i + av1;
+        av13 = v3i - (CRTM_15_5 * av1);
 
-        // Input point 8: x(7)
-        v8r = in_r[in_strides[7]];
-        v8i = in_i[in_strides[7]];
+        cv1 = av10 + av4;
+        cv2 = av10 - av4;
+        cv3 = av13 + av7;
+        cv4 = av13 - av7;
+        cv5 = av8 + av2;
+        cv6 = av8 - av2;
+        cv7 = av11 + av5;
+        cv8 = av11 - av5;
 
-        // Input point 9: x(8)
-        v9r = in_r[in_strides[8]];
-        v9i = in_i[in_strides[8]];
+        v1r = in_r[in_strides[1]];
+        v2r = in_r[in_strides[11]];
+        v3r = in_r[in_strides[6]];
 
-        // Input point 10: x(9)
-        v10r = in_r[in_strides[9]];
-        v10i = in_i[in_strides[9]];
+        av1 = v1r + v2r;
+        av2 = v2r - v1r;
+        av14 = v3r + av1;
+        av4 = v3r - (CRTM_15_5 * av1);
 
-        // Input point 11: x(10)
-        v11r = in_r[in_strides[10]];
-        v11i = in_i[in_strides[10]];
+        v1i = in_i[in_strides[1]];
+        v2i = in_i[in_strides[11]];
+        v3i = in_i[in_strides[6]];
 
-        // Input point 12: x(11)
-        v12r = in_r[in_strides[11]];
-        v12i = in_i[in_strides[11]];
+        av1 = v1i + v2i;
+        av5 = v2i - v1i;
+        av15 = v3i + av1;
+        av7 = v3i - (CRTM_15_5 * av1);
 
-        // Input point 13: x(12)
-        v13r = in_r[in_strides[12]];
-        v13i = in_i[in_strides[12]];
+        v1r = in_r[in_strides[4]];
+        v2r = in_r[in_strides[14]];
+        v3r = in_r[in_strides[9]];
 
-        // Input point 14: x(13)
-        v14r = in_r[in_strides[13]];
-        v14i = in_i[in_strides[13]];
+        av1 = v1r + v2r;
+        av8 = v2r - v1r;
+        av16 = v3r + av1;
+        av10 = v3r - (CRTM_15_5 * av1);
 
-        // Input point 15: x(14)
-        v15r = in_r[in_strides[14]];
-        v15i = in_i[in_strides[14]];
+        v1i = in_i[in_strides[4]];
+        v2i = in_i[in_strides[14]];
+        v3i = in_i[in_strides[9]];
 
-        // common calculations
-        tv1 = v11r + v6r;
-        tv2 = v11i + v6i;
-        cv1 = v1r + tv1;
-        cv2 = v1i + tv2;
-        av3 = v1r - (CRTM_15_5 * tv1);
-        av4 = v1i - (CRTM_15_5 * tv2);
+        av1 = v1i + v2i;
+        av11 = v2i - v1i;
+        av17 = v3i + av1;
+        av13 = v3i - (CRTM_15_5 * av1);
 
-        av5 = CRTM_15_6 * (v11r - v6r);
-        av6 = CRTM_15_6 * (v11i - v6i);
+        cv9 = av10 + av4;
+        cv10 = av4 - av10;
+        cv11 = av13 + av7;
+        cv12 = av7 - av13;
+        cv13 = av8 + av2;
+        cv14 = av2 - av8;
+        cv15 = av11 + av5;
+        cv16 = av5 - av11;
 
-        tv1 = v3r + v8r;
-        tv2 = v3i + v8i;
-        cv7 = v13r + tv1;
-        cv8 = v13i + tv2;
-        av7 = v13r - (CRTM_15_5 * tv1);
-        av8 = v13i - (CRTM_15_5 * tv2);
+        v1r = in_r[in_strides[5]];
+        v2r = in_r[in_strides[10]];
+        v3r = *in_r;
 
-        av9 = v3r - v8r;
-        av10 = v3i - v8i;
+        av1 = v1r + v2r;
+        av2 = CRTM_15_6 * (v2r - v1r);
+        av18 = v3r + av1;
+        av4 = v3r - (CRTM_15_5 * av1);
 
-        tv1 = v14r + v9r;
-        tv2 = v14i + v9i;
-        cv13 = v4r + tv1;
-        cv14 = v4i + tv2;
-        av11 = v4r - (CRTM_15_5 * tv1);
-        av12 = v4i - (CRTM_15_5 * tv2);
+        v1i = in_i[in_strides[5]];
+        v2i = in_i[in_strides[10]];
+        v3i = *in_i;
 
-        av13 = v14r - v9r;
-        av14 = v14i - v9i;
+        av1 = v1i + v2i;
+        av5 = CRTM_15_6 * (v2i - v1i);
+        av19 = v3i + av1;
+        av7 = v3i - (CRTM_15_5 * av1);
 
-        tv1 = v12r + v2r;
-        tv2 = v12i + v2i;
-        cv19 = v7r + tv1;
-        cv20 = v7i + tv2;
-        av15 = v7r - (CRTM_15_5 * tv1);
-        av16 = v7i - (CRTM_15_5 * tv2);
-
-        av17 = v12r - v2r;
-        av18 = v12i - v2i;
-
-        tv1 = v15r + v5r;
-        tv2 = v15i + v5i;
-        cv25 = v10r + tv1;
-        cv26 = v10i + tv2;
-        av19 = v10r - (CRTM_15_5 * tv1);
-        av20 = v10i - (CRTM_15_5 * tv2);
-
-        av21 = v15r - v5r;
-        av22 = v15i - v5i;
-
-        tv1 = cv25 + cv19;
-        tv2 = cv7 + cv13;
+        tv1 = av16 + av14;
+        tv2 = av3 + av9;
+        tv11 = av9 - av3;
+        tv12 = av16 - av14;
         tv3 = tv1 + tv2;
         tv4 = CRTM_15_1 * (tv1 - tv2);
-        tv5 = cv1 - (CRTM_15_2 * tv3);
-        tv6 = cv8 - cv14;
-        tv1 = cv20 - cv26;
+        tv5 = av18 - (CRTM_15_2 * tv3);
+
+        *out_r = av18 + tv3;
+
+        tv6 = av6 - av12;
+        tv8 = av6 + av12;
+        tv1 = av15 - av17;
+        tv7 = av17 + av15;
         tv2 = (CRTM_15_3 * tv1) + (CRTM_15_4 * tv6);
         cv1r = tv5 + tv4;
 
-        tv7 = cv26 + cv20;
-        tv8 = cv8 + cv14;
-        tv9 = tv7 + tv8;
-        tv10 = CRTM_15_1 * (tv7 - tv8);
-        tv11 = cv2 - (CRTM_15_2 * tv9);
-        tv12 = cv13 - cv7;
-        tv7 = cv25 - cv19;
-        tv8 = (CRTM_15_3 * tv7) + (CRTM_15_4 * tv12);
-        cv1i = tv11 + tv10;
-
-        // Output point 1: X(0)
-        *out_r = cv1 + tv3;
-        *out_i = cv2 + tv9;
-
-        // Output point 4: X(3)
         out_r[out_strides[3]] = cv1r + tv2;
-        out_i[out_strides[3]] = cv1i + tv8;
-
-        // Output point 13: X(12)
         out_r[out_strides[12]] = cv1r - tv2;
+
+        tv3 = tv7 + tv8;
+        tv9 = CRTM_15_1 * (tv7 - tv8);
+        tv10 = av19 - (CRTM_15_2 * tv3);
+
+        *out_i = av19 + tv3;
+
+        tv8 = (CRTM_15_3 * tv12) + (CRTM_15_4 * tv11);
+        cv1i = tv10 + tv9;
+        out_i[out_strides[3]] = cv1i + tv8;
         out_i[out_strides[12]] = cv1i - tv8;
 
         cv1r = tv5 - tv4;
-        cv1i = tv11 - tv10;
         tv2 = (CRTM_15_4 * tv1) - (CRTM_15_3 * tv6);
-        tv8 = (CRTM_15_4 * tv7) - (CRTM_15_3 * tv12);
+        cv1i = tv10 - tv9;
+        tv8 = (CRTM_15_4 * tv12) - (CRTM_15_3 * tv11);
 
-        // Output point 7: X(6)
         out_r[out_strides[6]] = cv1r + tv2;
-        out_i[out_strides[6]] = cv1i + tv8;
-
-        // Output point 10: X(9)
         out_r[out_strides[9]] = cv1r - tv2;
+        out_i[out_strides[6]] = cv1i + tv8;
         out_i[out_strides[9]] = cv1i - tv8;
 
-        av23 = av19 + av15;
-        av24 = av11 + av7;
-        av25 = av20 + av16;
-        av26 = av12 + av8;
-        av27 = av23 + av24;
-        av28 = av25 + av26;
+        tv1 = CRTM_15_1 * (cv9 - cv1);
+        tv2 = CRTM_15_9 * (cv15 + cv8);
+        tv3 = cv9 + cv1;
+        tv4 = cv8 - cv15;
+        tv5 = tv3 + av4;
+        tv6 = CRTM_15_6 * tv4 + av5;
 
-        av29 = av14 - av10;
-        av30 = av22 + av18;
-        av31 = av29 - av30;
-        av32 = av21 + av17;
-        av33 = av13 - av9;
-        av34 = av32 - av33;
+        out_r[out_strides[5]] = tv5 + tv6;
+        out_r[out_strides[10]] = tv5 - tv6;
 
-        cv1r = av27 + av3;
-        cv1i = av28 + av4;
-        cv2r = (CRTM_15_6 * av31) + av6;
-        cv2i = (CRTM_15_6 * av34) - av5;
-        // Output point 6: X(5)
-        out_r[out_strides[5]] = cv1r + cv2r;
-        out_i[out_strides[5]] = cv1i + cv2i;
-        // Output point 11: X(10)
-        out_r[out_strides[10]] = cv1r - cv2r;
-        out_i[out_strides[10]] = cv1i - cv2i;
+        tv7 = CRTM_15_1 * (cv11 - cv3);
+        tv8 = CRTM_15_9 * (cv13 + cv6);
+        tv9 = cv11 + cv3;
+        tv10 = cv13 - cv6;
+        tv5 = tv9 + av7;
+        tv6 = CRTM_15_6 * tv10 - av2;
 
-        tv1 = av3 - (CRTM_15_2 * av27);
-        tv2 = (CRTM_15_10 * av31) - av6;
-        tv3 = tv2 + tv1;
-        tv4 = tv1 - tv2;
-        tv1 = CRTM_15_1 * (av23 - av24);
-        tv2 = CRTM_15_9 * (av30 + av29);
-        tv5 = tv2 - tv1;
-        tv6 = tv1 + tv2;
+        out_i[out_strides[5]] = tv5 + tv6;
+        out_i[out_strides[10]] = tv5 - tv6;
 
-        cv1r = tv3 - tv6;
-        tv1  = av5 + (CRTM_15_10 * av34);
-        tv2  = av4 - (CRTM_15_2 * av28);
-        tv11 = tv1 + tv2;
-        tv12 = tv2 - tv1;
-        tv1  = CRTM_15_1 * (av25 - av26);
-        tv2  = CRTM_15_9 * (av32 + av33);
-        tv13 = tv1 - tv2;
-        tv14 = tv2 + tv1;
-        cv1i = tv11 - tv13;
+        tv5 = av4 - (CRTM_15_2 * tv3);
+        tv6 = (CRTM_15_10 * tv4) - av5;
+        tv11 = av7 - (CRTM_15_2 * tv9);
+        tv12 = av2 + (CRTM_15_10 * tv10);
+        tv3 = tv6 + tv5;
+        tv4 = tv5 - tv6;
+        tv9 = tv2 - tv1;
+        tv10 = tv1 + tv2;
 
-        cv2 = av11 - av7;
-        cv4 = av12 - av8;
-        cv5 = av13 + av9;
-        cv7 = av14 + av10;
+        cv1r = tv3 - tv10;
+        cv1 = (CRTM_15_4 * cv12) + (CRTM_15_3 * cv4);
+        cv3 = (CRTM_15_8 * cv5) - (CRTM_15_7 * cv14);
+        cv6 = cv1 + cv3;
+        cv8 = cv1 - cv3;
 
-        cv14 = av17 - av21;
-        cv10 = av15 - av19;
-        cv12 = av16 - av20;
-        cv16 = av18 - av22;
+        out_r[out_strides[1]] = cv1r + cv6;
+        out_r[out_strides[4]] = cv1r - cv6;
 
-        tv7  = (CRTM_15_4 * cv12) + (CRTM_15_3 * cv4);
-        tv8  = (CRTM_15_8 * cv5) - (CRTM_15_7 * cv14);
-        cv2r = tv7 + tv8;
-        tv15 = (CRTM_15_4 * cv10) + (CRTM_15_3 * cv2);
-        tv16 = (CRTM_15_8 * cv7) - (CRTM_15_7 * cv16);
-        cv2i = tv16 - tv15;
+        cv1r = tv3 + tv10;
+        cv1 = (CRTM_15_8 * cv14) + (CRTM_15_7 * cv5);
+        cv3 = (CRTM_15_4 * cv4) - (CRTM_15_3 * cv12);
+        cv6 = cv3 + cv1;
 
-        // Output point 2: X(1)
-        out_r[out_strides[1]] = cv1r + cv2r;
-        out_i[out_strides[1]] = cv1i + cv2i;
-        // Output point 5: X(4)
-        out_r[out_strides[4]] = cv1r - cv2r;
-        out_i[out_strides[4]] = cv1i - cv2i;
+        out_r[out_strides[7]] = cv1r + cv6;
+        out_r[out_strides[13]] = cv1r - cv6;
 
-        cv1r = tv3 + tv6;
-        tv9  = (CRTM_15_8 * cv14) + (CRTM_15_7 * cv5);
-        tv10 = (CRTM_15_4 * cv4) - (CRTM_15_3 * cv12);
-        cv2r = tv9 + tv10;
+        tv1 = tv12 + tv11;
+        tv2 = tv11 - tv12;
+        tv3 = tv7 - tv8;
+        tv5 = tv8 + tv7;
+        cv1i = tv1 - tv3;
 
-        cv1i = tv11 + tv13;
-        tv17 = (CRTM_15_8 * cv16) + (CRTM_15_7 * cv7);
-        tv18 = (CRTM_15_3 * cv10) - (CRTM_15_4 * cv2);
-        cv2i = tv18 + tv17;
-        // Output point 8: X(7)
-        out_r[out_strides[7]] = cv1r + cv2r;
-        out_i[out_strides[7]] = cv1i + cv2i;
-        // Output point 14: X(13)
-        out_r[out_strides[13]] = cv1r - cv2r;
-        out_i[out_strides[13]] = cv1i - cv2i;
+        tv6 = (CRTM_15_4 * cv10) + (CRTM_15_3 * cv2);
+        tv10 = (CRTM_15_8 * cv7) - (CRTM_15_7 * cv16);
+        cv6 = tv10 - tv6;
+        tv7 = tv6 + tv10;
 
-        cv2i = tv18 - tv17;
-        cv1r = tv4 - tv5;
-        cv1i = tv12 + tv14;
-        cv2r = tv10 - tv9;
+        out_i[out_strides[1]] = cv1i + cv6;
+        out_i[out_strides[4]] = cv1i - cv6;
 
-        // Output point 3: X(2)
-        out_r[out_strides[2]] = cv1r + cv2r;
-        out_i[out_strides[2]] = cv1i + cv2i;
-        // Output point 9: X(8)
-        out_r[out_strides[8]] = cv1r - cv2r;
-        out_i[out_strides[8]] = cv1i - cv2i;
+        cv1i = tv1 + tv3;
+        tv8 = (CRTM_15_8 * cv16) + (CRTM_15_7 * cv7);
+        tv1 = (CRTM_15_3 * cv10) - (CRTM_15_4 * cv2);
+        tv3 = tv1 + tv8;
 
-        cv1r = tv4 + tv5;
-        cv1i = tv12 - tv14;
-        cv2r = tv7 - tv8;
-        cv2i = tv15 + tv16;
+        out_i[out_strides[7]] = cv1i + tv3;
+        out_i[out_strides[13]] = cv1i - tv3;
 
-        // Output point 12: X(11)
-        out_r[out_strides[11]] = cv1r + cv2r;
-        out_i[out_strides[11]] = cv1i - cv2i;
-        // Output point 15: X(14)
-        out_r[out_strides[14]] = cv1r - cv2r;
-        out_i[out_strides[14]] = cv1i + cv2i;
+        tv3 = tv1 - tv8;
+        cv1r = tv4 - tv9;
+        cv6 = cv3 - cv1;
+        out_r[out_strides[2]] = cv1r + cv6;
+        out_r[out_strides[8]] = cv1r - cv6;
+
+        cv1i = tv2 + tv5;
+        out_i[out_strides[2]] = cv1i + tv3;
+        out_i[out_strides[8]] = cv1i - tv3;
+
+        cv1r = tv4 + tv9;
+        cv1i = tv2 - tv5;
+
+        out_r[out_strides[11]] = cv1r + cv8;
+        out_i[out_strides[11]] = cv1i - tv7;
+        out_r[out_strides[14]] = cv1r - cv8;
+        out_i[out_strides[14]] = cv1i + tv7;
 
         in_r += v_in_stride;
         in_i += v_in_stride;
@@ -1327,9 +1254,6 @@ static VOID fft15c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_dr += v_out_stride;
         out_di += v_out_stride;
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
 }
 
 static VOID fft15c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
