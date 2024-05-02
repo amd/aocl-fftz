@@ -88,293 +88,230 @@ static VOID fft16c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v6r, v6i, v7r,
-               v7i, v8r, v8i, v9r, v9i, v10r, v10i, v11r, v11i, v12r, v12i,
-               v13r, v13i, v14r, v14i, v15r, v15i, v16r, v16i,
-
-               ad1, ad2, ad3, ad4, ad5, ad6, ad7, adi1, adi2, adi3, adi4, adi5,
-               adi6, adi7, sbr1, sbr2, sbr3, sbr4, sbr5, sbr6, sbr7, sb1, sb2,
-               sb3, sb4, sb5, sb6, sb7,
-
-               tvrr, tvri, tvir, tvii,
-
-               tvr1, tvr2, tvr3, tvr4, tvi1, tvi2, tvi3, tvi4, tvr5, tvr6, tvi5,
-               tvi6, tvr7, tvr8, tvi7, tvi8, tvr9, tvr10, tvr11, tvr12, tvi9,
-               tvi10, tvi11, tvi12, ad26, ad49, adi26, adi49,
-
-               ad17, sb17, adi17, sbr17, sb35, sbr35, sb26, sbr26, ad35, adi35,
-               ad62, adi62,
-
+        DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, ad1, ad2, ad3, ad4, ad5,
+               ad6, ad7, adi1, adi2, adi3, adi4, adi5, adi6, adi7, sbr1, sbr2,
+               sbr3, sbr4, sbr5, sbr6, sbr7, sb1, sb2, sb3, sb4, sb5, sb6, sb7,
+               tvrr, tvri, tvir, tvii, tvr1, tvr2, tvr3, tvr4, tvi1, tvi2, tvi3,
+               tvi4, tvr5, tvr6, tvi5, tvi6, tvr7, tvr8, tvi7, tvi8, tvr9,
+               tvr10, tvr11, tvr12, tvi9, tvi10, tvi11, tvi12, ad26, ad49,
+               adi26, adi49, ad17, sb17, adi17, sbr17, sb35, sbr35, ad35, adi35,
                cv1r, cv1i, cv2r, cv2i, ctv1, ctv2, ctv3, ctv4, cav1r, cav1i,
                cav2r, cav2i, cav3r, cav3i, cav4r, cav4i;
 
-        // Input point 1: x(0)
-        v1r = *in_r;
-        v1i = *in_i;
-
-        // Input point 2: x(1)
-        v2r = in_r[in_strides[1]];
-        v2i = in_i[in_strides[1]];
-
-        // Input point 3: x(2)
-        v3r = in_r[in_strides[2]];
-        v3i = in_i[in_strides[2]];
-
-        // Input point 4: x(3)
-        v4r = in_r[in_strides[3]];
-        v4i = in_i[in_strides[3]];
-
-        // Input point 5: x(4)
-        v5r = in_r[in_strides[4]];
-        v5i = in_i[in_strides[4]];
-
-        // Input point 6: x(5)
-        v6r = in_r[in_strides[5]];
-        v6i = in_i[in_strides[5]];
-
-        // Input point 7: x(6)
-        v7r = in_r[in_strides[6]];
-        v7i = in_i[in_strides[6]];
-
-        // Input point 8: x(7)
-        v8r = in_r[in_strides[7]];
-        v8i = in_i[in_strides[7]];
-
-        // Input point 9: x(8)
-        v9r = in_r[in_strides[8]];
-        v9i = in_i[in_strides[8]];
-
-        // Input point 10: x(9)
-        v10r = in_r[in_strides[9]];
-        v10i = in_i[in_strides[9]];
-
-        // Input point 11: x(10)
-        v11r = in_r[in_strides[10]];
-        v11i = in_i[in_strides[10]];
-
-        // Input point 12: x(11)
-        v12r = in_r[in_strides[11]];
-        v12i = in_i[in_strides[11]];
-
-        // Input point 13: x(12)
-        v13r = in_r[in_strides[12]];
-        v13i = in_i[in_strides[12]];
-
-        // Input point 14: x(13)
-        v14r = in_r[in_strides[13]];
-        v14i = in_i[in_strides[13]];
-
-        // Input point 15: x(14)
-        v15r = in_r[in_strides[14]];
-        v15i = in_i[in_strides[14]];
-
-        // Input point 16: x(15)
-        v16r = in_r[in_strides[15]];
-        v16i = in_i[in_strides[15]];
-
-        cv1r = v1r + v9r;
-        cv1i = v1i + v9i;
-        cv2r = v1r - v9r;
-        cv2i = v1i - v9i;
-
-        ad1 = v2r + v16r;
-        ad2 = v3r + v15r;
-        ad3 = v4r + v14r;
-        ad4 = v5r + v13r;
-        ad5 = v6r + v12r;
-        ad6 = v7r + v11r;
-        ad7 = v8r + v10r;
-
-        sb1 = v16i - v2i;
-        sb2 = v15i - v3i;
-        sb3 = v14i - v4i;
-        sb4 = v13i - v5i;
-        sb5 = v12i - v6i;
-        sb6 = v11i - v7i;
-        sb7 = v10i - v8i;
-
-        sbr1 = v16r - v2r;
-        sbr2 = v15r - v3r;
-        sbr3 = v14r - v4r;
-        sbr4 = v13r - v5r;
-        sbr5 = v12r - v6r;
-        sbr6 = v11r - v7r;
-        sbr7 = v10r - v8r;
-
-        adi1 = v2i + v16i;
-        adi2 = v3i + v15i;
-        adi3 = v4i + v14i;
-        adi4 = v5i + v13i;
-        adi5 = v6i + v12i;
-        adi6 = v7i + v11i;
-        adi7 = v8i + v10i;
-
-        ad26 = ad2 + ad6;
-        ad49 = cv1r + ad4;
-        adi26 = adi2 + adi6;
-        adi49 = cv1i + adi4;
-
-        ad17 = ad1 - ad7;
-        sb17 = sb1 + sb7;
-        adi17 = adi1 - adi7;
-        sbr17 = sbr1 + sbr7;
-        sb35 = sb3 + sb5;
-        sbr35 = sbr3 + sbr5;
-        sb26 = sb2 + sb6;
-        sbr26 = sbr2 + sbr6;
-
-        ad35 = ad3 - ad5;
-        adi35 = adi3 - adi5;
-        ad62 = ad2 - ad6;
-        adi62 = adi2 - adi6;
-
-        ctv1 = CRTM_16_2 * ad62;
-        ctv2 = CRTM_16_2 * sb26;
-        ctv3 = CRTM_16_2 * adi62;
-        ctv4 = CRTM_16_2 * sbr26;
+        v1r = in_r[in_strides[1]];
+        v2r = in_r[in_strides[15]];
+        ad1 = v1r + v2r;
+        sbr1 = v2r - v1r;
+        v1r = in_r[in_strides[7]];
+        v2r = in_r[in_strides[9]];
+        ad7 = v1r + v2r;
+        sbr7 = v2r - v1r;
 
         cav1r = ad1 + ad7;
-        cav1i = adi1 + adi7;
-        cav2r = ad3 + ad5;
-        cav2i = adi3 + adi5;
+        ad17 = ad1 - ad7;
+        sbr17 = sbr1 + sbr7;
         cav3r = sbr1 - sbr7;
-        cav3i = sb1 - sb7;
+
+        v1r = in_r[in_strides[3]];
+        v2r = in_r[in_strides[13]];
+        ad3 = v1r + v2r;
+        sbr3 = v2r - v1r;
+        v1r = in_r[in_strides[5]];
+        v2r = in_r[in_strides[11]];
+        ad5 = v1r + v2r;
+        sbr5 = v2r - v1r;
+
+        cav2r = ad3 + ad5;
+        ad35 = ad3 - ad5;
+        sbr35 = sbr3 + sbr5;
         cav4r = sbr3 - sbr5;
-        cav4i = sb3 - sb5;
 
-        // common operations
-        tvr1  = (CRTM_16_1 * ad17);
-        tvr2  = cv2r + ctv1;
-        tvr3  = (CRTM_16_3 * sb17);
-        tvr4  = ctv2 + sb4;
-        tvr5  = cv1r - ad4;
-        tvr6  = CRTM_16_2 * (cav1r - cav2r);
-        tvr7  = CRTM_16_2 * (cav3i + cav4i);
-        tvr8  = sb2 - sb6;
-        tvr9  = cv2r - ctv1;
-        tvr10 = (CRTM_16_3 * ad17);
-        tvr11 = (CRTM_16_1 * sb17);
-        tvr12 = ctv2 - sb4;
+        v3r = in_r[in_strides[2]];
+        v4r = in_r[in_strides[14]];
+        ad2 = v3r + v4r;
+        sbr2 = v4r - v3r;
+        v3r = in_r[in_strides[6]];
+        v4r = in_r[in_strides[10]];
+        ad6 = v3r + v4r;
+        sbr6 = v4r - v3r;
 
-        tvi1  = (CRTM_16_1 * adi17);
-        tvi2  = cv2i + ctv3;
-        tvi3  = (CRTM_16_3 * sbr17);
-        tvi4  = ctv4 + sbr4;
-        tvi5  = cv1i - adi4;
-        tvi6  = CRTM_16_2 * (cav1i - cav2i);
-        tvi7  = CRTM_16_2 * (cav3r + cav4r);
-        tvi8  = sbr2 - sbr6;
-        tvi9  = cv2i - ctv3;
-        tvi10 = (CRTM_16_3 * adi17);
-        tvi11 = (CRTM_16_1 * sbr17);
+        tvr1 = (CRTM_16_3 * ad35) + (CRTM_16_1 * ad17);
+        tvr10 = (CRTM_16_3 * ad17) - (CRTM_16_1 * ad35);
+        tvi3 = (CRTM_16_1 * sbr35) + (CRTM_16_3 * sbr17);
+        tvi11 = (CRTM_16_1 * sbr17) - (CRTM_16_3 * sbr35);
+
+        tvr6 = CRTM_16_2 * (cav1r - cav2r);
+        tvi7 = CRTM_16_2 * (cav3r + cav4r);
+
+        v3r = in_r[in_strides[4]];
+        v4r = in_r[in_strides[12]];
+        ad4 = v3r + v4r;
+        sbr4 = v4r - v3r;
+        v1r = *in_r;
+        v2r = in_r[in_strides[8]];
+        cv1r = v1r + v2r;
+        cv2r = v1r - v2r;
+
+        ad26 = ad2 + ad6;
+        tvi8 = sbr2 - sbr6;
+        ctv4 = CRTM_16_2 * (sbr2 + sbr6);
+        ctv1 = CRTM_16_2 * (ad2 - ad6);
+
+        tvr5 = cv1r - ad4;
+        ad49 = cv1r + ad4;
+
+        tvi4 = ctv4 + sbr4;
         tvi12 = ctv4 - sbr4;
 
-        tvr1 += (CRTM_16_3 * ad35);
-        tvr3 += (CRTM_16_1 * sb35);
-        tvi1 += (CRTM_16_3 * adi35);
-        tvi3 += (CRTM_16_1 * sbr35);
+        tvr2 = cv2r + ctv1;
+        tvr9 = cv2r - ctv1;
 
-        tvr10 -= (CRTM_16_1 * ad35);
-        tvr11 -= (CRTM_16_3 * sb35);
-        tvi10 -= (CRTM_16_1 * adi35);
-        tvi11 -= (CRTM_16_3 * sbr35);
-
-        // Output point 1: X(0)
         tvrr = cav1r + cav2r;
         tvri = ad26 + ad49;
-        tvii = cav1i + cav2i;
-        tvir = adi26 + adi49;
-
         *out_r = tvri + tvrr;
-        *out_i = tvir + tvii;
 
-        // Output point 9: X(8)
         out_r[out_strides[8]] = tvri - tvrr;
-        out_i[out_strides[8]] = tvir - tvii;
 
-        // Output point 2: X(1)
-        tvrr = tvr2 + tvr1;
-        tvri = tvr3 + tvr4;
-        tvir = tvi3 + tvi4;
-        tvii = tvi2 + tvi1;
-        out_r[out_strides[1]] = tvrr - tvri;
-        out_i[out_strides[1]] = tvii + tvir;
+        //----------------------------------------
 
-        // Output point 16: X(15)
-        out_r[out_strides[15]] = tvrr + tvri;
-        out_i[out_strides[15]] = tvii - tvir;
+        v1i = in_i[in_strides[1]];
+        v2i = in_i[in_strides[15]];
+        adi1 = v1i + v2i;
+        sb1 = v2i - v1i;
+        v1i = in_i[in_strides[7]];
+        v2i = in_i[in_strides[9]];
+        adi7 = v1i + v2i;
+        sb7 = v2i - v1i;
 
-        // Output point 3: X(2)
-        tvrr = tvr5 + tvr6;
-        tvri = tvr7 + tvr8;
-        tvir = tvi7 + tvi8;
-        tvii = tvi5 + tvi6;
-        out_r[out_strides[2]] = tvrr - tvri;
-        out_i[out_strides[2]] = tvii + tvir;
+        v1i = in_i[in_strides[3]];
+        v2i = in_i[in_strides[13]];
+        adi3 = v1i + v2i;
+        sb3 = v2i - v1i;
+        v1i = in_i[in_strides[5]];
+        v2i = in_i[in_strides[11]];
+        adi5 = v1i + v2i;
+        sb5 = v2i - v1i;
+        cav1i = adi1 + adi7;
+        adi17 = adi1 - adi7;
+        sb17 = sb1 + sb7;
+        cav3i = sb1 - sb7;
 
-        // Output point 15: X(14)
-        out_r[out_strides[14]] = tvrr + tvri;
-        out_i[out_strides[14]] = tvii - tvir;
+        cav2i = adi3 + adi5;
+        adi35 = adi3 - adi5;
+        sb35 = sb3 + sb5;
+        cav4i = sb3 - sb5;
 
-        // Output point 4: X(3)
-        tvrr = tvr9 + tvr10;
-        tvri = tvr11 + tvr12;
-        tvir = tvi11 + tvi12;
-        tvii = tvi9 + tvi10;
-        out_r[out_strides[3]] = tvrr - tvri;
-        out_i[out_strides[3]] = tvii + tvir;
+        v3i = in_i[in_strides[2]];
+        v4i = in_i[in_strides[14]];
+        adi2 = v3i + v4i;
+        sb2 = v4i - v3i;
+        v3i = in_i[in_strides[6]];
+        v4i = in_i[in_strides[10]];
+        adi6 = v3i + v4i;
+        sb6 = v4i - v3i;
 
-        // Output point 14: X(13)
-        out_r[out_strides[13]] = tvrr + tvri;
-        out_i[out_strides[13]] = tvii - tvir;
+        tvr3 = (CRTM_16_1 * sb35) + (CRTM_16_3 * sb17);
+        tvr11 = (CRTM_16_1 * sb17) - (CRTM_16_3 * sb35);
+        tvi1 = (CRTM_16_3 * adi35) + (CRTM_16_1 * adi17);
+        tvi10 = (CRTM_16_3 * adi17) - (CRTM_16_1 * adi35);
+        tvr7 = CRTM_16_2 * (cav3i + cav4i);
+        tvi6 = CRTM_16_2 * (cav1i - cav2i);
 
-        // Output point 5: X(4)
         tvrr = ad49 - ad26;
         tvri = cav3i - cav4i;
+        out_r[out_strides[4]] = tvrr - tvri;
+        out_r[out_strides[12]] = tvrr + tvri;
+
+        v3i = in_i[in_strides[4]];
+        v4i = in_i[in_strides[12]];
+        adi4 = v3i + v4i;
+        sb4 = v4i - v3i;
+        v1i = *in_i;
+        v2i = in_i[in_strides[8]];
+        cv1i = v1i + v2i;
+        cv2i = v1i - v2i;
+
+        adi26 = adi2 + adi6;
+        tvr8 = sb2 - sb6;
+        ctv2 = CRTM_16_2 * (sb2 + sb6);
+        ctv3 = CRTM_16_2 * (adi2 - adi6);
+
+        adi49 = cv1i + adi4;
+        tvi5 = cv1i - adi4;
+
+        tvr4 = ctv2 + sb4;
+        tvr12 = ctv2 - sb4;
+        tvi2 = cv2i + ctv3;
+        tvi9 = cv2i - ctv3;
+
+        tvii = cav1i + cav2i;
+        tvir = adi26 + adi49;
+        *out_i = tvir + tvii;
+
+        out_i[out_strides[8]] = tvir - tvii;
+
+        //---------------------------------------
+
         tvir = cav3r - cav4r;
         tvii = adi49 - adi26;
-        out_r[out_strides[4]] = tvrr - tvri;
         out_i[out_strides[4]] = tvii + tvir;
-
-        // Output point 13: X(12)
-        out_r[out_strides[12]] = tvrr + tvri;
         out_i[out_strides[12]] = tvii - tvir;
 
-        // Output point 6: X(5)
-        tvrr = tvr9 - tvr10;
-        tvri = tvr11 - tvr12;
-        tvir = tvi11 - tvi12;
-        tvii = tvi9 - tvi10;
-        out_r[out_strides[5]] = tvrr - tvri;
-        out_i[out_strides[5]] = tvii + tvir;
+        tvrr = tvr2 + tvr1;
+        tvri = tvr3 + tvr4;
+        out_r[out_strides[1]] = tvrr - tvri;
+        out_r[out_strides[15]] = tvrr + tvri;
+        tvir = tvi3 + tvi4;
+        tvii = tvi2 + tvi1;
 
-        // Output point 12: X(11)
-        out_r[out_strides[11]] = tvrr + tvri;
-        out_i[out_strides[11]] = tvii - tvir;
+        out_i[out_strides[1]] = tvii + tvir;
+        out_i[out_strides[15]] = tvii - tvir;
 
-        // Output point 7: X(6)
-        tvrr = tvr5 - tvr6;
-        tvri = tvr7 - tvr8;
-        tvir = tvi7 - tvi8;
-        tvii = tvi5 - tvi6;
-        out_r[out_strides[6]] = tvrr - tvri;
-        out_i[out_strides[6]] = tvii + tvir;
-
-        // Output point 11: X(10)
-        out_r[out_strides[10]] = tvrr + tvri;
-        out_i[out_strides[10]] = tvii - tvir;
-
-        // Output point 8: X(7)
         tvrr = tvr2 - tvr1;
         tvri = tvr3 - tvr4;
+        out_r[out_strides[7]] = tvrr - tvri;
+        out_r[out_strides[9]] = tvrr + tvri;
         tvir = tvi3 - tvi4;
         tvii = tvi2 - tvi1;
-        out_r[out_strides[7]] = tvrr - tvri;
         out_i[out_strides[7]] = tvii + tvir;
-
-        // Output point 10: X(9)
-        out_r[out_strides[9]] = tvrr + tvri;
         out_i[out_strides[9]] = tvii - tvir;
+
+        tvrr = tvr5 + tvr6;
+        tvri = tvr7 + tvr8;
+        out_r[out_strides[2]] = tvrr - tvri;
+        out_r[out_strides[14]] = tvrr + tvri;
+        tvir = tvi7 + tvi8;
+        tvii = tvi5 + tvi6;
+        out_i[out_strides[2]] = tvii + tvir;
+        out_i[out_strides[14]] = tvii - tvir;
+
+        tvrr = tvr5 - tvr6;
+        tvri = tvr7 - tvr8;
+        out_r[out_strides[6]] = tvrr - tvri;
+        out_r[out_strides[10]] = tvrr + tvri;
+        tvir = tvi7 - tvi8;
+        tvii = tvi5 - tvi6;
+        out_i[out_strides[6]] = tvii + tvir;
+
+        out_i[out_strides[10]] = tvii - tvir;
+
+        tvrr = tvr9 + tvr10;
+        tvri = tvr11 + tvr12;
+        out_r[out_strides[3]] = tvrr - tvri;
+        out_r[out_strides[13]] = tvrr + tvri;
+        tvir = tvi11 + tvi12;
+        tvii = tvi9 + tvi10;
+        out_i[out_strides[3]] = tvii + tvir;
+        out_i[out_strides[13]] = tvii - tvir;
+
+        tvrr = tvr9 - tvr10;
+        tvri = tvr11 - tvr12;
+        out_r[out_strides[5]] = tvrr - tvri;
+        out_r[out_strides[11]] = tvrr + tvri;
+        tvir = tvi11 - tvi12;
+        tvii = tvi9 - tvi10;
+        out_i[out_strides[5]] = tvii + tvir;
+        out_i[out_strides[11]] = tvii - tvir;
 
         in_r += v_in_stride;
         in_i += v_in_stride;
@@ -417,293 +354,230 @@ static VOID fft16c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v6r, v6i, v7r,
-              v7i, v8r, v8i, v9r, v9i, v10r, v10i, v11r, v11i, v12r, v12i, v13r,
-              v13i, v14r, v14i, v15r, v15i, v16r, v16i,
+        FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, ad1, ad2, ad3, ad4, ad5,
+              ad6, ad7, adi1, adi2, adi3, adi4, adi5, adi6, adi7, sbr1, sbr2,
+              sbr3, sbr4, sbr5, sbr6, sbr7, sb1, sb2, sb3, sb4, sb5, sb6, sb7,
+              tvrr, tvri, tvir, tvii, tvr1, tvr2, tvr3, tvr4, tvi1, tvi2, tvi3,
+              tvi4, tvr5, tvr6, tvi5, tvi6, tvr7, tvr8, tvi7, tvi8, tvr9, tvr10,
+              tvr11, tvr12, tvi9, tvi10, tvi11, tvi12, ad26, ad49, adi26, adi49,
+              ad17, sb17, adi17, sbr17, sb35, sbr35, ad35, adi35, cv1r, cv1i,
+              cv2r, cv2i, ctv1, ctv2, ctv3, ctv4, cav1r, cav1i, cav2r, cav2i,
+              cav3r, cav3i, cav4r, cav4i;
 
-              ad1, ad2, ad3, ad4, ad5, ad6, ad7, adi1, adi2, adi3, adi4, adi5,
-              adi6, adi7, sbr1, sbr2, sbr3, sbr4, sbr5, sbr6, sbr7, sb1, sb2,
-              sb3, sb4, sb5, sb6, sb7,
-
-              tvrr, tvri, tvir, tvii,
-
-              tvr1, tvr2, tvr3, tvr4, tvi1, tvi2, tvi3, tvi4, tvr5, tvr6, tvi5,
-              tvi6, tvr7, tvr8, tvi7, tvi8, tvr9, tvr10, tvr11, tvr12, tvi9,
-              tvi10, tvi11, tvi12, ad26, ad49, adi26, adi49,
-
-              ad17, sb17, adi17, sbr17, sb35, sbr35, sb26, sbr26, ad35, adi35,
-              ad62, adi62,
-
-              cv1r, cv1i, cv2r, cv2i, ctv1, ctv2, ctv3, ctv4, cav1r, cav1i,
-              cav2r, cav2i, cav3r, cav3i, cav4r, cav4i;
-
-        // Input point 1: x(0)
-        v1r = *in_r;
-        v1i = *in_i;
-
-        // Input point 2: x(1)
-        v2r = in_r[in_strides[1]];
-        v2i = in_i[in_strides[1]];
-
-        // Input point 3: x(2)
-        v3r = in_r[in_strides[2]];
-        v3i = in_i[in_strides[2]];
-
-        // Input point 4: x(3)
-        v4r = in_r[in_strides[3]];
-        v4i = in_i[in_strides[3]];
-
-        // Input point 5: x(4)
-        v5r = in_r[in_strides[4]];
-        v5i = in_i[in_strides[4]];
-
-        // Input point 6: x(5)
-        v6r = in_r[in_strides[5]];
-        v6i = in_i[in_strides[5]];
-
-        // Input point 7: x(6)
-        v7r = in_r[in_strides[6]];
-        v7i = in_i[in_strides[6]];
-
-        // Input point 8: x(7)
-        v8r = in_r[in_strides[7]];
-        v8i = in_i[in_strides[7]];
-
-        // Input point 9: x(8)
-        v9r = in_r[in_strides[8]];
-        v9i = in_i[in_strides[8]];
-
-        // Input point 10: x(9)
-        v10r = in_r[in_strides[9]];
-        v10i = in_i[in_strides[9]];
-
-        // Input point 11: x(10)
-        v11r = in_r[in_strides[10]];
-        v11i = in_i[in_strides[10]];
-
-        // Input point 12: x(11)
-        v12r = in_r[in_strides[11]];
-        v12i = in_i[in_strides[11]];
-
-        // Input point 13: x(12)
-        v13r = in_r[in_strides[12]];
-        v13i = in_i[in_strides[12]];
-
-        // Input point 14: x(13)
-        v14r = in_r[in_strides[13]];
-        v14i = in_i[in_strides[13]];
-
-        // Input point 15: x(14)
-        v15r = in_r[in_strides[14]];
-        v15i = in_i[in_strides[14]];
-
-        // Input point 16: x(15)
-        v16r = in_r[in_strides[15]];
-        v16i = in_i[in_strides[15]];
-
-        cv1r = v1r + v9r;
-        cv1i = v1i + v9i;
-        cv2r = v1r - v9r;
-        cv2i = v1i - v9i;
-
-        ad1 = v2r + v16r;
-        ad2 = v3r + v15r;
-        ad3 = v4r + v14r;
-        ad4 = v5r + v13r;
-        ad5 = v6r + v12r;
-        ad6 = v7r + v11r;
-        ad7 = v8r + v10r;
-
-        sb1 = v16i - v2i;
-        sb2 = v15i - v3i;
-        sb3 = v14i - v4i;
-        sb4 = v13i - v5i;
-        sb5 = v12i - v6i;
-        sb6 = v11i - v7i;
-        sb7 = v10i - v8i;
-
-        sbr1 = v16r - v2r;
-        sbr2 = v15r - v3r;
-        sbr3 = v14r - v4r;
-        sbr4 = v13r - v5r;
-        sbr5 = v12r - v6r;
-        sbr6 = v11r - v7r;
-        sbr7 = v10r - v8r;
-
-        adi1 = v2i + v16i;
-        adi2 = v3i + v15i;
-        adi3 = v4i + v14i;
-        adi4 = v5i + v13i;
-        adi5 = v6i + v12i;
-        adi6 = v7i + v11i;
-        adi7 = v8i + v10i;
-
-        ad26 = ad2 + ad6;
-        ad49 = cv1r + ad4;
-        adi26 = adi2 + adi6;
-        adi49 = cv1i + adi4;
-
-        ad17 = ad1 - ad7;
-        sb17 = sb1 + sb7;
-        adi17 = adi1 - adi7;
-        sbr17 = sbr1 + sbr7;
-        sb35 = sb3 + sb5;
-        sbr35 = sbr3 + sbr5;
-        sb26 = sb2 + sb6;
-        sbr26 = sbr2 + sbr6;
-
-        ad35 = ad3 - ad5;
-        adi35 = adi3 - adi5;
-        ad62 = ad2 - ad6;
-        adi62 = adi2 - adi6;
-
-        ctv1 = CRTM_16_2 * ad62;
-        ctv2 = CRTM_16_2 * sb26;
-        ctv3 = CRTM_16_2 * adi62;
-        ctv4 = CRTM_16_2 * sbr26;
+        v1r = in_r[in_strides[1]];
+        v2r = in_r[in_strides[15]];
+        ad1 = v1r + v2r;
+        sbr1 = v2r - v1r;
+        v1r = in_r[in_strides[7]];
+        v2r = in_r[in_strides[9]];
+        ad7 = v1r + v2r;
+        sbr7 = v2r - v1r;
 
         cav1r = ad1 + ad7;
-        cav1i = adi1 + adi7;
-        cav2r = ad3 + ad5;
-        cav2i = adi3 + adi5;
+        ad17 = ad1 - ad7;
+        sbr17 = sbr1 + sbr7;
         cav3r = sbr1 - sbr7;
-        cav3i = sb1 - sb7;
+
+        v1r = in_r[in_strides[3]];
+        v2r = in_r[in_strides[13]];
+        ad3 = v1r + v2r;
+        sbr3 = v2r - v1r;
+        v1r = in_r[in_strides[5]];
+        v2r = in_r[in_strides[11]];
+        ad5 = v1r + v2r;
+        sbr5 = v2r - v1r;
+
+        cav2r = ad3 + ad5;
+        ad35 = ad3 - ad5;
+        sbr35 = sbr3 + sbr5;
         cav4r = sbr3 - sbr5;
-        cav4i = sb3 - sb5;
 
-        // common operations
-        tvr1  = (CRTM_16_1 * ad17);
-        tvr2  = cv2r + ctv1;
-        tvr3  = (CRTM_16_3 * sb17);
-        tvr4  = ctv2 + sb4;
-        tvr5  = cv1r - ad4;
-        tvr6  = CRTM_16_2 * (cav1r - cav2r);
-        tvr7  = CRTM_16_2 * (cav3i + cav4i);
-        tvr8  = sb2 - sb6;
-        tvr9  = cv2r - ctv1;
-        tvr10 = (CRTM_16_3 * ad17);
-        tvr11 = (CRTM_16_1 * sb17);
-        tvr12 = ctv2 - sb4;
+        v3r = in_r[in_strides[2]];
+        v4r = in_r[in_strides[14]];
+        ad2 = v3r + v4r;
+        sbr2 = v4r - v3r;
+        v3r = in_r[in_strides[6]];
+        v4r = in_r[in_strides[10]];
+        ad6 = v3r + v4r;
+        sbr6 = v4r - v3r;
 
-        tvi1  = (CRTM_16_1 * adi17);
-        tvi2  = cv2i + ctv3;
-        tvi3  = (CRTM_16_3 * sbr17);
-        tvi4  = ctv4 + sbr4;
-        tvi5  = cv1i - adi4;
-        tvi6  = CRTM_16_2 * (cav1i - cav2i);
-        tvi7  = CRTM_16_2 * (cav3r + cav4r);
-        tvi8  = sbr2 - sbr6;
-        tvi9  = cv2i - ctv3;
-        tvi10 = (CRTM_16_3 * adi17);
-        tvi11 = (CRTM_16_1 * sbr17);
+        tvr1 = (CRTM_16_3 * ad35) + (CRTM_16_1 * ad17);
+        tvr10 = (CRTM_16_3 * ad17) - (CRTM_16_1 * ad35);
+        tvi3 = (CRTM_16_1 * sbr35) + (CRTM_16_3 * sbr17);
+        tvi11 = (CRTM_16_1 * sbr17) - (CRTM_16_3 * sbr35);
+
+        tvr6 = CRTM_16_2 * (cav1r - cav2r);
+        tvi7 = CRTM_16_2 * (cav3r + cav4r);
+
+        v3r = in_r[in_strides[4]];
+        v4r = in_r[in_strides[12]];
+        ad4 = v3r + v4r;
+        sbr4 = v4r - v3r;
+        v1r = *in_r;
+        v2r = in_r[in_strides[8]];
+        cv1r = v1r + v2r;
+        cv2r = v1r - v2r;
+
+        ad26 = ad2 + ad6;
+        tvi8 = sbr2 - sbr6;
+        ctv4 = CRTM_16_2 * (sbr2 + sbr6);
+        ctv1 = CRTM_16_2 * (ad2 - ad6);
+
+        tvr5 = cv1r - ad4;
+        ad49 = cv1r + ad4;
+
+        tvi4 = ctv4 + sbr4;
         tvi12 = ctv4 - sbr4;
 
-        tvr1 += (CRTM_16_3 * ad35);
-        tvr3 += (CRTM_16_1 * sb35);
-        tvi1 += (CRTM_16_3 * adi35);
-        tvi3 += (CRTM_16_1 * sbr35);
+        tvr2 = cv2r + ctv1;
+        tvr9 = cv2r - ctv1;
 
-        tvr10 -= (CRTM_16_1 * ad35);
-        tvr11 -= (CRTM_16_3 * sb35);
-        tvi10 -= (CRTM_16_1 * adi35);
-        tvi11 -= (CRTM_16_3 * sbr35);
-
-        // Output point 1: X(0)
         tvrr = cav1r + cav2r;
         tvri = ad26 + ad49;
-        tvii = cav1i + cav2i;
-        tvir = adi26 + adi49;
-
         *out_r = tvri + tvrr;
-        *out_i = tvir + tvii;
 
-        // Output point 9: X(8)
         out_r[out_strides[8]] = tvri - tvrr;
-        out_i[out_strides[8]] = tvir - tvii;
 
-        // Output point 2: X(1)
-        tvrr = tvr2 + tvr1;
-        tvri = tvr3 + tvr4;
-        tvir = tvi3 + tvi4;
-        tvii = tvi2 + tvi1;
-        out_r[out_strides[1]] = tvrr - tvri;
-        out_i[out_strides[1]] = tvii + tvir;
+        //----------------------------------------
 
-        // Output point 16: X(15)
-        out_r[out_strides[15]] = tvrr + tvri;
-        out_i[out_strides[15]] = tvii - tvir;
+        v1i = in_i[in_strides[1]];
+        v2i = in_i[in_strides[15]];
+        adi1 = v1i + v2i;
+        sb1 = v2i - v1i;
+        v1i = in_i[in_strides[7]];
+        v2i = in_i[in_strides[9]];
+        adi7 = v1i + v2i;
+        sb7 = v2i - v1i;
 
-        // Output point 3: X(2)
-        tvrr = tvr5 + tvr6;
-        tvri = tvr7 + tvr8;
-        tvir = tvi7 + tvi8;
-        tvii = tvi5 + tvi6;
-        out_r[out_strides[2]] = tvrr - tvri;
-        out_i[out_strides[2]] = tvii + tvir;
+        v1i = in_i[in_strides[3]];
+        v2i = in_i[in_strides[13]];
+        adi3 = v1i + v2i;
+        sb3 = v2i - v1i;
+        v1i = in_i[in_strides[5]];
+        v2i = in_i[in_strides[11]];
+        adi5 = v1i + v2i;
+        sb5 = v2i - v1i;
+        cav1i = adi1 + adi7;
+        adi17 = adi1 - adi7;
+        sb17 = sb1 + sb7;
+        cav3i = sb1 - sb7;
 
-        // Output point 15: X(14)
-        out_r[out_strides[14]] = tvrr + tvri;
-        out_i[out_strides[14]] = tvii - tvir;
+        cav2i = adi3 + adi5;
+        adi35 = adi3 - adi5;
+        sb35 = sb3 + sb5;
+        cav4i = sb3 - sb5;
 
-        // Output point 4: X(3)
-        tvrr = tvr9 + tvr10;
-        tvri = tvr11 + tvr12;
-        tvir = tvi11 + tvi12;
-        tvii = tvi9 + tvi10;
-        out_r[out_strides[3]] = tvrr - tvri;
-        out_i[out_strides[3]] = tvii + tvir;
+        v3i = in_i[in_strides[2]];
+        v4i = in_i[in_strides[14]];
+        adi2 = v3i + v4i;
+        sb2 = v4i - v3i;
+        v3i = in_i[in_strides[6]];
+        v4i = in_i[in_strides[10]];
+        adi6 = v3i + v4i;
+        sb6 = v4i - v3i;
 
-        // Output point 14: X(13)
-        out_r[out_strides[13]] = tvrr + tvri;
-        out_i[out_strides[13]] = tvii - tvir;
+        tvr3 = (CRTM_16_1 * sb35) + (CRTM_16_3 * sb17);
+        tvr11 = (CRTM_16_1 * sb17) - (CRTM_16_3 * sb35);
+        tvi1 = (CRTM_16_3 * adi35) + (CRTM_16_1 * adi17);
+        tvi10 = (CRTM_16_3 * adi17) - (CRTM_16_1 * adi35);
+        tvr7 = CRTM_16_2 * (cav3i + cav4i);
+        tvi6 = CRTM_16_2 * (cav1i - cav2i);
 
-        // Output point 5: X(4)
         tvrr = ad49 - ad26;
         tvri = cav3i - cav4i;
+        out_r[out_strides[4]] = tvrr - tvri;
+        out_r[out_strides[12]] = tvrr + tvri;
+
+        v3i = in_i[in_strides[4]];
+        v4i = in_i[in_strides[12]];
+        adi4 = v3i + v4i;
+        sb4 = v4i - v3i;
+        v1i = *in_i;
+        v2i = in_i[in_strides[8]];
+        cv1i = v1i + v2i;
+        cv2i = v1i - v2i;
+
+        adi26 = adi2 + adi6;
+        tvr8 = sb2 - sb6;
+        ctv2 = CRTM_16_2 * (sb2 + sb6);
+        ctv3 = CRTM_16_2 * (adi2 - adi6);
+
+        adi49 = cv1i + adi4;
+        tvi5 = cv1i - adi4;
+
+        tvr4 = ctv2 + sb4;
+        tvr12 = ctv2 - sb4;
+        tvi2 = cv2i + ctv3;
+        tvi9 = cv2i - ctv3;
+
+        tvii = cav1i + cav2i;
+        tvir = adi26 + adi49;
+        *out_i = tvir + tvii;
+
+        out_i[out_strides[8]] = tvir - tvii;
+
+        //---------------------------------------
+
         tvir = cav3r - cav4r;
         tvii = adi49 - adi26;
-        out_r[out_strides[4]] = tvrr - tvri;
         out_i[out_strides[4]] = tvii + tvir;
-
-        // Output point 13: X(12)
-        out_r[out_strides[12]] = tvrr + tvri;
         out_i[out_strides[12]] = tvii - tvir;
 
-        // Output point 6: X(5)
-        tvrr = tvr9 - tvr10;
-        tvri = tvr11 - tvr12;
-        tvir = tvi11 - tvi12;
-        tvii = tvi9 - tvi10;
-        out_r[out_strides[5]] = tvrr - tvri;
-        out_i[out_strides[5]] = tvii + tvir;
+        tvrr = tvr2 + tvr1;
+        tvri = tvr3 + tvr4;
+        out_r[out_strides[1]] = tvrr - tvri;
+        out_r[out_strides[15]] = tvrr + tvri;
+        tvir = tvi3 + tvi4;
+        tvii = tvi2 + tvi1;
 
-        // Output point 12: X(11)
-        out_r[out_strides[11]] = tvrr + tvri;
-        out_i[out_strides[11]] = tvii - tvir;
+        out_i[out_strides[1]] = tvii + tvir;
+        out_i[out_strides[15]] = tvii - tvir;
 
-        // Output point 7: X(6)
-        tvrr = tvr5 - tvr6;
-        tvri = tvr7 - tvr8;
-        tvir = tvi7 - tvi8;
-        tvii = tvi5 - tvi6;
-        out_r[out_strides[6]] = tvrr - tvri;
-        out_i[out_strides[6]] = tvii + tvir;
-
-        // Output point 11: X(10)
-        out_r[out_strides[10]] = tvrr + tvri;
-        out_i[out_strides[10]] = tvii - tvir;
-
-        // Output point 8: X(7)
         tvrr = tvr2 - tvr1;
         tvri = tvr3 - tvr4;
+        out_r[out_strides[7]] = tvrr - tvri;
+        out_r[out_strides[9]] = tvrr + tvri;
         tvir = tvi3 - tvi4;
         tvii = tvi2 - tvi1;
-        out_r[out_strides[7]] = tvrr - tvri;
         out_i[out_strides[7]] = tvii + tvir;
-
-        // Output point 10: X(9)
-        out_r[out_strides[9]] = tvrr + tvri;
         out_i[out_strides[9]] = tvii - tvir;
+
+        tvrr = tvr5 + tvr6;
+        tvri = tvr7 + tvr8;
+        out_r[out_strides[2]] = tvrr - tvri;
+        out_r[out_strides[14]] = tvrr + tvri;
+        tvir = tvi7 + tvi8;
+        tvii = tvi5 + tvi6;
+        out_i[out_strides[2]] = tvii + tvir;
+        out_i[out_strides[14]] = tvii - tvir;
+
+        tvrr = tvr5 - tvr6;
+        tvri = tvr7 - tvr8;
+        out_r[out_strides[6]] = tvrr - tvri;
+        out_r[out_strides[10]] = tvrr + tvri;
+        tvir = tvi7 - tvi8;
+        tvii = tvi5 - tvi6;
+        out_i[out_strides[6]] = tvii + tvir;
+
+        out_i[out_strides[10]] = tvii - tvir;
+
+        tvrr = tvr9 + tvr10;
+        tvri = tvr11 + tvr12;
+        out_r[out_strides[3]] = tvrr - tvri;
+        out_r[out_strides[13]] = tvrr + tvri;
+        tvir = tvi11 + tvi12;
+        tvii = tvi9 + tvi10;
+        out_i[out_strides[3]] = tvii + tvir;
+        out_i[out_strides[13]] = tvii - tvir;
+
+        tvrr = tvr9 - tvr10;
+        tvri = tvr11 - tvr12;
+        out_r[out_strides[5]] = tvrr - tvri;
+        out_r[out_strides[11]] = tvrr + tvri;
+        tvir = tvi11 - tvi12;
+        tvii = tvi9 - tvi10;
+        out_i[out_strides[5]] = tvii + tvir;
+        out_i[out_strides[11]] = tvii - tvir;
 
         in_r += v_in_stride;
         in_i += v_in_stride;
