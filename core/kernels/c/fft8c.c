@@ -86,115 +86,91 @@ static VOID fft8c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                tvrr, tvri, tvir, tvii, tv1rr, tv1ii, v37r, v73r, v37i, v73i,
                tv1ri, tv1ir, v15r, v51r, v15i, v51i;
 
-        // Input point 1: x(0)
-        v1r = *in_r;
-        v1i = *in_i;
-
-        // Input point 2: x(1)
-        v2r = in_r[in_strides[1]];
-        v2i = in_i[in_strides[1]];
-
-        // Input point 3: x(2)
         v3r = in_r[in_strides[2]];
         v3i = in_i[in_strides[2]];
-
-        // Input point 4: x(3)
-        v4r = in_r[in_strides[3]];
-        v4i = in_i[in_strides[3]];
-
-        // Input point 5: x(4)
-        v5r = in_r[in_strides[4]];
-        v5i = in_i[in_strides[4]];
-
-        // Input point 6: x(5)
-        v6r = in_r[in_strides[5]];
-        v6i = in_i[in_strides[5]];
-
-        // Input point 7: x(6)
         v7r = in_r[in_strides[6]];
         v7i = in_i[in_strides[6]];
 
-        // Input point 8: x(7)
-        v8r = in_r[in_strides[7]];
-        v8i = in_i[in_strides[7]];
+        v37r = v3r + v7r;
+        v37i = v7i + v3i;
+        v73r = v7r - v3r;
+        v73i = v3i - v7i;
 
-        v28r = v2r + v8r;
-        v46r = v4r + v6r;
-        v28i = v2i + v8i;
-        v46i = v4i + v6i;
-        v82i = v8i - v2i;
-        v64i = v6i - v4i;
-        v82r = v8r - v2r;
-        v64r = v6r - v4r;
+        v1r = *in_r;
+        v5r = in_r[in_strides[4]];
         v15r = v1r + v5r;
         v51r = v1r - v5r;
+
+        v2r = in_r[in_strides[1]];
+        v8r = in_r[in_strides[7]];
+        v28r = v2r + v8r;
+        v82r = v8r - v2r;
+
+        v4r = in_r[in_strides[3]];
+        v6r = in_r[in_strides[5]];
+        v46r = v4r + v6r;
+        v64r = v6r - v4r;
+
+        v2i = in_i[in_strides[1]];
+        v8i = in_i[in_strides[7]];
+        v82i = v8i - v2i;
+        v28i = v2i + v8i;
+
+        tvrr = v28r + v46r;
+        tvri = v15r + v37r;
+        *out_r = tvrr + tvri;
+        out_r[out_strides[4]] = tvri - tvrr;
+
+        v4i = in_i[in_strides[3]];
+        v6i = in_i[in_strides[5]];
+        v46i = v4i + v6i;
+        v64i = v6i - v4i;
+
+        tvrr = v15r - v37r;
+        tvri = v82i - v64i;
+        out_r[out_strides[2]] = tvrr - tvri;
+        out_r[out_strides[6]] = tvrr + tvri;
+
+        v1i = *in_i;
+        v5i = in_i[in_strides[4]];
         v15i = v1i + v5i;
         v51i = v1i - v5i;
 
-        // common operations
-        tv1rr = CRTM_8_1 * (v28r - v46r);
-        tv1ii = CRTM_8_1 * (v28i - v46i);
-        tv1ri = CRTM_8_1 * (v82i + v64i);
-        tv1ir = CRTM_8_1 * (v82r + v64r);
-        v37r = v3r + v7r;
-        v73r = v7r - v3r;
-        v37i = v7i + v3i;
-        v73i = v3i - v7i;
-
-        // Output point 1: X(0)
-        tvrr = v28r + v46r;
-        tvri = v15r + v37r;
-
         tvii = v28i + v46i;
         tvir = v15i + v37i;
-
-        *out_r = tvrr + tvri;
         *out_i = tvii + tvir;
-
-        // Output point 5: X(4)
-        out_r[out_strides[4]] = tvri - tvrr;
         out_i[out_strides[4]] = tvir - tvii;
-
-        // Output point 2: X(1)
-        tvrr = v51r + tv1rr;
-        tvri = tv1ri - v73i;
-
-        tvir = tv1ir + v73r;
-        tvii = v51i + tv1ii;
-
-        out_r[out_strides[1]] = tvrr - tvri;
-        out_i[out_strides[1]] = tvir + tvii;
-
-        // Output point 8: X(7)
-        out_r[out_strides[7]] = tvrr + tvri;
-        out_i[out_strides[7]] = tvii - tvir;
-
-        // Output point 3: X(2)
-        tvrr = v15r - v37r;
-        tvri = v82i - v64i;
 
         tvir = v82r - v64r;
         tvii = v15i - v37i;
 
-        out_r[out_strides[2]] = tvrr - tvri;
         out_i[out_strides[2]] = tvir + tvii;
-
-        // Output point 7: X(6)
-        out_r[out_strides[6]] = tvrr + tvri;
         out_i[out_strides[6]] = tvii - tvir;
 
-        // Output point 4: X(3)
+        tv1rr = CRTM_8_1 * (v28r - v46r);
+        tv1ri = CRTM_8_1 * (v82i + v64i);
+
+        tvrr = v51r + tv1rr;
+        tvri = tv1ri - v73i;
+        out_r[out_strides[1]] = tvrr - tvri;
+        out_r[out_strides[7]] = tvrr + tvri;
+
         tvrr = v51r - tv1rr;
         tvri = tv1ri + v73i;
+        out_r[out_strides[3]] = tvrr - tvri;
+        out_r[out_strides[5]] = tvrr + tvri;
+
+        tv1ir = CRTM_8_1 * (v82r + v64r);
+        tvir = tv1ir + v73r;
+        tv1ii = CRTM_8_1 * (v28i - v46i);
+        tvii = v51i + tv1ii;
+        out_i[out_strides[1]] = tvir + tvii;
+        out_i[out_strides[7]] = tvii - tvir;
 
         tvir = tv1ir - v73r;
         tvii = v51i - tv1ii;
 
-        out_r[out_strides[3]] = tvrr - tvri;
         out_i[out_strides[3]] = tvir + tvii;
-
-        // Output point 6: X(5)
-        out_r[out_strides[5]] = tvrr + tvri;
         out_i[out_strides[5]] = tvii - tvir;
 
         in_r += v_in_stride;
@@ -238,115 +214,91 @@ static VOID fft8c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
               tvrr, tvri, tvir, tvii, tv1rr, tv1ii, v37r, v73r, v37i, v73i,
               tv1ri, tv1ir, v15r, v51r, v15i, v51i;
 
-        // Input point 1: x(0)
-        v1r = *in_r;
-        v1i = *in_i;
-
-        // Input point 2: x(1)
-        v2r = in_r[in_strides[1]];
-        v2i = in_i[in_strides[1]];
-
-        // Input point 3: x(2)
         v3r = in_r[in_strides[2]];
         v3i = in_i[in_strides[2]];
-
-        // Input point 4: x(3)
-        v4r = in_r[in_strides[3]];
-        v4i = in_i[in_strides[3]];
-
-        // Input point 5: x(4)
-        v5r = in_r[in_strides[4]];
-        v5i = in_i[in_strides[4]];
-
-        // Input point 6: x(5)
-        v6r = in_r[in_strides[5]];
-        v6i = in_i[in_strides[5]];
-
-        // Input point 7: x(6)
         v7r = in_r[in_strides[6]];
         v7i = in_i[in_strides[6]];
 
-        // Input point 8: x(7)
-        v8r = in_r[in_strides[7]];
-        v8i = in_i[in_strides[7]];
+        v37r = v3r + v7r;
+        v37i = v7i + v3i;
+        v73r = v7r - v3r;
+        v73i = v3i - v7i;
 
-        v28r = v2r + v8r;
-        v46r = v4r + v6r;
-        v28i = v2i + v8i;
-        v46i = v4i + v6i;
-        v82i = v8i - v2i;
-        v64i = v6i - v4i;
-        v82r = v8r - v2r;
-        v64r = v6r - v4r;
+        v1r = *in_r;
+        v5r = in_r[in_strides[4]];
         v15r = v1r + v5r;
         v51r = v1r - v5r;
+
+        v2r = in_r[in_strides[1]];
+        v8r = in_r[in_strides[7]];
+        v28r = v2r + v8r;
+        v82r = v8r - v2r;
+
+        v4r = in_r[in_strides[3]];
+        v6r = in_r[in_strides[5]];
+        v46r = v4r + v6r;
+        v64r = v6r - v4r;
+
+        v2i = in_i[in_strides[1]];
+        v8i = in_i[in_strides[7]];
+        v82i = v8i - v2i;
+        v28i = v2i + v8i;
+
+        tvrr = v28r + v46r;
+        tvri = v15r + v37r;
+        *out_r = tvrr + tvri;
+        out_r[out_strides[4]] = tvri - tvrr;
+
+        v4i = in_i[in_strides[3]];
+        v6i = in_i[in_strides[5]];
+        v46i = v4i + v6i;
+        v64i = v6i - v4i;
+
+        tvrr = v15r - v37r;
+        tvri = v82i - v64i;
+        out_r[out_strides[2]] = tvrr - tvri;
+        out_r[out_strides[6]] = tvrr + tvri;
+
+        v1i = *in_i;
+        v5i = in_i[in_strides[4]];
         v15i = v1i + v5i;
         v51i = v1i - v5i;
 
-        // common operations
-        tv1rr = CRTM_8_1 * (v28r - v46r);
-        tv1ii = CRTM_8_1 * (v28i - v46i);
-        tv1ri = CRTM_8_1 * (v82i + v64i);
-        tv1ir = CRTM_8_1 * (v82r + v64r);
-        v37r = v3r + v7r;
-        v73r = v7r - v3r;
-        v37i = v7i + v3i;
-        v73i = v3i - v7i;
-
-        // Output point 1: X(0)
-        tvrr = v28r + v46r;
-        tvri = v15r + v37r;
-
         tvii = v28i + v46i;
         tvir = v15i + v37i;
-
-        *out_r = tvrr + tvri;
         *out_i = tvii + tvir;
-
-        // Output point 5: X(4)
-        out_r[out_strides[4]] = tvri - tvrr;
         out_i[out_strides[4]] = tvir - tvii;
-
-        // Output point 2: X(1)
-        tvrr = v51r + tv1rr;
-        tvri = tv1ri - v73i;
-
-        tvir = tv1ir + v73r;
-        tvii = v51i + tv1ii;
-
-        out_r[out_strides[1]] = tvrr - tvri;
-        out_i[out_strides[1]] = tvir + tvii;
-
-        // Output point 8: X(7)
-        out_r[out_strides[7]] = tvrr + tvri;
-        out_i[out_strides[7]] = tvii - tvir;
-
-        // Output point 3: X(2)
-        tvrr = v15r - v37r;
-        tvri = v82i - v64i;
 
         tvir = v82r - v64r;
         tvii = v15i - v37i;
 
-        out_r[out_strides[2]] = tvrr - tvri;
         out_i[out_strides[2]] = tvir + tvii;
-
-        // Output point 7: X(6)
-        out_r[out_strides[6]] = tvrr + tvri;
         out_i[out_strides[6]] = tvii - tvir;
 
-        // Output point 4: X(3)
+        tv1rr = CRTM_8_1 * (v28r - v46r);
+        tv1ri = CRTM_8_1 * (v82i + v64i);
+
+        tvrr = v51r + tv1rr;
+        tvri = tv1ri - v73i;
+        out_r[out_strides[1]] = tvrr - tvri;
+        out_r[out_strides[7]] = tvrr + tvri;
+
         tvrr = v51r - tv1rr;
         tvri = tv1ri + v73i;
+        out_r[out_strides[3]] = tvrr - tvri;
+        out_r[out_strides[5]] = tvrr + tvri;
+
+        tv1ir = CRTM_8_1 * (v82r + v64r);
+        tvir = tv1ir + v73r;
+        tv1ii = CRTM_8_1 * (v28i - v46i);
+        tvii = v51i + tv1ii;
+        out_i[out_strides[1]] = tvir + tvii;
+        out_i[out_strides[7]] = tvii - tvir;
 
         tvir = tv1ir - v73r;
         tvii = v51i - tv1ii;
 
-        out_r[out_strides[3]] = tvrr - tvri;
         out_i[out_strides[3]] = tvir + tvii;
-
-        // Output point 6: X(5)
-        out_r[out_strides[5]] = tvrr + tvri;
         out_i[out_strides[5]] = tvii - tvir;
 
         in_r += v_in_stride;
