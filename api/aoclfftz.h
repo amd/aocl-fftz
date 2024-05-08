@@ -56,7 +56,7 @@ extern "C" {
 #define EXPORT_SYM_DYN
 #endif
 
-#define AOCLFFTZ_LIBRARY_VERSION "AOCL-FFTZ 0.0.1"
+#define AOCLFFTZ_LIBRARY_VERSION "AOCL-FFTZ 0.2.0"
 
 //Error return codes of aocl-fftz library
 //Add new error codes at the code to retain the existing error code values
