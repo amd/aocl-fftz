@@ -134,18 +134,16 @@ endif()
 #set(USER_DEBUG_ON "-g")
 message(STATUS "C Compiler used: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ Compiler used: ${CMAKE_CXX_COMPILER}")
-message(ENABLE_AVX128 : ${ENABLE_AVX128})
-message(ENABLE_AVX256 : ${ENABLE_AVX256})
-message(ENABLE_AVX512 : ${ENABLE_AVX512})
+message(STATUS ENABLE_AVX128 : ${ENABLE_AVX128})
+message(STATUS ENABLE_AVX256 : ${ENABLE_AVX256})
+message(STATUS ENABLE_AVX512 : ${ENABLE_AVX512})
 
 if(WIN32)
     if(ENABLE_AVX512)
         set(AVX512_FLAG /arch:AVX512)
-        message(STATUS "Enabling AVX512 instructions")
     endif()
-    if(ENABLE_AVX128)
+    if(ENABLE_AVX128 OR ENABLE_AVX256)
         set(AVX_FLAG /arch:AVX)
-        message(STATUS "Enabling AVX instructions")
     endif()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${USER_DEBUG_ON} /O2 /DNDEBUG /Oy")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USER_DEBUG_ON} /O2 /DNDEBUG /Oy")
@@ -153,17 +151,13 @@ if(WIN32)
 elseif(UNIX)
     if(ENABLE_AVX512)
         set(AVX512_FLAG -mavx512f)
-        message(STATUS "Enabling AVX512 instructions")
     endif()
     if(ENABLE_AVX128 OR ENABLE_AVX256)
         set(AVX_FLAG -mavx)
-        message(STATUS "Enabling AVX instructions")
     endif()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${USER_DEBUG_ON} -fomit-frame-pointer -fstrict-aliasing")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USER_DEBUG_ON} -fomit-frame-pointer -fstrict-aliasing")
 endif()
-
-add_compile_options(${AVX_FLAG} ${AVX512_FLAG})
 
 add_compile_definitions(CCompiler="${CMAKE_C_COMPILER}")
 add_compile_definitions(CXXCompiler="${CMAKE_CXX_COMPILER}")
@@ -226,12 +220,29 @@ if(VALGRIND OR ASAN OR CODE_COVERAGE)
     set(AOCL_TEST_COVERAGE ON)
 endif()
 
+message(STATUS ASAN : ${ASAN})
+message(STATUS VALGRIND : ${VALGRIND})
+message(STATUS CODE COVERAGE : ${CODE_COVERAGE})
+
 #setup CTest for GoogleTest and test bench
 if(AOCL_TEST_COVERAGE)
     # enabling ctest
     enable_testing()
     add_subdirectory(gtest)
     add_subdirectory(test)
+endif()
+
+# compile kernel files with only the relevant simd flags.
+#
+# By default, the properties set are visible only to source files in the current folder
+# To make it visible to files across folders,'DIRECTORY' option is used
+if(ENABLE_AVX512)
+    set_source_files_properties(${CORE_AVX512_FILES} DIRECTORY "${ROOT_DIR}" "gtest"
+                                PROPERTIES COMPILE_FLAGS "${AVX512_FLAG}")
+endif()
+if(ENABLE_AVX128 OR ENABLE_AVX256)
+    set_source_files_properties(${CORE_AVX128_FILES} ${CORE_AVX256_FILES} DIRECTORY "${ROOT_DIR}" "gtest"
+                                PROPERTIES COMPILE_FLAGS "${AVX_FLAG}")
 endif()
 
 #Enabling strict warnings
