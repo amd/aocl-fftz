@@ -50,8 +50,8 @@ kfft_ register_kernel_fft15avx128(INT32 precision)
         return NULL;
 }
 
-static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 28, 78, 60, 7, 7},
-                                                     {0, 28, 78, 30, 7, 7}};
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 25, 78, 60, 7, 7},
+                                                     {0, 25, 78, 30, 7, 7}};
 ops_cycles_t get_ops_cnt_fft15avx128(INT32 precision)
 {
     if (precision == DT_FLOAT)
@@ -64,13 +64,17 @@ VOID fft15avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                      VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                      UINT8 flag)
 {
-    const FLOAT CRTM_15[6] =
+    const FLOAT CRTM_15[10] =
         {0.55901699437494742410229341718281905886015458990288,
          0.25000000000000000000000000000000000000000000000000,
          0.95105651629515357211643933337938214340569863400000,
          0.58778525229247301629891039327884007596190389052978,
          0.50000000000000000000000000000000000000000000000000,
-         0.86602540378443864676372317075293618347140262690519};
+         0.86602540378443864676372317075293618347140262690519,
+         0.48412291827592710612024388657479988457787393064252,
+         0.21650635094610964914707551542960572987794876098633,
+         0.82363910354633184270744116161596601637855195182647,
+         0.50903696045512706468216979248996715975105181034577};
 
     FLOAT *in_r = (FLOAT *)in_real;
     FLOAT *out_r = (FLOAT *)out_real;
@@ -89,7 +93,7 @@ VOID fft15avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     __m128 v_av1, v_av2, v_av3, v_av4, v_av5, v_av6, v_av7, v_av8, v_av9;
     __m128 v_av11, v_av12, v_av13, v_av14, v_av15, v_av16, v_av17;
     __m128 v_av18, v_av19, v_av20, v_av21, v_av22, v_av23, v_av24, v_av25;
-    __m128 v_av26, v_av27, v_av28, v_av29, v_av30, v_av31, v_av32, v_av33;
+    __m128 v_av26, v_av27, v_av30, v_av33;
     __m128 v_av34, v_av35, v_av36, v_av37, v_av38, v_av39, v_av40, v_av41;
     __m128 v_av42, v_av44, v_av45, v_av46, v_av47, v_av48, v_av49;
     __m128 v_tv1, v_tv2, v_tv3, v_tv4, v_tv5, v_tv6, v_tv7, v_tv8, v_tv9,
@@ -105,6 +109,10 @@ VOID fft15avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     __m128 v_K4 = _mm_broadcast_ss(&CRTM_15[3]);
     __m128 v_K5 = _mm_broadcast_ss(&CRTM_15[4]);
     __m128 v_K6 = _mm_broadcast_ss(&CRTM_15[5]);
+    __m128 v_K7 = _mm_broadcast_ss(&CRTM_15[6]);
+    __m128 v_K8 = _mm_broadcast_ss(&CRTM_15[7]);
+    __m128 v_K9 = _mm_broadcast_ss(&CRTM_15[8]);
+    __m128 v_K10 = _mm_broadcast_ss(&CRTM_15[9]);
 
     if (flag)
     {
@@ -113,6 +121,8 @@ VOID fft15avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_K3 = -v_K3;
         v_K4 = -v_K4;
         v_K6 = -v_K6;
+        v_K7 = -v_K7;
+        v_K8 = -v_K8;
     }
 
     for (count = 0; count < N; count++)
@@ -216,27 +226,23 @@ VOID fft15avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_tv11 = _mm_mul_ps(v_K1, v_av20);
         v_av21 = _mm_add_ps(v_av19, v_tv11);
         v_cv11 = _mm_sub_ps(v_in14, v_in4);
-        v_av29 = _mm_mul_ps(v_K6, v_cv11);
         v_cv12 = _mm_sub_ps(v_in11, v_in1);
-        v_av28 = _mm_mul_ps(v_K6, v_cv12);
-        v_av22 = _mm_sub_ps(v_av29, v_av28);
+        v_av22 = _mm_sub_ps(v_cv11, v_cv12);
         v_av23 = _mm_sub_ps(v_in8, v_in13);
-        v_av32 = _mm_mul_ps(v_K6, v_av23);
         v_av24 = _mm_sub_ps(v_in2, v_in7);
-        v_av31 = _mm_mul_ps(v_K6, v_av24);
-        v_av25 = _mm_sub_ps(v_av32, v_av31);
-        v_tv16 = _mm_mul_ps(v_K3, v_av22);
-        v_tv17 = _mm_mul_ps(v_K4, v_av25);
+        v_av25 = _mm_sub_ps(v_av23, v_av24);
+        v_tv16 = _mm_mul_ps(v_K9, v_av22);
+        v_tv17 = _mm_mul_ps(v_K10, v_av25);
         v_av26 = _mm_add_ps(v_tv16, v_tv17);
         v_av27 = _mm_sub_ps(v_in10, v_in5);
         v_tv18 = _mm_mul_ps(v_K6, v_av27);
-        v_av30 = _mm_add_ps(v_av28, v_av29);
-        v_av33 = _mm_add_ps(v_av31, v_av32);
+        v_av30 = _mm_add_ps(v_cv12, v_cv11);
+        v_av33 = _mm_add_ps(v_av24, v_av23);
         v_av34 = _mm_add_ps(v_av30, v_av33);
-        v_tv19 = _mm_mul_ps(v_K2, v_av34);
+        v_tv19 = _mm_mul_ps(v_K8, v_av34);
         v_av35 = _mm_add_ps(v_tv18, v_tv19);
         v_av36 = _mm_sub_ps(v_av33, v_av30);
-        v_tv20 = _mm_mul_ps(v_K1, v_av36);
+        v_tv20 = _mm_mul_ps(v_K7, v_av36);
         v_av37 = _mm_add_ps(v_av35, v_tv20);
         v_av38 = _mm_sub_ps(v_av13, v_av12);
         v_av39 = _mm_sub_ps(v_av16, v_av15);
@@ -248,6 +254,7 @@ VOID fft15avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_av41 = _mm_add_ps(v_av11, v_av18);
 
         // imag part
+        v_av34 = _mm_mul_ps(v_K6, v_av34);
         v_av42 = _mm_sub_ps(v_tv18, v_av34);
         v_av42 = SWAP_RI_128_S(CONJ_128_S(v_av42));
 
@@ -269,8 +276,8 @@ VOID fft15avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out2 = _mm_sub_ps(v_av41, v_av42);
 
         v_av44 = _mm_sub_ps(v_av19, v_tv11);
-        v_tv23 = _mm_mul_ps(v_K3, v_av25);
-        v_tv24 = _mm_mul_ps(v_K4, v_av22);
+        v_tv23 = _mm_mul_ps(v_K9, v_av25);
+        v_tv24 = _mm_mul_ps(v_K10, v_av22);
         v_av45 = _mm_sub_ps(v_tv23, v_tv24);
         v_av46 = _mm_sub_ps(v_av35, v_tv20);
         v_tv25 = _mm_mul_ps(v_K3, v_av39);
@@ -448,27 +455,23 @@ VOID fft15avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_tv11 = _mm_mul_ps(v_K1, v_av20);
         v_av21 = _mm_add_ps(v_av19, v_tv11);
         v_cv11 = _mm_sub_ps(v_in14, v_in4);
-        v_av29 = _mm_mul_ps(v_K6, v_cv11);
         v_cv12 = _mm_sub_ps(v_in11, v_in1);
-        v_av28 = _mm_mul_ps(v_K6, v_cv12);
-        v_av22 = _mm_sub_ps(v_av29, v_av28);
+        v_av22 = _mm_sub_ps(v_cv11, v_cv12);
         v_av23 = _mm_sub_ps(v_in8, v_in13);
-        v_av32 = _mm_mul_ps(v_K6, v_av23);
         v_av24 = _mm_sub_ps(v_in2, v_in7);
-        v_av31 = _mm_mul_ps(v_K6, v_av24);
-        v_av25 = _mm_sub_ps(v_av32, v_av31);
-        v_tv16 = _mm_mul_ps(v_K3, v_av22);
-        v_tv17 = _mm_mul_ps(v_K4, v_av25);
+        v_av25 = _mm_sub_ps(v_av23, v_av24);
+        v_tv16 = _mm_mul_ps(v_K9, v_av22);
+        v_tv17 = _mm_mul_ps(v_K10, v_av25);
         v_av26 = _mm_add_ps(v_tv16, v_tv17);
         v_av27 = _mm_sub_ps(v_in10, v_in5);
         v_tv18 = _mm_mul_ps(v_K6, v_av27);
-        v_av30 = _mm_add_ps(v_av28, v_av29);
-        v_av33 = _mm_add_ps(v_av31, v_av32);
+        v_av30 = _mm_add_ps(v_cv12, v_cv11);
+        v_av33 = _mm_add_ps(v_av24, v_av23);
         v_av34 = _mm_add_ps(v_av30, v_av33);
-        v_tv19 = _mm_mul_ps(v_K2, v_av34);
+        v_tv19 = _mm_mul_ps(v_K8, v_av34);
         v_av35 = _mm_add_ps(v_tv18, v_tv19);
         v_av36 = _mm_sub_ps(v_av33, v_av30);
-        v_tv20 = _mm_mul_ps(v_K1, v_av36);
+        v_tv20 = _mm_mul_ps(v_K7, v_av36);
         v_av37 = _mm_add_ps(v_av35, v_tv20);
         v_av38 = _mm_sub_ps(v_av13, v_av12);
         v_av39 = _mm_sub_ps(v_av16, v_av15);
@@ -480,6 +483,7 @@ VOID fft15avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_av41 = _mm_add_ps(v_av11, v_av18);
 
         // imag part
+        v_av34 = _mm_mul_ps(v_K6, v_av34);
         v_av42 = _mm_sub_ps(v_tv18, v_av34);
         v_av42 = SWAP_RI_128_S(CONJ_128_S(v_av42));
 
@@ -501,8 +505,8 @@ VOID fft15avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out2 = _mm_sub_ps(v_av41, v_av42);
 
         v_av44 = _mm_sub_ps(v_av19, v_tv11);
-        v_tv23 = _mm_mul_ps(v_K3, v_av25);
-        v_tv24 = _mm_mul_ps(v_K4, v_av22);
+        v_tv23 = _mm_mul_ps(v_K9, v_av25);
+        v_tv24 = _mm_mul_ps(v_K10, v_av22);
         v_av45 = _mm_sub_ps(v_tv23, v_tv24);
         v_av46 = _mm_sub_ps(v_av35, v_tv20);
         v_tv25 = _mm_mul_ps(v_K3, v_av39);
@@ -581,13 +585,17 @@ VOID fft15avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                      VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                      UINT8 flag)
 {
-    const DOUBLE CRTM_15[6] = {
-        0.55901699437494742410229341718281905886015458990288,
-        0.25000000000000000000000000000000000000000000000000,
-        0.95105651629515357211643933337938214340569863400000,
-        0.58778525229247301629891039327884007596190389052978,
-        0.50000000000000000000000000000000000000000000000000,
-        0.86602540378443864676372317075293618347140262690519};
+    const DOUBLE CRTM_15[10] =
+        {0.55901699437494742410229341718281905886015458990288,
+         0.25000000000000000000000000000000000000000000000000,
+         0.95105651629515357211643933337938214340569863400000,
+         0.58778525229247301629891039327884007596190389052978,
+         0.50000000000000000000000000000000000000000000000000,
+         0.86602540378443864676372317075293618347140262690519,
+         0.48412291827592710612024388657479988457787393064252,
+         0.21650635094610964914707551542960572987794876098633,
+         0.82363910354633184270744116161596601637855195182647,
+         0.50903696045512706468216979248996715975105181034577};
 
     DOUBLE *in_r = (DOUBLE *)in_real;
     DOUBLE *out_r = (DOUBLE *)out_real;
@@ -606,7 +614,7 @@ VOID fft15avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     __m128d v_av1, v_av2, v_av3, v_av4, v_av5, v_av6, v_av7, v_av8, v_av9;
     __m128d v_av11, v_av12, v_av13, v_av14, v_av15, v_av16, v_av17;
     __m128d v_av18, v_av19, v_av20, v_av21, v_av22, v_av23, v_av24, v_av25;
-    __m128d v_av26, v_av27, v_av28, v_av29, v_av30, v_av31, v_av32, v_av33;
+    __m128d v_av26, v_av27, v_av30, v_av33;
     __m128d v_av34, v_av35, v_av36, v_av37, v_av38, v_av39, v_av40, v_av41;
     __m128d v_av42, v_av44, v_av45, v_av46, v_av47, v_av48, v_av49;
     __m128d v_tv1, v_tv2, v_tv3, v_tv4, v_tv5, v_tv6, v_tv7, v_tv8, v_tv9,
@@ -622,6 +630,10 @@ VOID fft15avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     __m128d v_K4 = _mm_set1_pd(CRTM_15[3]);
     __m128d v_K5 = _mm_set1_pd(CRTM_15[4]);
     __m128d v_K6 = _mm_set1_pd(CRTM_15[5]);
+    __m128d v_K7 = _mm_set1_pd(CRTM_15[6]);
+    __m128d v_K8 = _mm_set1_pd(CRTM_15[7]);
+    __m128d v_K9 = _mm_set1_pd(CRTM_15[8]);
+    __m128d v_K10 = _mm_set1_pd(CRTM_15[9]);
 
     if (flag)
     {
@@ -630,6 +642,8 @@ VOID fft15avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_K3 = -v_K3;
         v_K4 = -v_K4;
         v_K6 = -v_K6;
+        v_K7 = -v_K7;
+        v_K8 = -v_K8;
     }
 
     for (count = 0; count < N; count++)
@@ -733,27 +747,23 @@ VOID fft15avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_tv11 = _mm_mul_pd(v_K1, v_av20);
         v_av21 = _mm_add_pd(v_av19, v_tv11);
         v_cv11 = _mm_sub_pd(v_in14, v_in4);
-        v_av29 = _mm_mul_pd(v_K6, v_cv11);
         v_cv12 = _mm_sub_pd(v_in11, v_in1);
-        v_av28 = _mm_mul_pd(v_K6, v_cv12);
-        v_av22 = _mm_sub_pd(v_av29, v_av28);
+        v_av22 = _mm_sub_pd(v_cv11, v_cv12);
         v_av23 = _mm_sub_pd(v_in8, v_in13);
-        v_av32 = _mm_mul_pd(v_K6, v_av23);
         v_av24 = _mm_sub_pd(v_in2, v_in7);
-        v_av31 = _mm_mul_pd(v_K6, v_av24);
-        v_av25 = _mm_sub_pd(v_av32, v_av31);
-        v_tv16 = _mm_mul_pd(v_K3, v_av22);
-        v_tv17 = _mm_mul_pd(v_K4, v_av25);
+        v_av25 = _mm_sub_pd(v_av23, v_av24);
+        v_tv16 = _mm_mul_pd(v_K9, v_av22);
+        v_tv17 = _mm_mul_pd(v_K10, v_av25);
         v_av26 = _mm_add_pd(v_tv16, v_tv17);
         v_av27 = _mm_sub_pd(v_in10, v_in5);
         v_tv18 = _mm_mul_pd(v_K6, v_av27);
-        v_av30 = _mm_add_pd(v_av28, v_av29);
-        v_av33 = _mm_add_pd(v_av31, v_av32);
+        v_av30 = _mm_add_pd(v_cv12, v_cv11);
+        v_av33 = _mm_add_pd(v_av24, v_av23);
         v_av34 = _mm_add_pd(v_av30, v_av33);
-        v_tv19 = _mm_mul_pd(v_K2, v_av34);
+        v_tv19 = _mm_mul_pd(v_K8, v_av34);
         v_av35 = _mm_add_pd(v_tv18, v_tv19);
         v_av36 = _mm_sub_pd(v_av33, v_av30);
-        v_tv20 = _mm_mul_pd(v_K1, v_av36);
+        v_tv20 = _mm_mul_pd(v_K7, v_av36);
         v_av37 = _mm_add_pd(v_av35, v_tv20);
         v_av38 = _mm_sub_pd(v_av13, v_av12);
         v_av39 = _mm_sub_pd(v_av16, v_av15);
@@ -765,6 +775,7 @@ VOID fft15avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_av41 = _mm_add_pd(v_av11, v_av18);
 
         // imag part
+        v_av34 = _mm_mul_pd(v_K6, v_av34);
         v_av42 = _mm_sub_pd(v_tv18, v_av34);
         v_av42 = SWAP_RI_128_D(CONJ_128_D(v_av42));
 
@@ -786,8 +797,8 @@ VOID fft15avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out2 = _mm_sub_pd(v_av41, v_av42);
 
         v_av44 = _mm_sub_pd(v_av19, v_tv11);
-        v_tv23 = _mm_mul_pd(v_K3, v_av25);
-        v_tv24 = _mm_mul_pd(v_K4, v_av22);
+        v_tv23 = _mm_mul_pd(v_K9, v_av25);
+        v_tv24 = _mm_mul_pd(v_K10, v_av22);
         v_av45 = _mm_sub_pd(v_tv23, v_tv24);
         v_av46 = _mm_sub_pd(v_av35, v_tv20);
         v_tv25 = _mm_mul_pd(v_K3, v_av39);
