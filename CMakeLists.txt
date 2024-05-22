@@ -70,7 +70,7 @@ option(AOCL_TEST_COVERAGE "Enable GTest and AOCL test bench based CTest suite (D
 option(CODE_COVERAGE "Enable source code coverage (only on Linux with GCC compiler)" OFF)
 option(ASAN "Enable Address Sanitizer checks (only on Linux/Debug build)" OFF)
 option(VALGRIND "Enable Valgrind checks (only on Linux/Debug. Incompatible with ASAN=ON)" OFF)
-#option(BUILD_DOC "Build documentation for aocl-fftz (Disabled by default)" OFF)
+option(BUILD_DOC "Build documentation for aocl-fftz (Disabled by default)" OFF)
 option(ENABLE_STRICT_WARNINGS "Enable compiler flags to treat all warnings as errors (Enabled by default)" ON)
 option(AOCL_ENABLE_LOG "Enable logging support within the library (Disabled by default)" OFF)
 
@@ -344,15 +344,14 @@ add_custom_command(
     COMMAND rm -vf ${ROOT_DIR}/lib/*
     )
 
-if(BUILD_DOC)
-    find_package(Doxygen 1.9.6)
+if (BUILD_DOC)
+    find_package(Doxygen 1.10.0)
     set(W_DIR "${CMAKE_CURRENT_SOURCE_DIR}/docs")
     if(NOT (DOXYGEN_FOUND))
         message(STATUS "Doxygen not found please install doxygen and try again.")
     else()
         execute_process(COMMAND ${DOXYGEN_EXECUTABLE} Doxyfile
-                WORKING_DIRECTORY ${W_DIR}
-                COMMAND_ECHO STDOUT)
+                WORKING_DIRECTORY ${W_DIR})
     endif()
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/docs/html/index.html)
         message(STATUS "Documentation generated successfully, to view documentation open docs/html/index.html")

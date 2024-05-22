@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2023, Advanced Micro Devices. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,9 +26,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file types.h
- *
- *  @brief Typedef declarations of data types.
+/** @file types.h
+ *  @brief AOCL-FFTZ Library - Typedef declarations.
  *
  *  This file contains the typedef declarations of different data types.
  *
@@ -41,22 +40,22 @@
 #include <stdint.h>
 #include <stddef.h>
 
-typedef int64_t INT64;          //fixed signed 64 bits int
-typedef int32_t INT32;          //fixed signed 32 bits int : Use it for signed int
-typedef ptrdiff_t INTP;         //portable signed int type : 4 bytes (ILP32), 8 bytes (LP64)
-typedef uint64_t UINT64;        //fixed unsigned 64 bits int
-typedef uint32_t UINT32;        //fixed unsigned 32 bits int : Use it for unsigned int
-typedef size_t UINTP;           //portable unsigned int type : 4 bytes (ILP32), 8 bytes (LP64)
-typedef char CHAR;              //signed character data type : 1 byte
-typedef unsigned char UCHAR;    //unsigned character data type : 1 byte
-typedef short SHORT;            //signed short integer : 2 bytes
-typedef unsigned short USHORT;  //unsigned short integer : 2 bytes
-typedef void VOID;              //void
-typedef float FLOAT32;          //single-precision
-typedef float FLOAT;            //single-precision
-typedef double FLOAT64;         //double-precision
-typedef double DOUBLE;          //double-precision
-typedef uint8_t UINT8;          //unsigned 1 byte integer
-typedef int8_t INT8;            //signed 1 byte integer
+typedef int64_t INT64;          /**< fixed signed 64 bits int @ingroup group_types */
+typedef int32_t INT32;          /**< fixed signed 32 bits int : Use it for signed int @ingroup group_types */
+typedef ptrdiff_t INTP;         /**< portable signed int type : 32 bits (ILP32), 64 bits (LP64) @ingroup group_types */
+typedef uint64_t UINT64;        /**< fixed unsigned 64 bits int @ingroup group_types */
+typedef uint32_t UINT32;        /**< fixed unsigned 32 bits int : Use it for unsigned int @ingroup group_types */
+typedef size_t UINTP;           /**< portable unsigned int type : 32 bits (ILP32), 64 bits (LP64) @ingroup group_types */
+typedef char CHAR;              /**< signed character data type : 8 bits @ingroup group_types */
+typedef unsigned char UCHAR;    /**< unsigned character data type : 8 bits @ingroup group_types */
+typedef short SHORT;            /**< signed short integer : 16 bits @ingroup group_types */
+typedef unsigned short USHORT;  /**< unsigned short integer : 16 bits @ingroup group_types */
+typedef void VOID;              /**< void type @ingroup group_types */
+typedef float FLOAT32;          /**< single precision floating point : 32 bits @ingroup group_types */
+typedef float FLOAT;            /**< single precision floating point : 32 bits @ingroup group_types */
+typedef double FLOAT64;         /**< double precision floating point : 64 bits @ingroup group_types */
+typedef double DOUBLE;          /**< double precision floating point : 64 bits @ingroup group_types */
+typedef uint8_t UINT8;          /**< unsigned 8 bits integer @ingroup group_types */
+typedef int8_t INT8;            /**< signed 8 bits integer @ingroup group_types */
 
 #endif //TYPES_H

@@ -2,9 +2,6 @@
 build/
 lib/
 
-# docs directory
-docs/
-
 # CTest logs
 Testing/
 

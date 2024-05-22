@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2023, Advanced Micro Devices. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,17 +27,35 @@
  */
 
 /** @file aoclfftz.h
- *
- *  @brief Interface APIs and data structures of AOCL FFTZ library.
+ *  @brief AOCL-FFTZ Library - Interface APIs and data structures.
  *
  *  This file contains the APIs and associated data structures that
  *  are responsible for setting up and executing the single-threaded,
  *  and multi-threaded FFT operations.
  *
- *  @note Different variants of APIs and data structures are exposed to
- *  support float and double precision types in LP64 and ILP64 data models.
- *
  *  @author S. Biplab Raut
+*/
+
+/**
+ *  @defgroup group_api AOCL-FFTZ - API
+ *  @brief Interface APIs of AOCL-FFTZ library.
+ *
+ *  APIs for setting up and executing the single-threaded, and multi-threaded
+ *  FFT operations.
+ *
+ *  @note Different variants of APIs are exposed to support float and double
+ *  precision types in LP64 and ILP64 data models.
+ *
+ */
+
+/**
+ *  @defgroup group_types AOCL-FFTZ - Types
+ *  @brief Data structures and typedef declarations of AOCL-FFTZ library.
+ *
+ *  Data strutures and typedef declarations used for AOCL-FFTZ APIs.
+ *
+ *  @note Different variants of data structures are available to support float
+ *  and double precision types in LP64 and ILP64 data models.
  */
 
 #ifndef AOCLFFTZ_H
@@ -50,6 +68,7 @@
 extern "C" {
 #endif
 
+/// @cond DOXYGEN_SHOULD_SKIP_THIS
 #ifdef _WINDOWS
 #define EXPORT_SYM_DYN __declspec(dllexport)
 #else
@@ -57,150 +76,285 @@ extern "C" {
 #endif
 
 #define AOCLFFTZ_LIBRARY_VERSION "AOCL-FFTZ 0.2.0"
+/// @endcond /* DOXYGEN_SHOULD_SKIP_THIS */
 
-//Error return codes of aocl-fftz library
+/**  @ingroup group_types
+     * aoclfftz_error_type
+     * Error return codes of aocl-fftz library.
+*/
 //Add new error codes at the code to retain the existing error code values
 typedef enum
 {
-    AOCLFFTZ_TIME_OUT = -6,     //Operation took long time than expected
-    AOCLFFTZ_MPI_COMM_FAILURE,  //Error encourered in MPI comminucation
-    AOCLFFTZ_MEMORY_FAILURE,    //Error related to Memory access or operation
-    AOCLFFTZ_INVALID_INPUT,     //Invalid size, format, type or precision of input
-    AOCLFFTZ_SETUP_FAILURE,     //Error in setup of the library
-    AOCLFFTZ_EXECUTION_FAILURE, //Error in execution of the library
-    AOCLFFTZ_SUCCESS            //Successful operation
+    AOCLFFTZ_TIME_OUT = -6,     /**< Operation took long time than expected */
+    AOCLFFTZ_MPI_COMM_FAILURE,  /**< Error encountered in MPI communication */
+    AOCLFFTZ_MEMORY_FAILURE,    /**< Error related to Memory access or operation */
+    AOCLFFTZ_INVALID_INPUT,     /**< Invalid size, format, type or precision of input */
+    AOCLFFTZ_SETUP_FAILURE,     /**< Error in setup of the library */
+    AOCLFFTZ_EXECUTION_FAILURE, /**< Error in execution of the library */
+    AOCLFFTZ_SUCCESS            /**< Successful operation */
 } aoclfftz_error_type;
 
-//tensor dimension for LP64
+/**  @ingroup group_types
+     * aoclfftz_dim_t
+     * Tensor dimension for LP64.
+*/
 typedef struct aoclfftz_dim
 {
-    INT32 n;
-    INT32 in_stride;
-    INT32 out_stride;
+    INT32 n;            /**< Problem dimension size */
+    INT32 in_stride;    /**< Stride for input buffer */
+    INT32 out_stride;   /**< Stride for output buffer */
 } aoclfftz_dim_t;
 
-//tensor dimension for ILP64
+/**  @ingroup group_types
+     * aoclfftz_dim_t_64_
+     * Tensor dimension for ILP64.
+*/
 typedef struct aoclfftz_dim_64_
 {
-    INTP n;
-    INTP in_stride;
-    INTP out_stride;
+    INTP n;            /**< Problem dimension size */
+    INTP in_stride;    /**< Stride for input buffer */
+    INTP out_stride;   /**< Stride for output buffer */
 } aoclfftz_dim_t_64_;
 
-//params for parallel SMP fft computation
+/**  @ingroup group_types
+     * aoclfftz_smp_pfft_t
+     * params for parallel SMP fft computation.
+*/
 typedef struct aoclfftz_smp_pfft
 {
-    //Number of max threads to granted for use
-    INT32 num_threads;
-    //Allow the library to determine how many threads to be used
-    INT32 dynamic_load_model;
+    INT32 num_threads;        /**< Number of max threads to granted for use */
+    INT32 dynamic_load_model; /**< Allow the library to determine how many threads to be used */
 } aoclfftz_smp_pfft_t;
 
-//control params for optimizations, logs, stats and others
+/**  @ingroup group_types
+     * aoclfftz_cntrl_params_t
+     * control params for optimizations, logs, stats and others.
+*/
 typedef struct aoclfftz_cntrl_params
 {
-    //Levels: 0 - non-SIMD algorithmic optimizations, 1 - SSE2 optimizations,
-    //2 - AVX optimizations, 3 - AVX2 optimizations, 4 - AVX512 optimizations
-    INT32 opt_level;
-    INT32 opt_off; //Turn off all optimizations
-    INT32 logger_mode;
-    INT32 measure_stats;
+    INT32 opt_level;        /**< Set Optimization level with following values\n
+     Levels:\n 0 - non-SIMD algorithmic optimizations\n
+     1 - SSE2 optimizations\n
+     2 - AVX optimizations\n
+     3 - AVX2 optimizations\n
+     4 - AVX512 optimizations */
+    INT32 opt_off;          /**< Turn off all optimizations */
+    INT32 logger_mode;      /**< Set Logger mode with following values
+    0 - no logging\n 1 - error\n 2 - info\n 3 - debug\n 4 - trace */
+    INT32 measure_stats;    /**< Enable/Disable measure stats */
 } aoclfftz_cntrl_params_t;
 
-//float LP64
+/**  @ingroup group_types
+     * aoclfftz_prob_desc_f
+     * problem descriptor for float LP64
+*/
 typedef struct
 {
-    FLOAT *in;
-    FLOAT *out;
-    INT32 vec_rank;
-    INT32 dim_rank;
-    aoclfftz_dim_t *dims;
-    aoclfftz_dim_t *vecs;
-    //Bits-> 0 : in-place(0) or out-of-place(1),
-    //       1 : in-order(0) or out-of-order(1),
-    //       2 : forward(0) or backward(1),
-    //       3 : complex(0) or real
-    UINT32 flags;
-    aoclfftz_smp_pfft_t pthr_fft;
-    aoclfftz_cntrl_params_t cntrl_params;
+    FLOAT *in;              /**< Input buffer */
+    FLOAT *out;             /**< Output buffer */
+    INT32 vec_rank;         /**< Vector rank */
+    INT32 dim_rank;         /**< Dimension rank */
+    aoclfftz_dim_t *dims;   /**< Multi-dimensional tensor dimensions for LP64 */
+    aoclfftz_dim_t *vecs;   /**< Vector tensor dimensions for LP64 */
+    UINT32 flags;           /**< Set flags with a 4 bit value
+     where each bit represents the following\n
+     Bit 0 : in-place(0) or out-of-place(1),\n
+     Bit 1 : in-order(0) or out-of-order(1),\n
+     Bit 2 : forward(0) or backward(1),\n
+     Bit 3 : complex(0) or real(1) */
+    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
+    aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_f;
 
-//double LP64
+/**  @ingroup group_types
+     * aoclfftz_prob_desc_d
+     * problem descriptor for double LP64
+*/
 typedef struct
 {
-    DOUBLE *in;
-    DOUBLE *out;
-    INT32 vec_rank;
-    INT32 dim_rank;
-    aoclfftz_dim_t *dims;
-    aoclfftz_dim_t *vecs;
-    //Bits-> 0 : in-place(0) or out-of-place(1),
-    //       1 : in-order(0) or out-of-order(1),
-    //       2 : forward(0) or backward(1),
-    //       3 : complex(0) or real
-    UINT32 flags;
-    aoclfftz_smp_pfft_t pthr_fft;
-    aoclfftz_cntrl_params_t cntrl_params;
+    DOUBLE *in;             /**< Input buffer */
+    DOUBLE *out;            /**< Output buffer */
+    INT32 vec_rank;         /**< Vector rank */
+    INT32 dim_rank;         /**< Dimension rank */
+    aoclfftz_dim_t *dims;   /**< Multi-dimensional tensor dimensions for LP64 */
+    aoclfftz_dim_t *vecs;   /**< Vector tensor dimensions for LP64 */
+    UINT32 flags;   /**< Set flags with a 4 bit value
+     where each bit represents the following\n
+     Bit 0 : in-place(0) or out-of-place(1),\n
+     Bit 1 : in-order(0) or out-of-order(1),\n
+     Bit 2 : forward(0) or backward(1),\n
+     Bit 3 : complex(0) or real(1) */
+    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
+    aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_d;
 
 //float ILP64
+/**  @ingroup group_types
+     * aoclfftz_prob_desc_f_64_
+     * problem descriptor for float ILP64
+*/
 typedef struct
 {
-    FLOAT *in;
-    FLOAT *out;
-    INT32 vec_rank;
-    INT32 dim_rank;
-    aoclfftz_dim_t_64_ *dims;
-    aoclfftz_dim_t_64_ *vecs;
-    //Bits-> 0 : in-place(0) or out-of-place(1),
-    //       1 : in-order(0) or out-of-order(1),
-    //       2 : forward(0) or backward(1),
-    //       3 : complex(0) or real
-    UINT32 flags;
-    aoclfftz_smp_pfft_t pthr_fft;
-    aoclfftz_cntrl_params_t cntrl_params;
+    FLOAT *in;                  /**< Input buffer */
+    FLOAT *out;                 /**< Output buffer */
+    INT32 vec_rank;             /**< Vector rank */
+    INT32 dim_rank;             /**< Dimension rank */
+    aoclfftz_dim_t_64_ *dims;   /**< Multi-dimensional tensor dimensions for ILP64 */
+    aoclfftz_dim_t_64_ *vecs;   /**< Vector tensor dimensions for ILP64 */
+    UINT32 flags;               /**< Set flags with a 4 bit value
+     where each bit represents the following\n
+     Bit 0 : in-place(0) or out-of-place(1),\n
+     Bit 1 : in-order(0) or out-of-order(1),\n
+     Bit 2 : forward(0) or backward(1),\n
+     Bit 3 : complex(0) or real(1) */
+    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
+    aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_f_64_;
 
-//double LP64
+/**  @ingroup group_types
+     * aoclfftz_prob_desc_d_64_
+     * problem descriptor for double ILP64
+*/
 typedef struct
 {
-    DOUBLE *in;
-    DOUBLE *out;
-    INT32 vec_rank;
-    INT32 dim_rank;
-    aoclfftz_dim_t_64_ *dims;
-    aoclfftz_dim_t_64_ *vecs;
-    //Bits-> 0 : in-place(0) or out-of-place(1),
-    //       1 : in-order(0) or out-of-order(1),
-    //       2 : forward(0) or backward(1),
-    //       3 : complex(0) or real
-    UINT32 flags;
-    aoclfftz_smp_pfft_t pthr_fft;
-    aoclfftz_cntrl_params_t cntrl_params;
+    DOUBLE *in;                 /**< Input buffer */
+    DOUBLE *out;                /**< Output buffer */
+    INT32 vec_rank;             /**< Vector rank */
+    INT32 dim_rank;             /**< Dimension rank */
+    aoclfftz_dim_t_64_ *dims;   /**< Multi-dimensional tensor dimensions for ILP64 */
+    aoclfftz_dim_t_64_ *vecs;   /**< Vector tensor dimensions for ILP64 */
+    UINT32 flags;               /**< Set flags with a 4 bit value
+     where each bit represents the following\n
+     Bit 0 : in-place(0) or out-of-place(1),\n
+     Bit 1 : in-order(0) or out-of-order(1),\n
+     Bit 2 : forward(0) or backward(1),\n
+     Bit 3 : complex(0) or real(1) */
+    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
+    aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_d_64_;
 
 /* Single-threaded and multi-threaded FFT unified APIs */
 //float LP64
+/**  @ingroup group_api
+     * @brief Generates a solution handle for the given input problem.\n
+     * This generated handle is passed to the execute/destroy APIs.
+     *
+     * @param problem FLOAT LP64 problem descriptor object
+     * @return solution handle as an opaque pointer
+     */
 EXPORT_SYM_DYN VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem);
+/**  @ingroup group_api
+     * @brief Receives a solution handle and performs FFT computation for that solution.\n
+     * Returns the status of execution as an INT32 value.
+     *
+     * @param handle solution handle (generated by setup api)
+     * @return
+     * | Result     | Description |
+     * |:-----------|:------------|
+     * | Success    |`AOCLFFTZ_SUCCESS`                |
+     * | Fail       |`AOCLFFTZ_EXECUTION_FAILURE`      |
+     */
 EXPORT_SYM_DYN INT32 aoclfftz_execute_f(VOID *handle);
+/**  @ingroup group_api
+     * @brief Destroys the solution handle created by aoclfftz_setup_d API
+     *
+     * @param handle solution handle (generated by setup api)
+     *
+     */
 EXPORT_SYM_DYN VOID aoclfftz_destroy_f(VOID *handle);
 
 //double LP64
+/**  @ingroup group_api
+     * @brief Generates a solution handle for the given input problem.\n
+     * This generated handle is passed to the execute/destroy APIs.
+     *
+     * @param problem DOUBLE LP64 problem descriptor object
+     * @return solution handle as an opaque pointer
+     */
 EXPORT_SYM_DYN VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem);
+/**  @ingroup group_api
+     * @brief Receives a solution handle and performs FFT computation for that solution.\n
+     * Returns the status of execution as an INT32 value.
+     *
+     * @param handle solution handle (generated by setup api)
+     * @return
+     * | Result     | Description |
+     * |:-----------|:------------|
+     * | Success    |`AOCLFFTZ_SUCCESS`                |
+     * | Fail       |`AOCLFFTZ_EXECUTION_FAILURE`      |
+     */
 EXPORT_SYM_DYN INT32 aoclfftz_execute_d(VOID *handle);
+/**  @ingroup group_api
+     * @brief Destroys the solution handle created by the aoclfftz_setup_d API
+     *
+     * @param handle solution handle (generated by setup api)
+     *
+     */
 EXPORT_SYM_DYN VOID aoclfftz_destroy_d(VOID *handle);
 
 //float ILP64
+/**  @ingroup group_api
+     * @brief Generates a solution handle for the given input problem.\n
+     * This generated handle is passed to the execute/destroy APIs.
+     *
+     * @param problem FLOAT ILP64 problem descriptor object
+     * @return solution handle as an opaque pointer
+     */
 EXPORT_SYM_DYN VOID *aoclfftz_setup_f_64_(aoclfftz_prob_desc_f_64_ *problem);
+/**  @ingroup group_api
+     * @brief Receives a solution handle and performs FFT computation for that solution.\n
+     * Returns the status of execution as an INT32 value.
+     *
+     * @param handle solution handle (generated by setup api)
+     * @return
+     * | Result     | Description |
+     * |:-----------|:------------|
+     * | Success    |`AOCLFFTZ_SUCCESS`                |
+     * | Fail       |`AOCLFFTZ_EXECUTION_FAILURE`      |
+     */
 EXPORT_SYM_DYN INT32 aoclfftz_execute_f_64_(VOID *handle);
+/**  @ingroup group_api
+     * @brief Destroys the solution handle created by aoclfftz_setup_f_64_ API
+     *
+     * @param handle solution handle (generated by setup api)
+     *
+     */
 EXPORT_SYM_DYN VOID aoclfftz_destroy_f_64_(VOID *handle);
 
 //double ILP64
+/**  @ingroup group_api
+     * @brief Generates a solution handle for the given input problem.\n
+     * This generated handle is passed to the execute/destroy APIs.
+     *
+     * @param problem DOUBLE ILP64 problem descriptor object
+     * @return solution handle as an opaque pointer
+     */
 EXPORT_SYM_DYN VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem);
+/**  @ingroup group_api
+     * @brief Receives a solution handle and performs FFT computation for that solution.\n
+     * Returns the status of execution as an INT32 value.
+     *
+     * @param handle solution handle (generated by setup api)
+     * @return
+     * | Result     | Description |
+     * |:-----------|:------------|
+     * | Success    |`AOCLFFTZ_SUCCESS`                |
+     * | Fail       |`AOCLFFTZ_EXECUTION_FAILURE`      |
+     */
 EXPORT_SYM_DYN INT32 aoclfftz_execute_d_64_(VOID *handle);
+/**  @ingroup group_api
+     * @brief Destroys the solution handle created by aoclfftz_setup_d_64_ API
+     *
+     * @param handle solution handle (generated by setup api)
+     *
+     */
 EXPORT_SYM_DYN VOID aoclfftz_destroy_d_64_(VOID *handle);
 
-//Interface API to get aocl-fftz library version string.
+/**  @ingroup group_api
+     * @brief Interface API to get aocl-fftz library version string.
+     *
+     * @return aocl-fftz library version string
+     */
 EXPORT_SYM_DYN const CHAR *aoclfftz_version(VOID);
 
 #ifdef __cplusplus

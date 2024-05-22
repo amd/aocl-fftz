@@ -1,24 +1,4 @@
-AOCL-FFTZ
-=========
-
-AOCL-FFTZ is a high performance Fast Fourier Transform (FFT) library developed
-by AMD supporting advanced optimizations for AMD’s "Zen"-based CPUs.
-The library computes FFTs of real and complex data of any size and dimension in
-both forward and backward directions. The important kernels in this library are
-vectorized to speed-up the single-threaded core performance. The library
-supports the computations of parallel FFTs by taking advantage of
-(i) shared-memory parallelism using openMP threads, and (ii) distributed-memory
-parallelism using MPI.
-AOCL-FFTZ introduces a generic and unified API set for supporting any
-precision types (single-precision and double-precision), and both the
-single-threaded and multi-threaded execution modes.
-AOCL-FFTZ supports distributed FFTs with a separate API set that makes use of
-an underlying MPI framework for communication.
-The library uses a dynamic dispatcher feature to run efficiently and portably
-across different x86 based systems.
-A test bench is supported for performance and functional tests including the
-accuracy tests. GTest based unit testing framework is also supported by the
-library.
+@page Build Build and Installation
 
 Prerequisites
 -------------
@@ -57,8 +37,8 @@ Building on Linux
    ```
    The library is generated in "lib" directory. <br>
    The test bench executable is generated in "build". <br>
-   The additional option `--target install` will install the library, binary, and <br>
-   interface header files in the installation path as specified with <br>
+   The additional option `--target install` will install the library, binary, and
+   interface header files in the installation path as specified with
    `-DCMAKE_INSTALL_PREFIX` option or in the local system path. <br>
    The option `-j` will run the compilation process using multiple cores.
 
@@ -108,11 +88,15 @@ Use the following additional options to configure your build:
 Option                              |  Description
 ------------------------------------|----------------------------------------------------------------------------------------
 AOCL_TEST_COVERAGE                  |  Enables GTest and AOCL test bench based CTest suite (Disabled by default)
+ASAN                                |  Enable Address Sanitizer checks (only on Linux/Debug build)
+BUILD_DOC                           |  Build documentation for aocl-fftz (Disabled by default)
+BUILD_STATIC_LIBS                   |  Build static library (Default build type is shared library)
+CODE_COVERAGE                       |  Enable source code coverage (only on Linux with GCC compiler)
+ENABLE_AVX128                       |  Compile with AVX 128-bit instruction set support
+ENABLE_AVX256                       |  Compile with AVX 256-bit instruction set support
 ENABLE_STRICT_WARNINGS              |  Enables strict warnings (Enabled by default)
 ENABLE_AVX128                       |  Compiles library with AVX 128-bit kernels support (Disabled by default)
 ENABLE_AVX256                       |  Compiles library with AVX 256-bit kernels support (Disabled by default)
-BUILD_STATIC_LIBS                   |  Build static library (Default build type is shared library)
-BUILD_DOC                           |  Build documentation for aocl-fftz (Disabled by default)
 CODE_COVERAGE                       |  Enables source code coverage and generates coverage report. Only supported on Linux with GCC compiler (Disabled by default)
 ASAN                                |  Enables address sanitizer checks. Supported only on Linux Debug build (Disabled by default)
 VALGRIND                            |  Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)
@@ -218,7 +202,4 @@ Generating Documentation
 - Documents will be generated in HTML format in the folder <b>docs/html</b>. Open the <b>index.html</b> file in any browser to view the documentation.
 - CMake will use the existing Doxygen if available. Else, it will prompt to install doxygen (version 1.10.0 or above) and try again.
 
-CONTACTS
---------
-AOCL-FFTZ is developed and maintained by AMD.<br>
-For support, send an email to toolchainsupport@amd.com.
+HTML based documentation will be generated inside docs/html folder.
