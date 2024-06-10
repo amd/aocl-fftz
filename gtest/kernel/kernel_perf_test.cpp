@@ -149,11 +149,12 @@ BENCHMARK_REGISTER_F(PerformanceTest, Kernel_d)
         return *(std::min_element(std::begin(v), std::end(v)));
     })
     ->ArgsProduct({
+                // Covers all direct kernels from 2-16
                 benchmark::CreateDenseRange(2, 16, 1),
-                // Batch sizes to cover all possible cases in C & AVX-128/256
-                benchmark::CreateDenseRange(1, 7, 1),
+                // Batch sizes to cover all possible cases in C & AVX kernels
+                benchmark::CreateDenseRange(1, 15, 1),
                 // aocl_fftz_kernel_type -> STANDARD/PERMUTED C/AVX
-                benchmark::CreateDenseRange(0, 5, 1),
+                benchmark::CreateDenseRange(0, 7, 1),
                 {IN_STRIDE}, {OUT_STRIDE},
                 {VEC_IN_STRIDE}, {VEC_OUT_STRIDE},
     });
@@ -163,9 +164,12 @@ BENCHMARK_REGISTER_F(PerformanceTest, Kernel_f)
         return *(std::min_element(std::begin(v), std::end(v)));
     })
     ->ArgsProduct({
+                // Covers all direct kernels from 2-16
                 benchmark::CreateDenseRange(2, 16, 1),
-                benchmark::CreateDenseRange(1, 7, 1), // Batch sizes to cover all possible cases in C & AVX
-                benchmark::CreateDenseRange(0, 5, 1),  // aocl_fftz_kernel_type -> STANDARD/PERMUTED C/AVX
+                // Batch sizes to cover all possible cases in C & AVX kernels
+                benchmark::CreateDenseRange(1, 15, 1),
+                // aocl_fftz_kernel_type -> STANDARD/PERMUTED C/AVX
+                benchmark::CreateDenseRange(0, 7, 1),
                 {IN_STRIDE}, {OUT_STRIDE},
                 {VEC_IN_STRIDE}, {VEC_OUT_STRIDE},
     });

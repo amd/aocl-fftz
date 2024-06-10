@@ -350,6 +350,22 @@ aoclfftz_kernel_test_params_t param_double_avx256_kernels[] =
      aoclfftz_kernel_test_type::ALL}
 };
 
+aoclfftz_kernel_test_params_t param_float_avx512_kernels[] =
+{
+    {2, aocl_fftz_kernel_type::STANDARD_AVX512,
+     aoclfftz_kernel_test_type::ALL},
+    {2, aocl_fftz_kernel_type::PERMUTED_AVX512,
+     aoclfftz_kernel_test_type::ALL}
+};
+
+aoclfftz_kernel_test_params_t param_double_avx512_kernels[] =
+{
+    {2, aocl_fftz_kernel_type::STANDARD_AVX512,
+     aoclfftz_kernel_test_type::ALL},
+    {2, aocl_fftz_kernel_type::PERMUTED_AVX512,
+     aoclfftz_kernel_test_type::ALL}
+};
+
 // IO params as {in-stride, out-stride , batch size, dir of FFT(0->FWD/1-> BWD),
 //               result placement(0 -> inplace, 1 -> out-of-place)}
 // Batch size fixed as 1-7 to cover all the tail case in AVX128 & AVX256 kernels
@@ -482,5 +498,40 @@ INSTANTIATE_TEST_SUITE_P(
     AVX256KernelTest, AoclfftzKernelTestDouble,
     ::testing::Combine(::testing::ValuesIn(param_double_avx256_kernels),
                        ::testing::ValuesIn(io_params)),
+    name_generator);
+#endif
+
+#ifdef ENABLE_AVX512
+// Separate io params for AVX512 Kernels to avoid batch-sizes 8-15 repetition
+// in AVX128 & AVX256 kernels.
+// IO params as {in-stride, out-stride , batch size, dir of FFT(0->FWD/1-> BWD),
+//               result placement(0 -> inplace, 1 -> out-of-place)}
+std::vector<std::tuple<INTP, INTP, INTP, UINT8, UINT8>> io_params_avx512 = {
+                                                            {1,   1,  1, 0, 0},
+                                                            {1,   1,  2, 1, 0},
+                                                            {5,   3,  3, 0, 1},
+                                                            {10, 15,  4, 1, 1},
+                                                            {11,  1,  5, 0, 1},
+                                                            {8,   1,  6, 1, 1},
+                                                            {1,   7,  7, 0, 1},
+                                                            {1,  13,  8, 1, 1},
+                                                            {7,   3,  9, 0, 1},
+                                                            {12,  4, 10, 1, 1},
+                                                            {11, 21, 11, 0, 1},
+                                                            {8,  15, 12, 1, 1},
+                                                            {10,  5, 13, 0, 1},
+                                                            {5,   5, 14, 1, 0},
+                                                            {15, 15, 15, 0, 0}};
+
+INSTANTIATE_TEST_SUITE_P(
+    AVX512KernelTest, AoclfftzKernelTestFloat,
+    ::testing::Combine(::testing::ValuesIn(param_float_avx512_kernels),
+                       ::testing::ValuesIn(io_params_avx512)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    AVX512KernelTest, AoclfftzKernelTestDouble,
+    ::testing::Combine(::testing::ValuesIn(param_double_avx512_kernels),
+                       ::testing::ValuesIn(io_params_avx512)),
     name_generator);
 #endif

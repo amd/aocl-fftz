@@ -101,8 +101,8 @@ ops_cycles_t get_ops_cnt_fft16c_wrapper(INT32 precision)
 {
     return get_ops_cnt_fft16c(precision);
 }
+
 #ifdef ENABLE_AVX128
-// AVX128 get ops count wrappers
 ops_cycles_t get_ops_cnt_fft2avx128_wrapper(INT32 precision)
 {
     return get_ops_cnt_fft2avx128(precision);
@@ -160,8 +160,8 @@ ops_cycles_t get_ops_cnt_fft16avx128_wrapper(INT32 precision)
     return get_ops_cnt_fft16avx128(precision);
 }
 #endif
+
 #ifdef ENABLE_AVX256
-// AVX256 get ops count wrappers
 ops_cycles_t get_ops_cnt_fft2avx256_wrapper(INT32 precision)
 {
     return get_ops_cnt_fft2avx256(precision);
@@ -217,6 +217,13 @@ ops_cycles_t get_ops_cnt_fft15avx256_wrapper(INT32 precision)
 ops_cycles_t get_ops_cnt_fft16avx256_wrapper(INT32 precision)
 {
     return get_ops_cnt_fft16avx256(precision);
+}
+#endif
+
+#ifdef ENABLE_AVX512
+ops_cycles_t get_ops_cnt_fft2avx512_wrapper(INT32 precision)
+{
+    return get_ops_cnt_fft2avx512(precision);
 }
 #endif
 
@@ -282,8 +289,8 @@ kfft_ register_kernel_fft16c_wrapper(INT32 precision)
 {
     return register_kernel_fft16c(precision);
 }
+
 #ifdef ENABLE_AVX128
-// AVX128 register kernel wrappers
 kfft_ register_kernel_fft2avx128_wrapper(INT32 precision)
 {
     return register_kernel_fft2avx128(precision);
@@ -341,8 +348,8 @@ kfft_ register_kernel_fft16avx128_wrapper(INT32 precision)
     return register_kernel_fft16avx128(precision);
 }
 #endif
+
 #ifdef ENABLE_AVX256
-// AVX256 register kernel wrappers
 kfft_ register_kernel_fft2avx256_wrapper(INT32 precision)
 {
     return register_kernel_fft2avx256(precision);
@@ -398,6 +405,13 @@ kfft_ register_kernel_fft15avx256_wrapper(INT32 precision)
 kfft_ register_kernel_fft16avx256_wrapper(INT32 precision)
 {
     return register_kernel_fft16avx256(precision);
+}
+#endif
+
+#ifdef ENABLE_AVX512
+kfft_ register_kernel_fft2avx512_wrapper(INT32 precision)
+{
+    return register_kernel_fft2avx512(precision);
 }
 #endif
 

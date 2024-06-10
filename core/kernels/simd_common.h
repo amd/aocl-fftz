@@ -48,7 +48,7 @@
 /**
  * @brief load two complex numbers(real,imaginary) of 32 bit single precision
  * floating point number from memory addresses specified by base address
- * and offset(v_in_stride) into 128 bit register.
+ * and offset into 128 bit register.
  * Operations : 2 MOV(load)
  */
 #define GATHER2_128_S(base, offset, dest)                                      \
@@ -60,7 +60,7 @@
 /**
  * @brief store two complex numbers(real,imaginary) of 32 bit single precision
  * floating point number from 128 bit register into memory addresses
- * specified by base address and offset(v_out_stride).
+ * specified by base address and offset.
  * Operations : 2 MOV(store)
  */
 #define SCATTER2_128_S(base, offset, src)                                      \
@@ -117,7 +117,7 @@
 /**
  * @brief load four complex numbers(real,imaginary) of 32 bit single precision
  * floating point number from memory addresses specified by base address
- * and index vector, into 256 bit register.
+ * and offset, into 256 bit register.
  * Operations : 4 MOV(load), 1 PERM(shuffle), 1 OTHERS(insert).Cast is excluded
  * as it will be a compile time operation.
  */
@@ -138,7 +138,7 @@
 /**
  * @brief store four complex numbers(real,imaginary) of 32 bit single precision
  * floating point number from 256 bit register into memory addresses
- * specified by base address and offset(v_out_stride).
+ * specified by base address and offset.
  * Operations : 4 MOV(store), 1 OTHERS(extract). Cast is excluded as it
  * will be a compile time operation.
  */
@@ -158,7 +158,7 @@
 /**
  * @brief load two complex numbers(real,imaginary) of 64 bit double precision
  * floating point number from memory addresses specified by base address
- * and offset(v_in_stride) into 256 bit register.
+ * and offset into 256 bit register.
  * Operations : 2 MOV(load), 1 OTHERS(insert). Cast is excluded as it
  * will be a compile time operation.
  */
@@ -174,7 +174,7 @@
 /**
  * @brief store two complex numbers(real,imaginary) of 64 bit double precision
  * floating point number from 256 bit register into memory addresses
- * specified by base address and offset(v_out_stride).
+ * specified by base address and offset.
  * Operations : 2 MOV(store), 1 OTHERS(extract). Cast is excluded as it
  * will be a compile time operation.
  */
@@ -182,6 +182,121 @@
 {                                                                              \
     __m128d _high = _mm256_extractf128_pd(src, 1);                             \
     __m128d _low = _mm256_castpd256_pd128(src);                                \
+    _mm_storeu_pd(base, _low);                                                 \
+    base += offset;                                                            \
+    _mm_storeu_pd(base, _high);                                                \
+}
+
+/**
+ * @brief load eight complex numbers(real,imaginary) of 32 bit single precision
+ * floating point number from memory addresses specified by base address
+ * and offset, into 512 bit register.
+ * Operations : 8 MOV(load), 3 PERM(shuffle), 3 OTHERS(insert).
+ * Cast is excluded as it will be a compile time operation.
+ */
+#define GATHER8_512_S(base, offset, dest)                                      \
+{                                                                              \
+    __m128 _low, _high, _tmp;                                                  \
+    __m256 _256low, _256high;                                                  \
+    _low = _mm_loadu_ps(base);                                                 \
+    base += offset;                                                            \
+    _tmp = _mm_loadu_ps(base);                                                 \
+    _low = _mm_shuffle_ps(_low, _tmp, 68);                                     \
+    base += offset;                                                            \
+    _high = _mm_loadu_ps(base);                                                \
+    base += offset;                                                            \
+    _tmp = _mm_loadu_ps(base);                                                 \
+    _high = _mm_shuffle_ps(_high, _tmp, 68);                                   \
+    _256low = _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _high, 1);    \
+    base += offset;                                                            \
+    _low = _mm_loadu_ps(base);                                                 \
+    base += offset;                                                            \
+    _tmp = _mm_loadu_ps(base);                                                 \
+    _low = _mm_shuffle_ps(_low, _tmp, 68);                                     \
+    base += offset;                                                            \
+    _high = _mm_loadu_ps(base);                                                \
+    base += offset;                                                            \
+    _high = _mm_loadh_pi(_high, (__m64 *)base);                                \
+    _256high = _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _high, 1);   \
+    dest = _mm512_insertf32x8(_mm512_castps256_ps512(_256low), _256high, 1);   \
+}
+
+/**
+ * @brief store eight complex numbers(real,imaginary) of 32 bit single precision
+ * floating point number from 512 bit register into memory addresses
+ * specified by base address and offset.
+ * Operations : 8 MOV(store), 3 OTHERS(extract).
+ * Cast is excluded as it will be a compile time operation.
+ */
+#define SCATTER8_512_S(base, offset, src)                                      \
+{                                                                              \
+    __m256 _256high = _mm512_extractf32x8_ps(src, 1);                          \
+    __m256 _256low = _mm512_castps512_ps256(src);                              \
+    __m128 _high, _low;                                                        \
+    _high = _mm256_extractf128_ps(_256low, 1);                                 \
+    _low = _mm256_castps256_ps128(_256low);                                    \
+    _mm_storel_pi((__m64 *)base, _low);                                        \
+    base += offset;                                                            \
+    _mm_storeh_pi((__m64 *)base, _low);                                        \
+    base += offset;                                                            \
+    _mm_storel_pi((__m64 *)base, _high);                                       \
+    base += offset;                                                            \
+    _mm_storeh_pi((__m64 *)base, _high);                                       \
+    _high = _mm256_extractf128_ps(_256high, 1);                                \
+    _low = _mm256_castps256_ps128(_256high);                                   \
+    base += offset;                                                            \
+    _mm_storel_pi((__m64 *)base, _low);                                        \
+    base += offset;                                                            \
+    _mm_storeh_pi((__m64 *)base, _low);                                        \
+    base += offset;                                                            \
+    _mm_storel_pi((__m64 *)base, _high);                                       \
+    base += offset;                                                            \
+    _mm_storeh_pi((__m64 *)base, _high);                                       \
+}
+
+/**
+ * @brief load four complex numbers(real,imaginary) of 64 bit double precision
+ * floating point number from memory addresses specified by base address
+ * and offset into 512 bit register.
+ * Operations : 4 MOV(load), 3 OTHERS(insert).
+ * Cast is excluded as it will be a compile time operation
+ */
+#define GATHER4_512_D(base, offset, dest)                                      \
+{                                                                              \
+    __m128d _low, _high;                                                       \
+    __m256d _256low, _256high;                                                 \
+    _low = _mm_loadu_pd(base);                                                 \
+    base += offset;                                                            \
+    _high = _mm_loadu_pd(base);                                                \
+    _256low = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);    \
+    base += offset;                                                            \
+    _low = _mm_loadu_pd(base);                                                 \
+    base += offset;                                                            \
+    _high = _mm_loadu_pd(base);                                                \
+    _256high = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);   \
+    dest = _mm512_insertf64x4(_mm512_castpd256_pd512(_256low), _256high, 1);   \
+}
+
+/**
+ * @brief store four complex numbers(real,imaginary) of 64 bit double precision
+ * floating point number from 512 bit register into memory addresses
+ * specified by base address and offset.
+ * Operations : 4 MOV(store), 3 OTHERS(extract).
+ * Cast is excluded as it will be a compile time operation.
+ */
+#define SCATTER4_512_D(base, offset, src)                                      \
+{                                                                              \
+    __m256d _m256high = _mm512_extractf64x4_pd(src, 1);                        \
+    __m256d _m256low = _mm512_castpd512_pd256(src);                            \
+    __m128d _low, _high;                                                       \
+    _high = _mm256_extractf128_pd(_m256low, 1);                                \
+    _low = _mm256_castpd256_pd128(_m256low);                                   \
+    _mm_storeu_pd(base, _low);                                                 \
+    base += offset;                                                            \
+    _mm_storeu_pd(base, _high);                                                \
+    base += offset;                                                            \
+    _high = _mm256_extractf128_pd(_m256high, 1);                               \
+    _low = _mm256_castpd256_pd128(_m256high);                                  \
     _mm_storeu_pd(base, _low);                                                 \
     base += offset;                                                            \
     _mm_storeu_pd(base, _high);                                                \
@@ -218,6 +333,20 @@
 #define SWAP_RI_256_D(val) _mm256_permute_pd(val, 5)
 
 /**
+ * @brief interchanges the real and imaginary values in a 512 bit register
+ * for single precision floating point using the control value in the last
+ * integer argument(b 10 11 00 01)
+ */
+#define SWAP_RI_512_S(val) _mm512_permute_ps(val, 177)
+
+/**
+ * @brief interchanges the real and imaginary values in a 512 bit register
+ * for double precision floating point using the control value in the last
+ * integer argument(b 01 01 01 01)
+ */
+#define SWAP_RI_512_D(val) _mm512_permute_pd(val, 85)
+
+/**
  * @brief implies the number of sets that can be processed in parallel.
  * Computed using Register width /(2* sizeof(floating point)
  */
@@ -225,6 +354,8 @@
 #define NUM_SETS_128_D 1
 #define NUM_SETS_256_S 4
 #define NUM_SETS_256_D 2
+#define NUM_SETS_512_S 8
+#define NUM_SETS_512_D 4
 
 /**
  * @brief prepare -0.0 for complex conjugate.
@@ -254,6 +385,27 @@ static const union zero_conj_256
             _conj_256_d = {{ 0x00000000, 0x00000000, 0x00000000, 0x80000000,
                              0x00000000, 0x00000000, 0x00000000, 0x80000000 }};
 
+#if defined (__unix__) || (defined (_WINDOWS) && defined (__AVX512F__))
+
+union zero_conj_512
+{
+    unsigned u[16];
+    __m512 s;
+    __m512d d;
+};
+
+static const union zero_conj_512
+            _conj_512_f = {{ 0x00000000, 0x80000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x80000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x80000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x80000000, 0x00000000, 0x80000000 }};
+static const union zero_conj_512
+            _conj_512_d = {{ 0x00000000, 0x00000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x00000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x00000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x00000000, 0x00000000, 0x80000000 }};
+#endif
+
 /**
  * @brief take conjugate of the complex number A+Bi => A-Bi
  * Operation : 1 OTHERS(xor)
@@ -262,7 +414,8 @@ static const union zero_conj_256
 #define CONJ_128_D(x) _mm_xor_pd(_conj_128_d.d, x)
 #define CONJ_256_S(x) _mm256_xor_ps(_conj_256_f.s, x)
 #define CONJ_256_D(x) _mm256_xor_pd(_conj_256_d.d, x)
-
+#define CONJ_512_S(x) _mm512_xor_ps(_conj_512_f.s, x)
+#define CONJ_512_D(x) _mm512_xor_pd(_conj_512_d.d, x)
 /**
  * @brief alternatively performs addition & subtraction in a 128 bit register
  * for single precision floating point.

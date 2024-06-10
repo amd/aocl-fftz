@@ -1,4 +1,4 @@
-# Copyright (C) 2023, Advanced Micro Devices. All rights reserved.
+# Copyright (C) 2023-2024 Advanced Micro Devices. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -64,7 +64,7 @@ set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
 option(BUILD_STATIC_LIBS "Build static library (Default build type is shared library)" OFF)
 option(ENABLE_AVX128 "Compile with AVX 128-bit instruction set support" OFF)
 option(ENABLE_AVX256 "Compile with AVX 256-bit instruction set support" OFF)
-#option(ENABLE_AVX512 "Compile with AVX512 instruction set support" OFF)
+option(ENABLE_AVX512 "Compile with AVX512 instruction set support" OFF)
 #option(ENABLE_MPI "Compile with distributed MPI FFTZ support" OFF)
 option(AOCL_TEST_COVERAGE "Enable GTest and AOCL test bench based CTest suite (Disabled by default)" OFF)
 option(CODE_COVERAGE "Enable source code coverage (only on Linux with GCC compiler)" OFF)
@@ -157,7 +157,7 @@ if(WIN32)
 
 elseif(UNIX)
     if(ENABLE_AVX512)
-        set(AVX512_FLAG -mavx512f)
+        set(AVX512_FLAG "-mavx512f -mavx512dq") # avx512dq for xor, insert and extract instructions
     endif()
     if(ENABLE_AVX128 OR ENABLE_AVX256)
         set(AVX_FLAG -mavx)
@@ -351,7 +351,7 @@ add_custom_command(
     TARGET "uninstall"
     POST_BUILD
     COMMENT "Uninstall the installed files as per install_manifest.txt and from ${ROOT_DIR}/lib/"
-    COMMAND ${CMAKE_COMMAND} -E echo "Checking for install_manifest.txt..."  
+    COMMAND ${CMAKE_COMMAND} -E echo "Checking for install_manifest.txt..."
     COMMAND [ -f install_manifest.txt ] && xargs rm -vf < install_manifest.txt || echo 'install_manifest.txt is not present, nothing to uninstall, install the library!'
     )
 
