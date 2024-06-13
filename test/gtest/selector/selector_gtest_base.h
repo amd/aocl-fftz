@@ -364,7 +364,7 @@ class AoclfftzSelectorTestBase
             p_desc->cntrl_params.opt_off = 1;
         }
         p_desc->cntrl_params.logger_mode = 0;
-
+        p_desc->cntrl_params.measure_stats = 0;
         p_desc->pthr_fft.num_threads = 1;
         p_desc->pthr_fft.dynamic_load_model = 0;
 

@@ -59,8 +59,6 @@
 INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank);
 VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
                             INTP *in_buffer_size, INTP *out_buffer_size);
-INT32 check_inplace_strides(aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                            INT32 dim_rank, INT32 vec_rank);
 VOID prepare_index_map(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                        INTP *out_idx_map);
 VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,

@@ -30,7 +30,8 @@
  *
  *  @brief Helper functions for dims and vecs.
  *
- *  This file contains the helper functions for dims and vecs for test bench.
+ *  This file contains the helper functions for dims and vecs for the
+ *  test bench and gtest.
  *
  *  @author S. Biplab Raut
  *  @author V. Murugan
@@ -210,7 +211,7 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         (*dims)[i].out_stride = desc[j].out_stride;
     }
 
-    // validate & set strides for dims if not provided
+    // set strides for dims if not provided
     for (INT32 i = 0; i < dim_rank; i++)
     {
         INTP min_stride = (i == 0) ?
@@ -218,32 +219,18 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         if ((*dims)[i].in_stride == 0)
         {
             (*dims)[i].in_stride = min_stride;
-        }
-        else if ((*dims)[i].in_stride < min_stride)
-        {
-            printf("Invalid in stride value : %td provided for (%d) dim."
-                    "minimum value expected : %td\n",
-                    (*dims)[i].in_stride, i+1, min_stride);
-            status = SIZE_PARSING_ERROR;
-            goto exit_func;
+            printf("INFO: in stride for dim[%d] is set to default value\n", i);
         }
         min_stride = (i == 0) ?
                 1 : ((*dims)[i - 1]. n * (*dims)[i - 1].out_stride);
         if ((*dims)[i].out_stride == 0)
         {
             (*dims)[i].out_stride = min_stride;
-        }
-        else if ((*dims)[i].out_stride < min_stride)
-        {
-            printf("Invalid out stride value : %td provided for (%d) dim."
-                    "minimum value expected : %td\n",
-                    (*dims)[i].out_stride, i+1, min_stride);
-            status = SIZE_PARSING_ERROR;
-            goto exit_func;
+            printf("INFO: out stride for dim[%d] is set to default value\n", i);
         }
     }
 
-    // validate & set strides for vecs if not provided
+    // set strides for vecs if not provided
     for (INT32 i = 0; i < vec_rank; i++)
     {
         INTP min_stride = (i == 0) ?
@@ -254,14 +241,6 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
             // stride of fcd should atleast be the length of dims
             (*vecs)[i].in_stride = min_stride;
         }
-        else if ((*vecs)[i].in_stride < min_stride)
-        {
-            printf("Invalid in stride value : %td provided for (%d) vec."
-                    "minimum value expected : %td\n",
-                    (*vecs)[i].in_stride, i+1, min_stride);
-            status = SIZE_PARSING_ERROR;
-            goto exit_func;
-        }
         min_stride = (i == 0) ?
                 (*dims)[dim_rank -1].n * (*dims)[dim_rank - 1].out_stride :
                     ((*vecs) [i - 1]. n * (*vecs) [i - 1].out_stride);
@@ -269,14 +248,6 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         {
             // stride of fcd should atleast be the length of dims
             (*vecs)[i].out_stride = min_stride;
-        }
-        else if ((*vecs)[i].out_stride < min_stride)
-        {
-            printf("Invalid out stride value : %td provided for (%d) vec."
-                    "minimum value expected : %td\n",
-                    (*vecs)[i].out_stride, i+1, min_stride);
-            status = SIZE_PARSING_ERROR;
-            goto exit_func;
         }
     }
 

@@ -94,35 +94,6 @@ VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
     out_buffer_size[0] = out_size;
 }
 /**
- * @brief checks if input & output strides are the same for of an inplace
- * problem
- *
- * @param dims holds dims related stride info
- * @param vecs holds vecs related stride info
- * @param dim_rank rank of the dimension
- * @param vec_rank rank of the vector
- * @return INT32
- */
-INT32 check_inplace_strides(aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                            INT32 dim_rank, INT32 vec_rank)
-{
-    for (INT32 i = 0; i < dim_rank; i++)
-    {
-        if (dims[i].in_stride != dims[i].out_stride)
-        {
-            return SIZE_PARSING_ERROR;
-        }
-    }
-    for (INT32 i = 0; i < vec_rank; i++)
-    {
-        if (vecs[i].in_stride != vecs[i].out_stride)
-        {
-            return SIZE_PARSING_ERROR;
-        }
-    }
-    return PARSER_SUCCESS;
-}
-/**
  * @brief prepare the index map to map non strided indices to strides ones
  *
  * index map is used to simplify the property tests for strided problems

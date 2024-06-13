@@ -191,13 +191,6 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                 printf("ERROR: Unknown output order\n");
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
             }
-            // TODO: Remove this after adding support for out-of-order
-            // arrangement
-            if (bench_params->order == OUT_OF_ORDER)
-            {
-                printf("ERROR: out-order 'o' is currently not supported\n");
-                status = MAX(status, UNSUPPORTED_OPTION_ERROR);
-            }
             break;
         case 301:
             if (!strcmp(optarg, "b"))
@@ -230,14 +223,6 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             else
             {
                 printf("ERROR: Unknown fft type\n");
-                status = MAX(status, UNSUPPORTED_OPTION_ERROR);
-            }
-            // TODO: Remove this after adding support for 'c2r' and 'r2c' types
-            if (bench_params->fft_type == COMPLEX_TO_REAL ||
-                bench_params->fft_type == REAL_TO_COMPLEX)
-            {
-                printf("ERROR: 'c2r' and 'r2c' types are currently not "
-                       "supported\n");
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
             }
             break;
@@ -297,40 +282,12 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             break;
         case 'o':
-            VALIDATE_AND_GET_INT(optarg, str_buff,
-                                 bench_params->opt_level, ret, -1);
-            if (ret != 0)
-            {
-                printf("WARNING: Invalid opt level value given, running "
-                       "bench with default value (-1: no-optimization)\n");
-                bench_params->opt_level = -1;
-            }
-            // TODO: Modify this after adding support for all optimization
-            // levels
-            else if (bench_params->opt_level != -1 &&
-                     bench_params->opt_level != 2 &&
-                     bench_params->opt_level != 3 &&
-                     bench_params->opt_level != 4)
-            {
-                printf("WARNING: only opt-level -1, 2, 3 and 4 are currently "
-                       "supported, running bench with defaultvalue "
-                       "(-1: no-optimization)\n");
-                bench_params->opt_level = -1;
-            }
+            VALIDATE_AND_GET_INT(optarg, str_buff, bench_params->opt_level,
+                                 ret, -1);
             break;
         case 'l':
-            VALIDATE_AND_GET_INT(optarg, str_buff,
-                                 bench_params->logger_mode, ret, 0);
-            if (bench_params->logger_mode > 4)
-            {
-                ret = 1;
-            }
-            if (ret != 0)
-            {
-                printf("WARNING: Invalid logger mode, running bench with "
-                       "default logger mode (0)\n");
-                bench_params->logger_mode = 0;
-            }
+            VALIDATE_AND_GET_INT(optarg, str_buff, bench_params->logger_mode,
+                                 ret, 0);
             break;
         case 302:
             // TODO: Modify this after adding support for dynamic-load-model
@@ -444,17 +401,6 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     if (status != PARSER_SUCCESS)
     {
         return status;
-    }
-    if (bench_params->res_placement == IN_PLACE)
-    {
-        status = check_inplace_strides(bench_params->dims,
-                                       bench_params->vecs,
-                                       bench_params->dim_rank,
-                                       bench_params->vec_rank);
-        if (status != PARSER_SUCCESS)
-        {
-            return status;
-        }
     }
     if (valid_iters_arg_found == 0)
     {
