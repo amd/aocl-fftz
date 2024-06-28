@@ -38,19 +38,6 @@
 
 #include "utils/utils.h"
 
-INTP is_SSE2_supported(INT32 logger_mode)
-{
-    INTP ret;
-    INTP eax, ebx, ecx, edx;
-    cpu_features_detection(0x00000001, 0, &eax, &ebx, &ecx, &edx);
-    ret = ((edx & (1 << 26)) != 0);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode, "SSE2 SIMD %s supported",
-                           (ret ? "is" : "is not"));
-#endif
-    return ret;
-}
-
 INTP is_AVX_supported(INT32 logger_mode)
 {
     INTP ret;
@@ -162,24 +149,20 @@ INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
     {
         return 0;
     }
-    if (opt_level > 0) // opt_level == 1
-    {
-        cpu_flags = is_SSE2_supported(logger_mode);
-    }
 #ifdef ENABLE_AVX128
-    if (opt_level > 1) // opt_level == 2
+    if (opt_level > 0) // opt_level == 1
     {
         cpu_flags += is_AVX_supported(logger_mode);
     }
 #endif
 #ifdef ENABLE_AVX256
-    if (opt_level > 2) // opt_level == 3
+    if (opt_level > 1) // opt_level == 2
     {
-        cpu_flags += is_AVX2_supported(logger_mode);
+        cpu_flags += is_AVX_supported(logger_mode);
     }
 #endif
 #ifdef ENABLE_AVX512
-    if (opt_level > 3) // opt_level == 4
+    if (opt_level > 2) // opt_level == 3
     {
         cpu_flags += is_AVX512_supported(logger_mode);
     }

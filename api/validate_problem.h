@@ -219,8 +219,8 @@ static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
     {
         if (cntrl_p->opt_level < 0 || cntrl_p->opt_level > 4)
         {
-            AOCLFFTZ_LOG_UNFORMATTED(INFO, INFO, "only opt-level 0 - 4 "
-                                    "are currently supported; disabling "
+            AOCLFFTZ_LOG_UNFORMATTED(INFO, INFO, "only opt-level 0-3 are "
+                                    "currently supported; disabling "
                                     "optimization");
             // disabling optimization
             cntrl_p->opt_off = 1;

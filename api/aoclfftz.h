@@ -134,10 +134,9 @@ typedef struct aoclfftz_cntrl_params
 {
     INT32 opt_level;        /**< Set Optimization level with following values\n
      Levels:\n 0 - non-SIMD algorithmic optimizations\n
-     1 - SSE2 optimizations\n
-     2 - AVX optimizations\n
-     3 - AVX2 optimizations\n
-     4 - AVX512 optimizations */
+     1 - AVX128 optimizations\n
+     2 - AVX256 optimizations\n
+     3 - AVX512 optimizations */
     INT32 opt_off;          /**< Turn off all optimizations */
     INT32 logger_mode;      /**< Set Logger mode with following values
     0 - no logging\n 1 - error\n 2 - info\n 3 - debug\n 4 - trace */
