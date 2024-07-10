@@ -364,6 +364,8 @@ aoclfftz_kernel_test_params_t param_float_avx512_kernels[] =
      aoclfftz_kernel_test_type::ALL},
     {7, aocl_fftz_kernel_type::STANDARD_AVX512,
      aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::STANDARD_AVX512,
+     aoclfftz_kernel_test_type::ALL},
     {2, aocl_fftz_kernel_type::PERMUTED_AVX512,
      aoclfftz_kernel_test_type::ALL},
     {3, aocl_fftz_kernel_type::PERMUTED_AVX512,
@@ -375,6 +377,8 @@ aoclfftz_kernel_test_params_t param_float_avx512_kernels[] =
     {6, aocl_fftz_kernel_type::PERMUTED_AVX512,
      aoclfftz_kernel_test_type::ALL},
     {7, aocl_fftz_kernel_type::PERMUTED_AVX512,
+     aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::PERMUTED_AVX512,
      aoclfftz_kernel_test_type::ALL}
 };
 
@@ -392,6 +396,8 @@ aoclfftz_kernel_test_params_t param_double_avx512_kernels[] =
      aoclfftz_kernel_test_type::ALL},
     {7, aocl_fftz_kernel_type::STANDARD_AVX512,
      aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::STANDARD_AVX512,
+     aoclfftz_kernel_test_type::ALL},
     {2, aocl_fftz_kernel_type::PERMUTED_AVX512,
      aoclfftz_kernel_test_type::ALL},
     {3, aocl_fftz_kernel_type::PERMUTED_AVX512,
@@ -403,6 +409,8 @@ aoclfftz_kernel_test_params_t param_double_avx512_kernels[] =
     {6, aocl_fftz_kernel_type::PERMUTED_AVX512,
      aoclfftz_kernel_test_type::ALL},
     {7, aocl_fftz_kernel_type::PERMUTED_AVX512,
+     aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::PERMUTED_AVX512,
      aoclfftz_kernel_test_type::ALL}
 };
 
