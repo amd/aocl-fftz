@@ -41,7 +41,7 @@
 // Register all applicable solvers and kernels into the respective tables
 // based on the input problem and cpu arch flags
 INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
-                       INT32 dt, INT32 cpu_flags)
+                       INT32 dt, INT32 dir, INT32 cpu_flags)
 {
     UINT32 num_kernels = 0;
     UINT32 num_list_kernels;
@@ -51,13 +51,14 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
              num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
              num_list_kernels++)
         {
-            if (kernels_c[num_list_kernels].k_register_kernel != NULL)
+            if (kernels_c2c_c[num_list_kernels].k_register_kernel != NULL)
             {
                 kertab[num_kernels].kfft =
-                    kernels_c[num_list_kernels].k_register_kernel(dt);
+                    kernels_c2c_c[num_list_kernels].k_register_kernel(dt, dir);
                 kertab[num_kernels].k_ops_cnt =
-                    kernels_c[num_list_kernels].k_ops_cnt;
-                kertab[num_kernels].radix = kernels_c[num_list_kernels].radix;
+                    kernels_c2c_c[num_list_kernels].k_ops_cnt;
+                kertab[num_kernels].radix =
+                    kernels_c2c_c[num_list_kernels].radix;
                 kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_C_S;
                 kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_C_D;
                 num_kernels++;
@@ -72,14 +73,15 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
              num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
              num_list_kernels++)
         {
-            if (kernels_avx128[num_list_kernels].k_register_kernel != NULL)
+            if (kernels_c2c_avx128[num_list_kernels].k_register_kernel != NULL)
             {
                 kertab[num_kernels].kfft =
-                    kernels_avx128[num_list_kernels].k_register_kernel(dt);
+                    kernels_c2c_avx128[num_list_kernels].k_register_kernel(dt,
+                        dir);
                 kertab[num_kernels].k_ops_cnt =
-                    kernels_avx128[num_list_kernels].k_ops_cnt;
+                    kernels_c2c_avx128[num_list_kernels].k_ops_cnt;
                 kertab[num_kernels].radix =
-                    kernels_avx128[num_list_kernels].radix;
+                    kernels_c2c_avx128[num_list_kernels].radix;
                 kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_128_S;
                 kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_128_D;
                 num_kernels++;
@@ -95,14 +97,15 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
              num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
              num_list_kernels++)
         {
-            if (kernels_avx256[num_list_kernels].k_register_kernel != NULL)
+            if (kernels_c2c_avx256[num_list_kernels].k_register_kernel != NULL)
             {
                 kertab[num_kernels].kfft =
-                    kernels_avx256[num_list_kernels].k_register_kernel(dt);
+                    kernels_c2c_avx256[num_list_kernels].k_register_kernel(dt,
+                        dir);
                 kertab[num_kernels].k_ops_cnt =
-                    kernels_avx256[num_list_kernels].k_ops_cnt;
+                    kernels_c2c_avx256[num_list_kernels].k_ops_cnt;
                 kertab[num_kernels].radix =
-                    kernels_avx256[num_list_kernels].radix;
+                    kernels_c2c_avx256[num_list_kernels].radix;
                 kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_256_S;
                 kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_256_D;
                 num_kernels++;
@@ -118,14 +121,15 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
              num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
              num_list_kernels++)
         {
-            if (kernels_avx512[num_list_kernels].k_register_kernel != NULL)
+            if (kernels_c2c_avx512[num_list_kernels].k_register_kernel != NULL)
             {
                 kertab[num_kernels].kfft =
-                    kernels_avx512[num_list_kernels].k_register_kernel(dt);
+                    kernels_c2c_avx512[num_list_kernels].k_register_kernel(dt,
+                        dir);
                 kertab[num_kernels].k_ops_cnt =
-                    kernels_avx512[num_list_kernels].k_ops_cnt;
+                    kernels_c2c_avx512[num_list_kernels].k_ops_cnt;
                 kertab[num_kernels].radix =
-                    kernels_avx512[num_list_kernels].radix;
+                    kernels_c2c_avx512[num_list_kernels].radix;
                 kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_512_S;
                 kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_512_D;
                 num_kernels++;

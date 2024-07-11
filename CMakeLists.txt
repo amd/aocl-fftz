@@ -84,35 +84,40 @@ file(GLOB CORE_SRC_FILES CONFIGURE_DEPENDS ${CORE_PATH}/*.c ${CORE_PATH}/*.h
                         ${CORE_PATH}/kernels/*.c ${CORE_PATH}/kernels/*.h
                         ${CORE_PATH}/kernels/transpose/*.c ${CORE_PATH}/kernels/transpose/*.h
                         ${CORE_PATH}/kernels/transpose/c/*.c ${CORE_PATH}/kernels/transpose/c/*.h
-                        ${CORE_PATH}/solvers/*.c ${CORE_PATH}/solvers/*.h)
+                        ${CORE_PATH}/solvers/*.c ${CORE_PATH}/solvers/*.h
+                        ${CORE_PATH}/solvers/complex/*.c ${CORE_PATH}/solvers/complex/*.h
+                        ${CORE_PATH}/solvers/real/*.c ${CORE_PATH}/solvers/real/*.h)
 file(GLOB CORE_C_FILES CONFIGURE_DEPENDS
-                        ${CORE_PATH}/kernels/c/*.c ${CORE_PATH}/kernels/c/*.h)
+                        ${CORE_PATH}/kernels/c2c/c/*.c ${CORE_PATH}/kernels/c2c/c/*.h
+                        ${CORE_PATH}/kernels/r2hc/c/*.c ${CORE_PATH}/kernels/r2hc/c/*.h
+                        ${CORE_PATH}/kernels/r2hc_fused/c/*.c ${CORE_PATH}/kernels/r2hc_fused/c/*.h)
 list(APPEND CORE_SRC_FILES ${CORE_C_FILES})
-
 
 #Add AVX Kernels based on the flags ENABLE_AVX128, ENABLE_AVX256 & ENABLE_AVX512
 if(ENABLE_AVX512)
     set(ENABLE_AVX256 ON)
     add_compile_definitions(ENABLE_AVX512)
     file(GLOB CORE_AVX512_FILES CONFIGURE_DEPENDS
-                            ${CORE_PATH}/kernels/avx512/*.c ${CORE_PATH}/kernels/avx512/*.h)
+                            ${CORE_PATH}/kernels/c2c/avx512/*.c ${CORE_PATH}/kernels/avx512/*.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX512_FILES})
 endif()
 if(ENABLE_AVX256)
     set(ENABLE_AVX128 ON)
     add_compile_definitions(ENABLE_AVX256)
     file(GLOB CORE_AVX256_FILES CONFIGURE_DEPENDS
-                            ${CORE_PATH}/kernels/avx256/*.c ${CORE_PATH}/kernels/avx256/*.h)
+                            ${CORE_PATH}/kernels/c2c/avx256/*.c ${CORE_PATH}/kernels/avx256/*.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX256_FILES})
 endif()
 if(ENABLE_AVX128)
     add_compile_definitions(ENABLE_AVX128)
     file(GLOB CORE_AVX128_FILES CONFIGURE_DEPENDS
-                            ${CORE_PATH}/kernels/avx128/*.c ${CORE_PATH}/kernels/avx128/*.h)
+                            ${CORE_PATH}/kernels/c2c/avx128/*.c ${CORE_PATH}/kernels/avx128/*.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX128_FILES})
 endif()
 
-file(GLOB SELECTOR_SRC_FILES selector/*.c selector/*.h)
+file(GLOB SELECTOR_SRC_FILES selector/*.c selector/*.h
+                             selector/complex/*.c selector/complex/*.h
+                             selector/real/*.c selector/real/*.h)
 file(GLOB THREADS_SRC_FILES threads/*.c threads/*.h)
 file(GLOB UTILS_SRC_FILES utils/*.c utils/*.cpp utils/*.h)
 

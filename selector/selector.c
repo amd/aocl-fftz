@@ -48,10 +48,10 @@
 // those radices.
 kernel_t kernels_table[NUM_KERNELS_IN_TABLE] = {{0x0}};
 
-// Register all applicable solvers and kernels into the respective tables
-// based on the input problem and cpu arch flags
-INT32 register_solvers_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE], INT32 dt,
-                               INT32 cpu_flags)
+//Register all applicable solvers and kernels into the respective tables
+//based on the input problem and cpu arch flags
+INT32 register_solvers_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
+                               INT32 dt, INT32 dir, INT32 cpu_flags)
 {
     INT32 ret = SELECTOR_FAILURE;
 
@@ -62,8 +62,8 @@ INT32 register_solvers_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE], INT32 dt,
         return SELECTOR_FAILURE;
     }
 
-    // Register Kernels
-    ret = register_kernels(kertab, dt, cpu_flags);
+    //Register Kernels
+    ret = register_kernels(kertab, dt, dir, cpu_flags);
 
     return ret;
 }
@@ -354,9 +354,10 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
                                          cntrl_params.opt_level,
                                          cntrl_params.logger_mode);
 
-    // Register solvers and kernels for solving the problem based on
-    // input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(kernels_table, DT_FLOAT, cpu_flags);
+    //Register solvers and kernels for solving the problem based on
+    //input problem datatype, CPU flags and dynamic dispatcher FMV selection
+    ret = register_solvers_kernels(kernels_table, DT_FLOAT,
+                                   FFT_DIR(problem->flags), cpu_flags);
     if (ret != 0)
     {
         goto exit_setup_dft_f;
@@ -416,9 +417,9 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
                                          cntrl_params.opt_level,
                                          cntrl_params.logger_mode);
 
-    // Register solvers and kernels for solving the problem based on
-    // input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(kernels_table, DT_DOUBLE, cpu_flags);
+    //Register solvers and kernels for solving the problem based on
+    //input problem datatype, CPU flags and dynamic dispatcher FMV selection
+    ret = register_solvers_kernels(kernels_table, DT_DOUBLE, FFT_DIR(problem->flags), cpu_flags);
     if (ret != 0)
     {
         goto exit_setup_dft_d;
@@ -478,9 +479,9 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
                                          cntrl_params.opt_level,
                                          cntrl_params.logger_mode);
 
-    // Register solvers and kernels for solving the problem based on
-    // input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(kernels_table, DT_FLOAT, cpu_flags);
+    //Register solvers and kernels for solving the problem based on
+    //input problem datatype, CPU flags and dynamic dispatcher FMV selection
+    ret = register_solvers_kernels(kernels_table, DT_FLOAT, FFT_DIR(problem->flags), cpu_flags);
     if (ret != 0)
     {
         goto exit_setup_dft_f_64_;
@@ -540,9 +541,9 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
                                          cntrl_params.opt_level,
                                          cntrl_params.logger_mode);
 
-    // Register solvers and kernels for solving the problem based on
-    // input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(kernels_table, DT_DOUBLE, cpu_flags);
+    //Register solvers and kernels for solving the problem based on
+    //input problem datatype, CPU flags and dynamic dispatcher FMV selection
+    ret = register_solvers_kernels(kernels_table, DT_DOUBLE, FFT_DIR(problem->flags), cpu_flags);
     if (ret != 0)
     {
         goto exit_setup_dft_d_64_;

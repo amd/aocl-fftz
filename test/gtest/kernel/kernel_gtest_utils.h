@@ -62,11 +62,13 @@ extern "C"
  * @brief Get the kernel object from the kernel table based on the given radix
  *
  * @param kernel_table wrapper_kernel_fp_list to search the kernel
+ * @param dir direction (forward / backward)
  * @param radix radix of the FFT kernel
  * @return kffft_ a kernel pointer; returns nullptr if kernel not found
  */
 template <class T>
-kfft_ get_kernel(const wrapper_kernel_fp_list *kernel_table, const UINT32 radix)
+kfft_ get_kernel(const wrapper_kernel_fp_list *kernel_table, const INT32 dir,
+                 const UINT32 radix)
 {
     while (kernel_table->k_register_kernel != nullptr)
     {
@@ -74,12 +76,12 @@ kfft_ get_kernel(const wrapper_kernel_fp_list *kernel_table, const UINT32 radix)
         {
             if (typeid(float) == typeid(T))
             {
-                kfft_ kernel = kernel_table->k_register_kernel(DT_FLOAT);
+                kfft_ kernel = kernel_table->k_register_kernel(DT_FLOAT, dir);
                 return kernel;
             }
             else
             {
-                kfft_ kernel = kernel_table->k_register_kernel(DT_DOUBLE);
+                kfft_ kernel = kernel_table->k_register_kernel(DT_DOUBLE, dir);
                 return kernel;
             }
         }
@@ -98,24 +100,30 @@ wrapper_kernel_fp_list *get_kernel_table(UINT8 kernel_type)
 {
     switch (kernel_type)
     {
-    case aocl_fftz_kernel_type::STANDARD_C:
-    case aocl_fftz_kernel_type::PERMUTED_C:
-        return wrapper_kernels_c;
+    case aocl_fftz_kernel_type::STANDARD_C2C_C:
+    case aocl_fftz_kernel_type::PERMUTED_C2C_C:
+        return wrapper_kernels_c2c_c;
 #ifdef ENABLE_AVX128
-    case aocl_fftz_kernel_type::STANDARD_AVX128:
-    case aocl_fftz_kernel_type::PERMUTED_AVX128:
-        return wrapper_kernels_avx128;
+    case aocl_fftz_kernel_type::STANDARD_C2C_AVX128:
+    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX128:
+        return wrapper_kernels_c2c_avx128;
 #endif
 #ifdef ENABLE_AVX256
-    case aocl_fftz_kernel_type::STANDARD_AVX256:
-    case aocl_fftz_kernel_type::PERMUTED_AVX256:
-        return wrapper_kernels_avx256;
+    case aocl_fftz_kernel_type::STANDARD_C2C_AVX256:
+    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX256:
+        return wrapper_kernels_c2c_avx256;
 #endif
 #ifdef ENABLE_AVX512
-    case aocl_fftz_kernel_type::STANDARD_AVX512:
-    case aocl_fftz_kernel_type::PERMUTED_AVX512:
-        return wrapper_kernels_avx512;
+    case aocl_fftz_kernel_type::STANDARD_C2C_AVX512:
+    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX512:
+        return wrapper_kernels_c2c_avx512;
 #endif
+    case aocl_fftz_kernel_type::STANDARD_R2HC_C:
+    case aocl_fftz_kernel_type::PERMUTED_R2HC_C:
+        return wrapper_kernels_r2hc_c;
+    case aocl_fftz_kernel_type::STANDARD_R2HCF_C:
+    case aocl_fftz_kernel_type::PERMUTED_R2HCF_C:
+        return wrapper_kernels_r2hcf_c;
     default:
         return {};
     }
@@ -131,24 +139,50 @@ std::string get_kernel_type_as_string(UINT8 kernel_type)
 {
     switch (kernel_type)
     {
-    case aocl_fftz_kernel_type::STANDARD_C:
-        return "_STANDARD_C";
-    case aocl_fftz_kernel_type::PERMUTED_C:
-        return "_PERMUTED_C";
-    case aocl_fftz_kernel_type::STANDARD_AVX128:
-        return "_STANDARD_AVX128";
-    case aocl_fftz_kernel_type::PERMUTED_AVX128:
-        return "_PERMUTED_AVX128";
-    case aocl_fftz_kernel_type::STANDARD_AVX256:
-        return "_STANDARD_AVX256";
-    case aocl_fftz_kernel_type::PERMUTED_AVX256:
-        return "_PERMUTED_AVX256";
-    case aocl_fftz_kernel_type::STANDARD_AVX512:
-        return "_STANDARD_AVX512";
-    case aocl_fftz_kernel_type::PERMUTED_AVX512:
-        return "_PERMUTED_AVX512";
+    case aocl_fftz_kernel_type::STANDARD_C2C_C:
+        return "_STANDARD_C2C_C";
+    case aocl_fftz_kernel_type::PERMUTED_C2C_C:
+        return "_PERMUTED_C2C_C";
+    case aocl_fftz_kernel_type::STANDARD_C2C_AVX128:
+        return "_STANDARD_C2C_AVX128";
+    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX128:
+        return "_PERMUTED_C2C_AVX128";
+    case aocl_fftz_kernel_type::STANDARD_C2C_AVX256:
+        return "_STANDARD_C2C_AVX256";
+    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX256:
+        return "_PERMUTED_C2C_AVX256";
+    case aocl_fftz_kernel_type::STANDARD_C2C_AVX512:
+        return "_STANDARD_C2C_AVX512";
+    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX512:
+        return "_PERMUTED_C2C_AVX512";
+    case aocl_fftz_kernel_type::STANDARD_R2HC_C:
+        return "_STANDARD_R2HC_C";
+    case aocl_fftz_kernel_type::PERMUTED_R2HC_C:
+        return "_PERMUTED_R2HC_C";
+    case aocl_fftz_kernel_type::STANDARD_R2HCF_C:
+        return "_STANDARD_R2HCF_C";
+    case aocl_fftz_kernel_type::PERMUTED_R2HCF_C:
+        return "_PERMUTED_R2HCF_C";
     default:
         return "_UNKNOWN";
+    }
+}
+
+/**
+ * @brief Helper function to check whether the given kernel is of fused or not
+ * @param kernel_type aocl_fftz_kernel_type kernel type
+ *
+ */
+bool is_fused_kernel(UINT8 kernel_type)
+{
+    switch (kernel_type)
+    {
+    // TODO: add avx variants
+    case aocl_fftz_kernel_type::STANDARD_R2HCF_C:
+    case aocl_fftz_kernel_type::PERMUTED_R2HCF_C:
+        return true;
+    default:
+        return false;
     }
 }
 
@@ -166,17 +200,17 @@ std::string get_kernel_type_as_string(UINT8 kernel_type)
  */
 template <class T>
 void permuted_copy(T *in, T *out, INTP n, INTP size,
-                   aoclfftz_strides_t *strides)
+                   aoclfftz_strides_t *strides, UINT8 data_stride)
 {
     if (typeid(T) == typeid(FLOAT32))
     {
         permuted_copy_c_fp32_wrapper((FLOAT32 *)in, (FLOAT32 *)out, n, size,
-                                     strides);
+                                     strides, data_stride);
     }
     else if (typeid(T) == typeid(FLOAT64))
     {
         permuted_copy_c_fp64_wrapper((FLOAT64 *)in, (FLOAT64 *)out, n, size,
-                                     strides);
+                                     strides, data_stride);
     }
 }
 

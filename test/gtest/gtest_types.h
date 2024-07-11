@@ -59,8 +59,10 @@ extern "C"
 enum aocl_fftz_test_input
 {
     RANDOM,
+    REAL_RANDOM,
     IMPULSE,
     SIGNAL,
+    REAL_RANDOM_SPECIAL,
     RANDOM_SPECIAL
 };
 
@@ -81,7 +83,8 @@ enum aoclfftz_kernel_test_type
     LINEARITY = 1,
     TRANSFORMATION = 2,
     TIMESHIFT = 4,
-    ALL = 7
+    DFT_REFERENCE = 8,
+    ALL = 15
 };
 
 /**
@@ -90,14 +93,18 @@ enum aoclfftz_kernel_test_type
  */
 enum aocl_fftz_kernel_type
 {
-    STANDARD_C = 0,
-    PERMUTED_C,
-    STANDARD_AVX128,
-    PERMUTED_AVX128,
-    STANDARD_AVX256,
-    PERMUTED_AVX256,
-    STANDARD_AVX512,
-    PERMUTED_AVX512,
+    STANDARD_C2C_C = 0,
+    PERMUTED_C2C_C,
+    STANDARD_C2C_AVX128,
+    PERMUTED_C2C_AVX128,
+    STANDARD_C2C_AVX256,
+    PERMUTED_C2C_AVX256,
+    STANDARD_C2C_AVX512,
+    PERMUTED_C2C_AVX512,
+    STANDARD_R2HC_C,
+    PERMUTED_R2HC_C,
+    STANDARD_R2HCF_C,
+    PERMUTED_R2HCF_C
 };
 
 /**

@@ -51,7 +51,8 @@ typedef struct kernel_fp_list
     UINT32 radix;
 } kernel_fp_list_t;
 
-kernel_fp_list_t kernels_c[NUM_KERNELS_IN_EACH_CATEGORY] =
+// C2C - C Kernel List
+kernel_fp_list_t kernels_c2c_c[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2c, get_ops_cnt_fft2c, 2},    // radix-2
     {register_kernel_fft3c, get_ops_cnt_fft3c, 3},    // radix-3
@@ -74,8 +75,9 @@ kernel_fp_list_t kernels_c[NUM_KERNELS_IN_EACH_CATEGORY] =
     {NULL, NULL, 64}                                  // radix-64
 };
 
+// C2C - AVX128 Kernel List
 #ifdef ENABLE_AVX128
-kernel_fp_list_t kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
+kernel_fp_list_t kernels_c2c_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2avx128, get_ops_cnt_fft2avx128, 2},    // radix-2
     {register_kernel_fft3avx128, get_ops_cnt_fft3avx128, 3},    // radix-3
@@ -99,8 +101,9 @@ kernel_fp_list_t kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
 };
 #endif
 
+// C2C - AVX256 Kernel List
 #ifdef ENABLE_AVX256
-kernel_fp_list_t kernels_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
+kernel_fp_list_t kernels_c2c_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2avx256, get_ops_cnt_fft2avx256, 2},    // radix-2
     {register_kernel_fft3avx256, get_ops_cnt_fft3avx256, 3},    // radix-3
@@ -125,8 +128,9 @@ kernel_fp_list_t kernels_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
 };
 #endif
 
+// C2C - AVX512 Kernel List
 #ifdef ENABLE_AVX512
-kernel_fp_list_t kernels_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
+kernel_fp_list_t kernels_c2c_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2avx512, get_ops_cnt_fft2avx512, 2},    // radix-2
     {register_kernel_fft3avx512, get_ops_cnt_fft3avx512, 3},    // radix-3
@@ -149,5 +153,21 @@ kernel_fp_list_t kernels_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
     {NULL, NULL, 64}  // radix-64
 };
 #endif
+
+// R2HC - C Kernel List
+kernel_fp_list_t kernels_r2hc_c[NUM_KERNELS_IN_EACH_CATEGORY] =
+{
+    {register_kernel_r2hc_rfft2c, get_ops_cnt_r2hc_rfft2c, 2},    // radix-2
+    {register_kernel_r2hc_rfft3c, get_ops_cnt_r2hc_rfft3c, 3},    // radix-3
+    {register_kernel_r2hc_rfft4c, get_ops_cnt_r2hc_rfft4c, 4}     // radix-4
+};
+
+// R2HC-Fused - C Kernel List
+kernel_fp_list_t kernels_r2hcf_c[NUM_KERNELS_IN_EACH_CATEGORY] =
+{
+    {register_kernel_r2hcf_rfft2c, get_ops_cnt_r2hcf_rfft2c, 2},    // radix-2
+    {register_kernel_r2hcf_rfft3c, get_ops_cnt_r2hcf_rfft3c, 3},    // radix-3
+    {register_kernel_r2hcf_rfft4c, get_ops_cnt_r2hcf_rfft4c, 4}     // radix-4
+};
 
 #endif // AOCLFFTZ_KERNEL_LIST_H

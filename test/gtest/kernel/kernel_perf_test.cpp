@@ -66,7 +66,7 @@ class PerformanceTest : public benchmark::Fixture {
         UINT8 is_bwd = false;
 
         wrapper_kernel_fp_list *table = get_kernel_table(kernel_type);
-        kfft_ fft_kernel = get_kernel<T>(table, radix);
+        kfft_ fft_kernel = get_kernel<T>(table, is_bwd, radix);
         if (fft_kernel == nullptr)
         {
             state.SkipWithError(std::string("Radix-" + std::to_string(radix) +

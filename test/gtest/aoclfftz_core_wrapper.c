@@ -291,269 +291,323 @@ ops_cycles_t get_ops_cnt_fft16avx512_wrapper(INT32 precision)
 }
 #endif
 
+ops_cycles_t get_ops_cnt_r2hc_rfft2c_wrapper(INT32 precision)
+{
+    return get_ops_cnt_r2hc_rfft2c(precision);
+}
+ops_cycles_t get_ops_cnt_r2hc_rfft3c_wrapper(INT32 precision)
+{
+    return get_ops_cnt_r2hc_rfft3c(precision);
+}
+ops_cycles_t get_ops_cnt_r2hc_rfft4c_wrapper(INT32 precision)
+{
+    return get_ops_cnt_r2hc_rfft4c(precision);
+}
+
+ops_cycles_t get_ops_cnt_r2hcf_rfft2c_wrapper(INT32 precision)
+{
+    return get_ops_cnt_r2hcf_rfft2c(precision);
+}
+ops_cycles_t get_ops_cnt_r2hcf_rfft3c_wrapper(INT32 precision)
+{
+    return get_ops_cnt_r2hcf_rfft3c(precision);
+}
+ops_cycles_t get_ops_cnt_r2hcf_rfft4c_wrapper(INT32 precision)
+{
+    return get_ops_cnt_r2hcf_rfft4c(precision);
+}
+
 /* ---------------- kernels : register_kernel_fft* ---------------- */
 
-kfft_ register_kernel_fft2c_wrapper(INT32 precision)
+kfft_ register_kernel_fft2c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft2c(precision);
+    return register_kernel_fft2c(precision, direction);
 }
-kfft_ register_kernel_fft3c_wrapper(INT32 precision)
+kfft_ register_kernel_fft3c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft3c(precision);
+    return register_kernel_fft3c(precision, direction);
 }
-kfft_ register_kernel_fft4c_wrapper(INT32 precision)
+kfft_ register_kernel_fft4c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft4c(precision);
+    return register_kernel_fft4c(precision, direction);
 }
-kfft_ register_kernel_fft5c_wrapper(INT32 precision)
+kfft_ register_kernel_fft5c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft5c(precision);
+    return register_kernel_fft5c(precision, direction);
 }
-kfft_ register_kernel_fft6c_wrapper(INT32 precision)
+kfft_ register_kernel_fft6c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft6c(precision);
+    return register_kernel_fft6c(precision, direction);
 }
-kfft_ register_kernel_fft7c_wrapper(INT32 precision)
+kfft_ register_kernel_fft7c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft7c(precision);
+    return register_kernel_fft7c(precision, direction);
 }
-kfft_ register_kernel_fft8c_wrapper(INT32 precision)
+kfft_ register_kernel_fft8c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft8c(precision);
+    return register_kernel_fft8c(precision, direction);
 }
-kfft_ register_kernel_fft9c_wrapper(INT32 precision)
+kfft_ register_kernel_fft9c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft9c(precision);
+    return register_kernel_fft9c(precision, direction);
 }
-kfft_ register_kernel_fft10c_wrapper(INT32 precision)
+kfft_ register_kernel_fft10c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft10c(precision);
+    return register_kernel_fft10c(precision, direction);
 }
-kfft_ register_kernel_fft11c_wrapper(INT32 precision)
+kfft_ register_kernel_fft11c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft11c(precision);
+    return register_kernel_fft11c(precision, direction);
 }
-kfft_ register_kernel_fft12c_wrapper(INT32 precision)
+kfft_ register_kernel_fft12c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft12c(precision);
+    return register_kernel_fft12c(precision, direction);
 }
-kfft_ register_kernel_fft13c_wrapper(INT32 precision)
+kfft_ register_kernel_fft13c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft13c(precision);
+    return register_kernel_fft13c(precision, direction);
 }
-kfft_ register_kernel_fft14c_wrapper(INT32 precision)
+kfft_ register_kernel_fft14c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft14c(precision);
+    return register_kernel_fft14c(precision, direction);
 }
-kfft_ register_kernel_fft15c_wrapper(INT32 precision)
+kfft_ register_kernel_fft15c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft15c(precision);
+    return register_kernel_fft15c(precision, direction);
 }
-kfft_ register_kernel_fft16c_wrapper(INT32 precision)
+kfft_ register_kernel_fft16c_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft16c(precision);
+    return register_kernel_fft16c(precision, direction);
 }
 
 #ifdef ENABLE_AVX128
-kfft_ register_kernel_fft2avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft2avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft2avx128(precision);
+    return register_kernel_fft2avx128(precision, direction);
 }
-kfft_ register_kernel_fft3avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft3avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft3avx128(precision);
+    return register_kernel_fft3avx128(precision, direction);
 }
-kfft_ register_kernel_fft4avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft4avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft4avx128(precision);
+    return register_kernel_fft4avx128(precision, direction);
 }
-kfft_ register_kernel_fft5avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft5avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft5avx128(precision);
+    return register_kernel_fft5avx128(precision, direction);
 }
-kfft_ register_kernel_fft6avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft6avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft6avx128(precision);
+    return register_kernel_fft6avx128(precision, direction);
 }
-kfft_ register_kernel_fft7avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft7avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft7avx128(precision);
+    return register_kernel_fft7avx128(precision, direction);
 }
-kfft_ register_kernel_fft8avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft8avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft8avx128(precision);
+    return register_kernel_fft8avx128(precision, direction);
 }
-kfft_ register_kernel_fft9avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft9avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft9avx128(precision);
+    return register_kernel_fft9avx128(precision, direction);
 }
-kfft_ register_kernel_fft10avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft10avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft10avx128(precision);
+    return register_kernel_fft10avx128(precision, direction);
 }
-kfft_ register_kernel_fft11avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft11avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft11avx128(precision);
+    return register_kernel_fft11avx128(precision, direction);
 }
-kfft_ register_kernel_fft12avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft12avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft12avx128(precision);
+    return register_kernel_fft12avx128(precision, direction);
 }
-kfft_ register_kernel_fft13avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft13avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft13avx128(precision);
+    return register_kernel_fft13avx128(precision, direction);
 }
-kfft_ register_kernel_fft14avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft14avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft14avx128(precision);
+    return register_kernel_fft14avx128(precision, direction);
 }
-kfft_ register_kernel_fft15avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft15avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft15avx128(precision);
+    return register_kernel_fft15avx128(precision, direction);
 }
-kfft_ register_kernel_fft16avx128_wrapper(INT32 precision)
+kfft_ register_kernel_fft16avx128_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft16avx128(precision);
+    return register_kernel_fft16avx128(precision, direction);
 }
 #endif
 
 #ifdef ENABLE_AVX256
-kfft_ register_kernel_fft2avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft2avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft2avx256(precision);
+    return register_kernel_fft2avx256(precision, direction);
 }
-kfft_ register_kernel_fft3avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft3avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft3avx256(precision);
+    return register_kernel_fft3avx256(precision, direction);
 }
-kfft_ register_kernel_fft4avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft4avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft4avx256(precision);
+    return register_kernel_fft4avx256(precision, direction);
 }
-kfft_ register_kernel_fft5avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft5avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft5avx256(precision);
+    return register_kernel_fft5avx256(precision, direction);
 }
-kfft_ register_kernel_fft6avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft6avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft6avx256(precision);
+    return register_kernel_fft6avx256(precision, direction);
 }
-kfft_ register_kernel_fft7avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft7avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft7avx256(precision);
+    return register_kernel_fft7avx256(precision, direction);
 }
-kfft_ register_kernel_fft8avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft8avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft8avx256(precision);
+    return register_kernel_fft8avx256(precision, direction);
 }
-kfft_ register_kernel_fft9avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft9avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft9avx256(precision);
+    return register_kernel_fft9avx256(precision, direction);
 }
-kfft_ register_kernel_fft10avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft10avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft10avx256(precision);
+    return register_kernel_fft10avx256(precision, direction);
 }
-kfft_ register_kernel_fft11avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft11avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft11avx256(precision);
+    return register_kernel_fft11avx256(precision, direction);
 }
-kfft_ register_kernel_fft12avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft12avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft12avx256(precision);
+    return register_kernel_fft12avx256(precision, direction);
 }
-kfft_ register_kernel_fft13avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft13avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft13avx256(precision);
+    return register_kernel_fft13avx256(precision, direction);
 }
-kfft_ register_kernel_fft14avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft14avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft14avx256(precision);
+    return register_kernel_fft14avx256(precision, direction);
 }
-kfft_ register_kernel_fft15avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft15avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft15avx256(precision);
+    return register_kernel_fft15avx256(precision, direction);
 }
-kfft_ register_kernel_fft16avx256_wrapper(INT32 precision)
+kfft_ register_kernel_fft16avx256_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft16avx256(precision);
+    return register_kernel_fft16avx256(precision, direction);
 }
 #endif
 
 #ifdef ENABLE_AVX512
-kfft_ register_kernel_fft2avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft2avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft2avx512(precision);
+    return register_kernel_fft2avx512(precision, direction);
 }
-kfft_ register_kernel_fft3avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft3avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft3avx512(precision);
+    return register_kernel_fft3avx512(precision, direction);
 }
-kfft_ register_kernel_fft4avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft4avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft4avx512(precision);
+    return register_kernel_fft4avx512(precision, direction);
 }
-kfft_ register_kernel_fft5avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft5avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft5avx512(precision);
+    return register_kernel_fft5avx512(precision, direction);
 }
-kfft_ register_kernel_fft6avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft6avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft6avx512(precision);
+    return register_kernel_fft6avx512(precision, direction);
 }
-kfft_ register_kernel_fft7avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft7avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft7avx512(precision);
+    return register_kernel_fft7avx512(precision, direction);
 }
-kfft_ register_kernel_fft8avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft8avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft8avx512(precision);
+    return register_kernel_fft8avx512(precision, direction);
 }
-kfft_ register_kernel_fft9avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft9avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft9avx512(precision);
+    return register_kernel_fft9avx512(precision, direction);
 }
-kfft_ register_kernel_fft10avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft10avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft10avx512(precision);
+    return register_kernel_fft10avx512(precision, direction);
 }
-kfft_ register_kernel_fft11avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft11avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft11avx512(precision);
+    return register_kernel_fft11avx512(precision, direction);
 }
-kfft_ register_kernel_fft12avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft12avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft12avx512(precision);
+    return register_kernel_fft12avx512(precision, direction);
 }
-kfft_ register_kernel_fft13avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft13avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft13avx512(precision);
+    return register_kernel_fft13avx512(precision, direction);
 }
-kfft_ register_kernel_fft14avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft14avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft14avx512(precision);
+    return register_kernel_fft14avx512(precision, direction);
 }
-kfft_ register_kernel_fft15avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft15avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft15avx512(precision);
+    return register_kernel_fft15avx512(precision, direction);
 }
-kfft_ register_kernel_fft16avx512_wrapper(INT32 precision)
+kfft_ register_kernel_fft16avx512_wrapper(INT32 precision, INT32 direction)
 {
-    return register_kernel_fft16avx512(precision);
+    return register_kernel_fft16avx512(precision, direction);
 }
 #endif
+
+kfft_ register_kernel_r2hc_rfft2c_wrapper(INT32 precision, INT32 direction)
+{
+    return register_kernel_r2hc_rfft2c(precision, direction);
+}
+kfft_ register_kernel_r2hc_rfft3c_wrapper(INT32 precision, INT32 direction)
+{
+    return register_kernel_r2hc_rfft3c(precision, direction);
+}
+kfft_ register_kernel_r2hc_rfft4c_wrapper(INT32 precision, INT32 direction)
+{
+    return register_kernel_r2hc_rfft4c(precision, direction);
+}
+
+kfft_ register_kernel_r2hcf_rfft2c_wrapper(INT32 precision, INT32 direction)
+{
+    return register_kernel_r2hcf_rfft2c(precision, direction);
+}
+kfft_ register_kernel_r2hcf_rfft3c_wrapper(INT32 precision, INT32 direction)
+{
+    return register_kernel_r2hcf_rfft3c(precision, direction);
+}
+kfft_ register_kernel_r2hcf_rfft4c_wrapper(INT32 precision, INT32 direction)
+{
+    return register_kernel_r2hcf_rfft4c(precision, direction);
+}
 
 /* ---------------- kernels : permuted_copy_* ---------------- */
 
 VOID permuted_copy_c_fp32_wrapper(VOID *in, VOID *out, INTP n, INTP radix,
-                                  aoclfftz_strides_t *strides)
+                                  aoclfftz_strides_t *strides,
+                                  UINT8 data_stride)
 {
-    permuted_copy_c_fp32(in, out, n, radix, strides);
+    permuted_copy_c_fp32(in, out, n, radix, strides, data_stride);
 }
 VOID permuted_copy_c_fp64_wrapper(VOID *in, VOID *out, INTP n, INTP radix,
-                                  aoclfftz_strides_t *strides)
+                                  aoclfftz_strides_t *strides,
+                                  UINT8 data_stride)
 {
-    permuted_copy_c_fp64(in, out, n, radix, strides);
+    permuted_copy_c_fp64(in, out, n, radix, strides, data_stride);
 }
 
 /* ---------------- memory allocators/destroys ---------------- */
@@ -599,6 +653,21 @@ VOID fuse_vecs_wrapper(aoclfftz_solution_t *sol)
 {
     fuse_vecs(sol);
 }
+
+/* ---------------- strides wrapper ---------------- */
+VOID populate_stride_array_wrapper(INTP *strides, INTP stride_val, INTP n,
+                                   UINT8 compute_half_complex,
+                                   UINT8 adjust_to_full_complex)
+{
+    populate_stride_array(strides, stride_val, n, compute_half_complex,
+                          adjust_to_full_complex);
+}
+
+// VOID prepare_fused_kernel_strides_wrapper(INTP *strides, INTP radix,
+//                                           INTP offset)
+// {
+//     prepare_fused_kernel_strides(strides, radix, offset);
+// }
 
 // Transpose wrappers
 #define TRANSPOSE_WRAPPER_DEFN(kernel_name, TYPE, isa)                         \

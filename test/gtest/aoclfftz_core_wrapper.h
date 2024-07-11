@@ -41,6 +41,7 @@
 #define AOCLFFTZ_CORE_WRAPPER_H
 
 #include "core/common/memory_manager.h"
+#include "core/common/strides.h"
 #include "core/kernels/kernel.h"
 #include "core/solvers/solver.h"
 #include "selector/selector.h"
@@ -57,6 +58,7 @@ typedef struct wrapper_kernel_fp_list
 
 /* ---------------- kernels : get_opt_cnt_fft* ---------------- */
 
+// C2C Kernels
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft2c_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft3c_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft4c_wrapper(INT32 precision);
@@ -72,7 +74,6 @@ EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft13c_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft14c_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft15c_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft16c_wrapper(INT32 precision);
-// AVX-128
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft2avx128_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft3avx128_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft4avx128_wrapper(INT32 precision);
@@ -88,7 +89,6 @@ EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft13avx128_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft14avx128_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft15avx128_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft16avx128_wrapper(INT32 precision);
-// AVX256
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft2avx256_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft3avx256_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft4avx256_wrapper(INT32 precision);
@@ -121,80 +121,165 @@ EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft14avx512_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft15avx512_wrapper(INT32 precision);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft16avx512_wrapper(INT32 precision);
 
+// R2HC Kernels
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_r2hc_rfft2c_wrapper(INT32 precision);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_r2hc_rfft3c_wrapper(INT32 precision);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_r2hc_rfft4c_wrapper(INT32 precision);
+
+// R2HC-Fused Kernels
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_r2hcf_rfft2c_wrapper(INT32 precision);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_r2hcf_rfft3c_wrapper(INT32 precision);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_r2hcf_rfft4c_wrapper(INT32 precision);
+
 /* ---------------- kernels : register_kernel_fft* ---------------- */
 
-EXPORT_SYM_DYN kfft_ register_kernel_fft2c_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft3c_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft4c_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft5c_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft6c_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft7c_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft8c_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft9c_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft10c_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft11c_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft12c_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft13c_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft14c_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft15c_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft16c_wrapper(INT32 precision);
-// AVX-128
-EXPORT_SYM_DYN kfft_ register_kernel_fft2avx128_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft3avx128_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft4avx128_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft5avx128_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft6avx128_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft7avx128_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft8avx128_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft9avx128_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft10avx128_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft11avx128_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft12avx128_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft13avx128_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft14avx128_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft15avx128_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft16avx128_wrapper(INT32 precision);
-// AVX256
-EXPORT_SYM_DYN kfft_ register_kernel_fft2avx256_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft3avx256_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft4avx256_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft5avx256_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft6avx256_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft7avx256_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft8avx256_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft9avx256_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft10avx256_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft11avx256_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft12avx256_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft13avx256_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft14avx256_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft15avx256_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft16avx256_wrapper(INT32 precision);
+// C2C Kernels
+EXPORT_SYM_DYN kfft_ register_kernel_fft2c_wrapper(INT32 precision,
+                                                   INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft3c_wrapper(INT32 precision,
+                                                   INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft4c_wrapper(INT32 precision,
+                                                   INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft5c_wrapper(INT32 precision,
+                                                   INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft6c_wrapper(INT32 precision,
+                                                   INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft7c_wrapper(INT32 precision,
+                                                   INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft8c_wrapper(INT32 precision,
+                                                   INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft9c_wrapper(INT32 precision,
+                                                   INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft10c_wrapper(INT32 precision,
+                                                    INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft11c_wrapper(INT32 precision,
+                                                    INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft12c_wrapper(INT32 precision,
+                                                    INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft13c_wrapper(INT32 precision,
+                                                    INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft14c_wrapper(INT32 precision,
+                                                    INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft15c_wrapper(INT32 precision,
+                                                    INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft16c_wrapper(INT32 precision,
+                                                    INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft2avx128_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft3avx128_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft4avx128_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft5avx128_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft6avx128_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft7avx128_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft8avx128_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft9avx128_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft10avx128_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft11avx128_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft12avx128_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft13avx128_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft14avx128_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft15avx128_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft16avx128_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft2avx256_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft3avx256_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft4avx256_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft5avx256_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft6avx256_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft7avx256_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft8avx256_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft9avx256_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft10avx256_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft11avx256_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft12avx256_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft13avx256_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft14avx256_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft15avx256_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft16avx256_wrapper(INT32 precision,
+                                                         INT32 direction);
+// R2HC Kernels
+EXPORT_SYM_DYN kfft_ register_kernel_r2hc_rfft2c_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_r2hc_rfft3c_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_r2hc_rfft4c_wrapper(INT32 precision,
+                                                         INT32 direction);
+// R2HC-Fused Kernels
+EXPORT_SYM_DYN kfft_ register_kernel_r2hcf_rfft2c_wrapper(INT32 precision,
+                                                          INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_r2hcf_rfft3c_wrapper(INT32 precision,
+                                                          INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_r2hcf_rfft4c_wrapper(INT32 precision,
+                                                          INT32 direction);
 // AVX512
-EXPORT_SYM_DYN kfft_ register_kernel_fft2avx512_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft3avx512_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft4avx512_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft5avx512_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft6avx512_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft7avx512_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft8avx512_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft9avx512_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft10avx512_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft11avx512_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft12avx512_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft13avx512_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft14avx512_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft15avx512_wrapper(INT32 precision);
-EXPORT_SYM_DYN kfft_ register_kernel_fft16avx512_wrapper(INT32 precision);
+EXPORT_SYM_DYN kfft_ register_kernel_fft2avx512_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft3avx512_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft4avx512_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft5avx512_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft6avx512_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft7avx512_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft8avx512_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft9avx512_wrapper(INT32 precision,
+                                                        INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft10avx512_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft11avx512_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft12avx512_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft13avx512_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft14avx512_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft15avx512_wrapper(INT32 precision,
+                                                         INT32 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_fft16avx512_wrapper(INT32 precision,
+                                                         INT32 direction);
 
 /* ---------------- kernels : permuted_copy_* ---------------- */
 
 EXPORT_SYM_DYN VOID permuted_copy_c_fp32_wrapper(VOID *in, VOID *out, INTP n,
                                                  INTP radix,
-                                                 aoclfftz_strides_t *strides);
+                                                 aoclfftz_strides_t *strides,
+                                                 UINT8 data_stride);
 EXPORT_SYM_DYN VOID permuted_copy_c_fp64_wrapper(VOID *in, VOID *out, INTP n,
                                                  INTP radix,
-                                                 aoclfftz_strides_t *strides);
+                                                 aoclfftz_strides_t *strides,
+                                                 UINT8 data_stride);
 
 /* ---------------- memory allocators/destroys ---------------- */
 
@@ -216,10 +301,22 @@ EXPORT_SYM_DYN VOID destroy_handle_wrapper(VOID *handle);
 /* ---------------- fuse vector wrapper ---------------- */
 EXPORT_SYM_DYN VOID fuse_vecs_wrapper(aoclfftz_solution_t *sol);
 
+/* ---------------- strides wrapper ---------------- */
+EXPORT_SYM_DYN VOID populate_stride_array_wrapper(INTP *strides,
+                      INTP stride_val,
+                      INTP n,
+                      UINT8 compute_half_complex,
+                      UINT8 adjust_to_full_complex);
+
+// EXPORT_SYM_DYN VOID prepare_fused_kernel_strides_wrapper(INTP *strides,
+//                                                          INTP radix,
+//                                                          INTP offset);
+
 /* ---------------- wrapper kernel tables ---------------- */
 
+// C2C Kernels
 static wrapper_kernel_fp_list_t
-    wrapper_kernels_c[NUM_KERNELS_IN_EACH_CATEGORY] =
+    wrapper_kernels_c2c_c[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2c_wrapper, get_ops_cnt_fft2c_wrapper, 2},
     {register_kernel_fft3c_wrapper, get_ops_cnt_fft3c_wrapper, 3},
@@ -243,7 +340,7 @@ static wrapper_kernel_fp_list_t
 };
 #ifdef ENABLE_AVX128
 static wrapper_kernel_fp_list_t
-    wrapper_kernels_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
+    wrapper_kernels_c2c_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2avx128_wrapper, get_ops_cnt_fft2avx128_wrapper, 2},
     {register_kernel_fft3avx128_wrapper, get_ops_cnt_fft3avx128_wrapper, 3},
@@ -268,7 +365,7 @@ static wrapper_kernel_fp_list_t
 #endif
 #ifdef ENABLE_AVX256
 static wrapper_kernel_fp_list_t
-    wrapper_kernels_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
+    wrapper_kernels_c2c_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2avx256_wrapper, get_ops_cnt_fft2avx256_wrapper, 2},
     {register_kernel_fft3avx256_wrapper, get_ops_cnt_fft3avx256_wrapper, 3},
@@ -294,7 +391,7 @@ static wrapper_kernel_fp_list_t
 #endif
 #ifdef ENABLE_AVX512
 static wrapper_kernel_fp_list_t
-    wrapper_kernels_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
+    wrapper_kernels_c2c_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_fft2avx512_wrapper, get_ops_cnt_fft2avx512_wrapper, 2},
     {register_kernel_fft3avx512_wrapper, get_ops_cnt_fft3avx512_wrapper, 3},
@@ -318,6 +415,24 @@ static wrapper_kernel_fp_list_t
     {NULL, NULL, 64}
 };
 #endif
+
+// R2HC Kernels
+static wrapper_kernel_fp_list_t
+    wrapper_kernels_r2hc_c[NUM_KERNELS_IN_EACH_CATEGORY] =
+{
+    {register_kernel_r2hc_rfft2c_wrapper, get_ops_cnt_r2hc_rfft2c_wrapper, 2},
+    {register_kernel_r2hc_rfft3c_wrapper, get_ops_cnt_r2hc_rfft3c_wrapper, 3},
+    {register_kernel_r2hc_rfft4c_wrapper, get_ops_cnt_r2hc_rfft4c_wrapper, 4}
+};
+
+// R2HC-Fused Kernels
+static wrapper_kernel_fp_list_t
+    wrapper_kernels_r2hcf_c[NUM_KERNELS_IN_EACH_CATEGORY] =
+{
+    {register_kernel_r2hcf_rfft2c_wrapper, get_ops_cnt_r2hcf_rfft2c_wrapper, 2},
+    {register_kernel_r2hcf_rfft3c_wrapper, get_ops_cnt_r2hcf_rfft3c_wrapper, 3},
+    {register_kernel_r2hcf_rfft4c_wrapper, get_ops_cnt_r2hcf_rfft4c_wrapper, 4}
+};
 
 // Transpose wrappers
 #define TRANSPOSE_WRAPPER_DECL(kernel_name, TYPE, isa)                         \
