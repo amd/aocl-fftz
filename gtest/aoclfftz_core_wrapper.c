@@ -265,6 +265,10 @@ ops_cycles_t get_ops_cnt_fft12avx512_wrapper(INT32 precision)
 {
     return get_ops_cnt_fft12avx512(precision);
 }
+ops_cycles_t get_ops_cnt_fft14avx512_wrapper(INT32 precision)
+{
+    return get_ops_cnt_fft14avx512(precision);
+}
 #endif
 
 /* ---------------- kernels : register_kernel_fft* ---------------- */
@@ -492,6 +496,10 @@ kfft_ register_kernel_fft11avx512_wrapper(INT32 precision)
 kfft_ register_kernel_fft12avx512_wrapper(INT32 precision)
 {
     return register_kernel_fft12avx512(precision);
+}
+kfft_ register_kernel_fft14avx512_wrapper(INT32 precision)
+{
+    return register_kernel_fft14avx512(precision);
 }
 #endif
 
