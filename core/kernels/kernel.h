@@ -187,6 +187,7 @@ ops_cycles_t get_ops_cnt_fft8avx512(INT32 precision);
 ops_cycles_t get_ops_cnt_fft9avx512(INT32 precision);
 ops_cycles_t get_ops_cnt_fft10avx512(INT32 precision);
 ops_cycles_t get_ops_cnt_fft11avx512(INT32 precision);
+ops_cycles_t get_ops_cnt_fft12avx512(INT32 precision);
 #endif
 
 // C register kernels
@@ -251,6 +252,7 @@ kfft_ register_kernel_fft8avx512(INT32 precision);
 kfft_ register_kernel_fft9avx512(INT32 precision);
 kfft_ register_kernel_fft10avx512(INT32 precision);
 kfft_ register_kernel_fft11avx512(INT32 precision);
+kfft_ register_kernel_fft12avx512(INT32 precision);
 #endif
 
 // Permuted copy kernels
