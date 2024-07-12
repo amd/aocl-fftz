@@ -140,8 +140,8 @@ kernel_fp_list_t kernels_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_fft12avx512, get_ops_cnt_fft12avx512, 12}, // radix-12
     {register_kernel_fft14avx512, get_ops_cnt_fft14avx512, 14}, // radix-14
     {register_kernel_fft15avx512, get_ops_cnt_fft15avx512, 15}, // radix-15
+    {register_kernel_fft16avx512, get_ops_cnt_fft16avx512, 16}, // radix-16
     {NULL, NULL, 13}, // radix-13
-    {NULL, NULL, 16}, // radix-16
     {NULL, NULL, 20}, // radix-20
     {NULL, NULL, 25}, // radix-25
     {NULL, NULL, 32}, // radix-32
