@@ -1474,9 +1474,13 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             }
             fclose(out_file);
             CHAR path[PATH_SIZE_MAX];
-            GETCWD(path, sizeof(path));
+            CHAR *ret = GETCWD(path, sizeof(path));
+            if (ret == NULL)
+            {
+                strcpy(path, "current_dir");
+            }
             printf("\nFull output log can be found in %s%s%s\n", path,
-                   DIRECTORY_SEPARATOR, OUTPUT_LOG_FILE);
+                    DIRECTORY_SEPARATOR, OUTPUT_LOG_FILE);
         }
         else
         {
@@ -1662,9 +1666,13 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             }
             fclose(out_file);
             CHAR path[PATH_SIZE_MAX];
-            GETCWD(path, sizeof(path));
+            CHAR *ret = GETCWD(path, sizeof(path));
+            if (ret == NULL)
+            {
+                strcpy(path, "current_dir");
+            }
             printf("\nFull output log can be found in %s%s%s\n", path,
-                   DIRECTORY_SEPARATOR, OUTPUT_LOG_FILE);
+                    DIRECTORY_SEPARATOR, OUTPUT_LOG_FILE);
         }
         else
         {
