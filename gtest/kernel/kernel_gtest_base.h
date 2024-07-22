@@ -273,15 +273,15 @@ class AoclfftzKernelTestBase
         INT32 _stride = use_input_params ? in_stride : out_stride;
         for (int idx = 0; idx < _length; idx += _stride)
         {
-            T e = std::max(
+            T e = (std::max)(
                 std::abs(a[idx * DATA_STRIDE] - b[idx * DATA_STRIDE]),
                 std::abs(a[idx * DATA_STRIDE + 1] - b[idx * DATA_STRIDE + 1]));
-            T mag = std::min(std::max(std::abs(a[idx * DATA_STRIDE]),
+            T mag = (std::min)((std::max)(std::abs(a[idx * DATA_STRIDE]),
                                       std::abs(a[idx * DATA_STRIDE + 1])),
-                             std::max(std::abs(b[idx * DATA_STRIDE]),
+                             (std::max)(std::abs(b[idx * DATA_STRIDE]),
                                       std::abs(b[idx * DATA_STRIDE + 1])));
-            max_e = std::max(max_e, e);
-            max_mag = std::max(max_mag, mag);
+            max_e = (std::max)(max_e, e);
+            max_mag = (std::max)(max_mag, mag);
         }
         if (max_e == 0.0 && max_mag == 0.0)
         {
@@ -647,7 +647,7 @@ class AoclfftzKernelTestBase
         ALLOC_ALIGN_INIT(out_comp, T, output_length * DATA_STRIDE * sizeof(T));
         T *temp;
         ALLOC_ALIGN_INIT(temp, T,
-            std::max(input_length, output_length) * DATA_STRIDE * sizeof(T));
+            (std::max)(input_length, output_length) * DATA_STRIDE * sizeof(T));
 
         // Perform circular right shift by `m` times
         // range of m => [1, radix)

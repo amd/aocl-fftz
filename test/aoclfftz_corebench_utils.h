@@ -1919,10 +1919,15 @@ INT32 calibrate_iterations(VOID *handle, DOUBLE min_bench_time)
  */
 VOID bench_sleep(INT64 nano_seconds)
 {
+#ifdef WIN32
+    DWORD milli_seconds = (nano_seconds / 1e6);
+    Sleep(milli_seconds);
+#else
     timeVal t;
     t.tv_sec = nano_seconds / (INT64)1e9; // 1 second
     t.tv_nsec = nano_seconds % (INT64)1e9; // 1 second
     nanosleep(&t, &t);
+#endif
 }
 
 #endif // AOCLFFTZ_COREBENCH_UTILS_H

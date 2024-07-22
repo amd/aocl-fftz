@@ -2,9 +2,9 @@
 
 The following sample program shows the usage of the aocl-fftz APIs to setup and execute an fft problem.
 
----
+
 @note Please ensure that you utilize the appropriate compatible data type/model APIs.\n ex:- For a problem descriptor of type FLOAT LP64 The following would be the API call sequence\n aoclfftz_setup_f\n aoclfftz_execute_f/ aoclfftz_destroy_f
----
+
 
 ```C
 #include <stdio.h>
