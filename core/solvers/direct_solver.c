@@ -154,7 +154,7 @@ static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
-dft_solver_ register_execute_direct_solver()
+dft_solver_ register_execute_direct_solver(VOID)
 {
     return execute_direct_solver;
 }

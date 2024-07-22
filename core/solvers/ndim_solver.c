@@ -174,7 +174,7 @@ static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
-dft_solver_ register_execute_ndim_solver()
+dft_solver_ register_execute_ndim_solver(VOID)
 {
     return execute_ndim_solver;
 }

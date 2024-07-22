@@ -264,7 +264,7 @@ static INT32 execute_batched_solver(aoclfftz_solution_t *sol)
     return status;
 }
 
-dft_solver_ register_execute_batched_solver()
+dft_solver_ register_execute_batched_solver(VOID)
 {
     return execute_batched_solver;
 }

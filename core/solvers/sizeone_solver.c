@@ -81,7 +81,7 @@ static INT32 execute_sizeone_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
-dft_solver_ register_execute_sizeone_solver()
+dft_solver_ register_execute_sizeone_solver(VOID)
 {
     return execute_sizeone_solver;
 }

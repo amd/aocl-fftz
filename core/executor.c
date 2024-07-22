@@ -45,7 +45,7 @@ static INT32 execute_dft(aoclfftz_executor_t *executor_obj)
     return sol->solver->execute_solver(sol);
 }
 
-execute_ register_execute_dft()
+execute_ register_execute_dft(VOID)
 {
     return execute_dft;
 }

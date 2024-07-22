@@ -247,6 +247,6 @@ typedef struct
     aoclfftz_solution_t *sol_handle;
 } aoclfftz_dft_d_64_;
 
-execute_ register_execute_dft();
+execute_ register_execute_dft(VOID);
 
 #endif //AOCLFFTZ_INTERNAL_H

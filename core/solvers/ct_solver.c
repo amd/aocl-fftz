@@ -137,7 +137,7 @@ static INT32 execute_ct_solver(aoclfftz_solution_t *sol)
     return status;
 }
 
-dft_solver_ register_execute_ct_solver()
+dft_solver_ register_execute_ct_solver(VOID)
 {
     return execute_ct_solver;
 }

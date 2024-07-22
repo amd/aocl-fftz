@@ -251,7 +251,7 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     return status;
 }
 
-dft_solver_ register_execute_bluestein_solver()
+dft_solver_ register_execute_bluestein_solver(VOID)
 {
     return execute_bluestein_solver;
 }

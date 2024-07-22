@@ -99,11 +99,11 @@ INT32 setup_buffered_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                             kernel_t *kernel);
 #endif
 
-dft_solver_ register_execute_direct_solver();
-dft_solver_ register_execute_ct_solver();
-dft_solver_ register_execute_batched_solver();
-dft_solver_ register_execute_bluestein_solver();
-dft_solver_ register_execute_ndim_solver();
-dft_solver_ register_execute_sizeone_solver();
+dft_solver_ register_execute_direct_solver(VOID);
+dft_solver_ register_execute_ct_solver(VOID);
+dft_solver_ register_execute_batched_solver(VOID);
+dft_solver_ register_execute_bluestein_solver(VOID);
+dft_solver_ register_execute_ndim_solver(VOID);
+dft_solver_ register_execute_sizeone_solver(VOID);
 
 #endif //AOCLFFTZ_SOLVER_H
