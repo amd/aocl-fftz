@@ -1029,9 +1029,9 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
         {
             for (idx = 0; idx < n; ++idx)
             {
-                input_f[idx + T_DATA_STRIDE] =
+                input_f[idx * T_DATA_STRIDE] =
                     (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
-                input_f[idx + T_DATA_STRIDE + 1] =
+                input_f[idx * T_DATA_STRIDE + 1] =
                     (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
             }
         }
@@ -1039,9 +1039,9 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
         {
             for (idx = 0; idx < n; ++idx)
             {
-                input_f[idx_map[idx] + T_DATA_STRIDE] =
+                input_f[idx_map[idx] * T_DATA_STRIDE] =
                     (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
-                input_f[idx_map[idx] + T_DATA_STRIDE + 1] =
+                input_f[idx_map[idx] * T_DATA_STRIDE + 1] =
                     (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
             }
         }
@@ -1328,6 +1328,7 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     INT32 logger_mode = params->logger_mode;
     FLOAT *a_f = (FLOAT *)a;
     FLOAT *b_f = (FLOAT *)b;
+    INT32 status = BENCH_SUCCESS;
 
     INT32 dim_rank = params->dim_rank;
     aoclfftz_dim_t_64_ *dims = params->dims;
@@ -1335,10 +1336,9 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     aoclfftz_dim_t_64_ *vecs = params->vecs;
     INTP *dim_counter = NULL;
     INTP *vec_counter = NULL;
-    ALLOC_INIT(dim_counter, INTP, dim_rank * sizeof(INTP),
-               params->aligned_alloc);
-    ALLOC_INIT(vec_counter, INTP, vec_rank * sizeof(INTP),
-               params->aligned_alloc);
+    UINT32 is_aligned = params->aligned_alloc;
+    ALLOC_INIT(dim_counter, INTP, dim_rank * sizeof(INTP), is_aligned);
+    ALLOC_INIT(vec_counter, INTP, vec_rank * sizeof(INTP), is_aligned);
 
     FLOAT max_abs_err = 0.0;
     FLOAT max_mag = 0.0;
@@ -1349,14 +1349,10 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     INTP *d_err_coords = NULL;
     INTP *b_maxerr_coords = NULL;
     INTP *b_err_coords = NULL;
-    ALLOC_INIT(d_maxerr_coords, INTP, dim_rank * sizeof(INTP),
-               params->aligned_alloc);
-    ALLOC_INIT(d_err_coords, INTP, dim_rank * sizeof(INTP),
-               params->aligned_alloc);
-    ALLOC_INIT(b_maxerr_coords, INTP, vec_rank * sizeof(INTP),
-               params->aligned_alloc);
-    ALLOC_INIT(b_err_coords, INTP, vec_rank * sizeof(INTP),
-               params->aligned_alloc);
+    ALLOC_INIT(d_maxerr_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
+    ALLOC_INIT(d_err_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
+    ALLOC_INIT(b_maxerr_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
+    ALLOC_INIT(b_err_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
 
     INTP N = batches * n;
     for (INTP i = 0; i < N; i++)
@@ -1487,10 +1483,17 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             printf("\nUse debug logger mode [--logger-mode 3 (or) -l 3] to get "
                    "detailed error log\n");
         }
-        return VERIFICATION_FAILURE;
+        status = VERIFICATION_FAILURE;
     }
 
-    return BENCH_SUCCESS;
+    FREE_ALLOCATED_MEM(dim_counter, is_aligned);
+    FREE_ALLOCATED_MEM(vec_counter, is_aligned);
+    FREE_ALLOCATED_MEM(d_maxerr_coords, is_aligned);
+    FREE_ALLOCATED_MEM(d_err_coords, is_aligned);
+    FREE_ALLOCATED_MEM(b_maxerr_coords, is_aligned);
+    FREE_ALLOCATED_MEM(b_err_coords, is_aligned);
+
+    return status;
 }
 
 /**
@@ -1512,17 +1515,16 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     INT32 logger_mode = params->logger_mode;
     DOUBLE *a_d = (DOUBLE *)a;
     DOUBLE *b_d = (DOUBLE *)b;
-
+    INT32 status = BENCH_SUCCESS;
     INT32 dim_rank = params->dim_rank;
     aoclfftz_dim_t_64_ *dims = params->dims;
     INT32 vec_rank = params->vec_rank;
     aoclfftz_dim_t_64_ *vecs = params->vecs;
     INTP *dim_counter = NULL;
     INTP *vec_counter = NULL;
-    ALLOC_INIT(dim_counter, INTP, dim_rank * sizeof(INTP),
-               params->aligned_alloc);
-    ALLOC_INIT(vec_counter, INTP, vec_rank * sizeof(INTP),
-               params->aligned_alloc);
+    UINT32 is_aligned = params->aligned_alloc;
+    ALLOC_INIT(dim_counter, INTP, dim_rank * sizeof(INTP), is_aligned);
+    ALLOC_INIT(vec_counter, INTP, vec_rank * sizeof(INTP), is_aligned);
 
     DOUBLE max_abs_err = 0.0;
     DOUBLE max_mag = 0.0;
@@ -1533,14 +1535,10 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     INTP *d_err_coords = NULL;
     INTP *b_maxerr_coords = NULL;
     INTP *b_err_coords = NULL;
-    ALLOC_INIT(d_maxerr_coords, INTP, dim_rank * sizeof(INTP),
-               params->aligned_alloc);
-    ALLOC_INIT(d_err_coords, INTP, dim_rank * sizeof(INTP),
-               params->aligned_alloc);
-    ALLOC_INIT(b_maxerr_coords, INTP, vec_rank * sizeof(INTP),
-               params->aligned_alloc);
-    ALLOC_INIT(b_err_coords, INTP, vec_rank * sizeof(INTP),
-               params->aligned_alloc);
+    ALLOC_INIT(d_maxerr_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
+    ALLOC_INIT(d_err_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
+    ALLOC_INIT(b_maxerr_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
+    ALLOC_INIT(b_err_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
 
     INTP N = batches * n;
     for (INTP i = 0; i < N; i++)
@@ -1673,10 +1671,17 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             printf("\nUse debug logger mode [--logger-mode 3 (or) -l 3] to get "
                    "detailed error log\n");
         }
-        return VERIFICATION_FAILURE;
+        status = VERIFICATION_FAILURE;
     }
 
-    return BENCH_SUCCESS;
+    FREE_ALLOCATED_MEM(dim_counter, is_aligned);
+    FREE_ALLOCATED_MEM(vec_counter, is_aligned);
+    FREE_ALLOCATED_MEM(d_maxerr_coords, is_aligned);
+    FREE_ALLOCATED_MEM(d_err_coords, is_aligned);
+    FREE_ALLOCATED_MEM(b_maxerr_coords, is_aligned);
+    FREE_ALLOCATED_MEM(b_err_coords, is_aligned);
+
+    return status;
 }
 
 /**

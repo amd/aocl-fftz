@@ -58,14 +58,17 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     INT32 status = SOLVER_SUCCESS;
     UINT8 sets = kernel->sets[precision - 2];
 
-    ALLOC_ALIGN_UNINIT(strides->in_strides, INTP, radix * sizeof(INTP));
-    ALLOC_ALIGN_UNINIT(strides->out_strides, INTP, radix * sizeof(INTP));
-    INTP in_stride = sol->decomp_scheme->dims[0].in_stride;
-    INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
-    for (INTP i = 0; i < radix; i++)
+    if (strides->in_strides == NULL)
     {
-        strides->in_strides[i] = i * in_stride * DATA_STRIDE;
-        strides->out_strides[i] = i * out_stride * DATA_STRIDE;
+        ALLOC_ALIGN_UNINIT(strides->in_strides, INTP, radix * sizeof(INTP));
+        ALLOC_ALIGN_UNINIT(strides->out_strides, INTP, radix * sizeof(INTP));
+        INTP in_stride = sol->decomp_scheme->dims[0].in_stride;
+        INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
+        for (INTP i = 0; i < radix; i++)
+        {
+            strides->in_strides[i] = i * in_stride * DATA_STRIDE;
+            strides->out_strides[i] = i * out_stride * DATA_STRIDE;
+        }
     }
 
     strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
