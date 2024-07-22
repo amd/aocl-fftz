@@ -70,6 +70,7 @@ if(NOT benchmark_FOUND)
         GIT_REPOSITORY "https://github.com/google/benchmark.git"
         GIT_TAG v1.8.3 # Latest release
     )
+    set(BENCHMARK_ENABLE_TESTING OFF) # avoid benchmark tests getting added to FFTZ ctests
     FetchContent_MakeAvailable(benchmark)
 endif()
 

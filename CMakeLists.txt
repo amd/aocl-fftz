@@ -255,6 +255,7 @@ if(AOCL_TEST_COVERAGE)
     enable_testing()
     add_subdirectory(gtest)
     add_subdirectory(test)
+    set(GTEST_DIR gtest)
 endif()
 
 # compile kernel files with only the relevant simd flags.
@@ -262,11 +263,11 @@ endif()
 # By default, the properties set are visible only to source files in the current folder
 # To make it visible to files across folders,'DIRECTORY' option is used
 if(ENABLE_AVX512)
-    set_source_files_properties(${CORE_AVX512_FILES} DIRECTORY "${ROOT_DIR}" "gtest"
+    set_source_files_properties(${CORE_AVX512_FILES} DIRECTORY "${ROOT_DIR}" "${GTEST_DIR}"
                                 PROPERTIES COMPILE_FLAGS "${AVX512_FLAG}")
 endif()
 if(ENABLE_AVX128 OR ENABLE_AVX256)
-    set_source_files_properties(${CORE_AVX128_FILES} ${CORE_AVX256_FILES} DIRECTORY "${ROOT_DIR}" "gtest"
+    set_source_files_properties(${CORE_AVX128_FILES} ${CORE_AVX256_FILES} DIRECTORY "${ROOT_DIR}" "${GTEST_DIR}"
                                 PROPERTIES COMPILE_FLAGS "${AVX_FLAG}")
 endif()
 
