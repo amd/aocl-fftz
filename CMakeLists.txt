@@ -164,6 +164,7 @@ elseif(UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USER_DEBUG_ON} -fomit-frame-pointer -fstrict-aliasing")
 endif()
 
+include(CheckCXXCompilerFlag)
 add_compile_definitions(CCompiler="${CMAKE_C_COMPILER}")
 add_compile_definitions(CXXCompiler="${CMAKE_CXX_COMPILER}")
 add_compile_definitions(CFLAGS_SET2="${CMAKE_C_FLAGS}")
@@ -207,7 +208,6 @@ endif()
 #       "-fno-version-loops-for-strides".
 # NOTE: The flag needs to be applied only to the C Kernel files directory.
 # Check if the compiler supports -fversion-loops-for-strides
-include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag("-fversion-loops-for-strides" COMPILER_SUPPORTS_VERSION_LOOPS_FOR_STRIDES)
 if(COMPILER_SUPPORTS_VERSION_LOOPS_FOR_STRIDES)
     set_source_files_properties(${CORE_C_FILES} PROPERTIES COMPILE_OPTIONS "-fno-version-loops-for-strides")
@@ -294,7 +294,12 @@ endif()
 
 # add the compiler and linker flags for code coverage
 if(CODE_COVERAGE)
-    target_compile_options(${lib_name} PUBLIC --coverage -fprofile-abs-path)
+    target_compile_options(${lib_name} PUBLIC --coverage)
+    # Check if the compiler supports -fprofile-abs-path
+    check_cxx_compiler_flag("-fprofile-abs-path" HAS_FPROFILE_ABS_PATH)
+    if(HAS_FPROFILE_ABS_PATH)
+        target_compile_options(${lib_name} PUBLIC -fprofile-abs-path)
+    endif()
     target_link_options(${lib_name} PUBLIC --coverage)
 endif()
 
