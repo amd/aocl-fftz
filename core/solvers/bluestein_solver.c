@@ -86,6 +86,21 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     DT_PRECISION_BYTES(dt_prec);
     UINT32 dir = FFT_DIR(sol->decomp_scheme->flags);
+    UINT32 mask = 1 << 2;
+    UINT32 initial_flags = sol->next_sol->decomp_scheme->flags;
+
+    // Switch bwd flag to fwd for AVX kernels
+
+    // As per the design, in bwd scenario, the AVX kernels expect swapped
+    // in_real & in_imag pointers so that it can re-swap again within the kernel
+    // to pick the correct in_real for processing. But in Bluestein solver,
+    // the in_real & in_imag pointers are not swapped and hence there is a need
+    // to prevent the re-swapping within the kernel, which can only be achieved
+    // by setting the direction flag to Forward.
+    if (dir == BACKWARD_FFT_DIR)
+    {
+        sol->next_sol->decomp_scheme->flags ^= mask;
+    }
     INTP n = sol->decomp_scheme->dims[0].n;           // original length
     INTP m = sol->next_sol->decomp_scheme->dims[0].n; // extended length
     INT32 status = SOLVER_SUCCESS;
@@ -196,6 +211,7 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     sol->next_sol->decomp_scheme->in_imag = out_real;
     sol->next_sol->decomp_scheme->out_real = in_imag;
     sol->next_sol->decomp_scheme->out_imag = in_real;
+    sol->next_sol->decomp_scheme->flags ^= mask;
 
     // input  : out_imag
     // output : in_imag
@@ -244,6 +260,7 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     sol->next_sol->decomp_scheme->in_imag = in_imag;
     sol->next_sol->decomp_scheme->out_real = out_real;
     sol->next_sol->decomp_scheme->out_imag = out_imag;
+    sol->next_sol->decomp_scheme->flags = initial_flags;
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");

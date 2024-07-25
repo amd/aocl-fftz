@@ -60,7 +60,7 @@
 //Set and Get Flags bits
 #define IS_OUT_OF_PLACE(flags) (flags & 0x1)
 #define IS_OUT_OF_ORDER(flags) (flags & 0x2)
-#define FFT_DIR(flags) (flags & 0x4)
+#define FFT_DIR(flags) ((flags & 0x4) >> 2)
 #define IS_REAL(flags) (flags & 0x8)
 #define SET_PRECISION(flags, val) (flags |= (val << 30))
 #define SET_INPLACE(flags) (flags &= ~(0x1))

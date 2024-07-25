@@ -102,6 +102,7 @@ static INT32 execute_batched_solver(aoclfftz_solution_t *sol)
         next_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
         next_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
         next_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+        next_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
 
         for (batch_size = 0; batch_size < sol->decomp_scheme->vecs[0].n;
             batch_size++)

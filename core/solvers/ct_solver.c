@@ -105,11 +105,13 @@ static INT32 execute_ct_solver(aoclfftz_solution_t *sol)
     radix_m_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
     radix_m_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
     radix_m_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    radix_m_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
 
     radix_r_sol->decomp_scheme->in_real  = sol->decomp_scheme->out_real;
     radix_r_sol->decomp_scheme->in_imag  = sol->decomp_scheme->out_imag;
     radix_r_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
     radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    radix_r_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
 
     // execute radix-m sub-problem
     radix_m_sol->solver->execute_solver(radix_m_sol);
