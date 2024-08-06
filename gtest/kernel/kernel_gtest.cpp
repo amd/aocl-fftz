@@ -350,15 +350,17 @@ aoclfftz_kernel_test_params_t param_double_avx256_kernels[] =
      aoclfftz_kernel_test_type::ALL}
 };
 
-// IO params as {in-stride, out-stride , batch size, dir of FFT(0->FWD/1-> BWD)}
+// IO params as {in-stride, out-stride , batch size, dir of FFT(0->FWD/1-> BWD),
+//               result placement(0 -> inplace, 1 -> out-of-place)}
 // Batch size fixed as 1-7 to cover all the tail case in AVX128 & AVX256 kernels
-std::vector<std::tuple<INTP, INTP, INTP, UINT8>> io_params = {{1,  1, 1, 0},
-                                                              {2,  9, 2, 1},
-                                                              {7,  3, 3, 0},
-                                                              {4,  4, 4, 1},
-                                                              {11, 1, 5, 0},
-                                                              {1,  6, 6, 1},
-                                                              {10, 5, 7, 0}};
+std::vector<std::tuple<INTP, INTP, INTP, UINT8, UINT8>> io_params =
+                                                             {{1,  1, 1, 0, 0},
+                                                              {2,  9, 2, 1, 1},
+                                                              {7,  3, 3, 0, 1},
+                                                              {4,  4, 4, 1, 0},
+                                                              {11, 1, 5, 0, 1},
+                                                              {1,  6, 6, 1, 1},
+                                                              {10, 5, 7, 0, 1}};
 
 TEST_P(AoclfftzKernelTestFloat, TEST_FLOAT_KERNEL)
 {
@@ -387,7 +389,7 @@ TEST_P(AoclfftzKernelTestDouble, TEST_DOUBLE_KERNEL_SPECIAL)
 auto name_generator =
     [](const ::testing::TestParamInfo<
         std::tuple<aoclfftz_kernel_test_params_t,
-        std::tuple<INTP, INTP, INTP, UINT8>>> &info)
+        std::tuple<INTP, INTP, INTP, UINT8, UINT8>>> &info)
     {
         auto param = std::get<0>(info.param);
         auto io_param = std::get<1>(info.param);
@@ -395,6 +397,7 @@ auto name_generator =
         INTP ostride  = std::get<1>(io_param);
         INTP batch_sz = std::get<2>(io_param);
         UINT8 is_bwd  = std::get<3>(io_param);
+        UINT8 is_out_of_place  = std::get<4>(io_param);
         UINT32 radix  = std::get<0>(param);
         UINT8 kernel_type = std::get<1>(param);
         UINT8 test_type = std::get<2>(param);
@@ -407,6 +410,14 @@ auto name_generator =
         else
         {
             test_name += "_FWD";
+        }
+        if (is_out_of_place)
+        {
+            test_name += "_OUTOFPLACE";
+        }
+        else
+        {
+            test_name += "_INPLACE";
         }
         test_name += "_IS_" + std::to_string(istride);
         test_name += "_OS_" + std::to_string(ostride);
