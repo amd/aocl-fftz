@@ -73,25 +73,25 @@ if(VALGRIND)
 endif()
 
 # Add testcases to the list as 'testcase_name testcase_command'
+# Test case comments are in the given format                                                bench-type | datatype | data-model | dim | batched | solver | placement | direction | variant | intention(optional)
 set(TEST_SUITE
-    "DIRECT_PERFORMANCE ./aocl_fftz_bench 7"                                       # performance
-    "BATCHED_CT_WITH_SAME_STRIDE ./aocl_fftz_bench 7v18:2:2 -b a"                  # accuracy
-    "SIZE_ONE ./aocl_fftz_bench 1 -b a"                                            # size one accuracy
-    "SIZE_ONE_BATCHED ./aocl_fftz_bench 5v1:2:3 -b a"                              # size one batched
-    "MULTILEVEL_CT_WITH_STRIDES ./aocl_fftz_bench 128:3:2 -b a -m i"               # ILP64 data model
-    "CT_WITH_BLUESTEIN ./aocl_fftz_bench 38:4:4 -b a -r i"                         # Inplace
-    "BLUESTEIN_WITH_STRIDES ./aocl_fftz_bench 23:5:7 -b a -p f"                    # Float
-    "DIRECT_AVX_WITH_SAME_STRIDE_D ./aocl_fftz_bench 15:5:5 -b a -o 2"             # AVX128
-    "CT_AVX_WITH_SAME_STRIDE_F ./aocl_fftz_bench 18:5:5 -b a -p f -m i -r i -o 2"  # AVX128
-    "DIRECT_AVX2_WITH_SAME_STRIDE_D ./aocl_fftz_bench 8:2:2 -b a -o 3"             # AVX256
-    "CT_AVX2_WITH_SAME_STRIDE_F ./aocl_fftz_bench 22:2:2 -b a -p f -o 3 -l 3"      # logger mode INFO
-    "2D_BATCH_3D_DIM ./aocl_fftz_bench 3x2v17x19x8 -b a --dir b"                   # Inverse FFT
-    "3D_WITH_STRIDE_GREATER_THAN_DIM ./aocl_fftz_bench 2x14:4:5x3 -b a"
-    "4D_WITH_STRIDE ./aocl_fftz_bench 2x72x37x13:2:3 -b a"
-    "CT_ALL_KERNELS_1 ./aocl_fftz_bench 1287 -b a -o 3"                            # covers 9,11,13 kernels
-    "CT_ALL_KERNELS_2 ./aocl_fftz_bench 3360 -b a -o 3"                            # covers every other radix kernels
-    "BLUESTEIN_UNIT_STRIDE ./aocl_fftz_bench 29:1:1 -b a"                          # unit strided bluestein to pick memcpy path
-    "2D_BATCHED_3D_PERFORMANCE ./aocl_fftz_bench 2x4v200x17x2")
+    "C_DIRECT_PERFORMANCE ./aocl_fftz_bench 14 -p f"                                        # perf     |  double  | LP64       | 1D  |  no     | direct    | outplace  | forward   | C       | performance
+    "C_BATCHED_CT_WITH_SAME_STRIDE ./aocl_fftz_bench 7v48:2:2 -b a"                         # accuracy |  double  | LP64       | 1D  |  yes    | CT        | outplace  | forward   | C       | C accuracy
+    "SIZE_ONE ./aocl_fftz_bench 1 -b a -p f"                                                # accuracy |  float   | LP64       | 1D  |  no     | sizeone   | outplace  | forward   | C       | size one accuracy
+    "SIZE_ONE_BATCHED ./aocl_fftz_bench 5v1:2:3 -b a"                                       # accuracy |  double  | LP64       | 1D  |  yes    | sizeone   | outplace  | forward   | C       | size one batched
+    "C_MULTILEVEL_CT_WITH_STRIDES ./aocl_fftz_bench 15015:3:2 -b a -m i -p f"               # accuracy |  float   | ILP64      | 1D  |  no     | CT        | outplace  | forward   | C       | C ILP64 data model, covers direct prime kernels
+    "C_CT_WITH_BLUESTEIN ./aocl_fftz_bench 170:4:4 -b a -r i"                               # accuracy |  double  | LP64       | 1D  |  no     | CT+BS     | inplace   | forward   | C       | C Inplace
+    "C_BLUESTEIN_WITH_STRIDES ./aocl_fftz_bench 23:5:7 -b a -p f --dir b"                   # accuracy |  float   | LP64       | 1D  |  no     | BS        | outplace  | backward  | C       | C Float Inverse
+    "AVX128_DIRECT_WITH_SAME_STRIDE_D ./aocl_fftz_bench 15:5:5 -b a -o 2"                   # accuracy |  double  | LP64       | 1D  |  no     | direct    | outplace  | forward   | AVX128  | AVX128 direct
+    "AVX128_CT_WITH_SAME_STRIDE_F ./aocl_fftz_bench 5005:8:5 -b a -p f -m i -o 2 --dir b"   # accuracy |  float   | ILP64      | 1D  |  no     | CT        | outplace  | backward  | AVX128  | AVX128 Float Inverse ILP64, covers direct prime kernels
+    "AVX128_3D_BATCHED_3D_ACCURACY ./aocl_fftz_bench 2x4x8v200x17x2 -b a -o 2"              # accuracy |  double  | LP64       | 3D  |  yes    | NDim      | outplace  | forward   | AVX128  | AVX128 multiple solvers
+    "AVX256_DIRECT_WITH_SAME_STRIDE_D ./aocl_fftz_bench 2v16:2:2 -b a -o 3"                 # accuracy |  double  | LP64       | 1D  |  yes    | direct    | outplace  | forward   | AVX256  | AVX256 direct
+    "AVX256_CT_WITH_SAME_STRIDE_F ./aocl_fftz_bench 2v40:2:2 -b a -p f -o 3 -l 3"           # accuracy |  float   | LP64       | 1D  |  yes    | CT        | outplace  | forward   | AVX256  | AVX256 Float logger mode INFO
+    "AVX256_2D_BATCH_3D_DIM ./aocl_fftz_bench 3x2v56x19x12 -b a --dir b -o 3 -m i"          # accuracy |  double  | ILP64      | 3D  |  yes    | NDim      | outplace  | backward  | AVX256  | AVX256 Inverse FFT ILP64
+    "C_3D_WITH_STRIDE_GREATER_THAN_DIM ./aocl_fftz_bench 12x28:4:5x2 -b a -p f"             # accuracy |  float   | LP64       | 3D  |  no     | NDim      | outplace  | forward   | C       | C 3D FFT
+    "C_4D_WITH_STRIDE ./aocl_fftz_bench 4x64x9x10:3:3 -b a -p f -r i"                       # accuracy |  float   | LP64       | 4D  |  no     | NDim      | inplace   | forward   | C       | C 4D FFT
+    "C_BLUESTEIN_UNIT_STRIDE ./aocl_fftz_bench 29:1:1 -b a"                                 # accuracy |  double  | LP64       | 1D  |  no     | bluestein | outplace  | forward   | C       | C unit strided bluestein to pick memcpy path
+    )
 
 list(LENGTH TEST_SUITE N)
 math(EXPR N "${N} - 1")  # Adjust length to get zero-based index
