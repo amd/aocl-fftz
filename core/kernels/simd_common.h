@@ -378,6 +378,11 @@ static const union zero_conj_128
 static const union zero_conj_128
             _conj_128_d = {{ 0x00000000, 0x00000000, 0x00000000, 0x80000000 }};
 
+static const union zero_conj_128
+        _neg_zero_128_f = {{ 0x80000000, 0x80000000, 0x80000000, 0x80000000 }};
+static const union zero_conj_128
+        _neg_zero_128_d = {{ 0x00000000, 0x80000000, 0x00000000, 0x80000000 }};
+
 static const union zero_conj_256
             _conj_256_f = {{ 0x00000000, 0x80000000, 0x00000000, 0x80000000,
                              0x00000000, 0x80000000, 0x00000000, 0x80000000 }};
