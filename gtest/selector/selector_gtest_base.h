@@ -176,9 +176,8 @@ class AoclfftzSelectorTestBase
     : public ::testing::TestWithParam<aoclfftz_selector_test_params_t>
 {
   protected:
-    // function pointers for aoclfftz_setup_* and aoclfftz_execute_* APIs
+    // function pointer for aoclfftz_setup_* API
     VOID *(*aoclfftz_setup)(prob_desc_t *problem);
-    INT32 (*aoclfftz_execute)(VOID *handle);
 
     UINT64 random_seed; // random seed value used for random data generation
     // following pointers are created in class level scope to hold the objects
@@ -969,7 +968,6 @@ class AoclfftzSelectorTestFloatLP64
     AoclfftzSelectorTestFloatLP64()
     {
         aoclfftz_setup = aoclfftz_setup_f;
-        aoclfftz_execute = aoclfftz_execute_f;
     }
 };
 
@@ -986,7 +984,6 @@ class AoclfftzSelectorTestDoubleLP64
     AoclfftzSelectorTestDoubleLP64()
     {
         aoclfftz_setup = aoclfftz_setup_d;
-        aoclfftz_execute = aoclfftz_execute_d;
     }
 };
 
@@ -1003,7 +1000,6 @@ class AoclfftzSelectorTestFloatILP64
     AoclfftzSelectorTestFloatILP64()
     {
         aoclfftz_setup = aoclfftz_setup_f_64_;
-        aoclfftz_execute = aoclfftz_execute_f_64_;
     }
 };
 
@@ -1020,7 +1016,6 @@ class AoclfftzSelectorTestDoubleILP64
     AoclfftzSelectorTestDoubleILP64()
     {
         aoclfftz_setup = aoclfftz_setup_d_64_;
-        aoclfftz_execute = aoclfftz_execute_d_64_;
     }
 };
 

@@ -89,7 +89,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     // prepare random input data
     params->prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT);
 
-    status = params->aoclfftz_execute(handle);
+    status = aoclfftz_execute(handle);
     if (status != AOCLFFTZ_SUCCESS)
     {
         PRINT_FAILURE(
@@ -109,7 +109,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
         INT32 j = iter + 1;
         while (--j)
         {
-            params->aoclfftz_execute(handle);
+            aoclfftz_execute(handle);
         }
     }
 #ifdef AOCL_ENABLE_LOG
@@ -127,7 +127,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
         getTime(start_time);
         while (--j)
         {
-            params->aoclfftz_execute(handle);
+                aoclfftz_execute(handle);
         }
         getTime(end_time);
         cur_time = diffTime(clk_tick, start_time, end_time);
@@ -232,7 +232,7 @@ INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params)
 
 exit_performance_mode:
     // destroy the handle object
-    params->aoclfftz_destroy(handle);
+    aoclfftz_destroy(handle);
     return BENCH_SUCCESS;
 }
 
@@ -263,7 +263,7 @@ INT32 calibrate_iterations(VOID *handle, DOUBLE min_bench_time,
         getTime(start_time);
         while (--j)
         {
-            params->aoclfftz_execute(handle);
+            aoclfftz_execute(handle);
         }
         getTime(end_time);
         cur_time = (DOUBLE)diffTime(clk_tick, start_time, end_time);

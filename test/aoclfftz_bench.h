@@ -60,8 +60,6 @@ typedef struct aoclfftz_bench_error aoclfftz_bench_error_t;
 typedef VOID (*dft_ref_) (aoclfftz_bench_params_t *params, VOID *out_buf,
                             INTP *in_idx_map, INTP *out_idx_map);
 typedef VOID *(*setup_problem_) (aoclfftz_bench_params_t *params);
-typedef INT32 (*aoclfftz_execute_) (VOID *handle);
-typedef VOID (*aoclfftz_destroy_) (VOID *handle);
 typedef VOID (*prepare_input_data_) (VOID *input, INTP n, INTP *idx_map,
                             INT32 input_type);
 typedef INT32 (*compare_) (aoclfftz_bench_params_t *params, VOID *a, VOID *b,
@@ -170,8 +168,6 @@ typedef struct aoclfftz_bench_params
     UINT32 aligned_alloc;
     dft_ref_ dft_ref;
     setup_problem_ setup_problem;
-    aoclfftz_execute_ aoclfftz_execute;
-    aoclfftz_destroy_ aoclfftz_destroy;
     prepare_input_data_ prepare_input_data;
     compare_ compare;
 } aoclfftz_bench_params_t;

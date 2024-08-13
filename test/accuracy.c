@@ -126,7 +126,7 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
         // perform FFT for first input
         memcpy(params->in, in1, dt_bytes * input_size * T_DATA_STRIDE);
-        ret = params->aoclfftz_execute(handle);
+        ret = aoclfftz_execute(handle);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             status = EXECUTION_FAILURE;
@@ -136,7 +136,7 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
         // perform FFT for second input
         memcpy(params->in, in2, dt_bytes * input_size * T_DATA_STRIDE);
-        ret = params->aoclfftz_execute(handle);
+        ret = aoclfftz_execute(handle);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             status = EXECUTION_FAILURE;
@@ -150,7 +150,7 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
         // perform FFT for combined input
         memcpy(params->in, in1, dt_bytes * input_size * T_DATA_STRIDE);
-        ret = params->aoclfftz_execute(handle);
+        ret = aoclfftz_execute(handle);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             status = EXECUTION_FAILURE;
@@ -185,7 +185,7 @@ exit_linearity_test:
     FREE_ALLOCATED_MEM(out_combined, is_align);
     FREE_ALLOCATED_MEM(factors, is_align);
     // destroy handle
-    params->aoclfftz_destroy(handle);
+    aoclfftz_destroy(handle);
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
 #endif
@@ -317,7 +317,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
 
         // perform FFT
         memcpy(params->in, in, dt_bytes * input_size * T_DATA_STRIDE);
-        ret = params->aoclfftz_execute(handle);
+        ret = aoclfftz_execute(handle);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             status = EXECUTION_FAILURE;
@@ -327,7 +327,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
         // perform reversed FFT
         memcpy(params_reverse->in, params->out,
                dt_bytes * output_size * T_DATA_STRIDE);
-        ret = params->aoclfftz_execute(handle_reverse);
+        ret = aoclfftz_execute(handle_reverse);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             status = EXECUTION_FAILURE;
@@ -353,8 +353,8 @@ exit_impulse_transform_test:
     // destroy local buffer
     FREE_ALLOCATED_MEM(in, is_align);
     // destroy handles
-    params->aoclfftz_destroy(handle);
-    params->aoclfftz_destroy(handle_reverse);
+    aoclfftz_destroy(handle);
+    aoclfftz_destroy(handle_reverse);
     // destroy locally created bench param
     destroy_bench_param(params_reverse);
 #ifdef AOCL_ENABLE_LOG
@@ -471,7 +471,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
             // perform FFT for input
             memcpy(params->in, in1, dt_bytes * input_size * T_DATA_STRIDE);
-            ret = params->aoclfftz_execute(handle);
+            ret = aoclfftz_execute(handle);
             if (ret != AOCLFFTZ_SUCCESS)
             {
                 status = EXECUTION_FAILURE;
@@ -481,7 +481,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
             // perform FFT for shifted input
             memcpy(params->in, in2, dt_bytes * input_size * T_DATA_STRIDE);
-            status |= params->aoclfftz_execute(handle);
+            status |= aoclfftz_execute(handle);
             memcpy(out2, params->out, dt_bytes * output_size * T_DATA_STRIDE);
 
             // perform phase shift on FFT(input)
@@ -521,7 +521,7 @@ exit_timeshift_test:
     FREE_ALLOCATED_MEM(out1, is_align);
     FREE_ALLOCATED_MEM(out2, is_align);
     // destroy handle
-    params->aoclfftz_destroy(handle);
+    aoclfftz_destroy(handle);
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
 #endif

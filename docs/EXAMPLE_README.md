@@ -3,8 +3,8 @@
 The following sample program shows the usage of the aocl-fftz APIs to setup and execute an fft problem.
 
 
-@note Please ensure that you utilize the appropriate compatible data type/model APIs.\n ex:- For a problem descriptor of type FLOAT LP64 The following would be the API call sequence\n aoclfftz_setup_f\n aoclfftz_execute_f/ aoclfftz_destroy_f
-
+@note Please ensure that you utilize the appropriate compatible data type/model for aoclfftz_setup_<datatype>_<integer_size>_ where datatype is either float (f) or double (d) and integer size is either LP64 (no suffix) or ILP64 (64).
+\n ex:- For a problem descriptor of type FLOAT LP64 you need to invoke aoclfftz_setup_f API followed by aoclfftz_execute and aoclfftz_destroy APIs.
 
 ```C
 #include <stdio.h>
@@ -53,7 +53,7 @@ int main()
     printf("\nSetup succesful\n");
 
     // execute call
-    INT32 res = aoclfftz_execute_d(aoclfftz_handle);
+    INT32 res = aoclfftz_execute(aoclfftz_handle);
 
     if (res == AOCLFFTZ_EXECUTION_FAILURE)
     {
@@ -64,7 +64,7 @@ int main()
 
     exit_api:
     // destroy handle
-    aoclfftz_destroy_d(aoclfftz_handle);
+    aoclfftz_destroy(aoclfftz_handle);
     free(problem->dims);
     free(problem->vecs);
     free(problem);

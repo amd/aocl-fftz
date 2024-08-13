@@ -39,9 +39,9 @@
  */
 
 
+#include "test/dft_reference.h"
 #include "test/utils/compare.h"
 #include "test/utils/size_and_index_mapper.h"
-#include "test/utils/bench_utils.h"
 
 #ifdef ENABLE_DFT_REFERENCE
 
@@ -106,14 +106,14 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
         // get the DFT reference output
         params->dft_ref(params, out_ref, in_idx_map, out_idx_map);
-        status |= params->aoclfftz_execute(handle);
+        status |= aoclfftz_execute(handle);
 
         if (status != BENCH_SUCCESS)
         {
             // destroy reference output buffer
             FREE_ALLOCATED_MEM(out_ref, is_align);
             // destroy handle
-            params->aoclfftz_destroy(handle);
+            aoclfftz_destroy(handle);
             return EXECUTION_FAILURE;
         }
 
@@ -128,14 +128,14 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             // destroy reference output buffer
             FREE_ALLOCATED_MEM(out_ref, is_align);
             // destroy handle
-            params->aoclfftz_destroy(handle);
+            aoclfftz_destroy(handle);
             return VERIFICATION_FAILURE;
         }
     }
     // destroy reference output buffer
     FREE_ALLOCATED_MEM(out_ref, is_align);
     // destroy handle
-    params->aoclfftz_destroy(handle);
+    aoclfftz_destroy(handle);
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
 #endif

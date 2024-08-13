@@ -59,14 +59,10 @@ INT32 register_functions(aoclfftz_bench_params_t *params)
         if (params->data_model == LP64)
         {
             params->setup_problem = setup_problem_f;
-            params->aoclfftz_execute = aoclfftz_execute_f;
-            params->aoclfftz_destroy = aoclfftz_destroy_f;
         }
         else // data_model == ILP64
         {
             params->setup_problem = setup_problem_f_64_;
-            params->aoclfftz_execute = aoclfftz_execute_f_64_;
-            params->aoclfftz_destroy = aoclfftz_destroy_f_64_;
         }
     }
     else // precision == DOUBLE_P
@@ -79,14 +75,10 @@ INT32 register_functions(aoclfftz_bench_params_t *params)
         if (params->data_model == LP64)
         {
             params->setup_problem = setup_problem_d;
-            params->aoclfftz_execute = aoclfftz_execute_d;
-            params->aoclfftz_destroy = aoclfftz_destroy_d;
         }
         else // data_model == ILP64
         {
             params->setup_problem = setup_problem_d_64_;
-            params->aoclfftz_execute = aoclfftz_execute_d_64_;
-            params->aoclfftz_destroy = aoclfftz_destroy_d_64_;
         }
     }
     return PARSER_SUCCESS;
