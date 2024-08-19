@@ -1402,7 +1402,9 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     {
         rel_err = max_abs_err / max_mag;
     }
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode, "Error = %.6g", rel_err);
+#endif
     if (rel_err > tol)
     {
         printf("Relative error  = %.6g\n", rel_err);
@@ -1592,7 +1594,9 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     {
         rel_err = max_abs_err / max_mag;
     }
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode, "Error = %.6g", rel_err);
+#endif
     if (rel_err > tol)
     {
         printf("Relative error  = %.6g\n", rel_err);

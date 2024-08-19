@@ -43,6 +43,10 @@
 
 INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
     aoclfftz_selector_t *cur_sel = NULL;
     aoclfftz_selector_t *cur_sel_m = NULL;
 
@@ -57,15 +61,12 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     INTP n = sel->solution->decomp_scheme->dims[0].n;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
     INT32 stats_mode =
         sel->solution->decomp_scheme->cntrl_params->measure_stats;
     UINT32 radix_r = 0;
     UINT32 radix_m = 0;
     INT32 ker_cat = 0;
     INT32 ret = SELECTOR_FAILURE;
-
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 
     if (vec_rank != 1 || dim_rank != 1)
         return ret;
@@ -232,7 +233,9 @@ exit_ct_dft:
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
     FREE_ALIGN_ALLOCATED_MEM(TW);
 #endif
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
 
     return ret;
 }

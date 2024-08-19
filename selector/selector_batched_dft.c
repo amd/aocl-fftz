@@ -42,18 +42,18 @@
 
 INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
     aoclfftz_selector_t *cur_sel = NULL;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->
-        logger_mode;
     INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
         measure_stats;
     INT32 rnk = 0;
     INT32 batch_size = 0;
     INT32 ret = SELECTOR_FAILURE;
-
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 
     if (vec_rank > 3) //Currently vector rank till 3 only supported
         goto exit_batched_dft;
@@ -94,12 +94,16 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     // destroy only the selector not the solution within it
     destroy_selector_without_solution(cur_sel);
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
     return SELECTOR_SUCCESS;
 
 exit_batched_dft:
     destroy_selector(cur_sel);
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
 
     return ret;
 }

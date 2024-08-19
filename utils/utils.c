@@ -44,8 +44,10 @@ INTP is_SSE2_supported(INT32 logger_mode)
     INTP eax, ebx, ecx, edx;
     cpu_features_detection(0x00000001, 0, &eax, &ebx, &ecx, &edx);
     ret = ((edx & (1 << 26)) != 0);
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode,
         "SSE2 SIMD %s supported", (ret ? "is" : "is not"));
+#endif
     return ret;
 }
 
@@ -55,8 +57,10 @@ INTP is_AVX_supported(INT32 logger_mode)
     INTP eax, ebx, ecx, edx;
     cpu_features_detection(0x00000001, 0, &eax, &ebx, &ecx, &edx);
     ret = ((ecx & 0x18000000) == 0x18000000);
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode,
         "AVX SIMD %s supported", (ret ? "is" : "is not"));
+#endif
     return ret;
 }
 
@@ -66,8 +70,10 @@ INTP is_AVX2_supported(INT32 logger_mode)
     INTP eax, ebx, ecx, edx;
     cpu_features_detection(0x00000007, 0, &eax, &ebx, &ecx, &edx);
     ret = ((ebx & (1 << 5)) != 0);
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode,
         "AVX2 SIMD %s supported", (ret ? "is" : "is not"));
+#endif
     return ret;
 }
 
@@ -100,8 +106,10 @@ INTP is_AVX512_supported(INT32 logger_mode)
             }
         }
     }
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode,
         "AVX512 SIMD %s supported", (ret ? "is" : "is not"));
+#endif
     return ret;
 }
 
@@ -141,7 +149,9 @@ INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
                                INT32 logger_mode)
 {
     INT32 cpu_flags = 0;
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
 
     if (opt_off)
         return -1;
@@ -163,7 +173,9 @@ INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
         cpu_flags += is_AVX512_supported(logger_mode);
     #endif
 
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
 
     return cpu_flags;
 }

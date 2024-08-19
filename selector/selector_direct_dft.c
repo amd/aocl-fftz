@@ -42,12 +42,14 @@
 
 INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
     aoclfftz_selector_t *cur_sel = NULL;
     INTP n = sel->solution->decomp_scheme->dims[0].n;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->
-                            logger_mode;
     INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
                             measure_stats;
     UINT32 radix = 0;
@@ -55,8 +57,6 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     UINT32 selector_mode =
         GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags);
     INT32 ret = SELECTOR_FAILURE;
-
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 
     cur_sel = alloc_selector(vec_rank, dim_rank);
     if (cur_sel == NULL)
@@ -74,8 +74,10 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
         if (radix == n)
         {
+#ifdef AOCL_ENABLE_LOG
             AOCLFFTZ_LOG_FORMATTED(TRACE, logger_mode,
                                 "Evaluating Radix-%td kernel", n);
+#endif
             cur_sel->solution->solver->kernel_r = kertab[ker_cat].kfft;
             cur_sel->solution->solver->kernel_m = NULL;
 
@@ -132,6 +134,8 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     destroy_selector(cur_sel);
 
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
     return SELECTOR_SUCCESS;
 }

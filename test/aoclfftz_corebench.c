@@ -710,8 +710,10 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         return status;
     }
 
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, bench_params->logger_mode,
                              "Bench params prepared from parsing arguments");
+#endif
 
     ret = register_functions(bench_params->precision, bench_params->data_model);
     status = MAX(status, ret);
@@ -779,7 +781,9 @@ INT32 register_functions(INT32 precision, INT32 data_model)
  */
 VOID *setup_problem_f(aoclfftz_bench_params_t *params)
 {
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
+#endif
 #ifdef WIN32
     timer clk_tick;
 #endif
@@ -818,7 +822,9 @@ VOID *setup_problem_f(aoclfftz_bench_params_t *params)
         handle = aoclfftz_setup_f(p_desc);
     }
     DESTROY_PD(p_desc, is_align);
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
+#endif
     return handle;
 }
 
@@ -830,7 +836,9 @@ VOID *setup_problem_f(aoclfftz_bench_params_t *params)
  */
 VOID *setup_problem_d(aoclfftz_bench_params_t *params)
 {
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
+#endif
 #ifdef WIN32
     timer clk_tick;
 #endif
@@ -869,7 +877,9 @@ VOID *setup_problem_d(aoclfftz_bench_params_t *params)
         handle = aoclfftz_setup_d(p_desc);
     }
     DESTROY_PD(p_desc, is_align);
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
+#endif
     return handle;
 }
 
@@ -881,7 +891,9 @@ VOID *setup_problem_d(aoclfftz_bench_params_t *params)
  */
 VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
 {
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
+#endif
 #ifdef WIN32
     timer clk_tick;
 #endif
@@ -920,7 +932,9 @@ VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
         handle = aoclfftz_setup_f_64_(p_desc);
     }
     DESTROY_PD(p_desc, is_align);
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
+#endif
     return handle;
 }
 
@@ -932,7 +946,9 @@ VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
  */
 VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params)
 {
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
+#endif
 #ifdef WIN32
     timer clk_tick;
 #endif
@@ -971,7 +987,9 @@ VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params)
         handle = aoclfftz_setup_d_64_(p_desc);
     }
     DESTROY_PD(p_desc, is_align);
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
+#endif
     return handle;
 }
 
@@ -1007,7 +1025,9 @@ VOID destroy_bench_param(aoclfftz_bench_params_t *params)
 INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
                                       VOID *handle)
 {
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
+#endif
     INT32 status;
 #ifdef WIN32
     timer clk_tick;
@@ -1027,8 +1047,10 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
         params->seed = time(0);
     }
 
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode, "seed   : %d",
                           params->seed);
+#endif
 
     // prepare random input data
     prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT);
@@ -1043,7 +1065,9 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
 
     // warmup iterations (skipped from profiling)
     // TODO: improvise this logic
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "WARM-UP START");
+#endif
     for (INT32 i = 0; i < WARMUP_ITERATIONS; ++i)
     {
         INT32 j = iter + 1;
@@ -1052,13 +1076,17 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
             aoclfftz_execute(handle);
         }
     }
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "WARM-UP END");
+#endif
 
     initTimer(clk_tick);
     for (INT32 i = 0; i < params->num_iterations; i++)
     {
+#ifdef AOCL_ENABLE_LOG
         AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode, "Iteration: %d",
                                i + 1);
+#endif
         INT32 j = iter + 1;
         getTime(start_time);
         while (--j)
@@ -1120,7 +1148,9 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     printf("      Max MFLOPS : %9.6lf\n", max_mflops);
     printf("      Avg MFLOPS : %9.6lf\n", avg_mflops);
     printf("=====================================\n");
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
+#endif
     return BENCH_SUCCESS;
 }
 
@@ -1135,7 +1165,9 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
 INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                              INTP *out_idx_map)
 {
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
+#endif
     INT32 status = BENCH_SUCCESS;
     INT32 compare_status = AOCLFFTZ_SUCCESS;
     INT32 dt_bytes = (params->precision == FLOAT_P) ?
@@ -1173,8 +1205,10 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             params->seed = rand();
         }
         srand(params->seed);
+#ifdef AOCL_ENABLE_LOG
         AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,
                                "Iteration: %d, Seed: %d", i, params->seed);
+#endif
 
         // prepare random input data
         // use in_stride as 1 to fill random data in all points
@@ -1212,7 +1246,9 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     FREE_ALLOCATED_MEM(out_ref, is_align);
     // destroy handle
     aoclfftz_destroy(handle);
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
+#endif
     return BENCH_SUCCESS;
 }
 #endif
@@ -1226,7 +1262,9 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                          INTP *out_idx_map)
 {
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
+#endif
     INT32 status = BENCH_SUCCESS;
     INT32 ret = AOCLFFTZ_SUCCESS;
     INT32 dt_bytes = (params->precision == FLOAT_P) ?
@@ -1287,8 +1325,10 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             params->seed = rand();
         }
         srand(params->seed);
+#ifdef AOCL_ENABLE_LOG
         AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,
                                "Iteration: %d, Seed: %d", i, params->seed);
+#endif
 
         // prepare random input data
         // use in_stride as 1 to fill random data in all points
@@ -1356,7 +1396,9 @@ exit_linearity_test:
     FREE_ALLOCATED_MEM(factors, is_align);
     // destroy handle
     aoclfftz_destroy(handle);
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
+#endif
     return status;
 }
 
@@ -1470,8 +1512,10 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params,
             params->seed = rand();
         }
         srand(params->seed);
+#ifdef AOCL_ENABLE_LOG
         AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,
                                "Iteration: %d, Seed: %d", i, params->seed);
+#endif
 
         prepare_input_data(in, n * batches, in_idx_map, IMPULSE_INPUT);
 
@@ -1515,7 +1559,9 @@ exit_unit_impulse_transform_test:
     aoclfftz_destroy(handle_reverse);
     // destroy locally created bench param
     destroy_bench_param(params_reverse);
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
+#endif
     return status;
 }
 
@@ -1528,7 +1574,9 @@ exit_unit_impulse_transform_test:
 INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                          INTP *out_idx_map)
 {
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
+#endif
     INT32 status = BENCH_SUCCESS;
     INT32 ret = AOCLFFTZ_SUCCESS;
     INTP n = calculate_size(params->dims, params->dim_rank);
@@ -1583,8 +1631,10 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             params->seed = rand();
         }
         srand(params->seed);
+#ifdef AOCL_ENABLE_LOG
         AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,
                                "Iteration: %d, Seed: %d", i, params->seed);
+#endif
 
         // FIXME: using random data instead of sinusoidal input data
         //        for debugging purpose
@@ -1666,7 +1716,9 @@ exit_timeshift_test:
     FREE_ALLOCATED_MEM(out2, is_align);
     // destroy handle
     aoclfftz_destroy(handle);
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
+#endif
     return status;
 }
 
