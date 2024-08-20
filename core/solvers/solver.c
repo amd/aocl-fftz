@@ -59,6 +59,7 @@ INT32 register_solvers(INT32 dt, INT32 cpu_flags)
     solvers_table[SOLVER_BLUESTEIN] = register_execute_bluestein_solver();
     solvers_table[SOLVER_NDIM] = register_execute_ndim_solver();
     solvers_table[SOLVER_SIZEONE] = register_execute_sizeone_solver();
+    solvers_table[SOLVER_TRANSPOSE] = register_execute_transpose_solver();
 
     return SOLVER_SUCCESS;
 }

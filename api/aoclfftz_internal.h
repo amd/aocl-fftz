@@ -92,8 +92,23 @@
 #define SET_SELECTOR_MODE(flags, value) SET_BIT_FLAG32(flags, 16, value)
 #define GET_SELECTOR_MODE(flags) GET_BIT_FLAG32(flags, 16)
 
+// +-------------------------------+-------------------------------+
+// |         SET_TRANSPOSE         |    SET_STANDALONE_TRANSPOSE   |
+// |-------------------------------+-------------------------------+
+// | * used at solver (CT) level   | * used at selector level      |
+// | * transpose + dft operations  | * transpose operation, no dft |
+// +-------------------------------+-------------------------------+
+
+#define SET_TRANSPOSE(flags, val) SET_BIT_FLAG32(flags, 9, val)
+#define GET_TRANSPOSE(flags) GET_BIT_FLAG32(flags, 9)
+
+#define SET_STANDALONE_TRANSPOSE(flags, val) SET_BIT_FLAG32(flags, 8, val)
+#define GET_STANDALONE_TRANSPOSE(flags) GET_BIT_FLAG32(flags, 8)
+
 // Move the base address of void pointer by adding offset
 #define MOVE_ADDR(base_addr, offset) (VOID *)((CHAR *)base_addr + offset)
+
+#define IS_POW2(x) (((x) & ((x) - 1)) == 0)
 
 #define NUM_FFT_DIRS 2
 #define FORWARD_FFT_DIR 0
@@ -171,7 +186,10 @@ typedef struct aoclfftz_decomp_scheme
     //   bit 2: (0) forward  / (1) backward
     //   bit 3: (0) complex  / (1) real
     // Library side internal flag bits
+    //  transpose (standalone) (no DFT): 8th-bit
+    //  transpose (alongside DFT): 9th-bit
     //   bit 8     : (0) no-transpose / (1) transpose
+    //   bit 9     : (0) (transpose+fft) / (1) fft (no transpose)
     //   bit 16    : (0) fixed selector mode / (1) auto tuner selector mode
     //   bit 30-31 : floating point datatype precision
     //               (00) 8-bit / (01) 16-bit / (10) 32-bit / (11) 64-bit
@@ -218,6 +236,15 @@ typedef struct aoclfftz_complex_d
     DOUBLE real, imag;
 } aoclfftz_complex_d_t;
 
+typedef enum aoclfftz_transpose_dtype
+{
+    // enum value : [3 bit value] = (datatype flag value)(is real)
+    TYPE_FLOAT = (2 << 1) | 1,         // 101
+    TYPE_FLOATCOMPLEX = (2 << 1) | 0,  // 100
+    TYPE_DOUBLE = (3 << 1) | 1,        // 111
+    TYPE_DOUBLECOMPLEX = (3 << 1) | 0, // 110
+} aoclfftz_transpose_dtype;
+
 // A data structure to track the visited locations in a matrix
 typedef struct aoclfftz_transpose_aux_mem
 {
@@ -230,6 +257,14 @@ typedef void (*aoclfftz_transpose_kernel)(VOID *, VOID *, aoclfftz_dim_t_64_,
                                           aoclfftz_dim_t_64_,
                                           aoclfftz_transpose_aux_mem_t *);
 
+typedef struct aoclfftz_transpose
+{
+    aoclfftz_dim_t_64_ row_info;
+    aoclfftz_dim_t_64_ col_info;
+    aoclfftz_transpose_kernel kernel;
+    aoclfftz_transpose_aux_mem_t *aux_mem;
+} aoclfftz_transpose_t;
+
 // Solution data structure that is returned as a handle by the setup API and
 // used by the execute API.
 typedef struct aoclfftz_solution
@@ -239,6 +274,7 @@ typedef struct aoclfftz_solution
     aoclfftz_strides_t *strides;
     aoclfftz_twiddle_t *twiddle;
     aoclfftz_bluestein_t *bluestein;
+    aoclfftz_transpose_t *transpose;
     aoclfftz_solution_t *nd_sol; // holds one of the solutions of ND, else NULL
     aoclfftz_solution_t *next_sol;
 } aoclfftz_solution_t;

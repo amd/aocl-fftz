@@ -133,17 +133,15 @@ typedef struct aoclfftz_selector
 #define COPY_SOLUTION_OBJ(to_sol_obj, from_sol_obj)                            \
 {                                                                              \
     to_sol_obj->solver->solver_type = from_sol_obj->solver->solver_type;       \
-    to_sol_obj->solver->execute_solver =                                       \
-        from_sol_obj->solver->execute_solver;                                  \
-    to_sol_obj->solver->destroy_solver =                                       \
-        from_sol_obj->solver->destroy_solver;                                  \
+    to_sol_obj->solver->execute_solver = from_sol_obj->solver->execute_solver; \
+    to_sol_obj->solver->destroy_solver = from_sol_obj->solver->destroy_solver; \
     to_sol_obj->solver->kernel_r = from_sol_obj->solver->kernel_r;             \
     to_sol_obj->solver->kernel_m = from_sol_obj->solver->kernel_m;             \
     to_sol_obj->decomp_scheme->vec_rank =                                      \
         from_sol_obj->decomp_scheme->vec_rank;                                 \
     to_sol_obj->decomp_scheme->dim_rank =                                      \
         from_sol_obj->decomp_scheme->dim_rank;                                 \
-    UINT32 cnt;                                                                \
+    INT32 cnt;                                                                 \
     for (cnt = 0; cnt < to_sol_obj->decomp_scheme->dim_rank; cnt++)            \
     {                                                                          \
         to_sol_obj->decomp_scheme->dims[cnt].n =                               \
@@ -162,10 +160,8 @@ typedef struct aoclfftz_selector
         to_sol_obj->decomp_scheme->vecs[cnt].out_stride =                      \
             from_sol_obj->decomp_scheme->vecs[cnt].out_stride;                 \
     }                                                                          \
-    to_sol_obj->decomp_scheme->in_real =                                       \
-        from_sol_obj->decomp_scheme->in_real;                                  \
-    to_sol_obj->decomp_scheme->in_imag =                                       \
-        from_sol_obj->decomp_scheme->in_imag;                                  \
+    to_sol_obj->decomp_scheme->in_real = from_sol_obj->decomp_scheme->in_real; \
+    to_sol_obj->decomp_scheme->in_imag = from_sol_obj->decomp_scheme->in_imag; \
     to_sol_obj->decomp_scheme->out_real =                                      \
         from_sol_obj->decomp_scheme->out_real;                                 \
     to_sol_obj->decomp_scheme->out_imag =                                      \
@@ -190,6 +186,33 @@ typedef struct aoclfftz_selector
     to_sol_obj->bluestein->out = from_sol_obj->bluestein->out;                 \
     to_sol_obj->bluestein->is_B_out_valid =                                    \
         from_sol_obj->bluestein->is_B_out_valid;                               \
+    if (from_sol_obj->transpose && to_sol_obj->transpose)                      \
+    {                                                                          \
+        to_sol_obj->transpose->row_info = from_sol_obj->transpose->row_info;   \
+        to_sol_obj->transpose->col_info = from_sol_obj->transpose->col_info;   \
+        to_sol_obj->transpose->kernel = from_sol_obj->transpose->kernel;       \
+        if (from_sol_obj->transpose->aux_mem &&                                \
+            from_sol_obj->transpose->aux_mem->data &&                          \
+            from_sol_obj->transpose->aux_mem->size > 0)                        \
+        {                                                                      \
+            if (!to_sol_obj->transpose->aux_mem->data)                         \
+            {                                                                  \
+                ALLOC_ALIGN_INIT(to_sol_obj->transpose->aux_mem->data, UINT8,  \
+                                 from_sol_obj->transpose->aux_mem->size);      \
+            }                                                                  \
+            else                                                               \
+            {                                                                  \
+                FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->transpose->aux_mem->data) \
+                ALLOC_ALIGN_INIT(to_sol_obj->transpose->aux_mem->data, UINT8,  \
+                                 from_sol_obj->transpose->aux_mem->size);      \
+            }                                                                  \
+            memcpy(to_sol_obj->transpose->aux_mem->data,                       \
+                   from_sol_obj->transpose->aux_mem->data,                     \
+                   from_sol_obj->transpose->aux_mem->size);                    \
+        }                                                                      \
+        to_sol_obj->transpose->aux_mem->size =                                 \
+            from_sol_obj->transpose->aux_mem->size;                            \
+    }                                                                          \
     to_sol_obj->next_sol = from_sol_obj->next_sol;                             \
 }
 
@@ -343,6 +366,8 @@ INT32 selector_permuted_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_sizeone_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+INT32 selector_transpose(aoclfftz_selector_t *sel);
+
 VOID destroy_handle(VOID *handle);
 VOID fuse_vecs(aoclfftz_solution_t *sol);
 

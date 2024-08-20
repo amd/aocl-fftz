@@ -148,6 +148,7 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
     INT32 level1_cond1 = 0;
     INT32 level1_cond2 = 0;
     INT32 level2_cond = 0;
+    INT32 standalone_transpose_cond = 0;
 
     SET_SELECTOR_MODE(sel->solution->decomp_scheme->flags,
                       AOCLFFTZ_FIXED_SELECTOR_MODE);
@@ -185,6 +186,10 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
     // SOLVER_PFA
     // SOLVER_RADER
 
+    // SOLVER_TRANSPOSE
+    standalone_transpose_cond =
+        GET_STANDALONE_TRANSPOSE(sel->solution->decomp_scheme->flags);
+
     /** Level 1 decisions : Solvers **/
     // Batched/vector FFT Solver
     if (level1_cond1 & 0x1)
@@ -197,6 +202,17 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
 
         // call batched solver master
         ret = selector_batched_dft(sel, kertab);
+        return ret;
+    }
+    // Transpose Solver (Standalone)
+    if (standalone_transpose_cond)
+    {
+        solver_obj->solver_type = SOLVER_TRANSPOSE;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+            return SELECTOR_FAILURE;
+
+        // call the transpose solver selector
+        ret = selector_transpose(sel);
         return ret;
     }
     // Multi-dimentional FFT Solver
@@ -350,6 +366,16 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_FLOAT);
 
+    // Note: Currently the 8th bit of the flags member of both, the problem and
+    // the selector represent the same thing -> a standalone transpose
+    // operation. Hence the reuse of the same macro is valid. If this no longer
+    // holds for whatever reason, change this "GET_STANDALONE_TRANSPOSE" macro
+    // accordingly.
+    if (GET_STANDALONE_TRANSPOSE(problem->flags))
+    {
+        SET_STANDALONE_TRANSPOSE(sel_obj->solution->decomp_scheme->flags, 1);
+    }
+
     // Select the best solution for the given input problem
     ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);
     if (ret != SELECTOR_SUCCESS)
@@ -401,6 +427,16 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     // Initialize decomposition scheme data object
     INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_DOUBLE);
+
+    // Note: Currently the 8th bit of the flags member of both, the problem and
+    // the selector represent the same thing -> a standalone transpose
+    // operation. Hence the reuse of the same macro is valid. If this no longer
+    // holds for whatever reason, change this "GET_STANDALONE_TRANSPOSE" macro
+    // accordingly.
+    if (GET_STANDALONE_TRANSPOSE(problem->flags))
+    {
+        SET_STANDALONE_TRANSPOSE(sel_obj->solution->decomp_scheme->flags, 1);
+    }
 
     // Select the best solution for the given input problem
     ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);
@@ -454,6 +490,16 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_FLOAT);
 
+    // Note: Currently the 8th bit of the flags member of both, the problem and
+    // the selector represent the same thing -> a standalone transpose
+    // operation. Hence the reuse of the same macro is valid. If this no longer
+    // holds for whatever reason, change this "GET_STANDALONE_TRANSPOSE" macro
+    // accordingly.
+    if (GET_STANDALONE_TRANSPOSE(problem->flags))
+    {
+        SET_STANDALONE_TRANSPOSE(sel_obj->solution->decomp_scheme->flags, 1);
+    }
+
     // Select the best solution for the given input problem
     ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);
     if (ret != SELECTOR_SUCCESS)
@@ -506,6 +552,16 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_DOUBLE);
 
+    // Note: Currently the 8th bit of the flags member of both, the problem and
+    // the selector represent the same thing -> a standalone transpose
+    // operation. Hence the reuse of the same macro is valid. If this no longer
+    // holds for whatever reason, change this "GET_STANDALONE_TRANSPOSE" macro
+    // accordingly.
+    if (GET_STANDALONE_TRANSPOSE(problem->flags))
+    {
+        SET_STANDALONE_TRANSPOSE(sel_obj->solution->decomp_scheme->flags, 1);
+    }
+
     // Select the best solution for the given input problem
     ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);
     if (ret != SELECTOR_SUCCESS)
@@ -533,12 +589,14 @@ VOID fuse_vecs(aoclfftz_solution_t *sol)
     aoclfftz_dim_t_64_ *vecs = sol->decomp_scheme->vecs;
     for (INT32 i = 1; i < vec_rank; i++)
     {
-        // expected stride is the regular stride we obtain by n * stride of prev dim
+        // expected stride is the regular stride we obtain by n * stride of
+        // prev dim
         INTP expected_in_stride = vecs[i-1].n * vecs[i-1].in_stride;
         INTP expected_out_stride = vecs[i-1].n * vecs[i-1].out_stride;
         INTP actual_in_stride = vecs[i].in_stride;
         INTP actual_out_stride = vecs[i].out_stride;
-        // mark the vector for fusing and compute the new size for the fused vector
+        // mark the vector for fusing and compute the new size for the fused
+        // vector
         if (expected_in_stride == actual_in_stride &&
              expected_out_stride == actual_out_stride)
         {

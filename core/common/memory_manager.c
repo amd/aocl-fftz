@@ -89,6 +89,10 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
                            sizeof(aoclfftz_twiddle_t));
         ALLOC_ALIGN_UNINIT(sol->bluestein, aoclfftz_bluestein_t,
                            sizeof(aoclfftz_bluestein_t));
+        ALLOC_ALIGN_INIT(sol->transpose, aoclfftz_transpose_t,
+                         sizeof(aoclfftz_transpose_t));
+        ALLOC_ALIGN_INIT(sol->transpose->aux_mem, aoclfftz_transpose_aux_mem_t,
+                         sizeof(aoclfftz_transpose_aux_mem_t));
         sol->next_sol = NULL;
         sol->nd_sol = NULL;
         if (sol->solver == NULL || sol->decomp_scheme == NULL ||
@@ -111,6 +115,10 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->bluestein->in = NULL;
         sol->bluestein->out = NULL;
         sol->bluestein->is_B_out_valid = 0;
+        sol->transpose->row_info = (aoclfftz_dim_t_64_){0};
+        sol->transpose->col_info = (aoclfftz_dim_t_64_){0};
+        sol->transpose->aux_mem->size = 0;
+        sol->transpose->aux_mem->data = NULL;
         return sol;
     }
     else
@@ -197,6 +205,19 @@ VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme)
     return;
 }
 
+VOID destroy_transpose(aoclfftz_transpose_t *transpose)
+{
+    if (transpose)
+    {
+        if (transpose->aux_mem)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(transpose->aux_mem->data);
+            FREE_ALIGN_ALLOCATED_MEM(transpose->aux_mem);
+        }
+        FREE_ALIGN_ALLOCATED_MEM(transpose);
+    }
+}
+
 VOID destroy_solution(aoclfftz_solution_t *sol)
 {
     aoclfftz_solution_t *cur_sol = NULL;
@@ -209,9 +230,10 @@ VOID destroy_solution(aoclfftz_solution_t *sol)
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides->in_strides);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides->out_strides);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides);
-        destroy_bluestein(cur_sol->bluestein);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->twiddle->TW);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->twiddle);
+        destroy_bluestein(cur_sol->bluestein);
+        destroy_transpose(cur_sol->transpose);
         destroy_solution(cur_sol->nd_sol);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol);
     }

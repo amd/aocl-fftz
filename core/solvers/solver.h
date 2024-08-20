@@ -63,7 +63,7 @@ typedef enum
     SOLVER_PFA,
     SOLVER_RADER,
     SOLVER_PERM_COPY,
-    SOLVER_TRANS,
+    SOLVER_TRANSPOSE,
     SOLVER_SIZEONE,
     NUM_SOLVERS_END
 } aoclfftz_solver_type;
@@ -93,6 +93,7 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
                         aoclfftz_solution_t *n_minus1_sol,
                         aoclfftz_solution_t *outer_dim_sol);
 INT32 setup_sizeone_solver(aoclfftz_solution_t *sol);
+INT32 setup_transpose_solver(aoclfftz_solution_t *sol, INT32 cpu_flags);
 #if 0
 INT32 setup_permuted_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                             kernel_t *kernel);
@@ -106,5 +107,6 @@ dft_solver_ register_execute_batched_solver(VOID);
 dft_solver_ register_execute_bluestein_solver(VOID);
 dft_solver_ register_execute_ndim_solver(VOID);
 dft_solver_ register_execute_sizeone_solver(VOID);
+dft_solver_ register_execute_transpose_solver(VOID);
 
 #endif // AOCLFFTZ_SOLVER_H

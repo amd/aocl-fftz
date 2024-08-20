@@ -156,12 +156,13 @@ typedef struct
     INT32 dim_rank;         /**< Dimension rank */
     aoclfftz_dim_t *dims;   /**< Multi-dimensional tensor dimensions for LP64 */
     aoclfftz_dim_t *vecs;   /**< Vector tensor dimensions for LP64 */
-    UINT32 flags;           /**< Set flags with a 4 bit value
+    UINT32 flags;           /**< Set flags
      where each bit represents the following\n
      Bit 0 : in-place(0) or out-of-place(1),\n
      Bit 1 : in-order(0) or out-of-order(1),\n
      Bit 2 : forward(0) or backward(1),\n
-     Bit 3 : complex(0) or real(1) */
+     Bit 3 : complex(0) or real(1),\n
+     Bit 8 : fft(0) or standalone transpose(1) */
     aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
     aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_f;
@@ -178,12 +179,13 @@ typedef struct
     INT32 dim_rank;         /**< Dimension rank */
     aoclfftz_dim_t *dims;   /**< Multi-dimensional tensor dimensions for LP64 */
     aoclfftz_dim_t *vecs;   /**< Vector tensor dimensions for LP64 */
-    UINT32 flags;   /**< Set flags with a 4 bit value
+    UINT32 flags;   /**< Set flags
      where each bit represents the following\n
      Bit 0 : in-place(0) or out-of-place(1),\n
      Bit 1 : in-order(0) or out-of-order(1),\n
      Bit 2 : forward(0) or backward(1),\n
-     Bit 3 : complex(0) or real(1) */
+     Bit 3 : complex(0) or real(1),\n
+     Bit 8 : fft(0) or standalone transpose(1) */
     aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
     aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_d;
@@ -201,12 +203,13 @@ typedef struct
     INT32 dim_rank;             /**< Dimension rank */
     aoclfftz_dim_t_64_ *dims;   /**< Multi-dimensional tensor dimensions for ILP64 */
     aoclfftz_dim_t_64_ *vecs;   /**< Vector tensor dimensions for ILP64 */
-    UINT32 flags;               /**< Set flags with a 4 bit value
+    UINT32 flags;               /**< Set flags
      where each bit represents the following\n
      Bit 0 : in-place(0) or out-of-place(1),\n
      Bit 1 : in-order(0) or out-of-order(1),\n
      Bit 2 : forward(0) or backward(1),\n
-     Bit 3 : complex(0) or real(1) */
+     Bit 3 : complex(0) or real(1),\n
+     Bit 8 : fft(0) or standalone transpose(1) */
     aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
     aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_f_64_;
@@ -223,12 +226,13 @@ typedef struct
     INT32 dim_rank;             /**< Dimension rank */
     aoclfftz_dim_t_64_ *dims;   /**< Multi-dimensional tensor dimensions for ILP64 */
     aoclfftz_dim_t_64_ *vecs;   /**< Vector tensor dimensions for ILP64 */
-    UINT32 flags;               /**< Set flags with a 4 bit value
+    UINT32 flags;               /**< Set flags
      where each bit represents the following\n
      Bit 0 : in-place(0) or out-of-place(1),\n
      Bit 1 : in-order(0) or out-of-order(1),\n
      Bit 2 : forward(0) or backward(1),\n
-     Bit 3 : complex(0) or real(1) */
+     Bit 3 : complex(0) or real(1),\n
+     Bit 8 : fft(0) or standalone transpose(1) */
     aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
     aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_d_64_;
