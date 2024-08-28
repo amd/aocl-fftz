@@ -108,6 +108,7 @@ Use the following additional options to configure your build:
 Option                              |  Description
 ------------------------------------|----------------------------------------------------------------------------------------
 AOCL_TEST_COVERAGE                  |  Enables GTest and AOCL test bench based CTest suite (Disabled by default)
+AOCL_ENABLE_LOG                     |  Enables logging support within library (Disabled by default)
 ENABLE_STRICT_WARNINGS              |  Enables strict warnings (Enabled by default)
 ENABLE_AVX128                       |  Compiles library with AVX 128-bit kernels support (Disabled by default)
 ENABLE_AVX256                       |  Compiles library with AVX 256-bit kernels support (Disabled by default)
