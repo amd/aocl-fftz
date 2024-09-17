@@ -67,14 +67,14 @@
 
 #ifdef WIN32
 #define SSCANF sscanf_s
-#define STRCPY(dst, size, src) strcpy_s(dst, size, src)
+#define STRCPY(dst, dst_size, src) strcpy_s(dst, dst_size, src)
 #define FOPEN(file_pointer, file_name, open_mode)   \
     fopen_s(&file_pointer, file_name, open_mode)
 #define GETCWD(buffer, size) _getcwd(buffer, size)
 #define DIRECTORY_SEPARATOR "\\"
 #else
 #define SSCANF sscanf
-#define STRCPY(dst, size, src) strcpy(dst, src)
+#define STRCPY(dst, dst_size, src) strcpy(dst, src)
 #define FOPEN(file_pointer, file_name, open_mode)   \
     (file_pointer = fopen(file_name, open_mode))
 #define GETCWD(buffer, size) getcwd(buffer, size)
@@ -1479,7 +1479,7 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             CHAR *ret = GETCWD(path, sizeof(path));
             if (ret == NULL)
             {
-                strcpy(path, "current_dir");
+                STRCPY(path, PATH_SIZE_MAX, "current_dir");
             }
             printf("\nFull output log can be found in %s%s%s\n", path,
                     DIRECTORY_SEPARATOR, OUTPUT_LOG_FILE);
@@ -1673,7 +1673,7 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             CHAR *ret = GETCWD(path, sizeof(path));
             if (ret == NULL)
             {
-                strcpy(path, "current_dir");
+                STRCPY(path, PATH_SIZE_MAX, "current_dir");
             }
             printf("\nFull output log can be found in %s%s%s\n", path,
                     DIRECTORY_SEPARATOR, OUTPUT_LOG_FILE);
