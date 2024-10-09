@@ -524,8 +524,12 @@ aoclfftz_kernel_test_params_t param_float_r2hc_c_kernels[] =
         aoclfftz_kernel_test_type::LINEARITY |
         aoclfftz_kernel_test_type::TIMESHIFT |
         aoclfftz_kernel_test_type::TRANSFORMATION |
+        aoclfftz_kernel_test_type::DFT_REFERENCE},
+    {6, aocl_fftz_kernel_type::STANDARD_R2HC_C,
+        aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
+        aoclfftz_kernel_test_type::TRANSFORMATION |
         aoclfftz_kernel_test_type::DFT_REFERENCE}
-
 };
 
 // R2HC - C Kernels - Double
@@ -547,6 +551,11 @@ aoclfftz_kernel_test_params_t param_double_r2hc_c_kernels[] =
         aoclfftz_kernel_test_type::TRANSFORMATION |
         aoclfftz_kernel_test_type::DFT_REFERENCE},
     {5, aocl_fftz_kernel_type::STANDARD_R2HC_C,
+        aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
+        aoclfftz_kernel_test_type::TRANSFORMATION |
+        aoclfftz_kernel_test_type::DFT_REFERENCE},
+    {6, aocl_fftz_kernel_type::STANDARD_R2HC_C,
         aoclfftz_kernel_test_type::LINEARITY |
         aoclfftz_kernel_test_type::TIMESHIFT |
         aoclfftz_kernel_test_type::TRANSFORMATION |

@@ -311,6 +311,11 @@ ops_cycles_t get_ops_cnt_r2hc_rfft5c_wrapper(UINT8 precision,
 {
     return get_ops_cnt_r2hc_rfft5c(precision, direction);
 }
+ops_cycles_t get_ops_cnt_r2hc_rfft6c_wrapper(UINT8 precision,
+                                             UINT8 direction)
+{
+    return get_ops_cnt_r2hc_rfft6c(precision, direction);
+}
 
 ops_cycles_t get_ops_cnt_r2hcf_rfft2c_wrapper(UINT8 precision,
                                               UINT8 direction)
@@ -331,6 +336,11 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft5c_wrapper(UINT8 precision,
                                               UINT8 direction)
 {
     return get_ops_cnt_r2hcf_rfft5c(precision, direction);
+}
+ops_cycles_t get_ops_cnt_r2hcf_rfft6c_wrapper(UINT8 precision,
+                                              UINT8 direction)
+{
+    return get_ops_cnt_r2hcf_rfft6c(precision, direction);
 }
 
 /* ---------------- kernels : register_kernel_fft* ---------------- */
@@ -601,6 +611,10 @@ kfft_ register_kernel_r2hc_rfft5c_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_r2hc_rfft5c(precision, direction);
 }
+kfft_ register_kernel_r2hc_rfft6c_wrapper(UINT8 precision, UINT8 direction)
+{
+    return register_kernel_r2hc_rfft6c(precision, direction);
+}
 
 kfft_ register_kernel_r2hcf_rfft2c_wrapper(UINT8 precision, UINT8 direction)
 {
@@ -617,6 +631,10 @@ kfft_ register_kernel_r2hcf_rfft4c_wrapper(UINT8 precision, UINT8 direction)
 kfft_ register_kernel_r2hcf_rfft5c_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_r2hcf_rfft5c(precision, direction);
+}
+kfft_ register_kernel_r2hcf_rfft6c_wrapper(UINT8 precision, UINT8 direction)
+{
+    return register_kernel_r2hcf_rfft6c(precision, direction);
 }
 
 /* ---------------- kernels : permuted_copy_* ---------------- */

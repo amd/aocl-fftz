@@ -204,12 +204,14 @@ ops_cycles_t get_ops_cnt_r2hc_rfft2c(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hc_rfft3c(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hc_rfft4c(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hc_rfft5c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_r2hc_rfft6c(UINT8 precision, UINT8 direction);
 
 // R2HC-Fused Kernels
 ops_cycles_t get_ops_cnt_r2hcf_rfft2c(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft3c(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft4c(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft5c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_r2hcf_rfft6c(UINT8 precision, UINT8 direction);
 
 // C register kernels
 kfft_ register_kernel_fft2c(UINT8 precision, UINT8 direction);
@@ -287,12 +289,14 @@ kfft_ register_kernel_r2hc_rfft2c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hc_rfft3c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hc_rfft4c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hc_rfft5c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_r2hc_rfft6c(UINT8 precision, UINT8 direction);
 
 // R2HC-Fused Kernels
 kfft_ register_kernel_r2hcf_rfft2c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft3c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft4c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft5c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_r2hcf_rfft6c(UINT8 precision, UINT8 direction);
 
 // Permuted Copy Kernels
 VOID permuted_copy_c_fp32(VOID *in, VOID *out, INTP n, INTP size,
