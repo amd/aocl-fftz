@@ -58,7 +58,7 @@ INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
 
     UINT32 dt_prec, dt_bytes;
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    DT_PRECISION_BYTES(dt_prec);
+    dt_bytes = DT_PRECISION_BYTES(dt_prec);
 
     alloc_bluestein_buffers(sol->bluestein, m * DATA_STRIDE * dt_bytes);
 
@@ -84,7 +84,7 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
 
     UINT32 dt_prec, dt_bytes;
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    DT_PRECISION_BYTES(dt_prec);
+    dt_bytes = DT_PRECISION_BYTES(dt_prec);
     UINT32 dir = FFT_DIR(sol->decomp_scheme->flags);
     UINT32 mask = 1 << 2;
     UINT32 initial_flags = sol->next_sol->decomp_scheme->flags;

@@ -52,8 +52,7 @@ static INT32 execute_sizeone_solver(aoclfftz_solution_t *sol)
     }
     UINT32 dt_prec, dt_bytes;
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    DT_PRECISION_BYTES(dt_prec);
-    dt_bytes = (dt_prec == DT_FLOAT) ? sizeof(FLOAT) : sizeof(DOUBLE);
+    dt_bytes = DT_PRECISION_BYTES(dt_prec);
     INTP out_buffer_size = sol->decomp_scheme->vecs[0].n;
 
     VOID *in  = (FFT_DIR(sol->decomp_scheme->flags)) ?

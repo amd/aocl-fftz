@@ -65,16 +65,8 @@
 #define SET_PRECISION(flags, val) (flags |= (val << 30))
 #define SET_INPLACE(flags) (flags &= ~(0x1))
 #define DT_PRECISION_FLAG(flags) (flags >> 30)
-#define DT_PRECISION_BYTES(dt_prec)                                            \
-    {                                                                          \
-        UINT32 _dt = dt_prec;                                                  \
-        dt_bytes = 1;                                                          \
-        while (_dt > 0)                                                        \
-        {                                                                      \
-            dt_bytes *= 2;                                                     \
-            _dt--;                                                             \
-        }                                                                      \
-    }
+#define DT_PRECISION_BYTES(dt_prec) (1 << dt_prec)
+
 #define SET_SELECTOR_MODE(flags, val)                                          \
     {                                                                          \
         if (val == 0)                                                          \

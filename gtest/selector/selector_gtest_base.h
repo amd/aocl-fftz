@@ -639,7 +639,7 @@ class AoclfftzSelectorTestBase
                 }
                 UINT32 dt_prec, dt_bytes;
                 dt_prec = DT_PRECISION_FLAG(cur_a->decomp_scheme->flags);
-                DT_PRECISION_BYTES(dt_prec);
+                dt_bytes = DT_PRECISION_BYTES(dt_prec);
                 INTP m = cur_a->next_sol->decomp_scheme->dims[0].n;
                 VOID *B = cur_a->bluestein->B;
                 VOID *B_ref = NULL;

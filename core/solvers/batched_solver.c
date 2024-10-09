@@ -88,7 +88,7 @@ static INT32 execute_batched_solver(aoclfftz_solution_t *sol)
     INTP v_out_stride_2;
 
     dt = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    DT_PRECISION_BYTES(dt);
+    dt_bytes = DT_PRECISION_BYTES(dt);
 
     switch (sol->decomp_scheme->vec_rank)
     {
