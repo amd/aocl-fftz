@@ -252,7 +252,7 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
         return ret;
     }
     /** Level 2 decisions : CT Solver and Kernels **/
-    // Size one problem
+    // SizeOne FFT Solver
     if (sel->solution->decomp_scheme->dims[0].n == 1)
     {
         solver_obj->solver_type = SOLVER_SIZEONE;
@@ -261,8 +261,9 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
             return SELECTOR_FAILURE;
         }
 
-        // No setup for SizeOne problem
-        return SELECTOR_SUCCESS;
+        // Call SizeOne Solver master
+        ret = selector_sizeone_dft(sel, kertab);
+        return ret;
     }
     else if (level2_cond & 0x1)
     {

@@ -342,6 +342,7 @@ INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_permuted_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+INT32 selector_sizeone_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 VOID destroy_handle(VOID *handle);
 VOID fuse_vecs(aoclfftz_solution_t *sol);
 

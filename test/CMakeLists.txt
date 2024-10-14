@@ -77,8 +77,9 @@ endif()
 set(TEST_SUITE
     "C_DIRECT_PERFORMANCE ./aocl_fftz_bench 14 -p f"                                        # perf     |  double  | LP64       | 1D  |  no     | direct    | outplace  | forward   | C       | performance
     "C_BATCHED_CT_WITH_SAME_STRIDE ./aocl_fftz_bench 7v48:2:2 -b a"                         # accuracy |  double  | LP64       | 1D  |  yes    | CT        | outplace  | forward   | C       | C accuracy
-    "SIZE_ONE ./aocl_fftz_bench 1 -b a -p f"                                                # accuracy |  float   | LP64       | 1D  |  no     | sizeone   | outplace  | forward   | C       | size one accuracy
-    "SIZE_ONE_BATCHED ./aocl_fftz_bench 5v1:2:3 -b a"                                       # accuracy |  double  | LP64       | 1D  |  yes    | sizeone   | outplace  | forward   | C       | size one batched
+    "SIZE_ONE_IN_PLACE ./aocl_fftz_bench 1 -b a -r i"                                       # accuracy |  double  | LP64       | 1D  |  no     | sizeone   | inplace   | forward   | C       | size one inplace
+    "SIZE_ONE_FUSABLE_ND_BATCHED ./aocl_fftz_bench 2x5v1 -b a -p f"                         # accuracy |  float   | LP64       | 1D  |  yes    | sizeone   | outplace  | forward   | C       | size one batched
+    "SIZE_ONE_NON_FUSABLE_ND_BATCHED ./aocl_fftz_bench 5:24:34x2:12:17x5:2:3v1:2:3 -b a"    # accuracy |  double  | LP64       | 1D  |  yes    | sizeone   | outplace  | forward   | C       | size one batched strided
     "C_MULTILEVEL_CT_WITH_STRIDES ./aocl_fftz_bench 15015:3:2 -b a -m i -p f"               # accuracy |  float   | ILP64      | 1D  |  no     | CT        | outplace  | forward   | C       | C ILP64 data model, covers direct prime kernels
     "C_CT_WITH_BLUESTEIN ./aocl_fftz_bench 170:4:4 -b a -r i"                               # accuracy |  double  | LP64       | 1D  |  no     | CT+BS     | inplace   | forward   | C       | C Inplace
     "C_BLUESTEIN_WITH_STRIDES ./aocl_fftz_bench 23:5:7 -b a -p f --dir b"                   # accuracy |  float   | LP64       | 1D  |  no     | BS        | outplace  | backward  | C       | C Float Inverse

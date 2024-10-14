@@ -92,6 +92,7 @@ INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
 INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
                         aoclfftz_solution_t *n_minus1_sol,
                         aoclfftz_solution_t *outer_dim_sol);
+INT32 setup_sizeone_solver(aoclfftz_solution_t *sol);
 #if 0
 INT32 setup_permuted_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                             kernel_t *kernel);
