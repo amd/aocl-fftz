@@ -58,27 +58,40 @@
 #define MAX_GUARANTEED_CACHEABLE_SIZE (2097152) // 2MB
 
 // Set and Get Flags bits
-#define IS_OUT_OF_PLACE(flags) (flags & 0x1)
-#define IS_OUT_OF_ORDER(flags) (flags & 0x2)
-#define FFT_DIR(flags) ((flags & 0x4) >> 2)
-#define IS_REAL(flags) (flags & 0x8)
-#define SET_PRECISION(flags, val) (flags |= (val << 30))
-#define SET_INPLACE(flags) (flags &= ~(0x1))
+#define BIT_FLAG32_ON(flags, nbit) ((flags) |= (0x1 << (nbit)))
+#define BIT_FLAG32_OFF(flags, nbit) ((flags) &= ~(0x1 << (nbit)))
+#define GET_BIT_FLAG32(flags, nbit) (((flags) >> (nbit)) & 0x1)
+
+#define SET_BIT_FLAG32(flags, nbit, value)                                     \
+    do                                                                         \
+    {                                                                          \
+        if (value)                                                             \
+        {                                                                      \
+            BIT_FLAG32_ON(flags, nbit);                                        \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
+            BIT_FLAG32_OFF(flags, nbit);                                       \
+        }                                                                      \
+    } while (0)
+
+// Get Flags
+#define IS_OUT_OF_PLACE(flags) GET_BIT_FLAG32(flags, 0)
+#define IS_OUT_OF_ORDER(flags) GET_BIT_FLAG32(flags, 1)
+#define FFT_DIR(flags) GET_BIT_FLAG32(flags, 2)
+#define IS_REAL(flags) GET_BIT_FLAG32(flags, 3)
 #define DT_PRECISION_FLAG(flags) (flags >> 30)
+
+// Set Flags
+#define SET_PRECISION(flags, val) (flags |= (val << 30))
+#define SET_INPLACE(flags) SET_BIT_FLAG32(flags, 0, 0)
+
+// Get size of datatype based on the precision
 #define DT_PRECISION_BYTES(dt_prec) (1 << dt_prec)
 
-#define SET_SELECTOR_MODE(flags, val)                                          \
-{                                                                              \
-    if (val == 0)                                                              \
-    {                                                                          \
-        flags &= (~(1 << 16));                                                 \
-    }                                                                          \
-    else                                                                       \
-    {                                                                          \
-        flags |= (1 << 16);                                                    \
-    }                                                                          \
-}
-#define GET_SELECTOR_MODE(flags) ((flags << 15) >> 31)
+#define SET_SELECTOR_MODE(flags, value) SET_BIT_FLAG32(flags, 16, value)
+#define GET_SELECTOR_MODE(flags) GET_BIT_FLAG32(flags, 16)
+
 // Move the base address of void pointer by adding offset
 #define MOVE_ADDR(base_addr, offset) (VOID *)((CHAR *)base_addr + offset)
 
@@ -152,13 +165,16 @@ typedef struct aoclfftz_decomp_scheme
     VOID *out_imag;
     aoclfftz_cntrl_params_t *cntrl_params;
     aoclfftz_smp_pfft_t *pthr_fft;
-    // Application side flag bits =>
-    //  in/out-of place:0-bit, in/out-of order:1-bit, dir:2-bit,
-    //  real/comp:3-bit..
-    // Library side internal flag bits =>
-    //  datatype:30-31 bits for precision
-    //  2-bits: 64-bit(11), 32-bit(10), 16-bit(01), 8-bit(00)
-    //  selector mode: 16th-bit
+    // Application side flag bits
+    //   bit 0: (0) in-place / (1) out-of-place
+    //   bit 1: (0) in-order / (1) out-of-order
+    //   bit 2: (0) forward  / (1) backward
+    //   bit 3: (0) complex  / (1) real
+    // Library side internal flag bits
+    //   bit 8     : (0) no-transpose / (1) transpose
+    //   bit 16    : (0) fixed selector mode / (1) auto tuner selector mode
+    //   bit 30-31 : floating point datatype precision
+    //               (00) 8-bit / (01) 16-bit / (10) 32-bit / (11) 64-bit
     UINT32 flags;
 } aoclfftz_decomp_scheme_t;
 
