@@ -30,16 +30,17 @@
  *
  *  @brief Functions of the Solver module.
  *
- *  This file contains Solver functions that are needed to solve a given problem.
+ *  This file contains Solver functions that are needed to solve a given
+ *  problem.
  *
  *  @author S. Biplab Raut
  */
 
 #include "core/solvers/solver.h"
 
-//Table of solvers that is populated with applicable solvers at setup time
-//ct, direct, nDim, buf, permKer, batched, bluestein, PFA, rader, permCopy,
-//trans
+// Table of solvers that is populated with applicable solvers at setup time
+// ct, direct, nDim, buf, permKer, batched, bluestein, PFA, rader, permCopy,
+// trans
 dft_solver_ solvers_table[NUM_SOLVERS] = { 0x0, };
 
 INT32 register_solvers(INT32 dt, INT32 cpu_flags)
@@ -51,7 +52,7 @@ INT32 register_solvers(INT32 dt, INT32 cpu_flags)
         solvers_table[solv_idx] = NULL;
     }
 
-    //Add all the available solvers
+    // Add all the available solvers
     solvers_table[SOLVER_DIRECT] = register_execute_direct_solver();
     solvers_table[SOLVER_CT] = register_execute_ct_solver();
     solvers_table[SOLVER_BATCHED] = register_execute_batched_solver();
@@ -70,7 +71,9 @@ dft_solver_ get_solver_fp(aoclfftz_solution_t *sol)
 INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj)
 {
     if (solvers_table[solver_obj->solver_type] == NULL)
+    {
         return SOLVER_FAILURE;
+    }
 
     solver_obj->execute_solver = solvers_table[solver_obj->solver_type];
     return SOLVER_SUCCESS;

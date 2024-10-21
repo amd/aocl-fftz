@@ -230,7 +230,6 @@ aoclfftz_kernel_test_params_t param_double_avx128_kernels[] =
     aoclfftz_kernel_test_type::ALL}
 };
 
-//AVX256 kernels
 aoclfftz_kernel_test_params_t param_float_avx256_kernels[] =
 {
     {2, aocl_fftz_kernel_type::STANDARD_AVX256,
@@ -420,11 +419,17 @@ auto name_generator =
         else
         {
             if (test_type & aoclfftz_kernel_test_type::LINEARITY)
+            {
                 test_name += "_LINEARITY";
+            }
             if (test_type & aoclfftz_kernel_test_type::TRANSFORMATION)
+            {
                 test_name += "_TRANSFORMATION";
+            }
             if (test_type & aoclfftz_kernel_test_type::TIMESHIFT)
+            {
                 test_name += "_TIMESHIFT";
+            }
         }
         return test_name;
     };
@@ -442,7 +447,6 @@ INSTANTIATE_TEST_SUITE_P(
     name_generator);
 
 #ifdef ENABLE_AVX128
-//AVX128 TEST SUITE
 INSTANTIATE_TEST_SUITE_P(
     AVXKernelTest, AoclfftzKernelTestFloat,
     ::testing::Combine(::testing::ValuesIn(param_float_avx128_kernels),
@@ -455,8 +459,8 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(io_params)),
     name_generator);
 #endif
+
 #ifdef ENABLE_AVX256
-//AVX256 TEST SUITE
 INSTANTIATE_TEST_SUITE_P(
     AVX256KernelTest, AoclfftzKernelTestFloat,
     ::testing::Combine(::testing::ValuesIn(param_float_avx256_kernels),

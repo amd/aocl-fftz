@@ -50,33 +50,41 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
-        measure_stats;
+                       measure_stats;
     INT32 rnk = 0;
     INT32 batch_size = 0;
     INT32 ret = SELECTOR_FAILURE;
 
-    if (vec_rank > 3) //Currently vector rank till 3 only supported
+    if (vec_rank > 3) // Currently vector rank till 3 only supported
+    {
         goto exit_batched_dft;
+    }
 
     cur_sel = alloc_selector(vec_rank, dim_rank);
     if (cur_sel == NULL)
+    {
         goto exit_batched_dft;
+    }
 
-    //copy solution object from sel to cur_sel
+    // copy solution object from sel to cur_sel
     COPY_SOLUTION_OBJ(cur_sel->solution, sel->solution);
 
-    //Setup batched solver to find the next solution for a single set/unit
-    //of the vector problem
+    // Setup batched solver to find the next solution for a single set/unit
+    // of the vector problem
     ret = setup_batched_solver(cur_sel->solution);
     if (ret != SELECTOR_SUCCESS)
+    {
         goto exit_batched_dft;
+    }
 
-    //Call selector for solving a single set/unit of the vector problem
+    // Call selector for solving a single set/unit of the vector problem
     ret = setup_dft_(cur_sel, kertab);
     if (ret != SELECTOR_SUCCESS)
+    {
         goto exit_batched_dft;
+    }
 
-    //Calculate the batch size of all the sub-problems in the vector problem
+    // Calculate the batch size of all the sub-problems in the vector problem
     for (rnk = 0; rnk < vec_rank; rnk++)
     {
         batch_size *= sel->solution->decomp_scheme->vecs[rnk].n;
@@ -87,7 +95,7 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     if (stats_mode)
     {
-        //capture stats
+        // capture stats
     }
 
     sel->solution->next_sol = cur_sel->solution;

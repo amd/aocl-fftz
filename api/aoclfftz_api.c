@@ -45,16 +45,18 @@
 #include "selector/selector.h"
 #include "core/executor.h"
 
-//Setup function for float LP64 based Single-threaded and multi-threaded FFT
+// Setup function for float LP64 based Single-threaded and multi-threaded FFT
 VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem)
 {
     if (problem == NULL)
+    {
         return NULL;
+    }
 
     return setup_dft_f(problem);
 }
 
-//Execute function for float LP64 based Single-threaded and multi-threaded FFT
+// Execute function for float LP64 based Single-threaded and multi-threaded FFT
 INT32 aoclfftz_execute_f(VOID *handle)
 {
     if (handle == NULL)
@@ -65,23 +67,25 @@ INT32 aoclfftz_execute_f(VOID *handle)
     return executor_obj->execute(executor_obj);
 }
 
-//Destroy function for float LP64 based Single-threaded and multi-threaded FFT
+// Destroy function for float LP64 based Single-threaded and multi-threaded FFT
 VOID aoclfftz_destroy_f(VOID *handle)
 {
     destroy_handle(handle);
     return;
 }
 
-//Setup function for double LP64 based Single-threaded and multi-threaded FFT
+// Setup function for double LP64 based Single-threaded and multi-threaded FFT
 VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem)
 {
     if (problem == NULL)
+    {
         return NULL;
+    }
 
     return setup_dft_d(problem);
 }
 
-//Execute function for double LP64 based Single-threaded and multi-threaded FFT
+// Execute function for double LP64 based Single-threaded and multi-threaded FFT
 INT32 aoclfftz_execute_d(VOID *handle)
 {
     if (handle == NULL)
@@ -92,23 +96,25 @@ INT32 aoclfftz_execute_d(VOID *handle)
     return executor_obj->execute(executor_obj);
 }
 
-//Destroy function for double LP64 based Single-threaded and multi-threaded FFT
+// Destroy function for double LP64 based Single-threaded and multi-threaded FFT
 VOID aoclfftz_destroy_d(VOID *handle)
 {
     destroy_handle(handle);
     return;
 }
 
-//Setup function for float ILP64 based Single-threaded and multi-threaded FFT
+// Setup function for float ILP64 based Single-threaded and multi-threaded FFT
 VOID *aoclfftz_setup_f_64_(aoclfftz_prob_desc_f_64_ *problem)
 {
     if (problem == NULL)
+    {
         return NULL;
+    }
 
     return setup_dft_f_64_(problem);
 }
 
-//Execute function for float ILP64 based Single-threaded and multi-threaded FFT
+// Execute function for float ILP64 based Single-threaded and multi-threaded FFT
 INT32 aoclfftz_execute_f_64_(VOID *handle)
 {
     if (handle == NULL)
@@ -119,25 +125,27 @@ INT32 aoclfftz_execute_f_64_(VOID *handle)
     return executor_obj->execute(executor_obj);
 }
 
-//Destroy function for float ILP64 based Single-threaded and multi-threaded FFT
+// Destroy function for float ILP64 based Single-threaded and multi-threaded FFT
 VOID aoclfftz_destroy_f_64_(VOID *handle)
 {
     destroy_handle(handle);
     return;
 }
 
-//Setup function for double ILP64 based Single-threaded and
-//multi-threaded FFT
+// Setup function for double ILP64 based Single-threaded and
+// multi-threaded FFT
 VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem)
 {
     if (problem == NULL)
+    {
         return NULL;
+    }
 
     return setup_dft_d_64_(problem);
 }
 
-//Execute function for double ILP64 based Single-threaded and
-//multi-threaded FFT
+// Execute function for double ILP64 based Single-threaded and
+// multi-threaded FFT
 INT32 aoclfftz_execute_d_64_(VOID *handle)
 {
     if (handle == NULL)
@@ -148,16 +156,16 @@ INT32 aoclfftz_execute_d_64_(VOID *handle)
     return executor_obj->execute(executor_obj);
 }
 
-//Destroy function for double ILP64 based Single-threaded and
-//multi-threaded FFT
+// Destroy function for double ILP64 based Single-threaded and
+// multi-threaded FFT
 VOID aoclfftz_destroy_d_64_(VOID *handle)
 {
     destroy_handle(handle);
     return;
 }
 
-//Function to return aocl-fftz library version string
-const CHAR* aoclfftz_version(VOID)
+// Function to return aocl-fftz library version string
+const CHAR *aoclfftz_version(VOID)
 {
     return (AOCLFFTZ_LIBRARY_VERSION " " AOCL_BUILD_VERSION);
 }

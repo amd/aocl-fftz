@@ -38,15 +38,16 @@
  */
 
 #include "selector/selector.h"
-// TODO : move these to common header
+// TODO: move these to common header
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
 // In a single-threaded scenario, for the outer_dim_sol,
-// if the dims are regular strided (where strides are proportional to the prev dim size),
-// it is optimal to fuse those dims together and execute them as a single dim,
-// as opposed to recursive calls for each dim.
-// This function checks for such regular strided cases and returns the number of dims that can be fused.
+// if the dims are regular strided (where strides are proportional to the prev
+// dim size), it is optimal to fuse those dims together and execute them as a
+// single dim, as opposed to recursive calls for each dim.
+// This function checks for such regular strided cases and returns the number of
+// dims that can be fused.
 INT32 get_fusable_dims(aoclfftz_solution_t *sol, INT32 dim_rank)
 {
     INT32 fusable_dims = 1;
@@ -95,7 +96,7 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
-        measure_stats;
+                       measure_stats;
     INT32 ret = SELECTOR_FAILURE;
 
     INT32 fusable_dims = get_fusable_dims(sel->solution, dim_rank - 1);
@@ -105,29 +106,38 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
     else
     {
-        vec_rank = (dim_rank - fusable_dims); // dims not fusable has to be processed individually
+        // dims not fusable has to be processed individually
+        vec_rank = (dim_rank - fusable_dims);
     }
 
     n_minus1_sel = alloc_selector(1, dim_rank - 1);
     outer_dim_sel = alloc_selector(vec_rank, 1);
 
     if (n_minus1_sel == NULL || outer_dim_sel == NULL)
+    {
         goto exit_nd_dft;
+    }
 
     ret = setup_ndim_solver(sel->solution, n_minus1_sel->solution,
                             outer_dim_sel->solution, fusable_dims);
     if (ret != SELECTOR_SUCCESS)
+    {
         goto exit_nd_dft;
+    }
 
     // Invoke selector for solving ND-1 sub-problem
     ret = setup_dft_(n_minus1_sel, kertab);
     if (ret != SELECTOR_SUCCESS)
+    {
         goto exit_nd_dft;
+    }
 
     // Invoke selector for solving 1D sub-problem
     ret = setup_dft_(outer_dim_sel, kertab);
     if (ret != SELECTOR_SUCCESS)
+    {
         goto exit_nd_dft;
+    }
 
     sel->cost_analysis->ops = n_minus1_sel->cost_analysis->ops +
                               outer_dim_sel->cost_analysis->ops;

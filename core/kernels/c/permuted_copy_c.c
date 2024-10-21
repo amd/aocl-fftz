@@ -47,11 +47,17 @@ typedef VOID (*kdata_)(VOID *in, VOID *out, INTP n, INTP size,
 kdata_ register_kernel_permuted_copy_c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return permuted_copy_c_fp32;
+    }
     else if (precision == DT_DOUBLE)
+    {
         return permuted_copy_c_fp64;
+    }
     else
+    {
         return NULL;
+    }
 }
 
 VOID permuted_copy_c_fp64(VOID *in, VOID *out, INTP n, INTP size,
@@ -59,7 +65,7 @@ VOID permuted_copy_c_fp64(VOID *in, VOID *out, INTP n, INTP size,
 {
     DOUBLE *in_d = (DOUBLE *)in;
     DOUBLE *out_d = (DOUBLE *)out;
-    //FIXME: remove the condition to pick the strides, will be revamped in
+    // FIXME: remove the condition to pick the strides, will be revamped in
     // permute solver patch
     INTP in_stride = strides->in_strides[0] ?
              strides->in_strides[0] * DATA_STRIDE : strides->in_strides[1];
@@ -86,7 +92,7 @@ VOID permuted_copy_c_fp32(VOID *in, VOID *out, INTP n, INTP size,
 {
     FLOAT *in_f = (FLOAT *)in;
     FLOAT *out_f = (FLOAT *)out;
-    //FIXME: remove the condition to pick the strides, will be revamped in
+    // FIXME: remove the condition to pick the strides, will be revamped in
     // permute solver patch
     INTP in_stride = strides->in_strides[0] ?
              strides->in_strides[0] * DATA_STRIDE : strides->in_strides[1];

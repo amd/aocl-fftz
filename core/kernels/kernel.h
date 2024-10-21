@@ -143,7 +143,6 @@ ops_cycles_t get_ops_cnt_fft15c(INT32 precision);
 ops_cycles_t get_ops_cnt_fft16c(INT32 precision);
 
 #ifdef ENABLE_AVX128
-//AVX128 get_ops_cnt
 ops_cycles_t get_ops_cnt_fft2avx128(INT32 precision);
 ops_cycles_t get_ops_cnt_fft3avx128(INT32 precision);
 ops_cycles_t get_ops_cnt_fft4avx128(INT32 precision);
@@ -159,8 +158,8 @@ ops_cycles_t get_ops_cnt_fft14avx128(INT32 precision);
 ops_cycles_t get_ops_cnt_fft15avx128(INT32 precision);
 ops_cycles_t get_ops_cnt_fft16avx128(INT32 precision);
 #endif
+
 #ifdef ENABLE_AVX256
-//AVX256 get_ops_cnt
 ops_cycles_t get_ops_cnt_fft2avx256(INT32 precision);
 ops_cycles_t get_ops_cnt_fft3avx256(INT32 precision);
 ops_cycles_t get_ops_cnt_fft4avx256(INT32 precision);
@@ -193,8 +192,8 @@ kfft_ register_kernel_fft13c(INT32 precision);
 kfft_ register_kernel_fft14c(INT32 precision);
 kfft_ register_kernel_fft15c(INT32 precision);
 kfft_ register_kernel_fft16c(INT32 precision);
+
 #ifdef ENABLE_AVX128
-//AVX128 register kernel
 kfft_ register_kernel_fft2avx128(INT32 precision);
 kfft_ register_kernel_fft3avx128(INT32 precision);
 kfft_ register_kernel_fft4avx128(INT32 precision);
@@ -210,8 +209,8 @@ kfft_ register_kernel_fft14avx128(INT32 precision);
 kfft_ register_kernel_fft15avx128(INT32 precision);
 kfft_ register_kernel_fft16avx128(INT32 precision);
 #endif
+
 #ifdef ENABLE_AVX256
-//AVX256 register kernel
 kfft_ register_kernel_fft2avx256(INT32 precision);
 kfft_ register_kernel_fft3avx256(INT32 precision);
 kfft_ register_kernel_fft4avx256(INT32 precision);

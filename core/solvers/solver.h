@@ -42,15 +42,15 @@
 #include "api/aoclfftz_internal.h"
 #include "core/kernels/kernel.h"
 
-//Error return codes related to solver
-//Add more codes at the top
+// Error return codes related to solver
+// Add more codes at the top
 typedef enum
 {
     SOLVER_FAILURE = -1,
-    SOLVER_SUCCESS         //Successful operation
+    SOLVER_SUCCESS         // Successful operation
 } aoclfftz_solver_status;
 
-//Solver types implemented in the library for executing a given DFT problem
+// Solver types implemented in the library for executing a given DFT problem
 typedef enum
 {
     SOLVER_DIRECT = 1,
@@ -68,19 +68,19 @@ typedef enum
     NUM_SOLVERS_END
 } aoclfftz_solver_type;
 
-//Solver data structure that holds solver object/pointer and its type
+// Solver data structure that holds solver object/pointer and its type
 typedef struct solver
 {
     aoclfftz_generic_solver_t *solver;
-    //aoclfftz_solver_type solv_type;
+    // aoclfftz_solver_type solv_type;
 } solver_t;
 
 INT32 register_solvers(INT32 dt, INT32 cpu_flags);
 dft_solver_ get_solver_fp(aoclfftz_solution_t *sol);
 INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj);
 
-//Function declarations of all the supported solvers
-//(called by selector and executor)
+// Function declarations of all the supported solvers
+// (called by selector and executor)
 INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                           kernel_t *kernel);
 INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
@@ -106,4 +106,4 @@ dft_solver_ register_execute_bluestein_solver(VOID);
 dft_solver_ register_execute_ndim_solver(VOID);
 dft_solver_ register_execute_sizeone_solver(VOID);
 
-#endif //AOCLFFTZ_SOLVER_H
+#endif // AOCLFFTZ_SOLVER_H

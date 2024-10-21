@@ -46,14 +46,18 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 4, 18, 24, 2, 2},
 ops_cycles_t get_ops_cnt_fft6avx128(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
 static VOID fft6avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag)
+                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                           UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -63,13 +67,13 @@ static VOID fft6avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     FLOAT *in_r = (FLOAT *)in_real;
     FLOAT *out_r = (FLOAT *)out_real;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = strides->v_in_stride;
     INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_128_S;
@@ -230,8 +234,8 @@ static VOID fft6avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 }
 
 static VOID fft6avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag)
+                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                           UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -241,13 +245,13 @@ static VOID fft6avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     DOUBLE *in_r = (DOUBLE *)in_real;
     DOUBLE *out_r = (DOUBLE *)out_real;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = strides->v_in_stride;
     INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_128_D;
@@ -344,9 +348,15 @@ static VOID fft6avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 kfft_ register_kernel_fft6avx128(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return fft6avx128fp32;
+    }
     else if (precision == DT_DOUBLE)
+    {
         return fft6avx128fp64;
+    }
     else
+    {
         return NULL;
+    }
 }

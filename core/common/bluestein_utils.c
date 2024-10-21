@@ -43,7 +43,7 @@
 INTP get_extended_length(INTP n)
 {
     INTP m = 2 * n - 1;
-    // check all the factors of m is within the supported kernels
+    // check if all the factors of m are within the supported kernels' range
     // i.e. prime numbers in range 2 to 16
     // if not, adjust the m to a nearest larger number
     // which satisfies the above condition
@@ -58,9 +58,13 @@ INTP get_extended_length(INTP n)
         for (UINT32 i = 0; i < prime_count; i++)
         {
             while (quo % supported_primes[i] == 0)
+            {
                 quo /= supported_primes[i];
+            }
             if (quo == 1)
+            {
                 break; // solvable m value
+            }
         }
     }
     return m;

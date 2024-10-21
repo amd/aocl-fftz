@@ -45,14 +45,18 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 20, 40, 72, 23, 24},
 ops_cycles_t get_ops_cnt_fft9avx256(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
 static VOID fft9avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag)
+                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                           UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -68,13 +72,13 @@ static VOID fft9avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     FLOAT *in_r = (FLOAT *)in_real;
     FLOAT *out_r = (FLOAT *)out_real;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = strides->v_in_stride;
     INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_256_S;
@@ -504,30 +508,30 @@ static VOID fft9avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 }
 
 static VOID fft9avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag)
+                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                           UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
 #endif
     const DOUBLE CRTM_9[8] = {-0.939692620785908384054109277324731469936208134,
-                             0.342020143325668733044099614682259580763083368,
-                             0.984807753012208059366743024589523013670643252,
-                             0.173648177666930348851716626769314796000375677,
-                             0.642787609686539326322643409907263432907559884,
-                             0.766044443118978035202392650555416673935832457,
-                             0.500000000000000000000000000000000000000000000,
-                             0.866025403784438646763723170752936183471402627};
+                              0.342020143325668733044099614682259580763083368,
+                              0.984807753012208059366743024589523013670643252,
+                              0.173648177666930348851716626769314796000375677,
+                              0.642787609686539326322643409907263432907559884,
+                              0.766044443118978035202392650555416673935832457,
+                              0.500000000000000000000000000000000000000000000,
+                              0.866025403784438646763723170752936183471402627};
 
     DOUBLE *in_r = (DOUBLE *)in_real;
     DOUBLE *out_r = (DOUBLE *)out_real;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = strides->v_in_stride;
     INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_256_D;
@@ -825,9 +829,15 @@ static VOID fft9avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 kfft_ register_kernel_fft9avx256(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return fft9avx256fp32;
+    }
     else if (precision == DT_DOUBLE)
+    {
         return fft9avx256fp64;
+    }
     else
+    {
         return NULL;
+    }
 }

@@ -166,7 +166,9 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     status = elementwise_multiplication(in_real, in_real, sol->bluestein->B, n,
                                         mul_sign, dt_prec);
     if (status != BLUESTEIN_SUCCESS)
+    {
         return SOLVER_FAILURE;
+    }
 
     /****** convolution starts here ******/
     // 1. Perform FFT forward for bluestein sequence A
@@ -175,7 +177,9 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     // output : out_real
     status = sol->next_sol->solver->execute_solver(sol->next_sol);
     if (status != SOLVER_SUCCESS)
+    {
         return SOLVER_FAILURE;
+    }
 
     // 2. Perform FFT forward for bluestein sequence B
     // this will be triggered only during the first execution of a bluestein
@@ -194,7 +198,9 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
         // output : sol->bluestein->B_out
         status = sol->next_sol->solver->execute_solver(sol->next_sol);
         if (status != SOLVER_SUCCESS)
+        {
             return SOLVER_FAILURE;
+        }
 
         sol->bluestein->is_B_out_valid = 1;
     }
@@ -204,7 +210,9 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     status = elementwise_multiplication(
         out_real, out_real, sol->bluestein->B_out, m, !mul_sign, dt_prec);
     if (status != BLUESTEIN_SUCCESS)
+    {
         return SOLVER_FAILURE;
+    }
 
     // Swapping real, imag parts to achieve FFT backward
     sol->next_sol->decomp_scheme->in_real = out_imag;
@@ -217,7 +225,9 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     // output : in_imag
     status = sol->next_sol->solver->execute_solver(sol->next_sol);
     if (status != SOLVER_SUCCESS)
+    {
         return SOLVER_FAILURE;
+    }
 
     // Normalize the AB_out with data length `m`
     normalize_data(in_real, n, (1.0 / m), dt_prec);

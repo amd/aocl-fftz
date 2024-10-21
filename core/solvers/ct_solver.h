@@ -41,11 +41,11 @@
 
 #include "core/solvers/solver.h"
 
-//Solver data structure that holds solver object/pointer and its type
+// Solver data structure that holds solver object/pointer and its type
 typedef struct ct_solver
 {
     solver_t *ct_solver;
     cost_analysis_t *cost;
 } ct_solver_t;
 
-#endif //CT_SOLVER_H
+#endif // CT_SOLVER_H

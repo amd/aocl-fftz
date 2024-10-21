@@ -45,40 +45,44 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 50, 70, 44, 5, 5},
 ops_cycles_t get_ops_cnt_fft11avx128(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
 static VOID fft11avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                     UINT8 flag)
+                            VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                            UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
 #endif
-    const FLOAT CRTM_11[10] =
-        {0.84125353283118116029052039464203089547681594330064,
-         0.54064081745559759544482548159299693174139803024473,
-         0.41541501300188639668675795488636098054966524290126,
-         0.90963199535451838458365117807108162835411650732265,
-         0.14231483827328501490317354898047094957684096668515,
-         0.98982144188093275042610808187068914262031166769031,
-         0.65486073394528511198338203198719613618953603946564,
-         0.75574957435425824224552448923467521721665586591805,
-         0.95949297361449738989036805706632769906245484800000,
-         0.28173255684142978898192655345478532989004751779983};
+    const FLOAT CRTM_11[10] = {
+        0.84125353283118116029052039464203089547681594330064,
+        0.54064081745559759544482548159299693174139803024473,
+        0.41541501300188639668675795488636098054966524290126,
+        0.90963199535451838458365117807108162835411650732265,
+        0.14231483827328501490317354898047094957684096668515,
+        0.98982144188093275042610808187068914262031166769031,
+        0.65486073394528511198338203198719613618953603946564,
+        0.75574957435425824224552448923467521721665586591805,
+        0.95949297361449738989036805706632769906245484800000,
+        0.28173255684142978898192655345478532989004751779983};
 
     FLOAT *in_r = (FLOAT *)in_real;
     FLOAT *out_r = (FLOAT *)out_real;
     FLOAT *curr_in, *curr_out;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = strides->v_in_stride;
     INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_128_S;
@@ -559,8 +563,8 @@ static VOID fft11avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 }
 
 static VOID fft11avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                     UINT8 flag)
+                            VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                            UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -580,13 +584,13 @@ static VOID fft11avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     DOUBLE *in_r = (DOUBLE *)in_real;
     DOUBLE *out_r = (DOUBLE *)out_real;
     DOUBLE *curr_in, *curr_out;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = strides->v_in_stride;
     INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_128_D;
@@ -851,9 +855,15 @@ static VOID fft11avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 kfft_ register_kernel_fft11avx128(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return fft11avx128fp32;
+    }
     else if (precision == DT_DOUBLE)
+    {
         return fft11avx128fp64;
+    }
     else
+    {
         return NULL;
+    }
 }

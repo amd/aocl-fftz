@@ -45,36 +45,40 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 15, 72, 128, 23, 39},
 ops_cycles_t get_ops_cnt_fft16avx256(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
 static VOID fft16avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                     UINT8 flag)
+                            VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                            UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
 #endif
-    const FLOAT CRTM_16[7] =
-        {0.92387953251128675612818318939678828682241662586364,
-         0.38268343236508977172845998403039886676134456248563,
-         0.70710678118654752440084436210484903928483593768847,
-         0.70710678118654752440084436210484903928483593768847,
-         0.38268343236508977172845998403039886676134456248563,
-         0.92387953251128675612818318939678828682241662586364,
-         1.0};
+    const FLOAT CRTM_16[7] = {
+        0.92387953251128675612818318939678828682241662586364,
+        0.38268343236508977172845998403039886676134456248563,
+        0.70710678118654752440084436210484903928483593768847,
+        0.70710678118654752440084436210484903928483593768847,
+        0.38268343236508977172845998403039886676134456248563,
+        0.92387953251128675612818318939678828682241662586364,
+        1.0};
 
     FLOAT *in_r = (FLOAT *)in_real;
     FLOAT *out_r = (FLOAT *)out_real;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = strides->v_in_stride;
     INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_256_S;
@@ -767,30 +771,30 @@ static VOID fft16avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 }
 
 static VOID fft16avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                     UINT8 flag)
+                            VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                            UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
 #endif
-    const DOUBLE CRTM_16[7] =
-        {0.92387953251128675612818318939678828682241662586364,
-         0.38268343236508977172845998403039886676134456248563,
-         0.70710678118654752440084436210484903928483593768847,
-         0.70710678118654752440084436210484903928483593768847,
-         0.38268343236508977172845998403039886676134456248563,
-         0.92387953251128675612818318939678828682241662586364,
-         1.0};
+    const DOUBLE CRTM_16[7] = {
+        0.92387953251128675612818318939678828682241662586364,
+        0.38268343236508977172845998403039886676134456248563,
+        0.70710678118654752440084436210484903928483593768847,
+        0.70710678118654752440084436210484903928483593768847,
+        0.38268343236508977172845998403039886676134456248563,
+        0.92387953251128675612818318939678828682241662586364,
+        1.0};
 
     DOUBLE *in_r = (DOUBLE *)in_real;
     DOUBLE *out_r = (DOUBLE *)out_real;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = strides->v_in_stride;
     INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_256_D;
@@ -1262,9 +1266,15 @@ static VOID fft16avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 kfft_ register_kernel_fft16avx256(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return fft16avx256fp32;
+    }
     else if (precision == DT_DOUBLE)
+    {
         return fft16avx256fp64;
+    }
     else
+    {
         return NULL;
+    }
 }

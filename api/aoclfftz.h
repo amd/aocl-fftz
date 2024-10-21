@@ -34,7 +34,7 @@
  *  and multi-threaded FFT operations.
  *
  *  @author S. Biplab Raut
-*/
+ */
 
 /**
  *  @defgroup group_api AOCL-FFTZ - API
@@ -82,7 +82,7 @@ extern "C" {
      * aoclfftz_error_type
      * Error return codes of aocl-fftz library.
 */
-//Add new error codes at the code to retain the existing error code values
+// Add new error codes at the code to retain the existing error code values
 typedef enum
 {
     AOCLFFTZ_TIME_OUT = -6,     /**< Operation took long time than expected */
@@ -188,7 +188,7 @@ typedef struct
     aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_d;
 
-//float ILP64
+// float ILP64
 /**  @ingroup group_types
      * aoclfftz_prob_desc_f_64_
      * problem descriptor for float ILP64
@@ -234,7 +234,7 @@ typedef struct
 } aoclfftz_prob_desc_d_64_;
 
 /* Single-threaded and multi-threaded FFT unified APIs */
-//float LP64
+// float LP64
 /**  @ingroup group_api
      * @brief Generates a solution handle for the given input problem.\n
      * This generated handle is passed to the execute/destroy APIs.
@@ -263,7 +263,7 @@ EXPORT_SYM_DYN INT32 aoclfftz_execute_f(VOID *handle);
      */
 EXPORT_SYM_DYN VOID aoclfftz_destroy_f(VOID *handle);
 
-//double LP64
+// double LP64
 /**  @ingroup group_api
      * @brief Generates a solution handle for the given input problem.\n
      * This generated handle is passed to the execute/destroy APIs.
@@ -292,7 +292,7 @@ EXPORT_SYM_DYN INT32 aoclfftz_execute_d(VOID *handle);
      */
 EXPORT_SYM_DYN VOID aoclfftz_destroy_d(VOID *handle);
 
-//float ILP64
+// float ILP64
 /**  @ingroup group_api
      * @brief Generates a solution handle for the given input problem.\n
      * This generated handle is passed to the execute/destroy APIs.
@@ -321,7 +321,7 @@ EXPORT_SYM_DYN INT32 aoclfftz_execute_f_64_(VOID *handle);
      */
 EXPORT_SYM_DYN VOID aoclfftz_destroy_f_64_(VOID *handle);
 
-//double ILP64
+// double ILP64
 /**  @ingroup group_api
      * @brief Generates a solution handle for the given input problem.\n
      * This generated handle is passed to the execute/destroy APIs.
@@ -361,4 +361,4 @@ EXPORT_SYM_DYN const CHAR *aoclfftz_version(VOID);
 }
 #endif
 
-#endif //AOCLFFTZ_H
+#endif // AOCLFFTZ_H

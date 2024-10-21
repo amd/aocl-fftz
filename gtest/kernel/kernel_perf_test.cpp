@@ -60,9 +60,9 @@ class PerformanceTest : public benchmark::Fixture {
         INTP in_stride = state.range(3);
         INTP out_stride = state.range(4);
         INTP v_in_stride = state.range(5) != 1 ? state.range(5) :
-                             radix * in_stride;
+                           radix * in_stride;
         INTP v_out_stride = state.range(6) != 1 ? state.range(6) :
-                             radix * out_stride;
+                            radix * out_stride;
         UINT8 is_bwd = false;
 
         // Radix-13 AVX versions are yet to be implemented
@@ -150,8 +150,10 @@ BENCHMARK_REGISTER_F(PerformanceTest, Kernel_d)
     })
     ->ArgsProduct({
                 benchmark::CreateDenseRange(2, 16, 1),
-                benchmark::CreateDenseRange(1, 7, 1), // Batch sizes to cover all possible cases in C & AVX-128/256
-                benchmark::CreateDenseRange(0, 5, 1), // aocl_fftz_kernel_type -> STANDARD/PERMUTED C/AVX
+                // Batch sizes to cover all possible cases in C & AVX-128/256
+                benchmark::CreateDenseRange(1, 7, 1),
+                // aocl_fftz_kernel_type -> STANDARD/PERMUTED C/AVX
+                benchmark::CreateDenseRange(0, 5, 1),
                 {IN_STRIDE}, {OUT_STRIDE},
                 {VEC_IN_STRIDE}, {VEC_OUT_STRIDE},
     });

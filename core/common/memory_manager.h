@@ -56,4 +56,4 @@ VOID destroy_solution(aoclfftz_solution_t *sol);
 VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme);
 VOID destroy_bluestein(aoclfftz_bluestein_t *bluestein);
 
-#endif //MEMORY_MANAGER_H
+#endif // MEMORY_MANAGER_H

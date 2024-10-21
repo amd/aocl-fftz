@@ -42,11 +42,11 @@
 #include "core/solvers/solver.h"
 
 // FIXME : do we need this anymore ?
-//Solver data structure that holds solver object/pointer and its type
+// Solver data structure that holds solver object/pointer and its type
 typedef struct ndim_solver
 {
     solver_t *ndim_solver;
     cost_analysis_t *cost;
 } ndim_solver_t;
 
-#endif //NDIM_SOLVER_H
+#endif // NDIM_SOLVER_H

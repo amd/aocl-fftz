@@ -35,7 +35,7 @@
  *
  *  @author S. Biplab Raut
  *  @author Varun Sanjay
-*  @author Jeya R
+ *  @author Jeya R
  */
 
 #include "core/kernels/kernel.h"
@@ -47,13 +47,18 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 24, 84, 40, 0, 0},
 ops_cycles_t get_ops_cnt_fft10c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
-static VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                        UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -71,13 +76,13 @@ static VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
     DOUBLE *in_i = (DOUBLE *)in_imag;
     DOUBLE *out_r = (DOUBLE *)out_real;
     DOUBLE *out_i = (DOUBLE *)out_imag;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = (strides->v_in_stride);
     INTP v_out_stride = (strides->v_out_stride);
     INTP cnt;
@@ -85,11 +90,11 @@ static VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
     for (cnt = 0; cnt < n; cnt++)
     {
         DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v6r, v6i, v7r,
-            v7i, v8r, v8i, v9r, v9i, v10r, v10i, v210r, v39r, v48r, v57r, v102i,
-            v93i, v84i, v75i, v102r, v93r, v84r, v75r, v210i, v39i, v48i, v57i,
-            tv1rr, tv1ii, tv2rr, tv2ii, tv3rr, tv3ii, tv4rr, tv4ii,tv1ir, tv2ir,
-            cv1rr, cv1ii, cv2rr, cv2ii, cv3rr, cv3ii, cv4rr, cv4ii, v16r, v16i;
-
+               v7i, v8r, v8i, v9r, v9i, v10r, v10i, v210r, v39r, v48r, v57r,
+               v102i, v93i, v84i, v75i, v102r, v93r, v84r, v75r, v210i, v39i,
+               v48i, v57i, tv1rr, tv1ii, tv2rr, tv2ii, tv3rr, tv3ii, tv4rr,
+               tv4ii, tv1ir, tv2ir, cv1rr, cv1ii, cv2rr, cv2ii, cv3rr, cv3ii,
+               cv4rr, cv4ii, v16r, v16i;
 
         // Input point 1: x(0)
         v1r = *in_r;
@@ -223,7 +228,6 @@ static VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
 
         *out_r = v16r + tv3rr;
         *out_i = v16i + tv3ii;
-
 
         // Output point 3: X(2)
         cv1rr = CRTM_10_1 * tv4rr;
@@ -265,8 +269,9 @@ static VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
 #endif
 }
 
-static VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                        UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -285,13 +290,13 @@ static VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
     FLOAT *in_i = (FLOAT *)in_imag;
     FLOAT *out_r = (FLOAT *)out_real;
     FLOAT *out_i = (FLOAT *)out_imag;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = (strides->v_in_stride);
     INTP v_out_stride = (strides->v_out_stride);
     INTP cnt;
@@ -299,11 +304,11 @@ static VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
     for (cnt = 0; cnt < n; cnt++)
     {
         FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v6r, v6i, v7r,
-            v7i, v8r, v8i, v9r, v9i, v10r, v10i, v210r, v39r, v48r, v57r, v102i,
-            v93i, v84i, v75i, v102r, v93r, v84r, v75r, v210i, v39i, v48i, v57i,
-            tv1rr, tv1ii, tv2rr, tv2ii, tv3rr, tv3ii, tv4rr, tv4ii,tv1ir, tv2ir,
-            cv1rr, cv1ii, cv2rr, cv2ii, cv3rr, cv3ii, cv4rr, cv4ii, v16r, v16i;
-
+              v7i, v8r, v8i, v9r, v9i, v10r, v10i, v210r, v39r, v48r, v57r,
+              v102i, v93i, v84i, v75i, v102r, v93r, v84r, v75r, v210i, v39i,
+              v48i, v57i, tv1rr, tv1ii, tv2rr, tv2ii, tv3rr, tv3ii, tv4rr,
+              tv4ii, tv1ir, tv2ir, cv1rr, cv1ii, cv2rr, cv2ii, cv3rr, cv3ii,
+              cv4rr, cv4ii, v16r, v16i;
 
         // Input point 1: x(0)
         v1r = *in_r;
@@ -437,7 +442,6 @@ static VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
 
         *out_r = v16r + tv3rr;
         *out_i = v16i + tv3ii;
-
 
         // Output point 3: X(2)
         cv1rr = CRTM_10_1 * tv4rr;
@@ -488,9 +492,13 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {
 ops_cycles_t get_ops_cnt_fft10c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
 const DOUBLE CRTM_10[RADIX_10][2] = {{1.0, 0.0},
@@ -504,8 +512,9 @@ const DOUBLE CRTM_10[RADIX_10][2] = {{1.0, 0.0},
                                      {0.309016994374947, 0.951056516295154},
                                      {0.809016994374947, 0.587785252292473}};
 
-static VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                        UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -797,8 +806,9 @@ static VOID fft10c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
 #endif
 }
 
-static VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                        UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -1092,9 +1102,15 @@ static VOID fft10c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
 kfft_ register_kernel_fft10c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return fft10c_fp32;
+    }
     else if (precision == DT_DOUBLE)
+    {
         return fft10c_fp64;
+    }
     else
+    {
         return NULL;
+    }
 }

@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file direct_solver.h
+/** @file direct_solver.h
  *
  *  @brief Interface header file of the Direct Solver
  *
@@ -41,11 +41,11 @@
 
 #include "core/solvers/solver.h"
 
-//Solver data structure that holds solver object/pointer and its type
+// Solver data structure that holds solver object/pointer and its type
 typedef struct direct_solver
 {
     solver_t *direct_solver;
     cost_analysis_t *cost;
 } direct_solver_t;
 
-#endif //DIRECT_SOLVER_H
+#endif // DIRECT_SOLVER_H

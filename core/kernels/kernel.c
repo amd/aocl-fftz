@@ -38,18 +38,18 @@
 
 #include "core/kernels/kernel_list.h"
 
- //Register all applicable solvers and kernels into the respective tables
-//based on the input problem and cpu arch flags
+// Register all applicable solvers and kernels into the respective tables
+// based on the input problem and cpu arch flags
 INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
                        INT32 dt, INT32 cpu_flags)
 {
     UINT32 num_kernels = 0;
     UINT32 num_list_kernels;
 
-    {//Only non-AVX ISA is supported, optimized C kernels applicable
+    { // Only non-AVX ISA is supported, optimized C kernels applicable
         for (num_list_kernels = 0;
-            num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
-            num_list_kernels++)
+             num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
+             num_list_kernels++)
         {
             if (kernels_c[num_list_kernels].k_register_kernel != NULL)
             {
@@ -57,24 +57,22 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
                     kernels_c[num_list_kernels].k_register_kernel(dt);
                 kertab[num_kernels].k_ops_cnt =
                     kernels_c[num_list_kernels].k_ops_cnt;
-                kertab[num_kernels].radix =
-                    kernels_c[num_list_kernels].radix;
-                kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_C_S; // float
-                kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_C_D; // double
+                kertab[num_kernels].radix = kernels_c[num_list_kernels].radix;
+                kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_C_S;
+                kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_C_D;
                 num_kernels++;
             }
         }
     }
 
 #ifdef ENABLE_AVX128
-    if (cpu_flags >= 2) //AVX ISA is supported, 128-bit SIMD kernels applicable
+    if (cpu_flags >= 2) // AVX ISA is supported, 128-bit SIMD kernels applicable
     {
         for (num_list_kernels = 0;
-            num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
-            num_list_kernels++)
+             num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
+             num_list_kernels++)
         {
-            if (kernels_avx128[num_list_kernels].k_register_kernel !=
-                NULL)
+            if (kernels_avx128[num_list_kernels].k_register_kernel != NULL)
             {
                 kertab[num_kernels].kfft =
                     kernels_avx128[num_list_kernels].k_register_kernel(dt);
@@ -82,8 +80,8 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
                     kernels_avx128[num_list_kernels].k_ops_cnt;
                 kertab[num_kernels].radix =
                     kernels_avx128[num_list_kernels].radix;
-                kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_128_S; // float
-                kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_128_D; // double
+                kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_128_S;
+                kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_128_D;
                 num_kernels++;
             }
         }
@@ -91,14 +89,13 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
 #endif
 
 #ifdef ENABLE_AVX256
-    if (cpu_flags >= 3) //AVX2 ISA is supported, 256-bit SIMD kernels applicable
+    if (cpu_flags >= 3) // AVX2 ISA supported; 256-bit SIMD kernels applicable
     {
         for (num_list_kernels = 0;
-            num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
-            num_list_kernels++)
+             num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
+             num_list_kernels++)
         {
-            if (kernels_avx256[num_list_kernels].k_register_kernel !=
-                NULL)
+            if (kernels_avx256[num_list_kernels].k_register_kernel != NULL)
             {
                 kertab[num_kernels].kfft =
                     kernels_avx256[num_list_kernels].k_register_kernel(dt);
@@ -106,8 +103,8 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
                     kernels_avx256[num_list_kernels].k_ops_cnt;
                 kertab[num_kernels].radix =
                     kernels_avx256[num_list_kernels].radix;
-                kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_256_S; // float
-                kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_256_D; // double
+                kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_256_S;
+                kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_256_D;
                 num_kernels++;
             }
         }
@@ -115,14 +112,13 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
 #endif
 
 #ifdef ENABLE_AVX512
-    if (cpu_flags >= 4) //AVX512 ISA is supported, 512-bit SIMD kernels applicable
+    if (cpu_flags >= 4) // AVX512 ISA supported, 512-bit SIMD kernels applicable
     {
         for (num_list_kernels = 0;
-            num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
-            num_list_kernels++)
+             num_list_kernels < NUM_KERNELS_IN_EACH_CATEGORY;
+             num_list_kernels++)
         {
-            if (kernels_avx512[num_list_kernels].k_register_kernel !=
-                NULL)
+            if (kernels_avx512[num_list_kernels].k_register_kernel != NULL)
             {
                 kertab[num_kernels].kfft =
                     kernels_avx512[num_list_kernels].k_register_kernel(dt);
@@ -130,8 +126,8 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE],
                     kernels_avx512[num_list_kernels].k_ops_cnt;
                 kertab[num_kernels].radix =
                     kernels_avx512[num_list_kernels].radix;
-                kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_512_S; // float
-                kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_512_D; // double
+                kertab[num_kernels].sets[DT_FLOAT - 2] = NUM_SETS_512_S;
+                kertab[num_kernels].sets[DT_DOUBLE - 2] = NUM_SETS_512_D;
                 num_kernels++;
             }
         }

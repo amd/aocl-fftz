@@ -51,7 +51,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
-                            measure_stats;
+                       measure_stats;
     UINT32 radix = 0;
     INT32 ker_cat = 0;
     UINT32 selector_mode =
@@ -60,28 +60,32 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     cur_sel = alloc_selector(vec_rank, dim_rank);
     if (cur_sel == NULL)
+    {
         return SELECTOR_FAILURE;
+    }
 
-    //copy solution object from sel to cur_sel
+    // copy solution object from sel to cur_sel
     COPY_SOLUTION_OBJ(cur_sel->solution, sel->solution);
 
     for (ker_cat = 0; ker_cat < NUM_KERNELS_IN_TABLE; ker_cat++)
     {
         radix = kertab[ker_cat].radix;
 
-        if (radix == 0) //End of search for suitable kernels in the list
+        if (radix == 0) // End of search for suitable kernels in the list
+        {
             break;
+        }
 
         if (radix == n)
         {
 #ifdef AOCL_ENABLE_LOG
             AOCLFFTZ_LOG_FORMATTED(TRACE, logger_mode,
-                                "Evaluating Radix-%td kernel", n);
+                                   "Evaluating Radix-%td kernel", n);
 #endif
             cur_sel->solution->solver->kernel_r = kertab[ker_cat].kfft;
             cur_sel->solution->solver->kernel_m = NULL;
 
-            //call direct solver
+            // call direct solver
             ret = setup_direct_solver(cur_sel->solution,
                                       cur_sel->cost_analysis,
                                       &kertab[ker_cat]);
@@ -92,21 +96,17 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 {
                     if (!sel->cost_analysis->ops)
                     {
-                        sel->cost_analysis->ops =
-                            cur_sel->cost_analysis->ops;
-                        sel->cost_analysis->time =
-                            cur_sel->cost_analysis->time;
-                        //copy solution object from cur_sel to sel
+                        sel->cost_analysis->ops = cur_sel->cost_analysis->ops;
+                        sel->cost_analysis->time = cur_sel->cost_analysis->time;
+                        // copy solution object from cur_sel to sel
                         COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
                         COPY_STRIDES(sel->solution, cur_sel->solution);
                     }
                     if (cur_sel->cost_analysis->ops < sel->cost_analysis->ops)
                     {
-                        sel->cost_analysis->ops =
-                            cur_sel->cost_analysis->ops;
-                        sel->cost_analysis->time =
-                            cur_sel->cost_analysis->time;
-                        //copy solution object from cur_sel to sel
+                        sel->cost_analysis->ops = cur_sel->cost_analysis->ops;
+                        sel->cost_analysis->time = cur_sel->cost_analysis->time;
+                        // copy solution object from cur_sel to sel
                         COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
                         COPY_STRIDES(sel->solution, cur_sel->solution);
                     }
@@ -115,22 +115,20 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 {
                     if (cur_sel->cost_analysis->time < sel->cost_analysis->time)
                     {
-                        sel->cost_analysis->ops =
-                            cur_sel->cost_analysis->ops;
-                        sel->cost_analysis->time =
-                            cur_sel->cost_analysis->time;
-                        //copy solution object from cur_sel to sel
+                        sel->cost_analysis->ops = cur_sel->cost_analysis->ops;
+                        sel->cost_analysis->time = cur_sel->cost_analysis->time;
+                        // copy solution object from cur_sel to sel
                         COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
                         COPY_STRIDES(sel->solution, cur_sel->solution);
                     }
                 }
                 if (stats_mode)
                 {
-                    //capture stats
+                    // capture stats
                 }
-            } //if (SELECTOR_SUCCESS == ret)
-        } //if (radix == n)
-    } //End of FOR loop
+            } // if (SELECTOR_SUCCESS == ret)
+        } // if (radix == n)
+    } // End of FOR loop
 
     destroy_selector(cur_sel);
 

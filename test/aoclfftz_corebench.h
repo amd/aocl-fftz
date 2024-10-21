@@ -166,12 +166,11 @@ typedef struct
     DOUBLE max_mag;
     INTP *max_err_coords;
     INTP *first_err_coords;
-}aoclfftz_bench_error_t;
+} aoclfftz_bench_error_t;
 
-
-VOID *(*setup_problem) (aoclfftz_bench_params_t *params);
-INT32 (*aoclfftz_execute) (VOID *handle);
-VOID (*aoclfftz_destroy) (VOID *handle);
+VOID *(*setup_problem)(aoclfftz_bench_params_t *params);
+INT32 (*aoclfftz_execute)(VOID *handle);
+VOID (*aoclfftz_destroy)(VOID *handle);
 
 // Function declarations
 

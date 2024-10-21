@@ -43,15 +43,15 @@
 
 #define IN_MEMORY_TWIDDLE_FACTORS 0
 
-//Error return codes related to Twiddle factors multiplication
-//Add more codes at the top
+// Error return codes related to Twiddle factors multiplication
+// Add more codes at the top
 typedef enum
 {
     TW_FAILURE = -1,
-    TW_SUCCESS         //Successful operation
+    TW_SUCCESS         // Successful operation
 } twiddle_status;
 
 INT32 twiddle_multiplier(aoclfftz_solution_t *sol);
 INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol);
 
-#endif //TWIDDLE_H
+#endif // TWIDDLE_H

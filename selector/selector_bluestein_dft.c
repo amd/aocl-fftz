@@ -65,23 +65,31 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     aoclfftz_selector_t *next_sel = NULL;
     next_sel = alloc_selector(vec_rank, dim_rank);
     if (next_sel == NULL)
+    {
         goto exit_bluestein_dft;
+    }
 
     // Allocate in, out buffers for next sol and
     // Bluestein sequence B buffers for cur sol
     ret = setup_bluestein_solver(sel->solution, next_sel->solution, m);
     if (ret != SELECTOR_SUCCESS)
+    {
         goto exit_bluestein_dft;
+    }
 
     // Initialize Bluestein sequence B
     ret = prepare_bluestein_sequence(sel->solution, m);
     if (ret != BLUESTEIN_SUCCESS)
+    {
         goto exit_bluestein_dft;
+    }
 
     // Invoke CT/direct selectors of extended length `m`
     ret = setup_dft_(next_sel, kertab);
     if (ret != SELECTOR_SUCCESS)
+    {
         goto exit_bluestein_dft;
+    }
 
     sel->solution->next_sol = next_sel->solution;
 

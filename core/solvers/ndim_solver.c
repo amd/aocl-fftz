@@ -75,11 +75,11 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
 
     COPY_SOLUTION_OBJ_WO_DIMS(outer_dim_sol, sol);
 
-    // In the context of an out-of-place problem, outer_dim_sol has to operate on the
-    // output buffer (populated by n_minus1_sol's result), perform computation and store the result
-    // back in same buffer, typically like an inplace problem.
-    // So, it is necessary to convert the the out-to-place problem to in-place, for the
-    // in & out strides to be properly set.
+    // In the context of an out-of-place problem, outer_dim_sol has to operate
+    // on the output buffer (populated by n_minus1_sol's result), perform
+    // computation and store the result back in same buffer, typically like an
+    // inplace problem. So, it is necessary to convert the the out-to-place
+    // problem to in-place, for the in & out strides to be properly set.
     SET_INPLACE(outer_dim_sol->decomp_scheme->flags);
 
     outer_dim_sol->decomp_scheme->dim_rank = 1;

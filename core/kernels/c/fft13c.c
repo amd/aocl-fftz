@@ -50,9 +50,13 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 68, 176, 52, 0, 0},
 ops_cycles_t get_ops_cnt_fft13c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
 static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
@@ -66,13 +70,13 @@ static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     DOUBLE *in_i = (DOUBLE *)in_imag;
     DOUBLE *out_r = (DOUBLE *)out_real;
     DOUBLE *out_i = (DOUBLE *)out_imag;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = (strides->v_in_stride);
     INTP v_out_stride = (strides->v_out_stride);
     INTP cnt;
@@ -114,27 +118,27 @@ static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         DOUBLE vi[13];
 
         DOUBLE tvrr_1o, tvii_1o, tvrr_2o, tvii_2o, tvri_2o, tvir_2o, tvri_1o,
-            tvir_1o, tvrr_5o, tvri_5o, tvir_5o, tvii_5o, cv1rr, cv1ri, cv1ir,
-            cv1ii, cv2rr, cv2ri, cv2ir, cv2ii, tv2, tv3, tv4, tv5, tv7, tv8,
-            v711r, v711i;
+               tvir_1o, tvrr_5o, tvri_5o, tvir_5o, tvii_5o, cv1rr, cv1ri, cv1ir,
+               cv1ii, cv2rr, cv2ri, cv2ir, cv2ii, tv2, tv3, tv4, tv5, tv7, tv8,
+               v711r, v711i;
 
         {
-            DOUBLE cv1, cv13, cv9, cv17, cv7, cv3, cv15, cv11, cv19, cv5,
-                cv4, cv16, cv12, cv20, cv6, cv2, cv14, cv10, cv18, cv8, ad6,
-                ad5, ad3, ad1, sb6, sb5, ad2, sb2, ad4, sb4, sb1, sb3, v17r,
-                v71r, v17i, v71i;
+            DOUBLE cv1, cv13, cv9, cv17, cv7, cv3, cv15, cv11, cv19, cv5, cv4,
+                   cv16, cv12, cv20, cv6, cv2, cv14, cv10, cv18, cv8, ad6, ad5,
+                   ad3, ad1, sb6, sb5, ad2, sb2, ad4, sb4, sb1, sb3, v17r, v71r,
+                   v17i, v71i;
 
             DOUBLE adr1_DFT1, adr2_DFT1, adr3_DFT1, adr4_DFT1, adr5_DFT1,
-                adi1_DFT1, adi2_DFT1, adi3_DFT1, adi4_DFT1, adi5_DFT1,
-                sbi1_DFT1, sbi2_DFT1, sbi3_DFT1, sbi4_DFT1, sbi5_DFT1,
-                sbr1_DFT1, sbr2_DFT1, sbr3_DFT1, sbr4_DFT1, sbr5_DFT1,
-                cv1rr_DFT1, cv1ri_DFT1, cv1ir_DFT1, cv1ii_DFT1, cv2rr_DFT1,
-                cv2ri_DFT1, cv2ir_DFT1, cv2ii_DFT1, adr24_DFT1, adi24_DFT1,
-                adr15_DFT1, adi15_DFT1, sbi15_DFT1, sbi51_DFT1, sbr15_DFT1,
-                sbr51_DFT1, sbi24_DFT1, sbr24_DFT1, v17r_DFT1, v71r_DFT1,
-                v17i_DFT1, v71i_DFT1, tv1_DFT1, tv2_DFT1, tv3_DFT1, tv4_DFT1,
-                tv5_DFT1, tv6_DFT1, tv7_DFT1, tv8_DFT1, v711r_DFT1, v711i_DFT1,
-                tvii_DFT1, tvrr_DFT1, tvii_2_DFT1, tvrr_2_DFT1;
+                   adi1_DFT1, adi2_DFT1, adi3_DFT1, adi4_DFT1, adi5_DFT1,
+                   sbi1_DFT1, sbi2_DFT1, sbi3_DFT1, sbi4_DFT1, sbi5_DFT1,
+                   sbr1_DFT1, sbr2_DFT1, sbr3_DFT1, sbr4_DFT1, sbr5_DFT1,
+                   cv1rr_DFT1, cv1ri_DFT1, cv1ir_DFT1, cv1ii_DFT1, cv2rr_DFT1,
+                   cv2ri_DFT1, cv2ir_DFT1, cv2ii_DFT1, adr24_DFT1, adi24_DFT1,
+                   adr15_DFT1, adi15_DFT1, sbi15_DFT1, sbi51_DFT1, sbr15_DFT1,
+                   sbr51_DFT1, sbi24_DFT1, sbr24_DFT1, v17r_DFT1, v71r_DFT1,
+                   v17i_DFT1, v71i_DFT1, tv1_DFT1, tv2_DFT1, tv3_DFT1, tv4_DFT1,
+                   tv5_DFT1, tv6_DFT1, tv7_DFT1, tv8_DFT1, v711r_DFT1, v711i_DFT1,
+                   tvii_DFT1, tvrr_DFT1, tvii_2_DFT1, tvrr_2_DFT1;
 
             {
                 vr[1] = in_r[in_strides[1]];
@@ -355,7 +359,7 @@ static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                 tvir = sbr51_DFT1 - sbr24_DFT1;
 
                 cv17 = DGC_8 * tvrr - CRTM_13_5 * tvir;
-                cv18 = CRTM_13_4 * tvri  + DGC_9 * tvii;
+                cv18 = CRTM_13_4 * tvri + DGC_9 * tvii;
                 cv19 = DGC_8 * tvii - CRTM_13_5 * tvri;
                 cv20 = -CRTM_13_4 * tvir - DGC_9 * tvrr;
             }
@@ -476,13 +480,13 @@ static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     FLOAT *in_i = (FLOAT *)in_imag;
     FLOAT *out_r = (FLOAT *)out_real;
     FLOAT *out_i = (FLOAT *)out_imag;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = (strides->v_in_stride);
     INTP v_out_stride = (strides->v_out_stride);
     INTP cnt;
@@ -524,27 +528,27 @@ static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         FLOAT vi[13];
 
         FLOAT tvrr_1o, tvii_1o, tvrr_2o, tvii_2o, tvri_2o, tvir_2o, tvri_1o,
-            tvir_1o, tvrr_5o, tvri_5o, tvir_5o, tvii_5o, cv1rr, cv1ri, cv1ir,
-            cv1ii, cv2rr, cv2ri, cv2ir, cv2ii, tv2, tv3, tv4, tv5, tv7, tv8,
-            v711r, v711i;
+              tvir_1o, tvrr_5o, tvri_5o, tvir_5o, tvii_5o, cv1rr, cv1ri, cv1ir,
+              cv1ii, cv2rr, cv2ri, cv2ir, cv2ii, tv2, tv3, tv4, tv5, tv7, tv8,
+              v711r, v711i;
 
         {
-            FLOAT cv1, cv13, cv9, cv17, cv7, cv3, cv15, cv11, cv19, cv5,
-                cv4, cv16, cv12, cv20, cv6, cv2, cv14, cv10, cv18, cv8, ad6,
-                ad5, ad3, ad1, sb6, sb5, ad2, sb2, ad4, sb4, sb1, sb3, v17r,
-                v71r, v17i, v71i;
+            FLOAT cv1, cv13, cv9, cv17, cv7, cv3, cv15, cv11, cv19, cv5, cv4,
+                  cv16, cv12, cv20, cv6, cv2, cv14, cv10, cv18, cv8, ad6, ad5,
+                  ad3, ad1, sb6, sb5, ad2, sb2, ad4, sb4, sb1, sb3, v17r, v71r,
+                  v17i, v71i;
 
             FLOAT adr1_DFT1, adr2_DFT1, adr3_DFT1, adr4_DFT1, adr5_DFT1,
-                adi1_DFT1, adi2_DFT1, adi3_DFT1, adi4_DFT1, adi5_DFT1,
-                sbi1_DFT1, sbi2_DFT1, sbi3_DFT1, sbi4_DFT1, sbi5_DFT1,
-                sbr1_DFT1, sbr2_DFT1, sbr3_DFT1, sbr4_DFT1, sbr5_DFT1,
-                cv1rr_DFT1, cv1ri_DFT1, cv1ir_DFT1, cv1ii_DFT1, cv2rr_DFT1,
-                cv2ri_DFT1, cv2ir_DFT1, cv2ii_DFT1, adr24_DFT1, adi24_DFT1,
-                adr15_DFT1, adi15_DFT1, sbi15_DFT1, sbi51_DFT1, sbr15_DFT1,
-                sbr51_DFT1, sbi24_DFT1, sbr24_DFT1, v17r_DFT1, v71r_DFT1,
-                v17i_DFT1, v71i_DFT1, tv1_DFT1, tv2_DFT1, tv3_DFT1, tv4_DFT1,
-                tv5_DFT1, tv6_DFT1, tv7_DFT1, tv8_DFT1, v711r_DFT1, v711i_DFT1,
-                tvii_DFT1, tvrr_DFT1, tvii_2_DFT1, tvrr_2_DFT1;
+                  adi1_DFT1, adi2_DFT1, adi3_DFT1, adi4_DFT1, adi5_DFT1,
+                  sbi1_DFT1, sbi2_DFT1, sbi3_DFT1, sbi4_DFT1, sbi5_DFT1,
+                  sbr1_DFT1, sbr2_DFT1, sbr3_DFT1, sbr4_DFT1, sbr5_DFT1,
+                  cv1rr_DFT1, cv1ri_DFT1, cv1ir_DFT1, cv1ii_DFT1, cv2rr_DFT1,
+                  cv2ri_DFT1, cv2ir_DFT1, cv2ii_DFT1, adr24_DFT1, adi24_DFT1,
+                  adr15_DFT1, adi15_DFT1, sbi15_DFT1, sbi51_DFT1, sbr15_DFT1,
+                  sbr51_DFT1, sbi24_DFT1, sbr24_DFT1, v17r_DFT1, v71r_DFT1,
+                  v17i_DFT1, v71i_DFT1, tv1_DFT1, tv2_DFT1, tv3_DFT1, tv4_DFT1,
+                  tv5_DFT1, tv6_DFT1, tv7_DFT1, tv8_DFT1, v711r_DFT1,
+                  v711i_DFT1, tvii_DFT1, tvrr_DFT1, tvii_2_DFT1, tvrr_2_DFT1;
 
             {
                 vr[1] = in_r[in_strides[1]];
@@ -765,7 +769,7 @@ static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                 tvir = sbr51_DFT1 - sbr24_DFT1;
 
                 cv17 = DGC_8 * tvrr - CRTM_13_5 * tvir;
-                cv18 = CRTM_13_4 * tvri  + DGC_9 * tvii;
+                cv18 = CRTM_13_4 * tvri + DGC_9 * tvii;
                 cv19 = DGC_8 * tvii - CRTM_13_5 * tvri;
                 cv20 = -CRTM_13_4 * tvir - DGC_9 * tvrr;
             }
@@ -884,9 +888,13 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {
 ops_cycles_t get_ops_cnt_fft13c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
 const DOUBLE CRTM_13[RADIX_13][2] = {{1.0, 0.0},
@@ -903,8 +911,9 @@ const DOUBLE CRTM_13[RADIX_13][2] = {{1.0, 0.0},
                                      {0.568064746731156, 0.822983865893657},
                                      {0.88545602565321, 0.464723172043768}};
 
-static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                        UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -1346,8 +1355,9 @@ static VOID fft13c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
 #endif
 }
 
-static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                        UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -1794,9 +1804,15 @@ static VOID fft13c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
 kfft_ register_kernel_fft13c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return fft13c_fp32;
+    }
     else if (precision == DT_DOUBLE)
+    {
         return fft13c_fp64;
+    }
     else
+    {
         return NULL;
+    }
 }

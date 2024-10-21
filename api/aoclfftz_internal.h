@@ -51,13 +51,13 @@
 #define AOCLFFTZ_2_PI 6.2831853071795864769252867665590057683943388
 #define AOCLFFTZ_2_PIf 6.2831853071795864769252867665590057683943388f
 
-#define NUM_PRECISIONS 2 //Float, Double : Can be increased to add FP16 or FP8
+#define NUM_PRECISIONS 2 // Float, Double : Can be increased to add FP16 or FP8
 // 0, 1 reserved for FP8 & FP16
 #define DT_FLOAT 2
 #define DT_DOUBLE 3
-#define MAX_GUARANTEED_CACHEABLE_SIZE (2097152) //2MB
+#define MAX_GUARANTEED_CACHEABLE_SIZE (2097152) // 2MB
 
-//Set and Get Flags bits
+// Set and Get Flags bits
 #define IS_OUT_OF_PLACE(flags) (flags & 0x1)
 #define IS_OUT_OF_ORDER(flags) (flags & 0x2)
 #define FFT_DIR(flags) ((flags & 0x4) >> 2)
@@ -68,18 +68,18 @@
 #define DT_PRECISION_BYTES(dt_prec) (1 << dt_prec)
 
 #define SET_SELECTOR_MODE(flags, val)                                          \
+{                                                                              \
+    if (val == 0)                                                              \
     {                                                                          \
-        if (val == 0)                                                          \
-        {                                                                      \
-            flags &= (~(1 << 16));                                             \
-        }                                                                      \
-        else                                                                   \
-        {                                                                      \
-            flags |= (1 << 16);                                                \
-        }                                                                      \
-    }
+        flags &= (~(1 << 16));                                                 \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        flags |= (1 << 16);                                                    \
+    }                                                                          \
+}
 #define GET_SELECTOR_MODE(flags) ((flags << 15) >> 31)
-//Move the base address of void pointer by adding offset
+// Move the base address of void pointer by adding offset
 #define MOVE_ADDR(base_addr, offset) (VOID *)((CHAR *)base_addr + offset)
 
 #define NUM_FFT_DIRS 2
@@ -89,17 +89,17 @@
 #define NUM_KERNELS_IN_TABLE 256
 #define NUM_KERNEL_CATEGORIES 4
 #define NUM_KERNELS_IN_EACH_CATEGORY 64
-#define DATA_STRIDE 2 //Offset to next data, 2 for complex number
+#define DATA_STRIDE 2 // Offset to next data, 2 for complex number
 
-//AMD ZEN CPU Instruction approximated latency cycles
+// AMD ZEN CPU Instruction approximated latency cycles
 #define AMD_ZEN_FP_FMA_CYCLES 4
 #define AMD_ZEN_FP_MUL_CYCLES 3
 #define AMD_ZEN_FP_ADD_CYCLES 1
-#define AMD_ZEN_FP_MOVE_CYCLES 1//Need to fix this after more experiments
+#define AMD_ZEN_FP_MOVE_CYCLES 1 // Need to fix this after more experiments
 #define AMD_ZEN_FP_PERM_CYCLES 1
 #define AMD_ZEN_FP_OTHER_CYCLES 1
 
-//Forward declarations
+// Forward declarations
 typedef struct aoclfftz_solution aoclfftz_solution_t;
 typedef struct aoclfftz_generic_solver aoclfftz_generic_solver_t;
 typedef struct aoclfftz_strides aoclfftz_strides_t;
@@ -107,62 +107,63 @@ typedef struct aoclfftz_twiddle aoclfftz_twiddle_t;
 typedef struct aoclfftz_bluestein aoclfftz_bluestein_t;
 typedef struct aoclfftz_executor aoclfftz_executor_t;
 
-//Computational cost analysis of solution of an executed problem/sub-problem
+// Computational cost analysis of solution of an executed problem/sub-problem
 typedef struct cost_analysis
 {
     INT64 ops;
     INT64 time;
 } cost_analysis_t;
 
-//Kernel template function pointer for performing FFT
+// Kernel template function pointer for performing FFT
 typedef VOID (*kfft_) (VOID *in_real, VOID *in_imag,
                        VOID *out_real, VOID *out_imag,
                        INTP n,
                        aoclfftz_strides_t *strides, UINT8 flag);
 
-//Solver execute template function pointer
-typedef INT32 (*dft_solver_) (aoclfftz_solution_t *solution);
+// Solver execute template function pointer
+typedef INT32 (*dft_solver_)(aoclfftz_solution_t *solution);
 
-//Executor function pointer
-typedef INT32 (*execute_) (aoclfftz_executor_t *executor_obj);
+// Executor function pointer
+typedef INT32 (*execute_)(aoclfftz_executor_t *executor_obj);
 
-//Base data structure acting as an abstract class that is derived by the
-//top-level DFT data structure and implemented by all the solvers
+// Base data structure acting as an abstract class that is derived by the
+// top-level DFT data structure and implemented by all the solvers
 typedef struct aoclfftz_generic_solver
 {
     INT32 solver_type;
     dft_solver_ execute_solver;
-    VOID (*destroy_solver) (aoclfftz_solution_t *solution);
+    VOID (*destroy_solver)(aoclfftz_solution_t *solution);
     kfft_ kernel_r;
     kfft_ kernel_m;
 } aoclfftz_generic_solver_t;
 
-//Holds info on the main problem or decomposed sub-problem in current dimension
+// Holds info on the main problem or decomposed sub-problem in current dimension
 typedef struct aoclfftz_decomp_scheme
 {
     INT32 vec_rank;
     INT32 dim_rank;
     aoclfftz_dim_t_64_ *dims;
     aoclfftz_dim_t_64_ *vecs;
-    //VOID *in;
+    // VOID *in;
     VOID *in_real;
     VOID *in_imag;
-    //VOID *out;
+    // VOID *out;
     VOID *out_real;
     VOID *out_imag;
     aoclfftz_cntrl_params_t *cntrl_params;
     aoclfftz_smp_pfft_t *pthr_fft;
-    //Application side flag bits =>
-    //  in/out-of place:0-bit, in/out-of order:1-bit, dir:2-bit, real/comp:3-bit..
-    //Library side internal flag bits =>
+    // Application side flag bits =>
+    //  in/out-of place:0-bit, in/out-of order:1-bit, dir:2-bit,
+    //  real/comp:3-bit..
+    // Library side internal flag bits =>
     //  datatype:30-31 bits for precision
     //  2-bits: 64-bit(11), 32-bit(10), 16-bit(01), 8-bit(00)
     //  selector mode: 16th-bit
     UINT32 flags;
 } aoclfftz_decomp_scheme_t;
 
-//Holds element-wise and radix-wise strides of the sub-problem decomposition
-//that is acted upon by a specific kernel
+// Holds element-wise and radix-wise strides of the sub-problem decomposition
+// that is acted upon by a specific kernel
 typedef struct aoclfftz_strides
 {
     INTP *in_strides;
@@ -171,16 +172,16 @@ typedef struct aoclfftz_strides
     INTP v_out_stride;
 } aoclfftz_strides_t;
 
-//Holds twiddle factors used by a specific kernel for the given problem
+// Holds twiddle factors used by a specific kernel for the given problem
 typedef struct aoclfftz_twiddle
 {
     VOID *TW;
 } aoclfftz_twiddle_t;
 
-//Holds bluestein sequence B used by the bluestein solver
-//When FFT is computed for B, it will be stored in B_out and
-//is_B_out_valid will be set to 1.
-//Also holds the internal input and output buffers.
+// Holds bluestein sequence B used by the bluestein solver
+// When FFT is computed for B, it will be stored in B_out and
+// is_B_out_valid will be set to 1.
+// Also holds the internal input and output buffers.
 typedef struct aoclfftz_bluestein
 {
     VOID *B;
@@ -190,8 +191,8 @@ typedef struct aoclfftz_bluestein
     UINT8 is_B_out_valid;
 } aoclfftz_bluestein_t;
 
-//Solution data structure that is returned as a handle by the setup API and
-//used by the execute API.
+// Solution data structure that is returned as a handle by the setup API and
+// used by the execute API.
 typedef struct aoclfftz_solution
 {
     aoclfftz_generic_solver_t *solver;
@@ -199,40 +200,40 @@ typedef struct aoclfftz_solution
     aoclfftz_strides_t *strides;
     aoclfftz_twiddle_t *twiddle;
     aoclfftz_bluestein_t *bluestein;
-    aoclfftz_solution_t *nd_sol; // holds one of the solutions of ND, NULL otherwise
+    aoclfftz_solution_t *nd_sol; // holds one of the solutions of ND, else NULL
     aoclfftz_solution_t *next_sol;
 } aoclfftz_solution_t;
 
-//float LP64
-//DFT data structure that holds all other module objects and is the top-level
-//data structure of the library.
+// float LP64
+// DFT data structure that holds all other module objects and is the top-level
+// data structure of the library.
 typedef struct
 {
     aoclfftz_prob_desc_f *prob_desc;
     aoclfftz_solution_t *sol_handle;
 } aoclfftz_dft_f;
 
-//double LP64
-//DFT data structure that holds all other module objects and is the top-level
-//data structure of the library.
+// double LP64
+// DFT data structure that holds all other module objects and is the top-level
+// data structure of the library.
 typedef struct
 {
     aoclfftz_prob_desc_d *prob_desc;
     aoclfftz_solution_t *sol_handle;
 } aoclfftz_dft_d;
 
-//float ILP64
-//DFT data structure that holds all other module objects and is the top-level
-//data structure of the library.
+// float ILP64
+// DFT data structure that holds all other module objects and is the top-level
+// data structure of the library.
 typedef struct
 {
     aoclfftz_prob_desc_f_64_ *prob_desc;
     aoclfftz_solution_t *sol_handle;
 } aoclfftz_dft_f_64_;
 
-//double LP64
-//DFT data structure that holds all other module objects and is the top-level
-//data structure of the library.
+// double LP64
+// DFT data structure that holds all other module objects and is the top-level
+// data structure of the library.
 typedef struct
 {
     aoclfftz_prob_desc_d_64_ *prob_desc;
@@ -241,4 +242,4 @@ typedef struct
 
 execute_ register_execute_dft(VOID);
 
-#endif //AOCLFFTZ_INTERNAL_H
+#endif // AOCLFFTZ_INTERNAL_H

@@ -52,10 +52,10 @@
  * Operations : 2 MOV(load)
  */
 #define GATHER2_128_S(base, offset, dest)                                      \
-    {                                                                          \
-        dest = _mm_loadu_ps(base);                                             \
-        dest = _mm_loadh_pi(dest, (__m64 *)(base + offset));                   \
-    }
+{                                                                              \
+    dest = _mm_loadu_ps(base);                                                 \
+    dest = _mm_loadh_pi(dest, (__m64 *)(base + offset));                       \
+}
 
 /**
  * @brief store two complex numbers(real,imaginary) of 32 bit single precision
@@ -64,11 +64,11 @@
  * Operations : 2 MOV(store)
  */
 #define SCATTER2_128_S(base, offset, src)                                      \
-    {                                                                          \
-        _mm_storel_pi((__m64 *)base, src);                                     \
-        base += offset;                                                        \
-        _mm_storeh_pi((__m64 *)base, src);                                     \
-    }
+{                                                                              \
+    _mm_storel_pi((__m64 *)base, src);                                         \
+    base += offset;                                                            \
+    _mm_storeh_pi((__m64 *)base, src);                                         \
+}
 
 /**
  * @brief load a complex number(real,imaginary) of 32 bit single precision
@@ -77,9 +77,9 @@
  * Operation : 1 MOV(load)
  */
 #define LD_LOW_128_S(base, dest)                                               \
-    {                                                                          \
-        dest = _mm_loadl_pi(_mm_setzero_ps(), (__m64 *)base);                  \
-    }
+{                                                                              \
+    dest = _mm_loadl_pi(_mm_setzero_ps(), (__m64 *)base);                      \
+}
 
 /**
  * @brief store a complex number(real,imaginary) of 32 bit single precision
@@ -88,9 +88,9 @@
  * Operation : 1 MOV(store)
  */
 #define ST_LOW_128_S(base, src)                                                \
-    {                                                                          \
-        _mm_storel_pi((__m64 *)base, src);                                     \
-    }
+{                                                                              \
+    _mm_storel_pi((__m64 *)base, src);                                         \
+}
 
 /**
  * @brief load a complex number(real,imaginary) of 64 bit double precision
@@ -99,9 +99,9 @@
  * Operation : 1 MOV(load)
  */
 #define LD_128_D(base, dest)                                                   \
-    {                                                                          \
-        dest = _mm_loadu_pd(base);                                             \
-    }
+{                                                                              \
+    dest = _mm_loadu_pd(base);                                                 \
+}
 
 /**
  * @brief store a complex number(real,imaginary) of 64 bit double precision
@@ -110,9 +110,9 @@
  * Operation : 1 MOV(store)
  */
 #define ST_128_D(base, src)                                                    \
-    {                                                                          \
-        _mm_storeu_pd(base, src);                                              \
-    }
+{                                                                              \
+    _mm_storeu_pd(base, src);                                                  \
+}
 
 /**
  * @brief load four complex numbers(real,imaginary) of 32 bit single precision
@@ -122,18 +122,18 @@
  * as it will be a compile time operation.
  */
 #define GATHER4_256_S(base, offset, dest)                                      \
-    {                                                                          \
-        __m128 _low, _high, _tmp;                                              \
-        _low = _mm_loadu_ps(base);                                             \
-        base += offset;                                                        \
-        _tmp = _mm_loadu_ps(base);                                             \
-        _low = _mm_shuffle_ps(_low, _tmp, 68);                                 \
-        base += offset;                                                        \
-        _high = _mm_loadu_ps(base);                                            \
-        base += offset;                                                        \
-        _high = _mm_loadh_pi(_high, (__m64 *)base);                            \
-        dest = _mm256_insertf128_ps(_mm256_castps128_ps256(_low),_high,1);     \
-    }
+{                                                                              \
+    __m128 _low, _high, _tmp;                                                  \
+    _low = _mm_loadu_ps(base);                                                 \
+    base += offset;                                                            \
+    _tmp = _mm_loadu_ps(base);                                                 \
+    _low = _mm_shuffle_ps(_low, _tmp, 68);                                     \
+    base += offset;                                                            \
+    _high = _mm_loadu_ps(base);                                                \
+    base += offset;                                                            \
+    _high = _mm_loadh_pi(_high, (__m64 *)base);                                \
+    dest = _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _high, 1);       \
+}
 
 /**
  * @brief store four complex numbers(real,imaginary) of 32 bit single precision
@@ -143,17 +143,17 @@
  * will be a compile time operation.
  */
 #define SCATTER4_256_S(base, offset, src)                                      \
-    {                                                                          \
-        __m128 _high = _mm256_extractf128_ps(src, 1);                          \
-        __m128 _low = _mm256_castps256_ps128(src);                             \
-        _mm_storel_pi((__m64 *)base, _low);                                    \
-        base += offset;                                                        \
-        _mm_storeh_pi((__m64 *)base, _low);                                    \
-        base += offset;                                                        \
-        _mm_storel_pi((__m64 *)base, _high);                                   \
-        base += offset;                                                        \
-        _mm_storeh_pi((__m64 *)base, _high);                                   \
-    }
+{                                                                              \
+    __m128 _high = _mm256_extractf128_ps(src, 1);                              \
+    __m128 _low = _mm256_castps256_ps128(src);                                 \
+    _mm_storel_pi((__m64 *)base, _low);                                        \
+    base += offset;                                                            \
+    _mm_storeh_pi((__m64 *)base, _low);                                        \
+    base += offset;                                                            \
+    _mm_storel_pi((__m64 *)base, _high);                                       \
+    base += offset;                                                            \
+    _mm_storeh_pi((__m64 *)base, _high);                                       \
+}
 
 /**
  * @brief load two complex numbers(real,imaginary) of 64 bit double precision
@@ -163,13 +163,13 @@
  * will be a compile time operation.
  */
 #define GATHER2_256_D(base, offset, dest)                                      \
-    {                                                                          \
-        __m128d _low, _high;                                                   \
-        _low = _mm_loadu_pd(base);                                             \
-        base += offset;                                                        \
-        _high = _mm_loadu_pd(base);                                            \
-        dest = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low),_high,1);     \
-    }
+{                                                                              \
+    __m128d _low, _high;                                                       \
+    _low = _mm_loadu_pd(base);                                                 \
+    base += offset;                                                            \
+    _high = _mm_loadu_pd(base);                                                \
+    dest = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);       \
+}
 
 /**
  * @brief store two complex numbers(real,imaginary) of 64 bit double precision
@@ -179,13 +179,13 @@
  * will be a compile time operation.
  */
 #define SCATTER2_256_D(base, offset, src)                                      \
-    {                                                                          \
-        __m128d _high = _mm256_extractf128_pd(src, 1);                         \
-        __m128d _low = _mm256_castpd256_pd128(src);                            \
-        _mm_storeu_pd(base, _low);                                             \
-        base += offset;                                                        \
-        _mm_storeu_pd(base, _high);                                            \
-    }
+{                                                                              \
+    __m128d _high = _mm256_extractf128_pd(src, 1);                             \
+    __m128d _low = _mm256_castpd256_pd128(src);                                \
+    _mm_storeu_pd(base, _low);                                                 \
+    base += offset;                                                            \
+    _mm_storeu_pd(base, _high);                                                \
+}
 
 /**
  * @brief interchanges the real and imaginary values in a 128 bit register
@@ -268,32 +268,31 @@ static const union zero_conj_256
  * for single precision floating point.
  * Operation : 2 PERM, 1 ADD
  */
-#define SUBADD_128_S(a, b, c)                                                 \
-{                                                                             \
-    a = SWAP_RI_128_S(a);                                                     \
-    c = SWAP_RI_128_S(_mm_addsub_ps(a, b));                                   \
+#define SUBADD_128_S(a, b, c)                                                  \
+{                                                                              \
+    a = SWAP_RI_128_S(a);                                                      \
+    c = SWAP_RI_128_S(_mm_addsub_ps(a, b));                                    \
 }
-
 
 /**
  * @brief alternatively performs addition & subtraction in a 128 bit register
  * for double precision floating point.
  * Operation : 2 PERM, 1 ADD
  */
-#define SUBADD_128_D(a, b, c)                                                 \
-{                                                                             \
-    a = SWAP_RI_128_D(a);                                                     \
-    c = SWAP_RI_128_D(_mm_addsub_pd(a, b));                                   \
+#define SUBADD_128_D(a, b, c)                                                  \
+{                                                                              \
+    a = SWAP_RI_128_D(a);                                                      \
+    c = SWAP_RI_128_D(_mm_addsub_pd(a, b));                                    \
 }
 /**
  * @brief alternatively performs addition & subtraction in a 256 bit register
  * for single precision floating point.
  * Operation : 2 PERM, 1 ADD
  */
-#define SUBADD_256_S(a, b, c)                                                 \
-{                                                                             \
-    a = SWAP_RI_256_S(a);                                                     \
-    c = SWAP_RI_256_S(_mm256_addsub_ps(a, b));                                \
+#define SUBADD_256_S(a, b, c)                                                  \
+{                                                                              \
+    a = SWAP_RI_256_S(a);                                                      \
+    c = SWAP_RI_256_S(_mm256_addsub_ps(a, b));                                 \
 }
 
 /**
@@ -301,10 +300,10 @@ static const union zero_conj_256
  * for double precision floating point.
  * Operation : 2 PERM, 1 ADD
  */
-#define SUBADD_256_D(a, b, c)                                                 \
-{                                                                             \
-    a = SWAP_RI_256_D(a);                                                     \
-    c = SWAP_RI_256_D(_mm256_addsub_pd(a, b));                                \
+#define SUBADD_256_D(a, b, c)                                                  \
+{                                                                              \
+    a = SWAP_RI_256_D(a);                                                      \
+    c = SWAP_RI_256_D(_mm256_addsub_pd(a, b));                                 \
 }
 
 #endif // AOCLFFTZ_SIMD_COMMON_H

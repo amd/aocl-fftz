@@ -46,13 +46,18 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 40, 80, 36, 0, 0},
 ops_cycles_t get_ops_cnt_fft9c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
-static VOID fft9c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft9c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                       VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                       UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -70,23 +75,23 @@ static VOID fft9c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
     DOUBLE *in_i  = (DOUBLE *)in_imag;
     DOUBLE *out_r = (DOUBLE *)out_real;
     DOUBLE *out_i = (DOUBLE *)out_imag;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = (strides->v_in_stride);
     INTP v_out_stride = (strides->v_out_stride);
 
     for (INTP cnt = 0; cnt < n; cnt++)
     {
-        DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i,
-               v6r, v6i, v7r, v7i, v8r, v8i, v9r, v9i,
-               tv1rr, tv2rr, tv3rr, tv1ii, tv2ii, tv3ii, tv3ir, tv4ir,
-               cv1rr, cv1ii, cv2rr, cv2ii, cv3rr, cv3ii, cv4rr, cv4ii, cv5rr,
-               cv5ii, cv6rr, cv6ii, cv7rr, cv7ii, cv8rr, cv8ii, cv9rr, cv9ii;
+        DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v6r, v6i, v7r,
+               v7i, v8r, v8i, v9r, v9i, tv1rr, tv2rr, tv3rr, tv1ii, tv2ii,
+               tv3ii, tv3ir, tv4ir, cv1rr, cv1ii, cv2rr, cv2ii, cv3rr, cv3ii,
+               cv4rr, cv4ii, cv5rr, cv5ii, cv6rr, cv6ii, cv7rr, cv7ii, cv8rr,
+               cv8ii, cv9rr, cv9ii;
 
         // Input point 1: x(0)
         v1r = *in_r;
@@ -159,7 +164,7 @@ static VOID fft9c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
         cv9rr = tv2rr - tv1ii;
         cv9ii = tv2ii - tv1rr;
 
-        //Output point 1: X[0]
+        // Output point 1: X[0]
         tv1rr = cv4rr + cv7rr;
         tv1ii = cv4ii + cv7ii;
 
@@ -172,11 +177,11 @@ static VOID fft9c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
         tv1rr = CRTM_9_8 * (cv7rr - cv4rr);
         tv1ii = CRTM_9_8 * (cv4ii - cv7ii);
 
-        //Output point 4: X[3]
+        // Output point 4: X[3]
         out_r[out_strides[3]] = tv2rr + tv1ii;
         out_i[out_strides[3]] = tv2ii + tv1rr;
 
-        //Output point 7: X[6]
+        // Output point 7: X[6]
         out_r[out_strides[6]] = tv2rr - tv1ii;
         out_i[out_strides[6]] = tv2ii - tv1rr;
 
@@ -190,18 +195,18 @@ static VOID fft9c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
         tv3ii = CRTM_9_8 * (tv3ir - tv4ir);
         tv1ii = tv3ir + tv4ir;
 
-        //Output point 1: X[1]
+        // Output point 1: X[1]
         out_r[out_strides[1]] = cv2rr + tv1rr;
         out_i[out_strides[1]] = cv2ii + tv1ii;
 
         tv2rr = cv2rr - CRTM_9_7 * (tv1rr);
         tv2ii = cv2ii - CRTM_9_7 * (tv1ii);
 
-        //Output point 4: X[4]
+        // Output point 4: X[4]
         out_r[out_strides[4]] = tv2rr + tv3ii;
         out_i[out_strides[4]] = tv2ii + tv3rr;
 
-        //Output point 7: X[7]
+        // Output point 7: X[7]
         out_r[out_strides[7]] = tv2rr - tv3ii;
         out_i[out_strides[7]] = tv2ii - tv3rr;
 
@@ -215,18 +220,18 @@ static VOID fft9c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
         tv3ii = CRTM_9_8 * (tv3ir + tv4ir);
         tv1ii = tv3ir - tv4ir;
 
-        //Output point 3: X[2]
+        // Output point 3: X[2]
         out_r[out_strides[2]] = cv3rr + tv1rr;
         out_i[out_strides[2]] = cv3ii + tv1ii;
 
         tv2rr = cv3rr - CRTM_9_7 * (tv1rr);
         tv2ii = cv3ii - CRTM_9_7 * (tv1ii);
 
-        //Output point 6: X[5]
+        // Output point 6: X[5]
         out_r[out_strides[5]] = tv2rr + tv3ii;
         out_i[out_strides[5]] = tv2ii + tv3rr;
 
-        //Output point 9: X[8]
+        // Output point 9: X[8]
         out_r[out_strides[8]] = tv2rr - tv3ii;
         out_i[out_strides[8]] = tv2ii - tv3rr;
 
@@ -240,8 +245,9 @@ static VOID fft9c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
 #endif
 }
 
-static VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                       VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                       UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -259,23 +265,23 @@ static VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
     FLOAT *in_i  = (FLOAT *)in_imag;
     FLOAT *out_r = (FLOAT *)out_real;
     FLOAT *out_i = (FLOAT *)out_imag;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = (strides->v_in_stride);
     INTP v_out_stride = (strides->v_out_stride);
 
     for (INTP cnt = 0; cnt < n; cnt++)
     {
-        FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i,
-               v6r, v6i, v7r, v7i, v8r, v8i, v9r, v9i,
-               tv1rr, tv2rr, tv3rr, tv1ii, tv2ii, tv3ii, tv3ir, tv4ir,
-               cv1rr, cv1ii, cv2rr, cv2ii, cv3rr, cv3ii, cv4rr, cv4ii, cv5rr,
-               cv5ii, cv6rr, cv6ii, cv7rr, cv7ii, cv8rr, cv8ii, cv9rr, cv9ii;
+        FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v6r, v6i, v7r,
+              v7i, v8r, v8i, v9r, v9i, tv1rr, tv2rr, tv3rr, tv1ii, tv2ii,
+              tv3ii, tv3ir, tv4ir, cv1rr, cv1ii, cv2rr, cv2ii, cv3rr, cv3ii,
+              cv4rr, cv4ii, cv5rr, cv5ii, cv6rr, cv6ii, cv7rr, cv7ii, cv8rr,
+              cv8ii, cv9rr, cv9ii;
 
         // Input point 1: x(0)
         v1r = *in_r;
@@ -348,7 +354,7 @@ static VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
         cv9rr = tv2rr - tv1ii;
         cv9ii = tv2ii - tv1rr;
 
-        //Output point 1: X[0]
+        // Output point 1: X[0]
         tv1rr = cv4rr + cv7rr;
         tv1ii = cv4ii + cv7ii;
 
@@ -361,11 +367,11 @@ static VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
         tv1rr = CRTM_9_8 * (cv7rr - cv4rr);
         tv1ii = CRTM_9_8 * (cv4ii - cv7ii);
 
-        //Output point 4: X[3]
+        // Output point 4: X[3]
         out_r[out_strides[3]] = tv2rr + tv1ii;
         out_i[out_strides[3]] = tv2ii + tv1rr;
 
-        //Output point 7: X[6]
+        // Output point 7: X[6]
         out_r[out_strides[6]] = tv2rr - tv1ii;
         out_i[out_strides[6]] = tv2ii - tv1rr;
 
@@ -379,18 +385,18 @@ static VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
         tv3ii = CRTM_9_8 * (tv3ir - tv4ir);
         tv1ii = tv3ir + tv4ir;
 
-        //Output point 1: X[1]
+        // Output point 1: X[1]
         out_r[out_strides[1]] = cv2rr + tv1rr;
         out_i[out_strides[1]] = cv2ii + tv1ii;
 
         tv2rr = cv2rr - CRTM_9_7 * (tv1rr);
         tv2ii = cv2ii - CRTM_9_7 * (tv1ii);
 
-        //Output point 4: X[4]
+        // Output point 4: X[4]
         out_r[out_strides[4]] = tv2rr + tv3ii;
         out_i[out_strides[4]] = tv2ii + tv3rr;
 
-        //Output point 7: X[7]
+        // Output point 7: X[7]
         out_r[out_strides[7]] = tv2rr - tv3ii;
         out_i[out_strides[7]] = tv2ii - tv3rr;
 
@@ -404,18 +410,18 @@ static VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
         tv3ii = CRTM_9_8 * (tv3ir + tv4ir);
         tv1ii = tv3ir - tv4ir;
 
-        //Output point 3: X[2]
+        // Output point 3: X[2]
         out_r[out_strides[2]] = cv3rr + tv1rr;
         out_i[out_strides[2]] = cv3ii + tv1ii;
 
         tv2rr = cv3rr - CRTM_9_7 * (tv1rr);
         tv2ii = cv3ii - CRTM_9_7 * (tv1ii);
 
-        //Output point 6: X[5]
+        // Output point 6: X[5]
         out_r[out_strides[5]] = tv2rr + tv3ii;
         out_i[out_strides[5]] = tv2ii + tv3rr;
 
-        //Output point 9: X[8]
+        // Output point 9: X[8]
         out_r[out_strides[8]] = tv2rr - tv3ii;
         out_i[out_strides[8]] = tv2ii - tv3rr;
 
@@ -438,9 +444,13 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 116, 488, 90, 0, 361},
 ops_cycles_t get_ops_cnt_fft9c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
 const DOUBLE CRTM_9[RADIX_9][2] = {{1.0, 0.0},
@@ -453,8 +463,9 @@ const DOUBLE CRTM_9[RADIX_9][2] = {{1.0, 0.0},
                                    {0.17364817766693, 0.984807753012208},
                                    {0.766044443118978, 0.64278760968654}};
 
-static VOID fft9c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft9c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                       VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                       UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -705,8 +716,9 @@ static VOID fft9c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
 #endif
 }
 
-static VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                       VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                       UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -962,9 +974,15 @@ static VOID fft9c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
 kfft_ register_kernel_fft9c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return fft9c_fp32;
+    }
     else if (precision == DT_DOUBLE)
+    {
         return fft9c_fp64;
+    }
     else
+    {
         return NULL;
+    }
 }

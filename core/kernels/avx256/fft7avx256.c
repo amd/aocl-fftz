@@ -45,14 +45,18 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 18, 33, 56, 10, 17},
 ops_cycles_t get_ops_cnt_fft7avx256(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
 static VOID fft7avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag)
+                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                           UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -66,13 +70,13 @@ static VOID fft7avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     FLOAT *in_r = (FLOAT *)in_real;
     FLOAT *out_r = (FLOAT *)out_real;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = strides->v_in_stride;
     INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_256_S;
@@ -123,7 +127,7 @@ static VOID fft7avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_in = in_r + in_strides[6];
         GATHER4_256_S(curr_in, v_in_stride, v_in6);
 
-        //common calculations
+        // common calculations
         v_av1 = _mm256_add_ps(v_in2, v_in5);
         v_av2 = _mm256_sub_ps(v_in2, v_in5);
         v_av3 = _mm256_add_ps(v_in3, v_in4);
@@ -229,7 +233,7 @@ static VOID fft7avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_in = in_r + in_strides[6];
         GATHER2_128_S(curr_in, v_in_stride, v_in6);
 
-        //common calculations
+        // common calculations
         v_av1 = _mm_add_ps(v_in2, v_in5);
         v_av2 = _mm_sub_ps(v_in2, v_in5);
         v_av3 = _mm_add_ps(v_in3, v_in4);
@@ -407,28 +411,28 @@ static VOID fft7avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 }
 
 static VOID fft7avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                    VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                    UINT8 flag)
+                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                           UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
 #endif
     const DOUBLE CRTM_7[6] = {+0.222520933956314404288902564496794759466355569,
-                             +0.900968867902419126236102319507445051165919162,
-                             +0.623489801858733530525004884004239810632274731,
-                             +0.433883739117558120475768332848358754609990728,
-                             +0.781831482468029808708444526674057750232334519,
-                             +0.974927912181823607018131682993931217232785801};
+                              +0.900968867902419126236102319507445051165919162,
+                              +0.623489801858733530525004884004239810632274731,
+                              +0.433883739117558120475768332848358754609990728,
+                              +0.781831482468029808708444526674057750232334519,
+                              +0.974927912181823607018131682993931217232785801};
 
     DOUBLE *in_r = (DOUBLE *)in_real;
     DOUBLE *out_r = (DOUBLE *)out_real;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = strides->v_in_stride;
     INTP v_out_stride = strides->v_out_stride;
     INTP N = n / NUM_SETS_256_D;
@@ -478,7 +482,7 @@ static VOID fft7avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_in = in_r + in_strides[6];
         GATHER2_256_D(curr_in, v_in_stride, v_in6);
 
-        //common calculations
+        // common calculations
         v_av1 = _mm256_add_pd(v_in2, v_in5);
         v_av2 = _mm256_sub_pd(v_in2, v_in5);
         v_av3 = _mm256_add_pd(v_in3, v_in4);
@@ -584,7 +588,7 @@ static VOID fft7avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_in = in_r + in_strides[6];
         LD_128_D(curr_in, v_in6);
 
-        //common calculations
+        // common calculations
         v_av1 = _mm_add_pd(v_in2, v_in5);
         v_av2 = _mm_sub_pd(v_in2, v_in5);
         v_av3 = _mm_add_pd(v_in3, v_in4);
@@ -660,9 +664,15 @@ static VOID fft7avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 kfft_ register_kernel_fft7avx256(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return fft7avx256fp32;
+    }
     else if (precision == DT_DOUBLE)
+    {
         return fft7avx256fp64;
+    }
     else
+    {
         return NULL;
+    }
 }

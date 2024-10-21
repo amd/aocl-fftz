@@ -64,9 +64,13 @@ INTP get_extended_length_ref(INTP n)
         for (UINT32 i = 0; i < prime_count; i++)
         {
             while (quo % supported_primes[i] == 0)
+            {
                 quo /= supported_primes[i];
+            }
             if (quo == 1)
+            {
                 break; // solvable m value
+            }
         }
     }
     return m;
@@ -125,8 +129,8 @@ VOID prepare_bluestein_sequence_ref(VOID *B, INTP m, INTP n, UINT32 precision)
 }
 
 template <class prob_desc_t>
-VOID calculate_input_output_sizes(prob_desc_t *p_desc,
-                            INTP *in_buffer_size, INTP *out_buffer_size)
+VOID calculate_input_output_sizes(prob_desc_t *p_desc, INTP *in_buffer_size,
+                                  INTP *out_buffer_size)
 {
     // Data arrangement considered :
     // [1, 2, 3, 4]<0, 0>[5, 6, 7, 8]<0, 0>[9, 10, 11, 12]
@@ -301,7 +305,7 @@ class AoclfftzSelectorTestBase
         {
             p_desc->dims[i].n = (dm_t)dims[i].n;
             p_desc->dims[i].in_stride = (dm_t)dims[i].in_stride;
-            //Strides must be equal for inplace problems
+            // Strides must be equal for inplace problems
             if (is_in_place)
             {
                 p_desc->dims[i].out_stride = (dm_t)dims[i].in_stride;
@@ -316,7 +320,7 @@ class AoclfftzSelectorTestBase
         {
             p_desc->vecs[i].n = (dm_t)vecs[i].n;
             p_desc->vecs[i].in_stride = (dm_t)vecs[i].in_stride;
-            //Strides must be equal for inplace problems
+            // Strides must be equal for inplace problems
             if (is_in_place)
             {
                 p_desc->vecs[i].out_stride = (dm_t)vecs[i].in_stride;
@@ -335,7 +339,7 @@ class AoclfftzSelectorTestBase
         dt_t *in = NULL;
         dt_t *out = NULL;
         ALLOC_ALIGN_UNINIT(in, dt_t, input_size * DATA_STRIDE * sizeof(dt_t));
-        //input and output buffers must be same for inplace problems
+        // input and output buffers must be same for inplace problems
         if (is_in_place)
         {
             out = in;
@@ -343,7 +347,7 @@ class AoclfftzSelectorTestBase
         else
         {
             ALLOC_ALIGN_INIT(out, dt_t,
-                output_size * DATA_STRIDE * sizeof(dt_t));
+                             output_size * DATA_STRIDE * sizeof(dt_t));
         }
         for (int i = 0; i < input_size * DATA_STRIDE; i++)
             in[i] = (rand() % 1000) / 100.0;
@@ -434,7 +438,7 @@ class AoclfftzSelectorTestBase
             {
                 sol->decomp_scheme->dims[cnt].n = dims[idx].n;
                 sol->decomp_scheme->dims[cnt].in_stride = dims[idx].in_stride;
-                //Strides must be equal for inplace problems
+                // Strides must be equal for inplace problems
                 if (is_in_place)
                 {
                     sol->decomp_scheme->dims[cnt].out_stride =
@@ -448,14 +452,15 @@ class AoclfftzSelectorTestBase
                 cnt++;
             }
         }
-        // Sets value for atleast one of dims array element in a 1D problem or ND problem
-        // where the dim rank is reduced to one and the size of the dimensions are one.
+        // Sets value for atleast one of dims array element in a 1D problem or
+        // ND problem where the dim rank is reduced to one and the size of the
+        // dimensions are one.
         // Example dims:1x1x1  or dims:1
         if (cnt == 0)
         {
             sol->decomp_scheme->dims[0].n = dims[0].n;
             sol->decomp_scheme->dims[0].in_stride = dims[0].in_stride;
-            //Strides must be equal for inplace problems
+            // Strides must be equal for inplace problems
             if (is_in_place)
             {
                 sol->decomp_scheme->dims[0].out_stride = dims[0].in_stride;
@@ -470,7 +475,7 @@ class AoclfftzSelectorTestBase
         {
             sol->decomp_scheme->vecs[idx].n = vecs[idx].n;
             sol->decomp_scheme->vecs[idx].in_stride = vecs[idx].in_stride;
-            //Strides must be equal for inplace problems
+            // Strides must be equal for inplace problems
             if (is_in_place)
             {
                 sol->decomp_scheme->vecs[idx].out_stride = vecs[idx].in_stride;
@@ -689,28 +694,29 @@ class AoclfftzSelectorTestBase
 
                 // verify the dims & vecs of solution-nd
                 ret &= (sol_nd->decomp_scheme->dim_rank ==
-                            cur_a->decomp_scheme->dim_rank - 1);
+                        cur_a->decomp_scheme->dim_rank - 1);
                 ret &= (sol_nd->decomp_scheme->vec_rank == 1);
 
                 ret &= (sol_nd->decomp_scheme->vecs[0].n ==
                         cur_a->decomp_scheme->dims[cur_dim_rank - 1].n);
                 ret &= (sol_nd->decomp_scheme->vecs[0].in_stride ==
                         cur_a->decomp_scheme->dims[cur_dim_rank - 1].in_stride);
-                ret &= (sol_nd->decomp_scheme->vecs[0].out_stride ==
-                    cur_a->decomp_scheme->dims[cur_dim_rank - 1].out_stride);
+                ret &=
+                    (sol_nd->decomp_scheme->vecs[0].out_stride ==
+                     cur_a->decomp_scheme->dims[cur_dim_rank - 1].out_stride);
 
                 ret &= (memcmp(sol_nd->decomp_scheme->dims,
-                        cur_a->decomp_scheme->dims,
-                        sizeof(aoclfftz_dim_t_64_) * rank_nd) == 0);
+                               cur_a->decomp_scheme->dims,
+                               sizeof(aoclfftz_dim_t_64_) * rank_nd) == 0);
 
                 // verify the dims & vecs of solution-1d
                 ret &= !(IS_OUT_OF_PLACE(sol_1d->decomp_scheme->flags));
 
                 ret &= (sol_1d->decomp_scheme->dim_rank == 1);
                 ret &= (sol_1d->decomp_scheme->dims[0].n ==
-                            cur_a->decomp_scheme->dims[cur_dim_rank - 1].n);
+                        cur_a->decomp_scheme->dims[cur_dim_rank - 1].n);
                 ret &= (sol_1d->decomp_scheme->dims[0].in_stride ==
-                            sol_1d->decomp_scheme->dims[0].out_stride);
+                        sol_1d->decomp_scheme->dims[0].out_stride);
                 ret &=
                     (sol_1d->decomp_scheme->dims[0].in_stride ==
                      cur_a->decomp_scheme->dims[cur_dim_rank - 1].out_stride);
@@ -721,10 +727,10 @@ class AoclfftzSelectorTestBase
                     total_size *= cur_a->decomp_scheme->dims[i].n;
                 }
 
-                // TODO : add a different simple logic for fusable_dims ?
+                // TODO: add a different simple logic for fusable_dims ?
                 ret &= ((sol_1d->decomp_scheme->vec_rank == 1) ||
                         (sol_1d->decomp_scheme->vec_rank <
-                            cur_a->decomp_scheme->dim_rank));
+                         cur_a->decomp_scheme->dim_rank));
 
                 // combined size of dims & vecs of 1D should be equal to
                 // the combined size of dims of cur solution
@@ -907,7 +913,7 @@ class AoclfftzSelectorTestBase
         UINT32 node_count = 0;
         aoclfftz_solution_t *cur_sol = sol;
         aoclfftz_solution_t *nd_sol = NULL;
-        do //for ND support
+        do // for ND support
         {
             if (nd_sol != NULL)
             {

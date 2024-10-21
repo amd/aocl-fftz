@@ -43,17 +43,17 @@ aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank)
     aoclfftz_decomp_scheme_t *decomp_scheme = NULL;
 
     ALLOC_ALIGN_UNINIT(decomp_scheme, aoclfftz_decomp_scheme_t,
-                         sizeof(aoclfftz_decomp_scheme_t));
+                       sizeof(aoclfftz_decomp_scheme_t));
     if (decomp_scheme)
     {
         ALLOC_ALIGN_UNINIT(decomp_scheme->dims, aoclfftz_dim_t_64_,
-                             dim_rank * sizeof(aoclfftz_dim_t_64_));
+                           dim_rank * sizeof(aoclfftz_dim_t_64_));
         ALLOC_ALIGN_UNINIT(decomp_scheme->vecs, aoclfftz_dim_t_64_,
-                             vec_rank * sizeof(aoclfftz_dim_t_64_));
+                           vec_rank * sizeof(aoclfftz_dim_t_64_));
         ALLOC_ALIGN_UNINIT(decomp_scheme->cntrl_params, aoclfftz_cntrl_params_t,
-                             sizeof(aoclfftz_cntrl_params_t));
+                           sizeof(aoclfftz_cntrl_params_t));
         ALLOC_ALIGN_UNINIT(decomp_scheme->pthr_fft, aoclfftz_smp_pfft_t,
-                             sizeof(aoclfftz_smp_pfft_t));
+                           sizeof(aoclfftz_smp_pfft_t));
         if (decomp_scheme->dims == NULL || decomp_scheme->vecs == NULL ||
             decomp_scheme->cntrl_params == NULL ||
             decomp_scheme->pthr_fft == NULL)
@@ -77,7 +77,7 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
     if (sol)
     {
         ALLOC_ALIGN_UNINIT(sol->solver, aoclfftz_generic_solver_t,
-                            sizeof(aoclfftz_generic_solver_t));
+                           sizeof(aoclfftz_generic_solver_t));
         sol->solver->execute_solver = NULL;
         sol->solver->kernel_r = NULL;
         sol->solver->kernel_m = NULL;
@@ -86,9 +86,9 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         ALLOC_ALIGN_INIT(sol->strides, aoclfftz_strides_t,
                          sizeof(aoclfftz_strides_t));
         ALLOC_ALIGN_UNINIT(sol->twiddle, aoclfftz_twiddle_t,
-                                sizeof(aoclfftz_twiddle_t));
+                           sizeof(aoclfftz_twiddle_t));
         ALLOC_ALIGN_UNINIT(sol->bluestein, aoclfftz_bluestein_t,
-                             sizeof(aoclfftz_bluestein_t));
+                           sizeof(aoclfftz_bluestein_t));
         sol->next_sol = NULL;
         sol->nd_sol = NULL;
         if (sol->solver == NULL || sol->decomp_scheme == NULL ||
@@ -124,12 +124,12 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank)
     aoclfftz_selector_t *selector = NULL;
 
     ALLOC_ALIGN_UNINIT(selector, aoclfftz_selector_t,
-                         sizeof(aoclfftz_selector_t));
+                       sizeof(aoclfftz_selector_t));
     if (selector)
     {
         selector->solution = alloc_solution(vec_rank, dim_rank);
         ALLOC_ALIGN_UNINIT(selector->cost_analysis, cost_analysis_t,
-                             sizeof(cost_analysis_t));
+                           sizeof(cost_analysis_t));
         if (selector->solution == NULL || selector->cost_analysis == NULL)
         {
             destroy_selector(selector);
@@ -150,18 +150,26 @@ INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein, INTP size)
     // Allocate bluestein sequence buffers
     ALLOC_ALIGN_UNINIT(bluestein->B, VOID, size);
     if (bluestein->B == NULL)
+    {
         return AOCLFFTZ_MEMORY_FAILURE;
+    }
     ALLOC_ALIGN_INIT(bluestein->B_out, VOID, size);
     if (bluestein->B_out == NULL)
+    {
         return AOCLFFTZ_MEMORY_FAILURE;
+    }
 
     // Allocate bluestein in and out buffers
     ALLOC_ALIGN_UNINIT(bluestein->in, VOID, size);
     if (bluestein->in == NULL)
+    {
         return AOCLFFTZ_MEMORY_FAILURE;
-    ALLOC_ALIGN_UNINIT(bluestein->out, VOID,  size);
+    }
+    ALLOC_ALIGN_UNINIT(bluestein->out, VOID, size);
     if (bluestein->out == NULL)
+    {
         return AOCLFFTZ_MEMORY_FAILURE;
+    }
 
     return AOCLFFTZ_SUCCESS;
 }

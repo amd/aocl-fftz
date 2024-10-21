@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- /** @file sizeone_solver.h
+/** @file sizeone_solver.h
  *
  *  @brief Interface header file of the Size One Solver
  *
@@ -42,11 +42,11 @@
 #include <string.h> // for memcpy
 #include "core/solvers/solver.h"
 
-//Solver data structure that holds solver object/pointer and its type
+// Solver data structure that holds solver object/pointer and its type
 typedef struct sizeone_solver
 {
     solver_t *sizeone_solver;
     cost_analysis_t *cost;
 } sizeone_solver_t;
 
-#endif //SIZEONE_SOLVER_H
+#endif // SIZEONE_SOLVER_H

@@ -47,13 +47,18 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 72, 148, 56, 0, 0},
 ops_cycles_t get_ops_cnt_fft14c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
-static VOID fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                        UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -75,13 +80,13 @@ static VOID fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
     DOUBLE *in_i = (DOUBLE *)in_imag;
     DOUBLE *out_r = (DOUBLE *)out_real;
     DOUBLE *out_i = (DOUBLE *)out_imag;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = (strides->v_in_stride);
     INTP v_out_stride = (strides->v_out_stride);
     INTP cnt;
@@ -89,14 +94,14 @@ static VOID fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
     for (cnt = 0; cnt < n; cnt++)
     {
         DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v6r, v6i, v7r,
-            v7i, v8r, v8i, v9r, v9i, v10r, v10i, v11r, v11i, v12r, v12i, v13r,
-            v13i, v14r, v14i, v214r, v313r, v412r, v511r, v610r, v79r, v142i,
-            v133i, v124i, v511i, v106i, v97i, v214i, v313i, v412i, v115i, v610i,
-            v79i, v142r, v133r, v124r, v115r, v106r, v97r, tvrr, tvri, tvii,
-            tvir, cv1r, cv1i, cv2r, cv2i, cv3r, cv3i, tv1rr, tv2rr, tv3rr,
-            tv4rr, tv5rr, tv6rr, tv1ii, tv2ii, tv3ii, tv4ii, tv5ii, tv6ii,
-            tv1ri, tv2ri, tv1ir, tv2ir, tv3ri, tv4ri, tv5ri, tv6ri, tv3ir,
-            tv4ir, tv5ir, tv6ir;
+               v7i, v8r, v8i, v9r, v9i, v10r, v10i, v11r, v11i, v12r, v12i,
+               v13r, v13i, v14r, v14i, v214r, v313r, v412r, v511r, v610r, v79r,
+               v142i, v133i, v124i, v511i, v106i, v97i, v214i, v313i, v412i,
+               v115i, v610i, v79i, v142r, v133r, v124r, v115r, v106r, v97r,
+               tvrr, tvri, tvii, tvir, cv1r, cv1i, cv2r, cv2i, cv3r, cv3i,
+               tv1rr, tv2rr, tv3rr, tv4rr, tv5rr, tv6rr, tv1ii, tv2ii, tv3ii,
+               tv4ii, tv5ii, tv6ii, tv1ri, tv2ri, tv1ir, tv2ir, tv3ri, tv4ri,
+               tv5ri, tv6ri, tv3ir, tv4ir, tv5ir, tv6ir;
 
         // Input point 1: x(0)
         v1r = *in_r;
@@ -383,8 +388,9 @@ static VOID fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
 #endif
 }
 
-static VOID fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                        UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -406,13 +412,13 @@ static VOID fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
     FLOAT *in_i = (FLOAT *)in_imag;
     FLOAT *out_r = (FLOAT *)out_real;
     FLOAT *out_i = (FLOAT *)out_imag;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = (strides->v_in_stride);
     INTP v_out_stride = (strides->v_out_stride);
     INTP cnt;
@@ -420,14 +426,14 @@ static VOID fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
     for (cnt = 0; cnt < n; cnt++)
     {
         FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v6r, v6i, v7r,
-            v7i, v8r, v8i, v9r, v9i, v10r, v10i, v11r, v11i, v12r, v12i, v13r,
-            v13i, v14r, v14i, v214r, v313r, v412r, v511r, v610r, v79r, v142i,
-            v133i, v124i, v511i, v106i, v97i, v214i, v313i, v412i, v115i, v610i,
-            v79i, v142r, v133r, v124r, v115r, v106r, v97r, tvrr, tvri, tvii,
-            tvir, cv1r, cv1i, cv2r, cv2i, cv3r, cv3i, tv1rr, tv2rr, tv3rr,
-            tv4rr, tv5rr, tv6rr, tv1ii, tv2ii, tv3ii, tv4ii, tv5ii, tv6ii,
-            tv1ri, tv2ri, tv1ir, tv2ir, tv3ri, tv4ri, tv5ri, tv6ri, tv3ir,
-            tv4ir, tv5ir, tv6ir;
+              v7i, v8r, v8i, v9r, v9i, v10r, v10i, v11r, v11i, v12r, v12i, v13r,
+              v13i, v14r, v14i, v214r, v313r, v412r, v511r, v610r, v79r, v142i,
+              v133i, v124i, v511i, v106i, v97i, v214i, v313i, v412i, v115i,
+              v610i, v79i, v142r, v133r, v124r, v115r, v106r, v97r, tvrr, tvri,
+              tvii, tvir, cv1r, cv1i, cv2r, cv2i, cv3r, cv3i, tv1rr, tv2rr,
+              tv3rr, tv4rr, tv5rr, tv6rr, tv1ii, tv2ii, tv3ii, tv4ii, tv5ii,
+              tv6ii, tv1ri, tv2ri, tv1ir, tv2ir, tv3ri, tv4ri, tv5ri, tv6ri,
+              tv3ir, tv4ir, tv5ir, tv6ir;
 
         // Input point 1: x(0)
         v1r = *in_r;
@@ -723,9 +729,13 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {
 ops_cycles_t get_ops_cnt_fft14c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
 const DOUBLE CRTM_14[RADIX_14][2] = {{1.0, 0.0},
@@ -743,8 +753,9 @@ const DOUBLE CRTM_14[RADIX_14][2] = {{1.0, 0.0},
                                      {0.623489801858733, 0.78183148246803},
                                      {0.900968867902419, 0.433883739117558}};
 
-static VOID fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                        UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -1244,8 +1255,9 @@ static VOID fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
 #endif
 }
 
-static VOID fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                 INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                        UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -1750,9 +1762,15 @@ static VOID fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_
 kfft_ register_kernel_fft14c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return fft14c_fp32;
+    }
     else if (precision == DT_DOUBLE)
+    {
         return fft14c_fp64;
+    }
     else
+    {
         return NULL;
+    }
 }

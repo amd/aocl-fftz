@@ -28,7 +28,8 @@
 
 /** @file batched_solver.h
  *
- *  @brief Interface header file of the batched Solver that solves a vector problem
+ *  @brief Interface header file of the batched solver that solves a vector
+ *  problem
  *
  *  This file contains the data strucutes and function declarationss that
  *  setup, execute and destroy the batched solver.
@@ -41,11 +42,11 @@
 
 #include "core/solvers/solver.h"
 
-//Solver data structure that holds solver object/pointer and its type
+// Solver data structure that holds solver object/pointer and its type
 typedef struct batched_solver
 {
     solver_t *batched_solver;
     cost_analysis_t *cost;
 } batched_solver_t;
 
-#endif //BATCHED_SOLVER_H
+#endif // BATCHED_SOLVER_H

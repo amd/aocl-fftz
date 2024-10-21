@@ -41,7 +41,7 @@
 #include "core/common/twiddle.h"
 #include "utils/allocator.h"
 
-// TODO : Add support for In-Place problems
+// TODO: Add support for In-Place problems
 INT32 twiddle_multiplier(aoclfftz_solution_t *sol)
 {
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
@@ -151,7 +151,7 @@ INT32 twiddle_multiplier(aoclfftz_solution_t *sol)
  *          Mark the visited indices with 1.
  * Step 2 : Traverse along the 'visited' buffer to find the next unprocessed idx
  * Step 3 : Repeat Step 0 - 2 until the entire buffer is processed.
-*/
+ */
 INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol)
 {
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
@@ -173,9 +173,9 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol)
         ALLOC_ALIGN_INIT(visited, INT8, N * sizeof(INT8));
 
         INTP in_stride =
-                (sol->decomp_scheme->dims[0].in_stride / sets) * DATA_STRIDE;
+            (sol->decomp_scheme->dims[0].in_stride / sets) * DATA_STRIDE;
         INTP out_stride =
-                (sol->decomp_scheme->dims[0].out_stride / sets) * DATA_STRIDE;
+            (sol->decomp_scheme->dims[0].out_stride / sets) * DATA_STRIDE;
 
         INTP count = 0;
         INTP start_idx = 0;
@@ -215,7 +215,8 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol)
                 out_real[dst] = src_real * TW_real - src_imag * TW_imag;
                 out_imag[dst] = src_real * TW_imag + src_imag * TW_real;
 
-                visited[src_idx] = 1; count++;
+                visited[src_idx] = 1;
+                count++;
                 src_real = next_real;
                 src_imag = next_imag;
                 src_idx = dst_idx;
@@ -240,9 +241,9 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol)
         ALLOC_ALIGN_INIT(visited, INT8, N * sizeof(INT8));
 
         INTP in_stride =
-                (sol->decomp_scheme->dims[0].in_stride / sets) * DATA_STRIDE;
+            (sol->decomp_scheme->dims[0].in_stride / sets) * DATA_STRIDE;
         INTP out_stride =
-                (sol->decomp_scheme->dims[0].out_stride / sets) * DATA_STRIDE;
+            (sol->decomp_scheme->dims[0].out_stride / sets) * DATA_STRIDE;
 
         INTP count = 0;
         INTP start_idx = 0;
@@ -282,7 +283,8 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol)
                 out_real[dst] = src_real * TW_real - src_imag * TW_imag;
                 out_imag[dst] = src_real * TW_imag + src_imag * TW_real;
 
-                visited[src_idx] = 1; count++;
+                visited[src_idx] = 1;
+                count++;
                 src_real = next_real;
                 src_imag = next_imag;
                 src_idx = dst_idx;

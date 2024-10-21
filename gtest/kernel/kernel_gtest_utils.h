@@ -53,10 +53,10 @@ extern "C"
 #define TOLERANCE_D 1E-10
 
 #ifndef DBL_TRUE_MIN
-    #define DBL_TRUE_MIN 4.9406564584124654e-324
+#define DBL_TRUE_MIN 4.9406564584124654e-324
 #endif
 #ifndef FLT_TRUE_MIN
-    #define FLT_TRUE_MIN 1.40129846e-45F
+#define FLT_TRUE_MIN 1.40129846e-45F
 #endif
 /**
  * @brief Get the kernel object from the kernel table based on the given radix

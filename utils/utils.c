@@ -45,8 +45,8 @@ INTP is_SSE2_supported(INT32 logger_mode)
     cpu_features_detection(0x00000001, 0, &eax, &ebx, &ecx, &edx);
     ret = ((edx & (1 << 26)) != 0);
 #ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode,
-        "SSE2 SIMD %s supported", (ret ? "is" : "is not"));
+    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode, "SSE2 SIMD %s supported",
+                           (ret ? "is" : "is not"));
 #endif
     return ret;
 }
@@ -58,8 +58,8 @@ INTP is_AVX_supported(INT32 logger_mode)
     cpu_features_detection(0x00000001, 0, &eax, &ebx, &ecx, &edx);
     ret = ((ecx & 0x18000000) == 0x18000000);
 #ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode,
-        "AVX SIMD %s supported", (ret ? "is" : "is not"));
+    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode, "AVX SIMD %s supported",
+                           (ret ? "is" : "is not"));
 #endif
     return ret;
 }
@@ -71,16 +71,16 @@ INTP is_AVX2_supported(INT32 logger_mode)
     cpu_features_detection(0x00000007, 0, &eax, &ebx, &ecx, &edx);
     ret = ((ebx & (1 << 5)) != 0);
 #ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode,
-        "AVX2 SIMD %s supported", (ret ? "is" : "is not"));
+    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode, "AVX2 SIMD %s supported",
+                           (ret ? "is" : "is not"));
 #endif
     return ret;
 }
 
 static inline INTP xgetbv(INTP opt)
 {
-    int eax, edx;
-    __asm__(".byte 0x0f, 0x01, 0xd0" : "=a"(eax), "=d"(edx) : "c" (opt));
+    INT32 eax, edx;
+    __asm__(".byte 0x0f, 0x01, 0xd0" : "=a"(eax), "=d"(edx) : "c"(opt));
     return eax;
 }
 
@@ -88,17 +88,17 @@ INTP is_AVX512_supported(INT32 logger_mode)
 {
     INTP ret = 0;
     INTP eax, ebx, ecx, edx;
-    //Below is the set of checks for AVX512 detection
-    //1. Check CPU support for ZMM state management using OSXSAVE
-    //Its support also implies that XGETBV is enabled for application use
+    // Below is the set of checks for AVX512 detection
+    // 1. Check CPU support for ZMM state management using OSXSAVE
+    // Its support also implies that XGETBV is enabled for application use
     cpu_features_detection(0x1, 0, &eax, &ebx, &ecx, &edx);
     if ((ecx & 0x08000000) == 0x08000000)
     {
-        //2. Check OS support for XGETBV instruction and ZMM register state
+        // 2. Check OS support for XGETBV instruction and ZMM register state
         INTP reg_support_bits = (7 << 5) | (1 << 2) | (1 << 1);
         if ((xgetbv(0) & reg_support_bits) == reg_support_bits)
         {
-            //3. Check CPU support for AVX-512 Foundation instructions
+            // 3. Check CPU support for AVX-512 Foundation instructions
             cpu_features_detection(7, 0, &eax, &ebx, &ecx, &edx);
             if (ebx & (1 << 16))
             {
@@ -108,12 +108,12 @@ INTP is_AVX512_supported(INT32 logger_mode)
     }
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode,
-        "AVX512 SIMD %s supported", (ret ? "is" : "is not"));
+                           "AVX512 SIMD %s supported", (ret ? "is" : "is not"));
 #endif
     return ret;
 }
 
-//CPU Features detection using CPUID
+// CPU Features detection using CPUID
 #ifdef AOCLFFTZ_CPUID_SIMD_DETECTION
 #ifndef _WINDOWS
 inline VOID cpu_features_detection(INTP fn, INTP optVal,
@@ -124,8 +124,8 @@ inline VOID cpu_features_detection(INTP fn, INTP optVal,
     *ecx = optVal;
     *ebx = 0;
     *edx = 0;
-    __asm__ ("cpuid            \n\t"
-             : "+a" (*eax), "+b" (*ebx), "+c" (*ecx), "+d" (*edx));
+    __asm__("cpuid            \n\t"
+            : "+a"(*eax), "+b"(*ebx), "+c"(*ecx), "+d"(*edx));
 }
 #else
 #include <intrin.h>
@@ -154,24 +154,36 @@ INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
 #endif
 
     if (opt_off)
+    {
         return -1;
+    }
 
     if (opt_level == 0)
+    {
         return 0;
-    if (opt_level > 0) //opt_level == 1
+    }
+    if (opt_level > 0) // opt_level == 1
+    {
         cpu_flags = is_SSE2_supported(logger_mode);
-    #ifdef ENABLE_AVX128
-    if (opt_level > 1) //opt_level == 2
+    }
+#ifdef ENABLE_AVX128
+    if (opt_level > 1) // opt_level == 2
+    {
         cpu_flags += is_AVX_supported(logger_mode);
-    #endif
-    #ifdef ENABLE_AVX256
-    if (opt_level > 2) //opt_level == 3
+    }
+#endif
+#ifdef ENABLE_AVX256
+    if (opt_level > 2) // opt_level == 3
+    {
         cpu_flags += is_AVX2_supported(logger_mode);
-    #endif
-    #ifdef ENABLE_AVX512
-    if (opt_level > 3) //opt_level == 4
+    }
+#endif
+#ifdef ENABLE_AVX512
+    if (opt_level > 3) // opt_level == 4
+    {
         cpu_flags += is_AVX512_supported(logger_mode);
-    #endif
+    }
+#endif
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");

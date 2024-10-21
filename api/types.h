@@ -58,4 +58,4 @@ typedef double DOUBLE;          /**< double precision floating point : 64 bits @
 typedef uint8_t UINT8;          /**< unsigned 8 bits integer @ingroup group_types */
 typedef int8_t INT8;            /**< signed 8 bits integer @ingroup group_types */
 
-#endif //TYPES_H
+#endif // TYPES_H

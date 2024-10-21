@@ -47,42 +47,51 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 12, 32, 20, 0, 0},
 ops_cycles_t get_ops_cnt_fft5c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
-static VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                       VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                       UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
 #endif
-    const DOUBLE CRTM_5_1 = +0.55901699437494742410229341718281905886015458990288;
-    const DOUBLE CRTM_5_2 = +0.95105651629515357211643933337938214340569863400000;
-    const DOUBLE CRTM_5_3 = +0.25000000000000000000000000000000000000000000000000;
-    const DOUBLE CRTM_5_4 = +0.58778525229247301629891039327884007596190389052978;
+    const DOUBLE CRTM_5_1 =
+        +0.55901699437494742410229341718281905886015458990288;
+    const DOUBLE CRTM_5_2 =
+        +0.95105651629515357211643933337938214340569863400000;
+    const DOUBLE CRTM_5_3 =
+        +0.25000000000000000000000000000000000000000000000000;
+    const DOUBLE CRTM_5_4 =
+        +0.58778525229247301629891039327884007596190389052978;
 
     DOUBLE *in_r = (DOUBLE *)in_real;
     DOUBLE *in_i = (DOUBLE *)in_imag;
     DOUBLE *out_r = (DOUBLE *)out_real;
     DOUBLE *out_i = (DOUBLE *)out_imag;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = (strides->v_in_stride);
     INTP v_out_stride = (strides->v_out_stride);
     INTP cnt;
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i,
-            v25r, v34r, v52i, v43i, v25i, v34i, v52r, v43r, tvri, tvir,
-            cv1rr, cv2rr, cv3rr, cv1ii, cv2ii, cv3ii;
+        DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v25r, v34r,
+               v52i, v43i, v25i, v34i, v52r, v43r, tvri, tvir, cv1rr, cv2rr,
+               cv3rr, cv1ii, cv2ii, cv3ii;
 
         // Input point 1: x(0)
         v1r = *in_r;
@@ -124,7 +133,6 @@ static VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
         *out_r = v1r + cv1rr;
         *out_i = v1i + cv1ii;
 
-
         // Output point 2: X(1)
         cv1rr = CRTM_5_1 * (v25r - v34r);
         cv1ii = CRTM_5_1 * (v25i - v34i);
@@ -139,7 +147,6 @@ static VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
         // Output point 5: X(4)
         out_r[out_strides[4]] = cv3rr + tvri;
         out_i[out_strides[4]] = cv3ii - tvir;
-
 
         // Output point 3: X(2)
         cv3rr = cv2rr - cv1rr;
@@ -165,37 +172,42 @@ static VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
 #endif
 }
 
-static VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                       VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                       UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
 #endif
-    const FLOAT CRTM_5_1 = +0.55901699437494742410229341718281905886015458990288;
-    const FLOAT CRTM_5_2 = +0.95105651629515357211643933337938214340569863400000;
-    const FLOAT CRTM_5_3 = +0.25000000000000000000000000000000000000000000000000;
-    const FLOAT CRTM_5_4 = +0.58778525229247301629891039327884007596190389052978;
+    const FLOAT CRTM_5_1 =
+        +0.55901699437494742410229341718281905886015458990288;
+    const FLOAT CRTM_5_2 =
+        +0.95105651629515357211643933337938214340569863400000;
+    const FLOAT CRTM_5_3 =
+        +0.25000000000000000000000000000000000000000000000000;
+    const FLOAT CRTM_5_4 =
+        +0.58778525229247301629891039327884007596190389052978;
 
     FLOAT *in_r = (FLOAT *)in_real;
     FLOAT *in_i = (FLOAT *)in_imag;
     FLOAT *out_r = (FLOAT *)out_real;
     FLOAT *out_i = (FLOAT *)out_imag;
-    #ifdef VOLATILE_STRIDE_ARRAY
+#ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
-    #else
+#else
     INTP *in_strides = strides->in_strides;
     INTP *out_strides = strides->out_strides;
-    #endif
+#endif
     INTP v_in_stride = (strides->v_in_stride);
     INTP v_out_stride = (strides->v_out_stride);
     INTP cnt;
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i,
-            v25r, v34r, v52i, v43i, v25i, v34i, v52r, v43r, tvri, tvir,
-            cv1rr, cv2rr, cv3rr, cv1ii, cv2ii, cv3ii;
+        FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v5r, v5i, v25r, v34r,
+              v52i, v43i, v25i, v34i, v52r, v43r, tvri, tvir, cv1rr, cv2rr,
+              cv3rr, cv1ii, cv2ii, cv3ii;
 
         // Input point 1: x(0)
         v1r = *in_r;
@@ -236,7 +248,6 @@ static VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
         // Output point 1: X(0)
         *out_r = v1r + cv1rr;
         *out_i = v1i + cv1ii;
-
 
         // Output point 2: X(1)
         cv1rr = CRTM_5_1 * (v25r - v34r);
@@ -285,9 +296,13 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 28, 120, 50, 0, 61},
 ops_cycles_t get_ops_cnt_fft5c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return ops_cnt[0];
+    }
     else
+    {
         return ops_cnt[1];
+    }
 }
 
 const DOUBLE CRTM_5[RADIX_5][2] = {{1.0, 0.0},
@@ -296,8 +311,9 @@ const DOUBLE CRTM_5[RADIX_5][2] = {{1.0, 0.0},
                                    {-0.809016994374948, 0.587785252292473},
                                    {0.309016994374947, 0.951056516295154}};
 
-static VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                       VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                       UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -419,8 +435,9 @@ static VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
 #endif
 }
 
-static VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
-                INTP n, aoclfftz_strides_t *strides, UINT8 flag)
+static VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                       VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                       UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -547,9 +564,15 @@ static VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_i
 kfft_ register_kernel_fft5c(INT32 precision)
 {
     if (precision == DT_FLOAT)
+    {
         return fft5c_fp32;
+    }
     else if (precision == DT_DOUBLE)
+    {
         return fft5c_fp64;
+    }
     else
+    {
         return NULL;
+    }
 }
