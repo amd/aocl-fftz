@@ -53,33 +53,7 @@
 #include "utils/complex_utils.h"
 #include "utils/utils.h"
 
-// Defining DATA_STRIDE in corebench internally to avoid using internal headers
-#define T_DATA_STRIDE 2
-#define DATA_STRIDE 2
-
-// TODO: something else maybe ?
-#define IN_STRIDE 0
-#define OUT_STRIDE 1
-
-#define PATH_SIZE_MAX 200
-
 #define MAX(a, b) ((a > b) ? a : b)
-
-#ifdef WIN32
-#define SSCANF sscanf_s
-#define STRCPY(dst, dst_size, src) strcpy_s(dst, dst_size, src)
-#define FOPEN(file_pointer, file_name, open_mode)                              \
-    fopen_s(&file_pointer, file_name, open_mode)
-#define GETCWD(buffer, size) _getcwd(buffer, size)
-#define DIRECTORY_SEPARATOR "\\"
-#else
-#define SSCANF sscanf
-#define STRCPY(dst, dst_size, src) strcpy(dst, src)
-#define FOPEN(file_pointer, file_name, open_mode)                              \
-    (file_pointer = fopen(file_name, open_mode))
-#define GETCWD(buffer, size) getcwd(buffer, size)
-#define DIRECTORY_SEPARATOR "/"
-#endif
 
 #define PRINT_SUCCESS(str) printf("\033[1;32m" str "\033[1;0m");
 
@@ -342,189 +316,6 @@
         params->bit_reproducibility ? "TRUE" : "FALSE");                       \
 }
 
-#define PREPARE_LINEAR_TEST_INPUTS(in1, in2, in_combined, size, factors,       \
-                                   precision)                                  \
-{                                                                              \
-    if (precision == FLOAT_P)                                                  \
-    {                                                                          \
-        PREPARE_LINEAR_TEST_INPUTS_IMPL(in1, in2, in_combined, size,           \
-                                        factors, FLOAT);                       \
-    }                                                                          \
-    else                                                                       \
-    {                                                                          \
-        PREPARE_LINEAR_TEST_INPUTS_IMPL(in1, in2, in_combined, size,           \
-                                        factors, DOUBLE);                      \
-    }                                                                          \
-}
-
-#define PREPARE_LINEAR_TEST_INPUTS_IMPL(in1, in2, in_combined, size, factors,  \
-                                        dt_t)                                  \
-{                                                                              \
-    dt_t *in1_t = (dt_t *)in1;                                                 \
-    dt_t *in2_t = (dt_t *)in2;                                                 \
-    dt_t *in_combined_t = (dt_t *)in_combined;                                 \
-    dt_t *factors_t = (dt_t *)factors;                                         \
-    factors_t[0] = (dt_t)((rand() % 200) / 20.0 - 10.0);                       \
-    factors_t[1] = 0.0;                                                        \
-    factors_t[2] = (dt_t)((rand() % 200) / 20.0 - 10.0);                       \
-    factors_t[3] = 0.0;                                                        \
-    dt_t temp1[T_DATA_STRIDE] = {0.0, 0.0};                                    \
-    dt_t temp2[T_DATA_STRIDE] = {0.0, 0.0};                                    \
-    dt_t cmul_temp[T_DATA_STRIDE] = {0.0, 0.0};                                \
-    for (INTP idx = 0; idx < size; ++idx)                                      \
-    {                                                                          \
-        CMUL(factors_t, in1_t + idx * T_DATA_STRIDE, temp1, cmul_temp);        \
-        CMUL(factors_t + 2, in2_t + idx * T_DATA_STRIDE, temp2, cmul_temp);    \
-        CADD(temp1, temp2, in_combined_t + idx * T_DATA_STRIDE);               \
-    }                                                                          \
-}
-
-#define PREPARE_LINEAR_TEST_OUTPUTS(out1, out2, out_added, size, factors,      \
-                                    precision)                                 \
-{                                                                              \
-    if (precision == FLOAT_P)                                                  \
-    {                                                                          \
-        PREPARE_LINEAR_TEST_OUTPUTS_IMPL(out1, out2, out_added, size,          \
-                                         factors, FLOAT);                      \
-    }                                                                          \
-    else                                                                       \
-    {                                                                          \
-        PREPARE_LINEAR_TEST_OUTPUTS_IMPL(out1, out2, out_added, size,          \
-                                         factors, DOUBLE);                     \
-    }                                                                          \
-}
-
-#define PREPARE_LINEAR_TEST_OUTPUTS_IMPL(out1, out2, out_added, size, factors, \
-                                         dt_t)                                 \
-{                                                                              \
-    dt_t *out1_t = (dt_t *)out1;                                               \
-    dt_t *out2_t = (dt_t *)out2;                                               \
-    dt_t *out_added_t = (dt_t *)out_added;                                     \
-    dt_t *factors_t = (dt_t *)factors;                                         \
-    dt_t temp1[T_DATA_STRIDE] = {0.0, 0.0};                                    \
-    dt_t temp2[T_DATA_STRIDE] = {0.0, 0.0};                                    \
-    dt_t cmul_temp[T_DATA_STRIDE] = {0.0, 0.0};                                \
-    for (INTP idx = 0; idx < size; ++idx)                                      \
-    {                                                                          \
-        CMUL(factors_t, out1_t + idx * T_DATA_STRIDE, temp1, cmul_temp);       \
-        CMUL(factors_t + 2, out2_t + idx * T_DATA_STRIDE, temp2,               \
-             cmul_temp);                                                       \
-        CADD(temp1, temp2, out_added_t + idx * T_DATA_STRIDE);                 \
-    }                                                                          \
-}
-
-#define PREPARE_TIMESHIFT_TEST_INPUTS(in1, in2, n, m, imap, precision)         \
-{                                                                              \
-    if (precision == FLOAT_P)                                                  \
-    {                                                                          \
-        PREPARE_TIMESHIFT_TEST_INPUTS_IMPL(in1, in2, n, m, imap, FLOAT);       \
-    }                                                                          \
-    else                                                                       \
-    {                                                                          \
-        PREPARE_TIMESHIFT_TEST_INPUTS_IMPL(in1, in2, n, m, imap, DOUBLE);      \
-    }                                                                          \
-}
-
-#define PREPARE_TIMESHIFT_TEST_INPUTS_IMPL(in1, in2, n, m, imap, dt_t)         \
-{                                                                              \
-    dt_t *in1_t = (dt_t *)in1;                                                 \
-    dt_t *in2_t = (dt_t *)in2;                                                 \
-    /* Handle overflow to avoid negative indexing */                           \
-    for (INTP idx = 0; idx < n; idx++)                                         \
-    {                                                                          \
-        for (INTP is = 0; is < 1; is++)                                        \
-        {                                                                      \
-            INTP src = imap[(idx + (n - m)) % n + is] * T_DATA_STRIDE;         \
-            INTP dst = imap[idx + is] * T_DATA_STRIDE;                         \
-            in2_t[dst] = in1_t[src];                                           \
-            in2_t[dst + 1] = in1_t[src + 1];                                   \
-        }                                                                      \
-    }                                                                          \
-}
-
-#define PREPARE_TIMESHIFT_TEST_OUTPUTS(out1, out_combined, n, m, omap, dir,    \
-                                       precision)                              \
-{                                                                              \
-    if (precision == FLOAT_P)                                                  \
-    {                                                                          \
-        PREPARE_TIMESHIFT_TEST_OUTPUTS_IMPL(out1, out_combined, n, m,          \
-                                            omap, dir, FLOAT);                 \
-    }                                                                          \
-    else                                                                       \
-    {                                                                          \
-        PREPARE_TIMESHIFT_TEST_OUTPUTS_IMPL(out1, out_combined, n, m,          \
-                                            omap, dir, DOUBLE);                \
-    }                                                                          \
-}
-
-#define PREPARE_TIMESHIFT_TEST_OUTPUTS_IMPL(out1, out_combined, n, m, omap,    \
-                                            dir, dt_t)                         \
-{                                                                              \
-    dt_t *out1_t = (dt_t *)out1;                                               \
-    dt_t *out_combined_t = (dt_t *)out_combined;                               \
-    dt_t cmul_temp[T_DATA_STRIDE] = {0.0, 0.0};                                \
-    dt_t e_k[T_DATA_STRIDE] = {1.0, 0.0};                                      \
-    dt_t sign = (dir == FORWARD) ? -1.0 : 1.0;                                 \
-    for (INTP k = 0; k < n; k++)                                               \
-    {                                                                          \
-        dt_t angle = (sign * BENCH_2_PI * k / n);                              \
-        EULER(angle, e_k);                                                     \
-        for (INTP i = 0; i < m; i++)                                           \
-        {                                                                      \
-            CMUL(out1_t + omap[k * m + i] * T_DATA_STRIDE, e_k,                \
-                 out_combined_t + omap[k * m + i] * T_DATA_STRIDE,             \
-                 cmul_temp);                                                   \
-        }                                                                      \
-    }                                                                          \
-}
-
-#define NORMALIZE_DATA(arr, length, n, precision)                              \
-{                                                                              \
-    if (precision == FLOAT_P)                                                  \
-    {                                                                          \
-        NORMALIZE_DATA_IMPL(arr, length, n, FLOAT);                            \
-    }                                                                          \
-    else                                                                       \
-    {                                                                          \
-        NORMALIZE_DATA_IMPL(arr, length, n, DOUBLE);                           \
-    }                                                                          \
-}
-
-#define NORMALIZE_DATA_IMPL(arr, length, n, dt_t)                              \
-{                                                                              \
-    dt_t *arr_t = (dt_t *)arr;                                                 \
-    for (INTP idx = 0; idx < length; ++idx)                                    \
-    {                                                                          \
-        arr_t[idx * T_DATA_STRIDE] /= n;                                       \
-        arr_t[idx * T_DATA_STRIDE + 1] /= n;                                   \
-    }                                                                          \
-}
-
-#define INIT_ERR_COORDS(arr, length, val)                                      \
-{                                                                              \
-    for (INTP idx = 0; idx < length; ++idx)                                    \
-    {                                                                          \
-        arr[idx] = val;                                                        \
-    }                                                                          \
-}
-
-#define PRINT_ERR_COORDS(enablelog, arr, dim_length, vec_length)               \
-{                                                                              \
-    if (DEBUG <= enablelog)                                                    \
-    {                                                                          \
-        INTP idx;                                                              \
-        for (idx = vec_length - 1; idx > 0; idx--)                             \
-        {                                                                      \
-            printf("%ldx", arr[dim_length + idx]);                             \
-        }                                                                      \
-        printf("%ldv", arr[dim_length + idx]);                                 \
-        for (INTP idx = dim_length - 1; idx >= 0; idx--)                       \
-        {                                                                      \
-            printf("[%ld]", arr[idx]);                                         \
-        }                                                                      \
-        printf("\n");                                                          \
-    }                                                                          \
-}
 
 /**
  * @brief angle = angle * [(i0+k0)/n0 + (i0+k0)/n0 + ... + (iR+kR)/nR]
@@ -541,31 +332,6 @@
     angle = angle * x;                                                         \
 }
 
-/**
- * @brief incrmement the nD counter by 1 value, used to map 1D index to nD
- *
- */
-#define INCREMENT_ND_COUNTER(cur_dims, max_dims, rank)                         \
-{                                                                              \
-    UINT8 incremented = 0;                                                     \
-    INTP cur_rank = 0;                                                         \
-    do                                                                         \
-    {                                                                          \
-        if (cur_dims[cur_rank] < max_dims[cur_rank].n - 1)                     \
-        {                                                                      \
-            cur_dims[cur_rank]++;                                              \
-            incremented = 1;                                                   \
-        }                                                                      \
-        else                                                                   \
-        {                                                                      \
-            for (INTP i = 0; i <= cur_rank; i++)                               \
-            {                                                                  \
-                cur_dims[i] = 0;                                               \
-            }                                                                  \
-            cur_rank++;                                                        \
-        }                                                                      \
-    } while (!incremented && cur_rank < rank);                                 \
-}
 
 /**
  * @brief copy the nD counter from src to dst
@@ -577,76 +343,6 @@
     {                                                                          \
         dst[i] = src[i];                                                       \
     }                                                                          \
-}
-
-/**
- * @brief reset the nD counter values to 0
- *
- */
-#define RESET_ND_COUNTER(cur_dims, rank)                                       \
-{                                                                              \
-    for (INT32 i = 0; i < rank; i++)                                           \
-    {                                                                          \
-        cur_dims[i] = 0;                                                       \
-    }                                                                          \
-}
-
-/**
- * @brief print the nD index (with nD batches) to stdout
- *
- */
-#define PRINT_ND_COUNTER(dims, vecs, dim_rank, vec_rank)                       \
-{                                                                              \
-    /* vecs */                                                                 \
-    printf("[");                                                               \
-    for (INT32 j = vec_rank - 1; j >= 0; j--)                                  \
-    {                                                                          \
-        if (j < vec_rank - 1)                                                  \
-        {                                                                      \
-            printf(",");                                                       \
-        }                                                                      \
-        printf("%td", vecs[j]);                                                \
-    }                                                                          \
-    printf("]v[");                                                             \
-    /* dims */                                                                 \
-    for (INT32 j = dim_rank - 1; j >= 0; j--)                                  \
-    {                                                                          \
-        if (j < dim_rank - 1)                                                  \
-        {                                                                      \
-            printf(",");                                                       \
-        }                                                                      \
-        printf("%td", dims[j]);                                                \
-    }                                                                          \
-    printf("]");                                                               \
-}
-
-/**
- * @brief print the nD index (with nD batches) to file
- *
- */
-#define PRINT_ND_COUNTER_TO_FILE(out_file, dims, vecs, dim_rank, vec_rank)     \
-{                                                                              \
-    /* vecs */                                                                 \
-    fprintf(out_file, "[");                                                    \
-    for (INT32 j = vec_rank - 1; j >= 0; j--)                                  \
-    {                                                                          \
-        if (j < vec_rank - 1)                                                  \
-        {                                                                      \
-            fprintf(out_file, ",");                                            \
-        }                                                                      \
-        fprintf(out_file, "%td", vecs[j]);                                     \
-    }                                                                          \
-    fprintf(out_file, "]v[");                                                  \
-    /* dims */                                                                 \
-    for (INT32 j = dim_rank - 1; j >= 0; j--)                                  \
-    {                                                                          \
-        if (j < dim_rank - 1)                                                  \
-        {                                                                      \
-            fprintf(out_file, ",");                                            \
-        }                                                                      \
-        fprintf(out_file, "%td", dims[j]);                                     \
-    }                                                                          \
-    fprintf(out_file, "]");                                                    \
 }
 
 /**
@@ -680,15 +376,13 @@
     }                                                                          \
 }
 
-// Function pointers
-VOID (*prepare_input_data) (VOID *input, INTP n, INTP *idx_map,
-                            INT32 input_type);
+#define MINQ_TIME 1e5
+#define SLEEP_TIME 1e8
+
 #ifdef ENABLE_DFT_REFERENCE
 VOID (*dft_ref) (aoclfftz_bench_params_t *params, VOID *out_buf,
                  INTP *in_idx_map, INTP *out_idx_map);
 #endif
-INT32 (*compare) (aoclfftz_bench_params_t *params, VOID *a, VOID *b,
-                INTP batches, INTP n, INTP *idx_map);
 
 // Function declarations
 INT32 set_flag(aoclfftz_bench_params_t *params);
@@ -697,18 +391,12 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
                                   aoclfftz_dim_t_64_ **dims,
                                   aoclfftz_dim_t_64_ **vecs,
                                   INTP default_stride);
-VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type);
-VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type);
 #ifdef ENABLE_DFT_REFERENCE
 VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
                INTP *out_idx_map);
 VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
                INTP *out_idx_map);
 #endif
-INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *idx_map);
-INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *idx_map);
 INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank);
 VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
                             INTP *in_buffer_size, INTP *out_buffer_size);
@@ -719,7 +407,7 @@ VOID prepare_index_map(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
                        INTP dst_in_idx, INTP dst_out_idx,
                        aoclfftz_dim_t_64_ *dims, INT32 rank);
-INT32 calibrate_iterations(VOID *handle, DOUBLE min_bench_time);
+INT32 calibrate_iterations(VOID *handle, aoclfftz_bench_params_t *params);
 VOID bench_sleep(INT64 nano_seconds);
 
 // Function definitions
@@ -1023,182 +711,6 @@ exit_func:
     return status;
 }
 
-/**
- * @brief Prepare FLOAT input data of size `n * stride`.
- *
- * @param input array to store input data
- * @param n input size
- * @param idx_map index map of size n, specify NULL to disable mapping
- * @param input_type type of input data : RANDOM, IMPULSE or SIGNAL
- * @return VOID
- */
-VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
-{
-    FLOAT *input_f = (FLOAT *)input;
-    INTP idx = 0;
-    // random input
-    // range: [-10.0, 10.0)
-    if (input_type == RANDOM_INPUT)
-    {
-        if (idx_map == NULL)
-        {
-            for (idx = 0; idx < n; ++idx)
-            {
-                input_f[idx * T_DATA_STRIDE] =
-                    (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
-                input_f[idx * T_DATA_STRIDE + 1] =
-                    (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
-            }
-        }
-        else
-        {
-            for (idx = 0; idx < n; ++idx)
-            {
-                input_f[idx_map[idx] * T_DATA_STRIDE] =
-                    (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
-                input_f[idx_map[idx] * T_DATA_STRIDE + 1] =
-                    (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
-            }
-        }
-    }
-    // impulse input
-    // range: [-10.0, 10.0)
-    else if (input_type == IMPULSE_INPUT)
-    {
-        if (idx_map == NULL)
-        {
-            idx = rand() % n;
-        }
-        else
-        {
-            idx = idx_map[rand() % n];
-        }
-        memset(input_f, 0, n * T_DATA_STRIDE);
-        input_f[idx * T_DATA_STRIDE] =
-            (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
-        input_f[idx * T_DATA_STRIDE + 1] =
-            (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
-    }
-    // sinusoidal signal input
-    else if (input_type == SINUSOIDAL_SIGNAL_INPUT)
-    {
-        // Sine wave cycles
-        INTP cycles = (rand() % (n / 2)) + 2;
-        FLOAT size = BENCH_2_PI * cycles;
-        // Shift the origin of the wave from 0 to a positive integer `shift`,
-        // shift range: [0, n)
-        INTP shift = rand() % n;
-        // scale the amplitude of the wave by `scale` times,
-        // scale range: [0.0, 5.0)
-        FLOAT scale = ((FLOAT)rand() / (FLOAT)RAND_MAX) * 5.0f;
-        if (idx_map == NULL)
-        {
-            for (INTP i = 0; i < n; i++)
-            {
-                input_f[((i + shift) % n) * T_DATA_STRIDE] =
-                    sinf((FLOAT)(i * size) / n) * scale;
-                input_f[((i + shift) % n) * T_DATA_STRIDE + 1] = 0.0f;
-            }
-        }
-        else
-        {
-            for (INTP i = 0; i < n; i++)
-            {
-                input_f[idx_map[(i + shift) % n] * T_DATA_STRIDE] =
-                    sinf((FLOAT)(i * size) / n) * scale;
-                input_f[idx_map[(i + shift) % n] * T_DATA_STRIDE + 1] = 0.0f;
-            }
-        }
-    }
-}
-
-/**
- * @brief Prepare DOUBLE input data of size `n * stride`.
- *
- * @param input array to store input data
- * @param n input size
- * @param idx_map index map of size n, specify NULL to disable mapping
- * @param input_type type of input data : RANDOM, IMPULSE or SIGNAL
- * @return VOID
- */
-VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
-{
-    DOUBLE *input_d = (DOUBLE *)input;
-    INTP idx = 0;
-    // random input
-    // range: [-10.0, 10.0)
-    if (input_type == RANDOM_INPUT)
-    {
-        if (idx_map == NULL)
-        {
-            for (idx = 0; idx < n; ++idx)
-            {
-                input_d[idx * T_DATA_STRIDE] =
-                    (20.0 / RAND_MAX) * rand() - 10.0;
-                input_d[idx * T_DATA_STRIDE + 1] =
-                    (20.0 / RAND_MAX) * rand() - 10.0;
-            }
-        }
-        else
-        {
-            for (idx = 0; idx < n; ++idx)
-            {
-                input_d[idx_map[idx] * T_DATA_STRIDE] =
-                    (20.0 / RAND_MAX) * rand() - 10.0;
-                input_d[idx_map[idx] * T_DATA_STRIDE + 1] =
-                    (20.0 / RAND_MAX) * rand() - 10.0;
-            }
-        }
-    }
-    // impulse input
-    // range: [-10.0, 10.0)
-    else if (input_type == IMPULSE_INPUT)
-    {
-        if (idx_map == NULL)
-        {
-            idx = rand() % n;
-        }
-        else
-        {
-            idx = idx_map[rand() % n];
-        }
-        memset(input_d, 0, n * T_DATA_STRIDE);
-        input_d[idx * T_DATA_STRIDE] = (20.0 / RAND_MAX) * rand() - 10.0;
-        input_d[idx * T_DATA_STRIDE + 1] = (20.0 / RAND_MAX) * rand() - 10.0;
-    }
-    // sinusoidal signal input
-    else if (input_type == SINUSOIDAL_SIGNAL_INPUT)
-    {
-        // Sine wave cycles
-        INTP cycles = (rand() % (n / 2)) + 2;
-        DOUBLE size = BENCH_2_PI * cycles;
-        // Shift the origin of the wave from 0 to a positive integer `shift`,
-        // shift range: [0, n)
-        INTP shift = rand() % n;
-        // scale the amplitude of the wave by `scale` times,
-        // scale range: [0.0, 5.0)
-        DOUBLE scale = ((DOUBLE)rand() / RAND_MAX) * 5.0;
-        if (idx_map == NULL)
-        {
-            for (INTP i = 0; i < n; i++)
-            {
-                input_d[((i + shift) % n) * T_DATA_STRIDE] =
-                    sin((DOUBLE)(i * size) / n) * scale;
-                input_d[((i + shift) % n) * T_DATA_STRIDE + 1] = 0.0;
-            }
-        }
-        else
-        {
-            for (INTP i = 0; i < n; i++)
-            {
-                input_d[idx_map[(i + shift) % n] * T_DATA_STRIDE] =
-                    sin((DOUBLE)(i * size) / n) * scale;
-                input_d[idx_map[(i + shift) % n] * T_DATA_STRIDE + 1] = 0.0;
-            }
-        }
-    }
-}
-
 #ifdef ENABLE_DFT_REFERENCE
 /**
  * @brief DFT reference implementation for FLOAT type
@@ -1323,391 +835,6 @@ VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
     FREE_ALLOCATED_MEM(out_counter, is_align);
 }
 #endif
-
-/**
- * @brief Compare the two data of length n (FLOAT type)
- *        Used to compare output with reference output.
- *
- * @param params aoclfftz_bench_params_t struct containing the req info
- * @param a first data
- * @param b second data
- * @param batches batch/vec size
- * @param n problem size
- * @param idx_map index map
- * @return INT32 if the data points are same, return 1 else 0
- */
-INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *idx_map)
-{
-    DOUBLE tol = params->tolerance;
-    INT32 logger_mode = params->logger_mode;
-    FLOAT *a_f = (FLOAT *)a;
-    FLOAT *b_f = (FLOAT *)b;
-    INT32 status = BENCH_SUCCESS;
-
-    INT32 dim_rank = params->dim_rank;
-    aoclfftz_dim_t_64_ *dims = params->dims;
-    INT32 vec_rank = params->vec_rank;
-    aoclfftz_dim_t_64_ *vecs = params->vecs;
-    INTP *dim_counter = NULL;
-    INTP *vec_counter = NULL;
-    UINT32 is_aligned = params->aligned_alloc;
-    ALLOC_INIT(dim_counter, INTP, dim_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(vec_counter, INTP, vec_rank * sizeof(INTP), is_aligned);
-
-    FLOAT max_abs_err = 0.0;
-    FLOAT max_mag = 0.0;
-    INTP max_err_idx = -1;
-    INTP first_err_idx = INT64_MAX;
-    FLOAT first_abs_err = 0.0;
-    INTP *d_maxerr_coords = NULL;
-    INTP *d_err_coords = NULL;
-    INTP *b_maxerr_coords = NULL;
-    INTP *b_err_coords = NULL;
-    ALLOC_INIT(d_maxerr_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(d_err_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(b_maxerr_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(b_err_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
-
-    INTP N = batches * n;
-    for (INTP i = 0; i < N; i++)
-    {
-        INTP idx = idx_map[i];
-        FLOAT abs_err = fmaxf(
-            fabsf(a_f[idx * T_DATA_STRIDE] - b_f[idx * T_DATA_STRIDE]),
-            fabsf(a_f[idx * T_DATA_STRIDE + 1] - b_f[idx * T_DATA_STRIDE + 1]));
-        FLOAT mag = fminf(fmaxf(fabsf(a_f[idx * T_DATA_STRIDE]),
-                                fabsf(a_f[idx * T_DATA_STRIDE + 1])),
-                          fmaxf(fabsf(b_f[idx * T_DATA_STRIDE]),
-                                fabsf(b_f[idx * T_DATA_STRIDE + 1])));
-        if (abs_err > max_abs_err)
-        {
-            max_err_idx = idx;
-            max_abs_err = abs_err;
-            COPY_ND_COORDS(d_maxerr_coords, dim_counter, dim_rank);
-            COPY_ND_COORDS(b_maxerr_coords, vec_counter, vec_rank);
-            if (idx < first_err_idx && abs_err > tol)
-            {
-                first_err_idx = idx;
-                first_abs_err = abs_err;
-                COPY_ND_COORDS(d_err_coords, dim_counter, dim_rank);
-                COPY_ND_COORDS(b_err_coords, vec_counter, vec_rank);
-            }
-        }
-        if (mag > max_mag)
-        {
-            max_mag = mag;
-        }
-        INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
-        if (i % n == n - 1)
-        {
-            INCREMENT_ND_COUNTER(vec_counter, vecs, vec_rank);
-        }
-    }
-    FLOAT rel_err;
-    if (max_abs_err == 0.0 && max_mag == 0.0)
-    {
-        rel_err = 0.0;
-    }
-    else if (max_mag == 0.0)
-    {
-        rel_err = max_abs_err;
-    }
-    else
-    {
-        rel_err = max_abs_err / max_mag;
-    }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode, "Error = %.6g", rel_err);
-#endif
-    if (rel_err > tol)
-    {
-        printf("Relative error  = %.6g\n", rel_err);
-        printf("Tolerance       = %.6g\n", tol);
-        if (first_err_idx < INT64_MAX)
-        {
-            printf("First absolute error at index %td -> ", first_err_idx);
-            PRINT_ND_COUNTER(d_err_coords, b_err_coords, dim_rank, vec_rank);
-            printf("\n  expected = %.6g + %.6gj\n",
-                   b_f[first_err_idx * T_DATA_STRIDE],
-                   b_f[first_err_idx * T_DATA_STRIDE + 1]);
-            printf("  got      = %.6g + %.6gj\n",
-                   a_f[first_err_idx * T_DATA_STRIDE],
-                   a_f[first_err_idx * T_DATA_STRIDE + 1]);
-        }
-        printf("  max abs error = %.6g\n", first_abs_err);
-        printf("Max absolute error at index %td -> ", max_err_idx);
-        PRINT_ND_COUNTER(d_maxerr_coords, b_maxerr_coords, dim_rank, vec_rank);
-        printf("\n  expected = %.6g + %.6gj\n",
-               b_f[max_err_idx * T_DATA_STRIDE],
-               b_f[max_err_idx * T_DATA_STRIDE + 1]);
-        printf("  got      = %.6g + %.6gj\n", a_f[max_err_idx * T_DATA_STRIDE],
-               a_f[max_err_idx * T_DATA_STRIDE + 1]);
-        printf("  max abs error = %.6g\n", max_abs_err);
-        if (logger_mode >= DEBUG)
-        {
-            RESET_ND_COUNTER(dim_counter, dim_rank);
-            RESET_ND_COUNTER(vec_counter, vec_rank);
-            // Using printf instead of logger to avoid file and line prefix
-            printf("\n\t%5s%26s%32s\n", "Index", "Expected", "Actual");
-            for (INTP i = 0, c = 100; i < N && c > 0; i++, c--)
-            {
-                INTP idx = idx_map[i];
-                printf("%7td -> ", idx);
-                PRINT_ND_COUNTER(dim_counter, vec_counter, dim_rank, vec_rank);
-                printf(" : %12.6f + %12.6fj  vs  %12.6f + %12.6fj\n",
-                       a_f[idx * T_DATA_STRIDE], a_f[idx * T_DATA_STRIDE + 1],
-                       b_f[idx * T_DATA_STRIDE], b_f[idx * T_DATA_STRIDE + 1]);
-
-                INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
-                if (i % n == n - 1)
-                {
-                    INCREMENT_ND_COUNTER(vec_counter, vecs, vec_rank);
-                }
-            }
-            RESET_ND_COUNTER(dim_counter, dim_rank);
-            RESET_ND_COUNTER(vec_counter, vec_rank);
-            // Write full output to a file
-            FILE *out_file = NULL;
-            FOPEN(out_file, OUTPUT_LOG_FILE, "w");
-            fprintf(out_file, "\t%10s%30s%48s\n", "Index", "Expected",
-                    "Actual");
-            for (INTP i = 0; i < N; i++)
-            {
-                INTP idx = idx_map[i];
-                fprintf(out_file, "%7td -> ", idx);
-                PRINT_ND_COUNTER_TO_FILE(out_file, dim_counter, vec_counter,
-                                         dim_rank, vec_rank);
-                fprintf(out_file, " : %12.6f + %12.6fj  vs  %12.6f + %12.6fj\n",
-                        a_f[idx * T_DATA_STRIDE], a_f[idx * T_DATA_STRIDE + 1],
-                        b_f[idx * T_DATA_STRIDE], b_f[idx * T_DATA_STRIDE + 1]);
-
-                INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
-                if (i % n == n - 1)
-                {
-                    INCREMENT_ND_COUNTER(vec_counter, vecs, vec_rank);
-                }
-            }
-            fclose(out_file);
-            CHAR path[PATH_SIZE_MAX];
-            CHAR *ret = GETCWD(path, sizeof(path));
-            if (ret == NULL)
-            {
-                STRCPY(path, PATH_SIZE_MAX, "current_dir");
-            }
-            printf("\nFull output log can be found in %s%s%s\n", path,
-                   DIRECTORY_SEPARATOR, OUTPUT_LOG_FILE);
-        }
-        else
-        {
-            printf("\nUse debug logger mode [--logger-mode 3 (or) -l 3] to get "
-                   "detailed error log\n");
-        }
-        status = VERIFICATION_FAILURE;
-    }
-
-    FREE_ALLOCATED_MEM(dim_counter, is_aligned);
-    FREE_ALLOCATED_MEM(vec_counter, is_aligned);
-    FREE_ALLOCATED_MEM(d_maxerr_coords, is_aligned);
-    FREE_ALLOCATED_MEM(d_err_coords, is_aligned);
-    FREE_ALLOCATED_MEM(b_maxerr_coords, is_aligned);
-    FREE_ALLOCATED_MEM(b_err_coords, is_aligned);
-
-    return status;
-}
-
-/**
- * @brief Compare the two data of length n (DOUBLE type)
- *        Used to compare output with reference output.
- *
- * @param params aoclfftz_bench_params_t struct containing the req info
- * @param a first data
- * @param b second data
- * @param batches batch/vec size
- * @param n problem size
- * @param idx_map index map
- * @return INT32 if the data points are same, return 1 else 0
- */
-INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *idx_map)
-{
-    DOUBLE tol = params->tolerance;
-    INT32 logger_mode = params->logger_mode;
-    DOUBLE *a_d = (DOUBLE *)a;
-    DOUBLE *b_d = (DOUBLE *)b;
-    INT32 status = BENCH_SUCCESS;
-    INT32 dim_rank = params->dim_rank;
-    aoclfftz_dim_t_64_ *dims = params->dims;
-    INT32 vec_rank = params->vec_rank;
-    aoclfftz_dim_t_64_ *vecs = params->vecs;
-    INTP *dim_counter = NULL;
-    INTP *vec_counter = NULL;
-    UINT32 is_aligned = params->aligned_alloc;
-    ALLOC_INIT(dim_counter, INTP, dim_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(vec_counter, INTP, vec_rank * sizeof(INTP), is_aligned);
-
-    DOUBLE max_abs_err = 0.0;
-    DOUBLE max_mag = 0.0;
-    INTP max_err_idx = -1;
-    INTP first_err_idx = INT64_MAX;
-    DOUBLE first_abs_err = 0.0;
-    INTP *d_maxerr_coords = NULL;
-    INTP *d_err_coords = NULL;
-    INTP *b_maxerr_coords = NULL;
-    INTP *b_err_coords = NULL;
-    ALLOC_INIT(d_maxerr_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(d_err_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(b_maxerr_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(b_err_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
-
-    INTP N = batches * n;
-    for (INTP i = 0; i < N; i++)
-    {
-        INTP idx = idx_map[i];
-        DOUBLE abs_err = fmax(
-            fabs(a_d[idx * T_DATA_STRIDE] - b_d[idx * T_DATA_STRIDE]),
-            fabs(a_d[idx * T_DATA_STRIDE + 1] - b_d[idx * T_DATA_STRIDE + 1]));
-        DOUBLE mag = fmin(fmax(fabs(a_d[idx * T_DATA_STRIDE]),
-                               fabs(a_d[idx * T_DATA_STRIDE + 1])),
-                          fmax(fabs(b_d[idx * T_DATA_STRIDE]),
-                               fabs(b_d[idx * T_DATA_STRIDE + 1])));
-        if (abs_err > max_abs_err)
-        {
-            max_err_idx = idx;
-            max_abs_err = abs_err;
-            COPY_ND_COORDS(d_maxerr_coords, dim_counter, dim_rank);
-            COPY_ND_COORDS(b_maxerr_coords, vec_counter, vec_rank);
-            if (idx < first_err_idx && abs_err > tol)
-            {
-                first_err_idx = idx;
-                first_abs_err = abs_err;
-                COPY_ND_COORDS(d_err_coords, dim_counter, dim_rank);
-                COPY_ND_COORDS(b_err_coords, vec_counter, vec_rank);
-            }
-        }
-        if (mag > max_mag)
-        {
-            max_mag = mag;
-        }
-        INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
-        if (i % n == n - 1)
-        {
-            INCREMENT_ND_COUNTER(vec_counter, vecs, vec_rank);
-        }
-    }
-    DOUBLE rel_err;
-    if (max_abs_err == 0.0 && max_mag == 0.0)
-    {
-        rel_err = 0.0;
-    }
-    else if (max_mag == 0.0)
-    {
-        rel_err = max_abs_err;
-    }
-    else
-    {
-        rel_err = max_abs_err / max_mag;
-    }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode, "Error = %.6g", rel_err);
-#endif
-    if (rel_err > tol)
-    {
-        printf("Relative error  = %.6g\n", rel_err);
-        printf("Tolerance       = %.6g\n", tol);
-        if (first_err_idx < INT64_MAX)
-        {
-            printf("First absolute error at index %td -> ", first_err_idx);
-            PRINT_ND_COUNTER(d_err_coords, b_err_coords, dim_rank, vec_rank);
-            printf("\n  expected = %.6g + %.6gj\n",
-                   b_d[first_err_idx * T_DATA_STRIDE],
-                   b_d[first_err_idx * T_DATA_STRIDE + 1]);
-            printf("  got      = %.6g + %.6gj\n",
-                   a_d[first_err_idx * T_DATA_STRIDE],
-                   a_d[first_err_idx * T_DATA_STRIDE + 1]);
-        }
-        printf("  max abs error = %.6g\n", first_abs_err);
-        printf("Max absolute error at index %td -> ", max_err_idx);
-        PRINT_ND_COUNTER(d_maxerr_coords, b_maxerr_coords, dim_rank, vec_rank);
-        printf("\n  expected = %.6g + %.6gj\n",
-               b_d[max_err_idx * T_DATA_STRIDE],
-               b_d[max_err_idx * T_DATA_STRIDE + 1]);
-        printf("  got      = %.6g + %.6gj\n", a_d[max_err_idx * T_DATA_STRIDE],
-               a_d[max_err_idx * T_DATA_STRIDE + 1]);
-        printf("  max abs error = %.6g\n", max_abs_err);
-        if (logger_mode >= DEBUG)
-        {
-            RESET_ND_COUNTER(dim_counter, dim_rank);
-            RESET_ND_COUNTER(vec_counter, vec_rank);
-            // Using printf instead of logger to avoid file and line prefix
-            printf("\n\t%10s%30s%48s\n", "Index", "Expected", "Actual");
-            for (INTP i = 0, c = 100; i < N && c > 0; i++, c--)
-            {
-                INTP idx = idx_map[i];
-                // vecs
-                printf("%7td -> ", idx);
-                PRINT_ND_COUNTER(dim_counter, vec_counter, dim_rank, vec_rank);
-                printf(" : %20.14lf + %20.14lfj  vs  %20.14lf + %20.14lfj\n",
-                       a_d[idx * T_DATA_STRIDE], a_d[idx * T_DATA_STRIDE + 1],
-                       b_d[idx * T_DATA_STRIDE], b_d[idx * T_DATA_STRIDE + 1]);
-
-                INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
-                if (i % n == n - 1)
-                {
-                    INCREMENT_ND_COUNTER(vec_counter, vecs, vec_rank);
-                }
-            }
-            RESET_ND_COUNTER(dim_counter, dim_rank);
-            RESET_ND_COUNTER(vec_counter, vec_rank);
-            // Write full output to a file
-            FILE *out_file = NULL;
-            FOPEN(out_file, OUTPUT_LOG_FILE, "w");
-            fprintf(out_file, "\t%10s%30s%48s\n", "Index", "Expected",
-                    "Actual");
-            for (INTP i = 0; i < N; i++)
-            {
-                INTP idx = idx_map[i];
-                fprintf(out_file, "%7td -> ", idx);
-                PRINT_ND_COUNTER_TO_FILE(out_file, dim_counter, vec_counter,
-                                         dim_rank, vec_rank);
-                fprintf(out_file,
-                        " : %20.14lf + %20.14lfj  vs  %20.14lf + %20.14lfj\n",
-                        a_d[idx * T_DATA_STRIDE], a_d[idx * T_DATA_STRIDE + 1],
-                        b_d[idx * T_DATA_STRIDE], b_d[idx * T_DATA_STRIDE + 1]);
-
-                INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
-                if (i % n == n - 1)
-                {
-                    INCREMENT_ND_COUNTER(vec_counter, vecs, vec_rank);
-                }
-            }
-            fclose(out_file);
-            CHAR path[PATH_SIZE_MAX];
-            CHAR *ret = GETCWD(path, sizeof(path));
-            if (ret == NULL)
-            {
-                STRCPY(path, PATH_SIZE_MAX, "current_dir");
-            }
-            printf("\nFull output log can be found in %s%s%s\n", path,
-                   DIRECTORY_SEPARATOR, OUTPUT_LOG_FILE);
-        }
-        else
-        {
-            printf("\nUse debug logger mode [--logger-mode 3 (or) -l 3] to get "
-                   "detailed error log\n");
-        }
-        status = VERIFICATION_FAILURE;
-    }
-
-    FREE_ALLOCATED_MEM(dim_counter, is_aligned);
-    FREE_ALLOCATED_MEM(vec_counter, is_aligned);
-    FREE_ALLOCATED_MEM(d_maxerr_coords, is_aligned);
-    FREE_ALLOCATED_MEM(d_err_coords, is_aligned);
-    FREE_ALLOCATED_MEM(b_maxerr_coords, is_aligned);
-    FREE_ALLOCATED_MEM(b_err_coords, is_aligned);
-
-    return status;
-}
 
 /**
  * @brief calculates the total size without strides
@@ -1895,12 +1022,12 @@ VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
  * @brief Computes the number of iterations for benchmarking
  *
  * @param handle handle object of VOID* type
- * @param min_bench_time minimum time to run benchmark
+ * @param params aoclfftz_bench_params_t type contains parsed arguments
  * @return INT32 iterations
  */
-INT32 calibrate_iterations(VOID *handle, DOUBLE min_bench_time)
+INT32 calibrate_iterations(VOID *handle, aoclfftz_bench_params_t *params)
 {
-    DOUBLE minq_time = 1e5; // minimum quantifiable time 100 us
+    DOUBLE minq_time = MINQ_TIME; // minimum quantifiable time 100 us
     INT32 increase_iterations = 1;
     DOUBLE cur_time = 0;
 #ifdef WIN32
@@ -1916,7 +1043,7 @@ INT32 calibrate_iterations(VOID *handle, DOUBLE min_bench_time)
         getTime(start_time);
         while (--j)
         {
-            aoclfftz_execute(handle);
+            params->aoclfftz_execute(handle);
         }
         getTime(end_time);
         cur_time = (DOUBLE)diffTime(clk_tick, start_time, end_time);
@@ -1925,14 +1052,14 @@ INT32 calibrate_iterations(VOID *handle, DOUBLE min_bench_time)
         if (cur_time >= minq_time)
         {
             increase_iterations = 0;
-            if (cur_time > min_bench_time)
+            if (cur_time > params->min_bench_time)
             {
                 return iters;
             }
             // Scaling the iteration for min_acceptable_time
-            return (iters * min_bench_time / cur_time);
+            return (iters * params->min_bench_time / cur_time);
         }
-        bench_sleep(1e8); // 0.1 seconds
+        bench_sleep(SLEEP_TIME); // 0.1 seconds
     }
     return iters;
 }

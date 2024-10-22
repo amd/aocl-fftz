@@ -56,8 +56,26 @@
 // sized problems.
 #define WARMUP_ITERATIONS 2
 
-#define OUTPUT_LOG_FILE "output_dump.txt"
+// Defining DATA_STRIDE in corebench internally to avoid using internal headers
+#define T_DATA_STRIDE 2
+#define PATH_SIZE_MAX 200
 
+// Forward declarations
+typedef struct aoclfftz_bench_params aoclfftz_bench_params_t;
+typedef struct aoclfftz_bench_error aoclfftz_bench_error_t;
+
+// Function pointer types
+typedef VOID (*dft_ref_) (aoclfftz_bench_params_t *params, VOID *out_buf,
+                            INTP *in_idx_map, INTP *out_idx_map);
+typedef VOID *(*setup_problem_) (aoclfftz_bench_params_t *params);
+typedef INT32 (*aoclfftz_execute_) (VOID *handle);
+typedef VOID (*aoclfftz_destroy_) (VOID *handle);
+typedef VOID (*prepare_input_data_) (VOID *input, INTP n, INTP *idx_map,
+                            INT32 input_type);
+typedef INT32 (*compare_) (aoclfftz_bench_params_t *params, VOID *a, VOID *b,
+                INTP batches, INTP n, INTP *idx_map);
+
+// Enumerators for test bench
 typedef enum
 {
     COMPLEX_TO_COMPLEX = 0,
@@ -130,7 +148,8 @@ typedef enum
     SINUSOIDAL_SIGNAL_INPUT
 } aoclfftz_bench_input_type_t;
 
-typedef struct
+// Structures for test bench
+typedef struct aoclfftz_bench_params
 {
     VOID *in;
     VOID *out;
@@ -158,9 +177,15 @@ typedef struct
     INT32 measure_stats;
     INT32 bit_reproducibility;
     UINT32 aligned_alloc;
+    dft_ref_ dft_ref;
+    setup_problem_ setup_problem;
+    aoclfftz_execute_ aoclfftz_execute;
+    aoclfftz_destroy_ aoclfftz_destroy;
+    prepare_input_data_ prepare_input_data;
+    compare_ compare;
 } aoclfftz_bench_params_t;
 
-typedef struct
+typedef struct aoclfftz_bench_error
 {
     DOUBLE max_abs_err;
     DOUBLE max_mag;
@@ -168,15 +193,11 @@ typedef struct
     INTP *first_err_coords;
 } aoclfftz_bench_error_t;
 
-VOID *(*setup_problem)(aoclfftz_bench_params_t *params);
-INT32 (*aoclfftz_execute)(VOID *handle);
-VOID (*aoclfftz_destroy)(VOID *handle);
 
 // Function declarations
 
 INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                            aoclfftz_bench_params_t *bench_params);
-INT32 register_functions(INT32 precision, INT32 data_model);
 VOID *setup_problem_f(aoclfftz_bench_params_t *params);
 VOID *setup_problem_d(aoclfftz_bench_params_t *params);
 VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params);

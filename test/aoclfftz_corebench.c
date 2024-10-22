@@ -45,6 +45,7 @@
 #include "aoclfftz_corebench.h"
 #include "aoclfftz_corebench_utils.h"
 #include "utils/utils.h"
+#include "test/utils/register_functions.h"
 
 /**
  * @brief print the help menu contents to the output
@@ -65,10 +66,10 @@ VOID show_help_menu(VOID)
         "dimensional problem with size 10 having input and output strides\n"
         "                for nD problem :\n"
         "                  2x3x4 => size of the three dimensional problem\n"
-        "                  2v3x4v5 => a 2x4 length vector of two dimensonal "
-        "problem with size 4x5\n"
-        "                  2:2:1v10:3:2x4:1:2v5:5:2 => a strided 2x4 length "
-        "vector of two dimensonal problem with size 10x5 having strides\n"
+        "                  2x4v3x5 => a 2x4 length vector of two dimension "
+        "problem with size 3x5\n"
+        "                  2:2:1x4:1:2v10:3:2x5:5:2 => a strided 2x4 length "
+        "vector of two dimension problem with size 10x5 having strides\n"
         "Available options :-\n"
         "-p, --precision          'd' for double (fp64), 'f' for float (fp32) "
         "[default: d]\n"
@@ -700,62 +701,9 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                              "Bench params prepared from parsing arguments");
 #endif
 
-    ret = register_functions(bench_params->precision, bench_params->data_model);
+    ret = register_functions(bench_params);
     status = MAX(status, ret);
     return status;
-}
-
-/**
- * @brief Register the setup and other utility functions based on precision
- * and data-model
- *
- * @param precision data-type of input / output, FLOAT_P or DOUBLE_P
- * @param data_model data-model of integers, LP64 or ILP64
- * @return INT32
- */
-INT32 register_functions(INT32 precision, INT32 data_model)
-{
-    if (precision == FLOAT_P)
-    {
-        prepare_input_data = prepare_input_data_f;
-#ifdef ENABLE_DFT_REFERENCE
-        dft_ref = dft_ref_f;
-#endif
-        compare = compare_f;
-        if (data_model == LP64)
-        {
-            setup_problem = setup_problem_f;
-            aoclfftz_execute = aoclfftz_execute_f;
-            aoclfftz_destroy = aoclfftz_destroy_f;
-        }
-        else // data_model == ILP64
-        {
-            setup_problem = setup_problem_f_64_;
-            aoclfftz_execute = aoclfftz_execute_f_64_;
-            aoclfftz_destroy = aoclfftz_destroy_f_64_;
-        }
-    }
-    else // precision == DOUBLE_P
-    {
-        prepare_input_data = prepare_input_data_d;
-#ifdef ENABLE_DFT_REFERENCE
-        dft_ref = dft_ref_d;
-#endif
-        compare = compare_d;
-        if (data_model == LP64)
-        {
-            setup_problem = setup_problem_d;
-            aoclfftz_execute = aoclfftz_execute_d;
-            aoclfftz_destroy = aoclfftz_destroy_d;
-        }
-        else // data_model == ILP64
-        {
-            setup_problem = setup_problem_d_64_;
-            aoclfftz_execute = aoclfftz_execute_d_64_;
-            aoclfftz_destroy = aoclfftz_destroy_d_64_;
-        }
-    }
-    return PARSER_SUCCESS;
 }
 
 /**
@@ -1038,15 +986,15 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
 #endif
 
     // prepare random input data
-    prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT);
+    params->prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT);
 
-    status = aoclfftz_execute(handle);
+    status = params->aoclfftz_execute(handle);
     if (status != AOCLFFTZ_SUCCESS)
     {
         return EXECUTION_FAILURE;
     }
 
-    INT32 iter = calibrate_iterations(handle, params->min_bench_time);
+    INT32 iter = calibrate_iterations(handle, params);
 
     // warmup iterations (skipped from profiling)
     // TODO: improvise this logic
@@ -1058,7 +1006,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
         INT32 j = iter + 1;
         while (--j)
         {
-            aoclfftz_execute(handle);
+            params->aoclfftz_execute(handle);
         }
     }
 #ifdef AOCL_ENABLE_LOG
@@ -1076,7 +1024,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
         getTime(start_time);
         while (--j)
         {
-            aoclfftz_execute(handle);
+            params->aoclfftz_execute(handle);
         }
         getTime(end_time);
         cur_time = diffTime(clk_tick, start_time, end_time);
@@ -1166,7 +1114,7 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     UINT32 is_align = params->aligned_alloc;
 
     // setup FFT problem
-    VOID *handle = setup_problem(params);
+    VOID *handle = params->setup_problem(params);
     if (handle == NULL)
     {
         return SETUP_FAILURE;
@@ -1197,24 +1145,25 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
         // prepare random input data
         // use in_stride as 1 to fill random data in all points
-        prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT);
+        params->prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT);
 
         // get the DFT reference output
         dft_ref(params, out_ref, in_idx_map, out_idx_map);
-        status |= aoclfftz_execute(handle);
+        status |= params->aoclfftz_execute(handle);
 
         if (status != BENCH_SUCCESS)
         {
             // destroy reference output buffer
             FREE_ALLOCATED_MEM(out_ref, is_align);
             // destroy handle
-            aoclfftz_destroy(handle);
+            params->aoclfftz_destroy(handle);
             return EXECUTION_FAILURE;
         }
 
         // compare the FFT output with DFT reference output
         compare_status =
-            compare(params, out_ref, params->out, batches, n, out_idx_map);
+            params->compare(params, out_ref, params->out,
+                            batches, n, out_idx_map);
         if (compare_status != AOCLFFTZ_SUCCESS)
         {
             printf("\nResults mismatch on accuracy mode => DFT reference, "
@@ -1223,14 +1172,14 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             // destroy reference output buffer
             FREE_ALLOCATED_MEM(out_ref, is_align);
             // destroy handle
-            aoclfftz_destroy(handle);
+            params->aoclfftz_destroy(handle);
             return VERIFICATION_FAILURE;
         }
     }
     // destroy reference output buffer
     FREE_ALLOCATED_MEM(out_ref, is_align);
     // destroy handle
-    aoclfftz_destroy(handle);
+    params->aoclfftz_destroy(handle);
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
 #endif
@@ -1289,7 +1238,7 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     }
 
     // setup FFT problem
-    handle = setup_problem(params);
+    handle = params->setup_problem(params);
     if (handle == NULL)
     {
         status = SETUP_FAILURE;
@@ -1317,12 +1266,12 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
         // prepare random input data
         // use in_stride as 1 to fill random data in all points
-        prepare_input_data(in1, input_size, NULL, RANDOM_INPUT);
-        prepare_input_data(in2, input_size, NULL, RANDOM_INPUT);
+        params->prepare_input_data(in1, input_size, NULL, RANDOM_INPUT);
+        params->prepare_input_data(in2, input_size, NULL, RANDOM_INPUT);
 
         // perform FFT for first input
         memcpy(params->in, in1, dt_bytes * input_size * T_DATA_STRIDE);
-        ret = aoclfftz_execute(handle);
+        ret = params->aoclfftz_execute(handle);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             status = EXECUTION_FAILURE;
@@ -1332,7 +1281,7 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
         // perform FFT for second input
         memcpy(params->in, in2, dt_bytes * input_size * T_DATA_STRIDE);
-        ret = aoclfftz_execute(handle);
+        ret = params->aoclfftz_execute(handle);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             status = EXECUTION_FAILURE;
@@ -1346,7 +1295,7 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
         // perform FFT for combined input
         memcpy(params->in, in1, dt_bytes * input_size * T_DATA_STRIDE);
-        ret = aoclfftz_execute(handle);
+        ret = params->aoclfftz_execute(handle);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             status = EXECUTION_FAILURE;
@@ -1360,7 +1309,8 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                                     params->precision);
 
         // compare the outputs
-        ret = compare(params, out1, out_combined, batches, n, out_idx_map);
+        ret = params->compare(params, out1, out_combined, 
+                              batches, n, out_idx_map);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             printf("\nResults mismatch on accuracy mode => property: "
@@ -1380,7 +1330,7 @@ exit_linearity_test:
     FREE_ALLOCATED_MEM(out_combined, is_align);
     FREE_ALLOCATED_MEM(factors, is_align);
     // destroy handle
-    aoclfftz_destroy(handle);
+    params->aoclfftz_destroy(handle);
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
 #endif
@@ -1468,7 +1418,7 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params,
     }
 
     // setup FFT problem
-    handle = setup_problem(params);
+    handle = params->setup_problem(params);
     if (handle == NULL)
     {
         status = SETUP_FAILURE;
@@ -1476,7 +1426,7 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params,
     }
 
     // setup reverse FFT problem
-    handle_reverse = setup_problem(params_reverse);
+    handle_reverse = params->setup_problem(params_reverse);
     if (handle_reverse == NULL)
     {
         status = SETUP_FAILURE;
@@ -1502,11 +1452,11 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params,
                                "Iteration: %d, Seed: %d", i, params->seed);
 #endif
 
-        prepare_input_data(in, n * batches, in_idx_map, IMPULSE_INPUT);
+        params->prepare_input_data(in, n * batches, in_idx_map, IMPULSE_INPUT);
 
         // perform FFT
         memcpy(params->in, in, dt_bytes * input_size * T_DATA_STRIDE);
-        ret = aoclfftz_execute(handle);
+        ret = params->aoclfftz_execute(handle);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             status = EXECUTION_FAILURE;
@@ -1516,16 +1466,18 @@ INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params,
         // perform reversed FFT
         memcpy(params_reverse->in, params->out,
                dt_bytes * output_size * T_DATA_STRIDE);
-        ret = aoclfftz_execute(handle_reverse);
+        ret = params->aoclfftz_execute(handle_reverse);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             status = EXECUTION_FAILURE;
             goto exit_unit_impulse_transform_test;
         }
-        NORMALIZE_DATA(params_reverse->out, input_size, n, params->precision);
+        NORMALIZE_IFFT_DATA(params_reverse->out, input_size, n,
+                            params->precision);
 
         // compare reversed output with the input
-        ret = compare(params, in, params_reverse->out, batches, n, in_idx_map);
+        ret = params->compare(params, in, params_reverse->out, batches, n,
+                              in_idx_map);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             printf("\nResults mismatch on accuracy mode => property: "
@@ -1540,8 +1492,8 @@ exit_unit_impulse_transform_test:
     // destroy local buffer
     FREE_ALLOCATED_MEM(in, is_align);
     // destroy handles
-    aoclfftz_destroy(handle);
-    aoclfftz_destroy(handle_reverse);
+    params->aoclfftz_destroy(handle);
+    params->aoclfftz_destroy(handle_reverse);
     // destroy locally created bench param
     destroy_bench_param(params_reverse);
 #ifdef AOCL_ENABLE_LOG
@@ -1595,7 +1547,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     }
 
     // setup FFT problem
-    handle = setup_problem(params);
+    handle = params->setup_problem(params);
     if (handle == NULL)
     {
         status = SETUP_FAILURE;
@@ -1621,39 +1573,45 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                                "Iteration: %d, Seed: %d", i, params->seed);
 #endif
 
-        // FIXME: using random data instead of sinusoidal input data
-        //        for debugging purpose
-        // prepare_input_data(in1, input_size, NULL, SINUSOIDAL_SIGNAL_INPUT);
-        prepare_input_data(in1, n * batches, in_idx_map, RANDOM_INPUT);
+        params->prepare_input_data(in1, n * batches, in_idx_map, RANDOM_INPUT);
 
         INTP cur_n;
         INTP outer_n = 1;
         INTP inner_n = n;
-        // TODO: add support for random m values
         INTP unit_m = n;
 
+        // time shift for each dimension
         for (INTP d = params->dim_rank - 1; d >= 0; d--)
         {
             cur_n = params->dims[d].n;
             unit_m /= cur_n;
-            INTP rand_m = rand() % cur_n;
-            INTP m = rand_m * unit_m;
-            m = unit_m;
+            // random no. of shifts in the range of 0 to current dimension size
+            INTP m = rand() % cur_n;
+            // shfiting units wrt linear representation
+            // for example: A ND problem of 3x4x5 when dim=2 is processed
+            // if m = 2, then the actual unit to be shifted for each element
+            // would be 2*20
+            INTP shifts = m * unit_m;
 
+            // time shift for each batch
             for (INTP b = 0; b < batches; b++)
             {
+                // time shift the input for each outer dimension
+                // for example: A ND problem of 3x4x5 when dim=1 is processed
+                // it will shift the input m times in every 4x5 matrix for
+                // 3(outer_n) times
                 for (INTP o = 0; o < outer_n; o++)
                 {
                     PREPARE_TIMESHIFT_TEST_INPUTS(
                         in1 + in_idx_map[b * n + o * inner_n] * T_DATA_STRIDE,
                         in2 + in_idx_map[b * n + o * inner_n] * T_DATA_STRIDE,
-                        inner_n, m, in_idx_map, params->precision);
+                        inner_n, shifts, in_idx_map, params->precision);
                 }
             }
 
             // perform FFT for input
             memcpy(params->in, in1, dt_bytes * input_size * T_DATA_STRIDE);
-            ret = aoclfftz_execute(handle);
+            ret = params->aoclfftz_execute(handle);
             if (ret != AOCLFFTZ_SUCCESS)
             {
                 status = EXECUTION_FAILURE;
@@ -1663,8 +1621,10 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
             // perform FFT for shifted input
             memcpy(params->in, in2, dt_bytes * input_size * T_DATA_STRIDE);
-            status |= aoclfftz_execute(handle);
+            status |= params->aoclfftz_execute(handle);
             memcpy(out2, params->out, dt_bytes * output_size * T_DATA_STRIDE);
+
+            // perform phase shift on FFT(input)
             for (INTP b = 0; b < batches; b++)
             {
                 for (INTP o = 0; o < outer_n; o++)
@@ -1672,7 +1632,8 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                     PREPARE_TIMESHIFT_TEST_OUTPUTS(
                         out1 + out_idx_map[b * n + o * inner_n] * T_DATA_STRIDE,
                         out1 + out_idx_map[b * n + o * inner_n] * T_DATA_STRIDE,
-                        cur_n, m, out_idx_map, params->dir, params->precision);
+                        cur_n, m, unit_m, out_idx_map, params->dir,
+                        params->precision);
                 }
             }
 
@@ -1680,7 +1641,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             outer_n *= cur_n;
 
             // compare the outputs
-            ret = compare(params, out1, out2, batches, n, out_idx_map);
+            ret = params->compare(params, out1, out2, batches, n, out_idx_map);
             if (ret != AOCLFFTZ_SUCCESS)
             {
                 printf("\nResults mismatch on accuracy mode => property: "
@@ -1699,7 +1660,7 @@ exit_timeshift_test:
     FREE_ALLOCATED_MEM(out1, is_align);
     FREE_ALLOCATED_MEM(out2, is_align);
     // destroy handle
-    aoclfftz_destroy(handle);
+    params->aoclfftz_destroy(handle);
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
 #endif
@@ -1783,7 +1744,7 @@ INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params)
     INT32 status = BENCH_SUCCESS;
 
     // setup the FFT problem
-    VOID *handle = setup_problem(params);
+    VOID *handle = params->setup_problem(params);
     if (handle == NULL)
     {
         PRINT_FAILURE("\nTest bench failed [REASON: Setup problem failed]\n\n");
@@ -1805,7 +1766,7 @@ INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params)
 
 exit_performance_mode:
     // destroy the handle object
-    aoclfftz_destroy(handle);
+    params->aoclfftz_destroy(handle);
     return BENCH_SUCCESS;
 }
 
