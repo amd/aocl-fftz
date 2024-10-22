@@ -26,26 +26,45 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file register_functions.h
+/** @file dft_reference.h
  *
- *  @brief Register functions to function pointers.
+ *  @brief DFT reference implementation.
  *
- *  This file contains a register function which registers the appropriate
- *  functions to function pointers in aoclfftz_bench_params_t object.
+ *  This file contains the implementation of DFT reference and its helper
+ *  functions.
  *
+ *  @author S. Biplab Raut
  *  @author V. Murugan
  *  @author Srirammaswamy Srinivasan
  */
 
-#ifndef REGISTER_FUNCTIONS_H
-#define REGISTER_FUNCTIONS_H
-
+#ifndef DFT_REFERENCE_H
+#define DFT_REFERENCE_H
+#include <math.h>
 #include "api/types.h"
-#include "test/utils/compare.h"
-#include "test/utils/data_generation.h"
-#include "test/utils/dft_reference.h"
 #include "test/aoclfftz_corebench.h"
 
-INT32 register_functions(aoclfftz_bench_params_t *params);
+#ifdef ENABLE_DFT_REFERENCE
+/**
+ * @brief angle = angle * [(i0+k0)/n0 + (i1+k1)/n1 + ... + (iR+kR)/nR]
+ * where R = dim rank
+ *
+ */
+#define UPDATE_ANGLE(angle, in_arr_idx, out_arr_idx, dims, rank, dt_t)         \
+    {                                                                          \
+        dt_t x = 0.0;                                                          \
+        for (INTP i = 0; i < rank; i++)                                        \
+        {                                                                      \
+            x += (((dt_t)in_arr_idx[i] * out_arr_idx[i]) / dims[i].n);         \
+        }                                                                      \
+        angle = angle * x;                                                     \
+    }
 
-#endif // REGISTER_FUNCTIONS_H
+VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
+               INTP *out_idx_map);
+VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
+               INTP *out_idx_map);
+INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
+                             INTP *out_idx_map);
+#endif
+#endif // DFT_REFERENCE_H

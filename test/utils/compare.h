@@ -41,7 +41,6 @@
 #ifdef WIN32
 #include <direct.h> /* for _getcwd */
 #endif
-
 #include "api/types.h"
 #include "test/aoclfftz_corebench.h"
 #include "utils/allocator.h"

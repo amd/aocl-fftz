@@ -41,14 +41,12 @@
 #define AOCLFFTZ_COREBENCH_UTILS_H
 
 #include <ctype.h>
-#ifdef WIN32
-#include <direct.h> /* for _getcwd */
-#endif
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include "api/aoclfftz_internal.h"
 #include "test/aoclfftz_corebench.h"
+#include "test/utils/size_and_index_mapper.h"
 #include "utils/allocator.h"
 #include "utils/complex_utils.h"
 #include "utils/utils.h"
@@ -76,18 +74,6 @@
     ret |= strlen(str) != length;                                              \
     ret |= (result < min_val);                                                 \
     ret |= (result > max_val);                                                 \
-}
-
-/**
- * @brief check whether the dims are currently supported or not
- *
- */
-#define CHECK_SUPPORTED_DIMS(dims, vecs, dim_rank, vec_rank, status)           \
-{                                                                              \
-    if (vec_rank > 3)                                                          \
-    {                                                                          \
-        status = UNSUPPORTED_SIZE_ERROR;                                       \
-    }                                                                          \
 }
 
 /**
@@ -316,35 +302,6 @@
         params->bit_reproducibility ? "TRUE" : "FALSE");                       \
 }
 
-
-/**
- * @brief angle = angle * [(i0+k0)/n0 + (i0+k0)/n0 + ... + (iR+kR)/nR]
- * where R = dim rank
- *
- */
-#define UPDATE_ANGLE(angle, in, out, dims, rank, dt_t)                         \
-{                                                                              \
-    dt_t x = 0.0;                                                              \
-    for (INTP i = 0; i < rank; i++)                                            \
-    {                                                                          \
-        x += (((dt_t)in[i] * out[i]) / dims[i].n);                             \
-    }                                                                          \
-    angle = angle * x;                                                         \
-}
-
-
-/**
- * @brief copy the nD counter from src to dst
- *
- */
-#define COPY_ND_COORDS(dst, src, rank)                                         \
-{                                                                              \
-    for (INTP i = 0; i < rank; i++)                                            \
-    {                                                                          \
-        dst[i] = src[i];                                                       \
-    }                                                                          \
-}
-
 /**
  * @brief prepare suitable selector time unit
  *
@@ -379,11 +336,6 @@
 #define MINQ_TIME 1e5
 #define SLEEP_TIME 1e8
 
-#ifdef ENABLE_DFT_REFERENCE
-VOID (*dft_ref) (aoclfftz_bench_params_t *params, VOID *out_buf,
-                 INTP *in_idx_map, INTP *out_idx_map);
-#endif
-
 // Function declarations
 INT32 set_flag(aoclfftz_bench_params_t *params);
 INT32 find_dim_rank(CHAR *arg);
@@ -391,22 +343,6 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
                                   aoclfftz_dim_t_64_ **dims,
                                   aoclfftz_dim_t_64_ **vecs,
                                   INTP default_stride);
-#ifdef ENABLE_DFT_REFERENCE
-VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
-               INTP *out_idx_map);
-VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
-               INTP *out_idx_map);
-#endif
-INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank);
-VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
-                            INTP *in_buffer_size, INTP *out_buffer_size);
-INT32 check_inplace_strides(aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                            INT32 dim_rank, INT32 vec_rank);
-VOID prepare_index_map(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                       INTP *out_idx_map);
-VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
-                       INTP dst_in_idx, INTP dst_out_idx,
-                       aoclfftz_dim_t_64_ *dims, INT32 rank);
 INT32 calibrate_iterations(VOID *handle, aoclfftz_bench_params_t *params);
 VOID bench_sleep(INT64 nano_seconds);
 
@@ -709,313 +645,6 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
 exit_func:
     FREE_ALIGN_ALLOCATED_MEM(desc);
     return status;
-}
-
-#ifdef ENABLE_DFT_REFERENCE
-/**
- * @brief DFT reference implementation for FLOAT type
- *
- * @param params aoclfftz_bench_params_t struct containing the req info
- * @param out_buf buffer to store the DFT output
- * @param in_idx_map index map input indices
- * @param out_idx_map index map for output indices
- * @return VOID
- */
-VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
-               INTP *out_idx_map)
-{
-    FLOAT e[T_DATA_STRIDE], mul_buf[T_DATA_STRIDE];
-    FLOAT sign = params->dir == BACKWARD ? 1.0 : -1.0;
-    FLOAT *in_d = (FLOAT *)params->in;
-    FLOAT *out_d = (FLOAT *)out_buf;
-    INT32 rank = params->dim_rank;
-    aoclfftz_dim_t_64_ *dims = params->dims;
-    INTP n = calculate_size(params->dims, params->dim_rank);
-    INTP batches = calculate_size(params->vecs, params->vec_rank);
-    UINT32 is_align = params->aligned_alloc;
-
-    INTP *in_counter = NULL;
-    ALLOC_INIT(in_counter, INTP, rank * sizeof(INTP), is_align);
-    INTP *out_counter = NULL;
-    ALLOC_INIT(out_counter, INTP, rank * sizeof(INTP), is_align);
-
-    // iterate over the total batches
-    for (INTP b = 0; b < batches; b++)
-    {
-        RESET_ND_COUNTER(out_counter, rank);
-        // iterate over output points
-        for (INTP k = 0; k < n; k++)
-        {
-            INTP out_idx = out_idx_map[b * n + k] * T_DATA_STRIDE;
-            RESET_ND_COUNTER(in_counter, rank);
-            // iterate over input points
-            for (INTP i = 0; i < n; i++)
-            {
-                INTP in_idx = in_idx_map[b * n + i] * T_DATA_STRIDE;
-                FLOAT angle = sign * BENCH_2_PI;
-                // angle = angle * [(i0+k0)/n0 + (i0+k0)/n0 + ... + (iR+kR)/nR]
-                UPDATE_ANGLE(angle, in_counter, out_counter, dims, rank, FLOAT);
-                e[0] = cosf(angle);
-                e[1] = sinf(angle);
-
-                mul_buf[0] = (in_d[in_idx] * e[0]) - (in_d[in_idx + 1] * e[1]);
-                mul_buf[1] = (in_d[in_idx] * e[1]) + (in_d[in_idx + 1] * e[0]);
-
-                out_d[out_idx] = out_d[out_idx] + mul_buf[0];
-                out_d[out_idx + 1] = out_d[out_idx + 1] + mul_buf[1];
-
-                INCREMENT_ND_COUNTER(in_counter, dims, rank);
-            }
-            INCREMENT_ND_COUNTER(out_counter, dims, rank);
-        }
-    }
-    FREE_ALLOCATED_MEM(in_counter, is_align);
-    FREE_ALLOCATED_MEM(out_counter, is_align);
-}
-
-/**
- * @brief DFT reference implementation for DOUBLE type
- *
- * @param params aoclfftz_bench_params_t struct containing the req info
- * @param out_buf buffer to store the DFT output
- * @param in_idx_map index map input indices
- * @param out_idx_map index map for output indices
- * @return VOID
- */
-VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
-               INTP *out_idx_map)
-{
-    DOUBLE e[T_DATA_STRIDE], mul_buf[T_DATA_STRIDE];
-    DOUBLE sign = params->dir == BACKWARD ? 1.0 : -1.0;
-    DOUBLE *in_d = (DOUBLE *)params->in;
-    DOUBLE *out_d = (DOUBLE *)out_buf;
-    INT32 rank = params->dim_rank;
-    aoclfftz_dim_t_64_ *dims = params->dims;
-    INTP n = calculate_size(params->dims, params->dim_rank);
-    INTP batches = calculate_size(params->vecs, params->vec_rank);
-    UINT32 is_align = params->aligned_alloc;
-
-    INTP *in_counter = NULL;
-    ALLOC_INIT(in_counter, INTP, rank * sizeof(INTP), is_align);
-    INTP *out_counter = NULL;
-    ALLOC_INIT(out_counter, INTP, rank * sizeof(INTP), is_align);
-
-    // iterate over the total batches
-    for (INTP b = 0; b < batches; b++)
-    {
-        RESET_ND_COUNTER(out_counter, rank);
-        // iterate over output points
-        for (INTP k = 0; k < n; k++)
-        {
-            INTP out_idx = out_idx_map[b * n + k] * T_DATA_STRIDE;
-            RESET_ND_COUNTER(in_counter, rank);
-            // iterate over input points
-            for (INTP i = 0; i < n; i++)
-            {
-                INTP in_idx = in_idx_map[b * n + i] * T_DATA_STRIDE;
-                DOUBLE angle = sign * BENCH_2_PI;
-                // angle = angle * [(i0+k0)/n0 + (i0+k0)/n0 + ... + (iR+kR)/nR]
-                UPDATE_ANGLE(angle, in_counter, out_counter, dims, rank,
-                             DOUBLE);
-                e[0] = cos(angle);
-                e[1] = sin(angle);
-
-                mul_buf[0] = (in_d[in_idx] * e[0]) - (in_d[in_idx + 1] * e[1]);
-                mul_buf[1] = (in_d[in_idx] * e[1]) + (in_d[in_idx + 1] * e[0]);
-
-                out_d[out_idx] = out_d[out_idx] + mul_buf[0];
-                out_d[out_idx + 1] = out_d[out_idx + 1] + mul_buf[1];
-
-                INCREMENT_ND_COUNTER(in_counter, dims, rank);
-            }
-            INCREMENT_ND_COUNTER(out_counter, dims, rank);
-        }
-    }
-    FREE_ALLOCATED_MEM(in_counter, is_align);
-    FREE_ALLOCATED_MEM(out_counter, is_align);
-}
-#endif
-
-/**
- * @brief calculates the total size without strides
- *
- * @param dims holds dims related info
- * @param rank rank of the provided dims
- * @return INTP length of the input
- */
-INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank)
-{
-    INTP len = 1;
-
-    for (INT32 i = 0; i < rank; i++)
-    {
-        len = len * dims[i].n;
-    }
-
-    return len;
-}
-
-/**
- * @brief Function to find the required buffer size for memory allocation.
- * calculates the total length of input & output buffers with strides included
- *
- * @param params aoclfftz_bench_params_t struct containing the req info
- * @param in_buffer_size register to store input buffer size
- * @param out_buffer_size register to store output buffer size
- * @return VOID
- */
-VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
-                            INTP *in_buffer_size, INTP *out_buffer_size)
-{
-    // Data arrangement considered :
-    // [1, 2, 3, 4]<0, 0>[5, 6, 7, 8]<0, 0>[9, 10, 11, 12]
-    // <---vec stride--->
-    // <-------------(Batches -1)---------><--- Problem size * dim stride --->
-    // ((Batches -1) * (vec_stride)) + (Problem size * dim stride)
-
-    INT32 dim_rank = params->dim_rank;
-    INT32 vec_rank = params->vec_rank;
-    in_buffer_size[0] = 0;
-    out_buffer_size[0] = 0;
-    INT32 in_size = 1; // rank-0 problem where its a constant ?
-    INT32 out_size = 1;
-
-    for (INT32 i = 0; i < dim_rank; i++)
-    {
-        in_size += ((params->dims[i].n - 1) * (params->dims[i].in_stride));
-        out_size += ((params->dims[i].n - 1) * (params->dims[i].out_stride));
-    }
-
-    for (INT32 i = 0; i < vec_rank; i++)
-    {
-        in_size += ((params->vecs[i].n - 1) * (params->vecs[i].in_stride));
-        out_size += ((params->vecs[i].n - 1) * (params->vecs[i].out_stride));
-    }
-
-    in_buffer_size[0] = in_size;
-    out_buffer_size[0] = out_size;
-}
-
-/**
- * @brief checks if input & output strides are the same for of an inplace
- * problem
- *
- * @param dims holds dims related stride info
- * @param vecs holds vecs related stride info
- * @param dim_rank rank of the dimension
- * @param vec_rank rank of the vector
- * @return INT32
- */
-INT32 check_inplace_strides(aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                            INT32 dim_rank, INT32 vec_rank)
-{
-    for (INT32 i = 0; i < dim_rank; i++)
-    {
-        if (dims[i].in_stride != dims[i].out_stride)
-        {
-            return SIZE_PARSING_ERROR;
-        }
-    }
-    for (INT32 i = 0; i < vec_rank; i++)
-    {
-        if (vecs[i].in_stride != vecs[i].out_stride)
-        {
-            return SIZE_PARSING_ERROR;
-        }
-    }
-
-    return PARSER_SUCCESS;
-}
-
-/**
- * @brief prepare the index map to map non strided indices to strides ones
- *
- * index map is used to simplify the property tests for strided problems
- *
- * Example: for an 1D problem with 1D batch
- * Problem size : 3:6:6v4:1:1
- * Data arrangement considered :
- * [1, 2, 3, 4]<0, 0>[5, 6, 7, 8]<0, 0>[9, 10, 11, 12]
- * <---vec stride--->
- * <------------(Batches - 1)--------->
- *
- * data buffer   => [1, 2, 3, 4, 0, 0, 5, 6, 7, 8,  0,  0,  9, 10, 11, 12]
- * (here data in the strides are considered as 0)
- * indices       => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
- * valid indices => [0, 1, 2, 3,       6, 7, 8, 9,         12, 13, 14, 15]
- * (ignoring the indices of strides)
- *
- * index map for this configuration in key, value representation :
- * key : valid data index for the given problem without strides
- * value : valid data index for the given problem with strides
- * [(0,0), (1,1), (2,2), (3,3), (4,6), (5,7), (6,8), (7,9), (8,12), (9,13),
- * (10,14), (11,15)]
- * simplified index map (in array representation, where array index is the key):
- * [0, 1, 2, 3, 6, 7, 8, 9, 12, 13, 14, 15]
- *
- * @param params aoclfftz_bench_params_t struct containing the req info
- * @param in_idx_map buffer to store input index map
- * @param out_idx_map buffer to store output index map
- * @return VOID
- */
-VOID prepare_index_map(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                       INTP *out_idx_map)
-{
-    // combine dims and vecs
-    aoclfftz_dim_t_64_ *combined_dims = NULL;
-    ALLOC_UNINIT(combined_dims, aoclfftz_dim_t_64_,
-            sizeof(aoclfftz_dim_t_64_) * (params->dim_rank + params->vec_rank),
-            params->aligned_alloc);
-    memcpy(combined_dims, params->dims,
-           (sizeof(aoclfftz_dim_t_64_) * params->dim_rank));
-    memcpy((combined_dims + params->dim_rank), params->vecs,
-           (sizeof(aoclfftz_dim_t_64_) * params->vec_rank));
-
-    INT32 combined_rank = params->dim_rank + params->vec_rank;
-    INTP src_idx = 0;
-    INTP dst_in_idx = 0;
-    INTP dst_out_idx = 0;
-    compute_index_map(in_idx_map, out_idx_map, &src_idx, dst_in_idx,
-                      dst_out_idx, combined_dims, combined_rank);
-
-    FREE_ALLOCATED_MEM(combined_dims, params->aligned_alloc);
-}
-
-/**
- * @brief recursive algorithm to compute index map
- *
- * @param in_idx_map buffer to store input index map
- * @param out_idx_map buffer to store output index map
- * @param src_idx source index for input and output buffers
- * @param dst_in_idx destination index for input buffer
- * @param dst_out_idx destination index for output buffer
- * @param dims aoclfftz_dim_t_64_ struct which holds problem size and strides
- * @param rank current rank of the nD problem
- * @return VOID
- */
-VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
-                       INTP dst_in_idx, INTP dst_out_idx,
-                       aoclfftz_dim_t_64_ *dims, INT32 rank)
-{
-    if (rank == 0)
-    {
-        in_idx_map[*src_idx] = dst_in_idx;
-        out_idx_map[*src_idx] = dst_out_idx;
-        (*src_idx)++;
-    }
-    else
-    {
-        INTP n = dims[rank - 1].n;
-        INTP in_stride = dims[rank - 1].in_stride;
-        INTP out_stride = dims[rank - 1].out_stride;
-        for (INTP i = 0; i < n; i++)
-        {
-            compute_index_map(in_idx_map, out_idx_map, src_idx, dst_in_idx,
-                              dst_out_idx, dims, rank - 1);
-            dst_in_idx += in_stride;
-            dst_out_idx += out_stride;
-        }
-    }
 }
 
 /**

@@ -51,7 +51,7 @@ INT32 register_functions(aoclfftz_bench_params_t *params)
     {
         params->prepare_input_data = prepare_input_data_f;
 #ifdef ENABLE_DFT_REFERENCE
-        dft_ref = dft_ref_f;
+        params->dft_ref = dft_ref_f;
 #endif
         params->compare = compare_f;
         if (params->data_model == LP64)
@@ -71,7 +71,7 @@ INT32 register_functions(aoclfftz_bench_params_t *params)
     {
         params->prepare_input_data = prepare_input_data_d;
 #ifdef ENABLE_DFT_REFERENCE
-        dft_ref = dft_ref_d;
+        params->dft_ref = dft_ref_d;
 #endif
         params->compare = compare_d;
         if (params->data_model == LP64)

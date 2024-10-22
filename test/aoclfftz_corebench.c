@@ -46,6 +46,7 @@
 #include "aoclfftz_corebench_utils.h"
 #include "utils/utils.h"
 #include "test/utils/register_functions.h"
+#include "test/utils/size_and_index_mapper.h"
 
 /**
  * @brief print the help menu contents to the output
@@ -1086,106 +1087,6 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
 #endif
     return BENCH_SUCCESS;
 }
-
-#ifdef ENABLE_DFT_REFERENCE
-/**
- * @brief run the FFT execute api and compare the output with DFT reference
- * output
- *
- * @param params bench params object
- * @return INT32 bench status code
- */
-INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                             INTP *out_idx_map)
-{
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
-#endif
-    INT32 status = BENCH_SUCCESS;
-    INT32 compare_status = AOCLFFTZ_SUCCESS;
-    INT32 dt_bytes = (params->precision == FLOAT_P) ?
-                      sizeof(FLOAT) : sizeof(DOUBLE);
-    INTP input_size = 0;
-    INTP output_size = 0;
-    calculate_buffer_sizes(params, &input_size, &output_size);
-
-    INTP n = calculate_size(params->dims, params->dim_rank);
-    INTP batches = calculate_size(params->vecs, params->vec_rank);
-    UINT32 is_align = params->aligned_alloc;
-
-    // setup FFT problem
-    VOID *handle = params->setup_problem(params);
-    if (handle == NULL)
-    {
-        return SETUP_FAILURE;
-    }
-
-    // create local buffer to store DFT reference output
-    VOID *out_ref;
-    ALLOC_INIT(out_ref, VOID, output_size * T_DATA_STRIDE * dt_bytes, is_align);
-
-    // initialize the random seed value based on current time
-    if (params->use_random_seed)
-    {
-        srand(time(0));
-    }
-
-    for (INT32 i = 0; i < params->num_iterations && status == 0; i++)
-    {
-        // set the random seed value for each iteration
-        if (params->use_random_seed)
-        {
-            params->seed = rand();
-        }
-        srand(params->seed);
-#ifdef AOCL_ENABLE_LOG
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,
-                               "Iteration: %d, Seed: %d", i, params->seed);
-#endif
-
-        // prepare random input data
-        // use in_stride as 1 to fill random data in all points
-        params->prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT);
-
-        // get the DFT reference output
-        dft_ref(params, out_ref, in_idx_map, out_idx_map);
-        status |= params->aoclfftz_execute(handle);
-
-        if (status != BENCH_SUCCESS)
-        {
-            // destroy reference output buffer
-            FREE_ALLOCATED_MEM(out_ref, is_align);
-            // destroy handle
-            params->aoclfftz_destroy(handle);
-            return EXECUTION_FAILURE;
-        }
-
-        // compare the FFT output with DFT reference output
-        compare_status =
-            params->compare(params, out_ref, params->out,
-                            batches, n, out_idx_map);
-        if (compare_status != AOCLFFTZ_SUCCESS)
-        {
-            printf("\nResults mismatch on accuracy mode => DFT reference, "
-                   "iteration: %d/%d, seed: %d\n",
-                   i, params->num_iterations, params->seed);
-            // destroy reference output buffer
-            FREE_ALLOCATED_MEM(out_ref, is_align);
-            // destroy handle
-            params->aoclfftz_destroy(handle);
-            return VERIFICATION_FAILURE;
-        }
-    }
-    // destroy reference output buffer
-    FREE_ALLOCATED_MEM(out_ref, is_align);
-    // destroy handle
-    params->aoclfftz_destroy(handle);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
-#endif
-    return BENCH_SUCCESS;
-}
-#endif
 
 /**
  * @brief run the FFT execute api verify the linearity property

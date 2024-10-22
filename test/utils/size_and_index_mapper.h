@@ -26,26 +26,46 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file register_functions.h
+/** @file size_and_index_mapper.h
  *
- *  @brief Register functions to function pointers.
+ *  @brief Problem size and dims related utility functions.
  *
- *  This file contains a register function which registers the appropriate
- *  functions to function pointers in aoclfftz_bench_params_t object.
+ *  This file contains the test bench utility functions related to problem size,
+ *  dims and strides for test bench.
  *
+ *  @author S. Biplab Raut
  *  @author V. Murugan
  *  @author Srirammaswamy Srinivasan
  */
 
-#ifndef REGISTER_FUNCTIONS_H
-#define REGISTER_FUNCTIONS_H
+#ifndef SIZE_AND_INDEX_MAPPER_H
+#define SIZE_AND_INDEX_MAPPER_H
 
+#include "api/aoclfftz.h"
 #include "api/types.h"
-#include "test/utils/compare.h"
-#include "test/utils/data_generation.h"
-#include "test/utils/dft_reference.h"
 #include "test/aoclfftz_corebench.h"
 
-INT32 register_functions(aoclfftz_bench_params_t *params);
+/**
+ * @brief check whether the dims are currently supported or not
+ *
+ */
+#define CHECK_SUPPORTED_DIMS(dims, vecs, dim_rank, vec_rank, status)           \
+    {                                                                          \
+        if (vec_rank > 3)                                                      \
+        {                                                                      \
+            status = UNSUPPORTED_SIZE_ERROR;                                   \
+        }                                                                      \
+    }
 
-#endif // REGISTER_FUNCTIONS_H
+INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank);
+VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
+                            INTP *in_buffer_size, INTP *out_buffer_size);
+INT32 check_inplace_strides(aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
+                            INT32 dim_rank, INT32 vec_rank);
+VOID prepare_index_map(aoclfftz_bench_params_t *params, INTP *in_idx_map,
+                       INTP *out_idx_map);
+VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
+                       INTP dst_in_idx, INTP dst_out_idx,
+                       aoclfftz_dim_t_64_ *dims, INT32 rank);
+
+#endif // SIZE_AND_INDEX_MAPPER_H
