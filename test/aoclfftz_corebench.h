@@ -206,13 +206,6 @@ VOID destroy_bench_param(aoclfftz_bench_params_t *params);
 INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
                                       VOID *handle);
 INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params);
-INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params);
-INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                         INTP *out_idx_map);
-INT32 run_unit_impulse_transform_test(aoclfftz_bench_params_t *params,
-                                      INTP *in_idx_map, INTP *out_idx_map);
-INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                         INTP *out_idx_map);
 VOID show_help_menu(VOID);
 INT32 get_option(CHAR **argv, INT32 arg_idx);
 

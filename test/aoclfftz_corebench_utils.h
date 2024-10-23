@@ -135,33 +135,6 @@
 }
 
 /**
- * @brief handle the bench status error codes
- *
- */
-#define HANDLE_BENCH_STATUS(status)                                            \
-{                                                                              \
-    switch (status)                                                            \
-    {                                                                          \
-    case BENCH_SUCCESS:                                                        \
-        break;                                                                 \
-    case SETUP_FAILURE:                                                        \
-        PRINT_FAILURE(                                                         \
-            "\nTest bench failed [REASON: Setup problem failed]\n\n");         \
-        break;                                                                 \
-    case EXECUTION_FAILURE:                                                    \
-        PRINT_FAILURE(                                                         \
-            "\nTest bench failed [REASON: Execute problem failed]\n\n");       \
-        break;                                                                 \
-    case VERIFICATION_FAILURE:                                                 \
-        PRINT_FAILURE(                                                         \
-            "\nTest bench failed [REASON: Result mismatch]\n\n");              \
-        break;                                                                 \
-    default:                                                                   \
-        PRINT_FAILURE("\nTest bench failed [REASON: Unknown]\n\n");            \
-    }                                                                          \
-}
-
-/**
  * @brief Initialize problem descriptor with the bench params
  *
  */
@@ -219,28 +192,6 @@
         FREE_ALLOCATED_MEM(p_desc->vecs, is_align);                            \
         FREE_ALLOCATED_MEM(p_desc, is_align);                                  \
     }                                                                          \
-}
-
-/**
- * @brief Initialize dst params object and copy the values from src to dst
- *        NOTE: This function will not create in and out buffers, it needs to be
- *              created manually
- *
- */
-#define ALLOC_AND_COPY_PARAMS(dst, src)                                        \
-{                                                                              \
-    UINT32 is_align = src->aligned_alloc;                                      \
-    ALLOC_UNINIT(dst, aoclfftz_bench_params_t,                                 \
-                 sizeof(aoclfftz_bench_params_t), is_align);                   \
-    memcpy(dst, src, sizeof(aoclfftz_bench_params_t));                         \
-    ALLOC_UNINIT(dst->dims, aoclfftz_dim_t_64_,                                \
-                 sizeof(aoclfftz_dim_t_64_) * src->dim_rank, is_align);        \
-    ALLOC_UNINIT(dst->vecs, aoclfftz_dim_t_64_,                                \
-                 sizeof(aoclfftz_dim_t_64_) * src->vec_rank, is_align);        \
-    memcpy(dst->dims, src->dims,                                               \
-           sizeof(aoclfftz_dim_t_64_) * src->dim_rank);                        \
-    memcpy(dst->vecs, src->vecs,                                               \
-           sizeof(aoclfftz_dim_t_64_) * src->vec_rank);                        \
 }
 
 /**
