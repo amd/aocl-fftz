@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2023, Advanced Micro Devices. All rights reserved.
+ * Copyright (C) 2024, Advanced Micro Devices. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -26,204 +26,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file aoclfftz_corebench.c
+/** @file bench_problem.c
  *
- *  @brief Tests the single-threaded core fft library for functional and
- *  performance tests.
+ *  @brief Test bench problem descriptor functions.
  *
- *  This file contains the functions to setup and execute single-threaded core
- *  library for testing the library APIs.
+ *  This file contains the functions related to test bench params and
+ *  problem descriptor.
  *
- *  @author S. Biplab Raut
  *  @author V. Murugan
  *  @author Srirammaswamy Srinivasan
+ *  @author Jeya R
  */
 
-#include <float.h>
-#include <math.h>
-#include <time.h>
-#include "aoclfftz_corebench.h"
-#include "aoclfftz_corebench_utils.h"
-#include "utils/utils.h"
-#include "test/utils/register_functions.h"
-#include "test/utils/accuracy_test.h"
-#include "test/utils/size_and_index_mapper.h"
-
-/**
- * @brief print the help menu contents to the output
- *
- * @return VOID
- */
-VOID show_help_menu(VOID)
-{
-    printf(
-        "\nUSAGE: aocl_fftz_bench [OPTIONS]... PROBLEM_SIZE\n\n"
-        "PROBLEM_SIZE    for 1D problem :\n"
-        "                  10 => one dimensional problem of size 10\n"
-        "                  10:2:4 => one dimensional problem of size 10, input "
-        "stride 2 and output stride 4\n"
-        "                  2v10 => a length-2 vector of one dimensional "
-        "problem with size 10\n"
-        "                  2:1:2v10:2:4 => a strided length-2 vector of one "
-        "dimensional problem with size 10 having input and output strides\n"
-        "                for nD problem :\n"
-        "                  2x3x4 => size of the three dimensional problem\n"
-        "                  2x4v3x5 => a 2x4 length vector of two dimension "
-        "problem with size 3x5\n"
-        "                  2:2:1x4:1:2v10:3:2x5:5:2 => a strided 2x4 length "
-        "vector of two dimension problem with size 10x5 having strides\n"
-        "Available options :-\n"
-        "-p, --precision          'd' for double (fp64), 'f' for float (fp32) "
-        "[default: d]\n"
-        "-m, --data-model         'l' for LP64, 'i' for ILP64 [default: l]\n"
-        "-b, --bench-type         'a' for accuracy, 'p' for performance "
-        "[default: p]\n"
-        "-r, --result-placement   'i' for in-place, 'o' for out-of-place "
-        "[default: o]\n"
-        "--order                  'i' for in-order, 'o' for out-of-order "
-        "[default: i]\n"
-        "--dir                    FFT direction - 'f' for forward, 'b' for"
-        "backward [default: f]\n"
-        "-f, --fft-type           'c2c' for complex to complex, 'r2c' for real "
-        "to "
-        "complex, 'c2r' for complex to real [default: c2c]\n"
-        "-i, --iters              number of iterations [default: 50 for "
-        "`performance` mode and 1 for `accuracy` mode]\n"
-        "-s, --seed               specify manual seed value, random seed will "
-        "be used if this option is not specified\n"
-        "                           NOTE: iters will set to 1 if seed is "
-        "specified\n"
-        "-t, --tol                error tolerance value ranges from 0.0 to 1.0 "
-        "(inclusive) [default: 1E-10 for double, 1E-3 for float]\n"
-        "-n, --num-threads        number of CPU threads for multi-threading "
-        "FFT [default: 1]\n"
-        "--dynamic-load-model     use it to allow the library to determine how "
-        "many threads to be used (this option takes no value argument)\n"
-        "-o, --opt-level          optimization levels used for benchmarking\n"
-        "                           -1 = no optimization\n"
-        "                            0 = non-SIMD algorithmic optimization\n"
-        "                            1 = SSE2 optimization\n"
-        "                            2 = AVX optimization\n"
-        "                            3 = AVX2 optimization\n"
-        "                            4 = AVX512 optimization\n"
-        "                            5 = auto mode\n"
-        "                            [default: -1]\n"
-        "-l, --logger-mode        logger mode: log level value ranges from 0 "
-        "to 4 [default: 0]\n"
-        "                            0 = no logging\n"
-        "                            1 = error\n"
-        "                            2 = info\n"
-        "                            3 = debug\n"
-        "                            4 = trace\n"
-        "--selector-time          '1' to print the time taken for preparing "
-        "the solution, '0' to disable it [default: 0]\n"
-        "--min-bench-time         set minimum time to calculate performance "
-        "iterations [default: 100 ms]\n"
-        "--measure-stats          '1' to measure selector stats, '0' to "
-        "disable it [default: 0]\n"
-        "--bit-reproducibility    '1' to use bit reproducibility mode, '0' to "
-        "disable it [default: 0]\n"
-        "--aligned-alloc          '1' to use aligned memory allocation, '0' to "
-        "disable it [default: 1]\n");
-}
-
-INT32 get_option(CHAR **argv, INT32 arg_idx)
-{
-    CHAR *arg = argv[arg_idx];
-    if (arg[0] == '-')
-    {
-        if (strcmp(arg, "--help") == 0 || arg[1] == 'h')
-        {
-            return 'h';
-        }
-        else if (strcmp(arg, "--precision") == 0 || arg[1] == 'p')
-        {
-            return 'p';
-        }
-        else if (strcmp(arg, "--data-model") == 0 || arg[1] == 'm')
-        {
-            return 'm';
-        }
-        else if (strcmp(arg, "--bench-type") == 0 || arg[1] == 'b')
-        {
-            return 'b';
-        }
-        else if (strcmp(arg, "--result-placement") == 0 || arg[1] == 'r')
-        {
-            return 'r';
-        }
-        else if (strcmp(arg, "--order") == 0)
-        {
-            return 300;
-        }
-        else if (strcmp(arg, "--dir") == 0)
-        {
-            return 301;
-        }
-        else if (strcmp(arg, "--fft-type") == 0 || arg[1] == 'f')
-        {
-            return 'f';
-        }
-        else if (strcmp(arg, "--iters") == 0 || arg[1] == 'i')
-        {
-            return 'i';
-        }
-        else if (strcmp(arg, "--seed") == 0 || arg[1] == 's')
-        {
-            return 's';
-        }
-        else if (strcmp(arg, "--tol") == 0 || arg[1] == 't')
-        {
-            return 't';
-        }
-        else if (strcmp(arg, "--num-threads") == 0 || arg[1] == 'n')
-        {
-            return 'n';
-        }
-        else if (strcmp(arg, "--dynamic-load-model") == 0)
-        {
-            return 302;
-        }
-        else if (strcmp(arg, "--opt-level") == 0 || arg[1] == 'o')
-        {
-            return 'o';
-        }
-        else if (strcmp(arg, "--logger-mode") == 0 || arg[1] == 'l')
-        {
-            return 'l';
-        }
-        else if (strcmp(arg, "--selector-time") == 0)
-        {
-            return 303;
-        }
-        else if (strcmp(arg, "--measure-stats") == 0)
-        {
-            return 304;
-        }
-        else if (strcmp(arg, "--bit-reproducibility") == 0)
-        {
-            return 305;
-        }
-        else if (strcmp(arg, "--min-bench-time") == 0)
-        {
-            return 306;
-        }
-        else if (strcmp(arg, "--aligned-alloc") == 0)
-        {
-            return 307;
-        }
-        else
-        {
-            // Unsupported option
-            return '?';
-        }
-    }
-    else
-    {
-        // Non option argument
-        return 308;
-    }
-}
+#include "test/bench_problem.h"
 
 /**
  * @brief init bench params with default values
@@ -274,7 +89,9 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
 {
     init_bench_params(bench_params);
     INT32 c = -1;
+
     UCHAR use_cust_tolerance = 0;
+
     INT32 status = PARSER_SUCCESS;
     INT32 ret = PARSER_SUCCESS;
     // check for the dependent arguments
@@ -696,10 +513,6 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     {
         ALLOC_INIT(bench_params->out, VOID, out_buffer_size * dt_bytes,
                     is_align);
-        if (bench_params->out == NULL)
-        {
-            return MEMORY_FAILURE;
-        }
     }
 
 #ifdef AOCL_ENABLE_LOG
@@ -954,229 +767,221 @@ VOID destroy_bench_param(aoclfftz_bench_params_t *params)
     }
 }
 
-/**
- * @brief Run and benchmark the FFT problem
- *
- * @param params aoclfftz_bench_params_t type contains parsed arguments
- * @param handle handle object of VOID* type
- * @return INT32 status code
- */
-INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
-                                      VOID *handle)
+INT32 get_option(CHAR **argv, INT32 arg_idx)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
-#endif
-    INT32 status;
-#ifdef WIN32
-    timer clk_tick;
-#endif
-    timeVal start_time, end_time;
-    DOUBLE min_time = DBL_MAX, avg_time = 0.0, tot_time = 0.0, cur_time = 0.0;
-    DOUBLE avg_mflops = 0.0, max_mflops = 0.0;
-    INTP n = calculate_size(params->dims, params->dim_rank);
-    INTP batches = calculate_size(params->vecs, params->vec_rank);
-    INTP input_size = 0;
-    INTP output_size = 0;
-    calculate_buffer_sizes(params, &input_size, &output_size);
-
-    // prepare random seed value
-    if (params->use_random_seed)
+    CHAR *arg = argv[arg_idx];
+    if (arg[0] == '-')
     {
-        params->seed = time(0);
-    }
-
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode, "seed   : %d",
-                           params->seed);
-#endif
-
-    // prepare random input data
-    params->prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT);
-
-    status = params->aoclfftz_execute(handle);
-    if (status != AOCLFFTZ_SUCCESS)
-    {
-        return EXECUTION_FAILURE;
-    }
-
-    INT32 iter = calibrate_iterations(handle, params);
-
-    // warmup iterations (skipped from profiling)
-    // TODO: improvise this logic
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "WARM-UP START");
-#endif
-    for (INT32 i = 0; i < WARMUP_ITERATIONS; ++i)
-    {
-        INT32 j = iter + 1;
-        while (--j)
+        if (strcmp(arg, "--help") == 0 || arg[1] == 'h')
         {
-            params->aoclfftz_execute(handle);
+            return 'h';
+        }
+        else if (strcmp(arg, "--precision") == 0 || arg[1] == 'p')
+        {
+            return 'p';
+        }
+        else if (strcmp(arg, "--data-model") == 0 || arg[1] == 'm')
+        {
+            return 'm';
+        }
+        else if (strcmp(arg, "--bench-type") == 0 || arg[1] == 'b')
+        {
+            return 'b';
+        }
+        else if (strcmp(arg, "--result-placement") == 0 || arg[1] == 'r')
+        {
+            return 'r';
+        }
+        else if (strcmp(arg, "--order") == 0)
+        {
+            return 300;
+        }
+        else if (strcmp(arg, "--dir") == 0)
+        {
+            return 301;
+        }
+        else if (strcmp(arg, "--fft-type") == 0 || arg[1] == 'f')
+        {
+            return 'f';
+        }
+        else if (strcmp(arg, "--iters") == 0 || arg[1] == 'i')
+        {
+            return 'i';
+        }
+        else if (strcmp(arg, "--seed") == 0 || arg[1] == 's')
+        {
+            return 's';
+        }
+        else if (strcmp(arg, "--tol") == 0 || arg[1] == 't')
+        {
+            return 't';
+        }
+        else if (strcmp(arg, "--num-threads") == 0 || arg[1] == 'n')
+        {
+            return 'n';
+        }
+        else if (strcmp(arg, "--dynamic-load-model") == 0)
+        {
+            return 302;
+        }
+        else if (strcmp(arg, "--opt-level") == 0 || arg[1] == 'o')
+        {
+            return 'o';
+        }
+        else if (strcmp(arg, "--logger-mode") == 0 || arg[1] == 'l')
+        {
+            return 'l';
+        }
+        else if (strcmp(arg, "--selector-time") == 0)
+        {
+            return 303;
+        }
+        else if (strcmp(arg, "--measure-stats") == 0)
+        {
+            return 304;
+        }
+        else if (strcmp(arg, "--bit-reproducibility") == 0)
+        {
+            return 305;
+        }
+        else if (strcmp(arg, "--min-bench-time") == 0)
+        {
+            return 306;
+        }
+        else if (strcmp(arg, "--aligned-alloc") == 0)
+        {
+            return 307;
+        }
+        else
+        {
+            // Unsupported option
+            return '?';
         }
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "WARM-UP END");
-#endif
-
-    initTimer(clk_tick);
-    for (INT32 i = 0; i < params->num_iterations; i++)
-    {
-#ifdef AOCL_ENABLE_LOG
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode, "Iteration: %d",
-                               i + 1);
-#endif
-        INT32 j = iter + 1;
-        getTime(start_time);
-        while (--j)
-        {
-            params->aoclfftz_execute(handle);
-        }
-        getTime(end_time);
-        cur_time = diffTime(clk_tick, start_time, end_time);
-        cur_time = cur_time / iter;
-        tot_time = tot_time + cur_time;
-        if (cur_time < min_time)
-        {
-            min_time = cur_time;
-        }
-        avg_time = (DOUBLE)tot_time / params->num_iterations;
-        bench_sleep(1e8); // 0.1 seconds
-    }
-
-    // compute MFLOPS from execution time
-    max_mflops = (5.0 * n * batches * log2(n)) / (min_time * 1E-3);
-    avg_mflops = (5.0 * n * batches * log2(n)) / (avg_time * 1E-3);
-
-    // prepare suitable execution time unit
-    DOUBLE time_multiplier = 1.0;
-    CHAR time_unit[3];
-    // units will be decided based on minimum of min_time and avg_time
-    // which is min_time
-    // print time in seconds
-    if (min_time > 1E9)
-    {
-        time_multiplier = 1E-9;
-        STRCPY(time_unit, 3, "s");
-    }
-    // print time in milli-seconds
-    else if (min_time > 1E6)
-    {
-        time_multiplier = 1E-6;
-        STRCPY(time_unit, 3, "ms");
-    }
-    // print time in micro-seconds
-    else if (min_time > 1E3)
-    {
-        time_multiplier = 1E-3;
-        STRCPY(time_unit, 3, "us");
-    }
-    // print time in nano-seconds
     else
     {
-        time_multiplier = 1.0;
-        STRCPY(time_unit, 3, "ns");
+        // Non option argument
+        return 308;
     }
-
-    printf("\n=====================================\n");
-    printf("  Min Execution time : %6.3lf %s\n", min_time * time_multiplier,
-           time_unit);
-    printf("  Avg Execution time : %6.3lf %s\n", avg_time * time_multiplier,
-           time_unit);
-    printf("=====================================\n");
-    printf("      Max MFLOPS : %9.6lf\n", max_mflops);
-    printf("      Avg MFLOPS : %9.6lf\n", avg_mflops);
-    printf("=====================================\n");
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
-#endif
-    return BENCH_SUCCESS;
+}
+/**
+ * @brief set the flag value based on bench params
+ *
+ * @param params bench params
+ * @return INT32 encoded flag value
+ */
+UINT32 set_flag(aoclfftz_bench_params_t *params)
+{
+    UINT32 flag = 0;
+    if (params->res_placement == IN_PLACE)
+    {
+        flag = flag | (0 << 0);
+    }
+    else
+    {
+        flag = flag | (1 << 0);
+    }
+    if (params->order == IN_ORDER)
+    {
+        flag = flag | (0 << 1);
+    }
+    else
+    {
+        flag = flag | (1 << 1);
+    }
+    if (params->dir == FORWARD)
+    {
+        flag = flag | (0 << 2);
+    }
+    else
+    {
+        flag = flag | (1 << 2);
+    }
+    if (params->fft_type == COMPLEX_TO_COMPLEX)
+    {
+        flag = flag | (0 << 3);
+    }
+    else
+    {
+        flag = flag | (1 << 3);
+    }
+    return flag;
 }
 
 /**
- * @brief run the test bench on performance mode and calculate MFLOPS.
+ * @brief print the help menu contents to the output
  *
- * @param params bench params object
- * @return INT32 bench status code
+ * @return VOID
  */
-INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params)
+VOID show_help_menu(VOID)
 {
-    INT32 status = BENCH_SUCCESS;
-
-    // setup the FFT problem
-    VOID *handle = params->setup_problem(params);
-    if (handle == NULL)
-    {
-        PRINT_FAILURE("\nTest bench failed [REASON: Setup problem failed]\n\n");
-        status = SETUP_FAILURE;
-        goto exit_performance_mode;
-    }
-
-    // run the FFT problem
-    status = run_problem_on_performance_mode(params, handle);
-    if (status != BENCH_SUCCESS)
-    {
-        PRINT_FAILURE(
-            "\nTest bench failed [REASON: Execute problem failed]\n\n");
-        status = EXECUTION_FAILURE;
-        goto exit_performance_mode;
-    }
-
-    PRINT_SUCCESS("\nTest bench completed on performance mode\n\n");
-
-exit_performance_mode:
-    // destroy the handle object
-    params->aoclfftz_destroy(handle);
-    return BENCH_SUCCESS;
-}
-
-/**
- * @brief Entry function to test bench
- *
- * @param argc command-line argument count
- * @param argv command-line argument values as char array
- * @return INT32 status code: 0 indicates success
- *                 negative value indicates bench error code
- *                 positive value indicates specific parser error code
- */
-INT32 main(INT32 argc, CHAR **argv)
-{
-    printf("\nAOCL-FFTZ version: %s\n\n", aoclfftz_version());
-
-    INT32 status = BENCH_SUCCESS;
-
-    // prepare bench params from user inputs
-    aoclfftz_bench_params_t *params = NULL;
-    ALLOC_ALIGN_UNINIT(params, aoclfftz_bench_params_t,
-                       sizeof(aoclfftz_bench_params_t));
-    if (params == NULL)
-    {
-        status = MEMORY_FAILURE;
-        goto exit_main;
-    }
-
-    status = prepare_bench_params(argc, argv, params);
-    HANDLE_PARSER_ERROR_MESSAGE(status);
-    if (status != PARSER_SUCCESS)
-    {
-        goto exit_main;
-    }
-
-    // log the user params in INFO mode
-    LOG_BENCH_PARAMS(params);
-
-    if (params->bench_type == PERFORMANCE)
-    {
-        printf("\nRunning bench on performance mode\n");
-        status = run_bench_on_performance_mode(params);
-    }
-    else // params->bench_type == ACCURACY
-    {
-        printf("\nRunning bench on accuracy mode\n");
-        status = run_bench_on_accuracy_mode(params);
-    }
-
-exit_main:
-    destroy_bench_param(params);
-    return status;
+    printf(
+        "\nUSAGE: aocl_fftz_bench [OPTIONS]... PROBLEM_SIZE\n\n"
+        "PROBLEM_SIZE    for 1D problem :\n"
+        "                  10 => one dimensional problem of size 10\n"
+        "                  10:2:4 => one dimensional problem of size 10, input "
+        "stride 2 and output stride 4\n"
+        "                  2v10 => a length-2 vector of one dimensional "
+        "problem with size 10\n"
+        "                  2:1:2v10:2:4 => a strided length-2 vector of one "
+        "dimensional problem with size 10 having input and output strides\n"
+        "                for nD problem :\n"
+        "                  2x3x4 => size of the three dimensional problem\n"
+        "                  2x4v3x5 => a 2x4 length vector of two dimension "
+        "problem with size 3x5\n"
+        "                  2:2:1x4:1:2v10:3:2x5:5:2 => a strided 2x4 length "
+        "vector of two dimension problem with size 10x5 having strides\n"
+        "Available options :-\n"
+        "-p, --precision          'd' for double (fp64), 'f' for float (fp32) "
+        "[default: d]\n"
+        "-m, --data-model         'l' for LP64, 'i' for ILP64 [default: l]\n"
+        "-b, --bench-type         'a' for accuracy, 'p' for performance "
+        "[default: p]\n"
+        "-r, --result-placement   'i' for in-place, 'o' for out-of-place "
+        "[default: o]\n"
+        "--order                  'i' for in-order, 'o' for out-of-order "
+        "[default: i]\n"
+        "--dir                    FFT direction - 'f' for forward, 'b' for"
+        "backward [default: f]\n"
+        "-f, --fft-type           'c2c' for complex to complex, 'r2c' for real "
+        "to "
+        "complex, 'c2r' for complex to real [default: c2c]\n"
+        "-i, --iters              number of iterations [default: 50 for "
+        "`performance` mode and 1 for `accuracy` mode]\n"
+        "-s, --seed               specify manual seed value, random seed will "
+        "be used if this option is not specified\n"
+        "                           NOTE: iters will set to 1 if seed is "
+        "specified\n"
+        "-t, --tol                error tolerance value ranges from 0.0 to 1.0 "
+        "(inclusive) [default: 1E-10 for double, 1E-3 for float]\n"
+        "-n, --num-threads        number of CPU threads for multi-threading "
+        "FFT [default: 1]\n"
+        "--dynamic-load-model     use it to allow the library to determine how "
+        "many threads to be used (this option takes no value argument)\n"
+        "-o, --opt-level          optimization levels used for benchmarking\n"
+        "                           -1 = no optimization\n"
+        "                            0 = non-SIMD algorithmic optimization\n"
+        "                            1 = SSE2 optimization\n"
+        "                            2 = AVX optimization\n"
+        "                            3 = AVX2 optimization\n"
+        "                            4 = AVX512 optimization\n"
+        "                            5 = auto mode\n"
+        "                            [default: -1]\n"
+        "-l, --logger-mode        logger mode: log level value ranges from 0 "
+        "to 4 [default: 0]\n"
+        "                            0 = no logging\n"
+        "                            1 = error\n"
+        "                            2 = info\n"
+        "                            3 = debug\n"
+        "                            4 = trace\n"
+        "--selector-time          '1' to print the time taken for preparing "
+        "the solution, '0' to disable it [default: 0]\n"
+        "--min-bench-time         set minimum time to calculate performance "
+        "iterations [default: 100 ms]\n"
+        "--measure-stats          '1' to measure selector stats, '0' to "
+        "disable it [default: 0]\n"
+        "--bit-reproducibility    '1' to use bit reproducibility mode, '0' to "
+        "disable it [default: 0]\n"
+        "--aligned-alloc          '1' to use aligned memory allocation, '0' to "
+        "disable it [default: 1]\n");
 }

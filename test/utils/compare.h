@@ -33,6 +33,7 @@
  *  This file contains declarations of data compare functions for test bench.
  *
  *  @author Srirammaswamy Srinivasan
+ *  @author Jeya R
  */
 
 #ifndef COMPARE_H
@@ -41,8 +42,7 @@
 #ifdef WIN32
 #include <direct.h> /* for _getcwd */
 #endif
-#include "api/types.h"
-#include "test/aoclfftz_corebench.h"
+#include "test/aoclfftz_bench.h"
 #include "utils/allocator.h"
 #include "utils/utils.h"
 #include "test/utils/register_functions.h"

@@ -26,45 +26,32 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file dft_reference.h
+/** @file accuracy.h
  *
- *  @brief DFT reference implementation.
+ *  @brief Accuracy test utility functions.
  *
- *  This file contains the implementation of DFT reference and its helper
- *  functions.
+ *  This file contains accuracy test related utility function prototypes for
+ *  test bench.
  *
- *  @author S. Biplab Raut
  *  @author V. Murugan
  *  @author Srirammaswamy Srinivasan
+ *  @author Jeya R
  */
 
-#ifndef DFT_REFERENCE_H
-#define DFT_REFERENCE_H
-#include <math.h>
-#include "api/types.h"
-#include "test/aoclfftz_corebench.h"
+#ifndef ACCURACY_H
+#define ACCURACY_H
 
-#ifdef ENABLE_DFT_REFERENCE
-/**
- * @brief angle = angle * [(i0+k0)/n0 + (i1+k1)/n1 + ... + (iR+kR)/nR]
- * where R = dim rank
- *
- */
-#define UPDATE_ANGLE(angle, in_arr_idx, out_arr_idx, dims, rank, dt_t)         \
-    {                                                                          \
-        dt_t x = 0.0;                                                          \
-        for (INTP i = 0; i < rank; i++)                                        \
-        {                                                                      \
-            x += (((dt_t)in_arr_idx[i] * out_arr_idx[i]) / dims[i].n);         \
-        }                                                                      \
-        angle = angle * x;                                                     \
-    }
+#include "test/aoclfftz_bench.h"
+#include "test/utils/data_generation.h"
+#include "test/bench_problem.h"
+#include "utils/allocator.h"
 
-VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
-               INTP *out_idx_map);
-VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
-               INTP *out_idx_map);
-INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                             INTP *out_idx_map);
-#endif
-#endif // DFT_REFERENCE_H
+INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params);
+INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
+                         INTP *out_idx_map);
+INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
+                                      INTP *in_idx_map, INTP *out_idx_map);
+INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
+                         INTP *out_idx_map);
+
+#endif // ACCURACY_H

@@ -32,9 +32,9 @@
  *  This file contains the test bench utility functions related to problem size,
  *  dims and strides for test bench.
  *
- *  @author S. Biplab Raut
  *  @author V. Murugan
  *  @author Srirammaswamy Srinivasan
+ *  @author Jeya R
  */
 #include <string.h>
 #include "test/utils/size_and_index_mapper.h"

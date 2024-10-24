@@ -35,12 +35,14 @@
  *
  *  @author V. Murugan
  *  @author Srirammaswamy Srinivasan
+ *  @author Jeya R
  */
 
 #include <stdlib.h>
 #include <string.h>
 #include "test/utils/data_generation.h"
-#include "test/aoclfftz_corebench.h"
+#include "test/aoclfftz_bench.h"
+#include "test/utils/bench_utils.h"
 
 /**
  * @brief Prepare FLOAT input data of size `n * stride`.

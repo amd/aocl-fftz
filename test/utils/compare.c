@@ -33,12 +33,11 @@
  *  This file contains declarations of data compare functions for test bench.
  *
  *  @author Srirammaswamy Srinivasan
+ *  @author Jeya R
  */
 
-#include <string.h>
-#include <math.h>
-#include <stdio.h>
 #include "test/utils/compare.h"
+#include "test/utils/bench_utils.h"
 /**
  * @brief Compare the two data of length n (FLOAT type)
  *        Used to compare output with reference output.

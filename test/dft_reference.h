@@ -26,45 +26,45 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file size_and_index_mapper.h
+/** @file dft_reference.h
  *
- *  @brief Problem size and dims related utility functions.
+ *  @brief DFT reference implementation.
  *
- *  This file contains the test bench utility functions related to problem size,
- *  dims and strides for test bench.
+ *  This file contains the implementation of DFT reference and its helper
+ *  functions.
  *
  *  @author V. Murugan
  *  @author Srirammaswamy Srinivasan
  *  @author Jeya R
  */
 
-#ifndef SIZE_AND_INDEX_MAPPER_H
-#define SIZE_AND_INDEX_MAPPER_H
+#ifndef DFT_REFERENCE_H
+#define DFT_REFERENCE_H
 
-#include "api/aoclfftz.h"
+#include <math.h>
 #include "test/aoclfftz_bench.h"
 
+#ifdef ENABLE_DFT_REFERENCE
 /**
- * @brief check whether the dims are currently supported or not
+ * @brief angle = angle * [(i0+k0)/n0 + (i1+k1)/n1 + ... + (iR+kR)/nR]
+ * where R = dim rank
  *
  */
-#define CHECK_SUPPORTED_DIMS(dims, vecs, dim_rank, vec_rank, status)           \
+#define UPDATE_ANGLE(angle, in_arr_idx, out_arr_idx, dims, rank, dt_t)         \
     {                                                                          \
-        if (vec_rank > 3)                                                      \
+        dt_t x = 0.0;                                                          \
+        for (INTP i = 0; i < rank; i++)                                        \
         {                                                                      \
-            status = UNSUPPORTED_SIZE_ERROR;                                   \
+            x += (((dt_t)in_arr_idx[i] * out_arr_idx[i]) / dims[i].n);         \
         }                                                                      \
+        angle = angle * x;                                                     \
     }
 
-INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank);
-VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
-                            INTP *in_buffer_size, INTP *out_buffer_size);
-INT32 check_inplace_strides(aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                            INT32 dim_rank, INT32 vec_rank);
-VOID prepare_index_map(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                       INTP *out_idx_map);
-VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
-                       INTP dst_in_idx, INTP dst_out_idx,
-                       aoclfftz_dim_t_64_ *dims, INT32 rank);
-
-#endif // SIZE_AND_INDEX_MAPPER_H
+VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
+               INTP *out_idx_map);
+VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
+               INTP *out_idx_map);
+INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
+                             INTP *out_idx_map);
+#endif
+#endif // DFT_REFERENCE_H

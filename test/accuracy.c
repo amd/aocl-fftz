@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file accuracy_test.c
+/** @file accuracy.c
  *
  *  @brief Accuracy test utility functions.
  *
@@ -38,8 +38,7 @@
  */
 
 #include <time.h>
-#include <string.h>
-#include "test/utils/accuracy_test.h"
+#include "test/accuracy.h"
 #include "test/utils/bench_utils.h"
 #include "test/utils/size_and_index_mapper.h"
 
@@ -502,7 +501,8 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             outer_n *= cur_n;
 
             // compare the outputs
-            status = params->compare(params, out1, out2, batches, n, out_idx_map);
+            status = params->compare(params, out1, out2,
+                                     batches, n, out_idx_map);
             if (status != BENCH_SUCCESS)
             {
                 printf("\nResults mismatch on accuracy mode => property: "

@@ -26,21 +26,22 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file aoclfftz_corebench.h
+/** @file aoclfftz_bench.h
  *
  *  @brief Data structures and presets for testing single-threaded core fft
  *  library.
  *
- *  This file contains the data structures and presets to setup and execute
- *  single-threaded core library for testing the library APIs.
+ *  This file contains the data structures and presets for testing the
+ *  library APIs.
  *
  *  @author S. Biplab Raut
  *  @author V. Murugan
  *  @author Srirammaswamy Srinivasan
+ *  @author Jeya R
  */
 
-#ifndef AOCLFFTZ_COREBENCH_H
-#define AOCLFFTZ_COREBENCH_H
+#ifndef AOCLFFTZ_BENCH_H
+#define AOCLFFTZ_BENCH_H
 
 #define BENCH_2_PI 6.2831853071795864769252867665590057683943388
 #define BENCH_2_PIf 6.2831853071795864769252867665590057683943388f
@@ -50,15 +51,6 @@
 
 /* enable this to compare against DFT reference in accuracy mode */
 // #define ENABLE_DFT_REFERENCE
-
-// warmup iterations are set to 2 since each iteration will internally
-// run calibrated no. of iterations which will be sufficient for different
-// sized problems.
-#define WARMUP_ITERATIONS 2
-
-// Defining DATA_STRIDE in corebench internally to avoid using internal headers
-#define T_DATA_STRIDE 2
-#define PATH_SIZE_MAX 200
 
 // Forward declarations
 typedef struct aoclfftz_bench_params aoclfftz_bench_params_t;
@@ -193,20 +185,4 @@ typedef struct aoclfftz_bench_error
     INTP *first_err_coords;
 } aoclfftz_bench_error_t;
 
-
-// Function declarations
-
-INT32 prepare_bench_params(INT32 argc, CHAR **argv,
-                           aoclfftz_bench_params_t *bench_params);
-VOID *setup_problem_f(aoclfftz_bench_params_t *params);
-VOID *setup_problem_d(aoclfftz_bench_params_t *params);
-VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params);
-VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params);
-VOID destroy_bench_param(aoclfftz_bench_params_t *params);
-INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
-                                      VOID *handle);
-INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params);
-VOID show_help_menu(VOID);
-INT32 get_option(CHAR **argv, INT32 arg_idx);
-
-#endif // AOCLFFTZ_COREBENCH_H
+#endif // AOCLFFTZ_BENCH_H

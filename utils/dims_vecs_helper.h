@@ -26,11 +26,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file accuracy_test.h
+/** @file dims_vecs_helper.h
  *
- *  @brief Accuracy test utility functions.
+ *  @brief Helper functions for dims and vecs.
  *
- *  This file contains accuracy test related utility function prototypes for
+ *  This file contains the helper function prototypes for dims and vecs for
  *  test bench.
  *
  *  @author S. Biplab Raut
@@ -38,19 +38,21 @@
  *  @author Srirammaswamy Srinivasan
  */
 
-#ifndef ACCURACY_TEST_H
-#define ACCURACY_TEST_H
+#ifndef DIMS_VECS_HELPER_H
+#define DIMS_VECS_HELPER_H
 
-#include "test/aoclfftz_corebench.h"
-#include "test/utils/data_generation.h"
+#include <ctype.h>
+#include "api/aoclfftz.h"
+#include "test/utils/size_and_index_mapper.h"
 #include "utils/allocator.h"
 
-INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params);
-INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                         INTP *out_idx_map);
-INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
-                                      INTP *in_idx_map, INTP *out_idx_map);
-INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                         INTP *out_idx_map);
+EXPORT_SYM_DYN
+INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
+                                  aoclfftz_dim_t_64_ **dims,
+                                  aoclfftz_dim_t_64_ **vecs,
+                                  INTP default_stride);
 
-#endif // ACCURACY_TEST_H
+EXPORT_SYM_DYN
+INT32 find_dim_vec_ranks(CHAR *arg, INT32 *dim_rank, INT32 *vec_rank);
+
+#endif // DIMS_VECS_HELPER_H

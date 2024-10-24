@@ -33,15 +33,15 @@
  *  This file contains the implementation of DFT reference and its helper
  *  functions.
  *
- *  @author S. Biplab Raut
  *  @author V. Murugan
  *  @author Srirammaswamy Srinivasan
+ *  @author Jeya R
  */
 
 
-#include "test/utils/dft_reference.h"
 #include "test/utils/compare.h"
 #include "test/utils/size_and_index_mapper.h"
+#include "test/utils/bench_utils.h"
 
 #ifdef ENABLE_DFT_REFERENCE
 

@@ -35,9 +35,11 @@
  *
  *  @author V. Murugan
  *  @author Srirammaswamy Srinivasan
+ *  @author Jeya R
  */
 
 #include "test/utils/register_functions.h"
+#include "test/bench_problem.h"
 
 /**
  * @brief Register the setup, appropriate fftz API variants, and other utility

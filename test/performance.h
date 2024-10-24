@@ -26,45 +26,31 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file size_and_index_mapper.h
+/** @file performance.h
  *
- *  @brief Problem size and dims related utility functions.
+ *  @brief Performance test utility functions.
  *
- *  This file contains the test bench utility functions related to problem size,
- *  dims and strides for test bench.
+ *  This file contains function declarations of performance test related
+ *  utility functions for test bench.
  *
  *  @author V. Murugan
  *  @author Srirammaswamy Srinivasan
  *  @author Jeya R
  */
 
-#ifndef SIZE_AND_INDEX_MAPPER_H
-#define SIZE_AND_INDEX_MAPPER_H
+#ifndef PERFORMANCE_H
+#define PERFORMANCE_H
 
-#include "api/aoclfftz.h"
+#include <float.h>
 #include "test/aoclfftz_bench.h"
 
-/**
- * @brief check whether the dims are currently supported or not
- *
- */
-#define CHECK_SUPPORTED_DIMS(dims, vecs, dim_rank, vec_rank, status)           \
-    {                                                                          \
-        if (vec_rank > 3)                                                      \
-        {                                                                      \
-            status = UNSUPPORTED_SIZE_ERROR;                                   \
-        }                                                                      \
-    }
+INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params);
+INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
+                                      VOID *handle);
+INT32 calibrate_iterations(VOID *handle, DOUBLE min_bench_time,
+                            aoclfftz_bench_params_t *params);
+VOID bench_sleep(INT64 nano_seconds);
+VOID print_perf_stats(DOUBLE min_time, DOUBLE avg_time, DOUBLE avg_mflops,
+                      DOUBLE max_mflops);
 
-INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank);
-VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
-                            INTP *in_buffer_size, INTP *out_buffer_size);
-INT32 check_inplace_strides(aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                            INT32 dim_rank, INT32 vec_rank);
-VOID prepare_index_map(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                       INTP *out_idx_map);
-VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
-                       INTP dst_in_idx, INTP dst_out_idx,
-                       aoclfftz_dim_t_64_ *dims, INT32 rank);
-
-#endif // SIZE_AND_INDEX_MAPPER_H
+#endif // PERFORMANCE_H

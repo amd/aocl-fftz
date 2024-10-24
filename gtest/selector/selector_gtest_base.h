@@ -40,13 +40,14 @@
 #define AOCLFFTZ_SELECTOR_GTEST_BASE_H
 
 #include <gtest/gtest.h>
+#include <math.h>
 #include "api/aoclfftz.h"
 extern "C"
 {
 #include "gtest/aoclfftz_core_wrapper.h"
+#include "utils/dims_vecs_helper.h"
 }
 #include "gtest/gtest_types.h"
-#include "test/aoclfftz_corebench_utils.h"
 
 /****** Utility functions for Bluestein solver ******/
 INTP get_extended_length_ref(INTP n)

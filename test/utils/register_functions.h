@@ -35,16 +35,15 @@
  *
  *  @author V. Murugan
  *  @author Srirammaswamy Srinivasan
+ *  @author Jeya R
  */
 
 #ifndef REGISTER_FUNCTIONS_H
 #define REGISTER_FUNCTIONS_H
 
-#include "api/types.h"
 #include "test/utils/compare.h"
 #include "test/utils/data_generation.h"
-#include "test/utils/dft_reference.h"
-#include "test/aoclfftz_corebench.h"
+#include "test/dft_reference.h"
 
 INT32 register_functions(aoclfftz_bench_params_t *params);
 
