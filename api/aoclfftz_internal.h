@@ -191,6 +191,29 @@ typedef struct aoclfftz_bluestein
     UINT8 is_B_out_valid;
 } aoclfftz_bluestein_t;
 
+// Internal types to denote complex numbers in fftz's transpose routines
+typedef struct aoclfftz_complex_f
+{
+    FLOAT real, imag;
+} aoclfftz_complex_f_t;
+
+typedef struct aoclfftz_complex_d
+{
+    DOUBLE real, imag;
+} aoclfftz_complex_d_t;
+
+// A data structure to track the visited locations in a matrix
+typedef struct aoclfftz_transpose_aux_mem
+{
+    UINT8 *data;
+    INTP size;
+} aoclfftz_transpose_aux_mem_t;
+
+// function pointer compatible with all transpose kernel function signatures
+typedef void (*aoclfftz_transpose_kernel)(VOID *, VOID *, aoclfftz_dim_t_64_,
+                                          aoclfftz_dim_t_64_,
+                                          aoclfftz_transpose_aux_mem_t *);
+
 // Solution data structure that is returned as a handle by the setup API and
 // used by the execute API.
 typedef struct aoclfftz_solution

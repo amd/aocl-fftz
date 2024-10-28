@@ -81,6 +81,8 @@ file(GLOB API_SRC_FILES api/*.c api/*.cpp api/*.h)
 file(GLOB CORE_SRC_FILES CONFIGURE_DEPENDS ${CORE_PATH}/*.c ${CORE_PATH}/*.h
                         ${CORE_PATH}/common/*.c ${CORE_PATH}/common/*.h
                         ${CORE_PATH}/kernels/*.c ${CORE_PATH}/kernels/*.h
+                        ${CORE_PATH}/kernels/transpose/*.c ${CORE_PATH}/kernels/transpose/*.h
+                        ${CORE_PATH}/kernels/transpose/c/*.c ${CORE_PATH}/kernels/transpose/c/*.h
                         ${CORE_PATH}/solvers/*.c ${CORE_PATH}/solvers/*.h)
 file(GLOB CORE_C_FILES CONFIGURE_DEPENDS
                         ${CORE_PATH}/kernels/c/*.c ${CORE_PATH}/kernels/c/*.h)
