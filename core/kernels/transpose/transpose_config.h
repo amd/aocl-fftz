@@ -26,35 +26,25 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file transpose_inplace_square.c
+/** @file transpose_config.h
  *
- *  @brief Implementations of transpose kernels
+ *  @brief Parameters for chosing the optimal transpose kernels
  *
- *  Implementations of transpose kernels that use different algorithms to
- *  perform the transpose operation on square matrices, in place.
+ *  This file contains the various parameters that are used to obtain the
+ *  optimal transpose kernel.
  *
  *  @author Ashwin K. Godbole
  */
 
-#include "core/kernels/transpose/transpose_kernels.h"
-#include "utils/allocator.h"
+#ifndef TRANSPOSE_CONFIG_H
+#define TRANSPOSE_CONFIG_H
 
-#define TYPE_GENERIC_IMPLEMENTATION
+// TODO: refine the constants based on experimentation and collected data.
 
-#define TRANSPOSE_DT FLOAT
-#include "core/kernels/transpose/c/transpose_square_inplace_generic.h"
-#undef TRANSPOSE_DT
+// Minimum number or rows (or columns) for recursive square transpose to be used
+#define REC_MIN_FLOAT 128
+#define REC_MIN_DOUBLE 64
+#define REC_MIN_aoclfftz_complex_f_t 64
+#define REC_MIN_aoclfftz_complex_d_t 32
 
-#define TRANSPOSE_DT DOUBLE
-#include "core/kernels/transpose/c/transpose_square_inplace_generic.h"
-#undef TRANSPOSE_DT
-
-#define TRANSPOSE_DT aoclfftz_complex_f_t
-#include "core/kernels/transpose/c/transpose_square_inplace_generic.h"
-#undef TRANSPOSE_DT
-
-#define TRANSPOSE_DT aoclfftz_complex_d_t
-#include "core/kernels/transpose/c/transpose_square_inplace_generic.h"
-#undef TRANSPOSE_DT
-
-#undef TYPE_GENERIC_IMPLEMENTATION
+#endif // TRANSPOSE_CONFIG_H

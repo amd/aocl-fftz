@@ -95,8 +95,9 @@ auto compare_data_string(aoclfftz_complex_d_t recieved,
 #define GENERATE_TRANSPOSE_KERNEL_TABLE(type, isa)                             \
     static aoclfftz_transpose_kernel transpose_kernel_table_##type##_##isa[] = \
     {                                                                          \
-            /* 0 */ CONCAT(FUNC(tiq_iterative, type, isa), _wrapper),          \
-            /* 1 */ CONCAT(FUNC(tisq_iterative, type, isa), _wrapper),         \
+        /* 0 */ CONCAT(FUNC(tiq_iterative, type, isa), _wrapper),              \
+        /* 1 */ CONCAT(FUNC(tisq_iterative, type, isa), _wrapper),             \
+        /* 2 */ CONCAT(FUNC(tiq_recursive_buf, type, isa), _wrapper),          \
     }
 
 GENERATE_TRANSPOSE_KERNEL_TABLE(FLOAT, c);
@@ -107,7 +108,8 @@ GENERATE_TRANSPOSE_KERNEL_TABLE(aoclfftz_complex_d_t, c);
 static std::string transpose_kernel_names_table[] =
 {
     "tiq_iterative",
-    "tisq_iterative"
+    "tisq_iterative",
+    "tiq_recursive_buf",
 };
 
 // -----------------------------------------------------------------------------

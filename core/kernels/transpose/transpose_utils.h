@@ -39,6 +39,8 @@
 #ifndef TRANSPOSE_UTILS_H
 #define TRANSPOSE_UTILS_H
 
+#include <string.h>
+
 #define FUNC_(pre, type, post) pre##_##type##_##post
 #define FUNC(pre, type, post) FUNC_(pre, type, post)
 
@@ -53,5 +55,70 @@
 #define TRANSPOSE_KERNEL_ARGS                                                  \
     VOID *in_ptr, VOID *out_ptr, aoclfftz_dim_t_64_ row_metadata,              \
     aoclfftz_dim_t_64_ column_metadata, aoclfftz_transpose_aux_mem_t *aux_mem
+
+// Copy 'n_elems' number of elements from 'matrix' to 'buffer'
+#define COPY_MATRIX_ELEMS(TYPE, matrix, m_i, m_j, m_leading_dim, buffer, b_i,  \
+                          b_j, b_leading_dim, n_elems)                         \
+    do                                                                         \
+    {                                                                          \
+        TYPE *write_loc =                                                      \
+            &buffer[LINEAR_IDX_2D(b_i, b_j, UNIT_STRIDE, b_leading_dim)];      \
+        TYPE *read_loc =                                                       \
+            &matrix[LINEAR_IDX_2D(m_i, m_j, UNIT_STRIDE, m_leading_dim)];      \
+        memcpy(write_loc, read_loc, sizeof(TYPE) * n_elems);                   \
+    } while (0)
+
+// Process the last row/column that remains after the recursive transpose of a
+// square matrix with odd dimensions
+//
+// - If 'cols' is an odd number then one last row+column remains untransposed
+//
+// - For submatrices A and D, the vertical arm of the L-shaped area is swapped
+//   with the horizontal arm (because A and D lie on the main diagonal)
+//
+// - For submatrix B, when the vertical arm of the L-shaped area is processed,
+//   its elements get swapped with C's horizontal arm
+//
+// - This means that the elements of the horizontal arm of the L-shaped area of
+//   submatrix B remain untransposed.
+//
+// - To fix this, we must also process the horizontal arm of the L-shaped area
+//   of submatrix B (which gets swapped with the vertical arm of submatrix C)
+//
+//    ████████ █
+//    ████████ █
+//    ████████ █ <--- 'L' shaped untransposed area
+//    ████████ █
+//    ▄▄▄▄▄▄▄▄▄█
+
+#define TRANSPOSE_LAST_ROWCOL(TYPE, matrix, cols, leading_dim, i, j,           \
+                              in_top_right)                                    \
+    {                                                                          \
+        for (INTP it = 0; it < cols - 1; it++)                                 \
+        {                                                                      \
+            TYPE temp = matrix[LINEAR_IDX_2D(i + it, j + cols - 1,             \
+                                             UNIT_STRIDE, leading_dim)];       \
+            matrix[LINEAR_IDX_2D(i + it, j + cols - 1, UNIT_STRIDE,            \
+                                 leading_dim)] =                               \
+                matrix[LINEAR_IDX_2D(j + cols - 1, i + it, UNIT_STRIDE,        \
+                                     leading_dim)];                            \
+            matrix[LINEAR_IDX_2D(j + cols - 1, i + it, UNIT_STRIDE,            \
+                                 leading_dim)] = temp;                         \
+        }                                                                      \
+        if (in_top_right)                                                      \
+        {                                                                      \
+            for (INTP it = 0; it <= cols - 1; it++)                            \
+            {                                                                  \
+                TYPE temp = matrix[LINEAR_IDX_2D(i + cols - 1, j + it,         \
+                                                 UNIT_STRIDE, leading_dim)];   \
+                matrix[LINEAR_IDX_2D(i + cols - 1, j + it, UNIT_STRIDE,        \
+                                     leading_dim)] =                           \
+                    matrix[LINEAR_IDX_2D(j + it, i + cols - 1, UNIT_STRIDE,    \
+                                         leading_dim)];                        \
+                matrix[LINEAR_IDX_2D(j + it, i + cols - 1, UNIT_STRIDE,        \
+                                     leading_dim)] = temp;                     \
+            }                                                                  \
+        }                                                                      \
+    }
 
 #endif // TRANSPOSE_UTILS_H

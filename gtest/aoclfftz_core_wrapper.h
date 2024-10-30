@@ -332,5 +332,6 @@ static wrapper_kernel_fp_list_t
 
 TRANSPOSE_WRAPPER_ALL_TYPES_DECL(tiq_iterative, c);
 TRANSPOSE_WRAPPER_ALL_TYPES_DECL(tisq_iterative, c);
+TRANSPOSE_WRAPPER_ALL_TYPES_DECL(tiq_recursive_buf, c);
 
 #endif // AOCLFFTZ_CORE_WRAPPER_H

@@ -86,42 +86,50 @@ TEST_P(AoclfftzInplaceTransposeKernelTestDoubleComplex,
 }
 
 std::vector<std::tuple<INTP, INTP>> dims = {
-    {1, 1}, {2, 2}, {13, 13}, {56, 56}, {64, 64}};
+    {1, 1}, {2, 2}, {13, 13}, {56, 56}, {64, 64}, {360, 360}, {512, 512}};
 
 // Unit strided, square, inplace matrix transpose
 // -----------------------------------------------------------------------------
 INSTANTIATE_TEST_SUITE_P(
     IpUnitStrideTransposeKernelTest, AoclfftzInplaceTransposeKernelTestFloat,
-    ::testing::Combine(::testing::ValuesIn(dims),
-                       ::testing::Values(1), // stride
-                       ::testing::Values(0)  // kernel :: tiq_iterative
-                       ),
+    ::testing::Combine(
+        ::testing::ValuesIn(dims),
+        ::testing::Values(1), // stride
+        ::testing::Values(0,  // tiq_iterative
+                          2)  // tiq_recursive_buf
+        ),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     IpUnitStrideTransposeKernelTest, AoclfftzInplaceTransposeKernelTestDouble,
-    ::testing::Combine(::testing::ValuesIn(dims),
-                       ::testing::Values(1), // stride
-                       ::testing::Values(0)  // kernel :: tiq_iterative
-                       ),
+    ::testing::Combine(
+        ::testing::ValuesIn(dims),
+        ::testing::Values(1), // stride
+        ::testing::Values(0,  // tiq_iterative
+                          2)  // tiq_recursive_buf
+        ),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     IpUnitStrideTransposeKernelTest,
     AoclfftzInplaceTransposeKernelTestFloatComplex,
-    ::testing::Combine(::testing::ValuesIn(dims),
-                       ::testing::Values(1), // stride
-                       ::testing::Values(0)  // kernel :: tiq_iterative
-                       ),
+    ::testing::Combine(
+        ::testing::ValuesIn(dims),
+        ::testing::Values(1), // stride
+        ::testing::Values(0,  // tiq_iterative
+                          2)  // tiq_recursive_buf
+        ),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     IpUnitStrideTransposeKernelTest,
     AoclfftzInplaceTransposeKernelTestDoubleComplex,
-    ::testing::Combine(::testing::ValuesIn(dims),
-                       ::testing::Values(1), // stride
-                       ::testing::Values(0)  // kernel :: tiq_iterative
-                       ),
+    ::testing::Combine(
+        ::testing::ValuesIn(dims),
+        ::testing::Values(1), // stride
+        ::testing::Values(0,  // tiq_iterative
+                          2)  // tiq_recursive_buf
+        ),
     name_generator);
 
 std::vector<INTP> strides = {1, 3, 8, 35};
@@ -133,7 +141,7 @@ INSTANTIATE_TEST_SUITE_P(
     AoclfftzInplaceTransposeKernelTestFloat,
     ::testing::Combine(::testing::ValuesIn(dims),
                        ::testing::ValuesIn(strides), // stride
-                       ::testing::Values(1)          // kernel :: tisq_iterative
+                       ::testing::Values(1)          // tisq_iterative
                        ),
     name_generator);
 
@@ -142,7 +150,7 @@ INSTANTIATE_TEST_SUITE_P(
     AoclfftzInplaceTransposeKernelTestDouble,
     ::testing::Combine(::testing::ValuesIn(dims),
                        ::testing::ValuesIn(strides), // stride
-                       ::testing::Values(1)          // kernel :: tisq_iterative
+                       ::testing::Values(1)          // tisq_iterative
                        ),
     name_generator);
 
@@ -151,7 +159,7 @@ INSTANTIATE_TEST_SUITE_P(
     AoclfftzInplaceTransposeKernelTestFloatComplex,
     ::testing::Combine(::testing::ValuesIn(dims),
                        ::testing::ValuesIn(strides), // stride
-                       ::testing::Values(1)          // kernel :: tisq_iterative
+                       ::testing::Values(1)          // tisq_iterative
                        ),
     name_generator);
 
@@ -160,6 +168,6 @@ INSTANTIATE_TEST_SUITE_P(
     AoclfftzInplaceTransposeKernelTestDoubleComplex,
     ::testing::Combine(::testing::ValuesIn(dims),
                        ::testing::ValuesIn(strides), // stride
-                       ::testing::Values(1)          // kernel :: tisq_iterative
+                       ::testing::Values(1)          // tisq_iterative
                        ),
     name_generator);

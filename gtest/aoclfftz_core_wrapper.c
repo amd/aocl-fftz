@@ -616,3 +616,4 @@ VOID fuse_vecs_wrapper(aoclfftz_solution_t *sol)
 
 TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tiq_iterative, c);
 TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tisq_iterative, c);
+TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tiq_recursive_buf, c);
