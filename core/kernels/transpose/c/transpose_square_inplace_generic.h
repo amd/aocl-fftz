@@ -97,7 +97,7 @@
 // iterative transpose for unit strided matrices
 VOID FUNC(tiq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
 
-// iterative transpose for arbitrary strided matrices
+// iterative transpose for arbitrarily strided matrices
 VOID FUNC(tisq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
 
 // copy a submatrix and its companion into local buffers, transpose them

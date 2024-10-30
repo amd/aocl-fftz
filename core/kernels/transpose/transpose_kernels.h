@@ -98,18 +98,22 @@
 
 #define TRANSPOSE_DT FLOAT
 #include "core/kernels/transpose/c/transpose_square_inplace_generic.h"
+#include "core/kernels/transpose/c/transpose_rectangle_inplace_generic.h"
 #undef TRANSPOSE_DT
 
 #define TRANSPOSE_DT DOUBLE
 #include "core/kernels/transpose/c/transpose_square_inplace_generic.h"
+#include "core/kernels/transpose/c/transpose_rectangle_inplace_generic.h"
 #undef TRANSPOSE_DT
 
 #define TRANSPOSE_DT aoclfftz_complex_f_t
 #include "core/kernels/transpose/c/transpose_square_inplace_generic.h"
+#include "core/kernels/transpose/c/transpose_rectangle_inplace_generic.h"
 #undef TRANSPOSE_DT
 
 #define TRANSPOSE_DT aoclfftz_complex_d_t
 #include "core/kernels/transpose/c/transpose_square_inplace_generic.h"
+#include "core/kernels/transpose/c/transpose_rectangle_inplace_generic.h"
 #undef TRANSPOSE_DT
 
 #endif // TRANSPOSE_KERNELS_H

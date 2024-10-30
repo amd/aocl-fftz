@@ -98,6 +98,8 @@ auto compare_data_string(aoclfftz_complex_d_t recieved,
         /* 0 */ CONCAT(FUNC(tiq_iterative, type, isa), _wrapper),              \
         /* 1 */ CONCAT(FUNC(tisq_iterative, type, isa), _wrapper),             \
         /* 2 */ CONCAT(FUNC(tiq_recursive_buf, type, isa), _wrapper),          \
+        /* 3 */ CONCAT(FUNC(tir_cycles, type, isa), _wrapper),                 \
+        /* 4 */ CONCAT(FUNC(tisr_cycles, type, isa), _wrapper),                \
     }
 
 GENERATE_TRANSPOSE_KERNEL_TABLE(FLOAT, c);
@@ -110,6 +112,8 @@ static std::string transpose_kernel_names_table[] =
     "tiq_iterative",
     "tisq_iterative",
     "tiq_recursive_buf",
+    "tir_cycles",
+    "tisr_cycles",
 };
 
 // -----------------------------------------------------------------------------

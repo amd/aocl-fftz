@@ -101,12 +101,13 @@ class AoclfftzInplaceTransposeTestBase
 
         INTP n_elems = rows * cols * stride;
 
-        T *in = (T *)calloc(n_elems, sizeof(T));
-        T *out = (T *)calloc(n_elems, sizeof(T));
+        T *in, *out;
+        ALLOC_UNALIGN_INIT(in, T, n_elems * sizeof(T));
+        ALLOC_UNALIGN_INIT(out, T, n_elems * sizeof(T));
 
         aoclfftz_transpose_aux_mem_t aux_mem;
         aux_mem.size = rows * cols;
-        aux_mem.data = (UINT8 *)malloc(aux_mem.size * sizeof(UINT8));
+        ALLOC_UNALIGN_INIT(aux_mem.data, UINT8, aux_mem.size * sizeof(UINT8));
 
         // initialize the input matrix
         matrix_init(in, rows, cols, stride);

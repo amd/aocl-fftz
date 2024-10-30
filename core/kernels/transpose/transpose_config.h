@@ -39,8 +39,6 @@
 #ifndef TRANSPOSE_CONFIG_H
 #define TRANSPOSE_CONFIG_H
 
-// TODO: refine the constants based on experimentation and collected data.
-
 // Minimum number or rows (or columns) for recursive square transpose to be used
 #define REC_MIN_FLOAT 128
 #define REC_MIN_DOUBLE 64

@@ -73,8 +73,7 @@ TEST_P(AoclfftzInplaceTransposeKernelTestDouble, TESTDouble_KERNEL)
     test_kernel();
 }
 
-TEST_P(AoclfftzInplaceTransposeKernelTestFloatComplex,
-       TESTFloat_COMPLEX_KERNEL)
+TEST_P(AoclfftzInplaceTransposeKernelTestFloatComplex, TESTFloat_COMPLEX_KERNEL)
 {
     test_kernel();
 }
@@ -85,89 +84,162 @@ TEST_P(AoclfftzInplaceTransposeKernelTestDoubleComplex,
     test_kernel();
 }
 
-std::vector<std::tuple<INTP, INTP>> dims = {
+std::vector<std::tuple<INTP, INTP>> square_dims = {
     {1, 1}, {2, 2}, {13, 13}, {56, 56}, {64, 64}, {360, 360}, {512, 512}};
 
 // Unit strided, square, inplace matrix transpose
 // -----------------------------------------------------------------------------
 INSTANTIATE_TEST_SUITE_P(
-    IpUnitStrideTransposeKernelTest, AoclfftzInplaceTransposeKernelTestFloat,
-    ::testing::Combine(
-        ::testing::ValuesIn(dims),
-        ::testing::Values(1), // stride
-        ::testing::Values(0,  // tiq_iterative
-                          2)  // tiq_recursive_buf
-        ),
+    SquareIpUnitStrideTransposeKernelTest,
+    AoclfftzInplaceTransposeKernelTestFloat,
+    ::testing::Combine(::testing::ValuesIn(square_dims),
+                       ::testing::Values(1), // stride
+                       ::testing::Values(0,  // tiq_iterative
+                                         2)  // tiq_recursive_buf
+                       ),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
-    IpUnitStrideTransposeKernelTest, AoclfftzInplaceTransposeKernelTestDouble,
-    ::testing::Combine(
-        ::testing::ValuesIn(dims),
-        ::testing::Values(1), // stride
-        ::testing::Values(0,  // tiq_iterative
-                          2)  // tiq_recursive_buf
-        ),
+    SquareIpUnitStrideTransposeKernelTest,
+    AoclfftzInplaceTransposeKernelTestDouble,
+    ::testing::Combine(::testing::ValuesIn(square_dims),
+                       ::testing::Values(1), // stride
+                       ::testing::Values(0,  // tiq_iterative
+                                         2)  // tiq_recursive_buf
+                       ),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
-    IpUnitStrideTransposeKernelTest,
+    SquareIpUnitStrideTransposeKernelTest,
     AoclfftzInplaceTransposeKernelTestFloatComplex,
-    ::testing::Combine(
-        ::testing::ValuesIn(dims),
-        ::testing::Values(1), // stride
-        ::testing::Values(0,  // tiq_iterative
-                          2)  // tiq_recursive_buf
-        ),
+    ::testing::Combine(::testing::ValuesIn(square_dims),
+                       ::testing::Values(1), // stride
+                       ::testing::Values(0,  // tiq_iterative
+                                         2)  // tiq_recursive_buf
+                       ),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
-    IpUnitStrideTransposeKernelTest,
+    SquareIpUnitStrideTransposeKernelTest,
     AoclfftzInplaceTransposeKernelTestDoubleComplex,
-    ::testing::Combine(
-        ::testing::ValuesIn(dims),
-        ::testing::Values(1), // stride
-        ::testing::Values(0,  // tiq_iterative
-                          2)  // tiq_recursive_buf
-        ),
+    ::testing::Combine(::testing::ValuesIn(square_dims),
+                       ::testing::Values(1), // stride
+                       ::testing::Values(0,  // tiq_iterative
+                                         2)  // tiq_recursive_buf
+                       ),
     name_generator);
 
-std::vector<INTP> strides = {1, 3, 8, 35};
+std::vector<INTP> strides = {3, 8, 35, 102};
 
 // Arbitrarily (General) strided, square, inplace matrix transpose
 // -----------------------------------------------------------------------------
 INSTANTIATE_TEST_SUITE_P(
-    IpGeneralStrideTransposeKernelTest,
+    SquareIpGeneralStrideTransposeKernelTest,
     AoclfftzInplaceTransposeKernelTestFloat,
-    ::testing::Combine(::testing::ValuesIn(dims),
+    ::testing::Combine(::testing::ValuesIn(square_dims),
                        ::testing::ValuesIn(strides), // stride
                        ::testing::Values(1)          // tisq_iterative
                        ),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
-    IpGeneralStrideTransposeKernelTest,
+    SquareIpGeneralStrideTransposeKernelTest,
     AoclfftzInplaceTransposeKernelTestDouble,
-    ::testing::Combine(::testing::ValuesIn(dims),
+    ::testing::Combine(::testing::ValuesIn(square_dims),
                        ::testing::ValuesIn(strides), // stride
                        ::testing::Values(1)          // tisq_iterative
                        ),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
-    IpGeneralStrideTransposeKernelTest,
+    SquareIpGeneralStrideTransposeKernelTest,
     AoclfftzInplaceTransposeKernelTestFloatComplex,
-    ::testing::Combine(::testing::ValuesIn(dims),
+    ::testing::Combine(::testing::ValuesIn(square_dims),
                        ::testing::ValuesIn(strides), // stride
                        ::testing::Values(1)          // tisq_iterative
                        ),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
-    IpGeneralStrideTransposeKernelTest,
+    SquareIpGeneralStrideTransposeKernelTest,
     AoclfftzInplaceTransposeKernelTestDoubleComplex,
-    ::testing::Combine(::testing::ValuesIn(dims),
+    ::testing::Combine(::testing::ValuesIn(square_dims),
                        ::testing::ValuesIn(strides), // stride
                        ::testing::Values(1)          // tisq_iterative
+                       ),
+    name_generator);
+
+std::vector<std::tuple<INTP, INTP>> rect_dims = {
+    {10, 40}, {82, 69}, {341, 3}, {16, 1024}};
+
+// Unit strided, rectangle, inplace matrix transpose
+// -----------------------------------------------------------------------------
+INSTANTIATE_TEST_SUITE_P(RectIpUnitStrideTransposeKernelTest,
+                         AoclfftzInplaceTransposeKernelTestFloat,
+                         ::testing::Combine(::testing::ValuesIn(rect_dims),
+                                            ::testing::Values(1), // stride
+                                            ::testing::Values(3)  // tir_cycles
+                                            ),
+                         name_generator);
+
+INSTANTIATE_TEST_SUITE_P(RectIpUnitStrideTransposeKernelTest,
+                         AoclfftzInplaceTransposeKernelTestDouble,
+                         ::testing::Combine(::testing::ValuesIn(rect_dims),
+                                            ::testing::Values(1), // stride
+                                            ::testing::Values(3)  // tir_cycles
+                                            ),
+                         name_generator);
+
+INSTANTIATE_TEST_SUITE_P(RectIpUnitStrideTransposeKernelTest,
+                         AoclfftzInplaceTransposeKernelTestFloatComplex,
+                         ::testing::Combine(::testing::ValuesIn(rect_dims),
+                                            ::testing::Values(1), // stride
+                                            ::testing::Values(3)  // tir_cycles
+                                            ),
+                         name_generator);
+
+INSTANTIATE_TEST_SUITE_P(RectIpUnitStrideTransposeKernelTest,
+                         AoclfftzInplaceTransposeKernelTestDoubleComplex,
+                         ::testing::Combine(::testing::ValuesIn(rect_dims),
+                                            ::testing::Values(1), // stride
+                                            ::testing::Values(3)  // tir_cycles
+                                            ),
+                         name_generator);
+
+// Arbitrarily (General) strided, rectangle, inplace matrix transpose
+// -----------------------------------------------------------------------------
+INSTANTIATE_TEST_SUITE_P(
+    RectIpGeneralStrideTransposeKernelTest,
+    AoclfftzInplaceTransposeKernelTestFloat,
+    ::testing::Combine(::testing::ValuesIn(rect_dims),
+                       ::testing::ValuesIn(strides), // stride
+                       ::testing::Values(4)          // tisr_cycles
+                       ),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    RectIpGeneralStrideTransposeKernelTest,
+    AoclfftzInplaceTransposeKernelTestDouble,
+    ::testing::Combine(::testing::ValuesIn(rect_dims),
+                       ::testing::ValuesIn(strides), // stride
+                       ::testing::Values(4)          // tisr_cycles
+                       ),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    RectIpGeneralStrideTransposeKernelTest,
+    AoclfftzInplaceTransposeKernelTestFloatComplex,
+    ::testing::Combine(::testing::ValuesIn(rect_dims),
+                       ::testing::ValuesIn(strides), // stride
+                       ::testing::Values(4)          // tisr_cycles
+                       ),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    RectIpGeneralStrideTransposeKernelTest,
+    AoclfftzInplaceTransposeKernelTestDoubleComplex,
+    ::testing::Combine(::testing::ValuesIn(rect_dims),
+                       ::testing::ValuesIn(strides), // stride
+                       ::testing::Values(4)          // tisr_cycles
                        ),
     name_generator);

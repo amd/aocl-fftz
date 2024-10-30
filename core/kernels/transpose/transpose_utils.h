@@ -56,6 +56,12 @@
     VOID *in_ptr, VOID *out_ptr, aoclfftz_dim_t_64_ row_metadata,              \
     aoclfftz_dim_t_64_ column_metadata, aoclfftz_transpose_aux_mem_t *aux_mem
 
+// Assume that all the elements of the matrix are given numbers. such that
+//      (0, 0) -> 0, (0, 1) -> 1, (0, 2) -> 2, ...
+// This macro retrieves the linear index of the Nth element in the matrix
+#define NTH_ELEMS_LINEAR_IDX_2D(N, cols, stride, leading_dim)                  \
+    LINEAR_IDX_2D(((N) / (cols)), ((N) % (cols)), stride, leading_dim)
+
 // Copy 'n_elems' number of elements from 'matrix' to 'buffer'
 #define COPY_MATRIX_ELEMS(TYPE, matrix, m_i, m_j, m_leading_dim, buffer, b_i,  \
                           b_j, b_leading_dim, n_elems)                         \
