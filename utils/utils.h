@@ -40,6 +40,7 @@
 #define AOCLFFTZ_UTILS_H
 
 #include "api/types.h"
+#include "api/aoclfftz.h"
 
 #define AOCLFFTZ_DTL
 
@@ -177,7 +178,7 @@ VOID cpu_features_detection(INTP fn, INTP optVal,
                             INTP *eax, INTP *ebx,
                             INTP *ecx, INTP *edx);
 
-INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
+EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
                                INT32 logger_mode);
 
 #endif // AOCLFFTZ_UTILS_H

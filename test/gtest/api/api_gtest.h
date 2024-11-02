@@ -1,0 +1,339 @@
+/*
+ * Copyright (C) 2024, Advanced Micro Devices. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#ifndef AOCLFFTZ_API_GTEST_H
+#define AOCLFFTZ_API_GTEST_H
+
+#include <string>
+#include <limits>
+#include <vector>
+#include <stdlib.h>
+#include <cstdlib>
+#include <ctime>
+#include <vector>
+#include <random>
+#include <climits>
+#include <iostream> // Add this include for debug printing
+#include "gtest/gtest.h"
+
+extern "C"
+{
+#include "utils/utils.h"
+#include "api/aoclfftz.h"
+#include "api/types.h"
+#include "api/aoclfftz_internal.h"
+}
+
+// Enum to define valid and invalid test cases
+typedef enum
+{
+    INVALID = -1,
+    VALID
+} InvalidCase;
+
+// Default configuration parameters
+#define DEFAULT_OPT_OFF 1
+#define DEFAULT_OPT_LEVEL 2
+#define DEFAULT_FLAGS 0b0001
+#define DEFAULT_NUM_THREADS 1
+#define DEFAULT_DYNAMIC_LOAD_MODEL 1
+
+// Unsupported flags and ranks for testing
+const std::vector<UINT32> unsupported_flags = {
+    static_cast<UINT32>(-1),
+    static_cast<UINT32>(0xFFFFFFFF),
+    static_cast<UINT32>(0xFFFFFFFE)
+};
+const std::vector<INT32> unsupported_rank = { INT32_MIN, -1 };
+
+// Random number generator setup for generating invalid test values
+#define INIT_RANDOM_NUM_GEN() \
+    std::random_device rd; \
+    std::mt19937 prng(rd()); \
+    std::uniform_int_distribution<> dist_invalid(INT32_MIN, 0); \
+    prng.seed(42);
+
+// Template class for testing the AOCL-FFTZ API
+template<typename ProblemType>
+class AoclfftzAPITest : public ::testing::Test
+{
+public:
+    INT32 optOff;
+    INT32 optLevel;
+    UINT32 flags;
+    INT32 num_threads;
+    INT32 dynamic_load_model;
+    ProblemType *problem;
+    VOID *handle;
+    void SetUp() override
+    {
+        problem = NULL;
+        handle = NULL;
+        problem = new ProblemType();
+        if (problem == NULL)
+        {
+            throw std::
+            runtime_error("Memory allocation failed for the problem.");
+        }
+        create_default_pdesc(); // Create a sample problem for testing
+    }
+
+    void TearDown() override
+    {
+        if (problem != NULL)
+        {
+            cleanup_problem();
+            delete problem;
+            problem = NULL;
+        }
+    }
+
+    // Function to clean up the problem descriptor
+    VOID cleanup_problem()
+    {
+        if (problem == NULL)
+        {
+            return;
+        }
+        else
+        {
+            if (problem->in)
+            {
+                free(problem->in);
+                problem->in = NULL;
+            }
+            if (problem->out)
+            {
+                free(problem->out);
+                problem->out = NULL;
+            }
+            if (problem->dims)
+            {
+                free(problem->dims);
+                problem->dims = NULL;
+            }
+            if (problem->vecs)
+            {
+                free(problem->vecs);
+                problem->vecs = NULL;
+            }
+        }
+    }
+
+    // Function to create a sample problem for testing
+    template<typename DataType, typename DimT>
+    VOID create_pdesc()
+    {
+        if (problem == NULL)
+        {
+            return;
+        }
+        INT32 in_size = 0, out_size = 0;
+        problem->dim_rank = 3; // Set dim_rank to 3
+        problem->vec_rank = 1;
+        problem->dims = (DimT*)malloc(problem->dim_rank * sizeof(DimT));
+        problem->vecs = (DimT*)malloc(problem->vec_rank * sizeof(DimT));
+        if (problem->dims == NULL || problem->vecs == NULL)
+        {
+            cleanup_problem();
+            throw std::runtime_error("Memory allocation failed "
+                                                        "for dims or vecs!");
+        }
+        problem->flags = 0b0001;
+        // Set dims values
+        problem->dims[0].n = 10;
+        problem->dims[0].in_stride = 1;
+        problem->dims[0].out_stride = 1;
+        problem->dims[1].n = 20;
+        problem->dims[1].in_stride = problem->dims[0].n *
+                                                problem->dims[0].in_stride;
+        problem->dims[1].out_stride = problem->dims[0].n *
+                                                problem->dims[0].out_stride;
+        problem->dims[2].n = 30;
+        problem->dims[2].in_stride = problem->dims[1].n *
+                                                problem->dims[1].in_stride;
+        problem->dims[2].out_stride = problem->dims[1].n *
+                                                problem->dims[1].out_stride;
+        // Set vecs values
+        problem->vecs[0].n = 1;
+        problem->vecs[0].in_stride = problem->dims[problem->dim_rank - 1].n *
+                            problem->dims[problem->dim_rank - 1].in_stride;
+        problem->vecs[0].out_stride = problem->dims[problem->dim_rank - 1].n *
+                            problem->dims[problem->dim_rank - 1].out_stride;
+        for (INT32 i = 0; i < problem->dim_rank; i++)
+        {
+            in_size += (problem->dims[i].n) * (problem->dims[i].in_stride) * 2;
+            out_size += (problem->dims[i].n) * (problem->dims[i].out_stride)
+                                                                        * 2;
+        }
+        for (INT32 i = 0; i < problem->vec_rank; i++)
+        {
+            in_size += (problem->vecs[i].n) * (problem->vecs[i].in_stride);
+            out_size += (problem->vecs[i].n) * (problem->vecs[i].out_stride);
+        }
+
+        problem->in = (DataType*)malloc(in_size * sizeof(DataType));
+        problem->out = (DataType*)malloc(out_size * sizeof(DataType));
+
+        if (problem->in == NULL || problem->out == NULL)
+        {
+            cleanup_problem();
+            throw std::runtime_error("Memory allocation failed for input "
+                                                    "or output arrays");
+        }
+        for (INT32 i = 0; i < in_size; i++)
+        {
+            problem->in[i] = (DataType)i;
+        }
+        for (INT32 i = 0; i < out_size; i++)
+        {
+            problem->out[i] = (DataType)0.0;
+        }
+        problem->pthr_fft.dynamic_load_model = DEFAULT_DYNAMIC_LOAD_MODEL;
+        problem->pthr_fft.num_threads = DEFAULT_NUM_THREADS;
+        problem->cntrl_params.logger_mode = 0;
+        problem->cntrl_params.measure_stats = 0;
+        problem->cntrl_params.opt_level = -1;
+        problem->cntrl_params.opt_off = 1;
+    }
+
+    // Calls the appropriate sample problem creation based on problem type
+    VOID create_default_pdesc()
+    {
+        if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_f>::value)
+        {
+            create_pdesc<FLOAT, aoclfftz_dim_t>();
+        }
+        else if constexpr (std::is_same<ProblemType,
+                                            aoclfftz_prob_desc_d>::value)
+        {
+            create_pdesc<DOUBLE, aoclfftz_dim_t>();
+        }
+        else if constexpr (std::is_same<ProblemType,
+                                            aoclfftz_prob_desc_f_64_>::value)
+        {
+            create_pdesc<FLOAT, aoclfftz_dim_t_64_>();
+        }
+        else if constexpr (std::is_same<ProblemType,
+                                            aoclfftz_prob_desc_d_64_>::value)
+        {
+            create_pdesc<DOUBLE, aoclfftz_dim_t_64_>();
+        }
+        else
+        {
+            throw std::runtime_error("Unsupported problem type "
+                                                "for create_pdesc.");
+        }
+    }
+
+    // Calls the appropriate setup API based on the specified problem type
+    VOID *aoclfftz_setup(ProblemType *problem)
+    {
+        if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_f>::value)
+        {
+            return aoclfftz_setup_f(problem);
+        }
+        else if constexpr (std::is_same<ProblemType,
+                                            aoclfftz_prob_desc_d>::value)
+        {
+            return aoclfftz_setup_d(problem);
+        }
+        else if constexpr (std::is_same<ProblemType,
+                                            aoclfftz_prob_desc_f_64_>::value)
+        {
+            return aoclfftz_setup_f_64_(problem);
+        }
+        else if constexpr (std::is_same<ProblemType,
+                                            aoclfftz_prob_desc_d_64_>::value)
+        {
+            return aoclfftz_setup_d_64_(problem);
+        }
+        else
+        {
+            throw std::runtime_error("Unsupported problem type.");
+        }
+    }
+
+    // Functions to retrieve supported option levels and flags
+    std::vector<INT32> get_supported_optlevels()
+    {
+        return {-1, 0, 1, 2, 3};
+    }
+
+    std::vector<UINT32> get_supported_flags()
+    {
+        std::vector<UINT32> flags;
+        for (UINT32 in_place : {0,1})
+        {
+            for (UINT32 in_order : {0})
+            {
+                for (UINT32 forward : {0,1})
+                {
+                    for (UINT32 complex : {0})
+                    {
+                        UINT32 flag = (in_place << 0) |
+                                    (in_order << 1) |
+                                    (forward << 2)  |
+                                    (complex << 3);
+                        flags.push_back(flag);
+                    }
+                }
+            }
+        }
+        return flags;
+    }
+
+    // Function to run the setup and validate the handle
+    void run_setup_and_validate(int err_no)
+    {
+        if (err_no == INVALID)
+        {
+            handle = aoclfftz_setup(problem);
+            std::cout << "Debug: handle = " << handle << std::endl; // Debug print
+            EXPECT_EQ(handle, nullptr);
+        }
+        else if (err_no == VALID)
+        {
+            handle = aoclfftz_setup(problem);
+            std::cout << "Debug: handle = " << handle << std::endl; // Debug print
+            EXPECT_NE(handle, nullptr);
+            aoclfftz_destroy(handle);
+        }
+    }
+
+    // Function to check if the handle is destroyed
+    static bool is_handle_null(VOID *handle)
+    {
+        if (handle == NULL)
+        {
+            return true;
+        }
+        return false;
+    }
+};
+#endif // AOCLFFTZ_API_GTEST_H

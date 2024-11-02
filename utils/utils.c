@@ -132,7 +132,7 @@ inline VOID cpu_features_detection(INTP fn, INTP optVal,
 #endif
 #endif
 
-INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
+EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
                                INT32 logger_mode)
 {
     INT32 cpu_flags = 0;

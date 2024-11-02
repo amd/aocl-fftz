@@ -156,6 +156,30 @@ static inline INT32 validate_flags(UINT32 flags)
         errno = AOCLFFTZ_INVALID_INPUT;                                        \
         goto validation_exit;                                                  \
     }                                                                          \
+    for (INT32 i = 0; i < vec_rank; i++)                                       \
+    {                                                                          \
+        if (vecs[i].n <= 0)                                                    \
+        {                                                                      \
+            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "vector[%d]: n "                  \
+                                   "must be positive\n", i);                   \
+            errno = AOCLFFTZ_INVALID_INPUT;                                    \
+            goto validation_exit;                                              \
+        }                                                                      \
+        if (vecs[i].in_stride <= 0)                                            \
+        {                                                                      \
+            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "vector[%d]: in_stride "          \
+                                   "must be positive\n", i);                   \
+            errno = AOCLFFTZ_INVALID_INPUT;                                    \
+            goto validation_exit;                                              \
+        }                                                                      \
+        if (vecs[i].out_stride <= 0)                                           \
+        {                                                                      \
+            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "vector[%d]: out_stride "         \
+                                   "must be positive\n", i);                   \
+            errno = AOCLFFTZ_INVALID_INPUT;                                    \
+            goto validation_exit;                                              \
+        }                                                                      \
+    }                                                                          \
     /* Check vector dimensions for batched cases */                            \
     if (vec_rank > 1 || vecs[0].n > 1)                                         \
     {                                                                          \
