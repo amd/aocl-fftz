@@ -62,26 +62,10 @@ class AoclfftzInplaceTransposeTestBase
     INTP stride;
     aoclfftz_transpose_kernel kernel;
 
-    // performs an out-of-place transpose
-    VOID transpose_reference(T *in, T *out, INTP rows, INTP cols, INTP stride)
-    {
-        INTP old_leading_dim = stride * cols;
-        INTP new_leading_dim = stride * rows;
-
-        for (INTP i = 0; i < rows; ++i)
-        {
-            for (INTP j = 0; j < cols; ++j)
-            {
-                out[(j * new_leading_dim) + (i * stride)] =
-                    in[(i * old_leading_dim) + (j * stride)];
-            }
-        }
-    }
-
     VOID expect_matrix_equal(T* in, T* out, INTP rows, INTP cols, INTP stride)
     {
-        // this will ensure that the elements that are skipped during strided
-        // access have not been modified
+        // iterating over the entire matrix helps ensure that the elements that are
+        // skipped during strided access have not been modified
         for (INTP i = 0; i < rows * cols * stride; ++i)
         {
             EXPECT_EQ(data_equal(in[i], out[i]), true)
@@ -113,7 +97,7 @@ class AoclfftzInplaceTransposeTestBase
         matrix_init(in, rows, cols, stride);
 
         // transpose using default (reference) transpose
-        transpose_reference(in, out, rows, cols, stride);
+        transpose_reference(in, out, rows, cols, stride, stride);
 
         // setup transpose metadata
         aoclfftz_dim_t_64_ row_m, col_m;
@@ -129,8 +113,9 @@ class AoclfftzInplaceTransposeTestBase
         // transpose using kernel
         kernel((VOID *)in, (VOID *)in, row_m, col_m, &aux_mem);
 
-        // check if matrices are equal
-        expect_matrix_equal(out, in, rows, cols, stride);
+        // check if matrices are equal (rows and cols are interchanged because
+        // this is a post transpose comparison)
+        expect_matrix_equal(out, in, cols, rows, stride);
 
         free(in);
         free(out);

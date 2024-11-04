@@ -100,6 +100,7 @@ auto compare_data_string(aoclfftz_complex_d_t recieved,
         /* 2 */ CONCAT(FUNC(tiq_recursive_buf, type, isa), _wrapper),          \
         /* 3 */ CONCAT(FUNC(tir_cycles, type, isa), _wrapper),                 \
         /* 4 */ CONCAT(FUNC(tisr_cycles, type, isa), _wrapper),                \
+        /* 5 */ CONCAT(FUNC(tos_iterative, type, isa), _wrapper),              \
     }
 
 GENERATE_TRANSPOSE_KERNEL_TABLE(FLOAT, c);
@@ -114,6 +115,7 @@ static std::string transpose_kernel_names_table[] =
     "tiq_recursive_buf",
     "tir_cycles",
     "tisr_cycles",
+    "tos_iterative",
 };
 
 // -----------------------------------------------------------------------------
@@ -170,6 +172,24 @@ VOID matrix_init(T *matrix, INTP rows, INTP cols, INTP stride)
         {
             matrix[(i * leading_dim) + (j * stride)] = get_value<T>(value);
             value++;
+        }
+    }
+}
+
+// performs an out-of-place transpose
+template <typename T>
+void transpose_reference(T *in, T *out, INTP rows, INTP cols, INTP in_stride,
+                       INTP out_stride)
+{
+    INTP old_leading_dim = in_stride * cols;
+    INTP new_leading_dim = out_stride * rows;
+
+    for (INTP i = 0; i < rows; ++i)
+    {
+        for (INTP j = 0; j < cols; ++j)
+        {
+            out[(j * new_leading_dim) + (i * out_stride)] =
+                in[(i * old_leading_dim) + (j * in_stride)];
         }
     }
 }
