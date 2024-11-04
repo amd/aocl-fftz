@@ -45,4 +45,11 @@
 #define REC_MIN_aoclfftz_complex_f_t 64
 #define REC_MIN_aoclfftz_complex_d_t 32
 
+// Defines the block dimension (block-rows x block-columns) for the block based
+// transpose algorithm
+#define BLOCK_DIM_FLOAT 16
+#define BLOCK_DIM_DOUBLE 8
+#define BLOCK_DIM_aoclfftz_complex_f_t 8
+#define BLOCK_DIM_aoclfftz_complex_d_t 4
+
 #endif // TRANSPOSE_CONFIG_H

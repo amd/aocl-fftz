@@ -99,7 +99,8 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(::testing::ValuesIn(dims),
                        ::testing::ValuesIn(strides), // in-stride
                        ::testing::ValuesIn(strides), // out-stride
-                       ::testing::Values(5)          // tos_iterative
+                       ::testing::Values(5,          // tos_iterative
+                                         6)          // tos_blocked
                        ),
     name_generator);
 
@@ -109,7 +110,8 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(::testing::ValuesIn(dims),
                        ::testing::ValuesIn(strides), // in-stride
                        ::testing::ValuesIn(strides), // out-stride
-                       ::testing::Values(5)          // tos_iterative
+                       ::testing::Values(5,          // tos_iterative
+                                         6)          // tos_blocked
                        ),
     name_generator);
 
@@ -119,7 +121,8 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(::testing::ValuesIn(dims),
                        ::testing::ValuesIn(strides), // in-stride
                        ::testing::ValuesIn(strides), // out-stride
-                       ::testing::Values(5)          // tos_iterative
+                       ::testing::Values(5,          // tos_iterative
+                                         6)          // tos_blocked
                        ),
     name_generator);
 
@@ -129,6 +132,7 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(::testing::ValuesIn(dims),
                        ::testing::ValuesIn(strides), // in-stride
                        ::testing::ValuesIn(strides), // out-stride
-                       ::testing::Values(5)          // tos_iterative
+                       ::testing::Values(5,          // tos_iterative
+                                         6)          // tos_blocked
                        ),
     name_generator);

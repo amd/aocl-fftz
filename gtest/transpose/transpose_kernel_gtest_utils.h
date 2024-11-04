@@ -101,6 +101,7 @@ auto compare_data_string(aoclfftz_complex_d_t recieved,
         /* 3 */ CONCAT(FUNC(tir_cycles, type, isa), _wrapper),                 \
         /* 4 */ CONCAT(FUNC(tisr_cycles, type, isa), _wrapper),                \
         /* 5 */ CONCAT(FUNC(tos_iterative, type, isa), _wrapper),              \
+        /* 6 */ CONCAT(FUNC(tos_blocked, type, isa), _wrapper),                \
     }
 
 GENERATE_TRANSPOSE_KERNEL_TABLE(FLOAT, c);
@@ -116,6 +117,7 @@ static std::string transpose_kernel_names_table[] =
     "tir_cycles",
     "tisr_cycles",
     "tos_iterative",
+    "tos_blocked",
 };
 
 // -----------------------------------------------------------------------------

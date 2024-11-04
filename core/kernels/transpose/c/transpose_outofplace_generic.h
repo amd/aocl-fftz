@@ -94,8 +94,11 @@
 #ifndef TYPE_GENERIC_IMPLEMENTATION
 // Declarations
 
-// iterative transpose for unit strided matrices
+// iterative transpose for arbitrarily strided matrices
 VOID FUNC(tos_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
+
+// block based iterative transpose for
+VOID FUNC(tos_blocked, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
 
 #else
 // implementations
@@ -114,9 +117,48 @@ VOID FUNC(tos_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
         for (INTP j = 0; j < column_metadata.n; ++j)
         {
             out[LINEAR_IDX_2D(j, i, column_metadata.out_stride,
-                           row_metadata.out_stride)] =
+                              row_metadata.out_stride)] =
                 in[LINEAR_IDX_2D(i, j, column_metadata.in_stride,
-                               row_metadata.in_stride)];
+                                 row_metadata.in_stride)];
+        }
+    }
+
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
+}
+
+VOID FUNC(tos_blocked, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
+{
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
+
+    TRANSPOSE_DT *in = (TRANSPOSE_DT *)in_ptr;
+    TRANSPOSE_DT *out = (TRANSPOSE_DT *)out_ptr;
+
+    for (INTP col_block = 0; col_block < column_metadata.n;
+         col_block += CONCAT(BLOCK_DIM_, TRANSPOSE_DT))
+    {
+        for (INTP row_block = 0; row_block < row_metadata.n;
+             row_block += CONCAT(BLOCK_DIM_, TRANSPOSE_DT))
+        {
+            for (INTP i = row_block;
+                 (i < row_block + CONCAT(BLOCK_DIM_, TRANSPOSE_DT)) &&
+                 (i < row_metadata.n);
+                 i++)
+            {
+                for (INTP j = col_block;
+                     (j < col_block + CONCAT(BLOCK_DIM_, TRANSPOSE_DT)) &&
+                     (j < column_metadata.n);
+                     j++)
+                {
+                    out[LINEAR_IDX_2D(j, i, column_metadata.out_stride,
+                                      row_metadata.out_stride)] =
+                        in[LINEAR_IDX_2D(i, j, column_metadata.in_stride,
+                                         row_metadata.in_stride)];
+                }
+            }
         }
     }
 
