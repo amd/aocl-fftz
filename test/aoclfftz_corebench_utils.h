@@ -150,7 +150,12 @@
         default:                                                               \
             printf("\nInvalid arguments provided.\n");                         \
         }                                                                      \
-        if (status != HELP_MENU)                                               \
+        if (status == HELP_MENU)                                               \
+        {                                                                      \
+            status = PARSER_SUCCESS;                                           \
+            goto exit_main;                                                    \
+        }                                                                      \
+        else                                                                   \
         {                                                                      \
             printf("Use -h / --help for more information.\n");                 \
             PRINT_FAILURE("\nTest bench failed [REASON: Argument parsing "     \
