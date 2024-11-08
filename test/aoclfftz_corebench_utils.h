@@ -223,6 +223,7 @@
     }                                                                          \
     p_desc->cntrl_params.opt_level = params->opt_level;                        \
     p_desc->flags = set_flag(params);                                          \
+    p_desc->cntrl_params.opt_off = 0;                                          \
     if (params->opt_level == -1)                                               \
     {                                                                          \
         p_desc->cntrl_params.opt_off = 1;                                      \
