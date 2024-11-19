@@ -695,6 +695,10 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     {
         ALLOC_INIT(bench_params->out, VOID, out_buffer_size * dt_bytes,
                     is_align);
+        if (bench_params->out == NULL)
+        {
+            return MEMORY_FAILURE;
+        }
     }
 
 #ifdef AOCL_ENABLE_LOG

@@ -74,8 +74,8 @@ VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
     // <---vec stride--->
     // <-------------(Batches -1)---------><--- Problem size * dim stride --->
     // ((Batches -1) * (vec_stride)) + (Problem size * dim stride)
-    INT32 dim_rank = params->dim_rank;
-    INT32 vec_rank = params->vec_rank;
+    INTP dim_rank = params->dim_rank;
+    INTP vec_rank = params->vec_rank;
     in_buffer_size[0] = 0;
     out_buffer_size[0] = 0;
     INT32 in_size = 1;
