@@ -38,39 +38,56 @@
 # @author Srirammaswamy Srinivasan
 # @author Ashwin Godbole
 
-
-include(FetchContent)
 include(GoogleTest)
+include(ExternalProject)
 
 # to avoid DOWNLOAD_EXTRACT_TIMESTAMP warning from CMake 3.24 onwards
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
     cmake_policy(SET CMP0135 NEW)
 endif()
 
+# fetch, configure and build gtest inside build directory
+set(deps_googletest "GTEST")
 message("Fetching and Configuring GoogleTest")
-FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
+set(GTEST_URL "https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip")
+set(GTEST_DOWNLOAD_DIR "${CMAKE_CURRENT_BINARY_DIR}/googletest/download")
+set(GTEST_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/googletest/build")
+set(GTEST_INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/googletest/install")
+ExternalProject_Add(
+    GTEST
+    URL ${GTEST_URL}
+    PREFIX  ${GTEST_BUILD_DIR}
+    DOWNLOAD_DIR ${GTEST_DOWNLOAD_DIR}
+    CMAKE_GENERATOR ${gen}
+    CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=${GTEST_INSTALL_DIR}
+        -Dgtest_force_shared_crt=ON # For Windows: Prevent overriding the parent project's compiler/linker settings
+        -DCMAKE_INSTALL_LIBDIR=lib
 )
+include_directories(${GTEST_INSTALL_DIR}/include)
+link_directories(${GTEST_INSTALL_DIR}/lib)
 
-# For Windows: Prevent overriding the parent project's compiler/linker settings
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_GetProperties(googletest)
-if(NOT googletest_POPULATED)
-    FetchContent_Populate(googletest)
-    # Avoid installing gtest libs/headers by default
-    add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
-
+# fetch, configure and build benchmark inside build directory
+set(deps_benchmark "BENCHMARK")
 message("Fetching and Configuring Google Benchmark")
-FetchContent_Declare(
-    benchmark
-    URL https://github.com/google/benchmark/archive/refs/tags/v1.9.0.zip
+set(BENCHMARK_URL "https://github.com/google/benchmark/archive/refs/tags/v1.9.0.zip")
+set(BENCHMARK_DOWNLOAD_DIR "${CMAKE_CURRENT_BINARY_DIR}/benchmark/download")
+set(BENCHMARK_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/benchmark/build")
+set(BENCHMARK_INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/benchmark/install")
+ExternalProject_Add(
+    BENCHMARK
+    URL ${BENCHMARK_URL}
+    PREFIX  ${BENCHMARK_BUILD_DIR}
+    DOWNLOAD_DIR ${BENCHMARK_DOWNLOAD_DIR}
+    CMAKE_GENERATOR ${gen}
+    CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=${BENCHMARK_INSTALL_DIR}
+        -DBENCHMARK_ENABLE_TESTING=OFF # avoid benchmark tests getting added to FFTZ ctests
+        -DCMAKE_INSTALL_LIBDIR=lib
+        -DCMAKE_BUILD_TYPE=Release
 )
-set(BENCHMARK_ENABLE_TESTING OFF) # avoid benchmark tests getting added to FFTZ ctests
-FetchContent_MakeAvailable(benchmark)
-
-set(BENCHMARK_ENABLE_LIBPFM ON)
+include_directories(${BENCHMARK_INSTALL_DIR}/include)
+link_directories(${BENCHMARK_INSTALL_DIR}/lib)
 
 # gtest/aoclfftz_core_wrapper.h and gtest/aoclfftz_core_wrapper.c files
 # will be added to a separately built core library for gtest
@@ -107,7 +124,8 @@ foreach(FILE ${GTEST_SRC_FILES})
         continue()
     endif()
     add_executable(${TNAME} ${FILE})
-    target_link_libraries(${TNAME} ${gtest_lib_name} GTest::gtest_main)
+    add_dependencies(${TNAME} ${deps_googletest})
+    target_link_libraries(${TNAME} ${gtest_lib_name} gtest gtest_main)
 endforeach()
 
 foreach(FILE ${GTEST_SRC_FILES})
@@ -119,4 +137,15 @@ foreach(FILE ${GTEST_SRC_FILES})
 endforeach()
 
 add_executable(kernel_perf_test ${CMAKE_SOURCE_DIR}/gtest/kernel/kernel_perf_test.cpp)
-target_link_libraries(kernel_perf_test ${gtest_lib_name} GTest::gtest_main benchmark::benchmark)
+add_dependencies(kernel_perf_test ${deps_googletest} ${deps_benchmark})
+target_link_libraries(kernel_perf_test ${gtest_lib_name} benchmark)
+
+# Windows specific config dependencies for building & running kernel_perftest with benchmark
+if(WIN32)
+    # defining BENCHMARK_STATIC_DEFINE to avoid __declspec(dllexport) prefix in benchmark APIs
+    target_compile_definitions(kernel_perf_test PRIVATE -DBENCHMARK_STATIC_DEFINE)
+    # Benchmark internally uses shlwapi to get CPUInfo in windows, making shlwapi an indirect dependency
+    # https://github.com/google/benchmark/blob/main/docs/platform_specific_build_instructions.md
+    # TODO : Avoid linking shlwapi if possible
+    target_link_libraries(kernel_perf_test shlwapi)
+endif()
