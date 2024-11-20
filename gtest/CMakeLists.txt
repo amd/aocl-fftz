@@ -47,9 +47,10 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
     cmake_policy(SET CMP0135 NEW)
 endif()
 
+message("Fetching and Configuring GoogleTest")
 FetchContent_Declare(
     googletest
-    URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+    URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
 )
 
 # For Windows: Prevent overriding the parent project's compiler/linker settings
@@ -61,18 +62,13 @@ if(NOT googletest_POPULATED)
     add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
-find_package(benchmark QUIET)
-
-if(NOT benchmark_FOUND)
-    message("Fetching and Configuring Google Benchmark")
-    FetchContent_Declare(
-        benchmark
-        GIT_REPOSITORY "https://github.com/google/benchmark.git"
-        GIT_TAG v1.8.3 # Latest release
-    )
-    set(BENCHMARK_ENABLE_TESTING OFF) # avoid benchmark tests getting added to FFTZ ctests
-    FetchContent_MakeAvailable(benchmark)
-endif()
+message("Fetching and Configuring Google Benchmark")
+FetchContent_Declare(
+    benchmark
+    URL https://github.com/google/benchmark/archive/refs/tags/v1.9.0.zip
+)
+set(BENCHMARK_ENABLE_TESTING OFF) # avoid benchmark tests getting added to FFTZ ctests
+FetchContent_MakeAvailable(benchmark)
 
 set(BENCHMARK_ENABLE_LIBPFM ON)
 
