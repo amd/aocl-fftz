@@ -1849,6 +1849,11 @@ INT32 main(INT32 argc, CHAR **argv)
         status = MEMORY_FAILURE;
         goto exit_main;
     }
+    params->in = NULL;
+    params->out = NULL;
+    params->dims = NULL;
+    params->vecs = NULL;
+
     status = prepare_bench_params(argc, argv, params);
     HANDLE_PARSER_ERROR_MESSAGE(status);
     if (status != PARSER_SUCCESS)
