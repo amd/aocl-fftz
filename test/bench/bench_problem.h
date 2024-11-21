@@ -41,9 +41,13 @@
 #ifndef BENCH_PROBLEM_H
 #define BENCH_PROBLEM_H
 
-#include "test/utils/dims_vecs_helper.h"
+
+#include <math.h>
+#include <stdio.h>
+#include "test/bench/aoclfftz_bench.h"
 #include "test/bench/utils/register_functions.h"
 #include "test/bench/utils/bench_utils.h"
+#include "test/utils/dims_vecs_helper.h"
 
 /**
  * @brief Initialize problem descriptor with the bench params

@@ -55,6 +55,7 @@
 // Forward declarations
 typedef struct aoclfftz_bench_params aoclfftz_bench_params_t;
 typedef struct aoclfftz_bench_error aoclfftz_bench_error_t;
+typedef struct aoclfftz_bench_sz_info aoclfftz_bench_sz_info_t;
 
 // Function pointer types
 typedef VOID (*dft_ref_) (aoclfftz_bench_params_t *params, VOID *out_buf,
@@ -137,6 +138,14 @@ typedef enum
     SINUSOIDAL_SIGNAL_INPUT
 } aoclfftz_bench_input_type_t;
 
+typedef struct aoclfftz_bench_sz_info
+{
+    INTP n;
+    INTP batches;
+    UINTP input_size;
+    UINTP output_size;
+} aoclfftz_bench_sz_info_t;
+
 // Structures for test bench
 typedef struct aoclfftz_bench_params
 {
@@ -166,6 +175,7 @@ typedef struct aoclfftz_bench_params
     INT32 measure_stats;
     INT32 bit_reproducibility;
     UINT32 aligned_alloc;
+    aoclfftz_bench_sz_info_t sz_info;
     dft_ref_ dft_ref;
     setup_problem_ setup_problem;
     prepare_input_data_ prepare_input_data;

@@ -56,7 +56,8 @@
  * @return INT32 bench status code
  */
 INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                             INTP *out_idx_map)
+                             INTP *out_idx_map, VOID * handle,
+                             VOID *input_buffer)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
@@ -65,24 +66,12 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     INT32 compare_status = AOCLFFTZ_SUCCESS;
     INT32 dt_bytes = (params->precision == FLOAT_P) ?
                      sizeof(FLOAT) : sizeof(DOUBLE);
-    INTP input_size = 0;
-    INTP output_size = 0;
-    calculate_buffer_sizes(params, &input_size, &output_size);
-
-    INTP n = calculate_size(params->dims, params->dim_rank);
-    INTP batches = calculate_size(params->vecs, params->vec_rank);
     UINT32 is_align = params->aligned_alloc;
-
-    // setup FFT problem
-    VOID *handle = params->setup_problem(params);
-    if (handle == NULL)
-    {
-        return SETUP_FAILURE;
-    }
 
     // create local buffer to store DFT reference output
     VOID *out_ref;
-    ALLOC_INIT(out_ref, VOID, output_size * T_DATA_STRIDE * dt_bytes, is_align);
+    ALLOC_INIT(out_ref, VOID, params->sz_info.output_size * T_DATA_STRIDE *
+               dt_bytes, is_align);
 
     // initialize the random seed value based on current time
     if (params->use_random_seed)
@@ -105,7 +94,8 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
         // prepare random input data
         // use in_stride as 1 to fill random data in all points
-        params->prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT);
+        params->prepare_input_data(params->in, params->sz_info.input_size, NULL,
+                                   RANDOM_INPUT);
 
         // get the DFT reference output
         params->dft_ref(params, out_ref, in_idx_map, out_idx_map);
@@ -115,14 +105,14 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
         {
             // destroy reference output buffer
             FREE_ALLOCATED_MEM(out_ref, is_align);
-            // destroy handle
-            aoclfftz_destroy(handle);
             return EXECUTION_FAILURE;
         }
 
         // compare the FFT output with DFT reference output
-        compare_status = params->compare(params, out_ref, params->out,
-                                         batches, n, out_idx_map);
+        compare_status =
+            params->compare(params, out_ref, params->out,
+                            params->sz_info.batches, params->sz_info.n,
+                            out_idx_map);
         if (compare_status != AOCLFFTZ_SUCCESS)
         {
             printf("\nResults mismatch on accuracy mode => DFT reference, "
@@ -130,15 +120,11 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                    i, params->num_iterations, params->seed);
             // destroy reference output buffer
             FREE_ALLOCATED_MEM(out_ref, is_align);
-            // destroy handle
-            aoclfftz_destroy(handle);
             return VERIFICATION_FAILURE;
         }
     }
     // destroy reference output buffer
     FREE_ALLOCATED_MEM(out_ref, is_align);
-    // destroy handle
-    aoclfftz_destroy(handle);
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
 #endif
@@ -169,8 +155,8 @@ VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
     FLOAT *out_f = (FLOAT *)out_buf;
     INT32 rank = params->dim_rank;
     aoclfftz_dim_t_64_ *dims = params->dims;
-    INTP n = calculate_size(params->dims, params->dim_rank);
-    INTP batches = calculate_size(params->vecs, params->vec_rank);
+    INTP n = params->sz_info.n;
+    INTP batches = params->sz_info.batches;
     UINT32 is_align = params->aligned_alloc;
 
     INTP *in_counter = NULL;
@@ -235,8 +221,8 @@ VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
     DOUBLE *out_d = (DOUBLE *)out_buf;
     INT32 rank = params->dim_rank;
     aoclfftz_dim_t_64_ *dims = params->dims;
-    INTP n = calculate_size(params->dims, params->dim_rank);
-    INTP batches = calculate_size(params->vecs, params->vec_rank);
+    INTP n = params->sz_info.n;
+    INTP batches = params->sz_info.batches;
     UINT32 is_align = params->aligned_alloc;
 
     INTP *in_counter = NULL;

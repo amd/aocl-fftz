@@ -57,10 +57,12 @@
     }
 
 INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank);
-VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
-                            INTP *in_buffer_size, INTP *out_buffer_size);
-VOID prepare_index_map(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                       INTP *out_idx_map);
+VOID calculate_buffer_sizes(INT32 dim_rank,  INT32 vec_rank,
+                            aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
+                            UINTP *in_buffer_size, UINTP *out_buffer_size);
+VOID prepare_index_map(INT32 dim_rank,  INT32 vec_rank,
+                       aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
+                       INTP *in_idx_map, INTP *out_idx_map, UINT32 is_aligned);
 VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
                        INTP dst_in_idx, INTP dst_out_idx,
                        aoclfftz_dim_t_64_ *dims, INT32 rank);

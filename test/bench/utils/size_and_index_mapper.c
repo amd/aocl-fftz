@@ -64,8 +64,9 @@ INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank)
  * @param out_buffer_size register to store output buffer size
  * @return VOID
  */
-VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
-                            INTP *in_buffer_size, INTP *out_buffer_size)
+VOID calculate_buffer_sizes(INT32 dim_rank,  INT32 vec_rank,
+                            aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
+                            UINTP *in_buffer_size, UINTP *out_buffer_size)
 {
     // Example: for an 1D problem with 1D batch
     // Problem size : 3:6:6v4:1:1
@@ -74,21 +75,19 @@ VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
     // <---vec stride--->
     // <-------------(Batches -1)---------><--- Problem size * dim stride --->
     // ((Batches -1) * (vec_stride)) + (Problem size * dim stride)
-    INTP dim_rank = params->dim_rank;
-    INTP vec_rank = params->vec_rank;
     in_buffer_size[0] = 0;
     out_buffer_size[0] = 0;
-    INT32 in_size = 1;
-    INT32 out_size = 1;
+    UINTP in_size = 1;
+    UINTP out_size = 1;
     for (INT32 i = 0; i < dim_rank; i++)
     {
-        in_size += ((params->dims[i].n - 1) * (params->dims[i].in_stride));
-        out_size += ((params->dims[i].n - 1) * (params->dims[i].out_stride));
+        in_size += ((dims[i].n - 1) * (dims[i].in_stride));
+        out_size += ((dims[i].n - 1) * (dims[i].out_stride));
     }
     for (INT32 i = 0; i < vec_rank; i++)
     {
-        in_size += ((params->vecs[i].n - 1) * (params->vecs[i].in_stride));
-        out_size += ((params->vecs[i].n - 1) * (params->vecs[i].out_stride));
+        in_size += ((vecs[i].n - 1) * (vecs[i].in_stride));
+        out_size += ((vecs[i].n - 1) * (vecs[i].out_stride));
     }
     in_buffer_size[0] = in_size;
     out_buffer_size[0] = out_size;
@@ -123,25 +122,24 @@ VOID calculate_buffer_sizes(aoclfftz_bench_params_t *params,
  * @param out_idx_map buffer to store output index map
  * @return VOID
  */
-VOID prepare_index_map(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                       INTP *out_idx_map)
+VOID prepare_index_map(INT32 dim_rank,  INT32 vec_rank,
+                       aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
+                       INTP *in_idx_map, INTP *out_idx_map, UINT32 is_aligned)
 {
     // combine dims and vecs
     aoclfftz_dim_t_64_ *combined_dims = NULL;
-    ALLOC_UNINIT(combined_dims, aoclfftz_dim_t_64_,
-            sizeof(aoclfftz_dim_t_64_) * (params->dim_rank + params->vec_rank),
-            params->aligned_alloc);
-    memcpy(combined_dims, params->dims,
-           (sizeof(aoclfftz_dim_t_64_) * params->dim_rank));
-    memcpy((combined_dims + params->dim_rank), params->vecs,
-           (sizeof(aoclfftz_dim_t_64_) * params->vec_rank));
-    INT32 combined_rank = params->dim_rank + params->vec_rank;
+    ALLOC_UNINIT(combined_dims, aoclfftz_dim_t_64_, sizeof(aoclfftz_dim_t_64_) *
+                 (dim_rank + vec_rank), is_aligned);
+    memcpy(combined_dims, dims, (sizeof(aoclfftz_dim_t_64_) * dim_rank));
+    memcpy((combined_dims + dim_rank), vecs,
+           (sizeof(aoclfftz_dim_t_64_) * vec_rank));
+    INT32 combined_rank = dim_rank + vec_rank;
     INTP src_idx = 0;
     INTP dst_in_idx = 0;
     INTP dst_out_idx = 0;
     compute_index_map(in_idx_map, out_idx_map, &src_idx, dst_in_idx,
                       dst_out_idx, combined_dims, combined_rank);
-    FREE_ALLOCATED_MEM(combined_dims, params->aligned_alloc);
+    FREE_ALLOCATED_MEM(combined_dims, is_aligned);
 }
 /**
  * @brief recursive algorithm to compute index map

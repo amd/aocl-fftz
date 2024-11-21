@@ -444,14 +444,16 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     INT32 dt_bytes = (bench_params->precision == FLOAT_P) ?
                         sizeof(FLOAT) : sizeof(DOUBLE);
 
-    INTP in_buffer_size = 0;
-    INTP out_buffer_size = 0;
+    UINTP in_buffer_size = 0;
+    UINTP out_buffer_size = 0;
     UINT32 is_align = bench_params->aligned_alloc;
-    calculate_buffer_sizes(bench_params, &in_buffer_size, &out_buffer_size);
+    calculate_buffer_sizes(bench_params->dim_rank, bench_params->vec_rank,
+                           bench_params->dims, bench_params->vecs,
+                           &in_buffer_size, &out_buffer_size);
     in_buffer_size = in_buffer_size * T_DATA_STRIDE;
     out_buffer_size = out_buffer_size * T_DATA_STRIDE;
     ALLOC_UNINIT(bench_params->in, VOID, in_buffer_size * dt_bytes,
-                    is_align);
+                 is_align);
     if (bench_params->res_placement == IN_PLACE)
     {
         bench_params->out = bench_params->in;
@@ -459,7 +461,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     else
     {
         ALLOC_INIT(bench_params->out, VOID, out_buffer_size * dt_bytes,
-                    is_align);
+                   is_align);
     }
 
 #ifdef AOCL_ENABLE_LOG

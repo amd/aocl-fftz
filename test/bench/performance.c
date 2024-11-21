@@ -71,9 +71,10 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     DOUBLE avg_mflops = 0.0, max_mflops = 0.0;
     INTP n = calculate_size(params->dims, params->dim_rank);
     INTP batches = calculate_size(params->vecs, params->vec_rank);
-    INTP input_size = 0;
-    INTP output_size = 0;
-    calculate_buffer_sizes(params, &input_size, &output_size);
+    UINTP input_size = 0;
+    UINTP output_size = 0;
+    calculate_buffer_sizes(params->dim_rank, params->vec_rank, params->dims,
+                             params->vecs, &input_size, &output_size);
 
     // prepare random seed value
     if (params->use_random_seed)
