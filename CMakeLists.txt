@@ -73,6 +73,7 @@ option(VALGRIND "Enable Valgrind checks (only on Linux/Debug. Incompatible with 
 option(BUILD_DOC "Build documentation for aocl-fftz (Disabled by default)" OFF)
 option(ENABLE_STRICT_WARNINGS "Enable compiler flags to treat all warnings as errors (Enabled by default)" ON)
 option(AOCL_ENABLE_LOG "Enable logging support within the library (Disabled by default)" OFF)
+option(FUZZTEST "Enable Compilation of fuzz test with fuzzing mode (only on Clang/Debug, Disabled by default)" OFF)
 
 #list source files to be compiled for the library
 set(CORE_PATH core)
@@ -243,8 +244,17 @@ if(VALGRIND)
     endif()
 endif()
 
+# setup to run fuzztest
+if(FUZZTEST)
+    if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_BUILD_TYPE STREQUAL "Debug") OR WIN32)
+        # Switch off FUZZTEST: target not supported
+        set(FUZZTEST OFF)
+        message(WARNING "Target not supported. Fuzz testing is supported only in Linux with Clang compiler and in Debug build mode")
+    endif()
+endif()
+
 # Enable CTest for any of the cases
-if(VALGRIND OR ASAN OR CODE_COVERAGE)
+if(VALGRIND OR ASAN OR CODE_COVERAGE OR FUZZTEST)
     set(AOCL_TEST_COVERAGE ON)
 endif()
 
@@ -252,6 +262,7 @@ message(STATUS ASAN : ${ASAN})
 message(STATUS VALGRIND : ${VALGRIND})
 message(STATUS CODE COVERAGE : ${CODE_COVERAGE})
 message(STATUS AOCL_ENABLE_LOG : ${AOCL_ENABLE_LOG})
+message(STATUS FUZZTEST : ${FUZZTEST})
 
 #setup CTest for GoogleTest and test bench
 if(AOCL_TEST_COVERAGE)

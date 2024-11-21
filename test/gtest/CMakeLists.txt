@@ -100,7 +100,7 @@ link_directories(${BENCHMARK_INSTALL_DIR}/lib)
 # functions with __declspec(dllexport) attribute
 file(GLOB CORE_WRAPPER_FILES ${CMAKE_SOURCE_DIR}/${GTEST_DIR}/aoclfftz_core_wrapper.h
                              ${CMAKE_SOURCE_DIR}/${GTEST_DIR}/aoclfftz_core_wrapper.c
-                             ${CMAKE_SOURCE_DIR}/test/utils/dims_vecs_helper.*)
+                             ${CMAKE_SOURCE_DIR}/${TEST_UTILS_DIR}/dims_vecs_helper.*)
 
 # library will be generated in ${CMAKE_BINARY_DIR}/gtest
 set(gtest_lib_name ${lib_name}_gtest)
@@ -154,4 +154,56 @@ if(WIN32)
     # https://github.com/google/benchmark/blob/main/docs/platform_specific_build_instructions.md
     # TODO : Avoid linking shlwapi if possible
     target_link_libraries(kernel_perf_test shlwapi)
+endif()
+
+if(FUZZTEST)
+    set(deps_gfuzztest "GFUZZTEST")
+    message("Fetching and Configuring GoogleFuzzTest")
+    set(GFUZZTEST_URL "https://github.com/google/fuzztest/archive/refs/tags/2024-10-28.zip")
+    set(GFUZZTEST_DOWNLOAD_DIR "${CMAKE_CURRENT_BINARY_DIR}/googlefuzztest/download")
+    set(GFUZZTEST_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/googlefuzztest/build")
+    set(GFUZZTEST_INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/googlefuzztest/install")
+    ExternalProject_Add(
+        GFUZZTEST
+        URL ${GFUZZTEST_URL}
+        PREFIX  ${GFUZZTEST_BUILD_DIR}
+        DOWNLOAD_DIR ${GFUZZTEST_DOWNLOAD_DIR}
+        CMAKE_GENERATOR ${gen}
+        CMAKE_ARGS
+            -DCMAKE_INSTALL_PREFIX=${GFUZZTEST_INSTALL_DIR}
+            -DCMAKE_INSTALL_LIBDIR=lib
+            -DBUILD_SHARED_LIBS=ON
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+            -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+            -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+            -DABSL_PROPAGATE_CXX_STD=ON
+            -DFUZZTEST_FUZZING_MODE=ON
+    )
+    # link the dependent libraries of linked library with ld linker
+    # --copy-dt-needed-entries: Ensures that all symbols from dependent shared libraries are available.
+    # -fuse-ld=bfd: Uses the BFD linker instead of the default one.
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--copy-dt-needed-entries -fuse-ld=bfd")
+    include_directories(${GFUZZTEST_BUILD_DIR}/src/${deps_gfuzztest})
+    include_directories(${GFUZZTEST_INSTALL_DIR}/include)
+    # directories needed to link transitive dependent libs
+    link_directories(${GFUZZTEST_INSTALL_DIR}/lib)
+    link_directories(${GFUZZTEST_BUILD_DIR}/src/${deps_gfuzztest}-build/fuzztest)
+    link_directories(${GFUZZTEST_BUILD_DIR}/src/${deps_gfuzztest}-build/common)
+    # set fuzzing flags explicitly
+    set(FUZZ_FLAGS "-g -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -UNDEBUG -fsanitize=address -fsanitize-coverage=inline-8bit-counters -fsanitize-coverage=trace-cmp -DADDRESS_SANITIZER")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FUZZ_FLAGS}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${FUZZ_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+    file(GLOB FUZZ_TEST_SRC_FILES
+    ${CMAKE_SOURCE_DIR}/test/gtest/fuzz/fuzz_test.cpp
+    ${CMAKE_SOURCE_DIR}/test/bench/utils/*.c
+    ${CMAKE_SOURCE_DIR}/test/bench/bench_problem.c
+    ${CMAKE_SOURCE_DIR}/test/utils/dims_vecs_helper.c
+    ${CMAKE_SOURCE_DIR}/test/bench/accuracy.c
+    ${CMAKE_SOURCE_DIR}/test/bench/dft_reference.c
+    )
+    add_executable(fuzz_test ${FUZZ_TEST_SRC_FILES})
+    add_dependencies(fuzz_test ${deps_gfuzztest})
+    target_link_libraries(fuzz_test PRIVATE aocl_fftz)
+    target_link_libraries(fuzz_test PRIVATE fuzztest_fuzztest_gtest_main)
 endif()
