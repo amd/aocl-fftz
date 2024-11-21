@@ -83,7 +83,7 @@
 #define DT_PRECISION_FLAG(flags) (flags >> 30)
 
 // Set Flags
-#define SET_PRECISION(flags, val) (flags |= (val << 30))
+#define SET_PRECISION(flags, val) (flags = (flags & 0x3FFFFFFF) | (val << 30))
 #define SET_INPLACE(flags) SET_BIT_FLAG32(flags, 0, 0)
 
 // Get size of datatype based on the precision
