@@ -439,6 +439,7 @@ static const union zero_conj_512
 #define CONJ_256_D(x) _mm256_xor_pd(_conj_256_d.d, x)
 #define CONJ_512_S(x) _mm512_xor_ps(_conj_512_f.s, x)
 #define CONJ_512_D(x) _mm512_xor_pd(_conj_512_d.d, x)
+
 /**
  * @brief alternatively performs addition & subtraction in a 128 bit register
  * for single precision floating point.

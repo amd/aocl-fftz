@@ -104,7 +104,9 @@ enum aocl_fftz_kernel_type
     STANDARD_R2HC_C,
     PERMUTED_R2HC_C,
     STANDARD_R2HCF_C,
-    PERMUTED_R2HCF_C
+    PERMUTED_R2HCF_C,
+    STANDARD_R2HC_AVX256,
+    PERMUTED_R2HC_AVX256,
 };
 
 /**

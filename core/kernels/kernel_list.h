@@ -178,4 +178,12 @@ kernel_fp_list_t kernels_r2hcf_c[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_r2hcf_rfft8c, get_ops_cnt_r2hcf_rfft8c, 8}     // radix-8
 };
 
+#ifdef ENABLE_AVX256
+// R2HC - AVX256 Kernel List
+kernel_fp_list_t kernels_r2hc_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
+{
+    {register_kernel_r2hc_rfft5avx256, get_ops_cnt_r2hc_rfft5avx256, 5}     // radix-5
+};
+#endif
+
 #endif // AOCLFFTZ_KERNEL_LIST_H

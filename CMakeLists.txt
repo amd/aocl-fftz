@@ -105,13 +105,15 @@ if(ENABLE_AVX256)
     set(ENABLE_AVX128 ON)
     add_compile_definitions(ENABLE_AVX256)
     file(GLOB CORE_AVX256_FILES CONFIGURE_DEPENDS
-                            ${CORE_PATH}/kernels/c2c/avx256/*.c ${CORE_PATH}/kernels/avx256/*.h)
+                            ${CORE_PATH}/kernels/c2c/avx256/*.c ${CORE_PATH}/kernels/c2c/avx256/*.h
+                            ${CORE_PATH}/kernels/r2hc/avx256/*.c ${CORE_PATH}/kernels/r2hc/avx256/*.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX256_FILES})
 endif()
 if(ENABLE_AVX128)
     add_compile_definitions(ENABLE_AVX128)
     file(GLOB CORE_AVX128_FILES CONFIGURE_DEPENDS
-                            ${CORE_PATH}/kernels/c2c/avx128/*.c ${CORE_PATH}/kernels/avx128/*.h)
+                            ${CORE_PATH}/kernels/c2c/avx128/*.c ${CORE_PATH}/kernels/c2c/avx128/*.h
+                            ${CORE_PATH}/kernels/r2hc/avx128/*.c ${CORE_PATH}/kernels/r2hc/avx128/*.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX128_FILES})
 endif()
 

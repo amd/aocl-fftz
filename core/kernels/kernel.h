@@ -213,7 +213,14 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft6c(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft7c(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft8c(UINT8 precision, UINT8 direction);
 
-// C register kernels
+#ifdef ENABLE_AVX256
+// R2HC AVX256 Kernels
+ops_cycles_t get_ops_cnt_r2hc_rfft5avx256(UINT8 precision, UINT8 direction);
+#endif
+
+// Register kernels
+
+// C2C Kernels
 kfft_ register_kernel_fft2c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_fft3c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_fft4c(UINT8 precision, UINT8 direction);
@@ -301,6 +308,11 @@ kfft_ register_kernel_r2hcf_rfft5c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft6c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft7c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft8c(UINT8 precision, UINT8 direction);
+
+#ifdef ENABLE_AVX256
+// R2HC AVX256 Kernels
+kfft_ register_kernel_r2hc_rfft5avx256(UINT8 precision, UINT8 direction);
+#endif
 
 // Permuted Copy Kernels
 VOID permuted_copy_c_fp32(VOID *in, VOID *out, INTP n, INTP size,

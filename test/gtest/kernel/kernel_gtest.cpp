@@ -662,17 +662,48 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_c_kernels[] =
         aoclfftz_kernel_test_type::DFT_REFERENCE},
 };
 
+#ifdef ENABLE_AVX256
+// R2HC - AVX256 Kernels - Double
+aoclfftz_kernel_test_params_t param_double_r2hc_avx256_kernels[] =
+{
+    {5, aocl_fftz_kernel_type::STANDARD_R2HC_AVX256,
+        aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
+        aoclfftz_kernel_test_type::TRANSFORMATION |
+        aoclfftz_kernel_test_type::DFT_REFERENCE},
+    {5, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX256,
+        aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
+        aoclfftz_kernel_test_type::TRANSFORMATION |
+        aoclfftz_kernel_test_type::DFT_REFERENCE},
+};
+
+// R2HC - AVX256 Kernels - Float
+aoclfftz_kernel_test_params_t param_float_r2hc_avx256_kernels[] =
+{
+    {5, aocl_fftz_kernel_type::STANDARD_R2HC_AVX256,
+        aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
+        aoclfftz_kernel_test_type::TRANSFORMATION |
+        aoclfftz_kernel_test_type::DFT_REFERENCE},
+    {5, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX256,
+        aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
+        aoclfftz_kernel_test_type::TRANSFORMATION |
+        aoclfftz_kernel_test_type::DFT_REFERENCE},
+};
+#endif
 // IO params as {in-stride, out-stride , batch size, dir of FFT(0->FWD/1-> BWD),
 //               result placement(0 -> inplace, 1 -> out-of-place)}
-// Batch size fixed as 1-7 to cover all the tail case in AVX128 & AVX256 kernels
+// Batch size set to cover all the tail case in AVX128 & AVX256 kernels
 std::vector<std::tuple<INTP, INTP, INTP, UINT8, UINT8>> io_params =
-                                                             {{1,  1, 1, 0, 0},
-                                                              {2,  9, 2, 1, 1},
-                                                              {7,  3, 3, 0, 1},
-                                                              {4,  4, 4, 1, 0},
-                                                              {11, 1, 5, 0, 1},
-                                                              {1,  6, 6, 1, 1},
-                                                              {10, 5, 7, 0, 1}};
+                                                            {{1,  1, 1, 0, 0},
+                                                             {2,  9, 3, 1, 1},
+                                                             {7,  3, 4, 0, 1},
+                                                             {4,  4, 7, 1, 0},
+                                                             {11, 1, 8, 0, 1},
+                                                             {1,  6, 15, 1, 1},
+                                                             {10, 5, 16, 0, 1}};
 
 TEST_P(AoclfftzKernelTestFloat, TEST_FLOAT_KERNEL)
 {
@@ -822,12 +853,12 @@ INSTANTIATE_TEST_SUITE_P(
     name_generator);
 #endif
 
-#ifdef ENABLE_AVX512
-// Separate io params for AVX512 Kernels to avoid batch-sizes 8-15 repetition
-// in AVX128 & AVX256 kernels.
+// Separate io params for c2c AVX512 Kernels and r2hc AVX256 kernel onwards to
+// avoid batch-sizes 8-15 repetition in c2c AVX128 & AVX256 kernels and r2hc
+// AVX128 kernels
 // IO params as {in-stride, out-stride , batch size, dir of FFT(0->FWD/1-> BWD),
 //               result placement(0 -> inplace, 1 -> out-of-place)}
-std::vector<std::tuple<INTP, INTP, INTP, UINT8, UINT8>> io_params_avx512 = {
+std::vector<std::tuple<INTP, INTP, INTP, UINT8, UINT8>> io_params_batch16 = {
                                                             {1,   1,  1, 0, 0},
                                                             {1,   1,  2, 1, 0},
                                                             {5,   3,  3, 0, 1},
@@ -844,16 +875,17 @@ std::vector<std::tuple<INTP, INTP, INTP, UINT8, UINT8>> io_params_avx512 = {
                                                             {5,   5, 14, 1, 0},
                                                             {15, 15, 15, 0, 0}};
 
+#ifdef ENABLE_AVX512
 INSTANTIATE_TEST_SUITE_P(
     C2C_AVX512_KernelTest, AoclfftzKernelTestFloat,
     ::testing::Combine(::testing::ValuesIn(param_float_c2c_avx512_kernels),
-                       ::testing::ValuesIn(io_params_avx512)),
+                       ::testing::ValuesIn(io_params_batch16)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     C2C_AVX512_KernelTest, AoclfftzKernelTestDouble,
     ::testing::Combine(::testing::ValuesIn(param_double_c2c_avx512_kernels),
-                       ::testing::ValuesIn(io_params_avx512)),
+                       ::testing::ValuesIn(io_params_batch16)),
     name_generator);
 #endif
 
@@ -882,3 +914,18 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(::testing::ValuesIn(param_double_r2hcf_c_kernels),
                        ::testing::ValuesIn(io_params)),
     name_generator);
+
+#ifdef ENABLE_AVX256
+// R2HC AVX256 Kernels
+INSTANTIATE_TEST_SUITE_P(
+    R2HC_AVX256_KernelTest, AoclfftzKernelTestFloatReal,
+    ::testing::Combine(::testing::ValuesIn(param_float_r2hc_avx256_kernels),
+                       ::testing::ValuesIn(io_params_batch16)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    R2HC_AVX256_KernelTest, AoclfftzKernelTestDoubleReal,
+    ::testing::Combine(::testing::ValuesIn(param_double_r2hc_avx256_kernels),
+                       ::testing::ValuesIn(io_params_batch16)),
+    name_generator);
+#endif
