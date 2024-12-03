@@ -351,9 +351,8 @@ add_custom_command(
     TARGET "uninstall"
     POST_BUILD
     COMMENT "Uninstall the installed files as per install_manifest.txt and from ${ROOT_DIR}/lib/"
-    COMMAND xargs rm -vf < install_manifest.txt || echo Nothing in
-            install_manifest.txt to be uninstalled!
-    COMMAND rm -vf ${ROOT_DIR}/lib/*
+    COMMAND ${CMAKE_COMMAND} -E echo "Checking for install_manifest.txt..."  
+    COMMAND [ -f install_manifest.txt ] && xargs rm -vf < install_manifest.txt || echo 'install_manifest.txt is not present, nothing to uninstall, install the library!'
     )
 
 if (BUILD_DOC)
