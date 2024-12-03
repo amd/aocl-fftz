@@ -63,6 +63,7 @@ ExternalProject_Add(
         -DCMAKE_INSTALL_PREFIX=${GTEST_INSTALL_DIR}
         -Dgtest_force_shared_crt=ON # For Windows: Prevent overriding the parent project's compiler/linker settings
         -DCMAKE_INSTALL_LIBDIR=lib
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
 )
 include_directories(${GTEST_INSTALL_DIR}/include)
 link_directories(${GTEST_INSTALL_DIR}/lib)
@@ -85,6 +86,7 @@ ExternalProject_Add(
         -DBENCHMARK_ENABLE_TESTING=OFF # avoid benchmark tests getting added to FFTZ ctests
         -DCMAKE_INSTALL_LIBDIR=lib
         -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
 )
 include_directories(${BENCHMARK_INSTALL_DIR}/include)
 link_directories(${BENCHMARK_INSTALL_DIR}/lib)
