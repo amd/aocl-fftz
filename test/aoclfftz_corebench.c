@@ -115,7 +115,7 @@ VOID show_help_menu(VOID)
         "--selector-time          '1' to print the time taken for preparing "
         "the solution, '0' to disable it [default: 0]\n"
         "--min-bench-time         set minimum time to calculate performance "
-        "iterations [default: 10ms]\n"
+        "iterations [default: 100 ms]\n"
         "--measure-stats          '1' to measure selector stats, '0' to "
         "disable it [default: 0]\n"
         "--bit-reproducibility    '1' to use bit reproducibility mode, '0' to "
@@ -223,6 +223,42 @@ INT32 get_option(CHAR **argv, INT32 arg_idx)
 }
 
 /**
+ * @brief init bench params with default values
+ *
+ * @param bench_params aoclfftz_bench_params_t struct to store the values
+ * @return VOID
+ */
+VOID init_bench_params(aoclfftz_bench_params_t *bench_params)
+{
+    bench_params->in = NULL;
+    bench_params->out = NULL;
+    bench_params->bench_type = PERFORMANCE;
+    bench_params->precision = DOUBLE_P;
+    bench_params->data_model = LP64;
+    bench_params->fft_type = COMPLEX_TO_COMPLEX;
+    bench_params->order = IN_ORDER;
+    bench_params->res_placement = OUT_OF_PLACE;
+    bench_params->dir = FORWARD;
+    bench_params->dim_rank = 0;
+    bench_params->vec_rank = 0;
+    bench_params->dims = NULL;
+    bench_params->vecs = NULL;
+    bench_params->num_iterations = 10;
+    bench_params->seed = 0;
+    bench_params->use_random_seed = 1;
+    bench_params->opt_level = -1;
+    bench_params->tolerance = 1E-10;
+    bench_params->logger_mode = 0;
+    bench_params->num_threads = 1;
+    bench_params->dynamic_load_model = 0;
+    bench_params->selector_time = 0;
+    bench_params->min_bench_time = 100; // 100 ms
+    bench_params->measure_stats = 0;
+    bench_params->bit_reproducibility = 0;
+    bench_params->aligned_alloc = 1;
+}
+
+/**
  * @brief prepare the bench params from the command line arguments
  *
  * @param argc command-line argument count
@@ -233,33 +269,9 @@ INT32 get_option(CHAR **argv, INT32 arg_idx)
 INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                            aoclfftz_bench_params_t *bench_params)
 {
+    init_bench_params(bench_params);
     INT32 c = -1;
-
-    aoclfftz_bench_type_t bench_type = PERFORMANCE;
-    aoclfftz_bench_precision_t precision = DOUBLE_P;
-    aoclfftz_bench_data_model_t data_model = LP64;
-    aoclfftz_bench_fft_type_t fft_type = COMPLEX_TO_COMPLEX;
-    aoclfftz_bench_order_t order = IN_ORDER;
-    aoclfftz_bench_res_placement_t res_placement = OUT_OF_PLACE;
-    aoclfftz_bench_direction_t dir = FORWARD;
-    INT32 dim_rank = 0;
-    INT32 vec_rank = 0;
-    aoclfftz_dim_t_64_ *dims = NULL;
-    aoclfftz_dim_t_64_ *vecs = NULL;
-    INT32 iters = 10;
-    INT32 seed = 0;
-    UCHAR use_random_seed = 1;
-    INT32 opt_level = -1;
-    INT32 logger_mode = 0;
-    DOUBLE tolerance = 1E-10;
     UCHAR use_cust_tolerance = 0;
-    INT32 num_threads = 1;
-    INT32 dynamic_load_model = 0;
-    UCHAR selector_time = 0;
-    INT32 measure_stats = 0;
-    INT32 bit_reproducibility = 0;
-    DOUBLE min_bench_time = 100; // 100 ms
-    UINT32 aligned_alloc = 1;
     INT32 status = PARSER_SUCCESS;
     INT32 ret = PARSER_SUCCESS;
     // check for the dependent arguments
@@ -284,17 +296,15 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         {
         case 'h':
             FREE_ALIGN_ALLOCATED_MEM(str_buff);
-            FREE_ALIGN_ALLOCATED_MEM(dims);
-            FREE_ALIGN_ALLOCATED_MEM(vecs);
             return HELP_MENU;
         case 'p':
             if (!strcmp(optarg, "f"))
             {
-                precision = FLOAT_P;
+                bench_params->precision = FLOAT_P;
             }
             else if (!strcmp(optarg, "d"))
             {
-                precision = DOUBLE_P;
+                bench_params->precision = DOUBLE_P;
             }
             else
             {
@@ -305,11 +315,11 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         case 'm':
             if (!strcmp(optarg, "l"))
             {
-                data_model = LP64;
+                bench_params->data_model = LP64;
             }
             else if (!strcmp(optarg, "i"))
             {
-                data_model = ILP64;
+                bench_params->data_model = ILP64;
             }
             else
             {
@@ -320,11 +330,11 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         case 'b':
             if (!strcmp(optarg, "a"))
             {
-                bench_type = ACCURACY;
+                bench_params->bench_type = ACCURACY;
             }
             else if (!strcmp(optarg, "p"))
             {
-                bench_type = PERFORMANCE;
+                bench_params->bench_type = PERFORMANCE;
             }
             else
             {
@@ -335,11 +345,11 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         case 'r':
             if (!strcmp(optarg, "i"))
             {
-                res_placement = IN_PLACE;
+                bench_params->res_placement = IN_PLACE;
             }
             else if (!strcmp(optarg, "o"))
             {
-                res_placement = OUT_OF_PLACE;
+                bench_params->res_placement = OUT_OF_PLACE;
             }
             else
             {
@@ -350,11 +360,11 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         case 300:
             if (!strcmp(optarg, "o"))
             {
-                order = OUT_OF_ORDER;
+                bench_params->order = OUT_OF_ORDER;
             }
             else if (!strcmp(optarg, "i"))
             {
-                order = IN_ORDER;
+                bench_params->order = IN_ORDER;
             }
             else
             {
@@ -363,7 +373,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             // TODO: Remove this after adding support for out-of-order
             // arrangement
-            if (order == OUT_OF_ORDER)
+            if (bench_params->order == OUT_OF_ORDER)
             {
                 printf("ERROR: out-order 'o' is currently not supported\n");
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
@@ -372,11 +382,11 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         case 301:
             if (!strcmp(optarg, "b"))
             {
-                dir = BACKWARD;
+                bench_params->dir = BACKWARD;
             }
             else if (!strcmp(optarg, "f"))
             {
-                dir = FORWARD;
+                bench_params->dir = FORWARD;
             }
             else
             {
@@ -387,15 +397,15 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         case 'f':
             if (!strcmp(optarg, "c2r"))
             {
-                fft_type = COMPLEX_TO_REAL;
+                bench_params->fft_type = COMPLEX_TO_REAL;
             }
             else if (!strcmp(optarg, "r2c"))
             {
-                fft_type = REAL_TO_COMPLEX;
+                bench_params->fft_type = REAL_TO_COMPLEX;
             }
             else if (!strcmp(optarg, "c2c"))
             {
-                fft_type = COMPLEX_TO_COMPLEX;
+                bench_params->fft_type = COMPLEX_TO_COMPLEX;
             }
             else
             {
@@ -403,7 +413,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
             }
             // TODO: Remove this after adding support for 'c2r' and 'r2c' types
-            if (fft_type == COMPLEX_TO_REAL || fft_type == REAL_TO_COMPLEX)
+            if (bench_params->fft_type == COMPLEX_TO_REAL ||
+                bench_params->fft_type == REAL_TO_COMPLEX)
             {
                 printf("ERROR: 'c2r' and 'r2c' types are currently not "
                        "supported\n");
@@ -412,7 +423,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             break;
         case 'i':
             valid_iters_arg_found = 1;
-            VALIDATE_AND_GET_INT(optarg, str_buff, iters, ret, 0);
+            VALIDATE_AND_GET_INT(optarg, str_buff,
+                                 bench_params->num_iterations, ret, 0);
             if (ret != 0)
             {
                 printf("WARNING: Invalid iterations value given, "
@@ -422,7 +434,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             break;
         case 's':
-            VALIDATE_AND_GET_INT(optarg, str_buff, seed, ret, 0);
+            VALIDATE_AND_GET_INT(optarg, str_buff, bench_params->seed, ret, 0);
             if (ret != 0)
             {
                 printf("WARNING: Invalid seed value given, running bench with "
@@ -430,11 +442,12 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             else
             {
-                use_random_seed = 0;
+                bench_params->use_random_seed = 0;
             }
             break;
         case 't':
-            VALIDATE_AND_GET_DOUBLE(optarg, str_buff, tolerance, ret, 0.0, 1.0);
+            VALIDATE_AND_GET_DOUBLE(optarg, str_buff,
+                                    bench_params->tolerance, ret, 0.0, 1.0);
             if (ret != 0)
             {
                 printf("WARNING: Invalid custom tolerance value given, running "
@@ -446,43 +459,48 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             break;
         case 'n':
-            VALIDATE_AND_GET_INT(optarg, str_buff, num_threads, ret, 1);
+            VALIDATE_AND_GET_INT(optarg, str_buff,
+                                 bench_params->num_threads, ret, 1);
             if (ret != 0)
             {
                 printf("WARNING: Invalid num threads value given, "
                        "running bench with default threads (1)\n");
-                num_threads = 1;
+                bench_params->num_threads = 1;
             }
             // TODO: Remove this after adding multi-threaded FFT support
-            if (num_threads > 1)
+            if (bench_params->num_threads > 1)
             {
                 printf(
                     "WARNING: Multi-threaded FFT is currently not supported, "
                     "running bench with single-threaded FFT (1)\n");
-                num_threads = 1;
+                bench_params->num_threads = 1;
             }
             break;
         case 'o':
-            VALIDATE_AND_GET_INT(optarg, str_buff, opt_level, ret, -1);
+            VALIDATE_AND_GET_INT(optarg, str_buff,
+                                 bench_params->opt_level, ret, -1);
             if (ret != 0)
             {
                 printf("WARNING: Invalid opt level value given, running "
                        "bench with default value (-1: no-optimization)\n");
-                opt_level = -1;
+                bench_params->opt_level = -1;
             }
             // TODO: Modify this after adding support for all optimization
             // levels
-            else if (opt_level != -1 && opt_level != 2 && opt_level != 3)
+            else if (bench_params->opt_level != -1 &&
+                     bench_params->opt_level != 2 &&
+                     bench_params->opt_level != 3)
             {
                 printf(
                     "WARNING: only opt-level -1, 2, 3 are currently supported, "
                     "running bench with defaultvalue (-1: no-optimization)\n");
-                opt_level = -1;
+                bench_params->opt_level = -1;
             }
             break;
         case 'l':
-            VALIDATE_AND_GET_INT(optarg, str_buff, logger_mode, ret, 0);
-            if (logger_mode > 4)
+            VALIDATE_AND_GET_INT(optarg, str_buff,
+                                 bench_params->logger_mode, ret, 0);
+            if (bench_params->logger_mode > 4)
             {
                 ret = 1;
             }
@@ -490,7 +508,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             {
                 printf("WARNING: Invalid logger mode, running bench with "
                        "default logger mode (0)\n");
-                logger_mode = 0;
+                bench_params->logger_mode = 0;
             }
             break;
         case 302:
@@ -502,13 +520,13 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         case 303:
             if (atoi(optarg) != 0)
             {
-                if (selector_time != 1)
+                if (bench_params->selector_time != 1)
                 {
                     printf("WARNING: The provided value for selector_time is "
                            "not 1. Running the bench with selector_time set to "
                            "1.\n");
                 }
-                selector_time = 1;
+                bench_params->selector_time = 1;
             }
             break;
         case 304:
@@ -522,50 +540,50 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                    "supported, running bench without bit-reproducibility\n");
             break;
         case 306:
-            if (atof(optarg) < 10)
+            if (atof(optarg) < 100)
             {
-                printf("WARNING: min_bench_time value must be at least 10 ms, "
-                       "running bench with default value(10 ms)\n");
-                min_bench_time = 10;
+                printf("WARNING: min_bench_time value must be at least 100 ms, "
+                       "running bench with default value(100 ms)\n");
+                bench_params->min_bench_time = 100;
             }
             else
             {
-                min_bench_time = atof(optarg);
+                bench_params->min_bench_time = atof(optarg);
             }
             break;
         case 307:
             if (atoi(optarg) == 0)
             {
-                aligned_alloc = 0;
+                bench_params->aligned_alloc = 0;
             }
             else if (atoi(optarg) == 1)
             {
-                aligned_alloc = 1;
+                bench_params->aligned_alloc = 1;
             }
             else
             {
                 printf("WARNING: Unknown value provided for aligned memory "
                        "allocation, defaulting to 1\n");
-                aligned_alloc = 1;
+                bench_params->aligned_alloc = 1;
             }
             break;
         case 308:
             if (non_opt_arg_cnt == 0)
             {
                 // Parse dimension sizes and vector sizes
-                ret = find_dim_vec_ranks(argv[arg_idx], &dim_rank, &vec_rank);
+                ret = find_dim_vec_ranks(argv[arg_idx], &bench_params->dim_rank,
+                                         &bench_params->vec_rank);
                 if (ret != PARSER_SUCCESS)
                 {
                     status = MAX(status, SIZE_PARSING_ERROR);
                 }
                 else
                 {
-                    ret = allocate_and_fill_dims_vecs(
-                        argv[arg_idx], dim_rank, vec_rank, &dims, &vecs, 1);
+                    ret = allocate_and_fill_dims_vecs(argv[arg_idx],
+                                 bench_params->dim_rank, bench_params->vec_rank,
+                                 &bench_params->dims, &bench_params->vecs, 1);
                     if (ret != PARSER_SUCCESS)
                     {
-                        FREE_ALIGN_ALLOCATED_MEM(dims);
-                        FREE_ALIGN_ALLOCATED_MEM(vecs);
                         status = MAX(status, ret);
                     }
                 }
@@ -597,118 +615,84 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         status = MAX(status, SIZE_REQUIRED_ERROR);
     }
 
-    else if (dim_rank == 0 || vec_rank == 0 || dims == NULL || vecs == NULL)
+    else if (bench_params->dim_rank == 0 || bench_params->vec_rank == 0 ||
+             bench_params->dims == NULL || bench_params->vecs == NULL)
     {
         status = MAX(status, SIZE_PARSING_ERROR);
     }
     if (status != PARSER_SUCCESS)
     {
-        FREE_ALIGN_ALLOCATED_MEM(dims);
-        FREE_ALIGN_ALLOCATED_MEM(vecs);
         return status;
     }
-    if (res_placement == IN_PLACE)
+    if (bench_params->res_placement == IN_PLACE)
     {
-        status = check_inplace_strides(dims, vecs, dim_rank, vec_rank);
+        status = check_inplace_strides(bench_params->dims,
+                                       bench_params->vecs,
+                                       bench_params->dim_rank,
+                                       bench_params->vec_rank);
         if (status != PARSER_SUCCESS)
         {
-            FREE_ALIGN_ALLOCATED_MEM(dims);
-            FREE_ALIGN_ALLOCATED_MEM(vecs);
             return status;
         }
     }
     if (valid_iters_arg_found == 0)
     {
-        if (bench_type == ACCURACY)
+        if (bench_params->bench_type == ACCURACY)
         {
-            iters = 1;
+            bench_params->num_iterations = 1;
         }
         else // bench_type == PERFORMANCE
         {
-            iters = 10;
+            bench_params->num_iterations = 10;
         }
     }
-    if (selector_time != 0 && bench_type == ACCURACY)
+    if (bench_params->selector_time != 0 &&
+        bench_params->bench_type == ACCURACY)
     {
         printf("WARNING: selector-time won't be used in ACCURACY mode\n");
-        selector_time = 0;
+        bench_params->selector_time = 0;
     }
-    if (!use_random_seed && iters != 1 && bench_type == ACCURACY)
+    if (!bench_params->use_random_seed && bench_params->num_iterations != 1 &&
+         bench_params->bench_type == ACCURACY)
     {
         printf("WARNING: iterations will set to 1 since manual seed value is "
                "provided\n");
-        iters = 1;
+        bench_params->num_iterations = 1;
     }
 
     // change the min_bench_time unit from ms to ns
-    min_bench_time *= 1e6;
-
-    if (bench_params)
+    bench_params->min_bench_time *= 1e6;
+    if (!use_cust_tolerance)
     {
-        bench_params->dim_rank = dim_rank;
-        bench_params->vec_rank = vec_rank;
-        bench_params->dims = dims;
-        bench_params->vecs = vecs;
-        bench_params->precision = precision;
-        bench_params->data_model = data_model;
-        bench_params->bench_type = bench_type;
-        bench_params->res_placement = res_placement;
-        bench_params->order = order;
-        bench_params->dir = dir;
-        bench_params->fft_type = fft_type;
-        bench_params->num_iterations = iters;
-        bench_params->num_threads = num_threads;
-        bench_params->dynamic_load_model = dynamic_load_model;
-        bench_params->opt_level = opt_level;
-        bench_params->logger_mode = logger_mode;
-        bench_params->selector_time = selector_time;
-        bench_params->measure_stats = measure_stats;
-        bench_params->bit_reproducibility = bit_reproducibility;
-        bench_params->min_bench_time = min_bench_time;
-        bench_params->aligned_alloc = aligned_alloc;
-        bench_params->seed = seed;
-        bench_params->use_random_seed = use_random_seed;
-        if (use_cust_tolerance)
+        if (bench_params->precision == FLOAT_P)
         {
-            bench_params->tolerance = tolerance;
+            bench_params->tolerance = 1E-3;
         }
         else
         {
-            if (precision == FLOAT_P)
-            {
-                bench_params->tolerance = 1E-3;
-            }
-            else
-            {
-                bench_params->tolerance = 1E-10;
-            }
+            bench_params->tolerance = 1E-10;
         }
-        // create input and output buffers
-        INT32 dt_bytes = (bench_params->precision == FLOAT_P) ?
-                          sizeof(FLOAT) : sizeof(DOUBLE);
+    }
+    // create input and output buffers
+    INT32 dt_bytes = (bench_params->precision == FLOAT_P) ?
+                        sizeof(FLOAT) : sizeof(DOUBLE);
 
-        INTP in_buffer_size = 0;
-        INTP out_buffer_size = 0;
-        UINT32 is_align = bench_params->aligned_alloc;
-        calculate_buffer_sizes(bench_params, &in_buffer_size, &out_buffer_size);
-        in_buffer_size = in_buffer_size * T_DATA_STRIDE;
-        out_buffer_size = out_buffer_size * T_DATA_STRIDE;
-        ALLOC_UNINIT(bench_params->in, VOID, in_buffer_size * dt_bytes,
-                     is_align);
-        if (res_placement == IN_PLACE)
-        {
-            bench_params->out = bench_params->in;
-        }
-        else
-        {
-            ALLOC_INIT(bench_params->out, VOID, out_buffer_size * dt_bytes,
-                       is_align);
-        }
+    INTP in_buffer_size = 0;
+    INTP out_buffer_size = 0;
+    UINT32 is_align = bench_params->aligned_alloc;
+    calculate_buffer_sizes(bench_params, &in_buffer_size, &out_buffer_size);
+    in_buffer_size = in_buffer_size * T_DATA_STRIDE;
+    out_buffer_size = out_buffer_size * T_DATA_STRIDE;
+    ALLOC_UNINIT(bench_params->in, VOID, in_buffer_size * dt_bytes,
+                    is_align);
+    if (bench_params->res_placement == IN_PLACE)
+    {
+        bench_params->out = bench_params->in;
     }
     else
     {
-        status = MAX(status, PARSER_ERROR);
-        return status;
+        ALLOC_INIT(bench_params->out, VOID, out_buffer_size * dt_bytes,
+                    is_align);
     }
 
 #ifdef AOCL_ENABLE_LOG
@@ -1849,10 +1833,6 @@ INT32 main(INT32 argc, CHAR **argv)
         status = MEMORY_FAILURE;
         goto exit_main;
     }
-    params->in = NULL;
-    params->out = NULL;
-    params->dims = NULL;
-    params->vecs = NULL;
 
     status = prepare_bench_params(argc, argv, params);
     HANDLE_PARSER_ERROR_MESSAGE(status);
