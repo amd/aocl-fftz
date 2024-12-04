@@ -46,6 +46,9 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
     cmake_policy(SET CMP0135 NEW)
 endif()
 
+# Add the necessary package for pthread
+find_package(Threads REQUIRED)
+
 # fetch, configure and build gtest inside build directory
 set(deps_googletest "GTEST")
 message("Fetching and Configuring GoogleTest")
@@ -127,7 +130,7 @@ foreach(FILE ${GTEST_SRC_FILES})
     endif()
     add_executable(${TNAME} ${FILE})
     add_dependencies(${TNAME} ${deps_googletest})
-    target_link_libraries(${TNAME} ${gtest_lib_name} gtest gtest_main)
+    target_link_libraries(${TNAME} ${gtest_lib_name} gtest gtest_main Threads::Threads)
 endforeach()
 
 foreach(FILE ${GTEST_SRC_FILES})
@@ -140,7 +143,7 @@ endforeach()
 
 add_executable(kernel_perf_test ${CMAKE_SOURCE_DIR}/gtest/kernel/kernel_perf_test.cpp)
 add_dependencies(kernel_perf_test ${deps_googletest} ${deps_benchmark})
-target_link_libraries(kernel_perf_test ${gtest_lib_name} benchmark)
+target_link_libraries(kernel_perf_test ${gtest_lib_name} benchmark Threads::Threads)
 
 # Windows specific config dependencies for building & running kernel_perftest with benchmark
 if(WIN32)
