@@ -45,7 +45,7 @@ if(CODE_COVERAGE)
     endif()
 
     # set lcov variable to exclude paths during code coverage
-    set(LCOV_FILTERS "'/usr/*';'/*/_deps/*'")
+    set(LCOV_FILTERS "'/usr/*';'${ROOT_DIR}/build/*'")
     set(LCOV_TEST_FILTERS "'${ROOT_DIR}/gtest/*';'${ROOT_DIR}/test/*'")
 
     # add custom target for running ctest and generating code coverage report
