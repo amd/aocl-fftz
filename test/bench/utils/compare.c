@@ -51,7 +51,7 @@
  * @return INT32 if the data points are same, return 1 else 0
  */
 INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *idx_map)
+                INTP n, INTP *idx_map, INT32 data_stride)
 {
     DOUBLE tol = params->tolerance;
     INT32 logger_mode = params->logger_mode;
@@ -91,16 +91,14 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
         return MEMORY_FAILURE;
     }
     INTP N = batches * n;
-    for (INTP i = 0; i < N; i++)
+    for (INTP i = 0; i < N * data_stride; i++)
     {
-        INTP idx = idx_map[i];
-        FLOAT abs_err = fmaxf(
-            fabsf(a_f[idx * T_DATA_STRIDE] - b_f[idx * T_DATA_STRIDE]),
-            fabsf(a_f[idx * T_DATA_STRIDE + 1] - b_f[idx * T_DATA_STRIDE + 1]));
-        FLOAT mag = fminf(fmaxf(fabsf(a_f[idx * T_DATA_STRIDE]),
-                              fabsf(a_f[idx * T_DATA_STRIDE + 1])),
-                         fmaxf(fabsf(b_f[idx * T_DATA_STRIDE]),
-                              fabsf(b_f[idx * T_DATA_STRIDE + 1])));
+        INTP idx = idx_map[i / data_stride];
+        FLOAT abs_err =
+            fabsf(a_f[idx * data_stride + (i % data_stride)] -
+                 b_f[idx * data_stride + (i % data_stride)]);
+        FLOAT mag = fminf((fabsf(a_f[idx * data_stride + (i % data_stride)])),
+                          (fabsf(b_f[idx * data_stride + (i % data_stride)])));
         if (abs_err > max_abs_err)
         {
             max_err_idx = idx;
@@ -119,10 +117,15 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
         {
             max_mag = mag;
         }
-        INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
-        if (i % n == n - 1)
+        // Increment the dim_counter after reaching the end of single element
+        if (i % data_stride == data_stride - 1)
         {
-            INCREMENT_ND_COUNTER(vec_counter, vecs, vec_rank);
+            INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
+            // Increment the vec_counter after reaching the end of one batch
+            if ((i / data_stride) % n == n - 1)
+            {
+                INCREMENT_ND_COUNTER(vec_counter, vecs, vec_rank);
+            }
         }
     }
 
@@ -152,36 +155,50 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             PRINT_ND_COUNTER(d_err_coords, b_err_coords, dim_rank,
                              vec_rank);
             printf("\n  expected = %.6g + %.6gj\n",
-                   b_f[first_err_idx * T_DATA_STRIDE],
-                   b_f[first_err_idx * T_DATA_STRIDE + 1]);
+                   b_f[first_err_idx * data_stride],
+                   b_f[first_err_idx * data_stride  + 1]);
             printf("  got      = %.6g + %.6gj\n",
-                   a_f[first_err_idx * T_DATA_STRIDE],
-                   a_f[first_err_idx * T_DATA_STRIDE + 1]);
+                   a_f[first_err_idx * data_stride],
+                   a_f[first_err_idx * data_stride  + 1]);
         }
         printf("  max abs error = %.6g\n", first_abs_err);
         printf("Max absolute error at index %td -> ", max_err_idx);
         PRINT_ND_COUNTER(d_maxerr_coords, b_maxerr_coords, dim_rank, vec_rank);
         printf("\n  expected = %.6g + %.6gj\n",
-               b_f[max_err_idx * T_DATA_STRIDE],
-               b_f[max_err_idx * T_DATA_STRIDE + 1]);
-        printf("  got      = %.6g + %.6gj\n", a_f[max_err_idx * T_DATA_STRIDE],
-               a_f[max_err_idx * T_DATA_STRIDE + 1]);
+               b_f[max_err_idx * data_stride],
+               b_f[max_err_idx * data_stride  + 1]);
+        printf("  got      = %.6g + %.6gj\n", a_f[max_err_idx * data_stride],
+               a_f[max_err_idx * data_stride  + 1]);
         printf("  max abs error = %.6g\n", max_abs_err);
         if (logger_mode >= DEBUG)
         {
             RESET_ND_COUNTER(dim_counter, dim_rank);
             RESET_ND_COUNTER(vec_counter, vec_rank);
             // Using printf instead of logger to avoid file and line prefix
-            printf("\n\t%5s%26s%32s\n", "Index", "Expected", "Actual");
+            if (data_stride == 1)
+            {
+                printf("\n\t%5s%20s%17s\n", "Index", "Expected", "Actual");
+            }
+            else
+            {
+                printf("\n\t%5s%26s%32s\n", "Index", "Expected", "Actual");
+            }
             for (INTP i = 0, c = 100; i < N && c > 0; i++, c--)
             {
                 INTP idx = idx_map[i];
                 printf("%7td -> ", idx);
                 PRINT_ND_COUNTER(dim_counter, vec_counter, dim_rank, vec_rank);
-                printf(" : %12.6f + %12.6fj  vs  %12.6f + %12.6fj\n",
-                       a_f[idx * T_DATA_STRIDE], a_f[idx * T_DATA_STRIDE + 1],
-                       b_f[idx * T_DATA_STRIDE], b_f[idx * T_DATA_STRIDE + 1]);
-
+                if (data_stride == 1)
+                {
+                    printf(" : %12.6f  vs  %12.6f\n",
+                           a_f[idx * data_stride], b_f[idx * data_stride]);
+                }
+                else
+                {
+                    printf(" : %12.6f + %12.6fj  vs  %12.6f + %12.6fj\n",
+                        a_f[idx * data_stride], a_f[idx * data_stride + 1],
+                        b_f[idx * data_stride], b_f[idx * data_stride + 1]);
+                }
                 INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
                 if (i % n == n - 1)
                 {
@@ -193,18 +210,35 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             // Write full output to a file
             FILE *out_file = NULL;
             FOPEN(out_file, OUTPUT_LOG_FILE, "w");
-            fprintf(out_file, "\t%10s%30s%48s\n", "Index", "Expected",
-                    "Actual");
+            if (data_stride == 1)
+            {
+                fprintf(out_file, "\t%5s%20s%17s\n", "Index", "Expected",
+                        "Actual");
+            }
+            else
+            {
+                fprintf(out_file, "\t%5s%26s%32s\n", "Index", "Expected",
+                        "Actual");
+            }
             for (INTP i = 0; i < N; i++)
             {
                 INTP idx = idx_map[i];
                 fprintf(out_file, "%7td -> ", idx);
                 PRINT_ND_COUNTER_TO_FILE(out_file, dim_counter, vec_counter,
                                          dim_rank, vec_rank);
-                fprintf(out_file, " : %12.6f + %12.6fj  vs  %12.6f + %12.6fj\n",
-                        a_f[idx * T_DATA_STRIDE], a_f[idx * T_DATA_STRIDE + 1],
-                        b_f[idx * T_DATA_STRIDE], b_f[idx * T_DATA_STRIDE + 1]);
-
+                if (data_stride == 1)
+                {
+                    fprintf(out_file,
+                            " : %12.6f vs  %12.6f\n",
+                            a_f[idx * data_stride], b_f[idx * data_stride]);
+                }
+                else
+                {
+                    fprintf(out_file,
+                            " : %12.6f + %12.6fj  vs  %12.6f + %12.6fj\n",
+                            a_f[idx * data_stride], a_f[idx * data_stride + 1],
+                            b_f[idx * data_stride], b_f[idx * data_stride + 1]);
+                }
                 INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
                 if (i % n == n - 1)
                 {
@@ -252,7 +286,7 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
  * @return INT32 if the data points are same, return 1 else 0
  */
 INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *idx_map)
+                INTP n, INTP *idx_map, INT32 data_stride)
 {
     DOUBLE tol = params->tolerance;
     INT32 logger_mode = params->logger_mode;
@@ -284,16 +318,13 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     ALLOC_INIT(b_err_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
 
     INTP N = batches * n;
-    for (INTP i = 0; i < N; i++)
+    for (INTP i = 0; i < N * data_stride; i++)
     {
-        INTP idx = idx_map[i];
-        DOUBLE abs_err = fmax(
-            fabs(a_d[idx * T_DATA_STRIDE] - b_d[idx * T_DATA_STRIDE]),
-            fabs(a_d[idx * T_DATA_STRIDE + 1] - b_d[idx * T_DATA_STRIDE + 1]));
-        DOUBLE mag = fmin(fmax(fabs(a_d[idx * T_DATA_STRIDE]),
-                               fabs(a_d[idx * T_DATA_STRIDE + 1])),
-                          fmax(fabs(b_d[idx * T_DATA_STRIDE]),
-                               fabs(b_d[idx * T_DATA_STRIDE + 1])));
+        INTP idx = idx_map[i / data_stride];
+        DOUBLE abs_err = fabs(a_d[idx * data_stride + (i % data_stride)] -
+                              b_d[idx * data_stride + (i % data_stride)]);
+        DOUBLE mag = fmin((fabs(a_d[idx * data_stride + (i % data_stride)])),
+                          (fabs(b_d[idx * data_stride + (i % data_stride)])));
         if (abs_err > max_abs_err)
         {
             max_err_idx = idx;
@@ -312,10 +343,15 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
         {
             max_mag = mag;
         }
-        INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
-        if (i % n == n - 1)
+        // Increment the dim_counter after reaching the end of single element
+        if (i % data_stride == data_stride - 1)
         {
-            INCREMENT_ND_COUNTER(vec_counter, vecs, vec_rank);
+            INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
+            // Increment the vec_counter after reaching the end of one batch
+            if ((i / data_stride) % n == n - 1)
+            {
+                INCREMENT_ND_COUNTER(vec_counter, vecs, vec_rank);
+            }
         }
     }
     DOUBLE rel_err;
@@ -344,37 +380,53 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             PRINT_ND_COUNTER(d_err_coords, b_err_coords, dim_rank,
                              vec_rank);
             printf("\n  expected = %.6g + %.6gj\n",
-                   b_d[first_err_idx * T_DATA_STRIDE],
-                   b_d[first_err_idx * T_DATA_STRIDE + 1]);
+                   b_d[first_err_idx * data_stride],
+                   b_d[first_err_idx * data_stride + 1]);
             printf("  got      = %.6g + %.6gj\n",
-                   a_d[first_err_idx * T_DATA_STRIDE],
-                   a_d[first_err_idx * T_DATA_STRIDE + 1]);
+                   a_d[first_err_idx * data_stride],
+                   a_d[first_err_idx * data_stride + 1]);
         }
         printf("  max abs error = %.6g\n", first_abs_err);
         printf("Max absolute error at index %td -> ", max_err_idx);
         PRINT_ND_COUNTER(d_maxerr_coords, b_maxerr_coords, dim_rank, vec_rank);
         printf("\n  expected = %.6g + %.6gj\n",
-               b_d[max_err_idx * T_DATA_STRIDE],
-               b_d[max_err_idx * T_DATA_STRIDE + 1]);
-        printf("  got      = %.6g + %.6gj\n", a_d[max_err_idx * T_DATA_STRIDE],
-               a_d[max_err_idx * T_DATA_STRIDE + 1]);
+               a_d[max_err_idx * data_stride],
+               a_d[max_err_idx * data_stride + 1]);
+        printf("  got      = %.6g + %.6gj\n",
+               b_d[max_err_idx * data_stride],
+               b_d[max_err_idx * data_stride + 1]);
         printf("  max abs error = %.6g\n", max_abs_err);
         if (logger_mode >= DEBUG)
         {
             RESET_ND_COUNTER(dim_counter, dim_rank);
             RESET_ND_COUNTER(vec_counter, vec_rank);
             // Using printf instead of logger to avoid file and line prefix
-            printf("\n\t%10s%30s%48s\n", "Index", "Expected", "Actual");
+            if (data_stride == 1)
+            {
+                printf("\n\t%10s%20s%24s\n", "Index", "Expected", "Actual");
+            }
+            else
+            {
+                printf("\n\t%10s%30s%48s\n", "Index", "Expected", "Actual");
+            }
             for (INTP i = 0, c = 100; i < N && c > 0; i++, c--)
             {
                 INTP idx = idx_map[i];
                 // vecs
                 printf("%7td -> ", idx);
                 PRINT_ND_COUNTER(dim_counter, vec_counter, dim_rank, vec_rank);
-                printf(" : %20.14lf + %20.14lfj  vs  %20.14lf + %20.14lfj\n",
-                       a_d[idx * T_DATA_STRIDE], a_d[idx * T_DATA_STRIDE + 1],
-                       b_d[idx * T_DATA_STRIDE], b_d[idx * T_DATA_STRIDE + 1]);
-
+                if (data_stride == 1)
+                {
+                    printf(" : %20.14lf  vs  %20.14lf\n",
+                           a_d[idx * data_stride], b_d[idx * data_stride]);
+                }
+                else
+                {
+                    printf(
+                        " : %20.14lf + %20.14lfj  vs  %20.14lf + %20.14lfj\n",
+                        a_d[idx * data_stride], a_d[idx * data_stride + 1],
+                        b_d[idx * data_stride], b_d[idx * data_stride + 1]);
+                }
                 INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
                 if (i % n == n - 1)
                 {
@@ -386,19 +438,36 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             // Write full output to a file
             FILE *out_file = NULL;
             FOPEN(out_file, OUTPUT_LOG_FILE, "w");
-            fprintf(out_file, "\t%10s%30s%48s\n", "Index", "Expected",
-                    "Actual");
+            if (data_stride == 1)
+            {
+                fprintf(out_file, "\t%10s%20s%24s\n", "Index", "Expected",
+                        "Actual");
+            }
+            else
+            {
+                fprintf(out_file, "\t%10s%30s%48s\n", "Index", "Expected",
+                        "Actual");
+            }
             for (INTP i = 0; i < N; i++)
             {
                 INTP idx = idx_map[i];
                 fprintf(out_file, "%7td -> ", idx);
                 PRINT_ND_COUNTER_TO_FILE(out_file, dim_counter, vec_counter,
                                          dim_rank, vec_rank);
-                fprintf(out_file,
+                if (data_stride == 1)
+                {
+                    fprintf(out_file,
+                            " : %20.14lf vs  %20.14lf\n",
+                            a_d[idx * data_stride], b_d[idx * data_stride]);
+                }
+                else
+                {
+                    fprintf(
+                        out_file,
                         " : %20.14lf + %20.14lfj  vs  %20.14lf + %20.14lfj\n",
-                        a_d[idx * T_DATA_STRIDE], a_d[idx * T_DATA_STRIDE + 1],
-                        b_d[idx * T_DATA_STRIDE], b_d[idx * T_DATA_STRIDE + 1]);
-
+                        a_d[idx * data_stride], a_d[idx * data_stride + 1],
+                        b_d[idx * data_stride], b_d[idx * data_stride + 1]);
+                }
                 INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
                 if (i % n == n - 1)
                 {

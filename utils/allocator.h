@@ -138,7 +138,7 @@
 
 #define ALLOC_INIT(ptr, type, num_bytes, is_align)                             \
 {                                                                              \
-    if (is_align)                                                              \
+    if (is_align != 0)                                                         \
     {                                                                          \
         ALLOC_ALIGN_INIT(ptr, type, num_bytes)                                 \
     }                                                                          \

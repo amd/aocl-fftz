@@ -104,7 +104,7 @@ void init_bench_params(aoclfftz_bench_params_t* params, INT32 dim_rank,
         params->res_placement = OUT_OF_PLACE;
         params->order = IN_ORDER;
         params->dir = FORWARD;
-        params->fft_type = COMPLEX_TO_COMPLEX;
+        params->fft_type = C2C;
         params->num_iterations = 1;
         params->num_threads = 1;
         params->dynamic_load_model = 0;

@@ -44,8 +44,6 @@
 #include <stdio.h>
 #include "api/types.h"
 
-// Defining DATA_STRIDE in corebench internally to avoid using internal headers
-#define T_DATA_STRIDE 2
 #define PATH_SIZE_MAX 200
 
 #define MAX(a, b) ((a > b) ? a : b)
@@ -220,10 +218,9 @@
             params->dir == BACKWARD ? "BACKWARD" : "FORWARD");                 \
         AOCLFFTZ_LOG_FORMATTED(                                                \
             INFO, params->logger_mode, "fft_type      : %s",                   \
-            params->fft_type == COMPLEX_TO_COMPLEX                             \
-                ? "COMPLEX_TO_COMPLEX"                                         \
-                : (params->fft_type == REAL_TO_COMPLEX ? "REAL_TO_COMPLEX"     \
-                                                       : "COMPLEX_TO_REAL"));  \
+            params->fft_type == C2C                                            \
+                ? "C2C"                                                        \
+                : (params->fft_type == R2C ? "R2C" : "C2R"));                  \
         AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
                                "iterations    : %d", params->num_iterations);  \
         AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \

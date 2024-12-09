@@ -76,6 +76,7 @@ static inline INT32 validate_flags(UINT32 flags)
                                            "real inputs");
         return AOCLFFTZ_INVALID_INPUT;
     }
+
     // TODO: Remove validation once support for out-of-order output is added
     if (is_out_of_order)
     {

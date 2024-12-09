@@ -39,6 +39,7 @@
 #include <string.h>
 #include "test/bench/utils/size_and_index_mapper.h"
 #include "utils/allocator.h"
+
 /**
  * @brief calculates the total size without strides
  *
@@ -55,6 +56,7 @@ INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank)
     }
     return len;
 }
+
 /**
  * @brief Function to find the required buffer size for memory allocation.
  * calculates the total length of input & output buffers with strides included
@@ -92,6 +94,7 @@ VOID calculate_buffer_sizes(INT32 dim_rank,  INT32 vec_rank,
     in_buffer_size[0] = in_size;
     out_buffer_size[0] = out_size;
 }
+
 /**
  * @brief prepare the index map to map non strided indices to strides ones
  *
@@ -141,6 +144,7 @@ VOID prepare_index_map(INT32 dim_rank,  INT32 vec_rank,
                       dst_out_idx, combined_dims, combined_rank);
     FREE_ALLOCATED_MEM(combined_dims, is_aligned);
 }
+
 /**
  * @brief recursive algorithm to compute index map
  *

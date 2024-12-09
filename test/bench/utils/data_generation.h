@@ -45,22 +45,22 @@
 #include "utils/complex_utils.h"
 
 #define PREPARE_LINEAR_TEST_INPUTS(in1, in2, in_combined, size, factors,       \
-                                   precision)                                  \
+                                   precision, data_stride)                     \
     {                                                                          \
         if (precision == FLOAT_P)                                              \
         {                                                                      \
             PREPARE_LINEAR_TEST_INPUTS_IMPL(in1, in2, in_combined, size,       \
-                                            factors, FLOAT);                   \
+                                            factors, FLOAT, data_stride);      \
         }                                                                      \
         else                                                                   \
         {                                                                      \
             PREPARE_LINEAR_TEST_INPUTS_IMPL(in1, in2, in_combined, size,       \
-                                            factors, DOUBLE);                  \
+                                            factors, DOUBLE, data_stride);     \
         }                                                                      \
     }
 
 #define PREPARE_LINEAR_TEST_INPUTS_IMPL(in1, in2, in_combined, size, factors,  \
-                                        dt_t)                                  \
+                                        dt_t, data_stride)                     \
     dt_t *in1_t = (dt_t *)in1;                                                 \
     dt_t *in2_t = (dt_t *)in2;                                                 \
     dt_t *in_combined_t = (dt_t *)in_combined;                                 \
@@ -69,137 +69,166 @@
     factors_t[1] = 0.0;                                                        \
     factors_t[2] = (dt_t)((rand() % 200) / 20.0 - 10.0);                       \
     factors_t[3] = 0.0;                                                        \
-    dt_t temp1[T_DATA_STRIDE] = {0.0, 0.0};                                    \
-    dt_t temp2[T_DATA_STRIDE] = {0.0, 0.0};                                    \
-    dt_t cmul_temp[T_DATA_STRIDE] = {0.0, 0.0};                                \
-    for (INTP idx = 0; idx < size; ++idx)                                      \
+    if (data_stride == 1)                                                      \
     {                                                                          \
-        CMUL(factors_t, in1_t + idx * T_DATA_STRIDE, temp1, cmul_temp);        \
-        CMUL(factors_t + 2, in2_t + idx * T_DATA_STRIDE, temp2, cmul_temp);    \
-        CADD(temp1, temp2, in_combined_t + idx * T_DATA_STRIDE);               \
+        for (INTP idx = 0; idx < size; ++idx)                                  \
+        {                                                                      \
+            in_combined_t[idx] = factors_t[0] * in1_t[idx] +                   \
+                                 factors_t[2] * in2_t[idx];                    \
+        }                                                                      \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        dt_t temp1[2] = {0.0, 0.0};                                            \
+        dt_t temp2[2] = {0.0, 0.0};                                            \
+        dt_t cmul_temp[2] = {0.0, 0.0};                                        \
+        for (INTP idx = 0; idx < size; ++idx)                                  \
+        {                                                                      \
+            CMUL(factors_t, in1_t + idx * 2, temp1, cmul_temp);                \
+            CMUL(factors_t + 2, in2_t + idx * 2, temp2, cmul_temp);            \
+            CADD(temp1, temp2, in_combined_t + idx * 2);                       \
+        }                                                                      \
     }
 
 #define PREPARE_LINEAR_TEST_OUTPUTS(out1, out2, out_added, size, factors,      \
-                                    precision)                                 \
+                                    precision, data_stride)                    \
     {                                                                          \
         if (precision == FLOAT_P)                                              \
         {                                                                      \
             PREPARE_LINEAR_TEST_OUTPUTS_IMPL(out1, out2, out_added, size,      \
-                                             factors, FLOAT);                  \
+                                             factors, FLOAT, data_stride);     \
         }                                                                      \
         else                                                                   \
         {                                                                      \
             PREPARE_LINEAR_TEST_OUTPUTS_IMPL(out1, out2, out_added, size,      \
-                                             factors, DOUBLE);                 \
+                                             factors, DOUBLE, data_stride);    \
         }                                                                      \
     }
 
 #define PREPARE_LINEAR_TEST_OUTPUTS_IMPL(out1, out2, out_added, size, factors, \
-                                         dt_t)                                 \
+                                         dt_t, data_stride)                    \
     {                                                                          \
         dt_t *out1_t = (dt_t *)out1;                                           \
         dt_t *out2_t = (dt_t *)out2;                                           \
         dt_t *out_added_t = (dt_t *)out_added;                                 \
         dt_t *factors_t = (dt_t *)factors;                                     \
-        dt_t temp1[T_DATA_STRIDE] = {0.0, 0.0};                                \
-        dt_t temp2[T_DATA_STRIDE] = {0.0, 0.0};                                \
-        dt_t cmul_temp[T_DATA_STRIDE] = {0.0, 0.0};                            \
-        for (INTP idx = 0; idx < size; ++idx)                                  \
+        if (data_stride == 1)                                                  \
         {                                                                      \
-            CMUL(factors_t, out1_t + idx * T_DATA_STRIDE, temp1, cmul_temp);   \
-            CMUL(factors_t + 2, out2_t + idx * T_DATA_STRIDE, temp2,           \
-                 cmul_temp);                                                   \
-            CADD(temp1, temp2, out_added_t + idx * T_DATA_STRIDE);             \
-        }                                                                      \
-    }
-
-#define PREPARE_TIMESHIFT_TEST_INPUTS(in1, in2, n, m, imap, precision)         \
-    {                                                                          \
-        if (precision == FLOAT_P)                                              \
-        {                                                                      \
-            PREPARE_TIMESHIFT_TEST_INPUTS_IMPL(in1, in2, n, m, imap, FLOAT);   \
+            for (INTP idx = 0; idx < size; ++idx)                              \
+            {                                                                  \
+                out_added_t[idx] = factors_t[0] * out1_t[idx] +                \
+                                   factors_t[2] * out2_t[idx];                 \
+            }                                                                  \
         }                                                                      \
         else                                                                   \
         {                                                                      \
-            PREPARE_TIMESHIFT_TEST_INPUTS_IMPL(in1, in2, n, m, imap, DOUBLE);  \
+            dt_t temp1[2] = {0.0, 0.0};                                        \
+            dt_t temp2[2] = {0.0, 0.0};                                        \
+            dt_t cmul_temp[2] = {0.0, 0.0};                                    \
+            for (INTP idx = 0; idx < size; ++idx)                              \
+            {                                                                  \
+                CMUL(factors_t, out1_t + idx * data_stride, temp1, cmul_temp); \
+                CMUL(factors_t + 2, out2_t + idx * data_stride, temp2,         \
+                     cmul_temp);                                               \
+                CADD(temp1, temp2, out_added_t + idx * 2);                     \
+            }                                                                  \
         }                                                                      \
     }
 
-#define PREPARE_TIMESHIFT_TEST_INPUTS_IMPL(in1, in2, n, m, imap, dt_t)         \
+#define PREPARE_TIMESHIFT_TEST_INPUTS(in1, in2, n, m, imap, precision,         \
+                                      data_stride)                             \
+    {                                                                          \
+        if (precision == FLOAT_P)                                              \
+        {                                                                      \
+            PREPARE_TIMESHIFT_TEST_INPUTS_IMPL(in1, in2, n, m, imap, FLOAT,    \
+                                               data_stride);                   \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
+            PREPARE_TIMESHIFT_TEST_INPUTS_IMPL(in1, in2, n, m, imap, DOUBLE,   \
+                                               data_stride);                   \
+        }                                                                      \
+    }
+
+#define PREPARE_TIMESHIFT_TEST_INPUTS_IMPL(in1, in2, n, m, imap, dt_t,         \
+                                           data_stride)                        \
     {                                                                          \
         dt_t *in1_t = (dt_t *)in1;                                             \
         dt_t *in2_t = (dt_t *)in2;                                             \
         /* Handle overflow to avoid negative indexing */                       \
-        for (INTP idx = 0; idx < n; idx++)                                     \
+        for (INTP idx = 0; idx < n * data_stride; idx++)                       \
         {                                                                      \
-            INTP src = imap[(idx + (n - m)) % n] * T_DATA_STRIDE;              \
-            INTP dst = imap[idx] * T_DATA_STRIDE;                              \
+            INTP src = imap[(idx / data_stride + (n - m)) % n] * data_stride + \
+                       idx % data_stride;                                      \
+            INTP dst = imap[idx / data_stride] * data_stride +                 \
+                       idx % data_stride;                                      \
             in2_t[dst] = in1_t[src];                                           \
-            in2_t[dst + 1] = in1_t[src + 1];                                   \
         }                                                                      \
     }
 
 #define PREPARE_TIMESHIFT_TEST_OUTPUTS(out1, out_combined, n, m, unit_m, omap, \
-                                        dir, precision)                        \
+                                        dir, precision, data_stride)           \
     {                                                                          \
         if (precision == FLOAT_P)                                              \
         {                                                                      \
             PREPARE_TIMESHIFT_TEST_OUTPUTS_IMPL(out1, out_combined, n, m,      \
-                                                unit_m, omap, dir, FLOAT);     \
+                                                unit_m, omap, dir, FLOAT,      \
+                                                data_stride);                  \
         }                                                                      \
         else                                                                   \
         {                                                                      \
             PREPARE_TIMESHIFT_TEST_OUTPUTS_IMPL(out1, out_combined, n, m,      \
-                                                unit_m, omap, dir, DOUBLE);    \
+                                                unit_m, omap, dir, DOUBLE,     \
+                                                data_stride);                  \
         }                                                                      \
     }
 
 #define PREPARE_TIMESHIFT_TEST_OUTPUTS_IMPL(out1, out_combined, n, m, unit_m,  \
-                                            omap, dir, dt_t)                   \
+                                            omap, dir, dt_t, data_stride)      \
     {                                                                          \
         dt_t *out1_t = (dt_t *)out1;                                           \
         dt_t *out_combined_t = (dt_t *)out_combined;                           \
-        dt_t cmul_temp[T_DATA_STRIDE] = {0.0, 0.0};                            \
-        dt_t e_k[T_DATA_STRIDE] = {1.0, 0.0};                                  \
-        dt_t sign = (dir == FORWARD) ? -1.0 : 1.0;                             \
+        dt_t cmul_temp[2] = {0.0, 0.0};                                        \
+        dt_t e_k[2] = {1.0, 0.0};                                              \
         for (INTP k = 0; k < n; k++)                                           \
         {                                                                      \
             /* Handle overflow to improve accuracy for larger values */        \
             INTP mk = (m * k) % n;                                             \
-            dt_t angle = (sign * BENCH_2_PI * mk / n);                         \
+            dt_t angle = (-1 * BENCH_2_PI * mk / n);                           \
             EULER(angle, e_k);                                                 \
             for (INTP i = 0; i < unit_m; i++)                                  \
             {                                                                  \
-                CMUL(out1_t + omap[(k*unit_m+i)] * T_DATA_STRIDE, e_k,         \
-                     out_combined_t + omap[(k*unit_m+i)] * T_DATA_STRIDE,      \
+                CMUL(out1_t + omap[(k*unit_m+i)] * data_stride, e_k,           \
+                     out_combined_t + omap[(k*unit_m+i)] * data_stride,        \
                      cmul_temp);                                               \
             }                                                                  \
         }                                                                      \
     }
 
-#define NORMALIZE_IFFT_DATA(arr, length, n, precision)                         \
+#define NORMALIZE_IFFT_DATA(arr, length, n, precision, data_stride)            \
     {                                                                          \
         if (precision == FLOAT_P)                                              \
         {                                                                      \
-            NORMALIZE_IFFT_DATA_IMPL(arr, length, n, FLOAT);                   \
+            NORMALIZE_IFFT_DATA_IMPL(arr, length, n, FLOAT, data_stride);      \
         }                                                                      \
         else                                                                   \
         {                                                                      \
-            NORMALIZE_IFFT_DATA_IMPL(arr, length, n, DOUBLE);                  \
+            NORMALIZE_IFFT_DATA_IMPL(arr, length, n, DOUBLE, data_stride);     \
         }                                                                      \
     }
 
-#define NORMALIZE_IFFT_DATA_IMPL(arr, length, n, dt_t)                         \
+#define NORMALIZE_IFFT_DATA_IMPL(arr, length, n, dt_t, data_stride)            \
     {                                                                          \
         dt_t *arr_t = (dt_t *)arr;                                             \
-        for (INTP idx = 0; idx < length; ++idx)                                \
+        for (INTP idx = 0; idx < length * data_stride; ++idx)                  \
         {                                                                      \
-            arr_t[idx * T_DATA_STRIDE] /= n;                                   \
-            arr_t[idx * T_DATA_STRIDE + 1] /= n;                               \
+            arr_t[idx] /= n;                                                   \
         }                                                                      \
     }
 
-VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type);
-VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type);
+VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
+                          INT32 data_stride);
+VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
+                          INT32 data_stride);
 
 #endif // DATA_GENERATION_H

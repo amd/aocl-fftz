@@ -60,10 +60,10 @@
         angle = angle * x;                                                     \
     }
 
-VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
-               INTP *out_idx_map);
-VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
-               INTP *out_idx_map);
+VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
+               INTP *in_idx_map, INTP *out_idx_map);
+VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
+               INTP *in_idx_map, INTP *out_idx_map);
 INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                              INTP *out_idx_map, VOID * handle,
                              VOID *input_buffer);

@@ -274,7 +274,7 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
     params->res_placement = IS_OUT_OF_PLACE(flags) ? OUT_OF_PLACE : IN_PLACE;
     params->order = IS_OUT_OF_ORDER(flags) ? OUT_OF_ORDER : IN_ORDER;
     params->dir = FFT_DIR(flags) ? BACKWARD : FORWARD;
-    params->fft_type = IS_REAL(flags) ? REAL_TO_COMPLEX : COMPLEX_TO_COMPLEX;
+    params->fft_type = IS_REAL(flags) ? R2C : C2C;
     params->num_threads = pthr_fft.num_threads;
     params->dynamic_load_model = pthr_fft.dynamic_load_model;
     params->opt_level = cntrl_params.opt_level;

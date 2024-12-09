@@ -58,20 +58,21 @@ typedef struct aoclfftz_bench_error aoclfftz_bench_error_t;
 typedef struct aoclfftz_bench_sz_info aoclfftz_bench_sz_info_t;
 
 // Function pointer types
-typedef VOID (*dft_ref_) (aoclfftz_bench_params_t *params, VOID *out_buf,
+typedef VOID (*dft_ref_) (aoclfftz_bench_params_t *params, VOID *in, VOID *out,
                             INTP *in_idx_map, INTP *out_idx_map);
 typedef VOID *(*setup_problem_) (aoclfftz_bench_params_t *params);
 typedef VOID (*prepare_input_data_) (VOID *input, INTP n, INTP *idx_map,
-                            INT32 input_type);
+                                     INT32 input_type, INT32 data_stride);
 typedef INT32 (*compare_) (aoclfftz_bench_params_t *params, VOID *a, VOID *b,
-                INTP batches, INTP n, INTP *idx_map);
+                           INTP batches, INTP n, INTP *idx_map,
+                           INT32 data_stride);
 
 // Enumerators for test bench
 typedef enum
 {
-    COMPLEX_TO_COMPLEX = 0,
-    COMPLEX_TO_REAL,
-    REAL_TO_COMPLEX
+    C2C = 0,
+    R2C,
+    C2R
 } aoclfftz_bench_fft_type_t;
 
 typedef enum
@@ -162,6 +163,8 @@ typedef struct aoclfftz_bench_params
     INT32 vec_rank;
     aoclfftz_dim_t_64_ *dims;
     aoclfftz_dim_t_64_ *vecs;
+    INT32 in_data_stride;
+    INT32 out_data_stride;
     INT32 num_iterations;
     INT32 seed;
     UCHAR use_random_seed;

@@ -88,7 +88,8 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
 #endif
 
     // prepare random input data
-    params->prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT);
+    params->prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT,
+                               params->in_data_stride);
 
     status = aoclfftz_execute(handle);
     if (status != AOCLFFTZ_SUCCESS)
@@ -143,8 +144,16 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     }
 
     // compute MFLOPS from execution time
-    max_mflops = (5.0 * n * batches * log2(n)) / (min_time * 1E-3);
-    avg_mflops = (5.0 * n * batches * log2(n)) / (avg_time * 1E-3);
+    if (params->fft_type == C2C)
+    {
+        max_mflops = (5.0 * n * batches * log2(n)) / (min_time * 1E-3);
+        avg_mflops = (5.0 * n * batches * log2(n)) / (avg_time * 1E-3);
+    }
+    else
+    {
+        max_mflops = (2.5 * n * batches * log2(n)) / (min_time * 1E-3);
+        avg_mflops = (2.5 * n * batches * log2(n)) / (avg_time * 1E-3);
+    }
     print_perf_stats(min_time, avg_time, avg_mflops, max_mflops);
 
 #ifdef AOCL_ENABLE_LOG

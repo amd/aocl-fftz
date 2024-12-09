@@ -40,6 +40,7 @@
 #include <time.h>
 #include "test/bench/accuracy.h"
 #include "test/bench/utils/bench_utils.h"
+#include "test/bench/utils/data_conversion.h"
 #include "test/bench/utils/size_and_index_mapper.h"
 
 /**
@@ -49,7 +50,7 @@
  * @return INT32 bench status code
  */
 INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                         INTP *out_idx_map, VOID *handle, VOID * input_buffer)
+                         INTP *out_idx_map, VOID *handle, VOID *input_buffer)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
@@ -59,8 +60,20 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     INT32 dt_bytes = (params->precision == FLOAT_P) ?
                      sizeof(FLOAT) : sizeof(DOUBLE);
     UINT32 is_align = params->aligned_alloc;
-    INTP input_bytes = dt_bytes * params->sz_info.input_size * T_DATA_STRIDE;
-    INTP output_bytes = dt_bytes * params->sz_info.output_size * T_DATA_STRIDE;
+    INTP input_bytes =
+        dt_bytes * params->sz_info.input_size * params->in_data_stride;
+    INTP output_bytes =
+        dt_bytes * params->sz_info.output_size * params->out_data_stride;
+
+    // In an R2C problem, input will have N real points and output will have N
+    // complex points and vise-versa for C2R.
+    // For in-place R2C/C2R problems, since the same buffer will be used for
+    // input and output, it should be large enough to hold the N complex points.
+    if (params->fft_type != C2C && params->res_placement == IN_PLACE)
+    {
+        input_bytes = MAX(input_bytes, output_bytes);
+        output_bytes = input_bytes;
+    }
 
     VOID *factors, *in1, *in2, *out1, *out2, *out_combined;
     factors = in1 = in2 = out1 = out2 = out_combined = NULL;
@@ -68,11 +81,11 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     // create buffer to store 2 complex constant values
     ALLOC_INIT(factors, VOID, 4 * dt_bytes, is_align);
     // create locals buffer to store inputs and outputs
-    ALLOC_UNINIT(in1, VOID, input_bytes, is_align);
-    ALLOC_UNINIT(in2, VOID, input_bytes, is_align);
+    ALLOC_INIT(in1, VOID, input_bytes, is_align);
+    ALLOC_INIT(in2, VOID, input_bytes, is_align);
     if (factors == NULL || in1 == NULL || in2 == NULL)
     {
-        printf("run_linearity_test : input buffer creation failed\n");
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "input buffer creation failed");
         status = MEMORY_FAILURE;
         goto exit_linearity_test;
     }
@@ -81,8 +94,8 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     ALLOC_INIT(out_combined, VOID, output_bytes, is_align);
     if (out1 == NULL || out2 == NULL || out_combined == NULL)
     {
-        printf("run_linearity_test : output buffer creation failed\n");
-        status = SETUP_FAILURE;
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "output buffer creation failed");
+        status = MEMORY_FAILURE;
         goto exit_linearity_test;
     }
 
@@ -108,12 +121,12 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
         // prepare random input data
         // use in_stride as 1 to fill random data in all points
         params->prepare_input_data(in2, params->sz_info.input_size, NULL,
-                                   RANDOM_INPUT);
+                                   RANDOM_INPUT, params->in_data_stride);
 
         if (input_buffer == NULL)
         {
             params->prepare_input_data(in1, params->sz_info.input_size, NULL,
-                                       RANDOM_INPUT);
+                                       RANDOM_INPUT, params->in_data_stride);
         }
         else
         {
@@ -141,7 +154,8 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
         // combine in1 and in2 and store the result in in1
         PREPARE_LINEAR_TEST_INPUTS(in1, in2, in1, params->sz_info.input_size,
-                                   factors, params->precision);
+                                   factors, params->precision,
+                                   params->in_data_stride);
 
         // perform FFT for combined input
         memcpy(params->in, in1, input_bytes);
@@ -156,18 +170,17 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
         // combine out1 and out2 and store the result in out1
         PREPARE_LINEAR_TEST_OUTPUTS(out1, out2, out1,
                                     params->sz_info.output_size, factors,
-                                    params->precision);
+                                    params->precision, params->out_data_stride);
         // compare the outputs
-        ret = params->compare(params, out1, out_combined,
-                              params->sz_info.batches, params->sz_info.n,
-                              out_idx_map);
+        status = params->compare(params, out1, out_combined,
+                                 params->sz_info.batches, params->sz_info.n,
+                                 out_idx_map, params->out_data_stride);
 
         if (status != BENCH_SUCCESS)
         {
             printf("\nResults mismatch on accuracy mode => property: "
                    "linearity, iteration: %d/%d, seed: %d\n",
                    i, params->num_iterations, params->seed);
-            status = VERIFICATION_FAILURE;
             goto exit_linearity_test;
         }
     }
@@ -201,28 +214,41 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
     INT32 dt_bytes = (params->precision == FLOAT_P) ?
                      sizeof(FLOAT) : sizeof(DOUBLE);
     UINT32 is_align = params->aligned_alloc;
-    INTP input_bytes = dt_bytes * params->sz_info.input_size * T_DATA_STRIDE;
-    INTP output_bytes = dt_bytes * params->sz_info.output_size * T_DATA_STRIDE;
+    INTP input_bytes =
+        dt_bytes * params->sz_info.input_size * params->in_data_stride;
+    INTP output_bytes =
+        dt_bytes * params->sz_info.output_size * params->out_data_stride;
+
+    // In an R2C problem, input will have N real points and output will have N
+    // complex points and vise-versa for C2R.
+    // For in-place R2C/C2R problems, since the same buffer will be used for
+    // input and output, it should be large enough to hold the N complex points.
+    if (params->fft_type != C2C && params->res_placement == IN_PLACE)
+    {
+        input_bytes = MAX(input_bytes, output_bytes);
+        output_bytes = input_bytes;
+    }
 
     // create a new bench params for reverse FFT direction
     aoclfftz_bench_params_t *params_reverse = NULL;
+    VOID *in, *handle_reverse;
+    handle_reverse = in = NULL;
+
     ALLOC_AND_COPY_PARAMS(params_reverse, params);
     if (params_reverse == NULL)
     {
-        printf("run_impulse_transform_test : creating new bench params "
-               "failed\n");
-        return SETUP_FAILURE;
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "params_reverse creation failed");
+        status = MEMORY_FAILURE;
+        goto exit_impulse_transform_test;
     }
-
-    VOID *in, *handle_reverse;
-    handle_reverse = in = NULL;
 
     // create buffer to store input
     ALLOC_INIT(in, VOID, input_bytes, is_align);
     if (in == NULL)
     {
-        printf("%s : input buffer creation failed\n", __func__);
-        return SETUP_FAILURE;
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "input buffer creation failed");
+        status = MEMORY_FAILURE;
+        goto exit_impulse_transform_test;
     }
 
     // reverse the FFT direction and swap input output strides
@@ -238,6 +264,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
     ALLOC_INIT(params_reverse->in, VOID, output_bytes, is_align);
     if (params_reverse->in == NULL)
     {
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "input buffer creation failed");
         status = MEMORY_FAILURE;
         goto exit_impulse_transform_test;
     }
@@ -251,9 +278,11 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
         ALLOC_INIT(params_reverse->out, VOID, input_bytes, is_align);
         if (params_reverse->out == NULL)
         {
+            AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "output buffer creation failed");
             status = MEMORY_FAILURE;
             goto exit_impulse_transform_test;
         }
+
         for (INT32 i = 0; i < params->dim_rank; i++)
         {
             params_reverse->dims[i].in_stride = params->dims[i].out_stride;
@@ -297,12 +326,17 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
         {
             params->prepare_input_data(in, params->sz_info.n *
                                        params->sz_info.batches, in_idx_map,
-                                       IMPULSE_INPUT);
+                                       IMPULSE_INPUT, params->in_data_stride);
         }
         else
         {
-            memcpy(in, input_buffer, dt_bytes * params->sz_info.input_size *
-                   T_DATA_STRIDE);
+            memcpy(in, input_buffer, input_bytes);
+        }
+        if (params->fft_type == R2C && params->dir == BACKWARD)
+        {
+            convert_complex_to_half_complex(in, params->sz_info.n,
+                                            params->sz_info.batches,
+                                            in_idx_map, params->precision);
         }
 
         // perform FFT
@@ -315,26 +349,47 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
         }
 
         // perform reversed FFT
-        memcpy(params_reverse->in, params->out, output_bytes);
+        if (params->fft_type == R2C && params->dir == FORWARD)
+        {
+            convert_half_complex_to_complex(params_reverse->in, params->out,
+                                            params->sz_info.n,
+                                            params->sz_info.batches,
+                                            out_idx_map,
+                                            params->precision);
+        }
+        else
+        {
+            memcpy(params_reverse->in, params->out, output_bytes);
+        }
         ret = aoclfftz_execute(handle_reverse);
         if (ret != AOCLFFTZ_SUCCESS)
         {
             status = EXECUTION_FAILURE;
             goto exit_impulse_transform_test;
         }
+
+        if (params->fft_type == R2C && params->dir == BACKWARD)
+        {
+            convert_half_complex_to_complex(params_reverse->out,
+                                            params_reverse->out,
+                                            params->sz_info.n,
+                                            params->sz_info.batches,
+                                            in_idx_map,
+                                            params->precision);
+        }
         NORMALIZE_IFFT_DATA(params_reverse->out, params->sz_info.input_size,
-                            params->sz_info.n, params->precision);
+                            params->sz_info.n, params->precision,
+                            params->in_data_stride);
 
         // compare reversed output with the input
         status = params->compare(params, in, params_reverse->out,
                                  params->sz_info.batches, params->sz_info.n,
-                                 in_idx_map);
+                                 in_idx_map, params->in_data_stride);
         if (status != BENCH_SUCCESS)
         {
             printf("\nResults mismatch on accuracy mode => property: "
                    "transformation, iteration: %d/%d, seed: %d\n",
                    i, params->num_iterations, params->seed);
-            status = VERIFICATION_FAILURE;
             goto exit_impulse_transform_test;
         }
     }
@@ -349,6 +404,40 @@ exit_impulse_transform_test:
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
 #endif
     return status;
+}
+
+#define TIME_SHIFT(in, out, idx_map, data_stride)                              \
+{                                                                              \
+    for (INTP b = 0; b < batches; b++)                                         \
+    {                                                                          \
+        /* time shift the input for each outer dimension                       \
+           for example: An ND problem of 3x4x5 when dim=2 (i.e. outer dim,     \
+           where n=3) is processed it will shift the input m times in          \
+           every 4x5 matrix for 3 (outer_n) times */                           \
+        for (INTP o = 0; o < outer_n; o++)                                     \
+        {                                                                      \
+            PREPARE_TIMESHIFT_TEST_INPUTS(                                     \
+                in + idx_map[b * n + o * inner_n] * data_stride,               \
+                out + idx_map[b * n + o * inner_n] * data_stride,              \
+                inner_n, shifts, idx_map, params->precision,                   \
+                data_stride);                                                  \
+        }                                                                      \
+    }                                                                          \
+}
+
+#define PHASE_SHIFT(in, out, idx_map, data_stride)                             \
+{                                                                              \
+    for (INTP b = 0; b < batches; b++)                                         \
+    {                                                                          \
+        for (INTP o = 0; o < outer_n; o++)                                     \
+        {                                                                      \
+            PREPARE_TIMESHIFT_TEST_OUTPUTS(                                    \
+                in + idx_map[b * n + o * inner_n] * data_stride,               \
+                out + idx_map[b * n + o * inner_n] * data_stride,              \
+                cur_n, m, unit_m, idx_map, params->dir,                        \
+                params->precision, 2);                                         \
+        }                                                                      \
+    }                                                                          \
 }
 
 /**
@@ -366,30 +455,45 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     INT32 status = BENCH_SUCCESS;
     INT32 ret = AOCLFFTZ_SUCCESS;
     INTP n = params->sz_info.n;
+    INTP batches = params->sz_info.batches;
     INT32 dt_bytes = (params->precision == FLOAT_P) ?
                      sizeof(FLOAT) : sizeof(DOUBLE);
     UINT32 is_align = params->aligned_alloc;
 
-    VOID *in1, *in2, *out1, *out2;
-    in1 = in2 = out1 = out2 = NULL;
-    INTP input_bytes = dt_bytes * params->sz_info.input_size * T_DATA_STRIDE;
-    INTP output_bytes = dt_bytes * params->sz_info.output_size * T_DATA_STRIDE;
+    VOID *in1, *in2, *out1, *out2, *out_temp;
+    in1 = in2 = out1 = out2 = out_temp = NULL;
+    INTP input_bytes =
+        dt_bytes * params->sz_info.input_size * params->in_data_stride;
+    INTP output_bytes =
+        dt_bytes * params->sz_info.output_size * params->out_data_stride;
+    INTP complex_output_bytes =
+        dt_bytes * params->sz_info.output_size * 2;
+
+    // In an R2C problem, input will have N real points and output will have N
+    // complex points and vise-versa for C2R.
+    // For in-place R2C/C2R problems, since the same buffer will be used for
+    // input and output, it should be large enough to hold the N complex points.
+    if (params->fft_type != C2C && params->res_placement == IN_PLACE)
+    {
+        input_bytes = MAX(input_bytes, output_bytes);
+        output_bytes = input_bytes;
+    }
 
     // create buffers for inputs and outputs
     ALLOC_UNINIT(in1, VOID, input_bytes, is_align);
     ALLOC_UNINIT(in2, VOID, input_bytes, is_align);
     if (in1 == NULL || in2 == NULL)
     {
-        printf("run_timeshift_test : input buffer creation failed\n");
-        status = SETUP_FAILURE;
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "input buffer creation failed");
+        status = MEMORY_FAILURE;
         goto exit_timeshift_test;
     }
     ALLOC_INIT(out1, VOID, output_bytes, is_align);
-    ALLOC_INIT(out2, VOID, output_bytes, is_align);
+    ALLOC_INIT(out2, VOID, complex_output_bytes, is_align);
     if (out1 == NULL || out2 == NULL)
     {
-        printf("run_timeshift_test : output buffer creation failed\n");
-        status = SETUP_FAILURE;
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "output buffer creation failed");
+        status = MEMORY_FAILURE;
         goto exit_timeshift_test;
     }
 
@@ -414,45 +518,36 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
         if (input_buffer == NULL)
         {
-            params->prepare_input_data(in1, n * params->sz_info.batches,
-                                       in_idx_map, RANDOM_INPUT);
+            params->prepare_input_data(in1, n * batches, in_idx_map,
+                                       RANDOM_INPUT, params->in_data_stride);
         }
         else
         {
-            memcpy(in1, input_buffer, dt_bytes * params->sz_info.input_size *
-                   T_DATA_STRIDE);
+            memcpy(in1, input_buffer, input_bytes);
         }
         INTP cur_n;
         INTP outer_n = 1;
         INTP inner_n = n;
         INTP unit_m = n;
-
         for (INTP d = params->dim_rank - 1; d >= 0; d--)
         {
             cur_n = params->dims[d].n;
             unit_m /= cur_n;
             // random no. of shifts in the range of 0 to current dimension size
             INTP m = rand() % cur_n;
-            // shifting units wrt linear representation
-            // for example: A ND problem of 3x4x5 when dim=2 is processed
-            // if m = 2, then the actual unit to be shifted for every element
-            // would be 2*20
-            INTP shifts = m * unit_m;
 
-            // time shift for each batch
-            for (INTP b = 0; b < params->sz_info.batches ; b++)
+            if (params->dir == FORWARD)
             {
-                // time shift the input for each outer dimension
-                // for example: A ND problem of 3x4x5 when dim=1 is processed
-                // it will shift the input m times in every 4x5 matrix for
-                // 3(outer_n) times
-                for (INTP o = 0; o < outer_n; o++)
-                {
-                    PREPARE_TIMESHIFT_TEST_INPUTS(
-                        in1 + in_idx_map[b * n + o * inner_n] * T_DATA_STRIDE,
-                        in2 + in_idx_map[b * n + o * inner_n] * T_DATA_STRIDE,
-                        inner_n, shifts, in_idx_map, params->precision);
-                }
+                // shifting units wrt linear representation
+                // for example: An ND problem of 3x4x5 when dim=2 is processed
+                // if m = 2, then the actual unit to be shifted for every
+                // element would be 2*20
+                INTP shifts = m * unit_m;
+                TIME_SHIFT(in1, in2, in_idx_map, params->in_data_stride)
+            }
+            else
+            {
+                PHASE_SHIFT(in1, in2, in_idx_map, params->in_data_stride)
             }
 
             // perform FFT for input
@@ -470,31 +565,45 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             status |= aoclfftz_execute(handle);
             memcpy(out2, params->out, output_bytes);
 
-            // perform phase shift on FFT(input)
-            for (INTP b = 0; b < params->sz_info.batches; b++)
+            if (params->fft_type == R2C && params->dir == FORWARD)
             {
-                for (INTP o = 0; o < outer_n; o++)
+                convert_half_complex_to_complex(out1, out1, n, batches,
+                                                out_idx_map, params->precision);
+                convert_half_complex_to_complex(out2, out2, n, batches,
+                                                out_idx_map, params->precision);
+            }
+            if (params->dir == FORWARD)
+            {
+                PHASE_SHIFT(out1, out1, out_idx_map, params->out_data_stride)
+            }
+            else
+            {
+                ALLOC_INIT(out_temp, VOID, output_bytes, is_align);
+                if (out_temp == NULL)
                 {
-                    PREPARE_TIMESHIFT_TEST_OUTPUTS(
-                        out1 + out_idx_map[b * n + o * inner_n] * T_DATA_STRIDE,
-                        out1 + out_idx_map[b * n + o * inner_n] * T_DATA_STRIDE,
-                        cur_n, m, unit_m, out_idx_map, params->dir,
-                        params->precision);
+                    AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR,
+                                             "output buffer creation failed");
+                    status = MEMORY_FAILURE;
+                    goto exit_timeshift_test;
                 }
+                INTP shifts = m * unit_m;
+                TIME_SHIFT(out1, out_temp, out_idx_map,
+                           params->out_data_stride);
+                FREE_ALLOCATED_MEM(out1, is_align);
+                out1 = out_temp;
             }
 
             inner_n /= cur_n;
             outer_n *= cur_n;
 
             // compare the outputs
-            status = params->compare(params, out1, out2,
-                                     params->sz_info.batches, n, out_idx_map);
+            status = params->compare(params, out1, out2, batches, n,
+                                     out_idx_map, params->out_data_stride);
             if (status != BENCH_SUCCESS)
             {
                 printf("\nResults mismatch on accuracy mode => property: "
                     "timeshift (dim = %td), iteration: %d/%d, seed: %d\n",
                     d, i, params->num_iterations, params->seed);
-                status = VERIFICATION_FAILURE;
                 goto exit_timeshift_test;
             }
         }
@@ -528,6 +637,8 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
 #endif
     INT32 status = BENCH_SUCCESS;
+    VOID *handle = NULL;
+
     UINT32 is_align = params->aligned_alloc;
     params->sz_info.n = calculate_size(params->dims, params->dim_rank);
     params->sz_info.batches = calculate_size(params->vecs, params->vec_rank);
@@ -537,6 +648,13 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     INTP *out_idx_map = NULL;
     ALLOC_UNINIT(out_idx_map, INTP, params->sz_info.n *
                  params->sz_info.batches * sizeof(INTP), is_align);
+    if (in_idx_map == NULL || out_idx_map == NULL)
+    {
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "idx_map creation failed");
+        status = MEMORY_FAILURE;
+        goto exit_accuracy_mode;
+    }
+
     // prepare index map which maps the strided indices with non-strided ones
     prepare_index_map(params->dim_rank, params->vec_rank, params->dims,
                     params->vecs, in_idx_map, out_idx_map, is_align);
@@ -544,9 +662,8 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
                              params->vecs, &(params->sz_info.input_size),
                              &(params->sz_info.output_size));
 
-
     // setup FFT problem
-    VOID *handle = params->setup_problem(params);
+    handle = params->setup_problem(params);
     if (handle == NULL)
     {
         status = SETUP_FAILURE;
@@ -572,17 +689,17 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
         goto exit_accuracy_mode;
     }
 
-    // 2. transformation test
-    status = run_impulse_transform_test(params, in_idx_map, out_idx_map, handle,
-                                        NULL);
+    // 2. timeshift test
+    status = run_timeshift_test(params, in_idx_map, out_idx_map, handle, NULL);
     HANDLE_BENCH_STATUS(status);
     if (status != BENCH_SUCCESS)
     {
         goto exit_accuracy_mode;
     }
 
-    // 3. timeshift test
-    status = run_timeshift_test(params, in_idx_map, out_idx_map, handle, NULL);
+    // 3. transformation test
+    status = run_impulse_transform_test(params, in_idx_map, out_idx_map, handle,
+                                        NULL);
     HANDLE_BENCH_STATUS(status);
     if (status != BENCH_SUCCESS)
     {

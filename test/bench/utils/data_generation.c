@@ -53,7 +53,8 @@
  * @param input_type type of input data : RANDOM, IMPULSE or SIGNAL
  * @return VOID
  */
-VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
+VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
+                          INT32 data_stride)
 {
     FLOAT *input_f = (FLOAT *)input;
     INTP idx = 0;
@@ -63,21 +64,17 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
     {
         if (idx_map == NULL)
         {
-            for (idx = 0; idx < n; ++idx)
+            for (idx = 0; idx < n * data_stride; ++idx)
             {
-                input_f[idx * T_DATA_STRIDE] =
-                    (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
-                input_f[idx * T_DATA_STRIDE + 1] =
-                    (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
+                input_f[idx] = (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
             }
         }
         else
         {
-            for (idx = 0; idx < n; ++idx)
+            for (idx = 0; idx < n * data_stride; ++idx)
             {
-                input_f[idx_map[idx] * T_DATA_STRIDE] =
-                    (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
-                input_f[idx_map[idx] * T_DATA_STRIDE + 1] =
+                input_f[idx_map[idx / data_stride] * data_stride +
+                        (idx % data_stride)] =
                     (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
             }
         }
@@ -94,11 +91,12 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
         {
             idx = idx_map[rand() % n];
         }
-        memset(input_f, 0, n * T_DATA_STRIDE);
-        input_f[idx * T_DATA_STRIDE] =
-            (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
-        input_f[idx * T_DATA_STRIDE + 1] =
-            (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
+        memset(input_f, 0, n * data_stride);
+        for (int i = 0; i < data_stride; i++)
+        {
+            input_f[(idx * data_stride) + i] =
+                (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
+        }
     }
     // sinusoidal signal input
     else if (input_type == SINUSOIDAL_SIGNAL_INPUT)
@@ -113,24 +111,21 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
         // scale the amplitude of the wave by `scale` times,
         // scale range: [0.0, 5.0)
         FLOAT scale = ((FLOAT)rand() / (FLOAT)RAND_MAX) * 5.0f;
+        memset(input_f, 0, n * data_stride);
         if (idx_map == NULL)
         {
             for (INTP i = 0; i < n; i++)
             {
-                input_f[((i + shift) % n) * T_DATA_STRIDE] =
-                    cosf((FLOAT)(i * size) / n) * scale;
-                input_f[((i + shift) % n) * T_DATA_STRIDE + 1] =
-                    sinf((FLOAT)(i * size) / n) * scale;
+                input_f[((i + shift) % n) * data_stride] =
+                    sinf((i * size) / n) * scale;
             }
         }
         else
         {
             for (INTP i = 0; i < n; i++)
             {
-                input_f[idx_map[(i + shift) % n] * T_DATA_STRIDE] =
-                    cosf((FLOAT)(i * size) / n) * scale;
-                input_f[idx_map[(i + shift) % n] * T_DATA_STRIDE + 1] =
-                    sinf((FLOAT)(i * size) / n) * scale;;
+                input_f[idx_map[(i + shift) % n] * data_stride] =
+                    sinf((i * size) / n) * scale;
             }
         }
     }
@@ -145,7 +140,8 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
  * @param input_type type of input data : RANDOM, IMPULSE or SIGNAL
  * @return VOID
  */
-VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
+VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
+                          INT32 data_stride)
 {
     DOUBLE *input_d = (DOUBLE *)input;
     INTP idx = 0;
@@ -155,22 +151,17 @@ VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
     {
         if (idx_map == NULL)
         {
-            for (idx = 0; idx < n; ++idx)
+            for (idx = 0; idx < n * data_stride; ++idx)
             {
-                input_d[idx * T_DATA_STRIDE] =
-                    (20.0 / RAND_MAX) * rand() - 10.0;
-                input_d[idx * T_DATA_STRIDE + 1] =
-                    (20.0 / RAND_MAX) * rand() - 10.0;
+                input_d[idx] = (20.0 / RAND_MAX) * rand() - 10.0;
             }
         }
         else
         {
-            for (idx = 0; idx < n; ++idx)
+            for (idx = 0; idx < n * data_stride; ++idx)
             {
-                input_d[idx_map[idx] * T_DATA_STRIDE] =
-                    (20.0 / RAND_MAX) * rand() - 10.0;
-                input_d[idx_map[idx] * T_DATA_STRIDE + 1] =
-                    (20.0 / RAND_MAX) * rand() - 10.0;
+                input_d[idx_map[idx / data_stride] * data_stride
+                    + (idx % data_stride)] = (20.0 / RAND_MAX) * rand() - 10.0;
             }
         }
     }
@@ -186,9 +177,12 @@ VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
         {
             idx = idx_map[rand() % n];
         }
-        memset(input_d, 0, n * T_DATA_STRIDE);
-        input_d[idx * T_DATA_STRIDE] = (20.0 / RAND_MAX) * rand() - 10.0;
-        input_d[idx * T_DATA_STRIDE + 1] = (20.0 / RAND_MAX) * rand() - 10.0;
+        memset(input_d, 0, n * data_stride);
+        for (int i = 0; i < data_stride; i++)
+        {
+            input_d[(idx * data_stride) + i] =
+                (20.0 / RAND_MAX) * rand() - 10.0;
+        }
     }
     // sinusoidal signal input
     else if (input_type == SINUSOIDAL_SIGNAL_INPUT)
@@ -203,24 +197,21 @@ VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type)
         // scale the amplitude of the wave by `scale` times,
         // scale range: [0.0, 5.0)
         DOUBLE scale = ((DOUBLE)rand() / RAND_MAX) * 5.0;
+        memset(input_d, 0, n * data_stride);
         if (idx_map == NULL)
         {
             for (INTP i = 0; i < n; i++)
             {
-                input_d[((i + shift) % n) * T_DATA_STRIDE] =
+                input_d[((i + shift) % n) * data_stride] =
                     cos((DOUBLE)(i * size) / n) * scale;
-                input_d[((i + shift) % n) * T_DATA_STRIDE + 1] =
-                    sin((DOUBLE)(i * size) / n) * scale;;
             }
         }
         else
         {
             for (INTP i = 0; i < n; i++)
             {
-                input_d[idx_map[(i + shift) % n] * T_DATA_STRIDE] =
+                input_d[idx_map[(i + shift) % n] * data_stride] =
                     cos((DOUBLE)(i * size) / n) * scale;
-                input_d[idx_map[(i + shift) % n] * T_DATA_STRIDE + 1] =
-                    sin((DOUBLE)(i * size) / n) * scale;;
             }
         }
     }

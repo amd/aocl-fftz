@@ -53,7 +53,7 @@ VOID init_bench_params(aoclfftz_bench_params_t *bench_params)
     bench_params->bench_type = PERFORMANCE;
     bench_params->precision = DOUBLE_P;
     bench_params->data_model = LP64;
-    bench_params->fft_type = COMPLEX_TO_COMPLEX;
+    bench_params->fft_type = C2C;
     bench_params->order = IN_ORDER;
     bench_params->res_placement = OUT_OF_PLACE;
     bench_params->dir = FORWARD;
@@ -91,6 +91,10 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     INT32 c = -1;
 
     UCHAR use_cust_tolerance = 0;
+    // setting the data strides based on complex type and will be modified
+    // later for real problems
+    bench_params->in_data_stride = 2;
+    bench_params->out_data_stride = 2;
 
     INT32 status = PARSER_SUCCESS;
     INT32 ret = PARSER_SUCCESS;
@@ -210,15 +214,15 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         case 'f':
             if (!strcmp(optarg, "c2r"))
             {
-                bench_params->fft_type = COMPLEX_TO_REAL;
+                bench_params->fft_type = C2R;
             }
             else if (!strcmp(optarg, "r2c"))
             {
-                bench_params->fft_type = REAL_TO_COMPLEX;
+                bench_params->fft_type = R2C;
             }
             else if (!strcmp(optarg, "c2c"))
             {
-                bench_params->fft_type = COMPLEX_TO_COMPLEX;
+                bench_params->fft_type = C2C;
             }
             else
             {
@@ -228,8 +232,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             break;
         case 'i':
             valid_iters_arg_found = 1;
-            VALIDATE_AND_GET_INT(optarg, str_buff,
-                                 bench_params->num_iterations, ret, 0);
+            VALIDATE_AND_GET_INT(optarg, str_buff, bench_params->num_iterations,
+                                 ret, 0);
             if (ret != 0)
             {
                 printf("WARNING: Invalid iterations value given, "
@@ -251,8 +255,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             break;
         case 't':
-            VALIDATE_AND_GET_DOUBLE(optarg, str_buff,
-                                    bench_params->tolerance, ret, 0.0, 1.0);
+            VALIDATE_AND_GET_DOUBLE(optarg, str_buff, bench_params->tolerance,
+                                    ret, 0.0, 1.0);
             if (ret != 0)
             {
                 printf("WARNING: Invalid custom tolerance value given, running "
@@ -264,8 +268,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             break;
         case 'n':
-            VALIDATE_AND_GET_INT(optarg, str_buff,
-                                 bench_params->num_threads, ret, 1);
+            VALIDATE_AND_GET_INT(optarg, str_buff, bench_params->num_threads,
+                                 ret, 1);
             if (ret != 0)
             {
                 printf("WARNING: Invalid num threads value given, "
@@ -282,8 +286,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             break;
         case 'o':
-            VALIDATE_AND_GET_INT(optarg, str_buff, bench_params->opt_level,
-                                 ret, -1);
+            VALIDATE_AND_GET_INT(optarg, str_buff, bench_params->opt_level, ret,
+                                 -1);
             break;
         case 'l':
             VALIDATE_AND_GET_INT(optarg, str_buff, bench_params->logger_mode,
@@ -357,9 +361,10 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                 }
                 else
                 {
-                    ret = allocate_and_fill_dims_vecs(argv[arg_idx],
-                                 bench_params->dim_rank, bench_params->vec_rank,
-                                 &bench_params->dims, &bench_params->vecs, 1);
+                    ret = allocate_and_fill_dims_vecs(
+                        argv[arg_idx], bench_params->dim_rank,
+                        bench_params->vec_rank, &bench_params->dims,
+                        &bench_params->vecs, 1);
                     if (ret != PARSER_SUCCESS)
                     {
                         status = MAX(status, ret);
@@ -420,11 +425,44 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         bench_params->selector_time = 0;
     }
     if (!bench_params->use_random_seed && bench_params->num_iterations != 1 &&
-         bench_params->bench_type == ACCURACY)
+        bench_params->bench_type == ACCURACY)
     {
         printf("WARNING: iterations will set to 1 since manual seed value is "
                "provided\n");
         bench_params->num_iterations = 1;
+    }
+
+    // NOTE: 'c2r' mode is internally converted to 'r2c' mode
+    // i.e. c2r forward  -> r2c backward
+    //      c2r backward -> r2c forward
+    if (bench_params->fft_type == C2R)
+    {
+        bench_params->fft_type = R2C;
+        if (bench_params->dir == FORWARD)
+        {
+            printf("NOTE: 'c2r forward' maps to 'r2c backward'\n");
+            bench_params->dir = BACKWARD;
+        }
+        else
+        {
+            printf("NOTE: 'c2r backward' maps to 'r2c forward'\n");
+            bench_params->dir = FORWARD;
+        }
+    }
+
+    // set the data strides for an 'r2c' problem
+    if (bench_params->fft_type == R2C)
+    {
+        if (bench_params->dir == FORWARD)
+        {
+            bench_params->in_data_stride = 1;
+            bench_params->out_data_stride = 2;
+        }
+        else
+        {
+            bench_params->in_data_stride = 2;
+            bench_params->out_data_stride = 1;
+        }
     }
 
     // change the min_bench_time unit from ms to ns
@@ -441,8 +479,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         }
     }
     // create input and output buffers
-    INT32 dt_bytes = (bench_params->precision == FLOAT_P) ?
-                        sizeof(FLOAT) : sizeof(DOUBLE);
+    INT32 dt_bytes =
+        (bench_params->precision == FLOAT_P) ? sizeof(FLOAT) : sizeof(DOUBLE);
 
     UINTP in_buffer_size = 0;
     UINTP out_buffer_size = 0;
@@ -450,25 +488,31 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     calculate_buffer_sizes(bench_params->dim_rank, bench_params->vec_rank,
                            bench_params->dims, bench_params->vecs,
                            &in_buffer_size, &out_buffer_size);
-    in_buffer_size = in_buffer_size * T_DATA_STRIDE;
-    out_buffer_size = out_buffer_size * T_DATA_STRIDE;
-    ALLOC_UNINIT(bench_params->in, VOID, in_buffer_size * dt_bytes, is_align);
-    if (bench_params->in == NULL)
+    UINTP input_bytes =
+        dt_bytes * in_buffer_size * bench_params->in_data_stride;
+    UINTP output_bytes =
+        dt_bytes * out_buffer_size * bench_params->out_data_stride;
+
+    // In an R2C problem, input will have N real points and output will have N
+    // complex points.
+    // For in-place R2C problem, since the same buffer will be used for input
+    // and output, it should be large enough to hold the N complex points.
+    if (bench_params->fft_type != C2C &&
+        bench_params->res_placement == IN_PLACE)
     {
-        return MEMORY_FAILURE;
+        input_bytes = MAX(input_bytes, output_bytes);
     }
+    ALLOC_UNINIT(bench_params->in, VOID, input_bytes, is_align);
+
+    // use input buffer as output for in-place problems and create new output
+    // buffer for out-of-place problems
     if (bench_params->res_placement == IN_PLACE)
     {
         bench_params->out = bench_params->in;
     }
     else
     {
-        ALLOC_INIT(bench_params->out, VOID, out_buffer_size * dt_bytes,
-                   is_align);
-        if (bench_params->out == NULL)
-        {
-            return MEMORY_FAILURE;
-        }
+        ALLOC_INIT(bench_params->out, VOID, output_bytes, is_align);
     }
 
 #ifdef AOCL_ENABLE_LOG
@@ -853,7 +897,7 @@ UINT32 set_flag(aoclfftz_bench_params_t *params)
     {
         flag = flag | (1 << 2);
     }
-    if (params->fft_type == COMPLEX_TO_COMPLEX)
+    if (params->fft_type == C2C)
     {
         flag = flag | (0 << 3);
     }
@@ -900,8 +944,11 @@ VOID show_help_menu(VOID)
         "--dir                    FFT direction - 'f' for forward, 'b' for"
         "backward [default: f]\n"
         "-f, --fft-type           'c2c' for complex to complex, 'r2c' for real "
-        "to "
-        "complex, 'c2r' for complex to real [default: c2c]\n"
+        "to complex, 'c2r' for complex to real [default: c2c]\n"
+        "                         NOTE: 'c2r forward' is same as 'r2c "
+        "backward' and 'c2r backward' is same as 'r2c forward'\n"
+        "                               Hence c2r mode will be mapped to its "
+        "r2c mode\n"
         "-i, --iters              number of iterations [default: 50 for "
         "`performance` mode and 1 for `accuracy` mode]\n"
         "-s, --seed               specify manual seed value, random seed will "
