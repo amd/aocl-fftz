@@ -46,6 +46,8 @@
 #define OUT_STRIDE 1
 #define VEC_IN_STRIDE 1
 #define VEC_OUT_STRIDE 1
+#define REAL 1
+#define COMPLEX 0
 
 template <typename T>
 class PerformanceTest : public benchmark::Fixture {
@@ -64,6 +66,8 @@ class PerformanceTest : public benchmark::Fixture {
         INTP v_out_stride = state.range(6) != 1 ? state.range(6) :
                             radix * out_stride;
         UINT8 is_bwd = false;
+        UINT8 is_real = state.range(7);
+        INT32 data_stride = is_real ? 1 : 2;
 
         wrapper_kernel_fp_list *table = get_kernel_table(kernel_type);
         kfft_ fft_kernel = get_kernel<T>(table, is_bwd, radix);
@@ -99,12 +103,12 @@ class PerformanceTest : public benchmark::Fixture {
 
         for (INTP i = 0; i < radix; i++)
         {
-            strides.in_strides[i] = i * DATA_STRIDE * in_stride;
-            strides.out_strides[i] = i * DATA_STRIDE * out_stride;
+            strides.in_strides[i] = i * data_stride * in_stride;
+            strides.out_strides[i] = i * data_stride * out_stride;
         }
 
-        strides.v_in_stride = v_in_stride * DATA_STRIDE;
-        strides.v_out_stride = v_out_stride * DATA_STRIDE;
+        strides.v_in_stride = v_in_stride * data_stride;
+        strides.v_out_stride = v_out_stride * data_stride;
 
         for (auto _ : state)
         {
@@ -133,8 +137,20 @@ BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_f, FLOAT)
     kernel_profile(state);
 }
 
-// filter to benchmark specific test case : --benchmark_filter=.FLOAT.*/9/5/4/
-// runs Radix-9 AVX-256 Float variant with batch size of 5
+BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_real_d, DOUBLE)
+                           (benchmark::State& state)
+{
+    kernel_profile(state);
+}
+
+BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_real_f, FLOAT)
+                           (benchmark::State& state)
+{
+    kernel_profile(state);
+}
+// filter to benchmark specific test case : --benchmark_filter=
+// "DOUBLE.*radix:6/batch:1/kernel_type:0/*" which runs Radix-6 C Double kernel
+// with batch size of 1
 BENCHMARK_REGISTER_F(PerformanceTest, Kernel_d)
     ->ComputeStatistics("min", [](const std::vector<double>& v) -> double {
         return *(std::min_element(std::begin(v), std::end(v)));
@@ -147,8 +163,10 @@ BENCHMARK_REGISTER_F(PerformanceTest, Kernel_d)
                 // aocl_fftz_kernel_type -> STANDARD/PERMUTED C/AVX
                 benchmark::CreateDenseRange(0, 7, 1),
                 {IN_STRIDE}, {OUT_STRIDE},
-                {VEC_IN_STRIDE}, {VEC_OUT_STRIDE},
-    });
+                {VEC_IN_STRIDE}, {VEC_OUT_STRIDE}, {COMPLEX},
+    })
+    ->ArgNames({"radix", "batch", "kernel_type", "in_stride", "out_stride",
+                "v_in_stride", "v_out_stride", "is_real"});
 
 BENCHMARK_REGISTER_F(PerformanceTest, Kernel_f)
     ->ComputeStatistics("min", [](const std::vector<double>& v) -> double {
@@ -162,7 +180,43 @@ BENCHMARK_REGISTER_F(PerformanceTest, Kernel_f)
                 // aocl_fftz_kernel_type -> STANDARD/PERMUTED C/AVX
                 benchmark::CreateDenseRange(0, 7, 1),
                 {IN_STRIDE}, {OUT_STRIDE},
-                {VEC_IN_STRIDE}, {VEC_OUT_STRIDE},
-    });
+                {VEC_IN_STRIDE}, {VEC_OUT_STRIDE}, {COMPLEX},
+    })
+    ->ArgNames({"radix", "batch", "kernel_type", "in_stride", "out_stride",
+                "v_in_stride", "v_out_stride", "is_real"});
+
+BENCHMARK_REGISTER_F(PerformanceTest, Kernel_real_d)
+    ->ComputeStatistics("min", [](const std::vector<double>& v) -> double {
+        return *(std::min_element(std::begin(v), std::end(v)));
+    })
+    ->ArgsProduct({
+                benchmark::CreateDenseRange(2, 4, 1),
+                // Batch sizes to cover all possible cases in C & AVX
+                benchmark::CreateDenseRange(1, 31, 1),
+                benchmark::CreateDenseRange(
+                    aocl_fftz_kernel_type::STANDARD_R2HC_C,
+                    aocl_fftz_kernel_type::PERMUTED_R2HCF_C, 1),
+                {IN_STRIDE}, {OUT_STRIDE},
+                {VEC_IN_STRIDE}, {VEC_OUT_STRIDE}, {REAL},
+    })
+    ->ArgNames({"radix", "batch", "kernel_type", "in_stride", "out_stride",
+                "v_in_stride", "v_out_stride", "is_real"});
+
+BENCHMARK_REGISTER_F(PerformanceTest, Kernel_real_f)
+    ->ComputeStatistics("min", [](const std::vector<double>& v) -> double {
+        return *(std::min_element(std::begin(v), std::end(v)));
+    })
+    ->ArgsProduct({
+                benchmark::CreateDenseRange(2, 4, 1),
+                // Batch sizes to cover all possible cases in C & AVX
+                benchmark::CreateDenseRange(1, 31, 1),
+                benchmark::CreateDenseRange(
+                    aocl_fftz_kernel_type::STANDARD_R2HC_C,
+                    aocl_fftz_kernel_type::PERMUTED_R2HCF_C, 1),
+                {IN_STRIDE}, {OUT_STRIDE},
+                {VEC_IN_STRIDE}, {VEC_OUT_STRIDE}, {REAL},
+    })
+    ->ArgNames({"radix", "batch", "kernel_type", "in_stride", "out_stride",
+                "v_in_stride", "v_out_stride", "is_real"});
 
 BENCHMARK_MAIN();
