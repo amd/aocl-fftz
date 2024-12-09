@@ -44,6 +44,8 @@
 #include "core/kernels/kernel.h"
 #include "core/solvers/solver.h"
 #include "selector/selector.h"
+#include "core/kernels/transpose/transpose_utils.h"
+#include "core/kernels/transpose/transpose_kernels.h"
 
 // Re-delcaring this struct to avoid using core/kernels/kernel_list.h file
 typedef struct wrapper_kernel_fp_list
@@ -275,5 +277,19 @@ static wrapper_kernel_fp_list_t
     {NULL, NULL, 64}
 };
 #endif
+
+// Transpose wrappers
+#define TRANSPOSE_WRAPPER_DECL(kernel_name, TYPE, isa)                         \
+    EXPORT_SYM_DYN VOID CONCAT(FUNC(kernel_name, TYPE, isa),                   \
+                               _wrapper)(TRANSPOSE_KERNEL_ARGS)
+
+#define TRANSPOSE_WRAPPER_ALL_TYPES_DECL(kernel_name, isa)                     \
+    TRANSPOSE_WRAPPER_DECL(kernel_name, FLOAT, isa);                           \
+    TRANSPOSE_WRAPPER_DECL(kernel_name, DOUBLE, isa);                          \
+    TRANSPOSE_WRAPPER_DECL(kernel_name, aoclfftz_complex_f_t, isa);            \
+    TRANSPOSE_WRAPPER_DECL(kernel_name, aoclfftz_complex_d_t, isa);
+
+TRANSPOSE_WRAPPER_ALL_TYPES_DECL(tiq_iterative, c);
+TRANSPOSE_WRAPPER_ALL_TYPES_DECL(tisq_iterative, c);
 
 #endif // AOCLFFTZ_CORE_WRAPPER_H

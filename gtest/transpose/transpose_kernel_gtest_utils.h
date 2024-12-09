@@ -45,8 +45,7 @@
 extern "C"
 {
 #include "api/aoclfftz_internal.h"
-#include "core/kernels/transpose/transpose_kernels.h"
-#include "core/kernels/transpose/transpose_utils.h"
+#include "gtest/aoclfftz_core_wrapper.h"
 }
 
 // -----------------------------------------------------------------------------
@@ -96,8 +95,8 @@ auto compare_data_string(aoclfftz_complex_d_t recieved,
 #define GENERATE_TRANSPOSE_KERNEL_TABLE(type, isa)                             \
     static aoclfftz_transpose_kernel transpose_kernel_table_##type##_##isa[] = \
     {                                                                          \
-            /* 0 */ FUNC(tiq_iterative, type, isa),                            \
-            /* 1 */ FUNC(tisq_iterative, type, isa),                           \
+            /* 0 */ CONCAT(FUNC(tiq_iterative, type, isa), _wrapper),          \
+            /* 1 */ CONCAT(FUNC(tisq_iterative, type, isa), _wrapper),         \
     }
 
 GENERATE_TRANSPOSE_KERNEL_TABLE(FLOAT, c);

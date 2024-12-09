@@ -451,3 +451,20 @@ VOID destroy_handle_wrapper(VOID *handle)
 {
     destroy_handle(handle);
 }
+
+// Transpose wrappers
+#define TRANSPOSE_WRAPPER_DEFN(kernel_name, TYPE, isa)                         \
+    VOID CONCAT(FUNC(kernel_name, TYPE, isa), _wrapper)(TRANSPOSE_KERNEL_ARGS) \
+    {                                                                          \
+        FUNC(kernel_name, TYPE, c)(in_ptr, out_ptr, row_metadata,              \
+                                   column_metadata, aux_mem);                  \
+    }
+
+#define TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(kernel_name, isa)                     \
+    TRANSPOSE_WRAPPER_DEFN(kernel_name, FLOAT, isa);                           \
+    TRANSPOSE_WRAPPER_DEFN(kernel_name, DOUBLE, isa);                          \
+    TRANSPOSE_WRAPPER_DEFN(kernel_name, aoclfftz_complex_f_t, isa);            \
+    TRANSPOSE_WRAPPER_DEFN(kernel_name, aoclfftz_complex_d_t, isa);
+
+TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tiq_iterative, c);
+TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tisq_iterative, c);
