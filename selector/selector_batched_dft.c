@@ -52,7 +52,7 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
                        measure_stats;
     INT32 rnk = 0;
-    INT32 batch_size = 0;
+    INTP batch_size = 1;
     INT32 ret = SELECTOR_FAILURE;
 
     if (vec_rank > 3) // Currently vector rank till 3 only supported
