@@ -44,6 +44,7 @@
 VOID populate_stride_array(INTP *strides, INTP stride_val, INTP n,
                            UINT8 compute_half_complex,
                            UINT8 adjust_to_full_complex);
+VOID prepare_fused_kernel_strides(INTP *strides, INTP radix, INTP offset);
 VOID rearrange_stride_array(INTP *strides, INTP radix, INTP n);
 
 #endif // STRIDES_H

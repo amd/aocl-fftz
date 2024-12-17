@@ -111,6 +111,33 @@ VOID populate_stride_array(INTP *strides, INTP stride_val, INTP n,
 }
 
 /**
+ * @brief Prepare the strides for R2HCF kernels by fusing strides of two kernels
+ *        in the required order
+ *
+ * @param strides strides data to be reordered for R2HCF kernels
+ * @param radix radix of the kernel
+ * @param offset distance between the data point of two type of kernels within
+ *               one R2HCF kernel
+ * @return VOID
+ *
+ * @example Given -> radix = 3, offset = 2, strides = {0, 4, 8, 0, 0, 0},
+ * First half elements of passed strides array are specifically standard DFT
+ * input strides. This function will calculate the strides of Shifted DFT
+ * elements and will store strides in strides array in appropriate order.
+ * As result -> Re-ordered strides for fused kernel of radix-3
+ * will be {0, 2, 4, 6, 8, 10}
+ */
+VOID prepare_fused_kernel_strides(INTP *strides, INTP radix, INTP offset)
+{
+    for (INTP i = radix - 1; i >= 0; i--)
+    {
+        INTP stride = strides[i];
+        strides[i * 2] = stride;
+        strides[i * 2 + 1] = stride + offset;
+    }
+}
+
+/**
  * @brief Rearrange the stride array for C2C Kernel in Real Problem
  *
  * The stride array of C2C kernel in real problem needs to be rearranged in

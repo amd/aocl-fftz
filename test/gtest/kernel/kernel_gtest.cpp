@@ -39,6 +39,8 @@
 
 #include <gtest/gtest.h>
 #include "kernel_gtest_base.h"
+#include "complex_kernel_gtest.h"
+#include "real_kernel_gtest.h"
 
 // C2C - C Kernels - Float
 aoclfftz_kernel_test_params_t param_float_c2c_c_kernels[] =
@@ -546,32 +548,37 @@ aoclfftz_kernel_test_params_t param_float_r2hcf_c_kernels[] =
 {
     {2, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
         aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
         aoclfftz_kernel_test_type::TRANSFORMATION |
         aoclfftz_kernel_test_type::DFT_REFERENCE},
     {3, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
         aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
         aoclfftz_kernel_test_type::TRANSFORMATION |
         aoclfftz_kernel_test_type::DFT_REFERENCE},
     {4, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
         aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
         aoclfftz_kernel_test_type::TRANSFORMATION |
         aoclfftz_kernel_test_type::DFT_REFERENCE}
 };
 
 // R2HC-Fused - C Kernels - Double
-// TODO: To be implemented
 aoclfftz_kernel_test_params_t param_double_r2hcf_c_kernels[] =
 {
     {2, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
         aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
         aoclfftz_kernel_test_type::TRANSFORMATION |
         aoclfftz_kernel_test_type::DFT_REFERENCE},
     {3, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
         aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
         aoclfftz_kernel_test_type::TRANSFORMATION |
         aoclfftz_kernel_test_type::DFT_REFERENCE},
     {4, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
         aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
         aoclfftz_kernel_test_type::TRANSFORMATION |
         aoclfftz_kernel_test_type::DFT_REFERENCE}
 };
@@ -614,6 +621,16 @@ TEST_P(AoclfftzKernelTestFloatReal, TEST_FLOAT_REAL_KERNEL)
 }
 
 TEST_P(AoclfftzKernelTestDoubleReal, TEST_DOUBLE_REAL_KERNEL)
+{
+    run_kernel_test(); // run test with normal values
+}
+
+TEST_P(AoclfftzKernelTestFloatFused, TEST_FLOAT_REAL_KERNEL)
+{
+    run_kernel_test(); // run test with normal values
+}
+
+TEST_P(AoclfftzKernelTestDoubleFused, TEST_DOUBLE_REAL_KERNEL)
 {
     run_kernel_test(); // run test with normal values
 }
@@ -775,15 +792,14 @@ INSTANTIATE_TEST_SUITE_P(
     name_generator);
 
 // R2HC-Fused Kernels
-// TODO: Fix the property tests
-// INSTANTIATE_TEST_SUITE_P(
-//     R2HCF_C_KernelTest, AoclfftzKernelTestFloatReal,
-//     ::testing::Combine(::testing::ValuesIn(param_float_r2hcf_c_kernels),
-//                        ::testing::ValuesIn(io_params)),
-//     name_generator);
+INSTANTIATE_TEST_SUITE_P(
+    R2HCF_C_KernelTest, AoclfftzKernelTestFloatFused,
+    ::testing::Combine(::testing::ValuesIn(param_float_r2hcf_c_kernels),
+                       ::testing::ValuesIn(io_params)),
+    name_generator);
 
-// INSTANTIATE_TEST_SUITE_P(
-//     R2HCF_C_KernelTest, AoclfftzKernelTestDoubleReal,
-//     ::testing::Combine(::testing::ValuesIn(param_double_r2hcf_c_kernels),
-//                        ::testing::ValuesIn(io_params)),
-//     name_generator);
+INSTANTIATE_TEST_SUITE_P(
+    R2HCF_C_KernelTest, AoclfftzKernelTestDoubleFused,
+    ::testing::Combine(::testing::ValuesIn(param_double_r2hcf_c_kernels),
+                       ::testing::ValuesIn(io_params)),
+    name_generator);

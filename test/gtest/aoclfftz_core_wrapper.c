@@ -669,11 +669,12 @@ VOID populate_stride_array_wrapper(INTP *strides, INTP stride_val, INTP n,
                           adjust_to_full_complex);
 }
 
-// VOID prepare_fused_kernel_strides_wrapper(INTP *strides, INTP radix,
-//                                           INTP offset)
-// {
-//     prepare_fused_kernel_strides(strides, radix, offset);
-// }
+/* ---------------- fused strides wrapper ---------------- */
+VOID prepare_fused_kernel_strides_wrapper(INTP *strides, INTP radix,
+                                          INTP offset)
+{
+    prepare_fused_kernel_strides(strides, radix, offset);
+}
 
 // Transpose wrappers
 #define TRANSPOSE_WRAPPER_DEFN(kernel_name, TYPE, isa)                         \

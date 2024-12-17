@@ -38,18 +38,35 @@
 
 #include "core/kernels/kernel.h"
 
-static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 0, 6, 8, 0, 0},
-                                                     {0, 2, 6, 8, 0, 0}};
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS][NUM_FFT_DIRS] =
+                                                    {{{0, 0, 6, 8, 0, 0},
+                                                      {0, 2, 6, 8, 0, 0}},
+                                                     {{0, 0, 6, 8, 0, 0},
+                                                      {0, 2, 6, 8, 0, 0}}};
 
 ops_cycles_t get_ops_cnt_r2hc_rfft4c(UINT8 precision, UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
-        return ops_cnt[0];
+        if (direction == FORWARD_FFT_DIR)
+        {
+            return ops_cnt[0][0];
+        }
+        else
+        {
+            return ops_cnt[0][1];
+        }
     }
     else
     {
-        return ops_cnt[1];
+        if (direction == FORWARD_FFT_DIR)
+        {
+            return ops_cnt[1][0];
+        }
+        else
+        {
+            return ops_cnt[1][1];
+        }
     }
 }
 

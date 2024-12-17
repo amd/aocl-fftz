@@ -39,18 +39,35 @@
 #include "core/kernels/kernel.h"
 
 // Forward and backward opscount are identical for float and double
-static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 2, 4, 6, 0, 0},
-                                                     {0, 2, 4, 6, 0, 0}};
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS][NUM_FFT_DIRS] =
+                                                    {{{0, 2, 4, 6, 0, 0},
+                                                      {0, 2, 4, 6, 0, 0}},
+                                                     {{0, 2, 4, 6, 0, 0},
+                                                      {0, 2, 4, 6, 0, 0}}};
 
 ops_cycles_t get_ops_cnt_r2hc_rfft3c(UINT8 precision, UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
-        return ops_cnt[0];
+        if (direction == FORWARD_FFT_DIR)
+        {
+            return ops_cnt[0][0];
+        }
+        else
+        {
+            return ops_cnt[0][1];
+        }
     }
     else
     {
-        return ops_cnt[1];
+        if (direction == FORWARD_FFT_DIR)
+        {
+            return ops_cnt[1][0];
+        }
+        else
+        {
+            return ops_cnt[1][1];
+        }
     }
 }
 
@@ -129,7 +146,7 @@ static VOID r2hc_rfft3c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
     for (cnt = 0; cnt < n; cnt++)
     {
         FLOAT v0, v1, v2;
-        FLOAT t0, t1;
+        FLOAT t0, t1, t2;
 
         // Input point 1: x(0)
         v0 = *in;
@@ -140,9 +157,10 @@ static VOID r2hc_rfft3c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t0 = v0 - v1;
         t1 = CRTM_3_1 * v2;
+        t2 = CRTM_3_2 * v1;
 
         // Output point 1: X(0)
-        *out = v0 + CRTM_3_2 * v1;
+        *out = v0 + t2;
 
         // Output point 2: X(1)
         out[out_strides[1]] = t0 - t1;
@@ -230,7 +248,7 @@ static VOID r2hc_rfft3c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
     for (cnt = 0; cnt < n; cnt++)
     {
         DOUBLE v0, v1, v2;
-        DOUBLE t0, t1;
+        DOUBLE t0, t1, t2;
 
         // Input point 1: x(0)
         v0 = *in;
@@ -241,9 +259,10 @@ static VOID r2hc_rfft3c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t0 = v0 - v1;
         t1 = CRTM_3_1 * v2;
+        t2 = CRTM_3_2 * v1;
 
         // Output point 1: X(0)
-        *out = v0 + CRTM_3_2 * v1;
+        *out = v0 + t2;
 
         // Output point 2: X(1)
         out[out_strides[1]] = t0 - t1;

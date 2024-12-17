@@ -374,9 +374,10 @@ EXPORT_SYM_DYN VOID populate_stride_array_wrapper(INTP *strides,
                       UINT8 compute_half_complex,
                       UINT8 adjust_to_full_complex);
 
-// EXPORT_SYM_DYN VOID prepare_fused_kernel_strides_wrapper(INTP *strides,
-//                                                          INTP radix,
-//                                                          INTP offset);
+/* ---------------- fused strides wrapper ---------------- */
+EXPORT_SYM_DYN VOID prepare_fused_kernel_strides_wrapper(INTP *strides,
+                                                         INTP radix,
+                                                         INTP offset);
 
 /* ---------------- wrapper kernel tables ---------------- */
 
