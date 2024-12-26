@@ -90,6 +90,14 @@ typedef enum
     KERNEL_SUCCESS // Successful operation
 } aoclfftz_kernel_status;
 
+// Kernel types
+typedef enum
+{
+    C2C_KERNEL = 0,
+    R2HC_KERNEL,
+    R2HCF_KERNEL // TODO: Fix naming R2HCF or R2HC_FUSED
+} aoclfftz_kernel_type;
+
 // Holds the kernel level operational complexity in terms approximate cycles
 typedef struct ops_cycles
 {
@@ -112,12 +120,13 @@ typedef struct kernel
     kfft_ kfft;
     k_ops_cnt_ k_ops_cnt;
     UINT32 radix;
+    aoclfftz_kernel_type kernel_type;
     UINT8 sets[NUM_PRECISIONS];
 } kernel_t;
 
 // Function declarations for the common routines
 INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE], INT32 dt,
-                       INT32 dir, INT32 cpu_flags);
+                       INT32 dir, INT32 is_real, INT32 cpu_flags);
 
 // Kernel function declarations for different floating point precision types
 // supported in scalar and vector compute variants

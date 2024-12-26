@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2023, Advanced Micro Devices. All rights reserved.
+ * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -26,26 +26,26 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file strides.h
+/** @file batched_solver.h
  *
- *  @brief Declarations for stride utility functions.
+ *  @brief Interface header file of the Real Batched Solver
  *
- *  This file contains the function declarations related to strided-memcpy,
- *  computing and manipulating stride array values for real, complex and
- *  half-complex data.
+ *  This file contains the data strutures and function declarations that
+ *  setup, execute and destroy the real batched solver.
  *
  *  @author Srirammaswamy Srinivasan
  */
 
-#ifndef STRIDES_H
-#define STRIDES_H
+#ifndef REAL_BATCHED_SOLVER_H
+#define REAL_BATCHED_SOLVER_H
 
-#include "api/types.h"
+#include "core/solvers/solver.h"
 
-VOID populate_stride_array(INTP *strides, INTP stride_val, INTP n,
-                           UINT8 compute_half_complex,
-                           UINT8 adjust_to_full_complex);
-VOID prepare_fused_kernel_strides(INTP *strides, INTP radix, INTP offset);
-VOID rearrange_stride_array(INTP *strides, INTP radix, INTP n);
+// Solver data structure that holds solver object/pointer and its type
+typedef struct real_batched_solver
+{
+    solver_t *real_batched_solver;
+    cost_analysis_t *cost;
+} batched_solver_t;
 
-#endif // STRIDES_H
+#endif // REAL_BATCHED_SOLVER_H

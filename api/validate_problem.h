@@ -66,16 +66,7 @@
 
 static inline INT32 validate_flags(UINT32 flags)
 {
-    INT32 is_real = IS_REAL(flags);
     INT32 is_out_of_order = IS_OUT_OF_ORDER(flags);
-
-    // TODO: Remove validation once support for real FFTs is added
-    if (is_real)
-    {
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "Library does not support "
-                                           "real inputs");
-        return AOCLFFTZ_INVALID_INPUT;
-    }
 
     // TODO: Remove validation once support for out-of-order output is added
     if (is_out_of_order)

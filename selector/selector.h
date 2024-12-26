@@ -108,7 +108,7 @@ typedef struct aoclfftz_selector
         sel_obj->solution->decomp_scheme->vecs[cnt].out_stride =               \
             problem->vecs[cnt].out_stride;                                     \
     }                                                                          \
-    if (FFT_DIR(problem->flags) == FORWARD_FFT_DIR)                            \
+    if (FFT_DIR(problem->flags) == FORWARD_FFT_DIR || IS_REAL(problem->flags)) \
     {                                                                          \
         sel_obj->solution->decomp_scheme->in_real = problem->in;               \
         sel_obj->solution->decomp_scheme->in_imag = problem->in + 1;           \
@@ -137,13 +137,43 @@ typedef struct aoclfftz_selector
     sel_obj->solution->decomp_scheme->flags = problem->flags;                  \
 }
 
+#define PREPARE_AND_SETUP_DFT(sel_obj, kernels_table, ret)                     \
+{                                                                              \
+    sel_obj->execute = register_execute_dft();                                 \
+    if (IS_REAL(sel_obj->solution->decomp_scheme->flags))                      \
+    {                                                                          \
+        aoclfftz_realhelper_t *realhelper;                                     \
+        ALLOC_ALIGN_UNINIT(realhelper, aoclfftz_realhelper_t,                  \
+            sizeof(aoclfftz_realhelper_t));                                    \
+        realhelper->is_direct = 1;                                             \
+                                                                               \
+        ret = setup_rdft_(sel_obj, (kernel_t *)kernels_table, realhelper);     \
+        FREE_ALIGN_ALLOCATED_MEM(realhelper);                                  \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);                  \
+    }                                                                          \
+}
+
 #define COPY_SOLUTION_OBJ(to_sol_obj, from_sol_obj)                            \
 {                                                                              \
     to_sol_obj->solver->solver_type = from_sol_obj->solver->solver_type;       \
     to_sol_obj->solver->execute_solver = from_sol_obj->solver->execute_solver; \
     to_sol_obj->solver->destroy_solver = from_sol_obj->solver->destroy_solver; \
-    to_sol_obj->solver->kernel_r = from_sol_obj->solver->kernel_r;             \
-    to_sol_obj->solver->kernel_m = from_sol_obj->solver->kernel_m;             \
+    to_sol_obj->solver->kernel_c2c = from_sol_obj->solver->kernel_c2c;         \
+    to_sol_obj->solver->kernel_r2hc = from_sol_obj->solver->kernel_r2hc;       \
+    to_sol_obj->solver->kernel_r2hcf = from_sol_obj->solver->kernel_r2hcf;     \
+    to_sol_obj->solver->batches[C2C_KERNEL] =                                  \
+        from_sol_obj->solver->batches[C2C_KERNEL];                             \
+    to_sol_obj->solver->batches[R2HC_KERNEL] =                                 \
+        from_sol_obj->solver->batches[R2HC_KERNEL];                            \
+    to_sol_obj->solver->batches[R2HCF_KERNEL] =                                \
+        from_sol_obj->solver->batches[R2HCF_KERNEL];                           \
+    to_sol_obj->decomp_scheme->vec_rank =                                      \
+        from_sol_obj->decomp_scheme->vec_rank;                                 \
+    to_sol_obj->decomp_scheme->dim_rank =                                      \
+        from_sol_obj->decomp_scheme->dim_rank;                                 \
     to_sol_obj->decomp_scheme->vec_rank =                                      \
         from_sol_obj->decomp_scheme->vec_rank;                                 \
     to_sol_obj->decomp_scheme->dim_rank =                                      \
@@ -268,8 +298,15 @@ typedef struct aoclfftz_selector
         from_sol_obj->solver->execute_solver;                                  \
     to_sol_obj->solver->destroy_solver =                                       \
         from_sol_obj->solver->destroy_solver;                                  \
-    to_sol_obj->solver->kernel_r = from_sol_obj->solver->kernel_r;             \
-    to_sol_obj->solver->kernel_m = from_sol_obj->solver->kernel_m;             \
+    to_sol_obj->solver->kernel_c2c = from_sol_obj->solver->kernel_c2c;         \
+    to_sol_obj->solver->kernel_r2hc = from_sol_obj->solver->kernel_r2hc;       \
+    to_sol_obj->solver->kernel_r2hcf = from_sol_obj->solver->kernel_r2hcf;     \
+    to_sol_obj->solver->batches[C2C_KERNEL] =                                  \
+        from_sol_obj->solver->batches[C2C_KERNEL];                             \
+    to_sol_obj->solver->batches[R2HC_KERNEL] =                                 \
+        from_sol_obj->solver->batches[R2HC_KERNEL];                            \
+    to_sol_obj->solver->batches[R2HCF_KERNEL] =                                \
+        from_sol_obj->solver->batches[R2HCF_KERNEL];                           \
     to_sol_obj->decomp_scheme->in_real =                                       \
         from_sol_obj->decomp_scheme->in_real;                                  \
     to_sol_obj->decomp_scheme->in_imag =                                       \
@@ -303,27 +340,89 @@ typedef struct aoclfftz_selector
 
 #define COPY_STRIDES(to_sol_obj, from_sol_obj)                                 \
 {                                                                              \
-    if (from_sol_obj->strides->in_strides != NULL)                             \
-    {                                                                          \
-        FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides->in_strides);             \
-        ALLOC_ALIGN_UNINIT(to_sol_obj->strides->in_strides, INTP,              \
-                    from_sol_obj->decomp_scheme->dims[0].n *sizeof(INTP));     \
-        memcpy(to_sol_obj->strides->in_strides,                                \
-               from_sol_obj->strides->in_strides,                              \
-               from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));         \
-    }                                                                          \
-    if (from_sol_obj->strides->out_strides != NULL)                            \
-    {                                                                          \
-        FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides->out_strides);            \
-        ALLOC_ALIGN_UNINIT(to_sol_obj->strides->out_strides, INTP,             \
+        if (from_sol_obj->strides->in_strides != NULL)                         \
+        {                                                                      \
+            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides->in_strides);         \
+            ALLOC_ALIGN_UNINIT(to_sol_obj->strides->in_strides, INTP,          \
+                               from_sol_obj->decomp_scheme->dims[0].n *        \
+                                   sizeof(INTP));                              \
+            memcpy(to_sol_obj->strides->in_strides,                            \
+                   from_sol_obj->strides->in_strides,                          \
+                   from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));     \
+        }                                                                      \
+        if (from_sol_obj->strides->out_strides != NULL)                        \
+        {                                                                      \
+            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides->out_strides);        \
+            ALLOC_ALIGN_UNINIT(to_sol_obj->strides->out_strides, INTP,         \
+                               from_sol_obj->decomp_scheme->dims[0].n *        \
+                                   sizeof(INTP));                              \
+            memcpy(to_sol_obj->strides->out_strides,                           \
+                   from_sol_obj->strides->out_strides,                         \
+                   from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));     \
+        }                                                                      \
+        to_sol_obj->strides->v_in_stride = from_sol_obj->strides->v_in_stride; \
+        to_sol_obj->strides->v_out_stride =                                    \
+            from_sol_obj->strides->v_out_stride;                               \
+                                                                               \
+        if (from_sol_obj->solver->batches[R2HC_KERNEL] != 0)                   \
+        {                                                                      \
+            if (from_sol_obj->strides_r2hc->in_strides != NULL)                \
+            {                                                                  \
+                FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_r2hc->in_strides);\
+                ALLOC_ALIGN_UNINIT(to_sol_obj->strides_r2hc->in_strides, INTP, \
+                                   from_sol_obj->decomp_scheme->dims[0].n *    \
+                                       sizeof(INTP));                          \
+                memcpy(to_sol_obj->strides_r2hc->in_strides,                   \
+                    from_sol_obj->strides_r2hc->in_strides,                    \
                     from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));    \
-        memcpy(to_sol_obj->strides->out_strides,                               \
-               from_sol_obj->strides->out_strides,                             \
-               from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));         \
-    }                                                                          \
-    to_sol_obj->strides->v_in_stride = from_sol_obj->strides->v_in_stride;     \
-    to_sol_obj->strides->v_out_stride =                                        \
-        from_sol_obj->strides->v_out_stride;                                   \
+            }                                                                  \
+            if (from_sol_obj->strides_r2hc->out_strides != NULL)               \
+            {                                                                  \
+                FREE_ALIGN_ALLOCATED_MEM(                                      \
+                    to_sol_obj->strides_r2hc->out_strides);                    \
+                ALLOC_ALIGN_UNINIT(to_sol_obj->strides_r2hc->out_strides, INTP,\
+                                   from_sol_obj->decomp_scheme->dims[0].n *    \
+                                       sizeof(INTP));                          \
+                memcpy(to_sol_obj->strides_r2hc->out_strides,                  \
+                    from_sol_obj->strides_r2hc->out_strides,                   \
+                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));    \
+            }                                                                  \
+            to_sol_obj->strides_r2hc->v_in_stride =                            \
+                from_sol_obj->strides_r2hc->v_in_stride;                       \
+            to_sol_obj->strides_r2hc->v_out_stride =                           \
+                from_sol_obj->strides_r2hc->v_out_stride;                      \
+        }                                                                      \
+                                                                               \
+        if (from_sol_obj->solver->batches[R2HCF_KERNEL] != 0)                  \
+        {                                                                      \
+            if (from_sol_obj->strides_r2hcf->in_strides != NULL)               \
+            {                                                                  \
+                FREE_ALIGN_ALLOCATED_MEM(                                      \
+                    to_sol_obj->strides_r2hcf->in_strides);                    \
+                ALLOC_ALIGN_UNINIT(to_sol_obj->strides_r2hcf->in_strides, INTP,\
+                                   from_sol_obj->decomp_scheme->dims[0].n *    \
+                                       2 * sizeof(INTP));                      \
+                memcpy(to_sol_obj->strides_r2hcf->in_strides,                  \
+                    from_sol_obj->strides_r2hcf->in_strides,                   \
+                    from_sol_obj->decomp_scheme->dims[0].n * 2 * sizeof(INTP));\
+            }                                                                  \
+            if (from_sol_obj->strides_r2hcf->out_strides != NULL)              \
+            {                                                                  \
+                FREE_ALIGN_ALLOCATED_MEM(                                      \
+                    to_sol_obj->strides_r2hcf->out_strides);                   \
+                ALLOC_ALIGN_UNINIT(to_sol_obj->strides_r2hcf->out_strides,     \
+                                   INTP,                                       \
+                                   from_sol_obj->decomp_scheme->dims[0].n *    \
+                                       2 * sizeof(INTP));                      \
+                memcpy(to_sol_obj->strides_r2hcf->out_strides,                 \
+                    from_sol_obj->strides_r2hcf->out_strides,                  \
+                    from_sol_obj->decomp_scheme->dims[0].n * 2 * sizeof(INTP));\
+            }                                                                  \
+            to_sol_obj->strides_r2hcf->v_in_stride =                           \
+                from_sol_obj->strides_r2hcf->v_in_stride;                      \
+            to_sol_obj->strides_r2hcf->v_out_stride =                          \
+                from_sol_obj->strides_r2hcf->v_out_stride;                     \
+        }                                                                      \
 }
 
 #define RESET_COST(sol)                                                        \
@@ -357,8 +456,10 @@ typedef struct aoclfftz_selector
 
 // Function declarations
 INT32 register_solvers_kernels(kernel_t[NUM_KERNELS_IN_TABLE], INT32 dt,
-                               INT32 dir, INT32 cpu_flags);
+                               INT32 dir, INT32 is_real, INT32 cpu_flags);
 INT32 setup_dft_(aoclfftz_selector_t *sel, kernel_t *kertab);
+INT32 setup_rdft_(aoclfftz_selector_t *sel, kernel_t *kertab,
+                  aoclfftz_realhelper_t *realhelper);
 INT32 setup_dft_f_(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 setup_dft_d_(aoclfftz_selector_t *sel, kernel_t *kertab);
 VOID *setup_dft_f(aoclfftz_prob_desc_f *problem);
@@ -375,6 +476,10 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_sizeone_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_transpose(aoclfftz_selector_t *sel);
 
+INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+                           aoclfftz_realhelper_t *realhelper);
+INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+                             aoclfftz_realhelper_t *realhelper);
 VOID destroy_handle(VOID *handle);
 VOID fuse_vecs(aoclfftz_solution_t *sol);
 

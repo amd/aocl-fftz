@@ -31,7 +31,7 @@
  *  @brief Wrapper that acts on the batched solver as guided by the selector.
  *
  *  This file contains the implementation of functions that are used to
- *  setup, factorize and evaluate sub-problems and kernels as applicable.
+ *  handle the batches of multi-batched problems.
  *
  *  @author S. Biplab Raut
  */

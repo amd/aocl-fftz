@@ -667,6 +667,7 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     if (handle == NULL)
     {
         status = SETUP_FAILURE;
+        HANDLE_BENCH_STATUS(status);
         goto exit_accuracy_mode;
     }
 
@@ -709,6 +710,7 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     PRINT_SUCCESS("\nTest bench completed on accuracy mode\n\n");
 
 exit_accuracy_mode:
+
     FREE_ALLOCATED_MEM(in_idx_map, is_align);
     FREE_ALLOCATED_MEM(out_idx_map, is_align);
     aoclfftz_destroy(handle);

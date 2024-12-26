@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2023, Advanced Micro Devices. All rights reserved.
+ * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -26,26 +26,26 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file strides.h
+/** @file direct_solver.h
  *
- *  @brief Declarations for stride utility functions.
+ *  @brief Interface header file of the Real Direct Solver
  *
- *  This file contains the function declarations related to strided-memcpy,
- *  computing and manipulating stride array values for real, complex and
- *  half-complex data.
+ *  This file contains the data strutures and function declarations that
+ *  setup, execute and destroy the real direct solver.
  *
  *  @author Srirammaswamy Srinivasan
  */
 
-#ifndef STRIDES_H
-#define STRIDES_H
+#ifndef REAL_DIRECT_SOLVER_H
+#define REAL_DIRECT_SOLVER_H
 
-#include "api/types.h"
+#include "core/solvers/solver.h"
 
-VOID populate_stride_array(INTP *strides, INTP stride_val, INTP n,
-                           UINT8 compute_half_complex,
-                           UINT8 adjust_to_full_complex);
-VOID prepare_fused_kernel_strides(INTP *strides, INTP radix, INTP offset);
-VOID rearrange_stride_array(INTP *strides, INTP radix, INTP n);
+// Solver data structure that holds solver object/pointer and its type
+typedef struct real_direct_solver
+{
+    solver_t *real_direct_solver;
+    cost_analysis_t *cost;
+} direct_solver_t;
 
-#endif // STRIDES_H
+#endif // REAL_DIRECT_SOLVER_H

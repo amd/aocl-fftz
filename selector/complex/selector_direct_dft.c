@@ -31,7 +31,7 @@
  *  @brief Wrapper that acts on the direct solver as guided by the selector.
  *
  *  This file contains the implementation of functions that are used to
- *  setup, factorize and evaluate sub-problems and kernels as applicable.
+ *  setup and evaluate the kernels as applicable.
  *
  *  @author S. Biplab Raut
  */
@@ -82,8 +82,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
             AOCLFFTZ_LOG_FORMATTED(TRACE, logger_mode,
                                    "Evaluating Radix-%td kernel", n);
 #endif
-            cur_sel->solution->solver->kernel_r = kertab[ker_cat].kfft;
-            cur_sel->solution->solver->kernel_m = NULL;
+            cur_sel->solution->solver->kernel_c2c = kertab[ker_cat].kfft;
 
             // call direct solver
             ret = setup_direct_solver(cur_sel->solution,

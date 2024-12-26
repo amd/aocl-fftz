@@ -134,6 +134,7 @@ typedef struct aoclfftz_strides aoclfftz_strides_t;
 typedef struct aoclfftz_twiddle aoclfftz_twiddle_t;
 typedef struct aoclfftz_bluestein aoclfftz_bluestein_t;
 typedef struct aoclfftz_executor aoclfftz_executor_t;
+typedef struct aoclfftz_realhelper aoclfftz_realhelper_t;
 
 // Computational cost analysis of solution of an executed problem/sub-problem
 typedef struct cost_analysis
@@ -161,8 +162,10 @@ typedef struct aoclfftz_generic_solver
     INT32 solver_type;
     dft_solver_ execute_solver;
     VOID (*destroy_solver)(aoclfftz_solution_t *solution);
-    kfft_ kernel_r;
-    kfft_ kernel_m;
+    kfft_ kernel_c2c;
+    kfft_ kernel_r2hc;
+    kfft_ kernel_r2hcf;
+    INTP batches[3];  // for real kernels
 } aoclfftz_generic_solver_t;
 
 // Holds info on the main problem or decomposed sub-problem in current dimension
@@ -271,7 +274,9 @@ typedef struct aoclfftz_solution
 {
     aoclfftz_generic_solver_t *solver;
     aoclfftz_decomp_scheme_t *decomp_scheme;
-    aoclfftz_strides_t *strides;
+    aoclfftz_strides_t *strides;        // for C2C Kernel
+    aoclfftz_strides_t *strides_r2hc;   // for R2HC Kernel
+    aoclfftz_strides_t *strides_r2hcf;  // for R2HC-Fused Kernel
     aoclfftz_twiddle_t *twiddle;
     aoclfftz_bluestein_t *bluestein;
     aoclfftz_transpose_t *transpose;
@@ -279,6 +284,14 @@ typedef struct aoclfftz_solution
     aoclfftz_solution_t *next_sol;
     void *scratch_space;
 } aoclfftz_solution_t;
+
+// Helper data structure to store setup-time information related to real solvers
+// and selectors.
+typedef struct aoclfftz_realhelper
+{
+    UINT32 is_direct;
+    // TODO: Add more fields for other solvers
+} aoclfftz_realhelper_t;
 
 // float LP64
 // DFT data structure that holds all other module objects and is the top-level

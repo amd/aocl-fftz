@@ -138,7 +138,7 @@ static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 #endif
 
-    kfft_ kernel = sol->solver->kernel_r;
+    kfft_ kernel = sol->solver->kernel_c2c;
     aoclfftz_strides_t *strides = sol->strides;
     UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
 

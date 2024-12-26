@@ -30,8 +30,9 @@
  *
  *  @brief Stride utility functions.
  *
- *  This file contains the function definitions related to computing and
- *  manipulating stride array values for real, complex and half-complex data.
+ *  This file contains the function definitions related to strided-memcpy,
+ *  computing and manipulating stride array values for real, complex and
+ *  half-complex data.
  *
  *  @author Srirammaswamy Srinivasan
  */
@@ -111,22 +112,25 @@ VOID populate_stride_array(INTP *strides, INTP stride_val, INTP n,
 }
 
 /**
- * @brief Prepare the strides for R2HCF kernels by fusing strides of two kernels
- *        in the required order
+ * @brief Prepare the strides for R2HCF kernels by fusing strides of standard
+ *        and shifted kernels in interleaved order
+ *
+ * Example:
+ *  input: 0, 3, 6, 9 (which are standard kernel strides)
+ *  radix: 4 (length of the strides for one kernel variant)
+ *  if offset = 2, then the shifted kernel strides will be: 2, 5, 8, 11
+ *  fused strides: 0, 2, 3, 5, 6, 8, 9, 11 (output)
  *
  * @param strides strides data to be reordered for R2HCF kernels
  * @param radix radix of the kernel
- * @param offset distance between the data point of two type of kernels within
- *               one R2HCF kernel
+ * @param offset distance between the data point of standard and shifted kernels
+ *               within one R2HCF kernel
  * @return VOID
- *
- * @example Given -> radix = 3, offset = 2, strides = {0, 4, 8, 0, 0, 0},
- * First half elements of passed strides array are specifically standard DFT
- * input strides. This function will calculate the strides of Shifted DFT
- * elements and will store strides in strides array in appropriate order.
- * As result -> Re-ordered strides for fused kernel of radix-3
- * will be {0, 2, 4, 6, 8, 10}
  */
+
+// TODO: change the order of fused strides from interleaved to split order
+//       i.e. 0, 2, 3, 5, 6, 8, 9, 11 ---> 0, 3, 6, 9, 2, 5, 8, 11
+//       it is required since the fused kernels work in this format
 VOID prepare_fused_kernel_strides(INTP *strides, INTP radix, INTP offset)
 {
     for (INTP i = radix - 1; i >= 0; i--)
@@ -138,29 +142,44 @@ VOID prepare_fused_kernel_strides(INTP *strides, INTP radix, INTP offset)
 }
 
 /**
- * @brief Rearrange the stride array for C2C Kernel in Real Problem
+ * @brief Prepare the stride array for C2C Kernel in Real Problem
  *
  * The stride array of C2C kernel in real problem needs to be rearranged in
- * such a way that the second half of the strides will be reversed.
+ * such a way that the second half of the strides will be reversed to its
+ * complex conjugate point.
  *
- * Example for radix = 6 strides:
- * data buffer size   : |-----------------|
- * generated strides  : 1-----2-----3-----4-----5-----6
- * rearranged strides : 1--6--2--5--3--4--
+ * Example for radix 6 C2C kernel with stride complex stride 4 (i.e. stride in data = 8):
+ *
+ * full complex data    : x1------x2------x3------x4------x5------x6
+ * half complex buffer  : |----------------------|
+ * half complex data    : x1--y6--x2--y4--x3--y3-- (here y refers to complex conjugate of x)
+ *
+ * full complex strides : 0, 8, 16, 24, 32, 40
+ * half complex strides : 0, 8, 16, 20, 12, 4
  *
  * @param strides stride array
  * @param radix radix value i.e. length of the stride array
  * @param n length of the data buffer
+ * @param stride stride value for the given buffer
+ * @param offset distance of the C2C kernel within a group
  * @return VOID
  */
-VOID rearrange_stride_array(INTP *strides, INTP radix, INTP n)
+VOID prepare_real_c2c_kernel_strides(INTP *in, INTP *out, INTP radix,
+                                     INTP n, INTP stride, INTP offset)
 {
-    INTP offset = strides[1];
-    for (INTP i = 2; i < radix; i++)
+    // align stride to complex points
+    stride *= 2;
+    for (INTP i = 0; i < radix; i++)
     {
-        if (strides[i] >= n)
+        INTP a = in[i] / stride + offset;
+        if (a > n / 2)
         {
-            strides[i] = (strides[i] - n) + offset;
+            a = n - a;
+            out[i] = (a - offset) * stride;
+        }
+        else
+        {
+            out[i] = in[i];
         }
     }
 }

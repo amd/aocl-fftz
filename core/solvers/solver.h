@@ -75,7 +75,7 @@ typedef struct solver
     // aoclfftz_solver_type solv_type;
 } solver_t;
 
-INT32 register_solvers(INT32 dt, INT32 cpu_flags);
+INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags);
 dft_solver_ get_solver_fp(aoclfftz_solution_t *sol);
 INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj);
 
@@ -101,6 +101,14 @@ INT32 setup_buffered_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                             kernel_t *kernel);
 #endif
 
+// RealFFT-Solvers
+INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
+                               kernel_t *kernel_c2c, kernel_t *kernel_r2hc,
+                               kernel_t *kernel_r2hcf,
+                               aoclfftz_realhelper_t *realhelper);
+INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
+                                aoclfftz_realhelper_t *realhelper);
+
 dft_solver_ register_execute_direct_solver(VOID);
 dft_solver_ register_execute_ct_solver(VOID);
 dft_solver_ register_execute_batched_solver(VOID);
@@ -108,5 +116,8 @@ dft_solver_ register_execute_bluestein_solver(VOID);
 dft_solver_ register_execute_ndim_solver(VOID);
 dft_solver_ register_execute_sizeone_solver(VOID);
 dft_solver_ register_execute_transpose_solver(VOID);
+
+dft_solver_ register_execute_real_direct_solver(VOID);
+dft_solver_ register_execute_real_batched_solver(VOID);
 
 #endif // AOCLFFTZ_SOLVER_H

@@ -39,8 +39,8 @@
 #ifndef AOCLFFTZ_EXECUTOR_H
 #define AOCLFFTZ_EXECUTOR_H
 
+#include <string.h> /* for memcpy */
 #include "core/solvers/solver.h"
-#include "core/kernels/kernel.h"
 
 // Error return codes related to executor
 // Add more codes at the top

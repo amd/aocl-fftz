@@ -43,7 +43,7 @@
 // trans
 dft_solver_ solvers_table[NUM_SOLVERS] = { 0x0, };
 
-INT32 register_solvers(INT32 dt, INT32 cpu_flags)
+INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
 {
     aoclfftz_solver_type solv_idx;
 
@@ -53,13 +53,22 @@ INT32 register_solvers(INT32 dt, INT32 cpu_flags)
     }
 
     // Add all the available solvers
-    solvers_table[SOLVER_DIRECT] = register_execute_direct_solver();
-    solvers_table[SOLVER_CT] = register_execute_ct_solver();
-    solvers_table[SOLVER_BATCHED] = register_execute_batched_solver();
-    solvers_table[SOLVER_BLUESTEIN] = register_execute_bluestein_solver();
-    solvers_table[SOLVER_NDIM] = register_execute_ndim_solver();
-    solvers_table[SOLVER_SIZEONE] = register_execute_sizeone_solver();
-    solvers_table[SOLVER_TRANSPOSE] = register_execute_transpose_solver();
+    if (is_real)
+    {
+        solvers_table[SOLVER_DIRECT] = register_execute_real_direct_solver();
+        solvers_table[SOLVER_BATCHED] = register_execute_real_batched_solver();
+        // TODO: Add other RealFFT Solvers
+    }
+    else
+    {
+        solvers_table[SOLVER_DIRECT] = register_execute_direct_solver();
+        solvers_table[SOLVER_CT] = register_execute_ct_solver();
+        solvers_table[SOLVER_BATCHED] = register_execute_batched_solver();
+        solvers_table[SOLVER_BLUESTEIN] = register_execute_bluestein_solver();
+        solvers_table[SOLVER_NDIM] = register_execute_ndim_solver();
+        solvers_table[SOLVER_SIZEONE] = register_execute_sizeone_solver();
+        solvers_table[SOLVER_TRANSPOSE] = register_execute_transpose_solver();
+    }
 
     return SOLVER_SUCCESS;
 }
