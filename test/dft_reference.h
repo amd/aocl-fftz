@@ -50,12 +50,12 @@
  * where R = dim rank
  *
  */
-#define UPDATE_ANGLE(angle, in_arr_idx, out_arr_idx, dims, rank, dt_t)         \
+#define UPDATE_ANGLE(angle, in_arr_idx, out_arr_idx, dims, rank)               \
     {                                                                          \
-        dt_t x = 0.0;                                                          \
+        DOUBLE x = 0.0;                                                        \
         for (INTP i = 0; i < rank; i++)                                        \
         {                                                                      \
-            x += (((dt_t)in_arr_idx[i] * out_arr_idx[i]) / dims[i].n);         \
+            x += (((DOUBLE)in_arr_idx[i] * out_arr_idx[i]) /dims[i].n);        \
         }                                                                      \
         angle = angle * x;                                                     \
     }

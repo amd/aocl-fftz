@@ -38,9 +38,12 @@
  *  @author Jeya R
  */
 
-
+#ifdef _WINDOWS
+#include <time.h>
+#endif
 #include "test/dft_reference.h"
 #include "test/utils/compare.h"
+#include "test/utils/bench_utils.h"
 #include "test/utils/size_and_index_mapper.h"
 
 #ifdef ENABLE_DFT_REFERENCE
@@ -159,10 +162,11 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
                INTP *out_idx_map)
 {
-    FLOAT e[T_DATA_STRIDE], mul_buf[T_DATA_STRIDE];
+    // intermediate variables are in DOUBLE  data type to improve accuracy
+    DOUBLE e[T_DATA_STRIDE], mul_buf[T_DATA_STRIDE];
     FLOAT sign = params->dir == BACKWARD ? 1.0 : -1.0;
-    FLOAT *in_d = (FLOAT *)params->in;
-    FLOAT *out_d = (FLOAT *)out_buf;
+    FLOAT *in_f = (FLOAT *)params->in;
+    FLOAT *out_f = (FLOAT *)out_buf;
     INT32 rank = params->dim_rank;
     aoclfftz_dim_t_64_ *dims = params->dims;
     INTP n = calculate_size(params->dims, params->dim_rank);
@@ -187,17 +191,17 @@ VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
             for (INTP i = 0; i < n; i++)
             {
                 INTP in_idx = in_idx_map[b * n + i] * T_DATA_STRIDE;
-                FLOAT angle = sign * BENCH_2_PI;
+                DOUBLE angle = sign * BENCH_2_PI;
                 // angle = angle * [(i0+k0)/n0 + (i0+k0)/n0 + ... + (iR+kR)/nR]
-                UPDATE_ANGLE(angle, in_counter, out_counter, dims, rank, FLOAT);
-                e[0] = cosf(angle);
-                e[1] = sinf(angle);
+                UPDATE_ANGLE(angle, in_counter, out_counter, dims, rank);
+                e[0] = cos(angle);
+                e[1] = sin(angle);
 
-                mul_buf[0] = (in_d[in_idx] * e[0]) - (in_d[in_idx + 1] * e[1]);
-                mul_buf[1] = (in_d[in_idx] * e[1]) + (in_d[in_idx + 1] * e[0]);
+                mul_buf[0] = (in_f[in_idx] * e[0]) - (in_f[in_idx + 1] * e[1]);
+                mul_buf[1] = (in_f[in_idx] * e[1]) + (in_f[in_idx + 1] * e[0]);
 
-                out_d[out_idx] = out_d[out_idx] + mul_buf[0];
-                out_d[out_idx + 1] = out_d[out_idx + 1] + mul_buf[1];
+                out_f[out_idx] = out_f[out_idx] + mul_buf[0];
+                out_f[out_idx + 1] = out_f[out_idx + 1] + mul_buf[1];
 
                 INCREMENT_ND_COUNTER(in_counter, dims, rank);
             }
@@ -255,8 +259,7 @@ VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *out_buf, INTP *in_idx_map,
                 INTP in_idx = in_idx_map[b * n + i] * T_DATA_STRIDE;
                 DOUBLE angle = sign * BENCH_2_PI;
                 // angle = angle * [(i0+k0)/n0 + (i0+k0)/n0 + ... + (iR+kR)/nR]
-                UPDATE_ANGLE(angle, in_counter, out_counter, dims, rank,
-                             DOUBLE);
+                UPDATE_ANGLE(angle, in_counter, out_counter, dims, rank);
                 e[0] = cos(angle);
                 e[1] = sin(angle);
 
