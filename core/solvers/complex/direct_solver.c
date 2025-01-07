@@ -51,7 +51,7 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 #endif
 
     aoclfftz_strides_t *strides = sol->strides;
-    INTP n = sol->decomp_scheme->vecs[0].n;
+    INTP batch = sol->decomp_scheme->vecs[0].n;
     INTP radix = sol->decomp_scheme->dims[0].n;
     ops_cycles_t ops_cycles;
     UINT8 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
@@ -88,11 +88,11 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                      (ops_cycles.move * AMD_ZEN_FP_MOVE_CYCLES) +
                      (ops_cycles.perm * AMD_ZEN_FP_PERM_CYCLES) +
                      (ops_cycles.other * AMD_ZEN_FP_OTHER_CYCLES));
-        if (n >= sets)
+        if (batch >= sets)
         {
             cost->ops = (cost->ops + sets - 1) / sets; // ceil div
         }
-        cost->ops = cost->ops * n;
+        cost->ops = cost->ops * batch;
     }
     else
     {
@@ -107,7 +107,7 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         // execute the direct kernel
         kernel->kfft(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
                      sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
-                     n, strides, direction);
+                     batch, strides, direction);
 
         getTime(endTime);
         cost->time = diffTime(clkTick, startTime, endTime);
@@ -118,11 +118,11 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                      (ops_cycles.move * AMD_ZEN_FP_MOVE_CYCLES) +
                      (ops_cycles.perm * AMD_ZEN_FP_PERM_CYCLES) +
                      (ops_cycles.other * AMD_ZEN_FP_OTHER_CYCLES));
-        if (n >= sets)
+        if (batch >= sets)
         {
             cost->ops = (cost->ops + sets - 1) / sets; // ceil div
         }
-        cost->ops = cost->ops * n;
+        cost->ops = cost->ops * batch;
     }
 
 #ifdef AOCL_ENABLE_LOG
@@ -138,7 +138,7 @@ static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 #endif
 
-    kfft_ kernel = sol->solver->kernel_c2c;
+    kfft_ kernel = sol->solver->kernel_c2c->kfft;
     aoclfftz_strides_t *strides = sol->strides;
     UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
 

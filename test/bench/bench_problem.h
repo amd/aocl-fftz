@@ -84,6 +84,10 @@
             p_desc->pthr_fft.num_threads = 0;                                  \
             p_desc->pthr_fft.dynamic_load_model = 1;                           \
         }                                                                      \
+        if (params->dynamic_load_model >= 1)                                   \
+        {                                                                      \
+            p_desc->pthr_fft.dynamic_load_model = 1;                           \
+        }                                                                      \
         p_desc->cntrl_params.opt_level = params->opt_level;                    \
         p_desc->flags = set_flag(params);                                      \
         p_desc->cntrl_params.opt_off = 0;                                      \

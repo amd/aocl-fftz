@@ -105,7 +105,7 @@ INT32 setup_sizeone_solver(aoclfftz_solution_t *sol)
     sol->decomp_scheme->out_real = out;
 
     UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    sol->solver->kernel_c2c =
+    sol->solver->kernel_c2c->kfft =
         (dt_prec == DT_FLOAT) ? execute_float_kernel : execute_double_kernel;
 
 #ifdef AOCL_ENABLE_LOG
@@ -123,7 +123,7 @@ static INT32 execute_sizeone_solver_internal(aoclfftz_solution_t *sol, INTP vec_
 
     if (vec_rank == 1)
     {
-        kfft_ execute_innermost_batch = sol->solver->kernel_c2c;
+        kfft_ execute_innermost_batch = sol->solver->kernel_c2c->kfft;
         aoclfftz_strides_t *strides = sol->strides;
 
         execute_innermost_batch(

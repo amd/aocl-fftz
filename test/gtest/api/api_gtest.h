@@ -86,8 +86,8 @@ public:
     INT32 optOff;
     INT32 optLevel;
     UINT32 flags;
-    INT32 num_threads;
-    INT32 dynamic_load_model;
+    UINT32 num_threads;
+    UINT32 dynamic_load_model;
     ProblemType *problem;
     VOID *handle;
     UINTP input_size;

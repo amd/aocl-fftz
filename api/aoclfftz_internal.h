@@ -43,6 +43,9 @@
 #ifndef AOCLFFTZ_INTERNAL_H
 #define AOCLFFTZ_INTERNAL_H
 
+#ifdef MULTI_THREADING
+#include <omp.h>
+#endif
 #include "types.h"
 #include "aoclfftz.h"
 
@@ -150,6 +153,26 @@ typedef VOID (*kfft_) (VOID *in_real, VOID *in_imag,
                        INTP n,
                        aoclfftz_strides_t *strides, UINT8 flag);
 
+// Kernel information data structure holds the kernel function pointer and the
+// number of sets it can process in parallel based on the kernel type(C/SIMD).
+// This set information will be used by MT direct solver to find the kernel type
+// (C/AVX128/AVX256/AVX512) at runtime, adjust the number of batch iteration and
+// assign number of threads accordingly.
+typedef struct kernel_info
+{
+    kfft_ kfft;
+    UINT8 sets;
+} kernel_info_t;
+
+// Thread information structure holds the threading related information for the
+// solution of given problem
+typedef struct thread_info
+{
+    aoclfftz_smp_pfft_t *pthr_fft; // Thread information from problem descriptor
+    UINT32 avl_threads; // Available number of threads at any point of execution
+    UINT32 n_threads; // Number of threads assigned to a particular solver
+} thread_info_t;
+
 // Solver execute template function pointer
 typedef INT32 (*dft_solver_)(aoclfftz_solution_t *solution);
 
@@ -163,9 +186,9 @@ typedef struct aoclfftz_generic_solver
     INT32 solver_type;
     dft_solver_ execute_solver;
     VOID (*destroy_solver)(aoclfftz_solution_t *solution);
-    kfft_ kernel_c2c;
-    kfft_ kernel_r2hc;
-    kfft_ kernel_r2hcf;
+    kernel_info_t *kernel_c2c;
+    kernel_info_t *kernel_r2hc;
+    kernel_info_t *kernel_r2hcf;
     INTP batches[3];  // for real kernels
 } aoclfftz_generic_solver_t;
 
@@ -183,7 +206,7 @@ typedef struct aoclfftz_decomp_scheme
     VOID *out_real;
     VOID *out_imag;
     aoclfftz_cntrl_params_t *cntrl_params;
-    aoclfftz_smp_pfft_t *pthr_fft;
+    thread_info_t *thread_info;
     // Application side flag bits
     //   bit 0: (0) in-place / (1) out-of-place
     //   bit 1: (0) in-order / (1) out-of-order

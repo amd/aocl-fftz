@@ -276,14 +276,15 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                        "running bench with default threads (1)\n");
                 bench_params->num_threads = 1;
             }
-            // TODO: Remove this after adding multi-threaded FFT support
+#ifndef MULTI_THREADING
             if (bench_params->num_threads > 1)
             {
                 printf(
-                    "WARNING: Multi-threaded FFT is currently not supported, "
-                    "running bench with single-threaded FFT (1)\n");
+                    "WARNING: Multi-threaded FFT is not enabled, "
+                    "running bench with single-threaded FFT\n");
                 bench_params->num_threads = 1;
             }
+#endif
             break;
         case 'o':
             VALIDATE_AND_GET_INT(optarg, str_buff, bench_params->opt_level, ret,
@@ -294,10 +295,26 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                                  ret, 0);
             break;
         case 302:
-            // TODO: Modify this after adding support for dynamic-load-model
-            printf("WARNING: dynamic-load-model option is currently not "
-                   "supported, "
-                   "running bench with dynamic-load-model disabled\n");
+            if (atoi(optarg) != 0)
+            {
+                if (atoi(optarg) != 1)
+                {
+                    printf("WARNING: The provided value for dynamic_load_model "
+                           "is not 1. Running the bench with dynamic_load_model"
+                           "set to 1.\n");
+                }
+                bench_params->dynamic_load_model = 1;
+            }
+
+#ifndef MULTI_THREADING
+            if (bench_params->dynamic_load_model != 0)
+            {
+                printf(
+                    "WARNING: Multi-threaded FFT is not enabled, "
+                    "running bench with single-threaded FFT\n");
+                bench_params->dynamic_load_model = 0;
+            }
+#endif
             break;
         case 303:
             if (atoi(optarg) != 0)
@@ -959,8 +976,9 @@ VOID show_help_menu(VOID)
         "(inclusive) [default: 1E-10 for double, 1E-3 for float]\n"
         "-n, --num-threads        number of CPU threads for multi-threading "
         "FFT [default: 1]\n"
-        "--dynamic-load-model     use it to allow the library to determine how "
-        "many threads to be used (this option takes no value argument)\n"
+        "--dynamic-load-model     '1' to allow the library to determine how "
+        "many threads to be used, '0' to use value given in --num-threads as "
+        "maximum number of threads [default: 0]\n"
         "-o, --opt-level          optimization levels used for benchmarking\n"
         "                           -1 = no optimization\n"
         "                            0 = non-SIMD algorithmic optimization\n"

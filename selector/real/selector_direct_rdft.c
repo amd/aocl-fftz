@@ -99,9 +99,12 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
             kernel_c2c = &kertab[ker_idx - 1];
             kernel_r2hc = &kertab[ker_idx];
             kernel_r2hcf = &kertab[ker_idx + 1];
-            cur_sel->solution->solver->kernel_c2c = kertab[ker_idx - 1].kfft;
-            cur_sel->solution->solver->kernel_r2hc = kertab[ker_idx].kfft;
-            cur_sel->solution->solver->kernel_r2hcf = kertab[ker_idx + 1].kfft;
+            cur_sel->solution->solver->kernel_c2c->kfft =
+                    kertab[ker_idx - 1].kfft;
+            cur_sel->solution->solver->kernel_r2hc->kfft =
+                    kertab[ker_idx].kfft;
+            cur_sel->solution->solver->kernel_r2hcf->kfft =
+                    kertab[ker_idx + 1].kfft;
 
             // call direct solver
             ret = setup_real_direct_solver(

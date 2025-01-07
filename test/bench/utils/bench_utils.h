@@ -244,6 +244,9 @@
         AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
                                "num_threads   : %d", params->num_threads);     \
         AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
+                               "dynamic_load_model : %s",                      \
+                               params->dynamic_load_model ? "TRUE" : "FALSE"); \
+        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
                                "selector_time : %s",                           \
                                params->selector_time ? "TRUE" : "FALSE");      \
         AOCLFFTZ_LOG_FORMATTED(                                                \

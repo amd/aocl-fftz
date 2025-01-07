@@ -171,8 +171,8 @@ typedef struct aoclfftz_bench_params
     INT32 opt_level;
     DOUBLE tolerance;
     INT32 logger_mode;
-    INT32 num_threads;
-    INT32 dynamic_load_model;
+    UINT32 num_threads;
+    UINT32 dynamic_load_model;
     UCHAR selector_time;
     DOUBLE min_bench_time;
     INT32 measure_stats;

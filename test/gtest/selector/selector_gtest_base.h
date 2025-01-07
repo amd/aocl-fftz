@@ -493,8 +493,10 @@ class AoclfftzSelectorTestBase
         sol->decomp_scheme->cntrl_params->opt_off = opt_level == -1 ? 1 : 0;
         sol->decomp_scheme->cntrl_params->logger_mode = 0;
         sol->decomp_scheme->cntrl_params->measure_stats = 0;
-        sol->decomp_scheme->pthr_fft->num_threads = 1;
-        sol->decomp_scheme->pthr_fft->dynamic_load_model = 0;
+        sol->decomp_scheme->thread_info->pthr_fft->num_threads = 1;
+        sol->decomp_scheme->thread_info->pthr_fft->dynamic_load_model = 0;
+        sol->decomp_scheme->thread_info->avl_threads = 1;
+        sol->decomp_scheme->thread_info->n_threads = 1;
         sol->solver->solver_type = solver_type;
         sol->next_sol = NULL;
         if (typeid(dt_t) == typeid(FLOAT))
@@ -917,8 +919,10 @@ class AoclfftzSelectorTestBase
         // following values from decomp_scheme are skipped from comparison
         // 1. cntrl_params->logger_mode
         // 2. cntrl_params->measure_stat
-        // 3. pthr_fft->num_threads
-        // 4. pthr_fftdynamic_load_model
+        // 3. thread_info->pthr_fft->num_threads
+        // 4. thread_info->pthr_fft->dynamic_load_model
+        // 5. thread_info->avl_threads
+        // 6. thread_info->n_threads
 
         // ********** twiddle **********
         // either both should be NULL or both should have values

@@ -70,6 +70,33 @@ typedef struct aoclfftz_selector
 } aoclfftz_selector_t;
 
 // macro functions
+#ifdef MULTI_THREADING
+// if dynamic_load_model is set we are allowing the library to take all the
+// available threads in the system and use them efficiently
+#define INIT_THREADS(sel_obj, problem)                                         \
+{                                                                              \
+    if (problem->pthr_fft.dynamic_load_model)                                  \
+    {                                                                          \
+        UINT32 procs = omp_get_num_procs();                                    \
+        sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads = \
+            procs;                                                             \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads = \
+            problem->pthr_fft.num_threads;                                     \
+    }                                                                          \
+    /*Enable nested threading in openmp to support multi-level threads*/       \
+    omp_set_nested(1);                                                         \
+}
+#else
+#define INIT_THREADS(sel_obj, problem)                                         \
+{                                                                              \
+    sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads =     \
+        problem->pthr_fft.num_threads;                                         \
+}
+#endif
+
 #define INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank)                         \
 {                                                                              \
     sel_obj->solution->decomp_scheme->vec_rank = problem->vec_rank;            \
@@ -130,10 +157,12 @@ typedef struct aoclfftz_selector
         problem->cntrl_params.logger_mode;                                     \
     sel_obj->solution->decomp_scheme->cntrl_params->measure_stats =            \
         problem->cntrl_params.measure_stats;                                   \
-    sel_obj->solution->decomp_scheme->pthr_fft->num_threads =                  \
-        problem->pthr_fft.num_threads;                                         \
-    sel_obj->solution->decomp_scheme->pthr_fft->dynamic_load_model =           \
-        problem->pthr_fft.dynamic_load_model;                                  \
+    sel_obj->solution->decomp_scheme->thread_info->pthr_fft->                  \
+        dynamic_load_model = problem->pthr_fft.dynamic_load_model;             \
+    INIT_THREADS(sel_obj, problem)                                             \
+    sel_obj->solution->decomp_scheme->thread_info->avl_threads =               \
+    sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads;      \
+    sel_obj->solution->decomp_scheme->thread_info->n_threads = 1;              \
     sel_obj->solution->decomp_scheme->flags = problem->flags;                  \
 }
 
@@ -215,9 +244,18 @@ typedef struct aoclfftz_selector
     to_sol_obj->solver->solver_type = from_sol_obj->solver->solver_type;       \
     to_sol_obj->solver->execute_solver = from_sol_obj->solver->execute_solver; \
     to_sol_obj->solver->destroy_solver = from_sol_obj->solver->destroy_solver; \
-    to_sol_obj->solver->kernel_c2c = from_sol_obj->solver->kernel_c2c;         \
-    to_sol_obj->solver->kernel_r2hc = from_sol_obj->solver->kernel_r2hc;       \
-    to_sol_obj->solver->kernel_r2hcf = from_sol_obj->solver->kernel_r2hcf;     \
+    to_sol_obj->solver->kernel_c2c->kfft =                                     \
+        from_sol_obj->solver->kernel_c2c->kfft;                                \
+    to_sol_obj->solver->kernel_c2c->sets =                                     \
+        from_sol_obj->solver->kernel_c2c->sets;                                \
+    to_sol_obj->solver->kernel_r2hc->kfft =                                    \
+        from_sol_obj->solver->kernel_r2hc->kfft;                               \
+    to_sol_obj->solver->kernel_r2hc->sets =                                    \
+        from_sol_obj->solver->kernel_r2hc->sets;                               \
+    to_sol_obj->solver->kernel_r2hcf->kfft =                                   \
+        from_sol_obj->solver->kernel_r2hcf->kfft;                              \
+    to_sol_obj->solver->kernel_r2hcf->sets =                                   \
+        from_sol_obj->solver->kernel_r2hcf->sets;                              \
     to_sol_obj->solver->batches[C2C_KERNEL] =                                  \
         from_sol_obj->solver->batches[C2C_KERNEL];                             \
     to_sol_obj->solver->batches[R2HC_KERNEL] =                                 \
@@ -261,10 +299,14 @@ typedef struct aoclfftz_selector
         from_sol_obj->decomp_scheme->cntrl_params->logger_mode;                \
     to_sol_obj->decomp_scheme->cntrl_params->measure_stats =                   \
         from_sol_obj->decomp_scheme->cntrl_params->measure_stats;              \
-    to_sol_obj->decomp_scheme->pthr_fft->num_threads =                         \
-        from_sol_obj->decomp_scheme->pthr_fft->num_threads;                    \
-    to_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model =                  \
-        from_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model;             \
+    to_sol_obj->decomp_scheme->thread_info->pthr_fft->num_threads =            \
+        from_sol_obj->decomp_scheme->thread_info->pthr_fft->num_threads;       \
+    to_sol_obj->decomp_scheme->thread_info->pthr_fft->dynamic_load_model =     \
+        from_sol_obj->decomp_scheme->thread_info->pthr_fft->dynamic_load_model;\
+    to_sol_obj->decomp_scheme->thread_info->avl_threads =                      \
+        from_sol_obj->decomp_scheme->thread_info->avl_threads;                 \
+    to_sol_obj->decomp_scheme->thread_info->n_threads =                        \
+        from_sol_obj->decomp_scheme->thread_info->n_threads;                   \
     to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;     \
     to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;                       \
     to_sol_obj->bluestein->B = from_sol_obj->bluestein->B;                     \
@@ -351,9 +393,18 @@ typedef struct aoclfftz_selector
         from_sol_obj->solver->execute_solver;                                  \
     to_sol_obj->solver->destroy_solver =                                       \
         from_sol_obj->solver->destroy_solver;                                  \
-    to_sol_obj->solver->kernel_c2c = from_sol_obj->solver->kernel_c2c;         \
-    to_sol_obj->solver->kernel_r2hc = from_sol_obj->solver->kernel_r2hc;       \
-    to_sol_obj->solver->kernel_r2hcf = from_sol_obj->solver->kernel_r2hcf;     \
+    to_sol_obj->solver->kernel_c2c->kfft =                                     \
+        from_sol_obj->solver->kernel_c2c->kfft;                                \
+    to_sol_obj->solver->kernel_c2c->sets =                                     \
+        from_sol_obj->solver->kernel_c2c->sets;                                \
+    to_sol_obj->solver->kernel_r2hc->kfft =                                    \
+        from_sol_obj->solver->kernel_r2hc->kfft;                               \
+    to_sol_obj->solver->kernel_r2hc->sets =                                    \
+        from_sol_obj->solver->kernel_r2hc->sets;                               \
+    to_sol_obj->solver->kernel_r2hcf->kfft =                                   \
+        from_sol_obj->solver->kernel_r2hcf->kfft;                              \
+    to_sol_obj->solver->kernel_r2hcf->sets =                                   \
+        from_sol_obj->solver->kernel_r2hcf->sets;                              \
     to_sol_obj->solver->batches[C2C_KERNEL] =                                  \
         from_sol_obj->solver->batches[C2C_KERNEL];                             \
     to_sol_obj->solver->batches[R2HC_KERNEL] =                                 \
@@ -376,10 +427,14 @@ typedef struct aoclfftz_selector
         from_sol_obj->decomp_scheme->cntrl_params->logger_mode;                \
     to_sol_obj->decomp_scheme->cntrl_params->measure_stats =                   \
         from_sol_obj->decomp_scheme->cntrl_params->measure_stats;              \
-    to_sol_obj->decomp_scheme->pthr_fft->num_threads =                         \
-        from_sol_obj->decomp_scheme->pthr_fft->num_threads;                    \
-    to_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model =                  \
-        from_sol_obj->decomp_scheme->pthr_fft->dynamic_load_model;             \
+    to_sol_obj->decomp_scheme->thread_info->pthr_fft->num_threads =            \
+        from_sol_obj->decomp_scheme->thread_info->pthr_fft->num_threads;       \
+    to_sol_obj->decomp_scheme->thread_info->pthr_fft->dynamic_load_model =     \
+        from_sol_obj->decomp_scheme->thread_info->pthr_fft->dynamic_load_model;\
+    to_sol_obj->decomp_scheme->thread_info->avl_threads =                      \
+        from_sol_obj->decomp_scheme->thread_info->avl_threads;                 \
+    to_sol_obj->decomp_scheme->thread_info->n_threads =                        \
+        from_sol_obj->decomp_scheme->thread_info->n_threads;                   \
     to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;     \
     to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;                       \
     to_sol_obj->bluestein->B = from_sol_obj->bluestein->B;                     \

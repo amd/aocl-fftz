@@ -52,11 +52,14 @@ aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank)
                            vec_rank * sizeof(aoclfftz_dim_t_64_));
         ALLOC_ALIGN_UNINIT(decomp_scheme->cntrl_params, aoclfftz_cntrl_params_t,
                            sizeof(aoclfftz_cntrl_params_t));
-        ALLOC_ALIGN_UNINIT(decomp_scheme->pthr_fft, aoclfftz_smp_pfft_t,
-                           sizeof(aoclfftz_smp_pfft_t));
+        ALLOC_ALIGN_UNINIT(decomp_scheme->thread_info, thread_info_t,
+                           sizeof(thread_info_t));
+        ALLOC_ALIGN_UNINIT(decomp_scheme->thread_info->pthr_fft,
+                           aoclfftz_smp_pfft_t, sizeof(aoclfftz_smp_pfft_t));
         if (decomp_scheme->dims == NULL || decomp_scheme->vecs == NULL ||
             decomp_scheme->cntrl_params == NULL ||
-            decomp_scheme->pthr_fft == NULL)
+            decomp_scheme->thread_info == NULL ||
+            decomp_scheme->thread_info->pthr_fft == NULL)
         {
             destroy_decomp_scheme(decomp_scheme);
             return NULL;
@@ -78,10 +81,19 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
     {
         ALLOC_ALIGN_UNINIT(sol->solver, aoclfftz_generic_solver_t,
                            sizeof(aoclfftz_generic_solver_t));
+        ALLOC_ALIGN_UNINIT(sol->solver->kernel_c2c, kernel_info_t,
+                           sizeof(kernel_info_t));
+        ALLOC_ALIGN_UNINIT(sol->solver->kernel_r2hc, kernel_info_t,
+                           sizeof(kernel_info_t));
+        ALLOC_ALIGN_UNINIT(sol->solver->kernel_r2hcf, kernel_info_t,
+                           sizeof(kernel_info_t));
         sol->solver->execute_solver = NULL;
-        sol->solver->kernel_c2c = NULL;
-        sol->solver->kernel_r2hc = NULL;
-        sol->solver->kernel_r2hcf = NULL;
+        sol->solver->kernel_c2c->kfft = NULL;
+        sol->solver->kernel_r2hc->kfft = NULL;
+        sol->solver->kernel_r2hcf->kfft = NULL;
+        sol->solver->kernel_c2c->sets = 1;
+        sol->solver->kernel_r2hc->sets = 1;
+        sol->solver->kernel_r2hcf->sets = 1;
         sol->solver->destroy_solver = NULL;
         sol->decomp_scheme = alloc_decomp_scheme(vec_rank, dim_rank);
         ALLOC_ALIGN_INIT(sol->strides, aoclfftz_strides_t,
@@ -245,7 +257,8 @@ VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme)
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->dims);
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->vecs);
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->cntrl_params);
-        FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->pthr_fft);
+        FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->thread_info->pthr_fft);
+        FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->thread_info);
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme);
     }
     return;
@@ -272,6 +285,9 @@ VOID destroy_solution(aoclfftz_solution_t *sol)
         cur_sol = sol;
         sol = sol->next_sol;
         INT32 solver_type = cur_sol->solver->solver_type;
+        FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver->kernel_c2c);
+        FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver->kernel_r2hc);
+        FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver->kernel_r2hcf);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver);
         destroy_decomp_scheme(cur_sol->decomp_scheme);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides->in_strides);

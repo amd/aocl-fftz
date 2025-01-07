@@ -74,6 +74,7 @@ option(BUILD_DOC "Build documentation for aocl-fftz (Disabled by default)" OFF)
 option(ENABLE_STRICT_WARNINGS "Enable compiler flags to treat all warnings as errors (Enabled by default)" ON)
 option(AOCL_ENABLE_LOG "Enable logging support within the library (Disabled by default)" OFF)
 option(FUZZTEST "Enable Compilation of fuzz test with fuzzing mode (only on Clang/Debug, Disabled by default)" OFF)
+option(ENABLE_MULTI_THREADING "Compile with multi-threading support using OpenMP (Disabled by default)" OFF)
 
 #list source files to be compiled for the library
 set(CORE_PATH core)
@@ -181,6 +182,20 @@ add_compile_definitions(CCompiler="${CMAKE_C_COMPILER}")
 add_compile_definitions(CXXCompiler="${CMAKE_CXX_COMPILER}")
 add_compile_definitions(CFLAGS_SET2="${CMAKE_C_FLAGS}")
 
+if(ENABLE_MULTI_THREADING)
+    file(GLOB MT_SRC_FILES CONFIGURE_DEPENDS
+                        ${CORE_PATH}/solvers/complex/multithread/*.c)
+    find_package(OpenMP)
+    if(OpenMP_C_FOUND)
+        message(STATUS "OpenMP found")
+        add_compile_definitions(MULTI_THREADING)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    else()
+        message(FATAL_ERROR "OpenMP Missing! Please install OpenMP to enable mult-threading")
+    endif()
+    list(APPEND CORE_SRC_FILES ${MT_SRC_FILES})
+endif()
+
 if(ENABLE_MPI)
     add_compile_definitions(ENABLE_MPI_FFTZ="1")
 endif()
@@ -272,6 +287,7 @@ message(STATUS VALGRIND : ${VALGRIND})
 message(STATUS CODE COVERAGE : ${CODE_COVERAGE})
 message(STATUS AOCL_ENABLE_LOG : ${AOCL_ENABLE_LOG})
 message(STATUS FUZZTEST : ${FUZZTEST})
+message(STATUS MULTI-THREADING : ${ENABLE_MULTI_THREADING})
 
 #setup CTest for GoogleTest and test bench
 if(AOCL_TEST_COVERAGE)

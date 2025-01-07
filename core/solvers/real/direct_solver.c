@@ -70,7 +70,7 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 #endif
 
-    INTP n = sol->decomp_scheme->vecs[0].n;
+    INTP batch = sol->decomp_scheme->vecs[0].n;
     INTP radix = sol->decomp_scheme->dims[0].n;
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
@@ -134,7 +134,7 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
             if (is_first_stage)
             {
                 in_stride = p_last * org_in_stride;
-                out_stride = n;
+                out_stride = batch;
                 v_in_stride = p * org_in_stride;
                 v_out_stride = p_last;
                 c2c_in_stride = org_in_stride;
@@ -142,14 +142,14 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
             else if (is_last_stage)
             {
                 in_stride = p_last;
-                out_stride = n * org_out_stride;
+                out_stride = batch * org_out_stride;
                 v_in_stride = p;
                 v_out_stride = p_last * org_out_stride;
             }
             else
             {
                 in_stride = p_last;
-                out_stride = n;
+                out_stride = batch;
                 v_in_stride = p;
                 v_out_stride = p_last;
             }
@@ -158,14 +158,14 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         {
             if (is_first_stage)
             {
-                in_stride = n * org_in_stride;
+                in_stride = batch * org_in_stride;
                 out_stride = p_last;
                 v_in_stride = p_last * org_in_stride;
                 v_out_stride = p;
             }
             else if (is_last_stage)
             {
-                in_stride = n;
+                in_stride = batch;
                 out_stride = p_last * org_out_stride;
                 v_in_stride = p_last;
                 v_out_stride = p * org_out_stride;
@@ -173,7 +173,7 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
             }
             else
             {
-                in_stride = n;
+                in_stride = batch;
                 out_stride = p_last;
                 v_in_stride = p_last;
                 v_out_stride = p;
@@ -183,7 +183,7 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     else // direct problem
     {
         sol->solver->batches[C2C_KERNEL] = 0;
-        sol->solver->batches[R2HC_KERNEL] = n;
+        sol->solver->batches[R2HC_KERNEL] = batch;
         sol->solver->batches[R2HCF_KERNEL] = 0;
         in_stride = org_in_stride;
         out_stride = org_out_stride;
@@ -454,9 +454,9 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
     UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
     UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
 
-    kfft_ kernel_c2c = sol->solver->kernel_c2c;
-    kfft_ kernel_r2hc = sol->solver->kernel_r2hc;
-    kfft_ kernel_r2hcf = sol->solver->kernel_r2hcf;
+    kfft_ kernel_c2c = sol->solver->kernel_c2c->kfft;
+    kfft_ kernel_r2hc = sol->solver->kernel_r2hc->kfft;
+    kfft_ kernel_r2hcf = sol->solver->kernel_r2hcf->kfft;
 
     VOID *in = sol->decomp_scheme->in_real;
     VOID *out = sol->decomp_scheme->out_real;

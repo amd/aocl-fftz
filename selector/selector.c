@@ -135,6 +135,7 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
     aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
     INT32 ret = SELECTOR_FAILURE;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    UINT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
     INT32 is_FFT_ker_supported =
             check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n,
                                      kertab);
@@ -279,7 +280,14 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
     else if (level2_cond & 0x1)
     {
-        solver_obj->solver_type = SOLVER_DIRECT;
+        if (avl_threads <= 1)
+        {
+            solver_obj->solver_type = SOLVER_DIRECT;
+        }
+        else
+        {
+            solver_obj->solver_type = SOLVER_MT_DIRECT;
+        }
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
             return SELECTOR_FAILURE;

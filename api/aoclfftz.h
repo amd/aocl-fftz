@@ -122,8 +122,8 @@ typedef struct aoclfftz_dim_64_
 */
 typedef struct aoclfftz_smp_pfft
 {
-    INT32 num_threads;        /**< Number of max threads to granted for use */
-    INT32 dynamic_load_model; /**< Allow the library to determine how many threads to be used */
+    UINT32 num_threads;        /**< Number of max threads to granted for use */
+    UINT32 dynamic_load_model; /**< Allow the library to determine how many threads to be used */
 } aoclfftz_smp_pfft_t;
 
 /**  @ingroup group_types
