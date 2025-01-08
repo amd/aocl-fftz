@@ -189,7 +189,9 @@ set(SRC_FILES
         ${CORE_SRC_FILES}
         ${SELECTOR_SRC_FILES}
     )
-set(BENCH_PATH test)
+set(BENCH_DIR test/bench)
+set(TEST_UTILS_DIR test/utils)
+set(BENCH_UTILS_DIR test/bench/utils)
 
 #set library dependencies
 if(UNIX)
@@ -255,9 +257,9 @@ message(STATUS AOCL_ENABLE_LOG : ${AOCL_ENABLE_LOG})
 if(AOCL_TEST_COVERAGE)
     # enabling ctest
     enable_testing()
-    add_subdirectory(gtest)
-    add_subdirectory(test)
-    set(GTEST_DIR gtest)
+    set(GTEST_DIR test/gtest)
+    add_subdirectory(${GTEST_DIR})
+    add_subdirectory(${BENCH_DIR})
 endif()
 
 # compile kernel files with only the relevant simd flags.
@@ -317,7 +319,7 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${DEST_LIB_PATH}")
 
 #add test bench executable
 set(exe_name aocl_fftz_bench)
-file(GLOB BENCH_SRC_FILES ${BENCH_PATH}/*.c ${BENCH_PATH}/*.h ${BENCH_PATH}/utils/*.c ${BENCH_PATH}/utils/*.h)
+file(GLOB BENCH_SRC_FILES ${BENCH_DIR}/*.c ${BENCH_DIR}/*.h ${TEST_UTILS_DIR}/dims_vecs_helper.* ${BENCH_UTILS_DIR}/*.c ${BENCH_UTILS_DIR}/*.h)
 if(WIN32)
     message(STATUS "C Compiler flags used for this windows build are: ${CMAKE_C_FLAGS}")
     message(STATUS "C++ Compiler flags used for this windows build are: ${CMAKE_CXX_FLAGS}")
@@ -341,7 +343,7 @@ if((NOT BUILD_STATIC_LIBS) AND WIN32 AND AOCL_TEST_COVERAGE)
         TARGET ${lib_name}
         POST_BUILD
         COMMENT "Copy DLL to GTest executables path"
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${lib_name}> ${CMAKE_BINARY_DIR}/gtest
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${lib_name}> ${CMAKE_BINARY_DIR}/${GTEST_DIR}
         )
 endif()
 
