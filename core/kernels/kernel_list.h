@@ -113,6 +113,7 @@ kernel_fp_list_t kernels_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_fft10avx256, get_ops_cnt_fft10avx256, 10}, // radix-10
     {register_kernel_fft11avx256, get_ops_cnt_fft11avx256, 11}, // radix-11
     {register_kernel_fft12avx256, get_ops_cnt_fft12avx256, 12}, // radix-12
+    {register_kernel_fft13avx256, get_ops_cnt_fft13avx256, 13}, // radix-13
     {register_kernel_fft14avx256, get_ops_cnt_fft14avx256, 14}, // radix-14
     {register_kernel_fft15avx256, get_ops_cnt_fft15avx256, 15}, // radix-15
     {register_kernel_fft16avx256, get_ops_cnt_fft16avx256, 16}, // radix-16

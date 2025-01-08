@@ -210,6 +210,10 @@ ops_cycles_t get_ops_cnt_fft12avx256_wrapper(INT32 precision)
 {
     return get_ops_cnt_fft12avx256(precision);
 }
+ops_cycles_t get_ops_cnt_fft13avx256_wrapper(INT32 precision)
+{
+    return get_ops_cnt_fft13avx256(precision);
+}
 ops_cycles_t get_ops_cnt_fft14avx256_wrapper(INT32 precision)
 {
     return get_ops_cnt_fft14avx256(precision);
@@ -453,6 +457,10 @@ kfft_ register_kernel_fft11avx256_wrapper(INT32 precision)
 kfft_ register_kernel_fft12avx256_wrapper(INT32 precision)
 {
     return register_kernel_fft12avx256(precision);
+}
+kfft_ register_kernel_fft13avx256_wrapper(INT32 precision)
+{
+    return register_kernel_fft13avx256(precision);
 }
 kfft_ register_kernel_fft14avx256_wrapper(INT32 precision)
 {

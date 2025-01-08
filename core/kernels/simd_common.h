@@ -390,6 +390,13 @@ static const union zero_conj_256
             _conj_256_d = {{ 0x00000000, 0x00000000, 0x00000000, 0x80000000,
                              0x00000000, 0x00000000, 0x00000000, 0x80000000 }};
 
+static const union zero_conj_256
+        _neg_zero_256_f = {{ 0x80000000, 0x80000000, 0x80000000, 0x80000000,
+                             0x80000000, 0x80000000, 0x80000000, 0x80000000 }};
+static const union zero_conj_256
+        _neg_zero_256_d = {{ 0x00000000, 0x80000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x80000000, 0x00000000, 0x80000000 }};
+
 #if defined (__unix__) || (defined (_WINDOWS) && defined (__AVX512F__))
 
 union zero_conj_512
