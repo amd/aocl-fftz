@@ -662,6 +662,38 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_c_kernels[] =
         aoclfftz_kernel_test_type::DFT_REFERENCE},
 };
 
+#ifdef ENABLE_AVX128
+// R2HC - AVX128 Kernels - Double
+aoclfftz_kernel_test_params_t param_double_r2hc_avx128_kernels[] =
+{
+    {5, aocl_fftz_kernel_type::STANDARD_R2HC_AVX128,
+        aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
+        aoclfftz_kernel_test_type::TRANSFORMATION |
+        aoclfftz_kernel_test_type::DFT_REFERENCE},
+    {5, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX128,
+        aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
+        aoclfftz_kernel_test_type::TRANSFORMATION |
+        aoclfftz_kernel_test_type::DFT_REFERENCE},
+};
+
+// R2HC - AVX128 Kernels - Float
+aoclfftz_kernel_test_params_t param_float_r2hc_avx128_kernels[] =
+{
+    {5, aocl_fftz_kernel_type::STANDARD_R2HC_AVX128,
+        aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
+        aoclfftz_kernel_test_type::TRANSFORMATION |
+        aoclfftz_kernel_test_type::DFT_REFERENCE},
+    {5, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX128,
+        aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
+        aoclfftz_kernel_test_type::TRANSFORMATION |
+        aoclfftz_kernel_test_type::DFT_REFERENCE},
+};
+#endif
+
 #ifdef ENABLE_AVX256
 // R2HC - AVX256 Kernels - Double
 aoclfftz_kernel_test_params_t param_double_r2hc_avx256_kernels[] =
@@ -944,6 +976,21 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(::testing::ValuesIn(param_double_r2hcf_c_kernels),
                        ::testing::ValuesIn(io_params)),
     name_generator);
+
+#ifdef ENABLE_AVX128
+// R2HC AVX128 Kernels
+INSTANTIATE_TEST_SUITE_P(
+    R2HC_AVX128_KernelTest, AoclfftzKernelTestFloatReal,
+    ::testing::Combine(::testing::ValuesIn(param_float_r2hc_avx128_kernels),
+                       ::testing::ValuesIn(io_params)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    R2HC_AVX128_KernelTest, AoclfftzKernelTestDoubleReal,
+    ::testing::Combine(::testing::ValuesIn(param_double_r2hc_avx128_kernels),
+                       ::testing::ValuesIn(io_params)),
+    name_generator);
+#endif
 
 #ifdef ENABLE_AVX256
 // R2HC AVX256 Kernels

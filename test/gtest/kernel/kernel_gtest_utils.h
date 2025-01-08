@@ -124,6 +124,11 @@ wrapper_kernel_fp_list *get_kernel_table(UINT8 kernel_type)
     case aocl_fftz_kernel_type::STANDARD_R2HCF_C:
     case aocl_fftz_kernel_type::PERMUTED_R2HCF_C:
         return wrapper_kernels_r2hcf_c;
+#ifdef ENABLE_AVX128
+    case aocl_fftz_kernel_type::STANDARD_R2HC_AVX128:
+    case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX128:
+        return wrapper_kernels_r2hc_avx128;
+#endif
 #ifdef ENABLE_AVX256
     case aocl_fftz_kernel_type::STANDARD_R2HC_AVX256:
     case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX256:
@@ -171,6 +176,12 @@ std::string get_kernel_type_as_string(UINT8 kernel_type)
         return "_STANDARD_R2HCF_C";
     case aocl_fftz_kernel_type::PERMUTED_R2HCF_C:
         return "_PERMUTED_R2HCF_C";
+#ifdef ENABLE_AVX128
+    case aocl_fftz_kernel_type::STANDARD_R2HC_AVX128:
+        return "_STANDARD_R2HC_AVX128";
+    case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX128:
+        return "_PERMUTED_R2HC_AVX128";
+#endif
 #ifdef ENABLE_AVX256
     case aocl_fftz_kernel_type::STANDARD_R2HC_AVX256:
         return "_STANDARD_R2HC_AVX256";

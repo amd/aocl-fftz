@@ -363,6 +363,14 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft8c_wrapper(UINT8 precision,
     return get_ops_cnt_r2hcf_rfft8c(precision, direction);
 }
 
+#ifdef ENABLE_AVX128
+ops_cycles_t get_ops_cnt_r2hc_rfft5avx128_wrapper(UINT8 precision,
+                                                  UINT8 direction)
+{
+    return get_ops_cnt_r2hc_rfft5avx128(precision, direction);
+}
+#endif
+
 #ifdef ENABLE_AVX256
 ops_cycles_t get_ops_cnt_r2hc_rfft5avx256_wrapper(UINT8 precision,
                                                   UINT8 direction)
@@ -686,6 +694,15 @@ kfft_ register_kernel_r2hcf_rfft8c_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_r2hcf_rfft8c(precision, direction);
 }
+
+#ifdef ENABLE_AVX128
+// R2HC - AVX128 register kernel wrapper
+kfft_ register_kernel_r2hc_rfft5avx128_wrapper(UINT8 precision,
+                                               UINT8 direction)
+{
+    return register_kernel_r2hc_rfft5avx128(precision, direction);
+}
+#endif
 
 #ifdef ENABLE_AVX256
 // R2HC - AVX256 register kernel wrapper
