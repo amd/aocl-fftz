@@ -34,6 +34,7 @@
  *  setup, factorize and evaluate sub-problems and kernels as applicable.
  *
  *  @author Srirammaswamy Srinivasan
+ *  @author Ashwin K. Godbole
  */
 
 #include "api/aoclfftz_internal.h"
@@ -65,8 +66,6 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         sel->solution->decomp_scheme->cntrl_params->measure_stats;
     UINT32 radix_r = 0;
     UINT32 radix_m = 0;
-    INT32 ker_cat = 0;
-    aoclfftz_kernel_type kernel_type;
     UINT32 is_backward =
         FFT_DIR(sel->solution->decomp_scheme->flags) == BACKWARD_FFT_DIR;
     INT32 ret = SELECTOR_FAILURE;
@@ -105,10 +104,9 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     // based on minimum ops cost
     UINT8 is_previous_solution_selected = 0;
 
-    for (ker_cat = 0; ker_cat < NUM_KERNELS_IN_TABLE; ker_cat++)
+    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
-        radix_r = kertab[ker_cat].radix;
-        kernel_type = kertab[ker_cat].kernel_type;
+        radix_r = (INTP)kertab[i].radix;
 
         if (radix_r == 0) // End of suitable kernels in the list
         {
@@ -117,12 +115,6 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 
         // Check if this radix can factorize the problem
         if ((n % radix_r) != 0)
-        {
-            continue;
-        }
-
-        // FIXIT
-        if (kernel_type != C2C_KERNEL)
         {
             continue;
         }

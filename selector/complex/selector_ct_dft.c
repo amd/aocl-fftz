@@ -34,6 +34,7 @@
  *  setup, factorize and evaluate sub-problems and kernels as applicable.
  *
  *  @author S. Biplab Raut
+ *  @author Ashwin K. Godbole
  */
 
 #include "selector/selector.h"
@@ -59,9 +60,6 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 stats_mode =
         sel->solution->decomp_scheme->cntrl_params->measure_stats;
-    UINT32 radix_r = 0;
-    UINT32 radix_m = 0;
-    INT32 ker_cat = 0;
     INT32 ret = SELECTOR_FAILURE;
 
     if (vec_rank != 1 || dim_rank != 1)
@@ -100,9 +98,9 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     // based on minimum ops cost
     UINT8 is_previous_solution_selected = 0;
 
-    for (ker_cat = 0; ker_cat < NUM_KERNELS_IN_TABLE; ker_cat++)
+    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
-        radix_r = kertab[ker_cat].radix;
+        INTP radix_r = (INTP)kertab[i].radix;
 
         if (radix_r == 0) // End of suitable kernels in the list
         {
@@ -116,7 +114,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         }
 
         // choose the other radix m
-        radix_m = n / radix_r;
+        INTP radix_m = n / radix_r;
 
         // Create a new cur_sel & cur_sel_m selectors
         // if previous solutions is selected

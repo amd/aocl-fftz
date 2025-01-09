@@ -116,11 +116,19 @@
 #define NUM_FFT_DIRS 2
 #define FORWARD_FFT_DIR 0
 #define BACKWARD_FFT_DIR 1
-#define NUM_SOLVERS 25
-#define NUM_KERNELS_IN_TABLE 256
-#define NUM_KERNEL_CATEGORIES 4
-#define NUM_KERNELS_IN_EACH_CATEGORY 64
 #define DATA_STRIDE 2 // Offset to next data, 2 for complex number
+
+#define NUM_REAL_KERNELS_VARIANTS 3
+#define NUM_KERNEL_CATEGORIES 4
+#define NUM_KERNELS_IN_EACH_CATEGORY 15
+
+#define NUM_KERNELS_IN_EACH_DFT_VARIANT                                        \
+    (NUM_KERNELS_IN_EACH_CATEGORY * NUM_KERNEL_CATEGORIES)
+
+#define NUM_KERNELS_IN_TABLE_COMPLEX NUM_KERNELS_IN_EACH_DFT_VARIANT
+
+#define NUM_KERNELS_IN_TABLE_REAL                                              \
+    (NUM_KERNELS_IN_EACH_DFT_VARIANT * NUM_REAL_KERNELS_VARIANTS)
 
 // AMD ZEN CPU Instruction approximated latency cycles
 #define AMD_ZEN_FP_FMA_CYCLES 4

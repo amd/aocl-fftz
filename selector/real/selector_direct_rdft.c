@@ -35,6 +35,7 @@
  *  setup and evaluate the kernels as applicable.
  *
  *  @author Srirammaswamy Srinivasan
+ *  @author Ashwin K. Godbole
  */
 
 #include "selector/selector.h"
@@ -58,10 +59,7 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     UINT32 avl_threads = decomp_scheme->thread_info->avl_threads;
     UINT32 precision = DT_PRECISION_FLAG(decomp_scheme->flags);
     UINT32 selector_mode = GET_SELECTOR_MODE(decomp_scheme->flags);
-    UINT32 radix = 0;
     INT32 ret = SELECTOR_FAILURE;
-    INT32 ker_idx = 0;
-    aoclfftz_kernel_type kernel_type;
 
     kernel_t *kernel_c2c = NULL;
     kernel_t *kernel_r2hc = NULL;
@@ -79,98 +77,121 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 
     // copy solution object from sel to cur_sel
     COPY_SOLUTION_OBJ(cur_sel->solution, sel->solution);
-    for (ker_idx = 0; ker_idx < NUM_KERNELS_IN_TABLE; ker_idx++)
+
+    // find a suitable kernel within the list of C kernels, and if one is found,
+    // check for the existance of other implementations for the same radix
+    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
-        radix = kertab[ker_idx].radix;
-        kernel_type = kertab[ker_idx].kernel_type;
+        UINT32 radix = kertab[i].radix;
 
         if (radix == 0) // End of search for suitable kernels in the list
         {
             break;
         }
 
-        // Proceed only if the kernel is of R2HC type for direct real problems
-        if (kernel_type != R2HC_KERNEL)
-        {
-            continue;
-        }
-
-        if (radix == n)
+        if ((INTP)radix == n)
         {
 #ifdef AOCL_ENABLE_LOG
             AOCLFFTZ_LOG_FORMATTED(TRACE, logger_mode,
                                    "Evaluating Radix-%td kernel", n);
 #endif
-            kernel_c2c = &kertab[ker_idx - 1];
-            kernel_r2hc = &kertab[ker_idx];
-            kernel_r2hcf = &kertab[ker_idx + 1];
-            cur_sel->solution->solver->kernel_c2c->kfft =
-                kertab[ker_idx - 1].kfft;
-            cur_sel->solution->solver->kernel_r2hc->kfft =
-                kertab[ker_idx].kfft;
-            cur_sel->solution->solver->kernel_r2hcf->kfft =
-                kertab[ker_idx + 1].kfft;
+            for (INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
+            {
+                INTP kloc = (kcat * NUM_KERNELS_IN_EACH_CATEGORY) + i;
 
-            cur_sel->solution->solver->kernel_c2c->sets =
-                kertab[ker_idx - 1].sets[precision - 2];
-            cur_sel->solution->solver->kernel_r2hc->sets =
-                kertab[ker_idx].sets[precision - 2];
-            cur_sel->solution->solver->kernel_r2hcf->sets =
-                kertab[ker_idx + 1].sets[precision - 2];
-#ifdef MULTI_THREADING
-            if (num_threads <= 1 || realhelper->is_CT)
-            {
-#endif
-                // call direct solver
-                ret = setup_real_direct_solver(
-                    cur_sel->solution, cur_sel->cost_analysis, kernel_c2c,
-                    kernel_r2hc, kernel_r2hcf, realhelper);
-#ifdef MULTI_THREADING
-            }
-            else
-            {
-                ret = setup_real_mt_direct_solver(
-                    cur_sel->solution, cur_sel->cost_analysis, kernel_c2c,
-                    kernel_r2hc, kernel_r2hcf, realhelper);
-            }
-#endif
-            if (SELECTOR_SUCCESS == ret)
-            {
-                if (selector_mode == AOCLFFTZ_FIXED_SELECTOR)
+                INTP kloc_r2hc  = 0 * NUM_KERNELS_IN_EACH_DFT_VARIANT + kloc;
+                INTP kloc_r2hcf = 1 * NUM_KERNELS_IN_EACH_DFT_VARIANT + kloc;
+                INTP kloc_c2c   = 2 * NUM_KERNELS_IN_EACH_DFT_VARIANT + kloc;
+
+                if (kertab[kloc_r2hc].kfft == NULL ||
+                    kertab[kloc_r2hcf].kfft == NULL ||
+                    kertab[kloc_c2c].kfft == NULL)
                 {
-                    if (!sel->cost_analysis->ops)
-                    {
-                        sel->cost_analysis->ops = cur_sel->cost_analysis->ops;
-                        sel->cost_analysis->time = cur_sel->cost_analysis->time;
-                        // copy solution object from cur_sel to sel
-                        COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
-                        COPY_STRIDES(sel->solution, cur_sel->solution);
-                    }
-                    if (cur_sel->cost_analysis->ops < sel->cost_analysis->ops)
-                    {
-                        sel->cost_analysis->ops = cur_sel->cost_analysis->ops;
-                        sel->cost_analysis->time = cur_sel->cost_analysis->time;
-                        // copy solution object from cur_sel to sel
-                        COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
-                        COPY_STRIDES(sel->solution, cur_sel->solution);
-                    }
+                    continue;
+                }
+
+                kernel_c2c = &kertab[kloc_c2c];
+                kernel_r2hc = &kertab[kloc_r2hc];
+                kernel_r2hcf = &kertab[kloc_r2hcf];
+
+                cur_sel->solution->solver->kernel_c2c->kfft =
+                    kernel_c2c->kfft;
+                cur_sel->solution->solver->kernel_r2hc->kfft =
+                    kernel_r2hc->kfft;
+                cur_sel->solution->solver->kernel_r2hcf->kfft =
+                    kernel_r2hcf->kfft;
+
+                cur_sel->solution->solver->kernel_c2c->sets =
+                    kernel_c2c->sets[precision - 2];
+                cur_sel->solution->solver->kernel_r2hc->sets =
+                    kernel_r2hc->sets[precision - 2];
+                cur_sel->solution->solver->kernel_r2hcf->sets =
+                    kernel_r2hcf->sets[precision - 2];
+
+#ifdef MULTI_THREADING
+                if (num_threads <= 1 || realhelper->is_CT)
+                {
+#endif
+                    // call direct solver
+                    ret = setup_real_direct_solver(
+                        cur_sel->solution, cur_sel->cost_analysis, kernel_c2c,
+                        kernel_r2hc, kernel_r2hcf, realhelper);
+#ifdef MULTI_THREADING
                 }
                 else
                 {
-                    if (cur_sel->cost_analysis->time < sel->cost_analysis->time)
-                    {
-                        sel->cost_analysis->ops = cur_sel->cost_analysis->ops;
-                        sel->cost_analysis->time = cur_sel->cost_analysis->time;
-                        // copy solution object from cur_sel to sel
-                        COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
-                        COPY_STRIDES(sel->solution, cur_sel->solution);
-                    }
+                    ret = setup_real_mt_direct_solver(
+                        cur_sel->solution, cur_sel->cost_analysis, kernel_c2c,
+                        kernel_r2hc, kernel_r2hcf, realhelper);
                 }
-                if (stats_mode)
+#endif
+                if (SELECTOR_SUCCESS == ret)
                 {
-                    // capture stats
-                }
-            } // if (SELECTOR_SUCCESS == ret)
+                    if (selector_mode == AOCLFFTZ_FIXED_SELECTOR)
+                    {
+                        if (!sel->cost_analysis->ops)
+                        {
+                            sel->cost_analysis->ops =
+                                cur_sel->cost_analysis->ops;
+                            sel->cost_analysis->time =
+                                cur_sel->cost_analysis->time;
+                            // copy solution object from cur_sel to sel
+                            COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
+                            COPY_STRIDES(sel->solution, cur_sel->solution);
+                        }
+                        if (cur_sel->cost_analysis->ops <
+                            sel->cost_analysis->ops)
+                        {
+                            sel->cost_analysis->ops =
+                                cur_sel->cost_analysis->ops;
+                            sel->cost_analysis->time =
+                                cur_sel->cost_analysis->time;
+                            // copy solution object from cur_sel to sel
+                            COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
+                            COPY_STRIDES(sel->solution, cur_sel->solution);
+                        }
+                    }
+                    else
+                    {
+                        if (cur_sel->cost_analysis->time <
+                            sel->cost_analysis->time)
+                        {
+                            sel->cost_analysis->ops =
+                                cur_sel->cost_analysis->ops;
+                            sel->cost_analysis->time =
+                                cur_sel->cost_analysis->time;
+                            // copy solution object from cur_sel to sel
+                            COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
+                            COPY_STRIDES(sel->solution, cur_sel->solution);
+                        }
+                    }
+                    if (stats_mode)
+                    {
+                        // capture stats
+                    }
+                } // if (SELECTOR_SUCCESS == ret)
+            } // End of FOR loop
+            break;
         } // if (radix == n)
     } // End of FOR loop
 

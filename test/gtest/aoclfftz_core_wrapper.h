@@ -842,10 +842,6 @@ static wrapper_kernel_fp_list_t
     {register_kernel_fft14c_wrapper, get_ops_cnt_fft14c_wrapper, 14},
     {register_kernel_fft15c_wrapper, get_ops_cnt_fft15c_wrapper, 15},
     {register_kernel_fft16c_wrapper, get_ops_cnt_fft16c_wrapper, 16},
-    {NULL, NULL, 20},
-    {NULL, NULL, 25},
-    {NULL, NULL, 32},
-    {NULL, NULL, 64}
 };
 #ifdef ENABLE_AVX128
 static wrapper_kernel_fp_list_t
@@ -866,10 +862,6 @@ static wrapper_kernel_fp_list_t
     {register_kernel_fft14avx128_wrapper, get_ops_cnt_fft14avx128_wrapper, 14},
     {register_kernel_fft15avx128_wrapper, get_ops_cnt_fft15avx128_wrapper, 15},
     {register_kernel_fft16avx128_wrapper, get_ops_cnt_fft16avx128_wrapper, 16},
-    {NULL, NULL, 20},
-    {NULL, NULL, 25},
-    {NULL, NULL, 32},
-    {NULL, NULL, 64}
 };
 #endif
 #ifdef ENABLE_AVX256
@@ -891,11 +883,6 @@ static wrapper_kernel_fp_list_t
     {register_kernel_fft14avx256_wrapper, get_ops_cnt_fft14avx256_wrapper, 14},
     {register_kernel_fft15avx256_wrapper, get_ops_cnt_fft15avx256_wrapper, 15},
     {register_kernel_fft16avx256_wrapper, get_ops_cnt_fft16avx256_wrapper, 16},
-    {NULL, NULL, 13},
-    {NULL, NULL, 20},
-    {NULL, NULL, 25},
-    {NULL, NULL, 32},
-    {NULL, NULL, 64}
 };
 #endif
 #ifdef ENABLE_AVX512
@@ -917,11 +904,6 @@ static wrapper_kernel_fp_list_t
     {register_kernel_fft14avx512_wrapper, get_ops_cnt_fft14avx512_wrapper, 14},
     {register_kernel_fft15avx512_wrapper, get_ops_cnt_fft15avx512_wrapper, 15},
     {register_kernel_fft16avx512_wrapper, get_ops_cnt_fft16avx512_wrapper, 16},
-    {NULL, NULL, 16},
-    {NULL, NULL, 20},
-    {NULL, NULL, 25},
-    {NULL, NULL, 32},
-    {NULL, NULL, 64}
 };
 #endif
 

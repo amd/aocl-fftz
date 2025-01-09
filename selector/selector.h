@@ -744,9 +744,9 @@ typedef struct aoclfftz_selector
 }
 
 // Function declarations
-INT32 register_solvers_kernels(kernel_t[NUM_KERNELS_IN_TABLE],
-                               kernel_t[NUM_KERNELS_IN_TABLE],
-                               kernel_t[NUM_KERNELS_IN_TABLE], INT32 dt,
+INT32 register_solvers_kernels(kernel_t[NUM_KERNELS_IN_TABLE_COMPLEX],
+                               kernel_t[NUM_KERNELS_IN_TABLE_REAL],
+                               kernel_t[NUM_KERNELS_IN_TABLE_COMPLEX], INT32 dt,
                                INT32 dir, INT32 is_real, INT32 cpu_flags);
 INT32 selector_driver_dft_(aoclfftz_selector_t *);
 INT32 selector_driver_rdft_(aoclfftz_selector_t *, aoclfftz_realhelper_t *);

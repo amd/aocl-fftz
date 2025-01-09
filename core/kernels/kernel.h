@@ -39,6 +39,7 @@
  *
  *  @author S. Biplab Raut
  *  @author Srirammaswamy Srinivasan
+ *  @author Ashwin K. Godbole
  */
 
 #ifndef AOCLFFTZ_KERNEL_H
@@ -124,11 +125,28 @@ typedef struct kernel
     UINT8 sets[NUM_PRECISIONS];
 } kernel_t;
 
+// Data structure containing kernel function pointers corresponding to the
+// registration, and operation count of the kernel
+typedef struct kernel_fp_list
+{
+    k_register_kernel_ k_register_kernel;
+    k_ops_cnt_ k_ops_cnt;
+    UINT32 radix;
+} kernel_fp_list_t;
+
 // Function declarations for the common routines
-INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE], INT32 dt,
-                       INT32 dir, INT32 is_real, INT32 cpu_flags);
-INT32 register_twid_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE], INT32 dt,
-                            INT32 dir, INT32 is_real, INT32 cpu_flags);
+INT32 register_kernels_real(
+    kernel_t kertab[NUM_KERNELS_IN_TABLE_REAL],
+    kernel_fp_list_t static_kernel_table[NUM_REAL_KERNELS_VARIANTS]
+                                        [NUM_KERNELS_IN_EACH_CATEGORY]
+                                        [NUM_KERNEL_CATEGORIES],
+    INT32 dt, INT32 dir, INT32 cpu_flags);
+
+INT32 register_kernels_complex(
+    kernel_t kertab[NUM_KERNELS_IN_TABLE_COMPLEX],
+    kernel_fp_list_t static_kernel_table[NUM_KERNELS_IN_EACH_CATEGORY]
+                                        [NUM_KERNEL_CATEGORIES],
+    INT32 dt, INT32 dir, INT32 cpu_flags);
 
 // Kernel function declarations for different floating point precision types
 // supported in scalar and vector compute variants

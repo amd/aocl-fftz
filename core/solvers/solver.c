@@ -41,7 +41,7 @@
 // Table of solvers that is populated with applicable solvers at setup time
 // ct, direct, nDim, buf, permKer, batched, bluestein, PFA, rader, permCopy,
 // trans
-dft_solver_ solvers_table[NUM_SOLVERS] = { 0x0, };
+dft_solver_ solvers_table[NUM_SOLVERS_END] = { 0x0, };
 
 INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
 {

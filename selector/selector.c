@@ -34,15 +34,17 @@
  *  select a solution of kernels for the given input problem description.
  *
  *  @author S. Biplab Raut
+ *  @author Ashwin K. Godbole
  */
 
 #include "selector/selector.h"
 #include "utils/utils.h"
 #include "core/common/memory_manager.h"
-#include "core/kernels/kernel.h"
+#include "core/kernels/kernel_list.h"
 #include "core/common/twiddle.h"
 
-// Function pointers to communicate the exact selector model for executing the problem
+// Function pointers to communicate the exact selector model for executing the
+// problem.
 // Not thread-safe
 typedef INT32(*selector_model_func_)(aoclfftz_selector_t*);
 typedef INT32 (*selector_model_rdft_func_)(aoclfftz_selector_t *,
@@ -55,19 +57,19 @@ selector_model_rdft_func_ sel_rdft_fp = NULL;
 // Each set is having 64 entries populated based on support for the kernels
 // of those radices.
 // DFT kernels (Not thread-safe)
-kernel_t kernels_dft_table[NUM_KERNELS_IN_TABLE] = { {0x0} };
+kernel_t kernels_dft_table[NUM_KERNELS_IN_TABLE_COMPLEX] = { {0x0} };
 // RDFT kernels (Not thread-safe)
-kernel_t kernels_rdft_table[NUM_KERNELS_IN_TABLE] = { {0x0} };
+kernel_t kernels_rdft_table[NUM_KERNELS_IN_TABLE_REAL] = { {0x0} };
 // TDFT kernels (fused twiddle + dft kernels) (Not thread-safe)
-kernel_t kernels_twid_dft_table[NUM_KERNELS_IN_TABLE] = { {0x0} };
+kernel_t kernels_twid_dft_table[NUM_KERNELS_IN_TABLE_COMPLEX] = { {0x0} };
 
-//Register all applicable solvers and kernels into the respective tables
-//based on the input problem and cpu arch flags
-INT32 register_solvers_kernels(kernel_t kertab_dft[NUM_KERNELS_IN_TABLE],
-                               kernel_t kertab_rdft[NUM_KERNELS_IN_TABLE],
-                               kernel_t kertab_twid_dft[NUM_KERNELS_IN_TABLE],
-                               INT32 dt,
-                               INT32 dir, INT32 is_real, INT32 cpu_flags)
+// Register all applicable solvers and kernels into the respective tables
+// based on the input problem and cpu arch flags
+INT32 register_solvers_kernels(
+    kernel_t kertab_dft[NUM_KERNELS_IN_TABLE_COMPLEX],
+    kernel_t kertab_rdft[NUM_KERNELS_IN_TABLE_REAL],
+    kernel_t kertab_twid_dft[NUM_KERNELS_IN_TABLE_COMPLEX], INT32 dt, INT32 dir,
+    INT32 is_real, INT32 cpu_flags)
 {
     INT32 ret = SELECTOR_FAILURE;
 
@@ -78,15 +80,18 @@ INT32 register_solvers_kernels(kernel_t kertab_dft[NUM_KERNELS_IN_TABLE],
         return SELECTOR_FAILURE;
     }
 
-    //Register Kernels
+    // Register Kernels
     if (is_real)
     {
-        ret = register_kernels(kertab_rdft, dt, dir, is_real, cpu_flags);
+        ret = register_kernels_real(kertab_rdft, kernels_real, dt, dir,
+                                    cpu_flags);
     }
     else
     {
-        ret = register_kernels(kertab_dft, dt, dir, 0, cpu_flags);
-        ret |= register_twid_kernels(kertab_twid_dft, dt, dir, 0, cpu_flags);
+        ret = register_kernels_complex(kertab_dft, kernels_c2c, dt, dir,
+                                       cpu_flags);
+        ret |= register_kernels_complex(kertab_twid_dft, kernels_twid_c2c, dt,
+                                        dir, cpu_flags);
     }
 
     return ret;
@@ -94,8 +99,9 @@ INT32 register_solvers_kernels(kernel_t kertab_dft[NUM_KERNELS_IN_TABLE],
 
 INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table)
 {
-    INT32 is_supported = 0, i;
-    for (i = 0; i < NUM_KERNELS_IN_TABLE; i++)
+    INT32 is_supported = 0;
+    // It is enough to check for the existence of a suitable C kernel
+    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
         if (kernels_table[i].radix == 0)
         {
@@ -113,17 +119,16 @@ INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table)
 
 INTP check_CT_solvability(INTP n, kernel_t *kertab)
 {
-    INT32 ker_cat = 0;
-    UINT32 radix = 0;
-    for (ker_cat = 0; ker_cat < NUM_KERNELS_IN_TABLE; ker_cat++)
+    // It is enough to check for the existence of a suitable C kernel
+    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
-        radix = kertab[ker_cat].radix;
+        UINT32 radix = kertab[i].radix;
         if (radix == 0) // End of suitable kernels in the list
         {
             break;
         }
         // Check if this radix can factorize the problem
-        if ((n % radix) == 0)
+        if ((n % (INTP)radix) == 0)
         {
             return 1;
         }
@@ -204,18 +209,18 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     if (check_bluestein_problem(sel->solution->decomp_scheme) &&
         (avl_threads > 1))
     {
-        AOCLFFTZ_LOG_UNFORMATTED(INFO, INFO, "Multi Threaded execution is"
+        AOCLFFTZ_LOG_UNFORMATTED(
+            INFO, INFO,
+            "Multi Threaded execution is"
             " not supported for Bluestein solver, falling back to single"
             " threaded Execution");
         sel->solution->decomp_scheme->thread_info->avl_threads = 1;
         avl_threads = 1;
     }
-    INT32 is_FFT_ker_supported =
-            check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n,
-                                     kertab);
-    INT32 is_solvable_by_bluestein =
-            check_prime_solvability_bluestein(sel->solution->decomp_scheme,
-                                              is_FFT_ker_supported, kertab);
+    INT32 is_FFT_ker_supported = check_FFT_kernel_support(
+        sel->solution->decomp_scheme->dims[0].n, kertab);
+    INT32 is_solvable_by_bluestein = check_prime_solvability_bluestein(
+        sel->solution->decomp_scheme, is_FFT_ker_supported, kertab);
     INT32 level1_cond1 = 0;
     INT32 level1_cond2 = 0;
     INT32 level2_cond = 0;
@@ -228,16 +233,15 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     {
         fuse_vecs(sel->solution);
     }
-    //SOLVER_BATCHED
+    // SOLVER_BATCHED
     level1_cond1 =
-            ((sel->solution->decomp_scheme->dims[0].n != 1) && /* size one */
-            ((sel->solution->decomp_scheme->vec_rank > 1) ||  /* ND Batched */
-            /* 1D Batched 1D Non-direct cases*/
-            ((sel->solution->decomp_scheme->vecs[0].n > 1) &&
-                                    !is_FFT_ker_supported) ||
-            /* 1D Batched ND case*/
-            (dim_rank > 1 &&
-                sel->solution->decomp_scheme->vecs[0].n > 1)));
+        ((sel->solution->decomp_scheme->dims[0].n != 1) && /* size one */
+         ((sel->solution->decomp_scheme->vec_rank > 1) ||  /* ND Batched */
+          /* 1D Batched 1D Non-direct cases*/
+          ((sel->solution->decomp_scheme->vecs[0].n > 1) &&
+           !is_FFT_ker_supported) ||
+          /* 1D Batched ND case*/
+          (dim_rank > 1 && sel->solution->decomp_scheme->vecs[0].n > 1)));
     // SOLVER_NDIM
     level1_cond1 |= ((dim_rank > 1) << 1);
     // SOLVER_BLUESTEIN
@@ -398,52 +402,51 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
 // Fixed decision logic and CPI based selector mode execution for the
 // input problem based on the applicable tables of solvers and kernels
 // wherein the successive stage dfts are fused with twiddle multiplications
-INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t* sel)
+INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
 {
-    aoclfftz_generic_solver_t* solver_obj = sel->solution->solver;
+    aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
     kernel_t *kertab = kernels_dft_table;
     INT32 ret = SELECTOR_FAILURE;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     UINT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
 
     // TODO: Should be removed after supporting MT in bluestein solver
-    if (check_bluestein_problem(sel->solution->decomp_scheme)
-        && avl_threads > 1)
+    if (check_bluestein_problem(sel->solution->decomp_scheme) &&
+        avl_threads > 1)
     {
-        AOCLFFTZ_LOG_UNFORMATTED(INFO, INFO, "Multi Threaded execution is"
+        AOCLFFTZ_LOG_UNFORMATTED(
+            INFO, INFO,
+            "Multi Threaded execution is"
             " not suported for N-D & Bluestein solver, falling back to Single"
             " Threaded execution");
         sel->solution->decomp_scheme->thread_info->avl_threads = 1;
         avl_threads = 1;
     }
-    INT32 is_FFT_ker_supported =
-        check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n,
-            kertab);
-    INT32 is_solvable_by_bluestein =
-        check_prime_solvability_bluestein(sel->solution->decomp_scheme,
-            is_FFT_ker_supported, kertab);
+    INT32 is_FFT_ker_supported = check_FFT_kernel_support(
+        sel->solution->decomp_scheme->dims[0].n, kertab);
+    INT32 is_solvable_by_bluestein = check_prime_solvability_bluestein(
+        sel->solution->decomp_scheme, is_FFT_ker_supported, kertab);
     INT32 level1_cond1 = 0;
     INT32 level1_cond2 = 0;
     INT32 level2_cond = 0;
     INT32 standalone_transpose_cond = 0;
 
     SET_SELECTOR_MODE(sel->solution->decomp_scheme->flags,
-        AOCLFFTZ_FIXED_SELECTOR);
+                      AOCLFFTZ_FIXED_SELECTOR);
 
     if (sel->solution->decomp_scheme->vec_rank > 1)
     {
         fuse_vecs(sel->solution);
     }
-    //SOLVER_BATCHED
+    // SOLVER_BATCHED
     level1_cond1 =
         ((sel->solution->decomp_scheme->dims[0].n != 1) && /* size one */
-            ((sel->solution->decomp_scheme->vec_rank > 1) ||  /* ND Batched */
-                /* 1D Batched 1D Non-direct cases*/
-                ((sel->solution->decomp_scheme->vecs[0].n > 1) &&
-                    !is_FFT_ker_supported) ||
-                /* 1D Batched ND case*/
-                (dim_rank > 1 &&
-                    sel->solution->decomp_scheme->vecs[0].n > 1)));
+         ((sel->solution->decomp_scheme->vec_rank > 1) ||  /* ND Batched */
+          /* 1D Batched 1D Non-direct cases*/
+          ((sel->solution->decomp_scheme->vecs[0].n > 1) &&
+           !is_FFT_ker_supported) ||
+          /* 1D Batched ND case*/
+          (dim_rank > 1 && sel->solution->decomp_scheme->vecs[0].n > 1)));
     // SOLVER_NDIM
     level1_cond1 |= ((dim_rank > 1) << 1);
     // SOLVER_BLUESTEIN
@@ -453,9 +456,9 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t* sel)
     // SOLVER_BUFFERED
     // TODO: Conditions to work with AOCLFFTZ_FIXED_SELECTOR
     level1_cond2 &= ((sel->solution->decomp_scheme->dims[0].n >
-        MAX_GUARANTEED_CACHEABLE_SIZE) &&
-        (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
-            AOCLFFTZ_AUTO_SELECTOR));
+                      MAX_GUARANTEED_CACHEABLE_SIZE) &&
+                     (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
+                      AOCLFFTZ_AUTO_SELECTOR));
     // SOLVER_PERM_KER
     level1_cond2 |= (IS_OUT_OF_ORDER(sel->solution->decomp_scheme->flags) << 1);
     // SOLVER_DIRECT
