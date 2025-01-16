@@ -65,15 +65,6 @@ class PerformanceTest : public benchmark::Fixture {
                             radix * out_stride;
         UINT8 is_bwd = false;
 
-        // Radix-13 AVX versions are yet to be implemented
-        if (radix == 13 && (kernel_type != aocl_fftz_kernel_type::STANDARD_C &&
-                            kernel_type != aocl_fftz_kernel_type::PERMUTED_C))
-        {
-            state.SkipWithMessage("Radix-13 only supported in C version, "
-                                  "skipping AVX version");
-            return;
-        }
-
         wrapper_kernel_fp_list *table = get_kernel_table(kernel_type);
         kfft_ fft_kernel = get_kernel<T>(table, radix);
         if (fft_kernel == nullptr)
