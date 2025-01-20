@@ -123,7 +123,7 @@ INT32 prepare_bluestein_sequence(aoclfftz_solution_t *sol, INTP m)
 }
 
 INT32 elementwise_multiplication(VOID *out, VOID *a, VOID *b, INTP n,
-                                 UINT8 sign, UINT32 precision)
+                                 UINT8 sign, UINT8 precision)
 {
     if (precision == DT_FLOAT)
     {
@@ -196,7 +196,7 @@ INT32 elementwise_multiplication(VOID *out, VOID *a, VOID *b, INTP n,
 }
 
 INT32 normalize_data(VOID *data, INTP n, DOUBLE normalize_factor,
-                     UINT32 precision)
+                     UINT8 precision)
 {
     if (precision == DT_FLOAT)
     {

@@ -48,7 +48,7 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank);
 aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank);
 INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein, INTP size);
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
-VOID *alloc_twiddle_for_solution(UINT32 rad_size, UINT32 dt_prec);
+VOID *alloc_twiddle_for_solution(UINT32 rad_size, UINT8 dt_prec);
 #endif
 VOID destroy_selector_without_solution(aoclfftz_selector_t *sel);
 VOID destroy_selector(aoclfftz_selector_t *sel);

@@ -56,7 +56,6 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
     VOID *TW = NULL;
-    UINT32 dt_prec = 0;
 #endif
     INTP n = sel->solution->decomp_scheme->dims[0].n;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
@@ -74,7 +73,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
-    dt_prec = DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags);
+    UINT8 dt_prec = DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags);
 #endif
 
     org_sol = alloc_solution(vec_rank, dim_rank);

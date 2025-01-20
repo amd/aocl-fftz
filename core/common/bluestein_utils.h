@@ -53,8 +53,8 @@ typedef enum
 INTP get_extended_length(INTP n);
 INT32 prepare_bluestein_sequence(aoclfftz_solution_t *sol, INTP m);
 INT32 elementwise_multiplication(VOID *out, VOID *a, VOID *b, INTP n,
-                                 UINT8 sign, UINT32 precision);
+                                 UINT8 sign, UINT8 precision);
 INT32 normalize_data(VOID *data, INTP n, DOUBLE normalize_factor,
-                     UINT32 precision);
+                     UINT8 precision);
 
 #endif // BLUESTEIN_UTILS_H

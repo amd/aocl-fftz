@@ -39,18 +39,35 @@
 
 #include "core/kernels/kernel.h"
 
-static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 0, 0, 0, 0, 0},
-                                                     {0, 0, 0, 0, 0, 0}};
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS][NUM_FFT_DIRS] =
+                                                    {{{0, 0, 0, 0, 0, 0},
+                                                      {0, 0, 0, 0, 0, 0}},
+                                                     {{0, 0, 0, 0, 0, 0},
+                                                      {0, 0, 0, 0, 0, 0}}};
 
-ops_cycles_t get_ops_cnt_r2hcf_rfft4c(INT32 precision)
+ops_cycles_t get_ops_cnt_r2hcf_rfft4c(UINT8 precision, UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
-        return ops_cnt[0];
+        if (direction == FORWARD_FFT_DIR)
+        {
+            return ops_cnt[0][0];
+        }
+        else
+        {
+            return ops_cnt[0][1];
+        }
     }
     else
     {
-        return ops_cnt[1];
+        if (direction == FORWARD_FFT_DIR)
+        {
+            return ops_cnt[1][0];
+        }
+        else
+        {
+            return ops_cnt[1][1];
+        }
     }
 }
 
@@ -82,7 +99,7 @@ static VOID r2hcf_rfft4c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
     /* TO BE IMPLEMENTED */
 }
 
-kfft_ register_kernel_r2hcf_rfft4c(INT32 precision, INT32 direction)
+kfft_ register_kernel_r2hcf_rfft4c(UINT8 precision, UINT8 direction)
 {
     if (direction == FORWARD_FFT_DIR)
     {

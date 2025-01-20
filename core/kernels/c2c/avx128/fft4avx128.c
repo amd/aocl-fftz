@@ -42,8 +42,9 @@
 #include "core/kernels/simd_common.h"
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 1, 8, 16, 1, 1},
-                                                     {0, 1, 8, 8, 1, 1}};
-ops_cycles_t get_ops_cnt_fft4avx128(INT32 precision)
+                                                     {0, 1, 8,  8, 1, 1}};
+
+ops_cycles_t get_ops_cnt_fft4avx128(UINT8 precision, UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -263,7 +264,7 @@ static VOID fft4avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 #endif
 }
 
-kfft_ register_kernel_fft4avx128(INT32 precision, INT32 direction /* unused */)
+kfft_ register_kernel_fft4avx128(UINT8 precision, UINT8 direction /* unused */)
 {
     if (precision == DT_FLOAT)
     {

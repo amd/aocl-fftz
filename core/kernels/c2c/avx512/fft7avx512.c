@@ -42,7 +42,8 @@
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 18, 33, 112, 24, 45},
                                                      {0, 18, 33,  56,  3, 45}};
-ops_cycles_t get_ops_cnt_fft7avx512(INT32 precision)
+
+ops_cycles_t get_ops_cnt_fft7avx512(UINT8 precision, UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -879,7 +880,7 @@ static VOID fft7avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 #endif
 }
 
-kfft_ register_kernel_fft7avx512(INT32 precision, INT32 direction /* unused */)
+kfft_ register_kernel_fft7avx512(UINT8 precision, UINT8 direction /* unused */)
 {
     if (precision == DT_FLOAT)
     {

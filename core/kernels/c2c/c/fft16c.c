@@ -45,7 +45,7 @@
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 24, 144, 64, 0, 0},
                                                      {0, 24, 144, 64, 0, 0}};
 
-ops_cycles_t get_ops_cnt_fft16c(INT32 precision)
+ops_cycles_t get_ops_cnt_fft16c(UINT8 precision, UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -1885,7 +1885,7 @@ VOID fft16c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real, VOID *out_imag,
 }
 #endif // USE_OPT_KERNEL_VARIANT
 
-kfft_ register_kernel_fft16c(INT32 precision, INT32 direction /* unused */)
+kfft_ register_kernel_fft16c(UINT8 precision, UINT8 direction /* unused */)
 {
     if (precision == DT_FLOAT)
     {

@@ -183,7 +183,7 @@ INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein, INTP size)
 }
 
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
-VOID *alloc_twiddle_for_solution(UINT32 rad_size, UINT32 dt_prec)
+VOID *alloc_twiddle_for_solution(UINT32 rad_size, UINT8 dt_prec)
 {
     UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
     VOID *buffer = NULL;

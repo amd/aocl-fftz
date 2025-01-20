@@ -38,10 +38,11 @@
 
 #include "core/kernels/kernel.h"
 
+// Forward and backward opscount are identical for float and double
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 2, 4, 6, 0, 0},
                                                      {0, 2, 4, 6, 0, 0}};
 
-ops_cycles_t get_ops_cnt_r2hc_rfft3c(INT32 precision)
+ops_cycles_t get_ops_cnt_r2hc_rfft3c(UINT8 precision, UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -255,7 +256,7 @@ static VOID r2hc_rfft3c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
     }
 }
 
-kfft_ register_kernel_r2hc_rfft3c(INT32 precision, INT32 direction)
+kfft_ register_kernel_r2hc_rfft3c(UINT8 precision, UINT8 direction)
 {
     if (direction == FORWARD_FFT_DIR)
     {

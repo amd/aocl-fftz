@@ -54,7 +54,8 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     INTP n = sol->decomp_scheme->vecs[0].n;
     INTP radix = sol->decomp_scheme->dims[0].n;
     ops_cycles_t ops_cycles;
-    UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    UINT8 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
     INT32 status = SOLVER_SUCCESS;
     UINT8 sets = kernel->sets[precision - 2];
 
@@ -80,7 +81,7 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     {
         /** Fixed mode **/
         cost->time = 0;
-        ops_cycles = kernel->k_ops_cnt(precision);
+        ops_cycles = kernel->k_ops_cnt(precision, direction);
         cost->ops = ((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
                      (ops_cycles.mul * AMD_ZEN_FP_MUL_CYCLES) +
                      (ops_cycles.add * AMD_ZEN_FP_ADD_CYCLES) +
@@ -106,11 +107,11 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         // execute the direct kernel
         kernel->kfft(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
                      sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
-                     n, strides, FFT_DIR(sol->decomp_scheme->flags));
+                     n, strides, direction);
 
         getTime(endTime);
         cost->time = diffTime(clkTick, startTime, endTime);
-        ops_cycles = kernel->k_ops_cnt(precision);
+        ops_cycles = kernel->k_ops_cnt(precision, direction);
         cost->ops = ((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
                      (ops_cycles.mul * AMD_ZEN_FP_MUL_CYCLES) +
                      (ops_cycles.add * AMD_ZEN_FP_ADD_CYCLES) +
@@ -139,12 +140,12 @@ static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
 
     kfft_ kernel = sol->solver->kernel_r;
     aoclfftz_strides_t *strides = sol->strides;
+    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
 
     // execute the direct kernel
     kernel(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
            sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
-           sol->decomp_scheme->vecs[0].n, strides,
-           FFT_DIR(sol->decomp_scheme->flags));
+           sol->decomp_scheme->vecs[0].n, strides, direction);
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");

@@ -42,7 +42,8 @@
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 4, 18, 48, 8, 14},
                                                      {0, 4, 18, 24, 2, 14}};
-ops_cycles_t get_ops_cnt_fft6avx256(INT32 precision)
+
+ops_cycles_t get_ops_cnt_fft6avx256(UINT8 precision, UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -500,7 +501,7 @@ static VOID fft6avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 #endif
 }
 
-kfft_ register_kernel_fft6avx256(INT32 precision, INT32 direction /* unused */)
+kfft_ register_kernel_fft6avx256(UINT8 precision, UINT8 direction /* unused */)
 {
     if (precision == DT_FLOAT)
     {

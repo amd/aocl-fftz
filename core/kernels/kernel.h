@@ -106,8 +106,8 @@ typedef struct ops_cycles
 } ops_cycles_t;
 
 // Function pointer to get kernel compute operations in terms of approx cycles
-typedef ops_cycles_t (*k_ops_cnt_)(INT32);
-typedef kfft_ (*k_register_kernel_)(INT32, INT32);
+typedef ops_cycles_t (*k_ops_cnt_)(UINT8, UINT8);
+typedef kfft_ (*k_register_kernel_)(UINT8, UINT8);
 
 // Kernel data structure that holds kernel function pointers and other
 // associated parameters related to radix and compute operations
@@ -129,166 +129,166 @@ INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE], INT32 dt,
 // Get Operations Count Functions
 
 // C2C Kernels
-ops_cycles_t get_ops_cnt_fft2c(INT32 precision);
-ops_cycles_t get_ops_cnt_fft3c(INT32 precision);
-ops_cycles_t get_ops_cnt_fft4c(INT32 precision);
-ops_cycles_t get_ops_cnt_fft5c(INT32 precision);
-ops_cycles_t get_ops_cnt_fft6c(INT32 precision);
-ops_cycles_t get_ops_cnt_fft7c(INT32 precision);
-ops_cycles_t get_ops_cnt_fft8c(INT32 precision);
-ops_cycles_t get_ops_cnt_fft9c(INT32 precision);
-ops_cycles_t get_ops_cnt_fft10c(INT32 precision);
-ops_cycles_t get_ops_cnt_fft11c(INT32 precision);
-ops_cycles_t get_ops_cnt_fft12c(INT32 precision);
-ops_cycles_t get_ops_cnt_fft13c(INT32 precision);
-ops_cycles_t get_ops_cnt_fft14c(INT32 precision);
-ops_cycles_t get_ops_cnt_fft15c(INT32 precision);
-ops_cycles_t get_ops_cnt_fft16c(INT32 precision);
+ops_cycles_t get_ops_cnt_fft2c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft3c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft4c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft5c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft6c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft7c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft8c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft9c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft10c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft11c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft12c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft13c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft14c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft15c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft16c(UINT8 precision, UINT8 direction);
 
 #ifdef ENABLE_AVX128
-ops_cycles_t get_ops_cnt_fft2avx128(INT32 precision);
-ops_cycles_t get_ops_cnt_fft3avx128(INT32 precision);
-ops_cycles_t get_ops_cnt_fft4avx128(INT32 precision);
-ops_cycles_t get_ops_cnt_fft5avx128(INT32 precision);
-ops_cycles_t get_ops_cnt_fft6avx128(INT32 precision);
-ops_cycles_t get_ops_cnt_fft7avx128(INT32 precision);
-ops_cycles_t get_ops_cnt_fft8avx128(INT32 precision);
-ops_cycles_t get_ops_cnt_fft9avx128(INT32 precision);
-ops_cycles_t get_ops_cnt_fft10avx128(INT32 precision);
-ops_cycles_t get_ops_cnt_fft11avx128(INT32 precision);
-ops_cycles_t get_ops_cnt_fft12avx128(INT32 precision);
-ops_cycles_t get_ops_cnt_fft13avx128(INT32 precision);
-ops_cycles_t get_ops_cnt_fft14avx128(INT32 precision);
-ops_cycles_t get_ops_cnt_fft15avx128(INT32 precision);
-ops_cycles_t get_ops_cnt_fft16avx128(INT32 precision);
+ops_cycles_t get_ops_cnt_fft2avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft3avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft4avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft5avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft6avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft7avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft8avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft9avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft10avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft11avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft12avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft13avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft14avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft15avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft16avx128(UINT8 precision, UINT8 direction);
 #endif
 
 #ifdef ENABLE_AVX256
-ops_cycles_t get_ops_cnt_fft2avx256(INT32 precision);
-ops_cycles_t get_ops_cnt_fft3avx256(INT32 precision);
-ops_cycles_t get_ops_cnt_fft4avx256(INT32 precision);
-ops_cycles_t get_ops_cnt_fft5avx256(INT32 precision);
-ops_cycles_t get_ops_cnt_fft6avx256(INT32 precision);
-ops_cycles_t get_ops_cnt_fft7avx256(INT32 precision);
-ops_cycles_t get_ops_cnt_fft8avx256(INT32 precision);
-ops_cycles_t get_ops_cnt_fft9avx256(INT32 precision);
-ops_cycles_t get_ops_cnt_fft10avx256(INT32 precision);
-ops_cycles_t get_ops_cnt_fft11avx256(INT32 precision);
-ops_cycles_t get_ops_cnt_fft12avx256(INT32 precision);
-ops_cycles_t get_ops_cnt_fft13avx256(INT32 precision);
-ops_cycles_t get_ops_cnt_fft14avx256(INT32 precision);
-ops_cycles_t get_ops_cnt_fft15avx256(INT32 precision);
-ops_cycles_t get_ops_cnt_fft16avx256(INT32 precision);
+ops_cycles_t get_ops_cnt_fft2avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft3avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft4avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft5avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft6avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft7avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft8avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft9avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft10avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft11avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft12avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft13avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft14avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft15avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft16avx256(UINT8 precision, UINT8 direction);
 #endif
 
 #ifdef ENABLE_AVX512
-ops_cycles_t get_ops_cnt_fft2avx512(INT32 precision);
-ops_cycles_t get_ops_cnt_fft3avx512(INT32 precision);
-ops_cycles_t get_ops_cnt_fft4avx512(INT32 precision);
-ops_cycles_t get_ops_cnt_fft5avx512(INT32 precision);
-ops_cycles_t get_ops_cnt_fft6avx512(INT32 precision);
-ops_cycles_t get_ops_cnt_fft7avx512(INT32 precision);
-ops_cycles_t get_ops_cnt_fft8avx512(INT32 precision);
-ops_cycles_t get_ops_cnt_fft9avx512(INT32 precision);
-ops_cycles_t get_ops_cnt_fft10avx512(INT32 precision);
-ops_cycles_t get_ops_cnt_fft11avx512(INT32 precision);
-ops_cycles_t get_ops_cnt_fft12avx512(INT32 precision);
-ops_cycles_t get_ops_cnt_fft13avx512(INT32 precision);
-ops_cycles_t get_ops_cnt_fft14avx512(INT32 precision);
-ops_cycles_t get_ops_cnt_fft15avx512(INT32 precision);
-ops_cycles_t get_ops_cnt_fft16avx512(INT32 precision);
+ops_cycles_t get_ops_cnt_fft2avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft3avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft4avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft5avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft6avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft7avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft8avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft9avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft10avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft11avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft12avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft13avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft14avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft15avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_fft16avx512(UINT8 precision, UINT8 direction);
 #endif
 
 // R2HC Kernels
-ops_cycles_t get_ops_cnt_r2hc_rfft2c(INT32 precision);
-ops_cycles_t get_ops_cnt_r2hc_rfft3c(INT32 precision);
-ops_cycles_t get_ops_cnt_r2hc_rfft4c(INT32 precision);
+ops_cycles_t get_ops_cnt_r2hc_rfft2c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_r2hc_rfft3c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_r2hc_rfft4c(UINT8 precision, UINT8 direction);
 
 // R2HC-Fused Kernels
-ops_cycles_t get_ops_cnt_r2hcf_rfft2c(INT32 precision);
-ops_cycles_t get_ops_cnt_r2hcf_rfft3c(INT32 precision);
-ops_cycles_t get_ops_cnt_r2hcf_rfft4c(INT32 precision);
+ops_cycles_t get_ops_cnt_r2hcf_rfft2c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_r2hcf_rfft3c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_r2hcf_rfft4c(UINT8 precision, UINT8 direction);
 
 // C register kernels
-kfft_ register_kernel_fft2c(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft3c(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft4c(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft5c(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft6c(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft7c(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft8c(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft9c(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft10c(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft11c(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft12c(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft13c(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft14c(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft15c(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft16c(INT32 precision, INT32 direction);
+kfft_ register_kernel_fft2c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft3c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft4c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft5c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft6c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft7c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft8c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft9c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft10c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft11c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft12c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft13c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft14c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft15c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft16c(UINT8 precision, UINT8 direction);
 
 #ifdef ENABLE_AVX128
-kfft_ register_kernel_fft2avx128(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft3avx128(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft4avx128(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft5avx128(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft6avx128(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft7avx128(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft8avx128(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft9avx128(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft10avx128(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft11avx128(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft12avx128(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft13avx128(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft14avx128(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft15avx128(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft16avx128(INT32 precision, INT32 direction);
+kfft_ register_kernel_fft2avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft3avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft4avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft5avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft6avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft7avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft8avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft9avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft10avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft11avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft12avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft13avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft14avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft15avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft16avx128(UINT8 precision, UINT8 direction);
 #endif
 
 #ifdef ENABLE_AVX256
-kfft_ register_kernel_fft2avx256(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft3avx256(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft4avx256(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft5avx256(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft6avx256(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft7avx256(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft8avx256(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft9avx256(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft10avx256(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft11avx256(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft12avx256(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft13avx256(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft14avx256(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft15avx256(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft16avx256(INT32 precision, INT32 direction);
+kfft_ register_kernel_fft2avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft3avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft4avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft5avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft6avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft7avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft8avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft9avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft10avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft11avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft12avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft13avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft14avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft15avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft16avx256(UINT8 precision, UINT8 direction);
 #endif
 
 #ifdef ENABLE_AVX512
-kfft_ register_kernel_fft2avx512(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft3avx512(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft4avx512(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft5avx512(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft6avx512(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft7avx512(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft8avx512(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft9avx512(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft10avx512(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft11avx512(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft12avx512(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft13avx512(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft14avx512(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft15avx512(INT32 precision, INT32 direction);
-kfft_ register_kernel_fft16avx512(INT32 precision, INT32 direction);
+kfft_ register_kernel_fft2avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft3avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft4avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft5avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft6avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft7avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft8avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft9avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft10avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft11avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft12avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft13avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft14avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft15avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_fft16avx512(UINT8 precision, UINT8 direction);
 #endif
 
 // R2HC Kernels
-kfft_ register_kernel_r2hc_rfft2c(INT32 precision, INT32 direction);
-kfft_ register_kernel_r2hc_rfft3c(INT32 precision, INT32 direction);
-kfft_ register_kernel_r2hc_rfft4c(INT32 precision, INT32 direction);
+kfft_ register_kernel_r2hc_rfft2c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_r2hc_rfft3c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_r2hc_rfft4c(UINT8 precision, UINT8 direction);
 
 // R2HC-Fused Kernels
-kfft_ register_kernel_r2hcf_rfft2c(INT32 precision, INT32 direction);
-kfft_ register_kernel_r2hcf_rfft3c(INT32 precision, INT32 direction);
-kfft_ register_kernel_r2hcf_rfft4c(INT32 precision, INT32 direction);
+kfft_ register_kernel_r2hcf_rfft2c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_r2hcf_rfft3c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_r2hcf_rfft4c(UINT8 precision, UINT8 direction);
 
 // Permuted Copy Kernels
 VOID permuted_copy_c_fp32(VOID *in, VOID *out, INTP n, INTP size,
