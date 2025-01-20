@@ -83,6 +83,7 @@ set(TEST_SUITE
     "C_MULTILEVEL_CT_WITH_STRIDES ./aocl_fftz_bench 15015:3:2 -b a -m i -p f"               # accuracy |  float   | ILP64      | 1D  |  no     | CT        | outplace  | forward   | C       | C ILP64 data model, covers direct prime kernels
     "C_CT_WITH_BLUESTEIN ./aocl_fftz_bench 170:4:4 -b a -r i"                               # accuracy |  double  | LP64       | 1D  |  no     | CT+BS     | inplace   | forward   | C       | C Inplace
     "C_BLUESTEIN_WITH_STRIDES ./aocl_fftz_bench 23:5:7 -b a -p f --dir b"                   # accuracy |  float   | LP64       | 1D  |  no     | BS        | outplace  | backward  | C       | C Float Inverse
+    "AVX512_BLUESTEIN_WITH_STRIDES ./aocl_fftz_bench 823:7:7 -b a -r i -o 4"                # accuracy |  double  | LP64       | 1D  |  no     | BS        | inplace   | forward   | AVX512  | AVX512 Bluestein
     "AVX128_DIRECT_WITH_SAME_STRIDE_D ./aocl_fftz_bench 15:5:5 -b a -o 2"                   # accuracy |  double  | LP64       | 1D  |  no     | direct    | outplace  | forward   | AVX128  | AVX128 direct
     "AVX128_CT_WITH_SAME_STRIDE_F ./aocl_fftz_bench 5005:8:5 -b a -p f -m i -o 2 --dir b"   # accuracy |  float   | ILP64      | 1D  |  no     | CT        | outplace  | backward  | AVX128  | AVX128 Float Inverse ILP64, covers direct prime kernels
     "AVX128_3D_BATCHED_3D_ACCURACY ./aocl_fftz_bench 2x4x8v200x17x2 -b a -o 2"              # accuracy |  double  | LP64       | 3D  |  yes    | NDim      | outplace  | forward   | AVX128  | AVX128 multiple solvers
