@@ -98,7 +98,10 @@ list(APPEND CORE_SRC_FILES ${CORE_C_FILES})
 if(ENABLE_AVX512)
     set(ENABLE_AVX256 ON)
     add_compile_definitions(ENABLE_AVX512)
-    file(GLOB CORE_AVX512_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/c2c/avx512/*.c)
+    file(GLOB CORE_AVX512_FILES CONFIGURE_DEPENDS
+                            ${CORE_PATH}/kernels/c2c/avx512/*.c
+                            ${CORE_PATH}/kernels/r2hc/avx512/*.c
+                            ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx512.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX512_FILES})
 endif()
 if(ENABLE_AVX256)
