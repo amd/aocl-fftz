@@ -103,11 +103,26 @@ INT32 setup_buffered_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
 // RealFFT-Solvers
 INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
-                               kernel_t *kernel_c2c, kernel_t *kernel_r2hc,
-                               kernel_t *kernel_r2hcf,
+                               const kernel_t *kernel_c2c,
+                               const kernel_t *kernel_r2hc,
+                               const kernel_t *kernel_r2hcf,
                                aoclfftz_realhelper_t *realhelper);
 INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
+                                aoclfftz_solution_t *next_sol,
                                 aoclfftz_realhelper_t *realhelper);
+INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
+                                aoclfftz_realhelper_t *realhelper);
+INT32 setup_real_ct_solver(aoclfftz_solution_t *sol,
+                           aoclfftz_solution_t *sol_r,
+                           aoclfftz_solution_t *sol_m,
+                           UINT32 radix_r,
+                           UINT32 radix_m,
+                           aoclfftz_realhelper_t * realhelper);
+INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
+                                aoclfftz_realhelper_t *realhelper);
+INT32 setup_real_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
+                           aoclfftz_solution_t *sol_m, UINT32 radix_r,
+                           UINT32 radix_m, aoclfftz_realhelper_t * realhelper);
 
 dft_solver_ register_execute_direct_solver(VOID);
 dft_solver_ register_execute_ct_solver(VOID);
@@ -119,5 +134,7 @@ dft_solver_ register_execute_transpose_solver(VOID);
 
 dft_solver_ register_execute_real_direct_solver(VOID);
 dft_solver_ register_execute_real_batched_solver(VOID);
+dft_solver_ register_execute_real_buffered_solver(VOID);
+dft_solver_ register_execute_real_ct_solver(VOID);
 
 #endif // AOCLFFTZ_SOLVER_H

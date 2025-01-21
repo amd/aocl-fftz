@@ -133,6 +133,7 @@ typedef struct aoclfftz_generic_solver aoclfftz_generic_solver_t;
 typedef struct aoclfftz_strides aoclfftz_strides_t;
 typedef struct aoclfftz_twiddle aoclfftz_twiddle_t;
 typedef struct aoclfftz_bluestein aoclfftz_bluestein_t;
+typedef struct aoclfftz_buffered aoclfftz_buffered_t;
 typedef struct aoclfftz_executor aoclfftz_executor_t;
 typedef struct aoclfftz_realhelper aoclfftz_realhelper_t;
 
@@ -228,6 +229,19 @@ typedef struct aoclfftz_bluestein
     UINT8 is_B_out_valid;
 } aoclfftz_bluestein_t;
 
+typedef struct aoclfftz_buffered
+{
+    VOID *aux_buffer_1;
+    VOID *aux_buffer_2;
+    // this is used to store the address of last direct solution's output buffer
+    // NOTE: This is required since we cannot immediately get the address of the
+    //       last node from one of the starting nodes.
+    //       It can be avoided if we introduce support circular doubly
+    //       linked-list or an additional field to point dependend non-next
+    //       nodes from the current solution.
+    VOID **out_ptr;
+} aoclfftz_buffered_t;
+
 // Internal types to denote complex numbers in fftz's transpose routines
 typedef struct aoclfftz_complex_f
 {
@@ -274,11 +288,13 @@ typedef struct aoclfftz_solution
 {
     aoclfftz_generic_solver_t *solver;
     aoclfftz_decomp_scheme_t *decomp_scheme;
-    aoclfftz_strides_t *strides;        // for C2C Kernel
-    aoclfftz_strides_t *strides_r2hc;   // for R2HC Kernel
-    aoclfftz_strides_t *strides_r2hcf;  // for R2HC-Fused Kernel
+    aoclfftz_strides_t *strides;        // for complex Kernels
+    aoclfftz_strides_t *strides_c2c;    // for real C2C Kernels
+    aoclfftz_strides_t *strides_r2hc;   // for real R2HC Kernels
+    aoclfftz_strides_t *strides_r2hcf;  // for real R2HC-Fused Kernels
     aoclfftz_twiddle_t *twiddle;
     aoclfftz_bluestein_t *bluestein;
+    aoclfftz_buffered_t *buffered;
     aoclfftz_transpose_t *transpose;
     aoclfftz_solution_t *nd_sol; // holds one of the solutions of ND, else NULL
     aoclfftz_solution_t *next_sol;
@@ -289,8 +305,13 @@ typedef struct aoclfftz_solution
 // and selectors.
 typedef struct aoclfftz_realhelper
 {
-    UINT32 is_direct;
-    // TODO: Add more fields for other solvers
+    INTP problem_size;
+    INTP p;
+    INTP q;
+    UINT32 stage;
+    UINT8 is_last_stage;
+    UINT8 is_CT;
+    UINT8 is_buffered_invoked;
 } aoclfftz_realhelper_t;
 
 // float LP64

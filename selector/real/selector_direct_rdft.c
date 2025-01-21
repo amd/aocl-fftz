@@ -90,26 +90,18 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
             continue;
         }
 
-        // Support only direct problems for now
-        if (!realhelper->is_direct)
-        {
-            return SOLVER_FAILURE;
-        }
-
         if (radix == n)
         {
 #ifdef AOCL_ENABLE_LOG
             AOCLFFTZ_LOG_FORMATTED(TRACE, logger_mode,
                                    "Evaluating Radix-%td kernel", n);
 #endif
-
+            kernel_c2c = &kertab[ker_idx - 1];
             kernel_r2hc = &kertab[ker_idx];
+            kernel_r2hcf = &kertab[ker_idx + 1];
+            cur_sel->solution->solver->kernel_c2c = kertab[ker_idx - 1].kfft;
             cur_sel->solution->solver->kernel_r2hc = kertab[ker_idx].kfft;
-
-            // Set C2C and R2HCF Kernels as NULL for direct problems
-            // TODO: Fix this for CT direct problems
-            cur_sel->solution->solver->kernel_c2c = NULL;
-            cur_sel->solution->solver->kernel_r2hcf = NULL;
+            cur_sel->solution->solver->kernel_r2hcf = kertab[ker_idx + 1].kfft;
 
             // call direct solver
             ret = setup_real_direct_solver(

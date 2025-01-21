@@ -112,6 +112,52 @@ VOID populate_stride_array(INTP *strides, INTP stride_val, INTP n,
 }
 
 /**
+ * @brief Prepare the stride array for C2C Kernel in Real Problem
+ *
+ * The stride array of C2C kernel in real problem needs to be rearranged in
+ * such a way that the second half of the strides will be reversed to its
+ * complex conjugate point.
+ *
+ * This function will prepare rearranged strides for the first iteration in a
+ * CT stage and for the remaining iterations, the strides will be adjusted by
+ * subtracting a constant value during execution.
+ *
+ * Example for radix 6 C2C kernel with stride complex stride 4 (i.e. stride in data = 8):
+ *
+ * full complex data    : x1------x2------x3------x4------x5------x6
+ * half complex buffer  : |----------------------|
+ * half complex data    : x1--y6--x2--y4--x3--y3-- (here y refers to complex conjugate of x)
+ *
+ * full complex strides : 0, 8, 16, 24, 32, 40
+ * half complex strides : 0, 8, 16, 20, 12, 4
+ *
+ * @param strides stride array
+ * @param radix radix value i.e. length of the stride array
+ * @param n length of the data buffer
+ * @param stride stride value for the given buffer
+ * @return VOID
+ */
+VOID prepare_real_c2c_kernel_strides(INTP *in, INTP *out, INTP radix,
+                                     INTP n, INTP stride)
+{
+    // align stride to complex points
+    stride *= 2;
+    for (INTP i = 0; i < radix; i++)
+    {
+        INTP a = in[i] / stride + 1;
+        if (a > n / 2)
+        {
+            a = n - a;
+            out[i] = (a - 1) * stride;
+        }
+        else
+        {
+            out[i] = in[i];
+        }
+    }
+}
+
+/**
  * @brief Prepare the strides for R2HCF kernels by fusing strides of standard
  *        and shifted kernels in interleaved order
  *
@@ -138,48 +184,5 @@ VOID prepare_fused_kernel_strides(INTP *strides, INTP radix, INTP offset)
         INTP stride = strides[i];
         strides[i * 2] = stride;
         strides[i * 2 + 1] = stride + offset;
-    }
-}
-
-/**
- * @brief Prepare the stride array for C2C Kernel in Real Problem
- *
- * The stride array of C2C kernel in real problem needs to be rearranged in
- * such a way that the second half of the strides will be reversed to its
- * complex conjugate point.
- *
- * Example for radix 6 C2C kernel with stride complex stride 4 (i.e. stride in data = 8):
- *
- * full complex data    : x1------x2------x3------x4------x5------x6
- * half complex buffer  : |----------------------|
- * half complex data    : x1--y6--x2--y4--x3--y3-- (here y refers to complex conjugate of x)
- *
- * full complex strides : 0, 8, 16, 24, 32, 40
- * half complex strides : 0, 8, 16, 20, 12, 4
- *
- * @param strides stride array
- * @param radix radix value i.e. length of the stride array
- * @param n length of the data buffer
- * @param stride stride value for the given buffer
- * @param offset distance of the C2C kernel within a group
- * @return VOID
- */
-VOID prepare_real_c2c_kernel_strides(INTP *in, INTP *out, INTP radix,
-                                     INTP n, INTP stride, INTP offset)
-{
-    // align stride to complex points
-    stride *= 2;
-    for (INTP i = 0; i < radix; i++)
-    {
-        INTP a = in[i] / stride + offset;
-        if (a > n / 2)
-        {
-            a = n - a;
-            out[i] = (a - offset) * stride;
-        }
-        else
-        {
-            out[i] = in[i];
-        }
     }
 }

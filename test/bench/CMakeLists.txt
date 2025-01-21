@@ -94,8 +94,12 @@ set(TEST_SUITE
     "C_BLUESTEIN_UNIT_STRIDE ./aocl_fftz_bench 29:1:1 -b a"                                 # accuracy | complex  |  double  | LP64       | 1D  |  no     | bluestein | outplace  | forward   | C       | C unit strided bluestein to pick memcpy path
     "R2C_C_DIRECT ./aocl_fftz_bench 6:3:5 -f r2c -b a -p f"                                 # accuracy | real     |  float   | LP64       | 1D  |  no     | direct    | outplace  | forward   | C       | C accuracy
     "R2C_C_BATCHED_DIRECT ./aocl_fftz_bench 7v5:3:3 -f r2c -b a -r i"                       # accuracy | real     |  double  | LP64       | 1D  |  yes    | direct    | inplace   | backward  | C       | C accuracy
+    "R2C_C_CT ./aocl_fftz_bench 1000:10:2 -f r2c -b a -p f --dir b"                         # accuracy | real     |  float   | LP64       | 1D  |  no     | CT        | outplace  | forward   | C       | C accuracy
+    "R2C_C_BATCHED_CT ./aocl_fftz_bench 15v200:4:4 -f r2c -b a -p d --dir b -r i"           # accuracy | real     |  double  | LP64       | 1D  |  yes    | CT        | inplace   | forward   | C       | C accuracy
     "C2R_C_DIRECT ./aocl_fftz_bench 8:4:2 -f r2c -b a -p f --dir b"                         # accuracy | real     |  float   | LP64       | 1D  |  no     | direct    | outplace  | forward   | C       | C accuracy
     "C2R_C_BATCHED_DIRECT ./aocl_fftz_bench 7v5:4:3 -f r2c -b a --dir b"                    # accuracy | real     |  double  | LP64       | 1D  |  yes    | direct    | outplace  | backward  | C       | C accuracy
+    "C2R_C_CT ./aocl_fftz_bench 60:3:5 -f r2c -b a -p f --dir b"                            # accuracy | real     |  float   | LP64       | 1D  |  no     | CT        | outplace  | backward  | C       | C accuracy
+    "C2R_C_BATCHED_CT ./aocl_fftz_bench 1024:5:5 -f r2c -b a -p d --dir b -r i"             # accuracy | real     |  double  | LP64       | 1D  |  yes    | CT        | inplace   | backward  | C       | C accuracy
     )
 
 list(LENGTH TEST_SUITE N)

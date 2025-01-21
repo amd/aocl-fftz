@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2023, Advanced Micro Devices. All rights reserved.
+ * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -26,27 +26,26 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file strides.h
+/** @file ct_solver.h
  *
- *  @brief Declarations for stride utility functions.
+ *  @brief Interface header file of the Real Cooley Tukey Solver
  *
- *  This file contains the function declarations related to strided-memcpy,
- *  computing and manipulating stride array values for real, complex and
- *  half-complex data.
+ *  This file contains the data strucutes and function declarationss that
+ *  setup, execute and destroy the real CT solver.
  *
  *  @author Srirammaswamy Srinivasan
  */
 
-#ifndef STRIDES_H
-#define STRIDES_H
+#ifndef REAL_CT_SOLVER_H
+#define REAL_CT_SOLVER_H
 
-#include "api/types.h"
+#include "core/solvers/solver.h"
 
-VOID populate_stride_array(INTP *strides, INTP stride_val, INTP n,
-                           UINT8 compute_half_complex,
-                           UINT8 adjust_to_full_complex);
-VOID prepare_real_c2c_kernel_strides(INTP *in, INTP *out, INTP radix,
-                                     INTP n, INTP stride);
-VOID prepare_fused_kernel_strides(INTP *strides, INTP radix, INTP offset);
+// Solver data structure that holds solver object/pointer and its type
+typedef struct ct_solver
+{
+    solver_t *ct_solver;
+    cost_analysis_t *cost;
+} ct_solver_t;
 
-#endif // STRIDES_H
+#endif // REAL_CT_SOLVER_H

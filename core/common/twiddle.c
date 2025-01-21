@@ -40,6 +40,7 @@
 
 #include <math.h>
 #include "core/common/twiddle.h"
+#include "core/kernels/kernel.h"
 #include "utils/allocator.h"
 #include "api/aoclfftz_internal.h"
 #include "selector/selector.h"
@@ -583,4 +584,110 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol)
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
 #endif
     return status;
+}
+
+INT32 twiddle_multiplier_for_real(aoclfftz_solution_t *sol, INTP p)
+{
+    UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags);
+    VOID *in = sol->decomp_scheme->in_real;
+    VOID *out = sol->decomp_scheme->out_real;
+    INTP *batches = sol->solver->batches;
+    INTP radix = sol->decomp_scheme->dims[0].n;
+    aoclfftz_strides_t *strides = sol->strides;
+    // FIXIT: Fix for fully strided CT problems (i.e. strides in all CT stages)
+    INTP base_stride = 1;
+
+    INTP *stride_arr = NULL;
+    INTP vec_stride = 1;
+    if (is_backward)
+    {
+        stride_arr = strides->out_strides;
+        vec_stride = strides->v_out_stride;
+    }
+    else
+    {
+        stride_arr = strides->in_strides;
+        vec_stride = strides->v_in_stride;
+    }
+
+    INTP no_of_groups = batches[R2HCF_KERNEL] > 0 ?
+                        batches[R2HCF_KERNEL] :
+                        batches[R2HC_KERNEL];
+    INTP group_size = batches[C2C_KERNEL] / no_of_groups;
+
+    if (precision == DT_FLOAT)
+    {
+        FLOAT sign = is_backward ? 1.0 : -1.0;
+        FLOAT *data_r = is_backward ? (FLOAT *)out : (FLOAT *)in;
+        FLOAT *data_i = is_backward ? (FLOAT *)out + 1 : (FLOAT *)in + 1;
+
+        // move the in_r to point first C2C point
+        data_r += base_stride;
+        data_i += base_stride;
+
+        for (INTP i = 0; i < group_size; i++)
+        {
+            for (INTP j = 1; j < radix; j++)
+            {
+                FLOAT *cur_data_r = data_r;
+                FLOAT *cur_data_i = data_i;
+
+                FLOAT x = (sign * AOCLFFTZ_2_PI * (i + 1) * j) / p;
+                FLOAT TW_real = cos(x);
+                FLOAT TW_imag = sin(x);
+
+                INTP stride = stride_arr[j];
+
+                for (INTP k = 0; k < no_of_groups; k++)
+                {
+                    FLOAT a = cur_data_r[stride];
+                    FLOAT b = cur_data_i[stride];
+                    cur_data_r[stride] = a * TW_real - b * TW_imag;
+                    cur_data_i[stride] = b * TW_real + a * TW_imag;
+                    stride += vec_stride;
+                }
+            }
+            data_r += base_stride * 2;
+            data_i += base_stride * 2;
+        }
+    }
+    else
+    {
+        DOUBLE sign = is_backward ? 1.0 : -1.0;
+        DOUBLE *data_r = is_backward ? (DOUBLE *)out : (DOUBLE *)in;
+        DOUBLE *data_i = is_backward ? (DOUBLE *)out + 1 : (DOUBLE *)in + 1;
+
+        // move the in_r to point first C2C point
+        data_r += base_stride;
+        data_i += base_stride;
+
+        for (INTP i = 0; i < group_size; i++)
+        {
+            for (INTP j = 1; j < radix; j++)
+            {
+                DOUBLE *cur_data_r = data_r;
+                DOUBLE *cur_data_i = data_i;
+
+                DOUBLE x = (sign * AOCLFFTZ_2_PI * (i + 1) * j) / p;
+                DOUBLE TW_real = cos(x);
+                DOUBLE TW_imag = sin(x);
+
+                INTP stride = stride_arr[j];
+
+                for (INTP k = 0; k < no_of_groups; k++)
+                {
+                    DOUBLE a = cur_data_r[stride];
+                    DOUBLE b = cur_data_i[stride];
+                    cur_data_r[stride] = a * TW_real - b * TW_imag;
+                    cur_data_i[stride] = b * TW_real + a * TW_imag;
+                    stride += vec_stride;
+                }
+            }
+            data_r += base_stride * 2;
+            data_i += base_stride * 2;
+        }
+    }
+
+    return TW_SUCCESS;
 }

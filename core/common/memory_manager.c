@@ -86,6 +86,8 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->decomp_scheme = alloc_decomp_scheme(vec_rank, dim_rank);
         ALLOC_ALIGN_INIT(sol->strides, aoclfftz_strides_t,
                          sizeof(aoclfftz_strides_t));
+        ALLOC_ALIGN_INIT(sol->strides_c2c, aoclfftz_strides_t,
+                         sizeof(aoclfftz_strides_t));
         ALLOC_ALIGN_INIT(sol->strides_r2hc, aoclfftz_strides_t,
                          sizeof(aoclfftz_strides_t));
         ALLOC_ALIGN_INIT(sol->strides_r2hcf, aoclfftz_strides_t,
@@ -94,6 +96,8 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
                            sizeof(aoclfftz_twiddle_t));
         ALLOC_ALIGN_UNINIT(sol->bluestein, aoclfftz_bluestein_t,
                            sizeof(aoclfftz_bluestein_t));
+        ALLOC_ALIGN_UNINIT(sol->buffered, aoclfftz_buffered_t,
+                           sizeof(aoclfftz_buffered_t));
         ALLOC_ALIGN_INIT(sol->transpose, aoclfftz_transpose_t,
                          sizeof(aoclfftz_transpose_t));
         ALLOC_ALIGN_INIT(sol->transpose->aux_mem, aoclfftz_transpose_aux_mem_t,
@@ -101,22 +105,27 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->next_sol = NULL;
         sol->nd_sol = NULL;
         if (sol->solver == NULL || sol->decomp_scheme == NULL ||
-            sol->strides == NULL || sol->strides_r2hc == NULL ||
-            sol->strides_r2hcf == NULL || sol->bluestein == NULL ||
+            sol->strides == NULL || sol->strides_c2c == NULL ||
+            sol->strides_r2hc == NULL || sol->strides_r2hcf == NULL ||
+            sol->bluestein == NULL || sol->buffered == NULL ||
             sol->twiddle == NULL)
         {
             FREE_ALIGN_ALLOCATED_MEM(sol->solver);
             destroy_decomp_scheme(sol->decomp_scheme);
             FREE_ALIGN_ALLOCATED_MEM(sol->strides);
+            FREE_ALIGN_ALLOCATED_MEM(sol->strides_c2c);
             FREE_ALIGN_ALLOCATED_MEM(sol->strides_r2hc);
             FREE_ALIGN_ALLOCATED_MEM(sol->strides_r2hcf);
             destroy_bluestein(sol->bluestein);
+            FREE_ALIGN_ALLOCATED_MEM(sol->buffered);
             FREE_ALIGN_ALLOCATED_MEM(sol->twiddle);
             FREE_ALIGN_ALLOCATED_MEM(sol);
             return NULL;
         }
         sol->strides->in_strides = NULL;
         sol->strides->out_strides = NULL;
+        sol->strides_c2c->in_strides = NULL;
+        sol->strides_c2c->out_strides = NULL;
         sol->strides_r2hc->in_strides = NULL;
         sol->strides_r2hc->out_strides = NULL;
         sol->strides_r2hcf->in_strides = NULL;
@@ -127,6 +136,9 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->bluestein->in = NULL;
         sol->bluestein->out = NULL;
         sol->bluestein->is_B_out_valid = 0;
+        sol->buffered->aux_buffer_1 = NULL;
+        sol->buffered->aux_buffer_2 = NULL;
+        sol->buffered->out_ptr = NULL;
         sol->transpose->row_info = (aoclfftz_dim_t_64_){0};
         sol->transpose->col_info = (aoclfftz_dim_t_64_){0};
         sol->transpose->aux_mem->size = 0;
@@ -260,11 +272,15 @@ VOID destroy_solution(aoclfftz_solution_t *sol)
     {
         cur_sol = sol;
         sol = sol->next_sol;
+        INT32 solver_type = cur_sol->solver->solver_type;
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver);
         destroy_decomp_scheme(cur_sol->decomp_scheme);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides->in_strides);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides->out_strides);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides);
+        FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_c2c->in_strides);
+        FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_c2c->out_strides);
+        FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_c2c);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_r2hc->in_strides);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_r2hc->out_strides);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_r2hc);
@@ -276,6 +292,18 @@ VOID destroy_solution(aoclfftz_solution_t *sol)
         destroy_bluestein(cur_sol->bluestein);
         destroy_transpose(cur_sol->transpose);
         destroy_solution(cur_sol->nd_sol);
+        // Buffered solver will create aux_buffers and the same address will be
+        // used in other solvers.
+        // So free the aux_buffers only for buffered solver.
+        //
+        // Clearing these buffers will happen only once (which will be from
+        // destroy_handle).
+        if (solver_type == SOLVER_BUFFERED)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(cur_sol->buffered->aux_buffer_1);
+            FREE_ALIGN_ALLOCATED_MEM(cur_sol->buffered->aux_buffer_2);
+        }
+        FREE_ALIGN_ALLOCATED_MEM(cur_sol->buffered);
         FREE_ALIGN_ALLOCATED_MEM(cur_sol);
     }
     return;

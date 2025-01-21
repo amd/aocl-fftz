@@ -30,7 +30,8 @@
  *
  *  @brief Declarations for RealFFT utility functions.
  *
- *  This file contains the utility function macros related to RealFFT problems.
+ *  This file contains the function declarations and function macros of utility
+ *  functions related to RealFFT problems.
  *
  *  @author Srirammaswamy Srinivasan
  */
@@ -105,5 +106,8 @@
         }                                                                      \
     }                                                                          \
 }
+
+VOID compute_conjugates(VOID *data, INTP radix, INTP n, INTP *strides,
+                        INTP vec_stride, UINT32 prec);
 
 #endif // REALFFT_UTILS_H

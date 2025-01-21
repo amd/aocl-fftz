@@ -26,23 +26,22 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file selector_batched_rdft.c
+/** @file selector_buffered_rdft.c
  *
- *  @brief Wrapper that acts on the batched solver as guided by the selector.
+ *  @brief Wrapper that acts on the buffered solver as guided by the selector.
  *
  *  This file contains the implementation of functions that are used to
- *  handle the batches of multi-batched problems.
+ *  setup, factorize and evaluate sub-problems and kernels as applicable.
  *
  *  @author Srirammaswamy Srinivsan
- *  @author S. Biplab Raut
  */
 
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
-                            aoclfftz_realhelper_t *realhelper)
+INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+                             aoclfftz_realhelper_t *realhelper)
 {
 #ifdef AOCL_ENABLE_LOG
     INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
@@ -51,10 +50,6 @@ INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     aoclfftz_selector_t *cur_sel = NULL;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 stats_mode =
-        sel->solution->decomp_scheme->cntrl_params->measure_stats;
-    INT32 rnk = 0;
-    INTP batch_size = 1;
     INT32 ret = SELECTOR_FAILURE;
 
     cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space);
@@ -66,37 +61,35 @@ INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     // copy solution object from sel to cur_sel
     COPY_SOLUTION_OBJ(cur_sel->solution, sel->solution);
 
-    // Setup batched solver to find the next solution for a single set/unit
-    // of the vector problem
-    ret = setup_real_batched_solver(sel->solution, cur_sel->solution,
-                                    realhelper);
+    // Setup buffered solver
+    ret = setup_real_buffered_solver(sel->solution, realhelper);
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_batched_dft;
     }
 
-    // Call selector for solving a single set/unit of the vector problem
+    // Copy the auxiliary buffers (address) from sel to cur_sel (i.e. next_sol)
+    cur_sel->solution->buffered->aux_buffer_1 =
+        sel->solution->buffered->aux_buffer_1;
+    cur_sel->solution->buffered->aux_buffer_2 =
+        sel->solution->buffered->aux_buffer_2;
+
+    // Call selector for solving it as a non-buffered problem
     ret = setup_rdft_(cur_sel, kertab, realhelper);
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_batched_dft;
     }
 
-    // Calculate the batch size of all the sub-problems in the vector problem
-    for (rnk = 0; rnk < vec_rank; rnk++)
-    {
-        batch_size *= sel->solution->decomp_scheme->vecs[rnk].n;
-    }
-
-    sel->cost_analysis->ops = batch_size * cur_sel->cost_analysis->ops;
-    sel->cost_analysis->time = batch_size * cur_sel->cost_analysis->time;
-
-    if (stats_mode)
-    {
-        // capture stats
-    }
-
     sel->solution->next_sol = cur_sel->solution;
+
+    // Set the out_ptr to last direct solution's output
+    aoclfftz_solution_t *temp_sol = sel->solution->next_sol;
+    while (temp_sol->next_sol != NULL)
+    {
+        temp_sol = temp_sol->next_sol;
+    }
+    sel->solution->buffered->out_ptr = &temp_sol->decomp_scheme->out_real;
 
     // destroy only the selector not the solution within it
     destroy_selector_without_solution(cur_sel);

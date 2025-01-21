@@ -41,6 +41,7 @@
 #include "utils/utils.h"
 
 INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
+                                aoclfftz_solution_t *next_sol,
                                 aoclfftz_realhelper_t *realhelper)
 {
 #ifdef AOCL_ENABLE_LOG
@@ -49,9 +50,29 @@ INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
 #endif
 
     // Turn the vector problem into a single set/unit problem to find its
-    // solution
-    sol->decomp_scheme->vec_rank = 1;
-    sol->decomp_scheme->vecs[0].n = 1;
+    // solution if it is not a direct problem
+    next_sol->decomp_scheme->vec_rank = 1;
+    next_sol->decomp_scheme->vecs[0].n = 1;
+
+    // Strides are prepared based on real points, so adjust them (scale by 2)
+    // for complex points (i.e. R2C output and C2R input)
+    if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
+    {
+        sol->decomp_scheme->vecs[0].out_stride *= 2;
+    }
+    else
+    {
+        sol->decomp_scheme->vecs[0].in_stride *= 2;
+    }
+
+    // Update the vec in-stride for batched in-place forward problem
+    // for complex adjusted values.
+    // For batched direct in-place forward problem, it is done in direct solver.
+    if (!IS_OUT_OF_PLACE(next_sol->decomp_scheme->flags) &&
+        FFT_DIR(next_sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
+    {
+        sol->decomp_scheme->vecs[0].in_stride *= 2;
+    }
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
@@ -78,10 +99,8 @@ INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     dt_bytes = DT_PRECISION_BYTES(dt_prec);
 
-    v_in_stride = sol->decomp_scheme->vecs[vec_rank - 1].in_stride *
-                  DATA_STRIDE * dt_bytes;
-    v_out_stride = sol->decomp_scheme->vecs[vec_rank - 1].out_stride *
-                   DATA_STRIDE * dt_bytes;
+    v_in_stride = sol->decomp_scheme->vecs[vec_rank - 1].in_stride * dt_bytes;
+    v_out_stride = sol->decomp_scheme->vecs[vec_rank - 1].out_stride * dt_bytes;
 
     if (vec_rank == 1)
     {

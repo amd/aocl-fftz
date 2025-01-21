@@ -333,26 +333,22 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel, kernel_t *kertab,
 
     // SOLVER_BATCHED
     level1_cond1 =
-            ((sel->solution->decomp_scheme->dims[0].n != 1) && /* size one */
-            ((vec_rank > 1) ||  /* ND Batched */
-            /* 1D Batched 1D Non-direct cases*/
-            ((sel->solution->decomp_scheme->vecs[0].n > 1) &&
-                                    !is_FFT_ker_supported) ||
-            /* 1D Batched ND case*/
-            (dim_rank > 1 &&
-                sel->solution->decomp_scheme->vecs[0].n > 1)));
+        ((sel->solution->decomp_scheme->dims[0].n != 1) && /* size one */
+         ((vec_rank > 1) ||                                /* ND Batched */
+          /* 1D Batched 1D Non-direct cases*/
+          ((sel->solution->decomp_scheme->vecs[0].n > 1) &&
+           !is_FFT_ker_supported &&
+           (sel->solution->decomp_scheme->dims[0].n ==
+            realhelper->problem_size)) ||
+          /* 1D Batched ND case*/
+          (dim_rank > 1 && sel->solution->decomp_scheme->vecs[0].n > 1)));
     // SOLVER_NDIM
     level1_cond1 |= ((dim_rank > 1) << 1);
     // SOLVER_BLUESTEIN
     level1_cond1 |= (is_solvable_by_bluestein << 2);
     // SOLVER_BUFFERED
-    level1_cond2 = !(IS_OUT_OF_PLACE(sel->solution->decomp_scheme->flags));
-    // SOLVER_BUFFERED
-    // TODO: Conditions to work with AOCLFFTZ_FIXED_SELECTOR_MODE
-    level1_cond2 &= ((sel->solution->decomp_scheme->dims[0].n >
-                      MAX_GUARANTEED_CACHEABLE_SIZE) &&
-                     (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
-                      AOCLFFTZ_AUTO_SELECTOR_MODE));
+    // Buffered solver will be used for all CT problems as of now
+    level1_cond2 = !realhelper->is_buffered_invoked && !is_FFT_ker_supported;
     // SOLVER_PERM_KER
     level1_cond2 |= (IS_OUT_OF_ORDER(sel->solution->decomp_scheme->flags) << 1);
     // SOLVER_DIRECT
@@ -390,9 +386,14 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel, kernel_t *kertab,
     // Buffered FFT Solver
     if (level1_cond2 & 0x1)
     {
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, logger_mode,
-            "Buffered RealFFT is not supported");
-        return SELECTOR_FAILURE;
+        solver_obj->solver_type = SOLVER_BUFFERED;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+
+        ret = selector_buffered_rdft(sel, kertab, realhelper);
+        return ret;
     }
     // Permuted (out-of-order output) FFT Solver
     if (level1_cond2 & 0x2)
@@ -428,9 +429,15 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel, kernel_t *kertab,
     }
     else
     {
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, logger_mode,
-            "CT problems RealFFT is not supported");
-        return SELECTOR_FAILURE;
+        solver_obj->solver_type = SOLVER_CT;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+
+        // Call CT Solver master
+        ret = selector_ct_rdft(sel, kertab, realhelper);
+        return ret;
     }
 
     return ret;

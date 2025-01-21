@@ -34,6 +34,7 @@
  *  related function.
  *
  *  @author S. Biplab Raut
+ *  @author Srirammaswamy Srinivasan
  */
 
 #include "core/kernels/kernel_list.h"

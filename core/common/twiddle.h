@@ -53,5 +53,6 @@ typedef enum
 
 INT32 twiddle_multiplier(aoclfftz_solution_t *sol);
 INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol);
+INT32 twiddle_multiplier_for_real(aoclfftz_solution_t *sol, INTP p);
 
 #endif // TWIDDLE_H

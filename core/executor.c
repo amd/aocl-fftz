@@ -43,6 +43,7 @@
 static INT32 execute_dft(aoclfftz_executor_t *executor_obj)
 {
     aoclfftz_solution_t *sol = executor_obj->solution;
+
     // Re-order input buffer for batched in-place real forward (R2C) problems
     UINT32 flags = sol->decomp_scheme->flags;
     UINT8 is_batched_inplace_real_fwd =

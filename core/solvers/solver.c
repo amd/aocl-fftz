@@ -57,7 +57,9 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
     {
         solvers_table[SOLVER_DIRECT] = register_execute_real_direct_solver();
         solvers_table[SOLVER_BATCHED] = register_execute_real_batched_solver();
-        // TODO: Add other RealFFT Solvers
+        solvers_table[SOLVER_BUFFERED] =
+            register_execute_real_buffered_solver();
+        solvers_table[SOLVER_CT] = register_execute_real_ct_solver();
     }
     else
     {
