@@ -363,6 +363,11 @@ ops_cycles_t get_ops_cnt_r2hc_rfft2avx128_wrapper(UINT8 precision,
 {
     return get_ops_cnt_r2hc_rfft2avx128(precision, direction);
 }
+ops_cycles_t get_ops_cnt_r2hc_rfft3avx128_wrapper(UINT8 precision,
+                                                  UINT8 direction)
+{
+    return get_ops_cnt_r2hc_rfft3avx128(precision, direction);
+}
 ops_cycles_t get_ops_cnt_r2hc_rfft5avx128_wrapper(UINT8 precision,
                                                   UINT8 direction)
 {
@@ -382,6 +387,11 @@ ops_cycles_t get_ops_cnt_r2hc_rfft2avx256_wrapper(UINT8 precision,
 {
     return get_ops_cnt_r2hc_rfft2avx256(precision, direction);
 }
+ops_cycles_t get_ops_cnt_r2hc_rfft3avx256_wrapper(UINT8 precision,
+                                                  UINT8 direction)
+{
+    return get_ops_cnt_r2hc_rfft3avx256(precision, direction);
+}
 ops_cycles_t get_ops_cnt_r2hc_rfft5avx256_wrapper(UINT8 precision,
                                                   UINT8 direction)
 {
@@ -400,6 +410,11 @@ ops_cycles_t get_ops_cnt_r2hc_rfft2avx512_wrapper(UINT8 precision,
                                                   UINT8 direction)
 {
     return get_ops_cnt_r2hc_rfft2avx512(precision, direction);
+}
+ops_cycles_t get_ops_cnt_r2hc_rfft3avx512_wrapper(UINT8 precision,
+                                                  UINT8 direction)
+{
+    return get_ops_cnt_r2hc_rfft3avx512(precision, direction);
 }
 ops_cycles_t get_ops_cnt_r2hc_rfft5avx512_wrapper(UINT8 precision,
                                                   UINT8 direction)
@@ -733,13 +748,15 @@ kfft_ register_kernel_r2hcf_rfft10c_wrapper(UINT8 precision, UINT8 direction)
 
 #ifdef ENABLE_AVX128
 // R2HC - AVX128 register kernel wrapper
-kfft_ register_kernel_r2hc_rfft2avx128_wrapper(UINT8 precision,
-                                               UINT8 direction)
+kfft_ register_kernel_r2hc_rfft2avx128_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_r2hc_rfft2avx128(precision, direction);
 }
-kfft_ register_kernel_r2hc_rfft5avx128_wrapper(UINT8 precision,
-                                               UINT8 direction)
+kfft_ register_kernel_r2hc_rfft3avx128_wrapper(UINT8 precision, UINT8 direction)
+{
+    return register_kernel_r2hc_rfft3avx128(precision, direction);
+}
+kfft_ register_kernel_r2hc_rfft5avx128_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_r2hc_rfft5avx128(precision, direction);
 }
@@ -754,13 +771,15 @@ kfft_ register_kernel_r2hcf_rfft7avx128_wrapper(UINT8 precision,
 
 #ifdef ENABLE_AVX256
 // R2HC - AVX256 register kernel wrapper
-kfft_ register_kernel_r2hc_rfft2avx256_wrapper(UINT8 precision,
-                                               UINT8 direction)
+kfft_ register_kernel_r2hc_rfft2avx256_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_r2hc_rfft2avx256(precision, direction);
 }
-kfft_ register_kernel_r2hc_rfft5avx256_wrapper(UINT8 precision,
-                                               UINT8 direction)
+kfft_ register_kernel_r2hc_rfft3avx256_wrapper(UINT8 precision, UINT8 direction)
+{
+    return register_kernel_r2hc_rfft3avx256(precision, direction);
+}
+kfft_ register_kernel_r2hc_rfft5avx256_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_r2hc_rfft5avx256(precision, direction);
 }
@@ -775,13 +794,15 @@ kfft_ register_kernel_r2hcf_rfft2avx256_wrapper(UINT8 precision,
 
 #ifdef ENABLE_AVX512
 // R2HC - AVX512 register kernel wrapper
-kfft_ register_kernel_r2hc_rfft2avx512_wrapper(UINT8 precision,
-                                               UINT8 direction)
+kfft_ register_kernel_r2hc_rfft2avx512_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_r2hc_rfft2avx512(precision, direction);
 }
-kfft_ register_kernel_r2hc_rfft5avx512_wrapper(UINT8 precision,
-                                               UINT8 direction)
+kfft_ register_kernel_r2hc_rfft3avx512_wrapper(UINT8 precision, UINT8 direction)
+{
+    return register_kernel_r2hc_rfft3avx512(precision, direction);
+}
+kfft_ register_kernel_r2hc_rfft5avx512_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_r2hc_rfft5avx512(precision, direction);
 }

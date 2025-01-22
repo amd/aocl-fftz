@@ -28,7 +28,7 @@
 
 /** @file rfft5avx128.c
  *
- *  @brief Radix-5 r2hc Real-FFT kernel with AVX-256 operations using x86 SIMD
+ *  @brief Radix-5 r2hc Real-FFT kernel with AVX-128 operations using x86 SIMD
  *  intrinsics
  *
  *  This file contains the DIT radix-5 real-to-halfcomplex implementations using
