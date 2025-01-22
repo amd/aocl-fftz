@@ -39,42 +39,24 @@
 
 #include "core/kernels/kernel.h"
 
-// Forward and backward opscount are identical for float and double
-static const ops_cycles_t ops_cnt[NUM_PRECISIONS][NUM_FFT_DIRS] =
-                                                    {{{0, 0, 2, 4, 0, 0},
-                                                      {0, 0, 2, 4, 0, 0}},
-                                                     {{0, 0, 2, 4, 0, 0},
-                                                      {0, 0, 2, 4, 0, 0}}};
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 0, 2, 4, 0, 0},
+                                                     {0, 0, 2, 4, 0, 0}};
 
 ops_cycles_t get_ops_cnt_r2hc_rfft2c(UINT8 precision, UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
-        if (direction == FORWARD_FFT_DIR)
-        {
-            return ops_cnt[0][0];
-        }
-        else
-        {
-            return ops_cnt[0][1];
-        }
+        return ops_cnt[0];
     }
     else
     {
-        if (direction == FORWARD_FFT_DIR)
-        {
-            return ops_cnt[1][0];
-        }
-        else
-        {
-            return ops_cnt[1][1];
-        }
+        return ops_cnt[1];
     }
 }
 
-VOID r2hc_rfft2c_fp32_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
-                          VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                          UINT8 flag)
+VOID r2hc_rfft2c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                      VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                      UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -112,89 +94,9 @@ VOID r2hc_rfft2c_fp32_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 #endif
 }
 
-VOID r2hc_rfft2c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
-                          VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                          UINT8 flag)
-{
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
-    FLOAT *in = (FLOAT *)in_real;
-    FLOAT *out = (FLOAT *)out_real;
-#ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
-#else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
-#endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
-    INTP cnt;
-
-    // both R2C and C2R uses same approach
-    for (cnt = 0; cnt < n; cnt++)
-    {
-        FLOAT v0, v1;
-        // Input point 1: x(0)
-        v0 = *in;
-        // Input point 2: x(1)
-        v1 = in[in_strides[1]];
-        // Output point 1: X(0)
-        *out = v0 + v1;
-        // Output point 2: X(0)
-        out[out_strides[1]] = v0 - v1;
-        in = in + v_in_stride;
-        out = out + v_out_stride;
-    }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
-}
-
-VOID r2hc_rfft2c_fp64_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
-                          VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                          UINT8 flag)
-{
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
-    DOUBLE *in = (DOUBLE *)in_real;
-    DOUBLE *out = (DOUBLE *)out_real;
-#ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
-#else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
-#endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
-    INTP cnt;
-
-    // both R2C and C2R uses same approach
-    for (cnt = 0; cnt < n; cnt++)
-    {
-        DOUBLE v0, v1;
-        // Input point 1: x(0)
-        v0 = *in;
-        // Input point 2: x(1)
-        v1 = in[in_strides[1]];
-        // Output point 1: X(0)
-        *out = v0 + v1;
-        // Output point 2: X(0)
-        out[out_strides[1]] = v0 - v1;
-        in = in + v_in_stride;
-        out = out + v_out_stride;
-    }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
-}
-
-VOID r2hc_rfft2c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
-                          VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                          UINT8 flag)
+VOID r2hc_rfft2c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                      VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                      UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -234,34 +136,17 @@ VOID r2hc_rfft2c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
 kfft_ register_kernel_r2hc_rfft2c(UINT8 precision, UINT8 direction)
 {
-    if (direction == FORWARD_FFT_DIR)
+
+    if (precision == DT_FLOAT)
     {
-        if (precision == DT_FLOAT)
-        {
-            return r2hc_rfft2c_fp32_fwd;
-        }
-        else if (precision == DT_DOUBLE)
-        {
-            return r2hc_rfft2c_fp64_fwd;
-        }
-        else
-        {
-            return NULL;
-        }
+        return r2hc_rfft2c_fp32;
+    }
+    else if (precision == DT_DOUBLE)
+    {
+        return r2hc_rfft2c_fp64;
     }
     else
     {
-        if (precision == DT_FLOAT)
-        {
-            return r2hc_rfft2c_fp32_bwd;
-        }
-        else if (precision == DT_DOUBLE)
-        {
-            return r2hc_rfft2c_fp64_bwd;
-        }
-        else
-        {
-            return NULL;
-        }
+        return NULL;
     }
 }

@@ -182,6 +182,7 @@ kernel_fp_list_t kernels_r2hcf_c[NUM_KERNELS_IN_EACH_CATEGORY] =
 // R2HC - AVX128 Kernel List
 kernel_fp_list_t kernels_r2hc_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
+    {register_kernel_r2hc_rfft2avx128, get_ops_cnt_r2hc_rfft2avx128, 2},    // radix-2
     {register_kernel_r2hc_rfft5avx128, get_ops_cnt_r2hc_rfft5avx128, 5}     // radix-5
 };
 
@@ -196,6 +197,7 @@ kernel_fp_list_t kernels_r2hcf_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
 // R2HC - AVX256 Kernel List
 kernel_fp_list_t kernels_r2hc_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
+    {register_kernel_r2hc_rfft2avx256, get_ops_cnt_r2hc_rfft2avx256, 2},    // radix-2
     {register_kernel_r2hc_rfft5avx256, get_ops_cnt_r2hc_rfft5avx256, 5}     // radix-5
 };
 
@@ -210,6 +212,7 @@ kernel_fp_list_t kernels_r2hcf_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
 // R2HC - AVX512 Kernel List
 kernel_fp_list_t kernels_r2hc_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
+    {register_kernel_r2hc_rfft2avx512, get_ops_cnt_r2hc_rfft2avx512, 2},    // radix-2
     {register_kernel_r2hc_rfft5avx512, get_ops_cnt_r2hc_rfft5avx512, 5}     // radix-5
 };
 
