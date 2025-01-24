@@ -195,7 +195,8 @@ kernel_fp_list_t kernels_r2hc_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_r2hc_rfft3avx128, get_ops_cnt_r2hc_rfft3avx128, 3},    // radix-3
     {register_kernel_r2hc_rfft4avx128, get_ops_cnt_r2hc_rfft4avx128, 4},    // radix-4
     {register_kernel_r2hc_rfft5avx128, get_ops_cnt_r2hc_rfft5avx128, 5},    // radix-5
-    {register_kernel_r2hc_rfft6avx128, get_ops_cnt_r2hc_rfft6avx128, 6}     // radix-6
+    {register_kernel_r2hc_rfft6avx128, get_ops_cnt_r2hc_rfft6avx128, 6},    // radix-6
+    {register_kernel_r2hc_rfft8avx128, get_ops_cnt_r2hc_rfft8avx128, 8}     // radix-8
 };
 
 // R2HC-Fused - AVX128 Kernel List
@@ -214,7 +215,8 @@ kernel_fp_list_t kernels_r2hc_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_r2hc_rfft3avx256, get_ops_cnt_r2hc_rfft3avx256, 3},    // radix-3
     {register_kernel_r2hc_rfft4avx256, get_ops_cnt_r2hc_rfft4avx256, 4},    // radix-4
     {register_kernel_r2hc_rfft5avx256, get_ops_cnt_r2hc_rfft5avx256, 5},    // radix-5
-    {register_kernel_r2hc_rfft6avx256, get_ops_cnt_r2hc_rfft6avx256, 6}     // radix-6
+    {register_kernel_r2hc_rfft6avx256, get_ops_cnt_r2hc_rfft6avx256, 6},    // radix-6
+    {register_kernel_r2hc_rfft8avx256, get_ops_cnt_r2hc_rfft8avx256, 8},    // radix-8
 };
 
 // R2HC-Fused - AVX256 Kernel List
@@ -232,13 +234,14 @@ kernel_fp_list_t kernels_r2hc_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_r2hc_rfft3avx512, get_ops_cnt_r2hc_rfft3avx512, 3},    // radix-3
     {register_kernel_r2hc_rfft4avx512, get_ops_cnt_r2hc_rfft4avx512, 4},    // radix-4
     {register_kernel_r2hc_rfft5avx512, get_ops_cnt_r2hc_rfft5avx512, 5},    // radix-5
-    {register_kernel_r2hc_rfft6avx512, get_ops_cnt_r2hc_rfft6avx512, 6}     // radix-6
+    {register_kernel_r2hc_rfft6avx512, get_ops_cnt_r2hc_rfft6avx512, 6},    // radix-6
+    {register_kernel_r2hc_rfft8avx512, get_ops_cnt_r2hc_rfft8avx512, 8}     // radix-8
 };
 
 // R2HC-Fused - AVX512 Kernel List
 kernel_fp_list_t kernels_r2hcf_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
-    {register_kernel_r2hcf_rfft2avx512, get_ops_cnt_r2hcf_rfft2avx512, 2}     // radix-2
+    {register_kernel_r2hcf_rfft2avx512, get_ops_cnt_r2hcf_rfft2avx512, 2}    // radix-2
 };
 #endif
 

@@ -638,6 +638,10 @@ aoclfftz_kernel_test_params_t param_double_r2hc_avx128_kernels[] =
         aoclfftz_kernel_test_type::ALL},
     {6, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX128,
         aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::STANDARD_R2HC_AVX128,
+        aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX128,
+        aoclfftz_kernel_test_type::ALL},
 };
 
 // R2HC - AVX128 Kernels - Float
@@ -662,6 +666,10 @@ aoclfftz_kernel_test_params_t param_float_r2hc_avx128_kernels[] =
     {6, aocl_fftz_kernel_type::STANDARD_R2HC_AVX128,
         aoclfftz_kernel_test_type::ALL},
     {6, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX128,
+        aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::STANDARD_R2HC_AVX128,
+        aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX128,
         aoclfftz_kernel_test_type::ALL},
 };
 
@@ -716,6 +724,10 @@ aoclfftz_kernel_test_params_t param_double_r2hc_avx256_kernels[] =
         aoclfftz_kernel_test_type::ALL},
     {6, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX256,
         aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::STANDARD_R2HC_AVX256,
+        aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX256,
+        aoclfftz_kernel_test_type::ALL},
 };
 
 // R2HC - AVX256 Kernels - Float
@@ -740,6 +752,10 @@ aoclfftz_kernel_test_params_t param_float_r2hc_avx256_kernels[] =
     {6, aocl_fftz_kernel_type::STANDARD_R2HC_AVX256,
         aoclfftz_kernel_test_type::ALL},
     {6, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX256,
+        aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::STANDARD_R2HC_AVX256,
+        aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX256,
         aoclfftz_kernel_test_type::ALL},
 };
 
@@ -786,6 +802,10 @@ aoclfftz_kernel_test_params_t param_double_r2hc_avx512_kernels[] =
         aoclfftz_kernel_test_type::ALL},
     {6, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX512,
         aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::STANDARD_R2HC_AVX512,
+        aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX512,
+        aoclfftz_kernel_test_type::ALL},
 };
 
 // R2HC - AVX512 Kernels - Float
@@ -810,6 +830,10 @@ aoclfftz_kernel_test_params_t param_float_r2hc_avx512_kernels[] =
     {6, aocl_fftz_kernel_type::STANDARD_R2HC_AVX512,
         aoclfftz_kernel_test_type::ALL},
     {6, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX512,
+        aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::STANDARD_R2HC_AVX512,
+        aoclfftz_kernel_test_type::ALL},
+    {8, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX512,
         aoclfftz_kernel_test_type::ALL},
 };
 
