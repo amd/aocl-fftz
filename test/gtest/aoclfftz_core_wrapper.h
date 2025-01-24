@@ -246,6 +246,8 @@ get_ops_cnt_r2hc_rfft5avx128_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN ops_cycles_t
 get_ops_cnt_r2hc_rfft6avx128_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN ops_cycles_t
+get_ops_cnt_r2hc_rfft7avx128_wrapper(UINT8 precision, UINT8 direction);
+EXPORT_SYM_DYN ops_cycles_t
 get_ops_cnt_r2hc_rfft8avx128_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN ops_cycles_t
 get_ops_cnt_r2hc_rfft10avx128_wrapper(UINT8 precision, UINT8 direction);
@@ -278,6 +280,8 @@ get_ops_cnt_r2hc_rfft5avx256_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN ops_cycles_t
 get_ops_cnt_r2hc_rfft6avx256_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN ops_cycles_t
+get_ops_cnt_r2hc_rfft7avx256_wrapper(UINT8 precision, UINT8 direction);
+EXPORT_SYM_DYN ops_cycles_t
 get_ops_cnt_r2hc_rfft8avx256_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN ops_cycles_t
 get_ops_cnt_r2hc_rfft10avx256_wrapper(UINT8 precision, UINT8 direction);
@@ -307,6 +311,8 @@ EXPORT_SYM_DYN ops_cycles_t
 get_ops_cnt_r2hc_rfft5avx512_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN ops_cycles_t
 get_ops_cnt_r2hc_rfft6avx512_wrapper(UINT8 precision, UINT8 direction);
+EXPORT_SYM_DYN ops_cycles_t
+get_ops_cnt_r2hc_rfft7avx512_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN ops_cycles_t
 get_ops_cnt_r2hc_rfft8avx512_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN ops_cycles_t
@@ -512,6 +518,8 @@ register_kernel_r2hc_rfft5avx128_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN kfft_
 register_kernel_r2hc_rfft6avx128_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN kfft_
+register_kernel_r2hc_rfft7avx128_wrapper(UINT8 precision, UINT8 direction);
+EXPORT_SYM_DYN kfft_
 register_kernel_r2hc_rfft8avx128_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN kfft_
 register_kernel_r2hc_rfft10avx128_wrapper(UINT8 precision, UINT8 direction);
@@ -544,6 +552,8 @@ register_kernel_r2hc_rfft5avx256_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN kfft_
 register_kernel_r2hc_rfft6avx256_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN kfft_
+register_kernel_r2hc_rfft7avx256_wrapper(UINT8 precision, UINT8 direction);
+EXPORT_SYM_DYN kfft_
 register_kernel_r2hc_rfft8avx256_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN kfft_
 register_kernel_r2hc_rfft10avx256_wrapper(UINT8 precision, UINT8 direction);
@@ -573,6 +583,8 @@ EXPORT_SYM_DYN kfft_
 register_kernel_r2hc_rfft5avx512_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN kfft_
 register_kernel_r2hc_rfft6avx512_wrapper(UINT8 precision, UINT8 direction);
+EXPORT_SYM_DYN kfft_
+register_kernel_r2hc_rfft7avx512_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN kfft_
 register_kernel_r2hc_rfft8avx512_wrapper(UINT8 precision, UINT8 direction);
 EXPORT_SYM_DYN kfft_
@@ -799,6 +811,8 @@ static wrapper_kernel_fp_list_t
      get_ops_cnt_r2hc_rfft5avx128_wrapper, 5},
     {register_kernel_r2hc_rfft6avx128_wrapper,
      get_ops_cnt_r2hc_rfft6avx128_wrapper, 6},
+    {register_kernel_r2hc_rfft7avx128_wrapper,
+     get_ops_cnt_r2hc_rfft7avx128_wrapper, 7},
     {register_kernel_r2hc_rfft8avx128_wrapper,
      get_ops_cnt_r2hc_rfft8avx128_wrapper, 8},
     {register_kernel_r2hc_rfft10avx128_wrapper,
@@ -839,6 +853,8 @@ static wrapper_kernel_fp_list_t
      get_ops_cnt_r2hc_rfft5avx256_wrapper, 5},
     {register_kernel_r2hc_rfft6avx256_wrapper,
      get_ops_cnt_r2hc_rfft6avx256_wrapper, 6},
+    {register_kernel_r2hc_rfft7avx256_wrapper,
+     get_ops_cnt_r2hc_rfft7avx256_wrapper, 7},
     {register_kernel_r2hc_rfft8avx256_wrapper,
      get_ops_cnt_r2hc_rfft8avx256_wrapper, 8},
     {register_kernel_r2hc_rfft10avx256_wrapper,
@@ -877,6 +893,8 @@ static wrapper_kernel_fp_list_t
      get_ops_cnt_r2hc_rfft5avx512_wrapper, 5},
     {register_kernel_r2hc_rfft6avx512_wrapper,
      get_ops_cnt_r2hc_rfft6avx512_wrapper, 6},
+    {register_kernel_r2hc_rfft7avx512_wrapper,
+     get_ops_cnt_r2hc_rfft7avx512_wrapper, 7},
     {register_kernel_r2hc_rfft8avx512_wrapper,
      get_ops_cnt_r2hc_rfft8avx512_wrapper, 8},
     {register_kernel_r2hc_rfft10avx512_wrapper,
