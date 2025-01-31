@@ -341,7 +341,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         case 303:
             if (atoi(optarg) != 0)
             {
-                if (bench_params->selector_time != 1)
+                if (atoi(optarg) != 1)
                 {
                     printf("WARNING: The provided value for selector_time is "
                            "not 1. Running the bench with selector_time set to "
