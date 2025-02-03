@@ -579,6 +579,8 @@ exit_setup_dft_d_64_:
 
 VOID destroy_handle(VOID *handle)
 {
+    // clear the global kernels_table since it is bound to the setup api
+    memset(kernels_table, 0, NUM_KERNELS_IN_TABLE * sizeof(kernel_t));
     destroy_selector((aoclfftz_selector_t *)handle);
 }
 
