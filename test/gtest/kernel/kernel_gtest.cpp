@@ -624,6 +624,10 @@ aoclfftz_kernel_test_params_t param_float_r2hc_avx128_kernels[] =
 // R2HC-Fused - AVX128 Kernels - Double
 aoclfftz_kernel_test_params_t param_double_r2hcf_avx128_kernels[] =
 {
+    {2, aocl_fftz_kernel_type::STANDARD_R2HCF_AVX128,
+        aoclfftz_kernel_test_type::ALL},
+    {2, aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX128,
+        aoclfftz_kernel_test_type::ALL},
     {7, aocl_fftz_kernel_type::STANDARD_R2HCF_AVX128,
         aoclfftz_kernel_test_type::ALL},
     {7, aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX128,
@@ -633,6 +637,10 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_avx128_kernels[] =
 // R2HC-Fused - AVX128 Kernels - Float
 aoclfftz_kernel_test_params_t param_float_r2hcf_avx128_kernels[] =
 {
+    {2, aocl_fftz_kernel_type::STANDARD_R2HCF_AVX128,
+        aoclfftz_kernel_test_type::ALL},
+    {2, aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX128,
+        aoclfftz_kernel_test_type::ALL},
     {7, aocl_fftz_kernel_type::STANDARD_R2HCF_AVX128,
         aoclfftz_kernel_test_type::ALL},
     {7, aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX128,

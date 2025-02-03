@@ -209,9 +209,9 @@ std::string get_kernel_type_as_string(UINT8 kernel_type)
 #endif
 #ifdef ENABLE_AVX512
     case aocl_fftz_kernel_type::STANDARD_R2HC_AVX512:
-        return "_STANDARD_R2HC_AVX2512";
+        return "_STANDARD_R2HC_AVX512";
     case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX512:
-        return "_PERMUTED_R2HC_AVX2512";
+        return "_PERMUTED_R2HC_AVX512";
     case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX512:
         return "_STANDARD_R2HCF_AVX512";
     case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX512:

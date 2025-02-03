@@ -192,6 +192,7 @@ kernel_fp_list_t kernels_r2hc_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
 // R2HC-Fused - AVX128 Kernel List
 kernel_fp_list_t kernels_r2hcf_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
+    {register_kernel_r2hcf_rfft2avx128, get_ops_cnt_r2hcf_rfft2avx128, 2},    // radix-2
     {register_kernel_r2hcf_rfft7avx128, get_ops_cnt_r2hcf_rfft7avx128, 7}     // radix-7
 };
 #endif
