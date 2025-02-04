@@ -66,6 +66,7 @@ typedef enum
     SOLVER_TRANSPOSE,
     SOLVER_SIZEONE,
     SOLVER_MT_DIRECT,
+    SOLVER_MT_BATCHED,
     NUM_SOLVERS_END
 } aoclfftz_solver_type;
 
@@ -104,6 +105,8 @@ INT32 setup_buffered_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 #ifdef MULTI_THREADING
 INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                              kernel_t *kernel);
+INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol,
+                              UINT32 num_threads_used);
 #endif
 
 // RealFFT-Solvers
@@ -138,6 +141,7 @@ dft_solver_ register_execute_sizeone_solver(VOID);
 dft_solver_ register_execute_transpose_solver(VOID);
 #ifdef MULTI_THREADING
 dft_solver_ register_execute_mt_direct_solver(VOID);
+dft_solver_ register_execute_mt_batched_solver(VOID);
 #endif
 
 dft_solver_ register_execute_real_direct_solver(VOID);

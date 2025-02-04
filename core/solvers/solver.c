@@ -72,6 +72,7 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
         solvers_table[SOLVER_TRANSPOSE] = register_execute_transpose_solver();
 #ifdef MULTI_THREADING
         solvers_table[SOLVER_MT_DIRECT] = register_execute_mt_direct_solver();
+        solvers_table[SOLVER_MT_BATCHED] = register_execute_mt_batched_solver();
 #endif
     }
 

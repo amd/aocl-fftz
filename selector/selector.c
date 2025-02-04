@@ -127,6 +127,40 @@ INT32 check_prime_solvability_bluestein(aoclfftz_decomp_scheme_t *decomp_scheme,
     return 0;
 }
 
+INT32 is_prime(INT32 n)
+{
+    for (INT32 i = 2; i * i <= n; i++)
+    {
+        if (n % i == 0)
+        {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+// Check if the input problem contains a prime factor that requires a
+// bluestein solver to solve.
+INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme)
+{
+    INT32 dim_rank = decomp_scheme->dim_rank;
+    for (int i = 0; i < dim_rank; i++)
+    {
+        INTP n = decomp_scheme->dims[i].n;
+        // Check for prime factors greater than 13 in (n)
+        for (INT32 i = 17; i <= n; i++)
+        {
+            if (n % i == 0 && is_prime(i))
+            {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
 // Fixed decision logic and CPI based selector mode execution for the
 // single-precision input problem based on the applicable tables
 // of solvers and kernels
@@ -136,6 +170,17 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
     INT32 ret = SELECTOR_FAILURE;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     UINT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
+
+    // TODO: Should be removed after supporting MT in N-D and bluestein solver
+    if ((dim_rank > 1 || check_bluestein_problem(sel->solution->decomp_scheme))
+                                                         && avl_threads > 1)
+    {
+        AOCLFFTZ_LOG_UNFORMATTED(INFO, INFO, "Multi Threaded execution is"
+            " not suported for N-D & Bluestein solver, falling back to Single"
+            " Threaded execution");
+        sel->solution->decomp_scheme->thread_info->avl_threads = 1;
+        avl_threads = 1;
+    }
     INT32 is_FFT_ker_supported =
             check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n,
                                      kertab);
@@ -191,7 +236,15 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
     // Batched/vector FFT Solver
     if (level1_cond1 & 0x1)
     {
-        solver_obj->solver_type = SOLVER_BATCHED;
+        if (avl_threads <= 1)
+        {
+            solver_obj->solver_type = SOLVER_BATCHED;
+        }
+        else
+        {
+            solver_obj->solver_type = SOLVER_MT_BATCHED;
+        }
+
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
             return SELECTOR_FAILURE;

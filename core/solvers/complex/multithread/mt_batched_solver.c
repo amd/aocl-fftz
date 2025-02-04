@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2023, Advanced Micro Devices. All rights reserved.
+ * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -26,21 +26,21 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file batched_solver.c
+/** @file mt_batched_solver.c
  *
- *  @brief Batched Solver that sets up and solves a vector problem
+ *  @brief Multi threaded batched solver that sets up and solves a vector
+ *  problem by parallelizing across multiple threads
  *
  *  This file contains the functions that setup, execute and destroy
  *  the solver.
  *
- *  @author S. Biplab Raut
- *  @author Jeya R
+ *  @author Murugan Vairavel
  */
 
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 setup_batched_solver(aoclfftz_solution_t *sol)
+INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol, UINT32 num_threads_used)
 {
 #ifdef AOCL_ENABLE_LOG
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
@@ -52,15 +52,57 @@ INT32 setup_batched_solver(aoclfftz_solution_t *sol)
     sol->decomp_scheme->vec_rank = 1;
     sol->decomp_scheme->vecs[0].n = 1;
 
+    // Since we are using num_threads_used in current batched solver, we need to
+    // update the available threads accordingly so that the remaining threads
+    // can be used by the child threads in the next level
+    sol->decomp_scheme->thread_info->avl_threads /= num_threads_used;
+
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 #endif
     return SOLVER_SUCCESS;
 }
 
+// creates a copy of the solution till the end of the solution structure
+aoclfftz_solution_t *copy_solution(aoclfftz_solution_t *next_sol)
+{
+    aoclfftz_solution_t *org_sol, *to_sol;
+    org_sol = alloc_solution(next_sol->decomp_scheme->vec_rank,
+                             next_sol->decomp_scheme->dim_rank);
+    COPY_SOLUTION_OBJ(org_sol, next_sol);
+    COPY_STRIDES(org_sol, next_sol);
+    next_sol = next_sol->next_sol;
+    to_sol = org_sol;
+
+    while (next_sol != NULL)
+    {
+        to_sol->next_sol = alloc_solution(next_sol->decomp_scheme->vec_rank,
+                                          next_sol->decomp_scheme->dim_rank);
+        COPY_SOLUTION_OBJ(to_sol->next_sol, next_sol);
+        COPY_STRIDES(to_sol->next_sol, next_sol);
+        to_sol = to_sol->next_sol;
+        next_sol = next_sol->next_sol;
+    }
+    return org_sol;
+}
+
+// Funtion that helps in avoiding double free corruption of twiddle buffer as it
+// single memory location shared across multiple threads
+VOID unlink_twiddle_buff(aoclfftz_solution_t *sol)
+{
+    aoclfftz_solution_t *cur_sol = NULL;
+    while (sol != NULL)
+    {
+        cur_sol = sol;
+        sol = sol->next_sol;
+        cur_sol->twiddle->TW = NULL;
+    }
+    return;
+}
+
 // Recursively solves batched FFT by handling the innermost dimension first.
-INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
-                              aoclfftz_solution_t *next_sol, INTP vec_rank)
+INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
+                                aoclfftz_solution_t *next_sol, INTP vec_rank)
 {
 #ifdef AOCL_ENABLE_LOG
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
@@ -68,12 +110,11 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
 #endif
 
     INT32 status = SOLVER_SUCCESS;
-    INTP rnk_offset;
-    INTP v_in_stride;
-    INTP v_out_stride;
+    UINT32 dt_prec, dt_bytes;
+    INTP rnk_offset, v_in_stride, v_out_stride;
 
-    UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+    dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    dt_bytes = DT_PRECISION_BYTES(dt_prec);
 
     v_in_stride = sol->decomp_scheme->vecs[vec_rank - 1].in_stride *
                   DATA_STRIDE * dt_bytes;
@@ -84,29 +125,34 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
     {
         // For innermost vector rank, execute the solver
         INTP batches = sol->decomp_scheme->vecs[0].n;
+        VOID *in_real = next_sol->decomp_scheme->in_real;
+        VOID *in_imag = next_sol->decomp_scheme->in_imag;
+        VOID *out_real = next_sol->decomp_scheme->out_real;
+        VOID *out_imag = next_sol->decomp_scheme->out_imag;
+
+        omp_set_num_threads(sol->decomp_scheme->thread_info->n_threads);
+
+        #pragma omp parallel for
         for (INTP b = 0; b < batches; b++)
         {
-            status = next_sol->solver->execute_solver(next_sol);
-            if (status != SOLVER_SUCCESS)
-            {
-                return status;
-            }
-
-            next_sol->decomp_scheme->in_real =
-                    MOVE_ADDR(next_sol->decomp_scheme->in_real, v_in_stride);
-            next_sol->decomp_scheme->in_imag =
-                    MOVE_ADDR(next_sol->decomp_scheme->in_imag, v_in_stride);
-            next_sol->decomp_scheme->out_real =
-                    MOVE_ADDR(next_sol->decomp_scheme->out_real, v_out_stride);
-            next_sol->decomp_scheme->out_imag =
-                    MOVE_ADDR(next_sol->decomp_scheme->out_imag, v_out_stride);
+            aoclfftz_solution_t *org_sol = copy_solution(next_sol);
+            org_sol->decomp_scheme->in_real =
+                                (VOID *)((CHAR *)in_real + b * v_in_stride);
+            org_sol->decomp_scheme->in_imag =
+                                (VOID *)((CHAR *)in_imag + b * v_in_stride);
+            org_sol->decomp_scheme->out_real =
+                                (VOID *)((CHAR *)out_real + b * v_out_stride);
+            org_sol->decomp_scheme->out_imag =
+                                (VOID *)((CHAR *)out_imag + b * v_out_stride);
+            status = org_sol->solver->execute_solver(org_sol);
+            unlink_twiddle_buff(org_sol);
+            destroy_solution(org_sol);
         }
     }
     else
     {
         for (rnk_offset = 0;
-             rnk_offset < sol->decomp_scheme->vecs[vec_rank - 1].n;
-             rnk_offset++)
+             rnk_offset < sol->decomp_scheme->vecs[vec_rank-1].n; rnk_offset++)
         {
             // save pointer to restore it below since
             // they will be moved while execution
@@ -116,8 +162,8 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
             VOID *out_imag = next_sol->decomp_scheme->out_imag;
 
             //recursive call to solve the inner batches
-            status = execute_batched_solver_internal(sol, next_sol,
-                                                     vec_rank - 1);
+            status = execute_mt_batched_solver_internal(sol, next_sol,
+                                                        vec_rank - 1);
             if (status != SOLVER_SUCCESS)
             {
                 return status;
@@ -142,14 +188,14 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
 
 
 /*
- * Considerations and assumptions for execute_batched_solver():
+ * Considerations and assumptions for execute_mt_batched_solver():
  * For a multi-dimensional vector array of the DFT transforms,
  * sol->decomp_scheme->vecs[rnk].in_stride gives the offset at which
  * input buffer starts for the current rank/position in the vector array,
  * sol->decomp_scheme->vecs[rnk].out_stride gives the offset at which
  * output buffer starts for the current rank/position in the vector array.
  */
-static INT32 execute_batched_solver(aoclfftz_solution_t *sol)
+static INT32 execute_mt_batched_solver(aoclfftz_solution_t *sol)
 {
 #ifdef AOCL_ENABLE_LOG
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
@@ -165,8 +211,8 @@ static INT32 execute_batched_solver(aoclfftz_solution_t *sol)
     next_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
     next_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
 
-    status = execute_batched_solver_internal(sol, next_sol,
-                                             sol->decomp_scheme->vec_rank);
+    status = execute_mt_batched_solver_internal(sol, next_sol,
+                                                sol->decomp_scheme->vec_rank);
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
@@ -174,7 +220,7 @@ static INT32 execute_batched_solver(aoclfftz_solution_t *sol)
     return status;
 }
 
-dft_solver_ register_execute_batched_solver(VOID)
+dft_solver_ register_execute_mt_batched_solver(VOID)
 {
-    return execute_batched_solver;
+    return execute_mt_batched_solver;
 }
