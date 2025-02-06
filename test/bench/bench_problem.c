@@ -452,8 +452,11 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                            &in_buffer_size, &out_buffer_size);
     in_buffer_size = in_buffer_size * T_DATA_STRIDE;
     out_buffer_size = out_buffer_size * T_DATA_STRIDE;
-    ALLOC_UNINIT(bench_params->in, VOID, in_buffer_size * dt_bytes,
-                 is_align);
+    ALLOC_UNINIT(bench_params->in, VOID, in_buffer_size * dt_bytes, is_align);
+    if (bench_params->in == NULL)
+    {
+        return MEMORY_FAILURE;
+    }
     if (bench_params->res_placement == IN_PLACE)
     {
         bench_params->out = bench_params->in;
@@ -462,6 +465,10 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     {
         ALLOC_INIT(bench_params->out, VOID, out_buffer_size * dt_bytes,
                    is_align);
+        if (bench_params->out == NULL)
+        {
+            return MEMORY_FAILURE;
+        }
     }
 
 #ifdef AOCL_ENABLE_LOG

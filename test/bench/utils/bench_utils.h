@@ -149,6 +149,9 @@
                        "one non-option argument must be provided which is "    \
                        "problem size.\n");                                     \
                 break;                                                         \
+            case MEMORY_FAILURE:                                               \
+                printf("\nCould not allocate memory for data buffers.\n");     \
+                break;                                                         \
             default:                                                           \
                 printf("\nInvalid arguments provided.\n");                     \
             }                                                                  \
@@ -159,9 +162,16 @@
             }                                                                  \
             else                                                               \
             {                                                                  \
-                printf("Use -h / --help for more information.\n");             \
-                PRINT_FAILURE("\nTest bench failed [REASON: Argument parsing " \
-                              "failed]\n\n");                                  \
+                if (status > 0)                                                \
+                {                                                              \
+                    printf("Use -h / --help for more information.\n");         \
+                    PRINT_FAILURE("\nTest bench failed [REASON: Argument       \
+                                   parsing failed]\n\n");                      \
+                }                                                              \
+                else                                                           \
+                {                                                              \
+                    PRINT_FAILURE("\nTest bench failed\n\n");                  \
+                }                                                              \
             }                                                                  \
         }                                                                      \
     }
