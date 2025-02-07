@@ -692,6 +692,36 @@ aoclfftz_kernel_test_params_t param_float_r2hc_avx256_kernels[] =
         aoclfftz_kernel_test_type::TRANSFORMATION |
         aoclfftz_kernel_test_type::DFT_REFERENCE},
 };
+
+// R2HC-Fused - AVX256 Kernels - Double
+aoclfftz_kernel_test_params_t param_double_r2hcf_avx256_kernels[] =
+{
+    {2, aocl_fftz_kernel_type::STANDARD_R2HCF_AVX256,
+        aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
+        aoclfftz_kernel_test_type::TRANSFORMATION |
+        aoclfftz_kernel_test_type::DFT_REFERENCE},
+    {2, aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX256,
+        aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
+        aoclfftz_kernel_test_type::TRANSFORMATION |
+        aoclfftz_kernel_test_type::DFT_REFERENCE},
+};
+
+// R2HC-Fused - AVX256 Kernels - Float
+aoclfftz_kernel_test_params_t param_float_r2hcf_avx256_kernels[] =
+{
+    {2, aocl_fftz_kernel_type::STANDARD_R2HCF_AVX256,
+        aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
+        aoclfftz_kernel_test_type::TRANSFORMATION |
+        aoclfftz_kernel_test_type::DFT_REFERENCE},
+    {2, aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX256,
+        aoclfftz_kernel_test_type::LINEARITY |
+        aoclfftz_kernel_test_type::TIMESHIFT |
+        aoclfftz_kernel_test_type::TRANSFORMATION |
+        aoclfftz_kernel_test_type::DFT_REFERENCE},
+};
 #endif
 // IO params as {in-stride, out-stride , batch size, dir of FFT(0->FWD/1-> BWD),
 //               result placement(0 -> inplace, 1 -> out-of-place)}
@@ -926,6 +956,19 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     R2HC_AVX256_KernelTest, AoclfftzKernelTestDoubleReal,
     ::testing::Combine(::testing::ValuesIn(param_double_r2hc_avx256_kernels),
+                       ::testing::ValuesIn(io_params_batch16)),
+    name_generator);
+
+// R2HC-Fused AVX256 Kernels
+INSTANTIATE_TEST_SUITE_P(
+    R2HCF_AVX256_KernelTest, AoclfftzKernelTestFloatFused,
+    ::testing::Combine(::testing::ValuesIn(param_float_r2hcf_avx256_kernels),
+                       ::testing::ValuesIn(io_params_batch16)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    R2HCF_AVX256_KernelTest, AoclfftzKernelTestDoubleFused,
+    ::testing::Combine(::testing::ValuesIn(param_double_r2hcf_avx256_kernels),
                        ::testing::ValuesIn(io_params_batch16)),
     name_generator);
 #endif

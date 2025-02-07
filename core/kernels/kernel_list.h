@@ -184,6 +184,12 @@ kernel_fp_list_t kernels_r2hc_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_r2hc_rfft5avx256, get_ops_cnt_r2hc_rfft5avx256, 5}     // radix-5
 };
+
+// R2HC-Fused - AVX256 Kernel List
+kernel_fp_list_t kernels_r2hcf_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
+{
+    {register_kernel_r2hcf_rfft2avx256, get_ops_cnt_r2hcf_rfft2avx256, 2}   // radix-2
+};
 #endif
 
 #endif // AOCLFFTZ_KERNEL_LIST_H

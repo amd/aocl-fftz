@@ -216,6 +216,9 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft8c(UINT8 precision, UINT8 direction);
 #ifdef ENABLE_AVX256
 // R2HC AVX256 Kernels
 ops_cycles_t get_ops_cnt_r2hc_rfft5avx256(UINT8 precision, UINT8 direction);
+
+// R2HC-Fused AVX256 Kernels
+ops_cycles_t get_ops_cnt_r2hcf_rfft2avx256(UINT8 precision, UINT8 direction);
 #endif
 
 // Register kernels
@@ -312,6 +315,9 @@ kfft_ register_kernel_r2hcf_rfft8c(UINT8 precision, UINT8 direction);
 #ifdef ENABLE_AVX256
 // R2HC AVX256 Kernels
 kfft_ register_kernel_r2hc_rfft5avx256(UINT8 precision, UINT8 direction);
+
+// R2HC-Fused AVX256 Kernels
+kfft_ register_kernel_r2hcf_rfft2avx256(UINT8 precision, UINT8 direction);
 #endif
 
 // Permuted Copy Kernels
