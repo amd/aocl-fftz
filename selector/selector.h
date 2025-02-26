@@ -53,6 +53,10 @@ typedef enum
     SELECTOR_SUCCESS // Successful operation
 } aoclfftz_selector_status;
 
+// Note: The choice of size (16 KB) is completely arbitrary and can be
+//       experimented with.
+static const INTP scratch_space_capacity = 16 * 1024; // 16 KB
+
 // Selector data structure that is used to hold the solution and cost analysis
 // at each decomposition level for the associated sub-problem
 typedef struct aoclfftz_selector
@@ -60,6 +64,9 @@ typedef struct aoclfftz_selector
     aoclfftz_solution_t *solution;
     execute_ execute;
     cost_analysis_t *cost_analysis;
+
+    // A global buffer to help with transposition of twiddle multiplied elements
+    void* scratch_space;
 } aoclfftz_selector_t;
 
 // macro functions

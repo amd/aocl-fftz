@@ -343,7 +343,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL);
     if (sel_obj == NULL)
     {
         return NULL;
@@ -406,7 +406,7 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL);
     if (sel_obj == NULL)
     {
         return NULL;
@@ -468,7 +468,7 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL);
     if (sel_obj == NULL)
     {
         return NULL;
@@ -530,7 +530,7 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL);
     if (sel_obj == NULL)
     {
         return NULL;

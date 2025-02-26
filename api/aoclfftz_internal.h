@@ -277,6 +277,7 @@ typedef struct aoclfftz_solution
     aoclfftz_transpose_t *transpose;
     aoclfftz_solution_t *nd_sol; // holds one of the solutions of ND, else NULL
     aoclfftz_solution_t *next_sol;
+    void *scratch_space;
 } aoclfftz_solution_t;
 
 // float LP64

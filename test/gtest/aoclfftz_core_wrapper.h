@@ -387,7 +387,8 @@ aoclfftz_decomp_scheme_t *alloc_decomp_scheme_wrapper(INT32 vec_rank,
 EXPORT_SYM_DYN aoclfftz_solution_t *alloc_solution_wrapper(INT32 vec_rank,
                                                            INT32 dim_rank);
 EXPORT_SYM_DYN aoclfftz_selector_t *alloc_selector_wrapper(INT32 vec_rank,
-                                                           INT32 dim_rank);
+                                                           INT32 dim_rank,
+                                                           VOID *scratch_space);
 EXPORT_SYM_DYN VOID *alloc_twiddle_for_solution_wrapper(UINT8 rad_size,
                                                         UINT8 dt_prec);
 EXPORT_SYM_DYN VOID destroy_selector_wrapper(aoclfftz_selector_t *sel);

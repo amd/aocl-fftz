@@ -119,6 +119,7 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->transpose->col_info = (aoclfftz_dim_t_64_){0};
         sol->transpose->aux_mem->size = 0;
         sol->transpose->aux_mem->data = NULL;
+        sol->scratch_space = NULL;
         return sol;
     }
     else
@@ -127,7 +128,10 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
     }
 }
 
-aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank)
+// Allocates a new scratch_space iff the argument passed is NULL.
+// Otherwise sets the selector's scratch_space to the passed argument.
+aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
+                                    VOID *scratch_space)
 {
     aoclfftz_selector_t *selector = NULL;
 
@@ -135,6 +139,21 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank)
                        sizeof(aoclfftz_selector_t));
     if (selector)
     {
+        selector->scratch_space = NULL;
+
+        if (scratch_space == NULL)
+        {
+            // Note: this allocation could fail, but that is ok. All functions
+            //       that use the scratch buffer are expected to check if the
+            //       buffer is valid (not-null)
+            ALLOC_ALIGN_UNINIT(selector->scratch_space, UINT8,
+                               scratch_space_capacity);
+
+        }
+        else
+        {
+            selector->scratch_space = scratch_space;
+        }
         selector->solution = alloc_solution(vec_rank, dim_rank);
         ALLOC_ALIGN_UNINIT(selector->cost_analysis, cost_analysis_t,
                            sizeof(cost_analysis_t));
@@ -143,6 +162,7 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank)
             destroy_selector(selector);
             return NULL;
         }
+        selector->solution->scratch_space = selector->scratch_space;
         selector->cost_analysis->ops = 0;
         selector->cost_analysis->time = 0;
         return selector;
@@ -240,6 +260,10 @@ VOID destroy_solution(aoclfftz_solution_t *sol)
     return;
 }
 
+// Note: Since the use case for this function is primarily to free "temporary"
+//       selectors, and since temporary selectors are expected to be allocated
+//       using `alloc_selector_without_scratch_space`, this function does not
+//       free the scratch space.
 VOID destroy_selector_without_solution(aoclfftz_selector_t *sel)
 {
     if (sel != NULL)
@@ -251,6 +275,17 @@ VOID destroy_selector_without_solution(aoclfftz_selector_t *sel)
 }
 
 VOID destroy_selector(aoclfftz_selector_t *sel)
+{
+    if (sel != NULL)
+    {
+        FREE_ALIGN_ALLOCATED_MEM(sel->scratch_space);
+        destroy_solution(sel->solution);
+        destroy_selector_without_solution(sel);
+    }
+    return;
+}
+
+VOID destroy_selector_without_scratch_space(aoclfftz_selector_t *sel)
 {
     if (sel != NULL)
     {
