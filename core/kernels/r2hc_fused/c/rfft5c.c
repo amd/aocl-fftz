@@ -93,8 +93,8 @@ static VOID r2hcf_rfft5c_fp32_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP *in_strides  = strides->in_strides;
     INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride  = (strides->v_in_stride);
-    INTP v_out_stride = (strides->v_out_stride);
+    INTP v_in_stride  = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
     INTP cnt;
 
     for (cnt = 0; cnt < n; cnt++)
@@ -111,7 +111,7 @@ static VOID r2hcf_rfft5c_fp32_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
         av4 = in[in_strides[8]];    // Input point 9: x(8)
 
         at0 = av1 + av4;
-        at1 = av1 - av4;
+        at1 = av4 - av1;
         at2 = av2 + av3;
         at3 = av2 - av3;
         at4 = at0 + at2;
@@ -129,9 +129,9 @@ static VOID r2hcf_rfft5c_fp32_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         *out = av0 + at4;                   // Output point 1: X(0)
         out[out_strides[3]] = at7 + at8;    // Output point 4: X(3)
-        out[out_strides[4]] = -at9 - at10;  // Output point 5: X(4)
+        out[out_strides[4]] = at10 - at9;  // Output point 5: X(4)
         out[out_strides[7]] = at7 - at8;    // Output point 8: X(7)
-        out[out_strides[8]] = at11 - at12;  // Output point 9: X(8)
+        out[out_strides[8]] = at11 + at12;  // Output point 9: X(8)
 
         /* Shifted DFT */
         FLOAT bv0, bv1, bv2, bv3, bv4;
@@ -196,8 +196,8 @@ static VOID r2hcf_rfft5c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP *in_strides  = strides->in_strides;
     INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride  = (strides->v_in_stride);
-    INTP v_out_stride = (strides->v_out_stride);
+    INTP v_in_stride  = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
     INTP cnt;
 
     for (cnt = 0; cnt < n; cnt++)
@@ -300,8 +300,8 @@ static VOID r2hcf_rfft5c_fp64_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP *in_strides  = strides->in_strides;
     INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride  = (strides->v_in_stride);
-    INTP v_out_stride = (strides->v_out_stride);
+    INTP v_in_stride  = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
     INTP cnt;
 
     for (cnt = 0; cnt < n; cnt++)
@@ -318,7 +318,7 @@ static VOID r2hcf_rfft5c_fp64_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
         av4 = in[in_strides[8]];    // Input point 9: x(8)
 
         at0 = av1 + av4;
-        at1 = av1 - av4;
+        at1 = av4 - av1;
         at2 = av2 + av3;
         at3 = av2 - av3;
         at4 = at0 + at2;
@@ -336,9 +336,9 @@ static VOID r2hcf_rfft5c_fp64_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         *out = av0 + at4;                   // Output point 1: X(0)
         out[out_strides[3]] = at7 + at8;    // Output point 4: X(3)
-        out[out_strides[4]] = -at9 - at10;  // Output point 5: X(4)
+        out[out_strides[4]] = at10 - at9;   // Output point 5: X(4)
         out[out_strides[7]] = at7 - at8;    // Output point 8: X(7)
-        out[out_strides[8]] = at11 - at12;  // Output point 9: X(8)
+        out[out_strides[8]] = at11 + at12;  // Output point 9: X(8)
 
         /* Shifted DFT */
         DOUBLE bv0, bv1, bv2, bv3, bv4;
@@ -403,8 +403,8 @@ static VOID r2hcf_rfft5c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP *in_strides  = strides->in_strides;
     INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride  = (strides->v_in_stride);
-    INTP v_out_stride = (strides->v_out_stride);
+    INTP v_in_stride  = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
     INTP cnt;
 
     for (cnt = 0; cnt < n; cnt++)
