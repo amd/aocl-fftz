@@ -26,29 +26,29 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file rfft7avx128.c
+/** @file rfft7avx256.c
  *
- *  @brief Radix-7 r2hc_fused Real-FFT kernel with AVX-128 operations using x86
- *  SIMD intrinsics
+ *  @brief Radix-7 r2hc_fused Real-FFT kernel with AVX-256 operations using x86
+ *  SIMD intrinsics.
  *
  *  This file contains the DIT radix-7 real-to-halfcomplex fused of two
  *  different implementations (Standard DFT and Shifted DFT that differs in DFT
  *  weight matrix) using x86 SIMD intrinsics for single-precision and
  *  double-precision inputs
  *
- *  @author Jeya R
+ *  @author Jeevanantham N
  */
 
 #include "core/kernels/kernel.h"
-#include "core/kernels/simd_includes/r2hc_simd_avx128.h"
+#include "core/kernels/simd_includes/r2hc_simd_avx256.h"
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS][NUM_FFT_DIRS] =
-                                                {{{0, 36, 48, 88, 60, 1},
-                                                  {0, 38, 48, 88, 66, 1}},
-                                                 {{0, 36, 48, 44, 12, 1},
-                                                  {0, 38, 48, 44, 12, 1}}};
+                                                {{{0, 36, 48, 176, 108, 29},
+                                                  {0, 38, 48, 176, 126, 29}},
+                                                 {{0, 36, 48, 88,  12,  29},
+                                                  {0, 38, 48, 88,  12,  29}}};
 
-ops_cycles_t get_ops_cnt_r2hcf_rfft7avx128(UINT8 precision, UINT8 direction)
+ops_cycles_t get_ops_cnt_r2hcf_rfft7avx256(UINT8 precision, UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -74,7 +74,7 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft7avx128(UINT8 precision, UINT8 direction)
     }
 }
 
-static VOID r2hcf_rfft7avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
+static VOID r2hcf_rfft7avx256_fp32_fwd(VOID *in_real, VOID *in_imag,
                                        VOID *out_real, VOID *out_imag, INTP n,
                                        aoclfftz_strides_t *strides, UINT8 flag)
 {
@@ -101,17 +101,214 @@ static VOID r2hcf_rfft7avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
     INTP v_out_stride = strides->v_out_stride;
 
     INTP cnt;
-    INTP N = n >> 2;
+    INTP N = n >> 3;
     FLOAT *curr_in, *curr_out;
 
-    __m128 v_CRTM_7_1 = _mm_broadcast_ss(&CRTM_7_1);
-    __m128 v_CRTM_7_2 = _mm_broadcast_ss(&CRTM_7_2);
-    __m128 v_CRTM_7_3 = _mm_broadcast_ss(&CRTM_7_3);
-    __m128 v_CRTM_7_4 = _mm_broadcast_ss(&CRTM_7_4);
-    __m128 v_CRTM_7_5 = _mm_broadcast_ss(&CRTM_7_5);
-    __m128 v_CRTM_7_6 = _mm_broadcast_ss(&CRTM_7_6);
+    __m256 v_CRTM_7_1 = _mm256_broadcast_ss(&CRTM_7_1);
+    __m256 v_CRTM_7_2 = _mm256_broadcast_ss(&CRTM_7_2);
+    __m256 v_CRTM_7_3 = _mm256_broadcast_ss(&CRTM_7_3);
+    __m256 v_CRTM_7_4 = _mm256_broadcast_ss(&CRTM_7_4);
+    __m256 v_CRTM_7_5 = _mm256_broadcast_ss(&CRTM_7_5);
+    __m256 v_CRTM_7_6 = _mm256_broadcast_ss(&CRTM_7_6);
 
     for (cnt = 0; cnt < N; cnt++)
+    {
+        /* Standard DFT */
+        __m256 av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6;
+        __m256 av_s1, av_s2, av_s3, av_s4, av_s5, av_s6, av_s7, av_s8, av_s9,
+               av_s10, av_s11, av_s12, av_s13, av_s14, av_s15, av_s16, av_s17;
+        __m256 av_t1, av_t2, av_t3, av_t4, av_t5, av_t6, av_t7, av_t8, av_t9,
+               av_t10, av_t11, av_t12, av_t13, av_t14, av_t15, av_t16, av_t17,
+               av_t18;
+        __m256 v_out0, v_out1, v_out2, v_out3, v_out4, v_out5, v_out6, v_out7,
+               v_out8, v_out9, v_out10, v_out11, v_out12, v_out13;
+
+        curr_in = in;
+        curr_out = out;
+
+        // Input point 1: x(0)
+        LDR_256_S(curr_in, v_in_stride, av_in0);
+        // Input point 3: x(2)
+        curr_in = in + in_strides[2];
+        LDR_256_S(curr_in, v_in_stride, av_in1);
+        // Input point 5: x(4)
+        curr_in = in + in_strides[4];
+        LDR_256_S(curr_in, v_in_stride, av_in2);
+        // Input point 7: x(6)
+        curr_in = in + in_strides[6];
+        LDR_256_S(curr_in, v_in_stride, av_in3);
+        // Input point 9: x(8)
+        curr_in = in + in_strides[8];
+        LDR_256_S(curr_in, v_in_stride, av_in4);
+        // Input point 11: x(10)
+        curr_in = in + in_strides[10];
+        LDR_256_S(curr_in, v_in_stride, av_in5);
+        // Input point 13: x(12)
+        curr_in = in + in_strides[12];
+        LDR_256_S(curr_in, v_in_stride, av_in6);
+
+        av_s1 = _mm256_add_ps(av_in6, av_in1);
+        av_s2 = _mm256_sub_ps(av_in6, av_in1);
+        av_s3 = _mm256_add_ps(av_in5, av_in2);
+        av_s4 = _mm256_sub_ps(av_in5, av_in2);
+        av_s5 = _mm256_add_ps(av_in4, av_in3);
+        av_s6 = _mm256_sub_ps(av_in4, av_in3);
+
+        av_s7 = _mm256_add_ps(av_in0, av_s1);
+        av_s8 = _mm256_add_ps(av_s3, av_s5);
+
+        av_t1 = _mm256_mul_ps(v_CRTM_7_1, av_s5);
+        av_t2 = _mm256_mul_ps(v_CRTM_7_3, av_s1);
+        av_t3 = _mm256_mul_ps(v_CRTM_7_5, av_s3);
+        av_s9 = _mm256_sub_ps(av_in0, av_t1);
+
+        av_s10 = _mm256_sub_ps(av_t2, av_t3);
+        av_t4 = _mm256_mul_ps(v_CRTM_7_2, av_s6);
+        av_t5 = _mm256_mul_ps(v_CRTM_7_4, av_s2);
+
+        av_t6 = _mm256_mul_ps(v_CRTM_7_6, av_s4);
+        av_s11 = _mm256_add_ps(av_t4, av_t5);
+
+        av_t7 = _mm256_mul_ps(v_CRTM_7_1, av_s3);
+        av_t8 = _mm256_mul_ps(v_CRTM_7_3, av_s5);
+        av_t9 = _mm256_mul_ps(v_CRTM_7_5, av_s1);
+
+        av_s12 = _mm256_sub_ps(av_in0, av_t7);
+        av_s13 = _mm256_sub_ps(av_t8, av_t9);
+        av_t10 = _mm256_mul_ps(v_CRTM_7_2, av_s4);
+        av_t11 = _mm256_mul_ps(v_CRTM_7_4, av_s6);
+
+        av_t12 = _mm256_mul_ps(v_CRTM_7_6, av_s2);
+        av_s14 = _mm256_add_ps(av_t10, av_t11);
+        av_t13 = _mm256_mul_ps(v_CRTM_7_1, av_s1);
+        av_t14 = _mm256_mul_ps(v_CRTM_7_3, av_s3);
+        av_t15 = _mm256_mul_ps(v_CRTM_7_5, av_s5);
+
+        av_s15 = _mm256_sub_ps(av_in0, av_t13);
+        av_s16 = _mm256_sub_ps(av_t14, av_t15);
+        av_t16 = _mm256_mul_ps(v_CRTM_7_2, av_s2);
+        av_t17 = _mm256_mul_ps(v_CRTM_7_4, av_s4);
+        av_t18 = _mm256_mul_ps(v_CRTM_7_6, av_s6);
+        av_s17 = _mm256_sub_ps(av_t16, av_t17);
+
+        // Output pt 1: X(0)
+        v_out0 = _mm256_add_ps(av_s7, av_s8);
+        STR_256_S(curr_out, v_out_stride, v_out0);
+        // Output pt 4: X(3) & Output pt 5: X(4)
+        curr_out = out + out_strides[3];
+        v_out3 = _mm256_add_ps(av_s9, av_s10);
+        v_out4 = _mm256_add_ps(av_t6, av_s11);
+        STRI_2x256_S(curr_out, v_out_stride, v_out3, v_out4);
+        // Output pt 8: X(7) & Output pt 9: X(8)
+        curr_out = out + out_strides[7];
+        v_out7 = _mm256_add_ps(av_s12, av_s13);
+        v_out8 = _mm256_sub_ps(av_t12, av_s14);
+        STRI_2x256_S(curr_out, v_out_stride, v_out7, v_out8);
+        // Output pt 12: X(11) & Output pt 13: X(12)
+        curr_out = out + out_strides[11];
+        v_out11 = _mm256_add_ps(av_s15, av_s16);
+        v_out12 = _mm256_add_ps(av_s17, av_t18);
+        STRI_2x256_S(curr_out, v_out_stride, v_out11, v_out12);
+
+        /* Shifted DFT */
+        __m256 bv_in0, bv_in1, bv_in2, bv_in3, bv_in4, bv_in5, bv_in6;
+        __m256 bv_s1, bv_s2, bv_s3, bv_s4, bv_s5, bv_s6, bv_s7, bv_s8, bv_s9,
+               bv_s10, bv_s11, bv_s12, bv_s13, bv_s14, bv_s15, bv_s16, bv_s17;
+        __m256 bv_t1, bv_t2, bv_t3, bv_t4, bv_t5, bv_t6, bv_t7, bv_t8, bv_t9,
+               bv_t10, bv_t11, bv_t12, bv_t13, bv_t14, bv_t15, bv_t16, bv_t17,
+               bv_t18;
+
+        // Input point 2: x(1)
+        curr_in = in + in_strides[1];
+        LDR_256_S(curr_in, v_in_stride, bv_in0);
+        // Input point 4: x(3)
+        curr_in = in + in_strides[3];
+        LDR_256_S(curr_in, v_in_stride, bv_in1);
+        // Input point 6: x(5)
+        curr_in = in + in_strides[5];
+        LDR_256_S(curr_in, v_in_stride, bv_in2);
+        // Input point 8: x(7)
+        curr_in = in + in_strides[7];
+        LDR_256_S(curr_in, v_in_stride, bv_in3);
+        // Input point 10: x(9)
+        curr_in = in + in_strides[9];
+        LDR_256_S(curr_in, v_in_stride, bv_in4);
+        // Input point 12: x(11)
+        curr_in = in + in_strides[11];
+        LDR_256_S(curr_in, v_in_stride, bv_in5);
+        // Input point 14: x(13)
+        curr_in = in + in_strides[13];
+        LDR_256_S(curr_in, v_in_stride, bv_in6);
+
+        bv_s1 = _mm256_add_ps(bv_in6, bv_in1);
+        bv_s2 = _mm256_sub_ps(bv_in6, bv_in1);
+        bv_s3 = _mm256_add_ps(bv_in5, bv_in2);
+        bv_s4 = _mm256_sub_ps(bv_in5, bv_in2);
+        bv_s5 = _mm256_add_ps(bv_in4, bv_in3);
+        bv_s6 = _mm256_sub_ps(bv_in4, bv_in3);
+
+        bv_t1 = _mm256_mul_ps(v_CRTM_7_1, bv_s2);
+        bv_t2 = _mm256_mul_ps(v_CRTM_7_3, bv_s4);
+
+        bv_t3 = _mm256_mul_ps(v_CRTM_7_5, bv_s6);
+        bv_s7 = _mm256_sub_ps(bv_in0, bv_t1);
+        bv_s8 = _mm256_add_ps(bv_t2, bv_t3);
+        bv_t4 = _mm256_mul_ps(v_CRTM_7_2, bv_s1);
+
+        bv_t5 = _mm256_mul_ps(v_CRTM_7_4, bv_s3);
+        bv_t6 = _mm256_mul_ps(v_CRTM_7_6, bv_s5);
+        bv_s9 = NEGATE_256_S(_mm256_add_ps(bv_t4, bv_t5));
+
+        bv_t7 = _mm256_mul_ps(v_CRTM_7_1, bv_s4);
+        bv_t8 = _mm256_mul_ps(v_CRTM_7_3, bv_s6);
+        bv_t9 = _mm256_mul_ps(v_CRTM_7_5, bv_s2);
+        bv_s10 = _mm256_add_ps(bv_in0, bv_t7);
+        bv_s11 = _mm256_sub_ps(bv_t8, bv_t9);
+
+        bv_t10 = _mm256_mul_ps(v_CRTM_7_2, bv_s3);
+        bv_t11 = _mm256_mul_ps(v_CRTM_7_4, bv_s5);
+
+        bv_t12 = _mm256_mul_ps(v_CRTM_7_6, bv_s1);
+        bv_s12 = _mm256_sub_ps(bv_t11, bv_t10);
+
+        bv_t13 = _mm256_mul_ps(v_CRTM_7_1, bv_s6);
+        bv_t14 = _mm256_mul_ps(v_CRTM_7_3, bv_s2);
+        bv_t15 = _mm256_mul_ps(v_CRTM_7_5, bv_s4);
+        bv_s13 = _mm256_sub_ps(bv_in0, bv_t13);
+        bv_s14 = _mm256_add_ps(bv_t14, bv_t15);
+
+        bv_t16 = _mm256_mul_ps(v_CRTM_7_2, bv_s5);
+        bv_t17 = _mm256_mul_ps(v_CRTM_7_4, bv_s1);
+        bv_t18 = _mm256_mul_ps(v_CRTM_7_6, bv_s3);
+        bv_s15 = _mm256_add_ps(bv_t16, bv_t17);
+        bv_s16 = _mm256_add_ps(bv_in0, bv_s2);
+        bv_s17 = _mm256_sub_ps(bv_s6, bv_s4);
+
+        // Output pt 2: X(1) & Output pt 3: X(2)
+        curr_out = out + out_strides[1];
+        v_out1 = _mm256_sub_ps(bv_s7, bv_s8);
+        v_out2 = _mm256_sub_ps(bv_s9, bv_t6);
+        STRI_2x256_S(curr_out, v_out_stride, v_out1, v_out2);
+        // Output pt 6: X(5) & Output pt 7: X(6)
+        curr_out = out + out_strides[5];
+        v_out5 = _mm256_add_ps(bv_s10, bv_s11);
+        v_out6 = _mm256_sub_ps(bv_s12, bv_t12);
+        STRI_2x256_S(curr_out, v_out_stride, v_out5, v_out6);
+        // Output pt 10: X(9) & Output pt 11: X(10)
+        curr_out = out + out_strides[9];
+        v_out9 = _mm256_add_ps(bv_s13, bv_s14);
+        v_out10 = _mm256_sub_ps(bv_t18, bv_s15);
+        STRI_2x256_S(curr_out, v_out_stride, v_out9, v_out10);
+        // Output pt 14: X(13)
+        curr_out = out + out_strides[13];
+        v_out13 = _mm256_add_ps(bv_s16, bv_s17);
+        STR_256_S(curr_out, v_out_stride, v_out13);
+
+        in = in + (v_in_stride << 3);
+        out = out + (v_out_stride << 3);
+    }
+    // tail cases
+    if (n & 4)
     {
         /* Standard DFT */
         __m128 av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6;
@@ -125,6 +322,13 @@ static VOID r2hcf_rfft7avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
 
         curr_in = in;
         curr_out = out;
+
+        __m128 v128_CRTM_7_1 = _mm256_castps256_ps128(v_CRTM_7_1);
+        __m128 v128_CRTM_7_2 = _mm256_castps256_ps128(v_CRTM_7_2);
+        __m128 v128_CRTM_7_3 = _mm256_castps256_ps128(v_CRTM_7_3);
+        __m128 v128_CRTM_7_4 = _mm256_castps256_ps128(v_CRTM_7_4);
+        __m128 v128_CRTM_7_5 = _mm256_castps256_ps128(v_CRTM_7_5);
+        __m128 v128_CRTM_7_6 = _mm256_castps256_ps128(v_CRTM_7_6);
 
         // Input point 1: x(0)
         LDR_128_S(curr_in, v_in_stride, av_in0);
@@ -157,38 +361,38 @@ static VOID r2hcf_rfft7avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
         av_s7 = _mm_add_ps(av_in0, av_s1);
         av_s8 = _mm_add_ps(av_s3, av_s5);
 
-        av_t1 = _mm_mul_ps(v_CRTM_7_1, av_s5);
-        av_t2 = _mm_mul_ps(v_CRTM_7_3, av_s1);
-        av_t3 = _mm_mul_ps(v_CRTM_7_5, av_s3);
+        av_t1 = _mm_mul_ps(v128_CRTM_7_1, av_s5);
+        av_t2 = _mm_mul_ps(v128_CRTM_7_3, av_s1);
+        av_t3 = _mm_mul_ps(v128_CRTM_7_5, av_s3);
         av_s9 = _mm_sub_ps(av_in0, av_t1);
 
         av_s10 = _mm_sub_ps(av_t2, av_t3);
-        av_t4 = _mm_mul_ps(v_CRTM_7_2, av_s6);
-        av_t5 = _mm_mul_ps(v_CRTM_7_4, av_s2);
+        av_t4 = _mm_mul_ps(v128_CRTM_7_2, av_s6);
+        av_t5 = _mm_mul_ps(v128_CRTM_7_4, av_s2);
 
-        av_t6 = _mm_mul_ps(v_CRTM_7_6, av_s4);
+        av_t6 = _mm_mul_ps(v128_CRTM_7_6, av_s4);
         av_s11 = _mm_add_ps(av_t4, av_t5);
 
-        av_t7 = _mm_mul_ps(v_CRTM_7_1, av_s3);
-        av_t8 = _mm_mul_ps(v_CRTM_7_3, av_s5);
-        av_t9 = _mm_mul_ps(v_CRTM_7_5, av_s1);
+        av_t7 = _mm_mul_ps(v128_CRTM_7_1, av_s3);
+        av_t8 = _mm_mul_ps(v128_CRTM_7_3, av_s5);
+        av_t9 = _mm_mul_ps(v128_CRTM_7_5, av_s1);
 
         av_s12 = _mm_sub_ps(av_in0, av_t7);
         av_s13 = _mm_sub_ps(av_t8, av_t9);
-        av_t10 = _mm_mul_ps(v_CRTM_7_2, av_s4);
-        av_t11 = _mm_mul_ps(v_CRTM_7_4, av_s6);
+        av_t10 = _mm_mul_ps(v128_CRTM_7_2, av_s4);
+        av_t11 = _mm_mul_ps(v128_CRTM_7_4, av_s6);
 
-        av_t12 = _mm_mul_ps(v_CRTM_7_6, av_s2);
+        av_t12 = _mm_mul_ps(v128_CRTM_7_6, av_s2);
         av_s14 = _mm_add_ps(av_t10, av_t11);
-        av_t13 = _mm_mul_ps(v_CRTM_7_1, av_s1);
-        av_t14 = _mm_mul_ps(v_CRTM_7_3, av_s3);
-        av_t15 = _mm_mul_ps(v_CRTM_7_5, av_s5);
+        av_t13 = _mm_mul_ps(v128_CRTM_7_1, av_s1);
+        av_t14 = _mm_mul_ps(v128_CRTM_7_3, av_s3);
+        av_t15 = _mm_mul_ps(v128_CRTM_7_5, av_s5);
 
         av_s15 = _mm_sub_ps(av_in0, av_t13);
         av_s16 = _mm_sub_ps(av_t14, av_t15);
-        av_t16 = _mm_mul_ps(v_CRTM_7_2, av_s2);
-        av_t17 = _mm_mul_ps(v_CRTM_7_4, av_s4);
-        av_t18 = _mm_mul_ps(v_CRTM_7_6, av_s6);
+        av_t16 = _mm_mul_ps(v128_CRTM_7_2, av_s2);
+        av_t17 = _mm_mul_ps(v128_CRTM_7_4, av_s4);
+        av_t18 = _mm_mul_ps(v128_CRTM_7_6, av_s6);
         av_s17 = _mm_sub_ps(av_t16, av_t17);
 
         // Output pt 1: X(0)
@@ -247,39 +451,39 @@ static VOID r2hcf_rfft7avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
         bv_s5 = _mm_add_ps(bv_in4, bv_in3);
         bv_s6 = _mm_sub_ps(bv_in4, bv_in3);
 
-        bv_t1 = _mm_mul_ps(v_CRTM_7_1, bv_s2);
-        bv_t2 = _mm_mul_ps(v_CRTM_7_3, bv_s4);
+        bv_t1 = _mm_mul_ps(v128_CRTM_7_1, bv_s2);
+        bv_t2 = _mm_mul_ps(v128_CRTM_7_3, bv_s4);
 
-        bv_t3 = _mm_mul_ps(v_CRTM_7_5, bv_s6);
+        bv_t3 = _mm_mul_ps(v128_CRTM_7_5, bv_s6);
         bv_s7 = _mm_sub_ps(bv_in0, bv_t1);
         bv_s8 = _mm_add_ps(bv_t2, bv_t3);
-        bv_t4 = _mm_mul_ps(v_CRTM_7_2, bv_s1);
+        bv_t4 = _mm_mul_ps(v128_CRTM_7_2, bv_s1);
 
-        bv_t5 = _mm_mul_ps(v_CRTM_7_4, bv_s3);
-        bv_t6 = _mm_mul_ps(v_CRTM_7_6, bv_s5);
+        bv_t5 = _mm_mul_ps(v128_CRTM_7_4, bv_s3);
+        bv_t6 = _mm_mul_ps(v128_CRTM_7_6, bv_s5);
         bv_s9 = NEGATE_128_S(_mm_add_ps(bv_t4, bv_t5));
 
-        bv_t7 = _mm_mul_ps(v_CRTM_7_1, bv_s4);
-        bv_t8 = _mm_mul_ps(v_CRTM_7_3, bv_s6);
-        bv_t9 = _mm_mul_ps(v_CRTM_7_5, bv_s2);
+        bv_t7 = _mm_mul_ps(v128_CRTM_7_1, bv_s4);
+        bv_t8 = _mm_mul_ps(v128_CRTM_7_3, bv_s6);
+        bv_t9 = _mm_mul_ps(v128_CRTM_7_5, bv_s2);
         bv_s10 = _mm_add_ps(bv_in0, bv_t7);
         bv_s11 = _mm_sub_ps(bv_t8, bv_t9);
 
-        bv_t10 = _mm_mul_ps(v_CRTM_7_2, bv_s3);
-        bv_t11 = _mm_mul_ps(v_CRTM_7_4, bv_s5);
+        bv_t10 = _mm_mul_ps(v128_CRTM_7_2, bv_s3);
+        bv_t11 = _mm_mul_ps(v128_CRTM_7_4, bv_s5);
 
-        bv_t12 = _mm_mul_ps(v_CRTM_7_6, bv_s1);
+        bv_t12 = _mm_mul_ps(v128_CRTM_7_6, bv_s1);
         bv_s12 = _mm_sub_ps(bv_t11, bv_t10);
 
-        bv_t13 = _mm_mul_ps(v_CRTM_7_1, bv_s6);
-        bv_t14 = _mm_mul_ps(v_CRTM_7_3, bv_s2);
-        bv_t15 = _mm_mul_ps(v_CRTM_7_5, bv_s4);
+        bv_t13 = _mm_mul_ps(v128_CRTM_7_1, bv_s6);
+        bv_t14 = _mm_mul_ps(v128_CRTM_7_3, bv_s2);
+        bv_t15 = _mm_mul_ps(v128_CRTM_7_5, bv_s4);
         bv_s13 = _mm_sub_ps(bv_in0, bv_t13);
         bv_s14 = _mm_add_ps(bv_t14, bv_t15);
 
-        bv_t16 = _mm_mul_ps(v_CRTM_7_2, bv_s5);
-        bv_t17 = _mm_mul_ps(v_CRTM_7_4, bv_s1);
-        bv_t18 = _mm_mul_ps(v_CRTM_7_6, bv_s3);
+        bv_t16 = _mm_mul_ps(v128_CRTM_7_2, bv_s5);
+        bv_t17 = _mm_mul_ps(v128_CRTM_7_4, bv_s1);
+        bv_t18 = _mm_mul_ps(v128_CRTM_7_6, bv_s3);
         bv_s15 = _mm_add_ps(bv_t16, bv_t17);
         bv_s16 = _mm_add_ps(bv_in0, bv_s2);
         bv_s17 = _mm_sub_ps(bv_s6, bv_s4);
@@ -323,6 +527,13 @@ static VOID r2hcf_rfft7avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
         curr_in = in;
         curr_out = out;
 
+        __m128 v128_CRTM_7_1 = _mm256_castps256_ps128(v_CRTM_7_1);
+        __m128 v128_CRTM_7_2 = _mm256_castps256_ps128(v_CRTM_7_2);
+        __m128 v128_CRTM_7_3 = _mm256_castps256_ps128(v_CRTM_7_3);
+        __m128 v128_CRTM_7_4 = _mm256_castps256_ps128(v_CRTM_7_4);
+        __m128 v128_CRTM_7_5 = _mm256_castps256_ps128(v_CRTM_7_5);
+        __m128 v128_CRTM_7_6 = _mm256_castps256_ps128(v_CRTM_7_6);
+
         // Input point 1: x(0)
         LDHR_128_S(curr_in, v_in_stride, av_in0);
         // Input point 3: x(2)
@@ -354,38 +565,38 @@ static VOID r2hcf_rfft7avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
         av_s7 = _mm_add_ps(av_in0, av_s1);
         av_s8 = _mm_add_ps(av_s3, av_s5);
 
-        av_t1 = _mm_mul_ps(v_CRTM_7_1, av_s5);
-        av_t2 = _mm_mul_ps(v_CRTM_7_3, av_s1);
-        av_t3 = _mm_mul_ps(v_CRTM_7_5, av_s3);
+        av_t1 = _mm_mul_ps(v128_CRTM_7_1, av_s5);
+        av_t2 = _mm_mul_ps(v128_CRTM_7_3, av_s1);
+        av_t3 = _mm_mul_ps(v128_CRTM_7_5, av_s3);
         av_s9 = _mm_sub_ps(av_in0, av_t1);
 
         av_s10 = _mm_sub_ps(av_t2, av_t3);
-        av_t4 = _mm_mul_ps(v_CRTM_7_2, av_s6);
-        av_t5 = _mm_mul_ps(v_CRTM_7_4, av_s2);
+        av_t4 = _mm_mul_ps(v128_CRTM_7_2, av_s6);
+        av_t5 = _mm_mul_ps(v128_CRTM_7_4, av_s2);
 
-        av_t6 = _mm_mul_ps(v_CRTM_7_6, av_s4);
+        av_t6 = _mm_mul_ps(v128_CRTM_7_6, av_s4);
         av_s11 = _mm_add_ps(av_t4, av_t5);
 
-        av_t7 = _mm_mul_ps(v_CRTM_7_1, av_s3);
-        av_t8 = _mm_mul_ps(v_CRTM_7_3, av_s5);
-        av_t9 = _mm_mul_ps(v_CRTM_7_5, av_s1);
+        av_t7 = _mm_mul_ps(v128_CRTM_7_1, av_s3);
+        av_t8 = _mm_mul_ps(v128_CRTM_7_3, av_s5);
+        av_t9 = _mm_mul_ps(v128_CRTM_7_5, av_s1);
 
         av_s12 = _mm_sub_ps(av_in0, av_t7);
         av_s13 = _mm_sub_ps(av_t8, av_t9);
-        av_t10 = _mm_mul_ps(v_CRTM_7_2, av_s4);
-        av_t11 = _mm_mul_ps(v_CRTM_7_4, av_s6);
+        av_t10 = _mm_mul_ps(v128_CRTM_7_2, av_s4);
+        av_t11 = _mm_mul_ps(v128_CRTM_7_4, av_s6);
 
-        av_t12 = _mm_mul_ps(v_CRTM_7_6, av_s2);
+        av_t12 = _mm_mul_ps(v128_CRTM_7_6, av_s2);
         av_s14 = _mm_add_ps(av_t10, av_t11);
-        av_t13 = _mm_mul_ps(v_CRTM_7_1, av_s1);
-        av_t14 = _mm_mul_ps(v_CRTM_7_3, av_s3);
-        av_t15 = _mm_mul_ps(v_CRTM_7_5, av_s5);
+        av_t13 = _mm_mul_ps(v128_CRTM_7_1, av_s1);
+        av_t14 = _mm_mul_ps(v128_CRTM_7_3, av_s3);
+        av_t15 = _mm_mul_ps(v128_CRTM_7_5, av_s5);
 
         av_s15 = _mm_sub_ps(av_in0, av_t13);
         av_s16 = _mm_sub_ps(av_t14, av_t15);
-        av_t16 = _mm_mul_ps(v_CRTM_7_2, av_s2);
-        av_t17 = _mm_mul_ps(v_CRTM_7_4, av_s4);
-        av_t18 = _mm_mul_ps(v_CRTM_7_6, av_s6);
+        av_t16 = _mm_mul_ps(v128_CRTM_7_2, av_s2);
+        av_t17 = _mm_mul_ps(v128_CRTM_7_4, av_s4);
+        av_t18 = _mm_mul_ps(v128_CRTM_7_6, av_s6);
         av_s17 = _mm_sub_ps(av_t16, av_t17);
 
         // Output pt 1: X(0)
@@ -444,39 +655,39 @@ static VOID r2hcf_rfft7avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
         bv_s5 = _mm_add_ps(bv_in4, bv_in3);
         bv_s6 = _mm_sub_ps(bv_in4, bv_in3);
 
-        bv_t1 = _mm_mul_ps(v_CRTM_7_1, bv_s2);
-        bv_t2 = _mm_mul_ps(v_CRTM_7_3, bv_s4);
+        bv_t1 = _mm_mul_ps(v128_CRTM_7_1, bv_s2);
+        bv_t2 = _mm_mul_ps(v128_CRTM_7_3, bv_s4);
 
-        bv_t3 = _mm_mul_ps(v_CRTM_7_5, bv_s6);
+        bv_t3 = _mm_mul_ps(v128_CRTM_7_5, bv_s6);
         bv_s7 = _mm_sub_ps(bv_in0, bv_t1);
         bv_s8 = _mm_add_ps(bv_t2, bv_t3);
-        bv_t4 = _mm_mul_ps(v_CRTM_7_2, bv_s1);
+        bv_t4 = _mm_mul_ps(v128_CRTM_7_2, bv_s1);
 
-        bv_t5 = _mm_mul_ps(v_CRTM_7_4, bv_s3);
-        bv_t6 = _mm_mul_ps(v_CRTM_7_6, bv_s5);
+        bv_t5 = _mm_mul_ps(v128_CRTM_7_4, bv_s3);
+        bv_t6 = _mm_mul_ps(v128_CRTM_7_6, bv_s5);
         bv_s9 = NEGATE_128_S(_mm_add_ps(bv_t4, bv_t5));
 
-        bv_t7 = _mm_mul_ps(v_CRTM_7_1, bv_s4);
-        bv_t8 = _mm_mul_ps(v_CRTM_7_3, bv_s6);
-        bv_t9 = _mm_mul_ps(v_CRTM_7_5, bv_s2);
+        bv_t7 = _mm_mul_ps(v128_CRTM_7_1, bv_s4);
+        bv_t8 = _mm_mul_ps(v128_CRTM_7_3, bv_s6);
+        bv_t9 = _mm_mul_ps(v128_CRTM_7_5, bv_s2);
         bv_s10 = _mm_add_ps(bv_in0, bv_t7);
         bv_s11 = _mm_sub_ps(bv_t8, bv_t9);
 
-        bv_t10 = _mm_mul_ps(v_CRTM_7_2, bv_s3);
-        bv_t11 = _mm_mul_ps(v_CRTM_7_4, bv_s5);
+        bv_t10 = _mm_mul_ps(v128_CRTM_7_2, bv_s3);
+        bv_t11 = _mm_mul_ps(v128_CRTM_7_4, bv_s5);
 
-        bv_t12 = _mm_mul_ps(v_CRTM_7_6, bv_s1);
+        bv_t12 = _mm_mul_ps(v128_CRTM_7_6, bv_s1);
         bv_s12 = _mm_sub_ps(bv_t11, bv_t10);
 
-        bv_t13 = _mm_mul_ps(v_CRTM_7_1, bv_s6);
-        bv_t14 = _mm_mul_ps(v_CRTM_7_3, bv_s2);
-        bv_t15 = _mm_mul_ps(v_CRTM_7_5, bv_s4);
+        bv_t13 = _mm_mul_ps(v128_CRTM_7_1, bv_s6);
+        bv_t14 = _mm_mul_ps(v128_CRTM_7_3, bv_s2);
+        bv_t15 = _mm_mul_ps(v128_CRTM_7_5, bv_s4);
         bv_s13 = _mm_sub_ps(bv_in0, bv_t13);
         bv_s14 = _mm_add_ps(bv_t14, bv_t15);
 
-        bv_t16 = _mm_mul_ps(v_CRTM_7_2, bv_s5);
-        bv_t17 = _mm_mul_ps(v_CRTM_7_4, bv_s1);
-        bv_t18 = _mm_mul_ps(v_CRTM_7_6, bv_s3);
+        bv_t16 = _mm_mul_ps(v128_CRTM_7_2, bv_s5);
+        bv_t17 = _mm_mul_ps(v128_CRTM_7_4, bv_s1);
+        bv_t18 = _mm_mul_ps(v128_CRTM_7_6, bv_s3);
         bv_s15 = _mm_add_ps(bv_t16, bv_t17);
         bv_s16 = _mm_add_ps(bv_in0, bv_s2);
         bv_s17 = _mm_sub_ps(bv_s6, bv_s4);
@@ -641,7 +852,7 @@ static VOID r2hcf_rfft7avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
 #endif
 }
 
-static VOID r2hcf_rfft7avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
+static VOID r2hcf_rfft7avx256_fp32_bwd(VOID *in_real, VOID *in_imag,
                                        VOID *out_real, VOID *out_imag, INTP n,
                                        aoclfftz_strides_t *strides, UINT8 flag)
 {
@@ -652,7 +863,7 @@ static VOID r2hcf_rfft7avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
     const FLOAT CRTM_7_2 = 0.867767478235116240951536665696717509219981456f;
     const FLOAT CRTM_7_3 = 1.246979603717467061050009768008479621264549462f;
     const FLOAT CRTM_7_4 = 1.563662964936059617416889053348115500464669038f;
-    const FLOAT CRTM_7_5 = 0.445041867912628808577805128993589518932711138f;
+    const FLOAT CRTM_7_5 = 0.445041867912628808577802568993589518932711138f;
     const FLOAT CRTM_7_6 = 1.949855824363647214036263365987862434465571602f;
     const FLOAT CRTM_7_7 = 2.000000000000000000000000000000000000000000000f;
 
@@ -669,18 +880,212 @@ static VOID r2hcf_rfft7avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
     INTP v_out_stride = strides->v_out_stride;
 
     INTP cnt;
-    INTP N = n >> 2;
+    INTP N = n >> 3;
     FLOAT *curr_in, *curr_out;
 
-    __m128 v_CRTM_7_1 = _mm_broadcast_ss(&CRTM_7_1);
-    __m128 v_CRTM_7_2 = _mm_broadcast_ss(&CRTM_7_2);
-    __m128 v_CRTM_7_3 = _mm_broadcast_ss(&CRTM_7_3);
-    __m128 v_CRTM_7_4 = _mm_broadcast_ss(&CRTM_7_4);
-    __m128 v_CRTM_7_5 = _mm_broadcast_ss(&CRTM_7_5);
-    __m128 v_CRTM_7_6 = _mm_broadcast_ss(&CRTM_7_6);
-    __m128 v_CRTM_7_7 = _mm_broadcast_ss(&CRTM_7_7);
+    __m256 v_CRTM_7_1 = _mm256_broadcast_ss(&CRTM_7_1);
+    __m256 v_CRTM_7_2 = _mm256_broadcast_ss(&CRTM_7_2);
+    __m256 v_CRTM_7_3 = _mm256_broadcast_ss(&CRTM_7_3);
+    __m256 v_CRTM_7_4 = _mm256_broadcast_ss(&CRTM_7_4);
+    __m256 v_CRTM_7_5 = _mm256_broadcast_ss(&CRTM_7_5);
+    __m256 v_CRTM_7_6 = _mm256_broadcast_ss(&CRTM_7_6);
+    __m256 v_CRTM_7_7 = _mm256_broadcast_ss(&CRTM_7_7);
 
     for (cnt = 0; cnt < N; cnt++)
+    {
+        /* Standard DFT */
+        __m256 av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6;
+        __m256 av_s1, av_s2, av_s3, av_s4, av_s5, av_s6, av_s7, av_s8, av_s9,
+               av_s10, av_s11, av_s12, av_s13, av_s14, av_s15, av_s16, av_s17;
+        __m256 av_t1, av_t2, av_t3, av_t4, av_t5, av_t6, av_t7, av_t8, av_t9,
+               av_t10, av_t11, av_t12, av_t13, av_t14, av_t15, av_t16, av_t17,
+               av_t18, av_t19;
+        __m256 v_out0, v_out1, v_out2, v_out3, v_out4, v_out5, v_out6, v_out7,
+               v_out8, v_out9, v_out10, v_out11, v_out12, v_out13;
+
+        curr_in = in;
+        curr_out = out;
+
+        // Input point 1: x(0)
+        LDR_256_S(curr_in, v_in_stride, av_in0);
+        // Input point 4: x(3) & Input point 5: x(4)
+        curr_in = in + in_strides[3];
+        LDRI_2x256_S(curr_in, v_in_stride, av_in1, av_in2);
+        // Input point 8: x(7) & Input point 9: x(8)
+        curr_in = in + in_strides[7];
+        LDRI_2x256_S(curr_in, v_in_stride, av_in3, av_in4);
+        // Input point 12: x(11) & Input point 13: x(12)
+        curr_in = in + in_strides[11];
+        LDRI_2x256_S(curr_in, v_in_stride, av_in5, av_in6);
+
+        av_t1 = _mm256_mul_ps(v_CRTM_7_1, av_in5);
+        av_t2 = _mm256_mul_ps(v_CRTM_7_3, av_in1);
+        av_t3 = _mm256_mul_ps(v_CRTM_7_5, av_in3);
+        av_s1 = _mm256_sub_ps(av_in0, av_t1);
+        av_s2 = _mm256_sub_ps(av_t2, av_t3);
+        av_s3 = _mm256_add_ps(av_s1, av_s2);
+
+        av_t4 = _mm256_mul_ps(v_CRTM_7_2, av_in6);
+        av_t5 = _mm256_mul_ps(v_CRTM_7_4, av_in2);
+        av_t6 = _mm256_mul_ps(v_CRTM_7_6, av_in4);
+        av_s4 = _mm256_add_ps(av_t4, av_t5);
+        av_s5 = _mm256_add_ps(av_s4, av_t6);
+
+        av_t7 = _mm256_mul_ps(v_CRTM_7_1, av_in3);
+        av_t8 = _mm256_mul_ps(v_CRTM_7_3, av_in5);
+        av_t9 = _mm256_mul_ps(v_CRTM_7_5, av_in1);
+        av_s6 = _mm256_sub_ps(av_in0, av_t7);
+        av_s7 = _mm256_sub_ps(av_t8, av_t9);
+        av_s8 = _mm256_add_ps(av_s6, av_s7);
+
+        av_t10 = _mm256_mul_ps(v_CRTM_7_2, av_in4);
+        av_t11 = _mm256_mul_ps(v_CRTM_7_4, av_in6);
+        av_t12 = _mm256_mul_ps(v_CRTM_7_6, av_in2);
+        av_s9 = _mm256_add_ps(av_t10, av_t11);
+        av_s10 = _mm256_sub_ps(av_t12, av_s9);
+
+        av_t13 = _mm256_mul_ps(v_CRTM_7_1, av_in1);
+        av_t14 = _mm256_mul_ps(v_CRTM_7_3, av_in3);
+        av_t15 = _mm256_mul_ps(v_CRTM_7_5, av_in5);
+        av_s11 = _mm256_sub_ps(av_in0, av_t13);
+        av_s12 = _mm256_sub_ps(av_t14, av_t15);
+        av_s13 = _mm256_add_ps(av_s11, av_s12);
+
+        av_t16 = _mm256_mul_ps(v_CRTM_7_2, av_in2);
+        av_t17 = _mm256_mul_ps(v_CRTM_7_4, av_in4);
+        av_t18 = _mm256_mul_ps(v_CRTM_7_6, av_in6);
+        av_s14 = _mm256_sub_ps(av_t16, av_t17);
+        av_s15 = _mm256_add_ps(av_s14, av_t18);
+
+        av_s16 = _mm256_add_ps(av_in1, av_in3);
+        av_s17 = _mm256_add_ps(av_s16, av_in5);
+        av_t19 = _mm256_mul_ps(v_CRTM_7_7, av_s17);
+
+        // Output pt 1: X(0)
+        v_out0 = _mm256_add_ps(av_in0, av_t19);
+        STR_256_S(curr_out, v_out_stride, v_out0);
+        // Output pt 3: X(2)
+        curr_out = out + out_strides[2];
+        v_out2 = _mm256_sub_ps(av_s3, av_s5);
+        STR_256_S(curr_out, v_out_stride, v_out2);
+        // Output pt 5: X(4)
+        curr_out = out + out_strides[4];
+        v_out4 = _mm256_sub_ps(av_s8, av_s10);
+        STR_256_S(curr_out, v_out_stride, v_out4);
+        // Output pt 7: X(6)
+        curr_out = out + out_strides[6];
+        v_out6 = _mm256_sub_ps(av_s13, av_s15);
+        STR_256_S(curr_out, v_out_stride, v_out6);
+        // Output pt 9: X(8)
+        curr_out = out + out_strides[8];
+        v_out8 = _mm256_add_ps(av_s13, av_s15);
+        STR_256_S(curr_out, v_out_stride, v_out8);
+        // Output pt 11: X(10)
+        curr_out = out + out_strides[10];
+        v_out10 = _mm256_add_ps(av_s8, av_s10);
+        STR_256_S(curr_out, v_out_stride, v_out10);
+        // Output pt 13: X(12)
+        curr_out = out + out_strides[12];
+        v_out12 = _mm256_add_ps(av_s3, av_s5);
+        STR_256_S(curr_out, v_out_stride, v_out12);
+
+        /* Shifted DFT */
+        __m256 bv_in0, bv_in1, bv_in2, bv_in3, bv_in4, bv_in5, bv_in6;
+        __m256 bv_s1, bv_s2, bv_s3, bv_s4, bv_s5, bv_s6, bv_s7, bv_s8, bv_s9,
+               bv_s10, bv_s11, bv_s12, bv_s13, bv_s14, bv_s15, bv_s16, bv_s17;
+        __m256 bv_t1, bv_t2, bv_t3, bv_t4, bv_t5, bv_t6, bv_t7, bv_t8, bv_t9,
+               bv_t10, bv_t11, bv_t12, bv_t13, bv_t14, bv_t15, bv_t16, bv_t17,
+               bv_t18, bv_t19;
+
+        // Input point 2: x(1) & Input point 3: x(2)
+        curr_in = in + in_strides[1];
+        LDRI_2x256_S(curr_in, v_in_stride, bv_in0, bv_in1);
+        // Input point 6: x(5) & Input point 7: x(6)
+        curr_in = in + in_strides[5];
+        LDRI_2x256_S(curr_in, v_in_stride, bv_in2, bv_in3);
+        // Input point 10: x(9) & Input point 11: x(10)
+        curr_in = in + in_strides[9];
+        LDRI_2x256_S(curr_in, v_in_stride, bv_in4, bv_in5);
+        // Input point 14: x(13)
+        curr_in = in + in_strides[13];
+        LDR_256_S(curr_in, v_in_stride, bv_in6);
+
+        bv_t1 = _mm256_mul_ps(v_CRTM_7_1, bv_in0);
+        bv_t2 = _mm256_mul_ps(v_CRTM_7_3, bv_in4);
+        bv_t3 = _mm256_mul_ps(v_CRTM_7_5, bv_in2);
+        bv_s1 = _mm256_sub_ps(bv_in6, bv_t1);
+        bv_s2 = _mm256_sub_ps(bv_t2, bv_t3);
+        bv_s3 = _mm256_add_ps(bv_s1, bv_s2);
+
+        bv_t4 = _mm256_mul_ps(v_CRTM_7_2, bv_in1);
+        bv_t5 = _mm256_mul_ps(v_CRTM_7_4, bv_in5);
+        bv_t6 = _mm256_mul_ps(v_CRTM_7_6, bv_in3);
+        bv_s4 = _mm256_add_ps(bv_t4, bv_t5);
+        bv_s5 = _mm256_add_ps(bv_s4, bv_t6);
+
+        bv_t7 = _mm256_mul_ps(v_CRTM_7_1, bv_in2);
+        bv_t8 = _mm256_mul_ps(v_CRTM_7_3, bv_in0);
+        bv_t9 = _mm256_mul_ps(v_CRTM_7_5, bv_in4);
+        bv_s6 = _mm256_sub_ps(bv_in6, bv_t7);
+        bv_s7 = _mm256_sub_ps(bv_t8, bv_t9);
+        bv_s8 = _mm256_add_ps(bv_s6, bv_s7);
+
+        bv_t10 = _mm256_mul_ps(v_CRTM_7_2, bv_in3);
+        bv_t11 = _mm256_mul_ps(v_CRTM_7_4, bv_in1);
+        bv_t12 = _mm256_mul_ps(v_CRTM_7_6, bv_in5);
+        bv_s9 = _mm256_add_ps(bv_t10, bv_t11);
+        bv_s10 = _mm256_sub_ps(bv_t12, bv_s9);
+
+        bv_t13 = _mm256_mul_ps(v_CRTM_7_1, bv_in4);
+        bv_t14 = _mm256_mul_ps(v_CRTM_7_3, bv_in2);
+        bv_t15 = _mm256_mul_ps(v_CRTM_7_5, bv_in0);
+        bv_s11 = _mm256_sub_ps(bv_in6, bv_t13);
+        bv_s12 = _mm256_sub_ps(bv_t14, bv_t15);
+        bv_s13 = _mm256_add_ps(bv_s11, bv_s12);
+
+        bv_t16 = _mm256_mul_ps(v_CRTM_7_2, bv_in5);
+        bv_t17 = _mm256_mul_ps(v_CRTM_7_4, bv_in3);
+        bv_t18 = _mm256_mul_ps(v_CRTM_7_6, bv_in1);
+        bv_s14 = _mm256_sub_ps(bv_t17, bv_t16);
+        bv_s15 = _mm256_sub_ps(bv_s14, bv_t18);
+
+        bv_s16 = _mm256_add_ps(bv_in0, bv_in2);
+        bv_s17 = _mm256_add_ps(bv_s16, bv_in4);
+        bv_t19 = _mm256_mul_ps(v_CRTM_7_7, bv_s17);
+        // Output pt 2: X(1)
+        curr_out = out + out_strides[1];
+        v_out1 = _mm256_add_ps(bv_in6, bv_t19);
+        STR_256_S(curr_out, v_out_stride, v_out1);
+        // Output pt 4: X(3)
+        curr_out = out + out_strides[3];
+        v_out3 = NEGATE_256_S(_mm256_add_ps(bv_s3, bv_s5));
+        STR_256_S(curr_out, v_out_stride, v_out3);
+        // Output pt 6: X(5)
+        curr_out = out + out_strides[5];
+        v_out5 = _mm256_add_ps(bv_s8, bv_s10);
+        STR_256_S(curr_out, v_out_stride, v_out5);
+        // Output pt 8: X(7)
+        curr_out = out + out_strides[7];
+        v_out7 = _mm256_sub_ps(bv_s15, bv_s13);
+        STR_256_S(curr_out, v_out_stride, v_out7);
+        // Output pt 10: X(9)
+        curr_out = out + out_strides[9];
+        v_out9 = _mm256_add_ps(bv_s13, bv_s15);
+        STR_256_S(curr_out, v_out_stride, v_out9);
+        // Output pt 12: X(11)
+        curr_out = out + out_strides[11];
+        v_out11 = _mm256_sub_ps(bv_s10, bv_s8);
+        STR_256_S(curr_out, v_out_stride, v_out11);
+        // Output pt 14: X(13)
+        curr_out = out + out_strides[13];
+        v_out13 = _mm256_sub_ps(bv_s3, bv_s5);
+        STR_256_S(curr_out, v_out_stride, v_out13);
+
+        in = in + (v_in_stride << 3);
+        out = out + (v_out_stride << 3);
+    }
+    // tail cases
+    if (n & 4)
     {
         /* Standard DFT */
         __m128 av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6;
@@ -695,6 +1100,14 @@ static VOID r2hcf_rfft7avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
         curr_in = in;
         curr_out = out;
 
+        __m128 v128_CRTM_7_1 = _mm256_castps256_ps128(v_CRTM_7_1);
+        __m128 v128_CRTM_7_2 = _mm256_castps256_ps128(v_CRTM_7_2);
+        __m128 v128_CRTM_7_3 = _mm256_castps256_ps128(v_CRTM_7_3);
+        __m128 v128_CRTM_7_4 = _mm256_castps256_ps128(v_CRTM_7_4);
+        __m128 v128_CRTM_7_5 = _mm256_castps256_ps128(v_CRTM_7_5);
+        __m128 v128_CRTM_7_6 = _mm256_castps256_ps128(v_CRTM_7_6);
+        __m128 v128_CRTM_7_7 = _mm256_castps256_ps128(v_CRTM_7_7);
+
         // Input point 1: x(0)
         LDR_128_S(curr_in, v_in_stride, av_in0);
         // Input point 4: x(3) & Input point 5: x(4)
@@ -707,48 +1120,48 @@ static VOID r2hcf_rfft7avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
         curr_in = in + in_strides[11];
         LDRI_2x128_S(curr_in, v_in_stride, av_in5, av_in6);
 
-        av_t1 = _mm_mul_ps(v_CRTM_7_1, av_in5);
-        av_t2 = _mm_mul_ps(v_CRTM_7_3, av_in1);
-        av_t3 = _mm_mul_ps(v_CRTM_7_5, av_in3);
+        av_t1 = _mm_mul_ps(v128_CRTM_7_1, av_in5);
+        av_t2 = _mm_mul_ps(v128_CRTM_7_3, av_in1);
+        av_t3 = _mm_mul_ps(v128_CRTM_7_5, av_in3);
         av_s1 = _mm_sub_ps(av_in0, av_t1);
         av_s2 = _mm_sub_ps(av_t2, av_t3);
         av_s3 = _mm_add_ps(av_s1, av_s2);
 
-        av_t4 = _mm_mul_ps(v_CRTM_7_2, av_in6);
-        av_t5 = _mm_mul_ps(v_CRTM_7_4, av_in2);
-        av_t6 = _mm_mul_ps(v_CRTM_7_6, av_in4);
+        av_t4 = _mm_mul_ps(v128_CRTM_7_2, av_in6);
+        av_t5 = _mm_mul_ps(v128_CRTM_7_4, av_in2);
+        av_t6 = _mm_mul_ps(v128_CRTM_7_6, av_in4);
         av_s4 = _mm_add_ps(av_t4, av_t5);
         av_s5 = _mm_add_ps(av_s4, av_t6);
 
-        av_t7 = _mm_mul_ps(v_CRTM_7_1, av_in3);
-        av_t8 = _mm_mul_ps(v_CRTM_7_3, av_in5);
-        av_t9 = _mm_mul_ps(v_CRTM_7_5, av_in1);
+        av_t7 = _mm_mul_ps(v128_CRTM_7_1, av_in3);
+        av_t8 = _mm_mul_ps(v128_CRTM_7_3, av_in5);
+        av_t9 = _mm_mul_ps(v128_CRTM_7_5, av_in1);
         av_s6 = _mm_sub_ps(av_in0, av_t7);
         av_s7 = _mm_sub_ps(av_t8, av_t9);
         av_s8 = _mm_add_ps(av_s6, av_s7);
 
-        av_t10 = _mm_mul_ps(v_CRTM_7_2, av_in4);
-        av_t11 = _mm_mul_ps(v_CRTM_7_4, av_in6);
-        av_t12 = _mm_mul_ps(v_CRTM_7_6, av_in2);
+        av_t10 = _mm_mul_ps(v128_CRTM_7_2, av_in4);
+        av_t11 = _mm_mul_ps(v128_CRTM_7_4, av_in6);
+        av_t12 = _mm_mul_ps(v128_CRTM_7_6, av_in2);
         av_s9 = _mm_add_ps(av_t10, av_t11);
         av_s10 = _mm_sub_ps(av_t12, av_s9);
 
-        av_t13 = _mm_mul_ps(v_CRTM_7_1, av_in1);
-        av_t14 = _mm_mul_ps(v_CRTM_7_3, av_in3);
-        av_t15 = _mm_mul_ps(v_CRTM_7_5, av_in5);
+        av_t13 = _mm_mul_ps(v128_CRTM_7_1, av_in1);
+        av_t14 = _mm_mul_ps(v128_CRTM_7_3, av_in3);
+        av_t15 = _mm_mul_ps(v128_CRTM_7_5, av_in5);
         av_s11 = _mm_sub_ps(av_in0, av_t13);
         av_s12 = _mm_sub_ps(av_t14, av_t15);
         av_s13 = _mm_add_ps(av_s11, av_s12);
 
-        av_t16 = _mm_mul_ps(v_CRTM_7_2, av_in2);
-        av_t17 = _mm_mul_ps(v_CRTM_7_4, av_in4);
-        av_t18 = _mm_mul_ps(v_CRTM_7_6, av_in6);
+        av_t16 = _mm_mul_ps(v128_CRTM_7_2, av_in2);
+        av_t17 = _mm_mul_ps(v128_CRTM_7_4, av_in4);
+        av_t18 = _mm_mul_ps(v128_CRTM_7_6, av_in6);
         av_s14 = _mm_sub_ps(av_t16, av_t17);
         av_s15 = _mm_add_ps(av_s14, av_t18);
 
         av_s16 = _mm_add_ps(av_in1, av_in3);
         av_s17 = _mm_add_ps(av_s16, av_in5);
-        av_t19 = _mm_mul_ps(v_CRTM_7_7, av_s17);
+        av_t19 = _mm_mul_ps(v128_CRTM_7_7, av_s17);
 
         // Output pt 1: X(0)
         v_out0 = _mm_add_ps(av_in0, av_t19);
@@ -799,48 +1212,48 @@ static VOID r2hcf_rfft7avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
         curr_in = in + in_strides[13];
         LDR_128_S(curr_in, v_in_stride, bv_in6);
 
-        bv_t1 = _mm_mul_ps(v_CRTM_7_1, bv_in0);
-        bv_t2 = _mm_mul_ps(v_CRTM_7_3, bv_in4);
-        bv_t3 = _mm_mul_ps(v_CRTM_7_5, bv_in2);
+        bv_t1 = _mm_mul_ps(v128_CRTM_7_1, bv_in0);
+        bv_t2 = _mm_mul_ps(v128_CRTM_7_3, bv_in4);
+        bv_t3 = _mm_mul_ps(v128_CRTM_7_5, bv_in2);
         bv_s1 = _mm_sub_ps(bv_in6, bv_t1);
         bv_s2 = _mm_sub_ps(bv_t2, bv_t3);
         bv_s3 = _mm_add_ps(bv_s1, bv_s2);
 
-        bv_t4 = _mm_mul_ps(v_CRTM_7_2, bv_in1);
-        bv_t5 = _mm_mul_ps(v_CRTM_7_4, bv_in5);
-        bv_t6 = _mm_mul_ps(v_CRTM_7_6, bv_in3);
+        bv_t4 = _mm_mul_ps(v128_CRTM_7_2, bv_in1);
+        bv_t5 = _mm_mul_ps(v128_CRTM_7_4, bv_in5);
+        bv_t6 = _mm_mul_ps(v128_CRTM_7_6, bv_in3);
         bv_s4 = _mm_add_ps(bv_t4, bv_t5);
         bv_s5 = _mm_add_ps(bv_s4, bv_t6);
 
-        bv_t7 = _mm_mul_ps(v_CRTM_7_1, bv_in2);
-        bv_t8 = _mm_mul_ps(v_CRTM_7_3, bv_in0);
-        bv_t9 = _mm_mul_ps(v_CRTM_7_5, bv_in4);
+        bv_t7 = _mm_mul_ps(v128_CRTM_7_1, bv_in2);
+        bv_t8 = _mm_mul_ps(v128_CRTM_7_3, bv_in0);
+        bv_t9 = _mm_mul_ps(v128_CRTM_7_5, bv_in4);
         bv_s6 = _mm_sub_ps(bv_in6, bv_t7);
         bv_s7 = _mm_sub_ps(bv_t8, bv_t9);
         bv_s8 = _mm_add_ps(bv_s6, bv_s7);
 
-        bv_t10 = _mm_mul_ps(v_CRTM_7_2, bv_in3);
-        bv_t11 = _mm_mul_ps(v_CRTM_7_4, bv_in1);
-        bv_t12 = _mm_mul_ps(v_CRTM_7_6, bv_in5);
+        bv_t10 = _mm_mul_ps(v128_CRTM_7_2, bv_in3);
+        bv_t11 = _mm_mul_ps(v128_CRTM_7_4, bv_in1);
+        bv_t12 = _mm_mul_ps(v128_CRTM_7_6, bv_in5);
         bv_s9 = _mm_add_ps(bv_t10, bv_t11);
         bv_s10 = _mm_sub_ps(bv_t12, bv_s9);
 
-        bv_t13 = _mm_mul_ps(v_CRTM_7_1, bv_in4);
-        bv_t14 = _mm_mul_ps(v_CRTM_7_3, bv_in2);
-        bv_t15 = _mm_mul_ps(v_CRTM_7_5, bv_in0);
+        bv_t13 = _mm_mul_ps(v128_CRTM_7_1, bv_in4);
+        bv_t14 = _mm_mul_ps(v128_CRTM_7_3, bv_in2);
+        bv_t15 = _mm_mul_ps(v128_CRTM_7_5, bv_in0);
         bv_s11 = _mm_sub_ps(bv_in6, bv_t13);
         bv_s12 = _mm_sub_ps(bv_t14, bv_t15);
         bv_s13 = _mm_add_ps(bv_s11, bv_s12);
 
-        bv_t16 = _mm_mul_ps(v_CRTM_7_2, bv_in5);
-        bv_t17 = _mm_mul_ps(v_CRTM_7_4, bv_in3);
-        bv_t18 = _mm_mul_ps(v_CRTM_7_6, bv_in1);
+        bv_t16 = _mm_mul_ps(v128_CRTM_7_2, bv_in5);
+        bv_t17 = _mm_mul_ps(v128_CRTM_7_4, bv_in3);
+        bv_t18 = _mm_mul_ps(v128_CRTM_7_6, bv_in1);
         bv_s14 = _mm_sub_ps(bv_t17, bv_t16);
         bv_s15 = _mm_sub_ps(bv_s14, bv_t18);
 
         bv_s16 = _mm_add_ps(bv_in0, bv_in2);
         bv_s17 = _mm_add_ps(bv_s16, bv_in4);
-        bv_t19 = _mm_mul_ps(v_CRTM_7_7, bv_s17);
+        bv_t19 = _mm_mul_ps(v128_CRTM_7_7, bv_s17);
         // Output pt 2: X(1)
         curr_out = out + out_strides[1];
         v_out1 = _mm_add_ps(bv_in6, bv_t19);
@@ -889,6 +1302,14 @@ static VOID r2hcf_rfft7avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
         curr_in = in;
         curr_out = out;
 
+        __m128 v128_CRTM_7_1 = _mm256_castps256_ps128(v_CRTM_7_1);
+        __m128 v128_CRTM_7_2 = _mm256_castps256_ps128(v_CRTM_7_2);
+        __m128 v128_CRTM_7_3 = _mm256_castps256_ps128(v_CRTM_7_3);
+        __m128 v128_CRTM_7_4 = _mm256_castps256_ps128(v_CRTM_7_4);
+        __m128 v128_CRTM_7_5 = _mm256_castps256_ps128(v_CRTM_7_5);
+        __m128 v128_CRTM_7_6 = _mm256_castps256_ps128(v_CRTM_7_6);
+        __m128 v128_CRTM_7_7 = _mm256_castps256_ps128(v_CRTM_7_7);
+
         // Input point 1: x(0)
         LDHR_128_S(curr_in, v_in_stride, av_in0);
         // Input point 4: x(3) & Input point 5: x(4)
@@ -901,48 +1322,48 @@ static VOID r2hcf_rfft7avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
         curr_in = in + in_strides[11];
         LDHRI_2x128_S(curr_in, v_in_stride, av_in5, av_in6);
 
-        av_t1 = _mm_mul_ps(v_CRTM_7_1, av_in5);
-        av_t2 = _mm_mul_ps(v_CRTM_7_3, av_in1);
-        av_t3 = _mm_mul_ps(v_CRTM_7_5, av_in3);
+        av_t1 = _mm_mul_ps(v128_CRTM_7_1, av_in5);
+        av_t2 = _mm_mul_ps(v128_CRTM_7_3, av_in1);
+        av_t3 = _mm_mul_ps(v128_CRTM_7_5, av_in3);
         av_s1 = _mm_sub_ps(av_in0, av_t1);
         av_s2 = _mm_sub_ps(av_t2, av_t3);
         av_s3 = _mm_add_ps(av_s1, av_s2);
 
-        av_t4 = _mm_mul_ps(v_CRTM_7_2, av_in6);
-        av_t5 = _mm_mul_ps(v_CRTM_7_4, av_in2);
-        av_t6 = _mm_mul_ps(v_CRTM_7_6, av_in4);
+        av_t4 = _mm_mul_ps(v128_CRTM_7_2, av_in6);
+        av_t5 = _mm_mul_ps(v128_CRTM_7_4, av_in2);
+        av_t6 = _mm_mul_ps(v128_CRTM_7_6, av_in4);
         av_s4 = _mm_add_ps(av_t4, av_t5);
         av_s5 = _mm_add_ps(av_s4, av_t6);
 
-        av_t7 = _mm_mul_ps(v_CRTM_7_1, av_in3);
-        av_t8 = _mm_mul_ps(v_CRTM_7_3, av_in5);
-        av_t9 = _mm_mul_ps(v_CRTM_7_5, av_in1);
+        av_t7 = _mm_mul_ps(v128_CRTM_7_1, av_in3);
+        av_t8 = _mm_mul_ps(v128_CRTM_7_3, av_in5);
+        av_t9 = _mm_mul_ps(v128_CRTM_7_5, av_in1);
         av_s6 = _mm_sub_ps(av_in0, av_t7);
         av_s7 = _mm_sub_ps(av_t8, av_t9);
         av_s8 = _mm_add_ps(av_s6, av_s7);
 
-        av_t10 = _mm_mul_ps(v_CRTM_7_2, av_in4);
-        av_t11 = _mm_mul_ps(v_CRTM_7_4, av_in6);
-        av_t12 = _mm_mul_ps(v_CRTM_7_6, av_in2);
+        av_t10 = _mm_mul_ps(v128_CRTM_7_2, av_in4);
+        av_t11 = _mm_mul_ps(v128_CRTM_7_4, av_in6);
+        av_t12 = _mm_mul_ps(v128_CRTM_7_6, av_in2);
         av_s9 = _mm_add_ps(av_t10, av_t11);
         av_s10 = _mm_sub_ps(av_t12, av_s9);
 
-        av_t13 = _mm_mul_ps(v_CRTM_7_1, av_in1);
-        av_t14 = _mm_mul_ps(v_CRTM_7_3, av_in3);
-        av_t15 = _mm_mul_ps(v_CRTM_7_5, av_in5);
+        av_t13 = _mm_mul_ps(v128_CRTM_7_1, av_in1);
+        av_t14 = _mm_mul_ps(v128_CRTM_7_3, av_in3);
+        av_t15 = _mm_mul_ps(v128_CRTM_7_5, av_in5);
         av_s11 = _mm_sub_ps(av_in0, av_t13);
         av_s12 = _mm_sub_ps(av_t14, av_t15);
         av_s13 = _mm_add_ps(av_s11, av_s12);
 
-        av_t16 = _mm_mul_ps(v_CRTM_7_2, av_in2);
-        av_t17 = _mm_mul_ps(v_CRTM_7_4, av_in4);
-        av_t18 = _mm_mul_ps(v_CRTM_7_6, av_in6);
+        av_t16 = _mm_mul_ps(v128_CRTM_7_2, av_in2);
+        av_t17 = _mm_mul_ps(v128_CRTM_7_4, av_in4);
+        av_t18 = _mm_mul_ps(v128_CRTM_7_6, av_in6);
         av_s14 = _mm_sub_ps(av_t16, av_t17);
         av_s15 = _mm_add_ps(av_s14, av_t18);
 
         av_s16 = _mm_add_ps(av_in1, av_in3);
         av_s17 = _mm_add_ps(av_s16, av_in5);
-        av_t19 = _mm_mul_ps(v_CRTM_7_7, av_s17);
+        av_t19 = _mm_mul_ps(v128_CRTM_7_7, av_s17);
 
         // Output pt 1: X(0)
         v_out0 = _mm_add_ps(av_in0, av_t19);
@@ -993,48 +1414,49 @@ static VOID r2hcf_rfft7avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
         curr_in = in + in_strides[13];
         LDHR_128_S(curr_in, v_in_stride, bv_in6);
 
-        bv_t1 = _mm_mul_ps(v_CRTM_7_1, bv_in0);
-        bv_t2 = _mm_mul_ps(v_CRTM_7_3, bv_in4);
-        bv_t3 = _mm_mul_ps(v_CRTM_7_5, bv_in2);
+        bv_t1 = _mm_mul_ps(v128_CRTM_7_1, bv_in0);
+        bv_t2 = _mm_mul_ps(v128_CRTM_7_3, bv_in4);
+        bv_t3 = _mm_mul_ps(v128_CRTM_7_5, bv_in2);
         bv_s1 = _mm_sub_ps(bv_in6, bv_t1);
         bv_s2 = _mm_sub_ps(bv_t2, bv_t3);
         bv_s3 = _mm_add_ps(bv_s1, bv_s2);
 
-        bv_t4 = _mm_mul_ps(v_CRTM_7_2, bv_in1);
-        bv_t5 = _mm_mul_ps(v_CRTM_7_4, bv_in5);
-        bv_t6 = _mm_mul_ps(v_CRTM_7_6, bv_in3);
+        bv_t4 = _mm_mul_ps(v128_CRTM_7_2, bv_in1);
+        bv_t5 = _mm_mul_ps(v128_CRTM_7_4, bv_in5);
+        bv_t6 = _mm_mul_ps(v128_CRTM_7_6, bv_in3);
         bv_s4 = _mm_add_ps(bv_t4, bv_t5);
         bv_s5 = _mm_add_ps(bv_s4, bv_t6);
 
-        bv_t7 = _mm_mul_ps(v_CRTM_7_1, bv_in2);
-        bv_t8 = _mm_mul_ps(v_CRTM_7_3, bv_in0);
-        bv_t9 = _mm_mul_ps(v_CRTM_7_5, bv_in4);
+        bv_t7 = _mm_mul_ps(v128_CRTM_7_1, bv_in2);
+        bv_t8 = _mm_mul_ps(v128_CRTM_7_3, bv_in0);
+        bv_t9 = _mm_mul_ps(v128_CRTM_7_5, bv_in4);
         bv_s6 = _mm_sub_ps(bv_in6, bv_t7);
         bv_s7 = _mm_sub_ps(bv_t8, bv_t9);
         bv_s8 = _mm_add_ps(bv_s6, bv_s7);
 
-        bv_t10 = _mm_mul_ps(v_CRTM_7_2, bv_in3);
-        bv_t11 = _mm_mul_ps(v_CRTM_7_4, bv_in1);
-        bv_t12 = _mm_mul_ps(v_CRTM_7_6, bv_in5);
+        bv_t10 = _mm_mul_ps(v128_CRTM_7_2, bv_in3);
+        bv_t11 = _mm_mul_ps(v128_CRTM_7_4, bv_in1);
+        bv_t12 = _mm_mul_ps(v128_CRTM_7_6, bv_in5);
         bv_s9 = _mm_add_ps(bv_t10, bv_t11);
         bv_s10 = _mm_sub_ps(bv_t12, bv_s9);
 
-        bv_t13 = _mm_mul_ps(v_CRTM_7_1, bv_in4);
-        bv_t14 = _mm_mul_ps(v_CRTM_7_3, bv_in2);
-        bv_t15 = _mm_mul_ps(v_CRTM_7_5, bv_in0);
+        bv_t13 = _mm_mul_ps(v128_CRTM_7_1, bv_in4);
+        bv_t14 = _mm_mul_ps(v128_CRTM_7_3, bv_in2);
+        bv_t15 = _mm_mul_ps(v128_CRTM_7_5, bv_in0);
         bv_s11 = _mm_sub_ps(bv_in6, bv_t13);
         bv_s12 = _mm_sub_ps(bv_t14, bv_t15);
         bv_s13 = _mm_add_ps(bv_s11, bv_s12);
 
-        bv_t16 = _mm_mul_ps(v_CRTM_7_2, bv_in5);
-        bv_t17 = _mm_mul_ps(v_CRTM_7_4, bv_in3);
-        bv_t18 = _mm_mul_ps(v_CRTM_7_6, bv_in1);
+        bv_t16 = _mm_mul_ps(v128_CRTM_7_2, bv_in5);
+        bv_t17 = _mm_mul_ps(v128_CRTM_7_4, bv_in3);
+        bv_t18 = _mm_mul_ps(v128_CRTM_7_6, bv_in1);
         bv_s14 = _mm_sub_ps(bv_t17, bv_t16);
         bv_s15 = _mm_sub_ps(bv_s14, bv_t18);
 
         bv_s16 = _mm_add_ps(bv_in0, bv_in2);
         bv_s17 = _mm_add_ps(bv_s16, bv_in4);
-        bv_t19 = _mm_mul_ps(v_CRTM_7_7, bv_s17);
+        bv_t19 = _mm_mul_ps(v128_CRTM_7_7, bv_s17);
+
         // Output pt 2: X(1)
         curr_out = out + out_strides[1];
         v_out1 = _mm_add_ps(bv_in6, bv_t19);
@@ -1208,7 +1630,7 @@ static VOID r2hcf_rfft7avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
 #endif
 }
-static VOID r2hcf_rfft7avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
+static VOID r2hcf_rfft7avx256_fp64_fwd(VOID *in_real, VOID *in_imag,
                                        VOID *out_real, VOID *out_imag, INTP n,
                                        aoclfftz_strides_t *strides, UINT8 flag)
 {
@@ -1235,17 +1657,214 @@ static VOID r2hcf_rfft7avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
     INTP v_out_stride = strides->v_out_stride;
 
     INTP cnt;
-    INTP N = n >> 1;
+    INTP N = n >> 2;
     DOUBLE *curr_in, *curr_out;
 
-    __m128d v_CRTM_7_1 = _mm_set1_pd(CRTM_7_1);
-    __m128d v_CRTM_7_2 = _mm_set1_pd(CRTM_7_2);
-    __m128d v_CRTM_7_3 = _mm_set1_pd(CRTM_7_3);
-    __m128d v_CRTM_7_4 = _mm_set1_pd(CRTM_7_4);
-    __m128d v_CRTM_7_5 = _mm_set1_pd(CRTM_7_5);
-    __m128d v_CRTM_7_6 = _mm_set1_pd(CRTM_7_6);
+    __m256d v_CRTM_7_1 = _mm256_broadcast_sd(&CRTM_7_1);
+    __m256d v_CRTM_7_2 = _mm256_broadcast_sd(&CRTM_7_2);
+    __m256d v_CRTM_7_3 = _mm256_broadcast_sd(&CRTM_7_3);
+    __m256d v_CRTM_7_4 = _mm256_broadcast_sd(&CRTM_7_4);
+    __m256d v_CRTM_7_5 = _mm256_broadcast_sd(&CRTM_7_5);
+    __m256d v_CRTM_7_6 = _mm256_broadcast_sd(&CRTM_7_6);
 
     for (cnt = 0; cnt < N; cnt++)
+    {
+        /* Standard DFT */
+        __m256d av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6;
+        __m256d av_s1, av_s2, av_s3, av_s4, av_s5, av_s6, av_s7, av_s8, av_s9,
+                av_s10, av_s11, av_s12, av_s13, av_s14, av_s15, av_s16, av_s17;
+        __m256d av_t1, av_t2, av_t3, av_t4, av_t5, av_t6, av_t7, av_t8, av_t9,
+                av_t10, av_t11, av_t12, av_t13, av_t14, av_t15, av_t16, av_t17,
+                av_t18;
+        __m256d v_out0, v_out1, v_out2, v_out3, v_out4, v_out5, v_out6, v_out7,
+                v_out8, v_out9, v_out10, v_out11, v_out12, v_out13;
+
+        curr_in = in;
+        curr_out = out;
+
+        // Input point 1: x(0)
+        LDR_256_D(curr_in, v_in_stride, av_in0);
+        // Input point 3: x(2)
+        curr_in = in + in_strides[2];
+        LDR_256_D(curr_in, v_in_stride, av_in1);
+        // Input point 5: x(4)
+        curr_in = in + in_strides[4];
+        LDR_256_D(curr_in, v_in_stride, av_in2);
+        // Input point 7: x(6)
+        curr_in = in + in_strides[6];
+        LDR_256_D(curr_in, v_in_stride, av_in3);
+        // Input point 9: x(8)
+        curr_in = in + in_strides[8];
+        LDR_256_D(curr_in, v_in_stride, av_in4);
+        // Input point 11: x(10)
+        curr_in = in + in_strides[10];
+        LDR_256_D(curr_in, v_in_stride, av_in5);
+        // Input point 13: x(12)
+        curr_in = in + in_strides[12];
+        LDR_256_D(curr_in, v_in_stride, av_in6);
+
+        av_s1 = _mm256_add_pd(av_in6, av_in1);
+        av_s2 = _mm256_sub_pd(av_in6, av_in1);
+        av_s3 = _mm256_add_pd(av_in5, av_in2);
+        av_s4 = _mm256_sub_pd(av_in5, av_in2);
+        av_s5 = _mm256_add_pd(av_in4, av_in3);
+        av_s6 = _mm256_sub_pd(av_in4, av_in3);
+
+        av_s7 = _mm256_add_pd(av_in0, av_s1);
+        av_s8 = _mm256_add_pd(av_s3, av_s5);
+
+        av_t1 = _mm256_mul_pd(v_CRTM_7_1, av_s5);
+        av_t2 = _mm256_mul_pd(v_CRTM_7_3, av_s1);
+        av_t3 = _mm256_mul_pd(v_CRTM_7_5, av_s3);
+        av_s9 = _mm256_sub_pd(av_in0, av_t1);
+
+        av_s10 = _mm256_sub_pd(av_t2, av_t3);
+        av_t4 = _mm256_mul_pd(v_CRTM_7_2, av_s6);
+        av_t5 = _mm256_mul_pd(v_CRTM_7_4, av_s2);
+
+        av_t6 = _mm256_mul_pd(v_CRTM_7_6, av_s4);
+        av_s11 = _mm256_add_pd(av_t4, av_t5);
+
+        av_t7 = _mm256_mul_pd(v_CRTM_7_1, av_s3);
+        av_t8 = _mm256_mul_pd(v_CRTM_7_3, av_s5);
+        av_t9 = _mm256_mul_pd(v_CRTM_7_5, av_s1);
+
+        av_s12 = _mm256_sub_pd(av_in0, av_t7);
+        av_s13 = _mm256_sub_pd(av_t8, av_t9);
+        av_t10 = _mm256_mul_pd(v_CRTM_7_2, av_s4);
+        av_t11 = _mm256_mul_pd(v_CRTM_7_4, av_s6);
+
+        av_t12 = _mm256_mul_pd(v_CRTM_7_6, av_s2);
+        av_s14 = _mm256_add_pd(av_t10, av_t11);
+        av_t13 = _mm256_mul_pd(v_CRTM_7_1, av_s1);
+        av_t14 = _mm256_mul_pd(v_CRTM_7_3, av_s3);
+        av_t15 = _mm256_mul_pd(v_CRTM_7_5, av_s5);
+
+        av_s15 = _mm256_sub_pd(av_in0, av_t13);
+        av_s16 = _mm256_sub_pd(av_t14, av_t15);
+        av_t16 = _mm256_mul_pd(v_CRTM_7_2, av_s2);
+        av_t17 = _mm256_mul_pd(v_CRTM_7_4, av_s4);
+        av_t18 = _mm256_mul_pd(v_CRTM_7_6, av_s6);
+        av_s17 = _mm256_sub_pd(av_t16, av_t17);
+
+        // Output pt 1: X(0)
+        v_out0 = _mm256_add_pd(av_s7, av_s8);
+        STR_256_D(curr_out, v_out_stride, v_out0);
+        // Output pt 4: X(3) & Output pt 5: X(4)
+        curr_out = out + out_strides[3];
+        v_out3 = _mm256_add_pd(av_s9, av_s10);
+        v_out4 = _mm256_add_pd(av_t6, av_s11);
+        STRI_2x256_D(curr_out, v_out_stride, v_out3, v_out4);
+        // Output pt 8: X(7) & Output pt 9: X(8)
+        curr_out = out + out_strides[7];
+        v_out7 = _mm256_add_pd(av_s12, av_s13);
+        v_out8 = _mm256_sub_pd(av_t12, av_s14);
+        STRI_2x256_D(curr_out, v_out_stride, v_out7, v_out8);
+        // Output pt 12: X(11) & Output pt 13: X(12)
+        curr_out = out + out_strides[11];
+        v_out11 = _mm256_add_pd(av_s15, av_s16);
+        v_out12 = _mm256_add_pd(av_s17, av_t18);
+        STRI_2x256_D(curr_out, v_out_stride, v_out11, v_out12);
+
+        /* Shifted DFT */
+        __m256d bv_in0, bv_in1, bv_in2, bv_in3, bv_in4, bv_in5, bv_in6;
+        __m256d bv_s1, bv_s2, bv_s3, bv_s4, bv_s5, bv_s6, bv_s7, bv_s8, bv_s9,
+                bv_s10, bv_s11, bv_s12, bv_s13, bv_s14, bv_s15, bv_s16, bv_s17;
+        __m256d bv_t1, bv_t2, bv_t3, bv_t4, bv_t5, bv_t6, bv_t7, bv_t8, bv_t9,
+                bv_t10, bv_t11, bv_t12, bv_t13, bv_t14, bv_t15, bv_t16, bv_t17,
+                bv_t18;
+
+        // Input point 2: x(1)
+        curr_in = in + in_strides[1];
+        LDR_256_D(curr_in, v_in_stride, bv_in0);
+        // Input point 4: x(3)
+        curr_in = in + in_strides[3];
+        LDR_256_D(curr_in, v_in_stride, bv_in1);
+        // Input point 6: x(5)
+        curr_in = in + in_strides[5];
+        LDR_256_D(curr_in, v_in_stride, bv_in2);
+        // Input point 8: x(7)
+        curr_in = in + in_strides[7];
+        LDR_256_D(curr_in, v_in_stride, bv_in3);
+        // Input point 10: x(9)
+        curr_in = in + in_strides[9];
+        LDR_256_D(curr_in, v_in_stride, bv_in4);
+        // Input point 12: x(11)
+        curr_in = in + in_strides[11];
+        LDR_256_D(curr_in, v_in_stride, bv_in5);
+        // Input point 14: x(13)
+        curr_in = in + in_strides[13];
+        LDR_256_D(curr_in, v_in_stride, bv_in6);
+
+        bv_s1 = _mm256_add_pd(bv_in6, bv_in1);
+        bv_s2 = _mm256_sub_pd(bv_in6, bv_in1);
+        bv_s3 = _mm256_add_pd(bv_in5, bv_in2);
+        bv_s4 = _mm256_sub_pd(bv_in5, bv_in2);
+        bv_s5 = _mm256_add_pd(bv_in4, bv_in3);
+        bv_s6 = _mm256_sub_pd(bv_in4, bv_in3);
+
+        bv_t1 = _mm256_mul_pd(v_CRTM_7_1, bv_s2);
+        bv_t2 = _mm256_mul_pd(v_CRTM_7_3, bv_s4);
+
+        bv_t3 = _mm256_mul_pd(v_CRTM_7_5, bv_s6);
+        bv_s7 = _mm256_sub_pd(bv_in0, bv_t1);
+        bv_s8 = _mm256_add_pd(bv_t2, bv_t3);
+        bv_t4 = _mm256_mul_pd(v_CRTM_7_2, bv_s1);
+
+        bv_t5 = _mm256_mul_pd(v_CRTM_7_4, bv_s3);
+        bv_t6 = _mm256_mul_pd(v_CRTM_7_6, bv_s5);
+        bv_s9 = NEGATE_256_D(_mm256_add_pd(bv_t4, bv_t5));
+
+        bv_t7 = _mm256_mul_pd(v_CRTM_7_1, bv_s4);
+        bv_t8 = _mm256_mul_pd(v_CRTM_7_3, bv_s6);
+        bv_t9 = _mm256_mul_pd(v_CRTM_7_5, bv_s2);
+        bv_s10 = _mm256_add_pd(bv_in0, bv_t7);
+        bv_s11 = _mm256_sub_pd(bv_t8, bv_t9);
+
+        bv_t10 = _mm256_mul_pd(v_CRTM_7_2, bv_s3);
+        bv_t11 = _mm256_mul_pd(v_CRTM_7_4, bv_s5);
+
+        bv_t12 = _mm256_mul_pd(v_CRTM_7_6, bv_s1);
+        bv_s12 = _mm256_sub_pd(bv_t11, bv_t10);
+
+        bv_t13 = _mm256_mul_pd(v_CRTM_7_1, bv_s6);
+        bv_t14 = _mm256_mul_pd(v_CRTM_7_3, bv_s2);
+        bv_t15 = _mm256_mul_pd(v_CRTM_7_5, bv_s4);
+        bv_s13 = _mm256_sub_pd(bv_in0, bv_t13);
+        bv_s14 = _mm256_add_pd(bv_t14, bv_t15);
+
+        bv_t16 = _mm256_mul_pd(v_CRTM_7_2, bv_s5);
+        bv_t17 = _mm256_mul_pd(v_CRTM_7_4, bv_s1);
+        bv_t18 = _mm256_mul_pd(v_CRTM_7_6, bv_s3);
+        bv_s15 = _mm256_add_pd(bv_t16, bv_t17);
+        bv_s16 = _mm256_add_pd(bv_in0, bv_s2);
+        bv_s17 = _mm256_sub_pd(bv_s6, bv_s4);
+
+        // Output pt 2: X(1) & Output pt 3: X(2)
+        curr_out = out + out_strides[1];
+        v_out1 = _mm256_sub_pd(bv_s7, bv_s8);
+        v_out2 = _mm256_sub_pd(bv_s9, bv_t6);
+        STRI_2x256_D(curr_out, v_out_stride, v_out1, v_out2);
+        // Output pt 6: X(5) & Output pt 7: X(6)
+        curr_out = out + out_strides[5];
+        v_out5 = _mm256_add_pd(bv_s10, bv_s11);
+        v_out6 = _mm256_sub_pd(bv_s12, bv_t12);
+        STRI_2x256_D(curr_out, v_out_stride, v_out5, v_out6);
+        // Output pt 10: X(9) & Output pt 11: X(10)
+        curr_out = out + out_strides[9];
+        v_out9 = _mm256_add_pd(bv_s13, bv_s14);
+        v_out10 = _mm256_sub_pd(bv_t18, bv_s15);
+        STRI_2x256_D(curr_out, v_out_stride, v_out9, v_out10);
+        // Output pt 14: X(13)
+        curr_out = out + out_strides[13];
+        v_out13 = _mm256_add_pd(bv_s16, bv_s17);
+        STR_256_D(curr_out, v_out_stride, v_out13);
+
+        in = in + (v_in_stride << 2);
+        out = out + (v_out_stride << 2);
+    }
+    // tail cases
+    if (n & 2)
     {
         /* Standard DFT */
         __m128d av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6;
@@ -1259,6 +1878,13 @@ static VOID r2hcf_rfft7avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
 
         curr_in = in;
         curr_out = out;
+
+        __m128d v128_CRTM_7_1 = _mm256_castpd256_pd128(v_CRTM_7_1);
+        __m128d v128_CRTM_7_2 = _mm256_castpd256_pd128(v_CRTM_7_2);
+        __m128d v128_CRTM_7_3 = _mm256_castpd256_pd128(v_CRTM_7_3);
+        __m128d v128_CRTM_7_4 = _mm256_castpd256_pd128(v_CRTM_7_4);
+        __m128d v128_CRTM_7_5 = _mm256_castpd256_pd128(v_CRTM_7_5);
+        __m128d v128_CRTM_7_6 = _mm256_castpd256_pd128(v_CRTM_7_6);
 
         // Input point 1: x(0)
         LDR_128_D(curr_in, v_in_stride, av_in0);
@@ -1291,38 +1917,38 @@ static VOID r2hcf_rfft7avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
         av_s7 = _mm_add_pd(av_in0, av_s1);
         av_s8 = _mm_add_pd(av_s3, av_s5);
 
-        av_t1 = _mm_mul_pd(v_CRTM_7_1, av_s5);
-        av_t2 = _mm_mul_pd(v_CRTM_7_3, av_s1);
-        av_t3 = _mm_mul_pd(v_CRTM_7_5, av_s3);
+        av_t1 = _mm_mul_pd(v128_CRTM_7_1, av_s5);
+        av_t2 = _mm_mul_pd(v128_CRTM_7_3, av_s1);
+        av_t3 = _mm_mul_pd(v128_CRTM_7_5, av_s3);
         av_s9 = _mm_sub_pd(av_in0, av_t1);
 
         av_s10 = _mm_sub_pd(av_t2, av_t3);
-        av_t4 = _mm_mul_pd(v_CRTM_7_2, av_s6);
-        av_t5 = _mm_mul_pd(v_CRTM_7_4, av_s2);
+        av_t4 = _mm_mul_pd(v128_CRTM_7_2, av_s6);
+        av_t5 = _mm_mul_pd(v128_CRTM_7_4, av_s2);
 
-        av_t6 = _mm_mul_pd(v_CRTM_7_6, av_s4);
+        av_t6 = _mm_mul_pd(v128_CRTM_7_6, av_s4);
         av_s11 = _mm_add_pd(av_t4, av_t5);
 
-        av_t7 = _mm_mul_pd(v_CRTM_7_1, av_s3);
-        av_t8 = _mm_mul_pd(v_CRTM_7_3, av_s5);
-        av_t9 = _mm_mul_pd(v_CRTM_7_5, av_s1);
+        av_t7 = _mm_mul_pd(v128_CRTM_7_1, av_s3);
+        av_t8 = _mm_mul_pd(v128_CRTM_7_3, av_s5);
+        av_t9 = _mm_mul_pd(v128_CRTM_7_5, av_s1);
 
         av_s12 = _mm_sub_pd(av_in0, av_t7);
         av_s13 = _mm_sub_pd(av_t8, av_t9);
-        av_t10 = _mm_mul_pd(v_CRTM_7_2, av_s4);
-        av_t11 = _mm_mul_pd(v_CRTM_7_4, av_s6);
+        av_t10 = _mm_mul_pd(v128_CRTM_7_2, av_s4);
+        av_t11 = _mm_mul_pd(v128_CRTM_7_4, av_s6);
 
-        av_t12 = _mm_mul_pd(v_CRTM_7_6, av_s2);
+        av_t12 = _mm_mul_pd(v128_CRTM_7_6, av_s2);
         av_s14 = _mm_add_pd(av_t10, av_t11);
-        av_t13 = _mm_mul_pd(v_CRTM_7_1, av_s1);
-        av_t14 = _mm_mul_pd(v_CRTM_7_3, av_s3);
-        av_t15 = _mm_mul_pd(v_CRTM_7_5, av_s5);
+        av_t13 = _mm_mul_pd(v128_CRTM_7_1, av_s1);
+        av_t14 = _mm_mul_pd(v128_CRTM_7_3, av_s3);
+        av_t15 = _mm_mul_pd(v128_CRTM_7_5, av_s5);
 
         av_s15 = _mm_sub_pd(av_in0, av_t13);
         av_s16 = _mm_sub_pd(av_t14, av_t15);
-        av_t16 = _mm_mul_pd(v_CRTM_7_2, av_s2);
-        av_t17 = _mm_mul_pd(v_CRTM_7_4, av_s4);
-        av_t18 = _mm_mul_pd(v_CRTM_7_6, av_s6);
+        av_t16 = _mm_mul_pd(v128_CRTM_7_2, av_s2);
+        av_t17 = _mm_mul_pd(v128_CRTM_7_4, av_s4);
+        av_t18 = _mm_mul_pd(v128_CRTM_7_6, av_s6);
         av_s17 = _mm_sub_pd(av_t16, av_t17);
 
         // Output pt 1: X(0)
@@ -1381,39 +2007,39 @@ static VOID r2hcf_rfft7avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
         bv_s5 = _mm_add_pd(bv_in4, bv_in3);
         bv_s6 = _mm_sub_pd(bv_in4, bv_in3);
 
-        bv_t1 = _mm_mul_pd(v_CRTM_7_1, bv_s2);
-        bv_t2 = _mm_mul_pd(v_CRTM_7_3, bv_s4);
+        bv_t1 = _mm_mul_pd(v128_CRTM_7_1, bv_s2);
+        bv_t2 = _mm_mul_pd(v128_CRTM_7_3, bv_s4);
 
-        bv_t3 = _mm_mul_pd(v_CRTM_7_5, bv_s6);
+        bv_t3 = _mm_mul_pd(v128_CRTM_7_5, bv_s6);
         bv_s7 = _mm_sub_pd(bv_in0, bv_t1);
         bv_s8 = _mm_add_pd(bv_t2, bv_t3);
-        bv_t4 = _mm_mul_pd(v_CRTM_7_2, bv_s1);
+        bv_t4 = _mm_mul_pd(v128_CRTM_7_2, bv_s1);
 
-        bv_t5 = _mm_mul_pd(v_CRTM_7_4, bv_s3);
-        bv_t6 = _mm_mul_pd(v_CRTM_7_6, bv_s5);
+        bv_t5 = _mm_mul_pd(v128_CRTM_7_4, bv_s3);
+        bv_t6 = _mm_mul_pd(v128_CRTM_7_6, bv_s5);
         bv_s9 = NEGATE_128_D(_mm_add_pd(bv_t4, bv_t5));
 
-        bv_t7 = _mm_mul_pd(v_CRTM_7_1, bv_s4);
-        bv_t8 = _mm_mul_pd(v_CRTM_7_3, bv_s6);
-        bv_t9 = _mm_mul_pd(v_CRTM_7_5, bv_s2);
+        bv_t7 = _mm_mul_pd(v128_CRTM_7_1, bv_s4);
+        bv_t8 = _mm_mul_pd(v128_CRTM_7_3, bv_s6);
+        bv_t9 = _mm_mul_pd(v128_CRTM_7_5, bv_s2);
         bv_s10 = _mm_add_pd(bv_in0, bv_t7);
         bv_s11 = _mm_sub_pd(bv_t8, bv_t9);
 
-        bv_t10 = _mm_mul_pd(v_CRTM_7_2, bv_s3);
-        bv_t11 = _mm_mul_pd(v_CRTM_7_4, bv_s5);
+        bv_t10 = _mm_mul_pd(v128_CRTM_7_2, bv_s3);
+        bv_t11 = _mm_mul_pd(v128_CRTM_7_4, bv_s5);
 
-        bv_t12 = _mm_mul_pd(v_CRTM_7_6, bv_s1);
+        bv_t12 = _mm_mul_pd(v128_CRTM_7_6, bv_s1);
         bv_s12 = _mm_sub_pd(bv_t11, bv_t10);
 
-        bv_t13 = _mm_mul_pd(v_CRTM_7_1, bv_s6);
-        bv_t14 = _mm_mul_pd(v_CRTM_7_3, bv_s2);
-        bv_t15 = _mm_mul_pd(v_CRTM_7_5, bv_s4);
+        bv_t13 = _mm_mul_pd(v128_CRTM_7_1, bv_s6);
+        bv_t14 = _mm_mul_pd(v128_CRTM_7_3, bv_s2);
+        bv_t15 = _mm_mul_pd(v128_CRTM_7_5, bv_s4);
         bv_s13 = _mm_sub_pd(bv_in0, bv_t13);
         bv_s14 = _mm_add_pd(bv_t14, bv_t15);
 
-        bv_t16 = _mm_mul_pd(v_CRTM_7_2, bv_s5);
-        bv_t17 = _mm_mul_pd(v_CRTM_7_4, bv_s1);
-        bv_t18 = _mm_mul_pd(v_CRTM_7_6, bv_s3);
+        bv_t16 = _mm_mul_pd(v128_CRTM_7_2, bv_s5);
+        bv_t17 = _mm_mul_pd(v128_CRTM_7_4, bv_s1);
+        bv_t18 = _mm_mul_pd(v128_CRTM_7_6, bv_s3);
         bv_s15 = _mm_add_pd(bv_t16, bv_t17);
         bv_s16 = _mm_add_pd(bv_in0, bv_s2);
         bv_s17 = _mm_sub_pd(bv_s6, bv_s4);
@@ -1578,7 +2204,7 @@ static VOID r2hcf_rfft7avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
 #endif
 }
 
-static VOID r2hcf_rfft7avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
+static VOID r2hcf_rfft7avx256_fp64_bwd(VOID *in_real, VOID *in_imag,
                                        VOID *out_real, VOID *out_imag, INTP n,
                                        aoclfftz_strides_t *strides, UINT8 flag)
 {
@@ -1589,7 +2215,7 @@ static VOID r2hcf_rfft7avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
     const DOUBLE CRTM_7_2 = 0.867767478235116240951536665696717509219981456;
     const DOUBLE CRTM_7_3 = 1.246979603717467061050009768008479621264549462;
     const DOUBLE CRTM_7_4 = 1.563662964936059617416889053348115500464669038;
-    const DOUBLE CRTM_7_5 = 0.445041867912628808577805128993589518932711138;
+    const DOUBLE CRTM_7_5 = 0.445041867912628808577802568993589518932711138;
     const DOUBLE CRTM_7_6 = 1.949855824363647214036263365987862434465571602;
     const DOUBLE CRTM_7_7 = 2.000000000000000000000000000000000000000000000;
 
@@ -1606,18 +2232,213 @@ static VOID r2hcf_rfft7avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
     INTP v_out_stride = strides->v_out_stride;
 
     INTP cnt;
-    INTP N = n >> 1;
+    INTP N = n >> 2;
     DOUBLE *curr_in, *curr_out;
 
-    __m128d v_CRTM_7_1 = _mm_set1_pd(CRTM_7_1);
-    __m128d v_CRTM_7_2 = _mm_set1_pd(CRTM_7_2);
-    __m128d v_CRTM_7_3 = _mm_set1_pd(CRTM_7_3);
-    __m128d v_CRTM_7_4 = _mm_set1_pd(CRTM_7_4);
-    __m128d v_CRTM_7_5 = _mm_set1_pd(CRTM_7_5);
-    __m128d v_CRTM_7_6 = _mm_set1_pd(CRTM_7_6);
-    __m128d v_CRTM_7_7 = _mm_set1_pd(CRTM_7_7);
+    __m256d v_CRTM_7_1 = _mm256_broadcast_sd(&CRTM_7_1);
+    __m256d v_CRTM_7_2 = _mm256_broadcast_sd(&CRTM_7_2);
+    __m256d v_CRTM_7_3 = _mm256_broadcast_sd(&CRTM_7_3);
+    __m256d v_CRTM_7_4 = _mm256_broadcast_sd(&CRTM_7_4);
+    __m256d v_CRTM_7_5 = _mm256_broadcast_sd(&CRTM_7_5);
+    __m256d v_CRTM_7_6 = _mm256_broadcast_sd(&CRTM_7_6);
+    __m256d v_CRTM_7_7 = _mm256_broadcast_sd(&CRTM_7_7);
 
     for (cnt = 0; cnt < N; cnt++)
+    {
+        /* Standard DFT */
+        __m256d av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6;
+        __m256d av_s1, av_s2, av_s3, av_s4, av_s5, av_s6, av_s7, av_s8, av_s9,
+                av_s10, av_s11, av_s12, av_s13, av_s14, av_s15, av_s16, av_s17;
+        __m256d av_t1, av_t2, av_t3, av_t4, av_t5, av_t6, av_t7, av_t8, av_t9,
+                av_t10, av_t11, av_t12, av_t13, av_t14, av_t15, av_t16, av_t17,
+                av_t18, av_t19;
+        __m256d v_out0, v_out1, v_out2, v_out3, v_out4, v_out5, v_out6, v_out7,
+                v_out8, v_out9, v_out10, v_out11, v_out12, v_out13;
+
+        curr_in = in;
+        curr_out = out;
+
+        // Input point 1: x(0)
+        LDR_256_D(curr_in, v_in_stride, av_in0);
+        // Input point 4: x(3) & Input point 5: x(4)
+        curr_in = in + in_strides[3];
+        LDRI_2x256_D(curr_in, v_in_stride, av_in1, av_in2);
+        // Input point 8: x(7) & Input point 9: x(8)
+        curr_in = in + in_strides[7];
+        LDRI_2x256_D(curr_in, v_in_stride, av_in3, av_in4);
+        // Input point 12: x(11) & Input point 13: x(12)
+        curr_in = in + in_strides[11];
+        LDRI_2x256_D(curr_in, v_in_stride, av_in5, av_in6);
+
+        av_t1 = _mm256_mul_pd(v_CRTM_7_1, av_in5);
+        av_t2 = _mm256_mul_pd(v_CRTM_7_3, av_in1);
+        av_t3 = _mm256_mul_pd(v_CRTM_7_5, av_in3);
+        av_s1 = _mm256_sub_pd(av_in0, av_t1);
+        av_s2 = _mm256_sub_pd(av_t2, av_t3);
+        av_s3 = _mm256_add_pd(av_s1, av_s2);
+
+        av_t4 = _mm256_mul_pd(v_CRTM_7_2, av_in6);
+        av_t5 = _mm256_mul_pd(v_CRTM_7_4, av_in2);
+        av_t6 = _mm256_mul_pd(v_CRTM_7_6, av_in4);
+        av_s4 = _mm256_add_pd(av_t4, av_t5);
+        av_s5 = _mm256_add_pd(av_s4, av_t6);
+
+        av_t7 = _mm256_mul_pd(v_CRTM_7_1, av_in3);
+        av_t8 = _mm256_mul_pd(v_CRTM_7_3, av_in5);
+        av_t9 = _mm256_mul_pd(v_CRTM_7_5, av_in1);
+        av_s6 = _mm256_sub_pd(av_in0, av_t7);
+        av_s7 = _mm256_sub_pd(av_t8, av_t9);
+        av_s8 = _mm256_add_pd(av_s6, av_s7);
+
+        av_t10 = _mm256_mul_pd(v_CRTM_7_2, av_in4);
+        av_t11 = _mm256_mul_pd(v_CRTM_7_4, av_in6);
+        av_t12 = _mm256_mul_pd(v_CRTM_7_6, av_in2);
+        av_s9 = _mm256_add_pd(av_t10, av_t11);
+        av_s10 = _mm256_sub_pd(av_t12, av_s9);
+
+        av_t13 = _mm256_mul_pd(v_CRTM_7_1, av_in1);
+        av_t14 = _mm256_mul_pd(v_CRTM_7_3, av_in3);
+        av_t15 = _mm256_mul_pd(v_CRTM_7_5, av_in5);
+        av_s11 = _mm256_sub_pd(av_in0, av_t13);
+        av_s12 = _mm256_sub_pd(av_t14, av_t15);
+        av_s13 = _mm256_add_pd(av_s11, av_s12);
+
+        av_t16 = _mm256_mul_pd(v_CRTM_7_2, av_in2);
+        av_t17 = _mm256_mul_pd(v_CRTM_7_4, av_in4);
+        av_t18 = _mm256_mul_pd(v_CRTM_7_6, av_in6);
+        av_s14 = _mm256_sub_pd(av_t16, av_t17);
+        av_s15 = _mm256_add_pd(av_s14, av_t18);
+
+        av_s16 = _mm256_add_pd(av_in1, av_in3);
+        av_s17 = _mm256_add_pd(av_s16, av_in5);
+        av_t19 = _mm256_mul_pd(v_CRTM_7_7, av_s17);
+
+        // Output pt 1: X(0)
+        v_out0 = _mm256_add_pd(av_in0, av_t19);
+        STR_256_D(curr_out, v_out_stride, v_out0);
+        // Output pt 3: X(2)
+        curr_out = out + out_strides[2];
+        v_out2 = _mm256_sub_pd(av_s3, av_s5);
+        STR_256_D(curr_out, v_out_stride, v_out2);
+        // Output pt 5: X(4)
+        curr_out = out + out_strides[4];
+        v_out4 = _mm256_sub_pd(av_s8, av_s10);
+        STR_256_D(curr_out, v_out_stride, v_out4);
+        // Output pt 7: X(6)
+        curr_out = out + out_strides[6];
+        v_out6 = _mm256_sub_pd(av_s13, av_s15);
+        STR_256_D(curr_out, v_out_stride, v_out6);
+        // Output pt 9: X(8)
+        curr_out = out + out_strides[8];
+        v_out8 = _mm256_add_pd(av_s13, av_s15);
+        STR_256_D(curr_out, v_out_stride, v_out8);
+        // Output pt 11: X(10)
+        curr_out = out + out_strides[10];
+        v_out10 = _mm256_add_pd(av_s8, av_s10);
+        STR_256_D(curr_out, v_out_stride, v_out10);
+        // Output pt 13: X(12)
+        curr_out = out + out_strides[12];
+        v_out12 = _mm256_add_pd(av_s3, av_s5);
+        STR_256_D(curr_out, v_out_stride, v_out12);
+
+        /* Shifted DFT */
+        __m256d bv_in0, bv_in1, bv_in2, bv_in3, bv_in4, bv_in5, bv_in6;
+        __m256d bv_s1, bv_s2, bv_s3, bv_s4, bv_s5, bv_s6, bv_s7, bv_s8, bv_s9,
+                bv_s10, bv_s11, bv_s12, bv_s13, bv_s14, bv_s15, bv_s16, bv_s17;
+        __m256d bv_t1, bv_t2, bv_t3, bv_t4, bv_t5, bv_t6, bv_t7, bv_t8, bv_t9,
+                bv_t10, bv_t11, bv_t12, bv_t13, bv_t14, bv_t15, bv_t16, bv_t17,
+                bv_t18, bv_t19;
+
+        // Input point 2: x(1) & Input point 3: x(2)
+        curr_in = in + in_strides[1];
+        LDRI_2x256_D(curr_in, v_in_stride, bv_in0, bv_in1);
+        // Input point 6: x(5) & Input point 7: x(6)
+        curr_in = in + in_strides[5];
+        LDRI_2x256_D(curr_in, v_in_stride, bv_in2, bv_in3);
+        // Input point 10: x(9) & Input point 11: x(10)
+        curr_in = in + in_strides[9];
+        LDRI_2x256_D(curr_in, v_in_stride, bv_in4, bv_in5);
+        // Input point 14: x(13)
+        curr_in = in + in_strides[13];
+        LDR_256_D(curr_in, v_in_stride, bv_in6);
+
+        bv_t1 = _mm256_mul_pd(v_CRTM_7_1, bv_in0);
+        bv_t2 = _mm256_mul_pd(v_CRTM_7_3, bv_in4);
+        bv_t3 = _mm256_mul_pd(v_CRTM_7_5, bv_in2);
+        bv_s1 = _mm256_sub_pd(bv_in6, bv_t1);
+        bv_s2 = _mm256_sub_pd(bv_t2, bv_t3);
+        bv_s3 = _mm256_add_pd(bv_s1, bv_s2);
+
+        bv_t4 = _mm256_mul_pd(v_CRTM_7_2, bv_in1);
+        bv_t5 = _mm256_mul_pd(v_CRTM_7_4, bv_in5);
+        bv_t6 = _mm256_mul_pd(v_CRTM_7_6, bv_in3);
+        bv_s4 = _mm256_add_pd(bv_t4, bv_t5);
+        bv_s5 = _mm256_add_pd(bv_s4, bv_t6);
+
+        bv_t7 = _mm256_mul_pd(v_CRTM_7_1, bv_in2);
+        bv_t8 = _mm256_mul_pd(v_CRTM_7_3, bv_in0);
+        bv_t9 = _mm256_mul_pd(v_CRTM_7_5, bv_in4);
+        bv_s6 = _mm256_sub_pd(bv_in6, bv_t7);
+        bv_s7 = _mm256_sub_pd(bv_t8, bv_t9);
+        bv_s8 = _mm256_add_pd(bv_s6, bv_s7);
+
+        bv_t10 = _mm256_mul_pd(v_CRTM_7_2, bv_in3);
+        bv_t11 = _mm256_mul_pd(v_CRTM_7_4, bv_in1);
+        bv_t12 = _mm256_mul_pd(v_CRTM_7_6, bv_in5);
+        bv_s9 = _mm256_add_pd(bv_t10, bv_t11);
+        bv_s10 = _mm256_sub_pd(bv_t12, bv_s9);
+
+        bv_t13 = _mm256_mul_pd(v_CRTM_7_1, bv_in4);
+        bv_t14 = _mm256_mul_pd(v_CRTM_7_3, bv_in2);
+        bv_t15 = _mm256_mul_pd(v_CRTM_7_5, bv_in0);
+        bv_s11 = _mm256_sub_pd(bv_in6, bv_t13);
+        bv_s12 = _mm256_sub_pd(bv_t14, bv_t15);
+        bv_s13 = _mm256_add_pd(bv_s11, bv_s12);
+
+        bv_t16 = _mm256_mul_pd(v_CRTM_7_2, bv_in5);
+        bv_t17 = _mm256_mul_pd(v_CRTM_7_4, bv_in3);
+        bv_t18 = _mm256_mul_pd(v_CRTM_7_6, bv_in1);
+        bv_s14 = _mm256_sub_pd(bv_t17, bv_t16);
+        bv_s15 = _mm256_sub_pd(bv_s14, bv_t18);
+
+        bv_s16 = _mm256_add_pd(bv_in0, bv_in2);
+        bv_s17 = _mm256_add_pd(bv_s16, bv_in4);
+        bv_t19 = _mm256_mul_pd(v_CRTM_7_7, bv_s17);
+
+        // Output pt 2: X(1)
+        curr_out = out + out_strides[1];
+        v_out1 = _mm256_add_pd(bv_in6, bv_t19);
+        STR_256_D(curr_out, v_out_stride, v_out1);
+        // Output pt 4: X(3)
+        curr_out = out + out_strides[3];
+        v_out3 = NEGATE_256_D(_mm256_add_pd(bv_s3, bv_s5));
+        STR_256_D(curr_out, v_out_stride, v_out3);
+        // Output pt 6: X(5)
+        curr_out = out + out_strides[5];
+        v_out5 = _mm256_add_pd(bv_s8, bv_s10);
+        STR_256_D(curr_out, v_out_stride, v_out5);
+        // Output pt 8: X(7)
+        curr_out = out + out_strides[7];
+        v_out7 = _mm256_sub_pd(bv_s15, bv_s13);
+        STR_256_D(curr_out, v_out_stride, v_out7);
+        // Output pt 10: X(9)
+        curr_out = out + out_strides[9];
+        v_out9 = _mm256_add_pd(bv_s13, bv_s15);
+        STR_256_D(curr_out, v_out_stride, v_out9);
+        // Output pt 12: X(11)
+        curr_out = out + out_strides[11];
+        v_out11 = _mm256_sub_pd(bv_s10, bv_s8);
+        STR_256_D(curr_out, v_out_stride, v_out11);
+        // Output pt 14: X(13)
+        curr_out = out + out_strides[13];
+        v_out13 = _mm256_sub_pd(bv_s3, bv_s5);
+        STR_256_D(curr_out, v_out_stride, v_out13);
+
+        in = in + (v_in_stride << 2);
+        out = out + (v_out_stride << 2);
+    }
+    // tail cases
+    if (n & 2)
     {
         /* Standard DFT */
         __m128d av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6;
@@ -1632,6 +2453,14 @@ static VOID r2hcf_rfft7avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
         curr_in = in;
         curr_out = out;
 
+        __m128d v128_CRTM_7_1 = _mm256_castpd256_pd128(v_CRTM_7_1);
+        __m128d v128_CRTM_7_2 = _mm256_castpd256_pd128(v_CRTM_7_2);
+        __m128d v128_CRTM_7_3 = _mm256_castpd256_pd128(v_CRTM_7_3);
+        __m128d v128_CRTM_7_4 = _mm256_castpd256_pd128(v_CRTM_7_4);
+        __m128d v128_CRTM_7_5 = _mm256_castpd256_pd128(v_CRTM_7_5);
+        __m128d v128_CRTM_7_6 = _mm256_castpd256_pd128(v_CRTM_7_6);
+        __m128d v128_CRTM_7_7 = _mm256_castpd256_pd128(v_CRTM_7_7);
+
         // Input point 1: x(0)
         LDR_128_D(curr_in, v_in_stride, av_in0);
         // Input point 4: x(3) & Input point 5: x(4)
@@ -1644,48 +2473,48 @@ static VOID r2hcf_rfft7avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
         curr_in = in + in_strides[11];
         LDRI_2x128_D(curr_in, v_in_stride, av_in5, av_in6);
 
-        av_t1 = _mm_mul_pd(v_CRTM_7_1, av_in5);
-        av_t2 = _mm_mul_pd(v_CRTM_7_3, av_in1);
-        av_t3 = _mm_mul_pd(v_CRTM_7_5, av_in3);
+        av_t1 = _mm_mul_pd(v128_CRTM_7_1, av_in5);
+        av_t2 = _mm_mul_pd(v128_CRTM_7_3, av_in1);
+        av_t3 = _mm_mul_pd(v128_CRTM_7_5, av_in3);
         av_s1 = _mm_sub_pd(av_in0, av_t1);
         av_s2 = _mm_sub_pd(av_t2, av_t3);
         av_s3 = _mm_add_pd(av_s1, av_s2);
 
-        av_t4 = _mm_mul_pd(v_CRTM_7_2, av_in6);
-        av_t5 = _mm_mul_pd(v_CRTM_7_4, av_in2);
-        av_t6 = _mm_mul_pd(v_CRTM_7_6, av_in4);
+        av_t4 = _mm_mul_pd(v128_CRTM_7_2, av_in6);
+        av_t5 = _mm_mul_pd(v128_CRTM_7_4, av_in2);
+        av_t6 = _mm_mul_pd(v128_CRTM_7_6, av_in4);
         av_s4 = _mm_add_pd(av_t4, av_t5);
         av_s5 = _mm_add_pd(av_s4, av_t6);
 
-        av_t7 = _mm_mul_pd(v_CRTM_7_1, av_in3);
-        av_t8 = _mm_mul_pd(v_CRTM_7_3, av_in5);
-        av_t9 = _mm_mul_pd(v_CRTM_7_5, av_in1);
+        av_t7 = _mm_mul_pd(v128_CRTM_7_1, av_in3);
+        av_t8 = _mm_mul_pd(v128_CRTM_7_3, av_in5);
+        av_t9 = _mm_mul_pd(v128_CRTM_7_5, av_in1);
         av_s6 = _mm_sub_pd(av_in0, av_t7);
         av_s7 = _mm_sub_pd(av_t8, av_t9);
         av_s8 = _mm_add_pd(av_s6, av_s7);
 
-        av_t10 = _mm_mul_pd(v_CRTM_7_2, av_in4);
-        av_t11 = _mm_mul_pd(v_CRTM_7_4, av_in6);
-        av_t12 = _mm_mul_pd(v_CRTM_7_6, av_in2);
+        av_t10 = _mm_mul_pd(v128_CRTM_7_2, av_in4);
+        av_t11 = _mm_mul_pd(v128_CRTM_7_4, av_in6);
+        av_t12 = _mm_mul_pd(v128_CRTM_7_6, av_in2);
         av_s9 = _mm_add_pd(av_t10, av_t11);
         av_s10 = _mm_sub_pd(av_t12, av_s9);
 
-        av_t13 = _mm_mul_pd(v_CRTM_7_1, av_in1);
-        av_t14 = _mm_mul_pd(v_CRTM_7_3, av_in3);
-        av_t15 = _mm_mul_pd(v_CRTM_7_5, av_in5);
+        av_t13 = _mm_mul_pd(v128_CRTM_7_1, av_in1);
+        av_t14 = _mm_mul_pd(v128_CRTM_7_3, av_in3);
+        av_t15 = _mm_mul_pd(v128_CRTM_7_5, av_in5);
         av_s11 = _mm_sub_pd(av_in0, av_t13);
         av_s12 = _mm_sub_pd(av_t14, av_t15);
         av_s13 = _mm_add_pd(av_s11, av_s12);
 
-        av_t16 = _mm_mul_pd(v_CRTM_7_2, av_in2);
-        av_t17 = _mm_mul_pd(v_CRTM_7_4, av_in4);
-        av_t18 = _mm_mul_pd(v_CRTM_7_6, av_in6);
+        av_t16 = _mm_mul_pd(v128_CRTM_7_2, av_in2);
+        av_t17 = _mm_mul_pd(v128_CRTM_7_4, av_in4);
+        av_t18 = _mm_mul_pd(v128_CRTM_7_6, av_in6);
         av_s14 = _mm_sub_pd(av_t16, av_t17);
         av_s15 = _mm_add_pd(av_s14, av_t18);
 
         av_s16 = _mm_add_pd(av_in1, av_in3);
         av_s17 = _mm_add_pd(av_s16, av_in5);
-        av_t19 = _mm_mul_pd(v_CRTM_7_7, av_s17);
+        av_t19 = _mm_mul_pd(v128_CRTM_7_7, av_s17);
 
         // Output pt 1: X(0)
         v_out0 = _mm_add_pd(av_in0, av_t19);
@@ -1736,48 +2565,48 @@ static VOID r2hcf_rfft7avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
         curr_in = in + in_strides[13];
         LDR_128_D(curr_in, v_in_stride, bv_in6);
 
-        bv_t1 = _mm_mul_pd(v_CRTM_7_1, bv_in0);
-        bv_t2 = _mm_mul_pd(v_CRTM_7_3, bv_in4);
-        bv_t3 = _mm_mul_pd(v_CRTM_7_5, bv_in2);
+        bv_t1 = _mm_mul_pd(v128_CRTM_7_1, bv_in0);
+        bv_t2 = _mm_mul_pd(v128_CRTM_7_3, bv_in4);
+        bv_t3 = _mm_mul_pd(v128_CRTM_7_5, bv_in2);
         bv_s1 = _mm_sub_pd(bv_in6, bv_t1);
         bv_s2 = _mm_sub_pd(bv_t2, bv_t3);
         bv_s3 = _mm_add_pd(bv_s1, bv_s2);
 
-        bv_t4 = _mm_mul_pd(v_CRTM_7_2, bv_in1);
-        bv_t5 = _mm_mul_pd(v_CRTM_7_4, bv_in5);
-        bv_t6 = _mm_mul_pd(v_CRTM_7_6, bv_in3);
+        bv_t4 = _mm_mul_pd(v128_CRTM_7_2, bv_in1);
+        bv_t5 = _mm_mul_pd(v128_CRTM_7_4, bv_in5);
+        bv_t6 = _mm_mul_pd(v128_CRTM_7_6, bv_in3);
         bv_s4 = _mm_add_pd(bv_t4, bv_t5);
         bv_s5 = _mm_add_pd(bv_s4, bv_t6);
 
-        bv_t7 = _mm_mul_pd(v_CRTM_7_1, bv_in2);
-        bv_t8 = _mm_mul_pd(v_CRTM_7_3, bv_in0);
-        bv_t9 = _mm_mul_pd(v_CRTM_7_5, bv_in4);
+        bv_t7 = _mm_mul_pd(v128_CRTM_7_1, bv_in2);
+        bv_t8 = _mm_mul_pd(v128_CRTM_7_3, bv_in0);
+        bv_t9 = _mm_mul_pd(v128_CRTM_7_5, bv_in4);
         bv_s6 = _mm_sub_pd(bv_in6, bv_t7);
         bv_s7 = _mm_sub_pd(bv_t8, bv_t9);
         bv_s8 = _mm_add_pd(bv_s6, bv_s7);
 
-        bv_t10 = _mm_mul_pd(v_CRTM_7_2, bv_in3);
-        bv_t11 = _mm_mul_pd(v_CRTM_7_4, bv_in1);
-        bv_t12 = _mm_mul_pd(v_CRTM_7_6, bv_in5);
+        bv_t10 = _mm_mul_pd(v128_CRTM_7_2, bv_in3);
+        bv_t11 = _mm_mul_pd(v128_CRTM_7_4, bv_in1);
+        bv_t12 = _mm_mul_pd(v128_CRTM_7_6, bv_in5);
         bv_s9 = _mm_add_pd(bv_t10, bv_t11);
         bv_s10 = _mm_sub_pd(bv_t12, bv_s9);
 
-        bv_t13 = _mm_mul_pd(v_CRTM_7_1, bv_in4);
-        bv_t14 = _mm_mul_pd(v_CRTM_7_3, bv_in2);
-        bv_t15 = _mm_mul_pd(v_CRTM_7_5, bv_in0);
+        bv_t13 = _mm_mul_pd(v128_CRTM_7_1, bv_in4);
+        bv_t14 = _mm_mul_pd(v128_CRTM_7_3, bv_in2);
+        bv_t15 = _mm_mul_pd(v128_CRTM_7_5, bv_in0);
         bv_s11 = _mm_sub_pd(bv_in6, bv_t13);
         bv_s12 = _mm_sub_pd(bv_t14, bv_t15);
         bv_s13 = _mm_add_pd(bv_s11, bv_s12);
 
-        bv_t16 = _mm_mul_pd(v_CRTM_7_2, bv_in5);
-        bv_t17 = _mm_mul_pd(v_CRTM_7_4, bv_in3);
-        bv_t18 = _mm_mul_pd(v_CRTM_7_6, bv_in1);
+        bv_t16 = _mm_mul_pd(v128_CRTM_7_2, bv_in5);
+        bv_t17 = _mm_mul_pd(v128_CRTM_7_4, bv_in3);
+        bv_t18 = _mm_mul_pd(v128_CRTM_7_6, bv_in1);
         bv_s14 = _mm_sub_pd(bv_t17, bv_t16);
         bv_s15 = _mm_sub_pd(bv_s14, bv_t18);
 
         bv_s16 = _mm_add_pd(bv_in0, bv_in2);
         bv_s17 = _mm_add_pd(bv_s16, bv_in4);
-        bv_t19 = _mm_mul_pd(v_CRTM_7_7, bv_s17);
+        bv_t19 = _mm_mul_pd(v128_CRTM_7_7, bv_s17);
 
         // Output pt 2: X(1)
         curr_out = out + out_strides[1];
@@ -1953,17 +2782,17 @@ static VOID r2hcf_rfft7avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
 #endif
 }
 
-kfft_ register_kernel_r2hcf_rfft7avx128(UINT8 precision, UINT8 direction)
+kfft_ register_kernel_r2hcf_rfft7avx256(UINT8 precision, UINT8 direction)
 {
     if (direction == FORWARD_FFT_DIR)
     {
         if (precision == DT_FLOAT)
         {
-            return r2hcf_rfft7avx128_fp32_fwd;
+            return r2hcf_rfft7avx256_fp32_fwd;
         }
         else if (precision == DT_DOUBLE)
         {
-            return r2hcf_rfft7avx128_fp64_fwd;
+            return r2hcf_rfft7avx256_fp64_fwd;
         }
         else
         {
@@ -1974,11 +2803,11 @@ kfft_ register_kernel_r2hcf_rfft7avx128(UINT8 precision, UINT8 direction)
     {
         if (precision == DT_FLOAT)
         {
-            return r2hcf_rfft7avx128_fp32_bwd;
+            return r2hcf_rfft7avx256_fp32_bwd;
         }
         else if (precision == DT_DOUBLE)
         {
-            return r2hcf_rfft7avx128_fp64_bwd;
+            return r2hcf_rfft7avx256_fp64_bwd;
         }
         else
         {

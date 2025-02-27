@@ -386,19 +386,19 @@ static VOID r2hcf_rfft7c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
         bt27 = CRTM_7_2 * bv5;
         bt28 = CRTM_7_4 * bv3;
         bt29 = CRTM_7_6 * bv1;
-        bt30 = bt27 - bt28;
+        bt30 = bt28 - bt27;
 
         bt31 = bv0 + bv2;
         bt32 = bt25 + bt26;
         bt33 = bt31 + bv4;
-        bt34 = bt30 + bt29;
+        bt34 = bt30 - bt29;
         bt35 = bt33 * CRTM_7_7;
 
         out[out_strides[1]]  = bv6 + bt35;     // Output pt 2: X(1)
         out[out_strides[3]]  = -bt5 - bt10;    // Output pt 4: X(3)
         out[out_strides[5]]  = bt20 + bt21;    // Output pt 6: X(5)
-        out[out_strides[7]]  = -bt32 - bt34;   // Output pt 8: X(7)
-        out[out_strides[9]]  = bt32 - bt34;    // Output pt 10: X(9)
+        out[out_strides[7]]  = bt34 - bt32;    // Output pt 8: X(7)
+        out[out_strides[9]]  = bt32 + bt34;    // Output pt 10: X(9)
         out[out_strides[11]] = bt21 - bt20;    // Output pt 12: X(11)
         out[out_strides[13]] = bt5 - bt10;     // Output pt 14: X(13)
 
@@ -723,19 +723,19 @@ static VOID r2hcf_rfft7c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
         bt27 = CRTM_7_2 * bv5;
         bt28 = CRTM_7_4 * bv3;
         bt29 = CRTM_7_6 * bv1;
-        bt30 = bt27 - bt28;
+        bt30 = bt28 - bt27;
 
         bt31 = bv0 + bv2;
         bt32 = bt25 + bt26;
         bt33 = bt31 + bv4;
-        bt34 = bt30 + bt29;
+        bt34 = bt30 - bt29;
         bt35 = bt33 * CRTM_7_7;
 
         out[out_strides[1]]  = bv6 + bt35;     // Output pt 2: X(1)
         out[out_strides[3]]  = -bt5 - bt10;    // Output pt 4: X(3)
         out[out_strides[5]]  = bt20 + bt21;    // Output pt 6: X(5)
-        out[out_strides[7]]  = -bt32 - bt34;   // Output pt 8: X(7)
-        out[out_strides[9]]  = bt32 - bt34;    // Output pt 10: X(9)
+        out[out_strides[7]]  = bt34 - bt32;    // Output pt 8: X(7)
+        out[out_strides[9]]  = bt32 + bt34;    // Output pt 10: X(9)
         out[out_strides[11]] = bt21 - bt20;    // Output pt 12: X(11)
         out[out_strides[13]] = bt5 - bt10;     // Output pt 14: X(13)
 

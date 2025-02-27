@@ -245,6 +245,7 @@ kernel_fp_list_t kernels_r2hcf_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_r2hcf_rfft4avx256, get_ops_cnt_r2hcf_rfft4avx256, 4},    // radix-4
     {register_kernel_r2hcf_rfft5avx256, get_ops_cnt_r2hcf_rfft5avx256, 5},    // radix-5
     {register_kernel_r2hcf_rfft6avx256, get_ops_cnt_r2hcf_rfft6avx256, 6},    // radix-6
+    {register_kernel_r2hcf_rfft7avx256, get_ops_cnt_r2hcf_rfft7avx256, 7},    // radix-7
     {register_kernel_r2hcf_rfft8avx256, get_ops_cnt_r2hcf_rfft8avx256, 8},    // radix-8
     {register_kernel_r2hcf_rfft10avx256, get_ops_cnt_r2hcf_rfft10avx256, 10}, // radix-10
     {register_kernel_r2hcf_rfft14avx256, get_ops_cnt_r2hcf_rfft14avx256, 14}, // radix-14
@@ -277,6 +278,7 @@ kernel_fp_list_t kernels_r2hcf_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_r2hcf_rfft4avx512, get_ops_cnt_r2hcf_rfft4avx512, 4},    // radix-4
     {register_kernel_r2hcf_rfft5avx512, get_ops_cnt_r2hcf_rfft5avx512, 5},    // radix-5
     {register_kernel_r2hcf_rfft6avx512, get_ops_cnt_r2hcf_rfft6avx512, 6},    // radix-6
+    {register_kernel_r2hcf_rfft7avx512, get_ops_cnt_r2hcf_rfft7avx512, 7},    // radix-7
     {register_kernel_r2hcf_rfft8avx512, get_ops_cnt_r2hcf_rfft8avx512, 8},    // radix-8
     {register_kernel_r2hcf_rfft10avx512, get_ops_cnt_r2hcf_rfft10avx512, 10}, // radix-10
     {register_kernel_r2hcf_rfft14avx512, get_ops_cnt_r2hcf_rfft14avx512, 14}, // radix-14
