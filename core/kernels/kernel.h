@@ -247,6 +247,7 @@ ops_cycles_t get_ops_cnt_r2hc_rfft15avx128(UINT8 precision, UINT8 direction);
 
 // R2HC-Fused AVX128 Kernels
 ops_cycles_t get_ops_cnt_r2hcf_rfft2avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_r2hcf_rfft3avx128(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft7avx128(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft10avx128(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft14avx128(UINT8 precision, UINT8 direction);
@@ -269,6 +270,7 @@ ops_cycles_t get_ops_cnt_r2hc_rfft15avx256(UINT8 precision, UINT8 direction);
 
 // R2HC-Fused AVX256 Kernels
 ops_cycles_t get_ops_cnt_r2hcf_rfft2avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_r2hcf_rfft3avx256(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft10avx256(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft14avx256(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft15avx256(UINT8 precision, UINT8 direction);
@@ -290,6 +292,7 @@ ops_cycles_t get_ops_cnt_r2hc_rfft15avx512(UINT8 precision, UINT8 direction);
 
 // R2HC-Fused AVX512 Kernels
 ops_cycles_t get_ops_cnt_r2hcf_rfft2avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_r2hcf_rfft3avx512(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft10avx512(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft14avx512(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft15avx512(UINT8 precision, UINT8 direction);
@@ -412,6 +415,7 @@ kfft_ register_kernel_r2hc_rfft15avx128(UINT8 precision, UINT8 direction);
 
 // R2HC-Fused AVX128 Kernels
 kfft_ register_kernel_r2hcf_rfft2avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_r2hcf_rfft3avx128(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft7avx128(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft10avx128(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft14avx128(UINT8 precision, UINT8 direction);
@@ -434,6 +438,7 @@ kfft_ register_kernel_r2hc_rfft15avx256(UINT8 precision, UINT8 direction);
 
 // R2HC-Fused AVX256 Kernels
 kfft_ register_kernel_r2hcf_rfft2avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_r2hcf_rfft3avx256(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft10avx256(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft14avx256(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft15avx256(UINT8 precision, UINT8 direction);
@@ -456,6 +461,7 @@ kfft_ register_kernel_r2hc_rfft15avx512(UINT8 precision, UINT8 direction);
 
 // R2HC-Fused AVX512 Kernels
 kfft_ register_kernel_r2hcf_rfft2avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_r2hcf_rfft3avx512(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft10avx512(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft14avx512(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft15avx512(UINT8 precision, UINT8 direction);
