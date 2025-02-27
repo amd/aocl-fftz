@@ -46,111 +46,192 @@
 #include "selector/selector.h"
 #include "core/kernels/transpose/transpose_utils.h"
 
-INT32 twiddle_multiplier_float(aoclfftz_solution_t *sol)
+// The first row and first column are not processed because the twiddle
+// factors for them are such that they have to just be copied to the
+// same location as where they are read from.
+//
+// since sin(0) = 0 and cos(0) = 1, the first row and first column
+// elements are processed as:
+//
+// in_real[idx] = real * TW_real - imag * TW_imag
+//              = real * cos(0) - imag * sin(0)
+//              = real * 1 - imag * 0
+//              = real
+//
+// in_imag[idx] = real * TW_imag + imag * TW_real
+//              = real * sin(0) + imag * cos(0)
+//              = real * 0 + imag * 1
+//              = imag
+//
+// where
+//      real = out_real[idx] and imag = out_imag[idx]
+// but
+//      out_real = in_real and out_imag = in_imag
+//
+// so
+//      real = in_real[idx]
+//      imag = in_imag[idx]
+//
+// so
+//      in_real[idx] = real = in_real[idx]
+//      in_imag[idx] = imag = in_imag[idx]
+
+static VOID twiddle_multiplier_float(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
     FLOAT *in_real = (FLOAT *)sol->decomp_scheme->in_real;
     FLOAT *in_imag = (FLOAT *)sol->decomp_scheme->in_imag;
-    FLOAT *out_real = (FLOAT *)sol->decomp_scheme->out_real;
-    FLOAT *out_imag = (FLOAT *)sol->decomp_scheme->out_imag;
 
     INTP sets = sol->decomp_scheme->vecs[0].n;
     INTP radix = sol->decomp_scheme->dims[0].n;
     INTP N = sets * radix;
 
-    // out-of-order -> out-of-order multiplication of twiddle
-    // output_buffer = output_buffer * twiddle_val
     INTP in_stride = sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE;
-    INTP out_stride = sol->decomp_scheme->dims[0].out_stride * DATA_STRIDE;
     INTP v_in_stride = sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
-    INTP v_out_stride =
-        sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
 
-    for (INTP s = 0; s < sets; s++)
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+    FLOAT *twiddle_buffer_real = (FLOAT *)sol->twiddle->TW;
+
+    if (sol->twiddle->TW)
     {
-        INTP out_idx = 0;
-        INTP in_idx = 0;
-        for (INTP r = 0; r < radix; r++)
+        FLOAT *twiddle_buffer_imag = twiddle_buffer_real + 1;
+        for (INTP r = 1; r < radix; r++)
         {
-            FLOAT x = (-AOCLFFTZ_2_PIf * r * s) / ((FLOAT)(N));
+            INTP in_index = r * in_stride + v_in_stride;
+            INTP tw_in_index =  DATA_STRIDE * (r * sets + 1);
 
-            FLOAT TW_real = cosf(x);
-            FLOAT TW_imag = sinf(x);
-            FLOAT real = out_real[out_idx];
-            FLOAT imag = out_imag[out_idx];
+            for (INTP s = 1; s < sets; s++)
+            {
+                FLOAT TW_real = twiddle_buffer_real[tw_in_index];
+                FLOAT TW_imag = twiddle_buffer_imag[tw_in_index];
 
-            in_real[in_idx] = real * TW_real - imag * TW_imag;
-            in_imag[in_idx] = real * TW_imag + imag * TW_real;
+                FLOAT real = in_real[in_index];
+                FLOAT imag = in_imag[in_index];
 
-            in_idx += in_stride;
-            out_idx += out_stride;
+                in_real[in_index] = real * TW_real - imag * TW_imag;
+                in_imag[in_index] = real * TW_imag + imag * TW_real;
+
+                in_index += v_in_stride;
+                tw_in_index += DATA_STRIDE;
+            }
         }
-
-        in_real += v_in_stride;
-        in_imag += v_in_stride;
-        out_real += v_out_stride;
-        out_imag += v_out_stride;
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+    else
 #endif
-    return TW_SUCCESS;
+    {
+        for (INTP r = 1; r < radix; r++)
+        {
+            INTP in_index = r * in_stride + v_in_stride;
+
+            for (INTP s = 1; s < sets; s++)
+            {
+                FLOAT x = (-AOCLFFTZ_2_PIf * r * s) / ((FLOAT)(N));
+
+                FLOAT TW_real = cosf(x);
+                FLOAT TW_imag = sinf(x);
+                FLOAT real = in_real[in_index];
+                FLOAT imag = in_imag[in_index];
+
+                in_real[in_index] = real * TW_real - imag * TW_imag;
+                in_imag[in_index] = real * TW_imag + imag * TW_real;
+
+                in_index += v_in_stride;
+            }
+        }
+    }
 }
 
-INT32 twiddle_multiplier_double(aoclfftz_solution_t *sol)
+// The first row and first column are not processed because the twiddle
+// factors for them are such that they have to just be copied to the
+// same location as where they are read from.
+//
+// since sin(0) = 0 and cos(0) = 1, the first row and first column
+// elements are processed as:
+//
+// in_real[idx] = real * TW_real - imag * TW_imag
+//              = real * cos(0) - imag * sin(0)
+//              = real * 1 - imag * 0
+//              = real
+//
+// in_imag[idx] = real * TW_imag + imag * TW_real
+//              = real * sin(0) + imag * cos(0)
+//              = real * 0 + imag * 1
+//              = imag
+//
+// where
+//      real = out_real[idx] and imag = out_imag[idx]
+// but
+//      out_real = in_real and out_imag = in_imag
+//
+// so
+//      real = in_real[idx]
+//      imag = in_imag[idx]
+//
+// so
+//      in_real[idx] = real = in_real[idx]
+//      in_imag[idx] = imag = in_imag[idx]
+
+static VOID twiddle_multiplier_double(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
     DOUBLE *in_real = (DOUBLE *)sol->decomp_scheme->in_real;
     DOUBLE *in_imag = (DOUBLE *)sol->decomp_scheme->in_imag;
-    DOUBLE *out_real = (DOUBLE *)sol->decomp_scheme->out_real;
-    DOUBLE *out_imag = (DOUBLE *)sol->decomp_scheme->out_imag;
 
     INTP sets = sol->decomp_scheme->vecs[0].n;
     INTP radix = sol->decomp_scheme->dims[0].n;
     INTP N = sets * radix;
 
-    // out-of-order -> out-of-order multiplication of twiddle
-    // output_buffer = output_buffer * twiddle_val
     INTP in_stride = sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE;
-    INTP out_stride = sol->decomp_scheme->dims[0].out_stride * DATA_STRIDE;
     INTP v_in_stride = sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
-    INTP v_out_stride =
-        sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
 
-    for (INTP s = 0; s < sets; s++)
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+    DOUBLE *twiddle_buffer_real = (DOUBLE *)sol->twiddle->TW;
+
+    if (sol->twiddle->TW)
     {
-        INTP out_idx = 0;
-        INTP in_idx = 0;
-        for (INTP r = 0; r < radix; r++)
+        DOUBLE *twiddle_buffer_imag = twiddle_buffer_real + 1;
+        for (INTP r = 1; r < radix; r++)
         {
-            DOUBLE x = (-AOCLFFTZ_2_PI * r * s) / ((DOUBLE)(N));
+            INTP in_index = r * in_stride + v_in_stride;
+            INTP tw_in_index =  DATA_STRIDE * (r * sets + 1);
 
-            DOUBLE TW_real = cos(x);
-            DOUBLE TW_imag = sin(x);
+            for (INTP s = 1; s < sets; s++)
+            {
+                DOUBLE TW_real = twiddle_buffer_real[tw_in_index];
+                DOUBLE TW_imag = twiddle_buffer_imag[tw_in_index];
 
-            DOUBLE real = out_real[out_idx];
-            DOUBLE imag = out_imag[out_idx];
+                DOUBLE real = in_real[in_index];
+                DOUBLE imag = in_imag[in_index];
 
-            in_real[in_idx] = real * TW_real - imag * TW_imag;
-            in_imag[in_idx] = real * TW_imag + imag * TW_real;
+                in_real[in_index] = real * TW_real - imag * TW_imag;
+                in_imag[in_index] = real * TW_imag + imag * TW_real;
 
-            in_idx += in_stride;
-            out_idx += out_stride;
+                in_index += v_in_stride;
+                tw_in_index += DATA_STRIDE;
+            }
         }
-
-        in_real += v_in_stride;
-        in_imag += v_in_stride;
-        out_real += v_out_stride;
-        out_imag += v_out_stride;
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+    else
 #endif
-    return TW_SUCCESS;
+    {
+        for (INTP r = 1; r < radix; r++)
+        {
+            INTP in_index = r * in_stride + v_in_stride;
+
+            for (INTP s = 1; s < sets; s++)
+            {
+                DOUBLE x = (-AOCLFFTZ_2_PI * r * s) / ((DOUBLE)(N));
+
+                DOUBLE TW_real = cos(x);
+                DOUBLE TW_imag = sin(x);
+                DOUBLE real = in_real[in_index];
+                DOUBLE imag = in_imag[in_index];
+
+                in_real[in_index] = real * TW_real - imag * TW_imag;
+                in_imag[in_index] = real * TW_imag + imag * TW_real;
+
+                in_index += v_in_stride;
+            }
+        }
+    }
 }
 
 INT32 twiddle_multiplier(aoclfftz_solution_t *sol)
@@ -159,21 +240,18 @@ INT32 twiddle_multiplier(aoclfftz_solution_t *sol)
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
 #endif
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    INT32 status = TW_FAILURE;
-
     if (precision == DT_FLOAT)
     {
-        status = twiddle_multiplier_float(sol);
+        twiddle_multiplier_float(sol);
     }
     else
     {
-        status = twiddle_multiplier_double(sol);
+        twiddle_multiplier_double(sol);
     }
-
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
 #endif
-    return status;
+    return TW_SUCCESS;
 }
 
 /* The reordering of radix-m outputs is done by following a cyclic permutation
@@ -190,11 +268,8 @@ INT32 twiddle_multiplier(aoclfftz_solution_t *sol)
  * Step 2 : Traverse along the 'visited' buffer to find the next unprocessed idx
  * Step 3 : Repeat Step 0 - 2 until the entire buffer is processed.
  */
-INT32 twiddle_multiplier_inplace_nonbuffered_float(aoclfftz_solution_t *sol)
+static INT32 twiddle_multiplier_inplace_nonbuffered_float(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
     // both buffers point to same memory location in an inplace problem
     FLOAT *in_real = (FLOAT *)sol->decomp_scheme->out_real;
     FLOAT *in_imag = (FLOAT *)sol->decomp_scheme->out_imag;
@@ -213,6 +288,11 @@ INT32 twiddle_multiplier_inplace_nonbuffered_float(aoclfftz_solution_t *sol)
         (sol->decomp_scheme->dims[0].in_stride / sets) * DATA_STRIDE;
     INTP out_stride =
         (sol->decomp_scheme->dims[0].out_stride / sets) * DATA_STRIDE;
+
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+    FLOAT *twiddle_buffer_real = (FLOAT *)sol->twiddle->TW;
+    FLOAT *twiddle_buffer_imag = twiddle_buffer_real + 1;
+#endif
 
     INTP count = 0;
     INTP start_idx = 0;
@@ -237,7 +317,7 @@ INT32 twiddle_multiplier_inplace_nonbuffered_float(aoclfftz_solution_t *sol)
         do
         {
             // find the permuted index for the src index
-            INTP s = src_idx / radix;
+            INTP s = floor(src_idx / radix);
             INTP r = (src_idx % radix);
             INTP dst_idx = (s + (sets * r));
             INTP dst = dst_idx * out_stride;
@@ -245,12 +325,34 @@ INT32 twiddle_multiplier_inplace_nonbuffered_float(aoclfftz_solution_t *sol)
             FLOAT next_real = in_real[dst];
             FLOAT next_imag = in_imag[dst];
 
-            FLOAT x = (-AOCLFFTZ_2_PIf * r * s) / ((FLOAT)(N));
-            FLOAT TW_real = cosf(x);
-            FLOAT TW_imag = sinf(x);
+            FLOAT TW_real, TW_imag;
 
-            out_real[dst] = src_real * TW_real - src_imag * TW_imag;
-            out_imag[dst] = src_real * TW_imag + src_imag * TW_real;
+            if (r == 0 || s == 0)
+            {
+                out_real[dst] = src_real;
+                out_imag[dst] = src_imag;
+            }
+            else
+            {
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+                if (twiddle_buffer_real)
+                {
+                    TW_real = twiddle_buffer_real[LINEAR_IDX_2D(r, s,
+                            DATA_STRIDE, DATA_STRIDE * sets)];
+                    TW_imag = twiddle_buffer_imag[LINEAR_IDX_2D(r, s,
+                            DATA_STRIDE, DATA_STRIDE * sets)];
+                }
+                else
+#endif
+                {
+                    FLOAT x = (-AOCLFFTZ_2_PIf * r * s) / ((FLOAT)(N));
+                    TW_real = cosf(x);
+                    TW_imag = sinf(x);
+                }
+
+                out_real[dst] = src_real * TW_real - src_imag * TW_imag;
+                out_imag[dst] = src_real * TW_imag + src_imag * TW_real;
+            }
 
             visited[src_idx] = 1;
             count++;
@@ -260,31 +362,11 @@ INT32 twiddle_multiplier_inplace_nonbuffered_float(aoclfftz_solution_t *sol)
         } while (count != N && start_idx != src_idx);
     }
     FREE_ALIGN_ALLOCATED_MEM(visited);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
     return TW_SUCCESS;
 }
 
-/* The reordering of radix-m outputs is done by following a cyclic permutation
- * pattern to convert the out-of-order output into in-order output.
- * It is similar to out-of-place radix-m transform operation that writes to
- * a separate output buffer from out-of-order output into in-order output.
- *
- * Algorithm :
- *
- * Step 0 : Start from an index i
- * Step 1 : Keep processing the indices in cyclic manner until
- *          the start index "i" is encountered again.
- *          Mark the visited indices with 1.
- * Step 2 : Traverse along the 'visited' buffer to find the next unprocessed idx
- * Step 3 : Repeat Step 0 - 2 until the entire buffer is processed.
- */
-INT32 twiddle_multiplier_inplace_nonbuffered_double(aoclfftz_solution_t *sol)
+static INT32 twiddle_multiplier_inplace_nonbuffered_double(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
     // both buffers point to same memory location in an inplace problem
     DOUBLE *in_real = (DOUBLE *)sol->decomp_scheme->out_real;
     DOUBLE *in_imag = (DOUBLE *)sol->decomp_scheme->out_imag;
@@ -303,6 +385,11 @@ INT32 twiddle_multiplier_inplace_nonbuffered_double(aoclfftz_solution_t *sol)
         (sol->decomp_scheme->dims[0].in_stride / sets) * DATA_STRIDE;
     INTP out_stride =
         (sol->decomp_scheme->dims[0].out_stride / sets) * DATA_STRIDE;
+
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+    DOUBLE *twiddle_buffer_real = (DOUBLE *)sol->twiddle->TW;
+    DOUBLE *twiddle_buffer_imag = twiddle_buffer_real + 1;
+#endif
 
     INTP count = 0;
     INTP start_idx = 0;
@@ -327,7 +414,7 @@ INT32 twiddle_multiplier_inplace_nonbuffered_double(aoclfftz_solution_t *sol)
         do
         {
             // find the permuted index for the src index
-            INTP s = src_idx / radix;
+            INTP s = floor(src_idx / radix);
             INTP r = (src_idx % radix);
             INTP dst_idx = (s + (sets * r));
             INTP dst = dst_idx * out_stride;
@@ -335,12 +422,34 @@ INT32 twiddle_multiplier_inplace_nonbuffered_double(aoclfftz_solution_t *sol)
             DOUBLE next_real = in_real[dst];
             DOUBLE next_imag = in_imag[dst];
 
-            DOUBLE x = (-AOCLFFTZ_2_PI * r * s) / ((DOUBLE)(N));
-            DOUBLE TW_real = cos(x);
-            DOUBLE TW_imag = sin(x);
+            DOUBLE TW_real, TW_imag;
 
-            out_real[dst] = src_real * TW_real - src_imag * TW_imag;
-            out_imag[dst] = src_real * TW_imag + src_imag * TW_real;
+            if (r == 0 || s == 0)
+            {
+                out_real[dst] = src_real;
+                out_imag[dst] = src_imag;
+            }
+            else
+            {
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+                if (twiddle_buffer_real)
+                {
+                    TW_real = twiddle_buffer_real[LINEAR_IDX_2D(r, s,
+                            DATA_STRIDE, DATA_STRIDE * sets)];
+                    TW_imag = twiddle_buffer_imag[LINEAR_IDX_2D(r, s,
+                            DATA_STRIDE, DATA_STRIDE * sets)];
+                }
+                else
+#endif
+                {
+                    DOUBLE x = (-AOCLFFTZ_2_PI * r * s) / ((DOUBLE)(N));
+                    TW_real = cos(x);
+                    TW_imag = sin(x);
+                }
+
+                out_real[dst] = src_real * TW_real - src_imag * TW_imag;
+                out_imag[dst] = src_real * TW_imag + src_imag * TW_real;
+            }
 
             visited[src_idx] = 1;
             count++;
@@ -350,9 +459,6 @@ INT32 twiddle_multiplier_inplace_nonbuffered_double(aoclfftz_solution_t *sol)
         } while (count != N && start_idx != src_idx);
     }
     FREE_ALIGN_ALLOCATED_MEM(visited);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
     return TW_SUCCESS;
 }
 
@@ -415,14 +521,56 @@ twiddle_multiplier_inplace_buffered_float(aoclfftz_solution_t *sol)
     row_stride = sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE;
     col_stride = sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
 
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+    FLOAT *twiddle_buffer_real = (FLOAT *)sol->twiddle->TW;
+    FLOAT *twiddle_buffer_imag = twiddle_buffer_real + 1;
+#endif
+
+    // process the first column
     for (INTP i = 0; i < sc_rows; i++)
     {
-        for (INTP j = 0; j < sc_cols; j++)
-        {
-            FLOAT x = (-AOCLFFTZ_2_PIf * i * j) / ((FLOAT)(N));
+        FLOAT real = scratch_real[LINEAR_IDX_2D(i, 0, scratch_col_stride,
+                scratch_row_stride)];
+        FLOAT imag = scratch_imag[LINEAR_IDX_2D(i, 0, scratch_col_stride,
+                scratch_row_stride)];
 
-            FLOAT TW_real = cosf(x);
-            FLOAT TW_imag = sinf(x);
+        in_real[LINEAR_IDX_2D(i, 0, col_stride, row_stride)] = real;
+        in_imag[LINEAR_IDX_2D(i, 0, col_stride, row_stride)] = imag;
+    }
+
+    // process the first row
+    for (INTP j = 1; j < sc_cols; j++)
+    {
+        FLOAT real = scratch_real[LINEAR_IDX_2D(0, j, scratch_col_stride,
+                scratch_row_stride)];
+        FLOAT imag = scratch_imag[LINEAR_IDX_2D(0, j, scratch_col_stride,
+                scratch_row_stride)];
+
+        in_real[LINEAR_IDX_2D(0, j, col_stride, row_stride)] = real;
+        in_imag[LINEAR_IDX_2D(0, j, col_stride, row_stride)] = imag;
+    }
+
+    for (INTP i = 1; i < sc_rows; i++)
+    {
+        for (INTP j = 1; j < sc_cols; j++)
+        {
+            FLOAT TW_real, TW_imag;
+
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+            if (twiddle_buffer_real)
+            {
+                TW_real = twiddle_buffer_real[LINEAR_IDX_2D(i, j,
+                        DATA_STRIDE, DATA_STRIDE * sets)];
+                TW_imag = twiddle_buffer_imag[LINEAR_IDX_2D(i, j,
+                        DATA_STRIDE, DATA_STRIDE * sets)];
+            }
+            else
+#endif
+            {
+                FLOAT x = (-AOCLFFTZ_2_PIf * i * j) / ((FLOAT)(N));
+                TW_real = cosf(x);
+                TW_imag = sinf(x);
+            }
 
             FLOAT real = scratch_real[LINEAR_IDX_2D(i, j, scratch_col_stride,
                                                     scratch_row_stride)];
@@ -500,14 +648,54 @@ twiddle_multiplier_inplace_buffered_double(aoclfftz_solution_t *sol)
     row_stride = sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE;
     col_stride = sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
 
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+    DOUBLE *twiddle_buffer_real = (DOUBLE *)sol->twiddle->TW;
+    DOUBLE *twiddle_buffer_imag = twiddle_buffer_real + 1;
+#endif
+
     for (INTP i = 0; i < sc_rows; i++)
     {
-        for (INTP j = 0; j < sc_cols; j++)
-        {
-            DOUBLE x = (-AOCLFFTZ_2_PI * i * j) / ((DOUBLE)(N));
+        DOUBLE real = scratch_real[LINEAR_IDX_2D(i, 0, scratch_col_stride,
+                scratch_row_stride)];
+        DOUBLE imag = scratch_imag[LINEAR_IDX_2D(i, 0, scratch_col_stride,
+                scratch_row_stride)];
 
-            DOUBLE TW_real = cos(x);
-            DOUBLE TW_imag = sin(x);
+        in_real[LINEAR_IDX_2D(i, 0, col_stride, row_stride)] = real;
+        in_imag[LINEAR_IDX_2D(i, 0, col_stride, row_stride)] = imag;
+    }
+
+    for (INTP j = 1; j < sc_cols; j++)
+    {
+        DOUBLE real = scratch_real[LINEAR_IDX_2D(0, j, scratch_col_stride,
+                scratch_row_stride)];
+        DOUBLE imag = scratch_imag[LINEAR_IDX_2D(0, j, scratch_col_stride,
+                scratch_row_stride)];
+
+        in_real[LINEAR_IDX_2D(0, j, col_stride, row_stride)] = real;
+        in_imag[LINEAR_IDX_2D(0, j, col_stride, row_stride)] = imag;
+    }
+
+    for (INTP i = 1; i < sc_rows; i++)
+    {
+        for (INTP j = 1; j < sc_cols; j++)
+        {
+            DOUBLE TW_real, TW_imag;
+
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+            if (twiddle_buffer_real)
+            {
+                TW_real = twiddle_buffer_real[LINEAR_IDX_2D(i, j,
+                        DATA_STRIDE, DATA_STRIDE * sets)];
+                TW_imag = twiddle_buffer_imag[LINEAR_IDX_2D(i, j,
+                        DATA_STRIDE, DATA_STRIDE * sets)];
+            }
+            else
+#endif
+            {
+                DOUBLE x = (-AOCLFFTZ_2_PI * i * j) / ((DOUBLE)(N));
+                TW_real = cos(x);
+                TW_imag = sin(x);
+            }
 
             DOUBLE real = scratch_real[LINEAR_IDX_2D(i, j, scratch_col_stride,
                                                      scratch_row_stride)];
@@ -691,3 +879,103 @@ INT32 twiddle_multiplier_for_real(aoclfftz_solution_t *sol, INTP p)
 
     return TW_SUCCESS;
 }
+
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+// Setup a twiddle buffer of size `r x m`
+VOID setup_twiddle_buffer_float(VOID *twiddle_buffer, INTP r, INTP m)
+{
+    FLOAT *twiddle_buffer_real = (FLOAT *)twiddle_buffer;
+    FLOAT *twiddle_buffer_imag = twiddle_buffer_real + 1;
+
+    FLOAT angle_base = -AOCLFFTZ_2_PIf / (FLOAT)(r * m);
+    INTP c_stride = 1 * DATA_STRIDE;
+    INTP r_stride = m * DATA_STRIDE;
+
+    for (INTP i = 1; i < r; ++i)
+    {
+        for (INTP j = i; j < m; ++j)
+        {
+            FLOAT angle = angle_base * i * j;
+            FLOAT sin_val = sinf(angle);
+            FLOAT cos_val = cosf(angle);
+            twiddle_buffer_real[LINEAR_IDX_2D(i, j, c_stride, r_stride)] =
+                cos_val;
+            twiddle_buffer_imag[LINEAR_IDX_2D(i, j, c_stride, r_stride)] =
+                sin_val;
+
+            // The value in the twiddle buffer at location [i, j] is dependent
+            // on the product `i x j`. Therefore the point [j, i] also contains
+            // the same value as the point [i, j].
+            //
+            // The twiddle buffer is rectangular in shape (`r x m`).
+            // Therefore, not every point [i, j] has a corresponding point
+            // [j, i] in the buffer. So if and only if there is a corresponding
+            // [j, i] for the current [i, j], we initialize its value in the
+            // same iteration.
+
+            if (i < m && j < r)
+            {
+                twiddle_buffer_real[LINEAR_IDX_2D(j, i, c_stride, r_stride)]
+                    = cos_val;
+                twiddle_buffer_imag[LINEAR_IDX_2D(j, i, c_stride, r_stride)]
+                    = sin_val;
+            }
+        }
+    }
+}
+
+// Setup a twiddle buffer of size `r x m`
+VOID setup_twiddle_buffer_double(VOID *twiddle_buffer, INTP r, INTP m)
+{
+    DOUBLE *twiddle_buffer_real = (DOUBLE *)twiddle_buffer;
+    DOUBLE *twiddle_buffer_imag = twiddle_buffer_real + 1;
+
+    DOUBLE angle_base = -AOCLFFTZ_2_PI / (DOUBLE)(r * m);
+    INTP c_stride = 1 * DATA_STRIDE;
+    INTP r_stride = m * DATA_STRIDE;
+
+    for (INTP i = 1; i < r; ++i)
+    {
+        for (INTP j = i; j < m; ++j)
+        {
+            DOUBLE angle = angle_base * i * j;
+            DOUBLE sin_val = sin(angle);
+            DOUBLE cos_val = cos(angle);
+            twiddle_buffer_real[LINEAR_IDX_2D(i, j, c_stride, r_stride)] =
+                cos_val;
+            twiddle_buffer_imag[LINEAR_IDX_2D(i, j, c_stride, r_stride)] =
+                sin_val;
+
+            // The value in the twiddle buffer at location [i, j] is dependent
+            // on the product `i x j`. Therefore the point [j, i] also contains
+            // the same value as the point [i, j].
+            //
+            // The twiddle buffer is rectangular in shape (`r x m`).
+            // Therefore, not every point [i, j] has a corresponding point
+            // [j, i] in the buffer. So if and only if there is a corresponding
+            // [j, i] for the current [i, j], we initialize its value in the
+            // same iteration.
+
+            if (i < m && j < r)
+            {
+                twiddle_buffer_real[LINEAR_IDX_2D(j, i, c_stride, r_stride)]
+                    = cos_val;
+                twiddle_buffer_imag[LINEAR_IDX_2D(j, i, c_stride, r_stride)]
+                    = sin_val;
+            }
+        }
+    }
+}
+
+VOID setup_twiddle_buffer(VOID *twiddle_buffer, INTP r, INTP m, UINT32 dt_prec)
+{
+    if (dt_prec == DT_FLOAT)
+    {
+        setup_twiddle_buffer_float(twiddle_buffer, r, m);
+    }
+    else
+    {
+        setup_twiddle_buffer_double(twiddle_buffer, r, m);
+    }
+}
+#endif

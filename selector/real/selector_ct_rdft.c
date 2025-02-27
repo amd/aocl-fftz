@@ -41,6 +41,14 @@
 #include "utils/utils.h"
 #include "core/common/twiddle.h"
 
+// FIXME: The changes made to support setup time storage of twiddle factors into
+// a separate buffer have been made only for the complex code-path. This means
+// that IN_MEMORY_TWIDDLE_FACTORS being set to 1 makes this file error out.
+//
+// Until the required changes are merged for the support of buffered twiddle
+// factors for the real codepath, the `#if 0 && IN_MEMORY_TWIDDLE_FACTORS == 1` are
+// replaced by `#if 0 && IN_MEMORY_TWIDDLE_FACTORS == 1`
+
 INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                        aoclfftz_realhelper_t *realhelper)
 {
@@ -57,10 +65,11 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 
     realhelper->is_CT = 1;
 
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
+#if 0 && IN_MEMORY_TWIDDLE_FACTORS == 1
     VOID *TW = NULL;
     UINT32 dt_prec = 0;
 #endif
+
     INTP n = sel->solution->decomp_scheme->dims[0].n;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
@@ -79,7 +88,7 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         return ret;
     }
 
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
+#if 0 && IN_MEMORY_TWIDDLE_FACTORS == 1
     dt_prec = DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags);
 #endif
 
@@ -100,8 +109,8 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     sel->solution->next_sol = alloc_solution(vec_rank, dim_rank);
     sel->solution->next_sol->next_sol = alloc_solution(vec_rank, dim_rank);
 
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
-    TW = alloc_twiddle_for_solution(n, dt_prec);
+#if 0 && IN_MEMORY_TWIDDLE_FACTORS == 1
+    TW = alloc_twiddle_buffer(n, dt_prec);
     if (TW == NULL)
     {
         goto exit_ct_dft;
@@ -247,7 +256,7 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 cur_sel->solution->next_sol = NULL;
                 cur_sel_m->solution->next_sol = NULL;
                 is_previous_solution_selected = 1;
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
+#if 0 && IN_MEMORY_TWIDDLE_FACTORS == 1
                 sel->solution->twiddle->TW = TW;
 #endif
             }
@@ -276,7 +285,7 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                                            cur_sel_m->cost_analysis->time;
                 sel->solution->next_sol = cur_sel->solution;
                 sel->solution->next_sol->next_sol = cur_sel_m->solution;
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
+#if 0 && IN_MEMORY_TWIDDLE_FACTORS == 1
                 sel->solution->twiddle->TW = TW;
 #endif
             }
@@ -291,7 +300,7 @@ exit_ct_dft:
     destroy_selector_without_scratch_space(cur_sel);
     destroy_selector_without_scratch_space(cur_sel_m);
     destroy_solution(org_sol);
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
+#if 0 && IN_MEMORY_TWIDDLE_FACTORS == 1
     FREE_ALIGN_ALLOCATED_MEM(TW);
 #endif
 #ifdef AOCL_ENABLE_LOG

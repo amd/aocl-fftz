@@ -764,12 +764,11 @@ aoclfftz_selector_t *alloc_selector_wrapper(INT32 vec_rank, INT32 dim_rank,
 {
     return alloc_selector(vec_rank, dim_rank, scratch_space);
 }
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
-VOID *alloc_twiddle_for_solution_wrapper(UINT8 rad_size, UINT8 dt_prec)
+VOID *alloc_twiddle_buffer_wrapper(INTP size, UINT32 dt_prec)
 {
-    return alloc_twiddle_for_solution(rad_size, dt_prec);
+    return alloc_twiddle_buffer(size, dt_prec);
 }
-#endif
+
 VOID destroy_selector_wrapper(aoclfftz_selector_t *sel)
 {
     destroy_selector(sel);

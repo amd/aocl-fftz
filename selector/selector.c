@@ -40,6 +40,7 @@
 #include "utils/utils.h"
 #include "core/common/memory_manager.h"
 #include "core/kernels/kernel.h"
+#include "core/common/twiddle.h"
 
 // Tables of kernels that are populated with applicable kernels at setup time.
 // There are 4 sets of kernels contained in the kernels_table which are :
@@ -727,6 +728,25 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     {
         goto exit_setup_dft_d_64_;
     }
+
+    // TODO: Allocate the twiddle buffers after the setup?
+    //
+    //aoclfftz_solution_t *copy = sel_obj->solution;
+    //while (copy != NULL)
+    //{
+    //    if (copy->solver->solver_type == SOLVER_CT)
+    //    {
+    //        INTP r = copy->next_sol->decomp_scheme->dims[0].n;
+    //        INTP m = copy->next_sol->next_sol->decomp_scheme->dims[0].n;
+    //        VOID *TW = alloc_twiddle_buffer(r * m, DT_DOUBLE);
+    //        if (TW != NULL)
+    //        {
+    //            setup_twiddle_buffer(TW, r, m, DT_DOUBLE);
+    //            copy->next_sol->twiddle->TW = TW;
+    //        }
+    //    }
+    //    copy = copy->next_sol;
+    //}
 
     return sel_obj;
 

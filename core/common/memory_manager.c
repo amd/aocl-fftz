@@ -229,15 +229,14 @@ INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein, INTP size)
     return AOCLFFTZ_SUCCESS;
 }
 
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
-VOID *alloc_twiddle_for_solution(UINT32 rad_size, UINT8 dt_prec)
+VOID *alloc_twiddle_buffer(UINTP size, UINT32 dt_prec)
 {
+    // TODO: We don't need to allocate the space for the first row and column
     UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
     VOID *buffer = NULL;
-    ALLOC_ALIGN_UNINIT(buffer, VOID, rad_size * dt_bytes);
+    ALLOC_ALIGN_UNINIT(buffer, VOID, DATA_STRIDE * size * dt_bytes);
     return buffer;
 }
-#endif
 
 VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme)
 {

@@ -54,9 +54,6 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     // updating cost
     aoclfftz_solution_t *org_sol = NULL;
 
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
-    VOID *TW = NULL;
-#endif
     INTP n = sel->solution->decomp_scheme->dims[0].n;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
@@ -71,10 +68,6 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     {
         return ret;
     }
-
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
-    UINT8 dt_prec = DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags);
-#endif
 
     org_sol = alloc_solution(vec_rank, dim_rank);
     if (org_sol == NULL)
@@ -94,13 +87,6 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     sel->solution->next_sol = alloc_solution(vec_rank, dim_rank);
     sel->solution->next_sol->next_sol = alloc_solution(vec_rank, dim_rank);
 
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
-    TW = alloc_twiddle_for_solution(n, dt_prec);
-    if (TW == NULL)
-    {
-        goto exit_ct_dft;
-    }
-#endif
     COPY_SOLUTION_OBJ(org_sol, sel->solution);
     org_sol->scratch_space = sel->scratch_space;
     org_sol->next_sol = NULL;
@@ -148,9 +134,6 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         {
             goto exit_ct_dft;
         }
-
-        // TODO: For IN_MEMORY_TWIDDLE_FACTORS
-        // Compute twiddle factors in a separate buffer
 
         // Call selector for applying CT on the m set of sub-problems (radix-m)
         ret = setup_dft_(cur_sel_m, kertab);
@@ -211,9 +194,6 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 cur_sel->solution->next_sol = NULL;
                 cur_sel_m->solution->next_sol = NULL;
                 is_previous_solution_selected = 1;
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
-                sel->solution->twiddle->TW = TW;
-#endif
             }
             else
             {
@@ -240,9 +220,6 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                                            cur_sel_m->cost_analysis->time;
                 sel->solution->next_sol = cur_sel->solution;
                 sel->solution->next_sol->next_sol = cur_sel_m->solution;
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
-                sel->solution->twiddle->TW = TW;
-#endif
             }
         }
         if (stats_mode)
@@ -251,13 +228,22 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         }
     }
 
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+    UINT32 dt_prec = DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags);
+    VOID* TW = alloc_twiddle_buffer(n, dt_prec);
+    if (TW != NULL)
+    {
+        INTP r = sel->solution->next_sol->decomp_scheme->dims[0].n;
+        INTP m = sel->solution->next_sol->next_sol->decomp_scheme->dims[0].n;
+        setup_twiddle_buffer(TW, r, m, dt_prec);
+        sel->solution->next_sol->twiddle->TW = TW;
+    }
+#endif
+
 exit_ct_dft:
     destroy_selector_without_scratch_space(cur_sel);
     destroy_selector_without_scratch_space(cur_sel_m);
     destroy_solution(org_sol);
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
-    FREE_ALIGN_ALLOCATED_MEM(TW);
-#endif
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 #endif

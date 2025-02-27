@@ -41,7 +41,8 @@
 
 #include "api/aoclfftz_internal.h"
 
-#define IN_MEMORY_TWIDDLE_FACTORS 0
+// Usage of additional buffers to hold the twiddle data is enabled by default.
+#define IN_MEMORY_TWIDDLE_FACTORS 1
 
 // Error return codes related to Twiddle factors multiplication
 // Add more codes at the top
@@ -50,6 +51,10 @@ typedef enum
     TW_FAILURE = -1,
     TW_SUCCESS         // Successful operation
 } twiddle_status;
+
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+VOID setup_twiddle_buffer(VOID* twiddle_buffer, INTP r, INTP m, UINT32 dt_prec);
+#endif
 
 INT32 twiddle_multiplier(aoclfftz_solution_t *sol);
 INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol);
