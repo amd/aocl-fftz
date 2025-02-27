@@ -212,6 +212,12 @@ kernel_fp_list_t kernels_r2hc_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
 {
     {register_kernel_r2hc_rfft5avx512, get_ops_cnt_r2hc_rfft5avx512, 5}     // radix-5
 };
+
+// R2HC-Fused - AVX512 Kernel List
+kernel_fp_list_t kernels_r2hcf_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
+{
+    {register_kernel_r2hcf_rfft2avx512, get_ops_cnt_r2hcf_rfft2avx512, 2}     // radix-2
+};
 #endif
 
 #endif // AOCLFFTZ_KERNEL_LIST_H

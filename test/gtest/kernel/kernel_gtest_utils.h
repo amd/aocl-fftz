@@ -144,6 +144,9 @@ wrapper_kernel_fp_list *get_kernel_table(UINT8 kernel_type)
     case aocl_fftz_kernel_type::STANDARD_R2HC_AVX512:
     case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX512:
         return wrapper_kernels_r2hc_avx512;
+    case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX512:
+    case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX512:
+        return wrapper_kernels_r2hcf_avx512;
 #endif
     default:
         return {};
@@ -209,6 +212,10 @@ std::string get_kernel_type_as_string(UINT8 kernel_type)
         return "_STANDARD_R2HC_AVX2512";
     case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX512:
         return "_PERMUTED_R2HC_AVX2512";
+    case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX512:
+        return "_STANDARD_R2HCF_AVX512";
+    case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX512:
+        return "_PERMUTED_R2HCF_AVX512";
 #endif
     default:
         return "_UNKNOWN";
@@ -224,13 +231,14 @@ bool is_fused_kernel(UINT8 kernel_type)
 {
     switch (kernel_type)
     {
-    // TODO: add avx variants
     case aocl_fftz_kernel_type::STANDARD_R2HCF_C:
     case aocl_fftz_kernel_type::PERMUTED_R2HCF_C:
     case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX256:
     case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX256:
     case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX128:
     case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX128:
+    case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX512:
+    case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX512:
         return true;
     default:
         return false;

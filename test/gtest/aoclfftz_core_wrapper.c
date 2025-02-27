@@ -397,6 +397,11 @@ ops_cycles_t get_ops_cnt_r2hc_rfft5avx512_wrapper(UINT8 precision,
 {
     return get_ops_cnt_r2hc_rfft5avx512(precision, direction);
 }
+ops_cycles_t get_ops_cnt_r2hcf_rfft2avx512_wrapper(UINT8 precision,
+                                                   UINT8 direction)
+{
+    return get_ops_cnt_r2hcf_rfft2avx512(precision, direction);
+}
 #endif
 
 /* ---------------- kernels : register_kernel_fft* ---------------- */
@@ -747,6 +752,13 @@ kfft_ register_kernel_r2hc_rfft5avx512_wrapper(UINT8 precision,
                                                UINT8 direction)
 {
     return register_kernel_r2hc_rfft5avx512(precision, direction);
+}
+
+// R2HC-Fused - AVX512 register kernel wrapper
+kfft_ register_kernel_r2hcf_rfft2avx512_wrapper(UINT8 precision,
+                                                UINT8 direction)
+{
+    return register_kernel_r2hcf_rfft2avx512(precision, direction);
 }
 #endif
 

@@ -237,8 +237,12 @@ get_ops_cnt_r2hcf_rfft2avx256_wrapper(UINT8 precision, UINT8 direction);
 // R2HC AVX512 Kernels
 EXPORT_SYM_DYN ops_cycles_t
 get_ops_cnt_r2hc_rfft5avx512_wrapper(UINT8 precision, UINT8 direction);
-#endif
 
+
+// R2HC-Fused AVX512 Kernels
+EXPORT_SYM_DYN ops_cycles_t
+get_ops_cnt_r2hcf_rfft2avx512_wrapper(UINT8 precision, UINT8 direction);
+#endif
 /* ---------------- kernels : register_kernel_fft* ---------------- */
 
 // C2C Kernels
@@ -418,6 +422,10 @@ register_kernel_r2hcf_rfft2avx256_wrapper(UINT8 precision, UINT8 direction);
 // R2HC AVX512 Kernels
 EXPORT_SYM_DYN kfft_
 register_kernel_r2hc_rfft5avx512_wrapper(UINT8 precision, UINT8 direction);
+
+// R2HC-Fused AVX512 Kernels
+EXPORT_SYM_DYN kfft_
+register_kernel_r2hcf_rfft2avx512_wrapper(UINT8 precision, UINT8 direction);
 #endif
 /* ---------------- kernels : permuted_copy_* ---------------- */
 
@@ -637,8 +645,15 @@ static wrapper_kernel_fp_list_t
     {register_kernel_r2hc_rfft5avx512_wrapper,
      get_ops_cnt_r2hc_rfft5avx512_wrapper, 5}
 };
-#endif
 
+// R2HC-Fused -AVX512 Kernels
+static wrapper_kernel_fp_list_t
+    wrapper_kernels_r2hcf_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
+{
+    {register_kernel_r2hcf_rfft2avx512_wrapper,
+     get_ops_cnt_r2hcf_rfft2avx512_wrapper, 2} 
+};
+#endif
 
 // Transpose wrappers
 #define TRANSPOSE_WRAPPER_DECL(kernel_name, TYPE, isa)                         \
