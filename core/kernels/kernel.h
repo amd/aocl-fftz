@@ -49,10 +49,6 @@
 #include "utils/utils.h"
 #endif
 
-// macro to enable optimized C Radix kernels.
-// Comment this to switch to Basic version of kernels
-#define USE_OPT_KERNEL_VARIANT
-
 // macro to make in/out stride array volatile
 // hack to prevent compiler optimization to prevent register to stack movements
 // on the variable
