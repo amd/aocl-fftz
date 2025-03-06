@@ -561,6 +561,8 @@ aoclfftz_kernel_test_params_t param_float_r2hcf_c_kernels[] =
         aoclfftz_kernel_test_type::ALL},
     {8, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
         aoclfftz_kernel_test_type::ALL},
+    {10, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
+         aoclfftz_kernel_test_type::ALL}
 };
 
 // R2HC-Fused - C Kernels - Double
@@ -580,6 +582,8 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_c_kernels[] =
         aoclfftz_kernel_test_type::ALL},
     {8, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
         aoclfftz_kernel_test_type::ALL},
+    {10, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
+         aoclfftz_kernel_test_type::ALL}
 };
 
 #ifdef ENABLE_AVX128
