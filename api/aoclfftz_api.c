@@ -86,6 +86,42 @@ INT32 aoclfftz_execute(VOID *handle)
     return executor_obj->execute(executor_obj);
 }
 
+// Execute function for Single-threaded and multi-threaded FFT on different
+// input, output buffers using the same solution from the handle
+INT32 aoclfftz_execute_io(VOID *handle, VOID *in, VOID *out)
+{
+    if ((handle == NULL) | (in == NULL) | (out == NULL))
+    {
+        return AOCLFFTZ_EXECUTION_FAILURE;
+    }
+    // manipulate the in/out ptr in the structure based on direction
+    aoclfftz_executor_t *executor_obj = (aoclfftz_executor_t *)handle;
+    aoclfftz_solution_t *sol = executor_obj->solution;
+    UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+    if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
+    {
+        sol->decomp_scheme->in_real = in;
+        sol->decomp_scheme->in_imag = MOVE_ADDR(in, dt_bytes);
+        sol->decomp_scheme->out_real = out;
+        sol->decomp_scheme->out_imag = MOVE_ADDR(out, dt_bytes);
+    }
+    else
+    {
+        sol->decomp_scheme->in_real = MOVE_ADDR(in, dt_bytes);
+        sol->decomp_scheme->in_imag = in;
+        sol->decomp_scheme->out_real = MOVE_ADDR(out, dt_bytes);
+        sol->decomp_scheme->out_imag = out;
+    }
+    // handle for sizeone
+    if (sol->decomp_scheme->dims[0].n == 1)
+    {
+        sol->decomp_scheme->in_real = in;
+        sol->decomp_scheme->out_real = out;
+    }
+    return aoclfftz_execute(handle);
+}
+
 // Destroy function for Single-threaded and multi-threaded FFT
 VOID aoclfftz_destroy(VOID *handle)
 {

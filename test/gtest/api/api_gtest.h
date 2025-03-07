@@ -90,6 +90,8 @@ public:
     INT32 dynamic_load_model;
     ProblemType *problem;
     VOID *handle;
+    UINTP input_size;
+    UINTP output_size;
     void SetUp() override
     {
         problem = NULL;
@@ -145,6 +147,12 @@ public:
         }
     }
 
+    VOID get_inout_size(UINTP *in_size, UINTP *out_size)
+    {
+        in_size[0] = input_size;
+        out_size[0] = output_size;
+    }
+
     // Function to create a sample problem for testing
     template<typename DataType, typename DimT>
     VOID create_pdesc()
@@ -197,8 +205,10 @@ public:
             out_size += (problem->vecs[i].n) * (problem->vecs[i].out_stride);
         }
 
-        problem->in = (DataType*)malloc(in_size * sizeof(DataType));
-        problem->out = (DataType*)malloc(out_size * sizeof(DataType));
+        input_size = in_size * sizeof(DataType);
+        output_size = out_size * sizeof(DataType);
+        problem->in = (DataType*)malloc(input_size);
+        problem->out = (DataType*)malloc(output_size);
 
         if (problem->in == NULL || problem->out == NULL)
         {

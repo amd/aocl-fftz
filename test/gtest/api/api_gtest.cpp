@@ -36,8 +36,7 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_CNTRL_PARAMETERS)
 {
     for (auto optOff : {0,1})
     {
-        // Having an invalid oplevel -2 to ensure setup doesn't
-        // fails on invalid optlevel
+        // Invalid optlevel -2 to ensure setup doesn't fail on invalid inputs
         for (auto optLevel : {-2, -1, 0, 1, 2, 3})
         {
             this->problem->cntrl_params.opt_off = optOff;
@@ -150,11 +149,11 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_FLAGS)
     }
 }
 
-TYPED_TEST_P(AoclfftzAPITest, NTEST_INPLACE_PROBLEM)
+TYPED_TEST_P(AoclfftzAPITest, NTEST_INPLACE_IO_STRIDES)
 {
     this->problem->flags = 0b0000; // Set flags to in-place
-    // Setting input stride and output stride values different, expecting
-    // setup to fail in Inplace problems
+    // Setting non-identical input and output stride values, expecting
+    // setup to fail, as inplace problems require same input & output strides
     this->problem->dims[2].in_stride = 200;
     this->problem->dims[2].out_stride = 250;
     this->run_setup_and_validate(INVALID);
@@ -237,6 +236,44 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_VALIDHANDLE)
     aoclfftz_destroy(this->handle);
 }
 
+// Execute_dft API test cases
+TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_VALIDHANDLE)
+{
+    // this test compares the outputs obtained through
+    //  (a) invoke of execute API where in/out buffers are bound to problem desc
+    //  (b) invoke of execute_io API where in/out buffers are passed explicitly
+
+    this->handle = this->aoclfftz_setup(this->problem);
+
+    // invoke execute API
+    INT32 exe = aoclfftz_execute(this->handle);
+    EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
+
+    // involve execute_io API
+    UINTP input_size = 0;
+    UINTP output_size =0;
+    this->get_inout_size(&input_size, &output_size);
+
+    VOID *in, *out;
+    in = malloc(input_size);
+    out = malloc(output_size);
+
+    memcpy(in, this->problem->in, input_size);
+    memset(out, 0, output_size);
+    exe = aoclfftz_execute_io(this->handle, in, out);
+    EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
+
+    // Compare the 'out' buffer against the output buffer in the problem desc
+    INT32 ret = memcmp(out, this->problem->out, output_size);
+    EXPECT_EQ(ret, 0); // Expect successful comparison
+
+    aoclfftz_destroy(this->handle);
+    free(in);
+    in = NULL;
+    free(out);
+    out = NULL;
+}
+
 // Destroy API test cases
 TYPED_TEST_P(AoclfftzAPITest, PTEST_DESTROY_VALIDHANDLE_SOLUTION)
 {
@@ -267,7 +304,7 @@ REGISTER_TYPED_TEST_SUITE_P(
     NTEST_OUT_BUFFER,
     NTEST_CNTRL_PARAMS,
     NTEST_FLAGS,
-    NTEST_INPLACE_PROBLEM,
+    NTEST_INPLACE_IO_STRIDES,
     NTEST_DIM_RANK,
     NTEST_VEC_RANK,
     NTEST_DIMS,
@@ -275,6 +312,7 @@ REGISTER_TYPED_TEST_SUITE_P(
     NTEST_DIMS_STRIDES,
     NTEST_VECS_STRIDES,
     PTEST_EXECUTE_VALIDHANDLE,
+    PTEST_EXECUTE_IO_VALIDHANDLE,
     PTEST_DESTROY_VALIDHANDLE_SOLUTION,
     PTEST_DESTROY_WITHOUT_EXECUTE
 );
@@ -292,6 +330,14 @@ TEST(AoclfftzAPITest, NTEST_EXECUTE_INVALIDHANDLE)
     INT32 exe = aoclfftz_execute(handle);
     EXPECT_EQ(exe, AOCLFFTZ_EXECUTION_FAILURE)
                 << "Execution return run_setup_and_validate failure";
+}
+
+TEST(AoclfftzAPITest, NTEST_EXECUTE_IO_INVALIDHANDLE)
+{
+    VOID* handle = NULL;
+    VOID *in = NULL, *out = NULL;
+    INT32 exe = aoclfftz_execute_io(handle, in, out);
+    EXPECT_EQ(exe, -1) << "Execution failure for aoclfftz_execute_io API";
 }
 
 TEST(AoclfftzAPITest, NTEST_DESTROY_NULL_HANDLE)
