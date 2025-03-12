@@ -522,7 +522,9 @@ aoclfftz_kernel_test_params_t param_float_r2hc_c_kernels[] =
     {10, aocl_fftz_kernel_type::STANDARD_R2HC_C,
         aoclfftz_kernel_test_type::ALL},
     {12, aocl_fftz_kernel_type::STANDARD_R2HC_C,
-        aoclfftz_kernel_test_type::ALL}
+         aoclfftz_kernel_test_type::ALL},
+    {14, aocl_fftz_kernel_type::STANDARD_R2HC_C,
+         aoclfftz_kernel_test_type::ALL},
 };
 
 // R2HC - C Kernels - Double
@@ -545,7 +547,9 @@ aoclfftz_kernel_test_params_t param_double_r2hc_c_kernels[] =
     {10, aocl_fftz_kernel_type::STANDARD_R2HC_C,
         aoclfftz_kernel_test_type::ALL},
     {12, aocl_fftz_kernel_type::STANDARD_R2HC_C,
-        aoclfftz_kernel_test_type::ALL}
+         aoclfftz_kernel_test_type::ALL},
+    {14, aocl_fftz_kernel_type::STANDARD_R2HC_C,
+         aoclfftz_kernel_test_type::ALL}
 };
 
 // R2HC-Fused - C Kernels - Float
