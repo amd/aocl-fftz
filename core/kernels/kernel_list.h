@@ -179,7 +179,8 @@ kernel_fp_list_t kernels_r2hcf_c[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_r2hcf_rfft7c, get_ops_cnt_r2hcf_rfft7c, 7},    // radix-7
     {register_kernel_r2hcf_rfft8c, get_ops_cnt_r2hcf_rfft8c, 8},    // radix-8
     {register_kernel_r2hcf_rfft10c, get_ops_cnt_r2hcf_rfft10c, 10}, // radix-10
-    {register_kernel_r2hcf_rfft12c, get_ops_cnt_r2hcf_rfft12c, 12}  // radix-12
+    {register_kernel_r2hcf_rfft12c, get_ops_cnt_r2hcf_rfft12c, 12}, // radix-12
+    {register_kernel_r2hcf_rfft14c, get_ops_cnt_r2hcf_rfft14c, 14}  // radix-14
 };
 
 #ifdef ENABLE_AVX128
