@@ -216,6 +216,7 @@ ops_cycles_t get_ops_cnt_r2hc_rfft10c(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hc_rfft12c(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hc_rfft14c(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hc_rfft15c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_r2hc_rfft16c(UINT8 precision, UINT8 direction);
 
 // R2HC-Fused Kernels
 ops_cycles_t get_ops_cnt_r2hcf_rfft2c(UINT8 precision, UINT8 direction);
@@ -351,6 +352,7 @@ kfft_ register_kernel_r2hc_rfft10c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hc_rfft12c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hc_rfft14c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hc_rfft15c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_r2hc_rfft16c(UINT8 precision, UINT8 direction);
 
 // R2HC-Fused Kernels
 kfft_ register_kernel_r2hcf_rfft2c(UINT8 precision, UINT8 direction);
