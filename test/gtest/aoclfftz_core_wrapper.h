@@ -230,6 +230,8 @@ EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_r2hcf_rfft14c_wrapper(UINT8 precision,
                                                               UINT8 direction);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_r2hcf_rfft15c_wrapper(UINT8 precision,
                                                               UINT8 direction);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_r2hcf_rfft16c_wrapper(UINT8 precision,
+                                                              UINT8 direction);
 
 #ifdef ENABLE_AVX128
 // R2HC AVX128 Kernels
@@ -462,6 +464,8 @@ EXPORT_SYM_DYN kfft_ register_kernel_r2hcf_rfft12c_wrapper(UINT8 precision,
 EXPORT_SYM_DYN kfft_ register_kernel_r2hcf_rfft14c_wrapper(UINT8 precision,
                                                            UINT8 direction);
 EXPORT_SYM_DYN kfft_ register_kernel_r2hcf_rfft15c_wrapper(UINT8 precision,
+                                                           UINT8 direction);
+EXPORT_SYM_DYN kfft_ register_kernel_r2hcf_rfft16c_wrapper(UINT8 precision,
                                                            UINT8 direction);
 // AVX512
 EXPORT_SYM_DYN kfft_ register_kernel_fft2avx512_wrapper(UINT8 precision,
@@ -775,7 +779,9 @@ static wrapper_kernel_fp_list_t
     {register_kernel_r2hcf_rfft14c_wrapper,
      get_ops_cnt_r2hcf_rfft14c_wrapper, 14},
     {register_kernel_r2hcf_rfft15c_wrapper,
-     get_ops_cnt_r2hcf_rfft15c_wrapper, 15}
+     get_ops_cnt_r2hcf_rfft15c_wrapper, 15},
+    {register_kernel_r2hcf_rfft16c_wrapper,
+     get_ops_cnt_r2hcf_rfft16c_wrapper, 16}
 };
 
 #ifdef ENABLE_AVX128
