@@ -196,7 +196,9 @@ kernel_fp_list_t kernels_r2hc_avx128[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_r2hc_rfft4avx128, get_ops_cnt_r2hc_rfft4avx128, 4},    // radix-4
     {register_kernel_r2hc_rfft5avx128, get_ops_cnt_r2hc_rfft5avx128, 5},    // radix-5
     {register_kernel_r2hc_rfft6avx128, get_ops_cnt_r2hc_rfft6avx128, 6},    // radix-6
-    {register_kernel_r2hc_rfft8avx128, get_ops_cnt_r2hc_rfft8avx128, 8}     // radix-8
+    {register_kernel_r2hc_rfft8avx128, get_ops_cnt_r2hc_rfft8avx128, 8},    // radix-8
+    {register_kernel_r2hc_rfft10avx128,
+     get_ops_cnt_r2hc_rfft10avx128, 10}    // radix-10
 };
 
 // R2HC-Fused - AVX128 Kernel List
@@ -217,6 +219,8 @@ kernel_fp_list_t kernels_r2hc_avx256[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_r2hc_rfft5avx256, get_ops_cnt_r2hc_rfft5avx256, 5},    // radix-5
     {register_kernel_r2hc_rfft6avx256, get_ops_cnt_r2hc_rfft6avx256, 6},    // radix-6
     {register_kernel_r2hc_rfft8avx256, get_ops_cnt_r2hc_rfft8avx256, 8},    // radix-8
+    {register_kernel_r2hc_rfft10avx256,
+     get_ops_cnt_r2hc_rfft10avx256, 10}    // radix-10
 };
 
 // R2HC-Fused - AVX256 Kernel List
@@ -235,7 +239,9 @@ kernel_fp_list_t kernels_r2hc_avx512[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_r2hc_rfft4avx512, get_ops_cnt_r2hc_rfft4avx512, 4},    // radix-4
     {register_kernel_r2hc_rfft5avx512, get_ops_cnt_r2hc_rfft5avx512, 5},    // radix-5
     {register_kernel_r2hc_rfft6avx512, get_ops_cnt_r2hc_rfft6avx512, 6},    // radix-6
-    {register_kernel_r2hc_rfft8avx512, get_ops_cnt_r2hc_rfft8avx512, 8}     // radix-8
+    {register_kernel_r2hc_rfft8avx512, get_ops_cnt_r2hc_rfft8avx512, 8},    // radix-8
+    {register_kernel_r2hc_rfft10avx512,
+     get_ops_cnt_r2hc_rfft10avx512, 10}    // radix-10
 };
 
 // R2HC-Fused - AVX512 Kernel List

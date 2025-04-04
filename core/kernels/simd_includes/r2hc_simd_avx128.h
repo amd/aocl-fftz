@@ -332,7 +332,7 @@ static const union zero_negate_128
 
 /**
  * @brief take negation of a 128-bit vector __m128d A => -A
- * Operation : 1 PERM(xor)
+ * Operation : 1 OTHERS(xor)
  */
 #define NEGATE_128_S(x) _mm_xor_ps(_negate_128_f.s, x)
 #define NEGATE_128_D(x) _mm_xor_pd(_negate_128_d.d, x)

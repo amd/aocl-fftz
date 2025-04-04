@@ -348,7 +348,7 @@ static const union zero_negate_256
 
 /**
  * @brief take negation of a 256-bit vector __m256d A => -A
- * Operation : 1 PERM(xor)
+ * Operation : 1 OTHERS(xor)
  */
 #define NEGATE_256_S(x) _mm256_xor_ps(_negate_256_f.s, x)
 #define NEGATE_256_D(x) _mm256_xor_pd(_negate_256_d.d, x)
