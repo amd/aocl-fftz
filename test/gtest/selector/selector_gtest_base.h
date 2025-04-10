@@ -541,11 +541,18 @@ class AoclfftzSelectorTestBase
                         "Failed at level 2 compare [Direct solver]");
                     return false;
                 }
-                cur_a = cur_a->next_sol;
+                if (cur_a->next_sol)
+                {
+                    cur_a = cur_a->next_sol[0];
+                }
+                else
+                {
+                    cur_a = NULL;
+                }
             }
             else if (cur_a->solver->solver_type == SOLVER_BATCHED)
             {
-                aoclfftz_solution_t *next_sol = cur_a->next_sol;
+                aoclfftz_solution_t *next_sol = cur_a->next_sol[0];
                 if (next_sol == NULL)
                 {
                     AOCLFFTZ_LOG_UNFORMATTED(
@@ -570,7 +577,7 @@ class AoclfftzSelectorTestBase
             }
             else if (cur_a->solver->solver_type == SOLVER_CT)
             {
-                aoclfftz_solution_t *sol_r = cur_a->next_sol;
+                aoclfftz_solution_t *sol_r = cur_a->next_sol[0];
                 if (sol_r == NULL)
                 {
                     AOCLFFTZ_LOG_UNFORMATTED(
@@ -578,7 +585,7 @@ class AoclfftzSelectorTestBase
                         "Failed at level 2 compare [CT solver]");
                     return false;
                 }
-                aoclfftz_solution_t *sol_m = cur_a->next_sol->next_sol;
+                aoclfftz_solution_t *sol_m = cur_a->next_sol[0]->next_sol[0];
                 if (sol_m == NULL)
                 {
                     AOCLFFTZ_LOG_UNFORMATTED(
@@ -639,7 +646,7 @@ class AoclfftzSelectorTestBase
             else if (cur_a->solver->solver_type == SOLVER_BLUESTEIN)
             {
                 INTP n = cur_a->decomp_scheme->dims[0].n;
-                if (cur_a->next_sol == NULL)
+                if (cur_a->next_sol[0] == NULL)
                 {
                     AOCLFFTZ_LOG_UNFORMATTED(
                         ERR, ERR, "No solution after Bluestein !"
@@ -647,7 +654,7 @@ class AoclfftzSelectorTestBase
                 }
                 UINT8 dt_prec = DT_PRECISION_FLAG(cur_a->decomp_scheme->flags);
                 UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
-                INTP m = cur_a->next_sol->decomp_scheme->dims[0].n;
+                INTP m = cur_a->next_sol[0]->decomp_scheme->dims[0].n;
                 VOID *B = cur_a->dft_bufs->bluestein->B;
                 VOID *B_ref = NULL;
                 ALLOC_ALIGN_UNINIT(B_ref, VOID, m * DATA_STRIDE * dt_bytes);
@@ -663,11 +670,11 @@ class AoclfftzSelectorTestBase
                         "Failed at level 2 compare [Bluestein solver]");
                     return false;
                 }
-                cur_a = cur_a->next_sol;
+                cur_a = cur_a->next_sol[0];
             }
             else if (cur_a->solver->solver_type == SOLVER_NDIM)
             {
-                aoclfftz_solution_t *sol_1d = cur_a->next_sol;
+                aoclfftz_solution_t *sol_1d = cur_a->next_sol[0];
                 if (sol_1d == NULL)
                 {
                     AOCLFFTZ_LOG_UNFORMATTED(
@@ -845,7 +852,14 @@ class AoclfftzSelectorTestBase
                         ERR, ERR, "Failed at Level 2 compare [SizeOne solver]");
                     return false;
                 }
-                cur_a = cur_a->next_sol;
+                if (cur_a->next_sol)
+                {
+                    cur_a = cur_a->next_sol[0];
+                }
+                else
+                {
+                    cur_a = NULL;
+                }
             }
             else
             {
@@ -1000,7 +1014,14 @@ class AoclfftzSelectorTestBase
                     break;
                 }
                 node_count++;
-                cur_sol = cur_sol->next_sol;
+                if (cur_sol->next_sol)
+                {
+                    cur_sol = cur_sol->next_sol[0];
+                }
+                else
+                {
+                    cur_sol = NULL;
+                }
             }
         } while (nd_sol != NULL && ret);
         return ret && (node_count == solver_list.size());

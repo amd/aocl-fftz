@@ -136,8 +136,8 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     {
         // capture stats
     }
-
-    sel->solution->next_sol = outer_dim_sel->solution;
+    sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
+    sel->solution->next_sol[0] = outer_dim_sel->solution;
     sel->solution->dft_bufs->nd_sol = n_minus1_sel->solution;
 
     destroy_selector_without_solution(n_minus1_sel);

@@ -89,8 +89,11 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     }
 
     // Create empty solutions to copy cur_sel & cur_sel_m
-    sel->solution->next_sol = alloc_solution(vec_rank, dim_rank);
-    sel->solution->next_sol->next_sol = alloc_solution(vec_rank, dim_rank);
+    sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
+    sel->solution->next_sol[0] = alloc_solution(vec_rank, dim_rank);
+    aoclfftz_solution_t *next_sol = sel->solution->next_sol[0];
+    next_sol->next_sol = alloc_sol_array(1 /*n_threads*/);
+    next_sol->next_sol[0] = alloc_solution(vec_rank, dim_rank);
 
     COPY_SOLUTION_OBJ(org_sol, sel->solution);
     org_sol->next_sol = NULL;
@@ -207,22 +210,18 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 
                 // Destroy the solutions except the first 3 objects
                 // since it points to current CT, CT-R, CT-M respectively
-                if (sel->solution != NULL && sel->solution->next_sol != NULL &&
-                    sel->solution->next_sol->next_sol != NULL)
+                if (sel->solution != NULL && next_sol != NULL &&
+                                             next_sol->next_sol[0] != NULL)
                 {
-                    destroy_solution(
-                        sel->solution->next_sol->next_sol->next_sol);
+                    destroy_solutions(next_sol->next_sol[0]->next_sol, 1);
                 }
-                aoclfftz_solution_t *sel_next_sol =
-                    sel->solution->next_sol->next_sol;
-                COPY_SOLUTION_OBJ(sel->solution->next_sol, cur_sel->solution);
-                COPY_STRIDES(sel->solution->next_sol, cur_sel->solution);
+                aoclfftz_solution_t **sel_next_sol = next_sol->next_sol;
+                COPY_SOLUTION_OBJ(next_sol, cur_sel->solution);
+                COPY_STRIDES(next_sol, cur_sel->solution);
                 // Restore the original next_sol after copy
-                sel->solution->next_sol->next_sol = sel_next_sol;
-                COPY_SOLUTION_OBJ(sel->solution->next_sol->next_sol,
-                                  cur_sel_m->solution);
-                COPY_STRIDES(sel->solution->next_sol->next_sol,
-                             cur_sel_m->solution);
+                next_sol->next_sol = sel_next_sol;
+                COPY_SOLUTION_OBJ(next_sol->next_sol[0], cur_sel_m->solution);
+                COPY_STRIDES(next_sol->next_sol[0], cur_sel_m->solution);
 
                 // Break the link from cur_sel and cur_sel_m
                 // it can be still accessed through sel object
@@ -234,9 +233,9 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
             {
                 // Destroy the solutions of cur_sel and cur_sel_m
                 // except first solution
-                destroy_solution(cur_sel->solution->next_sol);
+                destroy_solutions(cur_sel->solution->next_sol, 1);
                 cur_sel->solution->next_sol = NULL;
-                destroy_solution(cur_sel_m->solution->next_sol);
+                destroy_solutions(cur_sel_m->solution->next_sol, 1);
                 cur_sel_m->solution->next_sol = NULL;
                 is_previous_solution_selected = 0;
                 RESET_COST(cur_sel);
@@ -253,8 +252,8 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                     cur_sel->cost_analysis->ops + cur_sel_m->cost_analysis->ops;
                 sel->cost_analysis->time = cur_sel->cost_analysis->time +
                                            cur_sel_m->cost_analysis->time;
-                sel->solution->next_sol = cur_sel->solution;
-                sel->solution->next_sol->next_sol = cur_sel_m->solution;
+                next_sol = cur_sel->solution;
+                next_sol->next_sol[0] = cur_sel_m->solution;
             }
         }
         if (stats_mode)

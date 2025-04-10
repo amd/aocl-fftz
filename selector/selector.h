@@ -247,30 +247,30 @@ typedef struct aoclfftz_selector
  */
 #define SWAP_CT_SOLUTIONS(sel)                                                 \
 {                                                                              \
-    aoclfftz_solution_t *prev = NULL;                                          \
     aoclfftz_solution_t *curr = sel->solution;                                 \
-    aoclfftz_solution_t *next = curr->next_sol;                                \
+    aoclfftz_solution_t *prev = NULL;                                          \
+    aoclfftz_solution_t *next = NULL;                                          \
     if (sel->solution->next_sol != NULL) {                                     \
       /* swap first CT node */                                                 \
       if (sel->solution->solver->solver_type == SOLVER_CT &&                   \
-          sel->solution->next_sol->solver->solver_type == SOLVER_DIRECT) {     \
-        sel->solution = curr->next_sol;                                        \
-        curr->next_sol = sel->solution->next_sol;                              \
-        sel->solution->next_sol = curr;                                        \
+          sel->solution->next_sol[0]->solver->solver_type == SOLVER_DIRECT) {  \
+        sel->solution = curr->next_sol[0];                                     \
+        curr->next_sol[0] = sel->solution->next_sol[0];                        \
+        sel->solution->next_sol[0] = curr;                                     \
       }                                                                        \
       /* swap remaining CT nodes */                                            \
       prev = curr;                                                             \
-      curr = curr->next_sol;                                                   \
-      while (curr && curr->next_sol) {                                         \
-        next = curr->next_sol;                                                 \
+      curr = curr->next_sol[0];                                                \
+      while (curr && curr->next_sol && curr->next_sol[0]) {                    \
+        next = curr->next_sol[0];                                              \
         if (curr->solver->solver_type == SOLVER_CT &&                          \
             next->solver->solver_type == SOLVER_DIRECT) {                      \
-          prev->next_sol = next;                                               \
-          curr->next_sol = next->next_sol;                                     \
-          next->next_sol = curr;                                               \
+          prev->next_sol[0] = next;                                            \
+          curr->next_sol[0] = next->next_sol[0];                               \
+          next->next_sol[0] = curr;                                            \
         }                                                                      \
         prev = curr;                                                           \
-        curr = curr->next_sol;                                                 \
+        curr = curr->next_sol[0];                                              \
       }                                                                        \
     }                                                                          \
 }
@@ -701,5 +701,6 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                        aoclfftz_realhelper_t *realhelper);
 VOID destroy_handle(VOID *handle);
 VOID fuse_vecs(aoclfftz_solution_t *sol);
+VOID post_process_solution(aoclfftz_solution_t *sol);
 
 #endif // AOCLFFTZ_SELECTOR_H

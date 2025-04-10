@@ -77,11 +77,11 @@ static INT32 execute_real_buffered_solver(aoclfftz_solution_t *sol)
     INT32 ret = SOLVER_SUCCESS;
 
     // composite problem input
-    sol->next_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
+    sol->next_sol[0]->decomp_scheme->in_real = sol->decomp_scheme->in_real;
     // composite problem output
     *sol->dft_bufs->buffered->out_ptr = sol->decomp_scheme->out_real;
 
-    ret = sol->next_sol->solver->execute_solver(sol->next_sol);
+    ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0]);
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");

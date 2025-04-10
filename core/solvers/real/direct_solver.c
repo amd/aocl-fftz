@@ -629,9 +629,9 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
     }
 
     // Iteratively execute the next solution
-    if (sol->next_sol != NULL)
+    if (sol->next_sol != NULL && sol->next_sol[0] != NULL)
     {
-        ret = sol->next_sol->solver->execute_solver(sol->next_sol);
+        ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0]);
     }
     else if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
     {

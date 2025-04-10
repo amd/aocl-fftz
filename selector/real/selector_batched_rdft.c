@@ -56,6 +56,7 @@ INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     INT32 rnk = 0;
     INTP batch_size = 1;
     INT32 ret = SELECTOR_FAILURE;
+    UINT32 n_threads = 1;
 
     cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space);
     if (cur_sel == NULL)
@@ -96,7 +97,8 @@ INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         // capture stats
     }
 
-    sel->solution->next_sol = cur_sel->solution;
+    sel->solution->next_sol = alloc_sol_array(n_threads);
+    sel->solution->next_sol[0] = cur_sel->solution;
 
     // destroy only the selector not the solution within it
     destroy_selector_without_solution(cur_sel);

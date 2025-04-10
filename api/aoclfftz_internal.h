@@ -223,9 +223,13 @@ typedef struct aoclfftz_decomp_scheme
     UINT32 flags;
 } aoclfftz_decomp_scheme_t;
 
-// Holds twiddle factors used by a specific kernel for the given problem
+// TW Holds twiddle factors used by a specific kernel for the given problem
+// twiddle_buf_ptr holds the pointer to the twiddle buffer (TW), that is used to
+// free the memory allocated for TW in a post processed solution, where the same
+// memory pointer is used across array of next solutions.
 typedef struct aoclfftz_twiddle
 {
+    VOID *twiddle_buf_ptr;
     VOID *TW;
 } aoclfftz_twiddle_t;
 
@@ -316,13 +320,13 @@ typedef enum {
     STRIDE_TYPE_RFFT_R2HCF
 } stride_type_t;
 
-typedef struct aoclfftz_strides_grp 
+typedef struct aoclfftz_strides_grp
 {
     stride_type_t active_type;
-    union 
+    union
     {
         aoclfftz_strides_t* strides;  // Use only this strides for complex ffts
-        struct 
+        struct
         {                      // Use multiple strides for real ffts
             aoclfftz_strides_t* strides;
             aoclfftz_strides_t* strides_c2c;
@@ -371,7 +375,7 @@ typedef struct aoclfftz_dft_bufs
 // Solution data structure that is returned as a handle by the setup API and
 // used by the execute API.
 // Recommended memory layout recommendations: (use jemalloc)
-// (aoclfftz_solution_t *sol) => nodes chained by next_sol links should come 
+// (aoclfftz_solution_t *sol) => nodes chained by next_sol links should come
 // from a contiguous memory pool
 // Elements within a node => solver->decomp_scheme->strides_grpdft_bufs shall
 // come from contiguous memory region. twiddle (one-time separate alloc region)
@@ -383,7 +387,7 @@ typedef struct aoclfftz_solution
     aoclfftz_strides_grp_t *strides_grp;
     aoclfftz_dft_bufs_t *dft_bufs;
     aoclfftz_twiddle_t *twiddle;
-    aoclfftz_solution_t *next_sol;
+    aoclfftz_solution_t **next_sol;
     UINT8* extra1;
     UINT8* extra2;
 } aoclfftz_solution_t;
@@ -401,7 +405,7 @@ typedef struct aoclfftz_solution
     aoclfftz_buffered_t* buffered;
     aoclfftz_transpose_t* transpose;
     aoclfftz_solution_t* nd_sol; // holds one of the solutions of ND, else NULL
-    aoclfftz_solution_t* next_sol;
+    aoclfftz_solution_t** next_sol;
     void* scratch_space;
 } aoclfftz_solution_t;
 #endif

@@ -118,7 +118,7 @@ static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
 #endif
 
     aoclfftz_solution_t *n_minus1_sol = sol->dft_bufs->nd_sol;
-    aoclfftz_solution_t *outer_dim_sol = sol->next_sol;
+    aoclfftz_solution_t *outer_dim_sol = sol->next_sol[0];
 
     // update solution data pointers
     n_minus1_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;

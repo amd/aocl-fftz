@@ -91,7 +91,8 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_bluestein_dft;
     }
 
-    sel->solution->next_sol = next_sel->solution;
+    sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
+    sel->solution->next_sol[0] = next_sel->solution;
 
     // destroy only the selector not the solution within it
     destroy_selector_without_solution(next_sel);

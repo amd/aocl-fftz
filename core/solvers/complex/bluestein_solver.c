@@ -85,11 +85,12 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 #endif
 
+    aoclfftz_solution_t *next_sol = sol->next_sol[0];
     UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
     UINT32 dir = FFT_DIR(sol->decomp_scheme->flags);
     UINT32 mask = 1 << 2;
-    UINT32 initial_flags = sol->next_sol->decomp_scheme->flags;
+    UINT32 initial_flags = next_sol->decomp_scheme->flags;
 
     // Switch bwd flag to fwd for AVX kernels
 
@@ -101,10 +102,10 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     // by setting the direction flag to Forward.
     if (dir == BACKWARD_FFT_DIR)
     {
-        sol->next_sol->decomp_scheme->flags ^= mask;
+        next_sol->decomp_scheme->flags ^= mask;
     }
     INTP n = sol->decomp_scheme->dims[0].n;           // original length
-    INTP m = sol->next_sol->decomp_scheme->dims[0].n; // extended length
+    INTP m = next_sol->decomp_scheme->dims[0].n; // extended length
     INT32 status = SOLVER_SUCCESS;
 
     INTP in_stride = sol->decomp_scheme->dims[0].in_stride;
@@ -120,13 +121,13 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     sol->strides_grp->strides->v_in_stride = 1;
     sol->strides_grp->strides->v_out_stride = 1;
 
-    // Store the default in, out buffer addresses in separate pointers
-    // next_sol->dft_bufs->bluestein->in
-    VOID *in_real = sol->next_sol->decomp_scheme->in_real;
-    VOID *in_imag = sol->next_sol->decomp_scheme->in_imag;
-    // next_sol->dft_bufs->bluestein->out
-    VOID *out_real = sol->next_sol->decomp_scheme->out_real;
-    VOID *out_imag = sol->next_sol->decomp_scheme->out_imag;
+    // Store the default in, out buffer addresses in seperate pointers
+    // next_sol->bluestein->in
+    VOID *in_real = next_sol->decomp_scheme->in_real;
+    VOID *in_imag = next_sol->decomp_scheme->in_imag;
+    // next_sol->bluestein->out
+    VOID *out_real = next_sol->decomp_scheme->out_real;
+    VOID *out_imag = next_sol->decomp_scheme->out_imag;
 
     // Copy input from current sol to next sol
     VOID *cur_in = (dir == FORWARD_FFT_DIR) ? sol->decomp_scheme->in_real
@@ -179,7 +180,7 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
 
     // input  : in_real
     // output : out_real
-    status = sol->next_sol->solver->execute_solver(sol->next_sol);
+    status = next_sol->solver->execute_solver(next_sol);
     if (status != SOLVER_SUCCESS)
     {
         return SOLVER_FAILURE;
@@ -191,16 +192,16 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     // B_out data
     if (!sol->dft_bufs->bluestein->is_B_out_valid)
     {
-        sol->next_sol->decomp_scheme->in_real = sol->dft_bufs->bluestein->B;
-        sol->next_sol->decomp_scheme->in_imag =
+        next_sol->decomp_scheme->in_real = sol->dft_bufs->bluestein->B;
+        next_sol->decomp_scheme->in_imag =
             MOVE_ADDR(sol->dft_bufs->bluestein->B, dt_bytes);
-        sol->next_sol->decomp_scheme->out_real = sol->dft_bufs->bluestein->B_out;
-        sol->next_sol->decomp_scheme->out_imag =
+        next_sol->decomp_scheme->out_real = sol->dft_bufs->bluestein->B_out;
+        next_sol->decomp_scheme->out_imag =
             MOVE_ADDR(sol->dft_bufs->bluestein->B_out, dt_bytes);
 
         // input  : sol->dft_bufs->bluestein->B
         // output : sol->dft_bufs->bluestein->B_out
-        status = sol->next_sol->solver->execute_solver(sol->next_sol);
+        status = next_sol->solver->execute_solver(next_sol);
         if (status != SOLVER_SUCCESS)
         {
             return SOLVER_FAILURE;
@@ -219,15 +220,15 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     }
 
     // Swapping real, imag parts to achieve FFT backward
-    sol->next_sol->decomp_scheme->in_real = out_imag;
-    sol->next_sol->decomp_scheme->in_imag = out_real;
-    sol->next_sol->decomp_scheme->out_real = in_imag;
-    sol->next_sol->decomp_scheme->out_imag = in_real;
-    sol->next_sol->decomp_scheme->flags ^= mask;
+    next_sol->decomp_scheme->in_real = out_imag;
+    next_sol->decomp_scheme->in_imag = out_real;
+    next_sol->decomp_scheme->out_real = in_imag;
+    next_sol->decomp_scheme->out_imag = in_real;
+    next_sol->decomp_scheme->flags ^= mask;
 
     // input  : out_imag
     // output : in_imag
-    status = sol->next_sol->solver->execute_solver(sol->next_sol);
+    status = next_sol->solver->execute_solver(next_sol);
     if (status != SOLVER_SUCCESS)
     {
         return SOLVER_FAILURE;
@@ -272,11 +273,11 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     sol->strides_grp->strides->out_strides = NULL;
 
     // Reset the in, out buffers of next solution to the original state
-    sol->next_sol->decomp_scheme->in_real = in_real;
-    sol->next_sol->decomp_scheme->in_imag = in_imag;
-    sol->next_sol->decomp_scheme->out_real = out_real;
-    sol->next_sol->decomp_scheme->out_imag = out_imag;
-    sol->next_sol->decomp_scheme->flags = initial_flags;
+    next_sol->decomp_scheme->in_real = in_real;
+    next_sol->decomp_scheme->in_imag = in_imag;
+    next_sol->decomp_scheme->out_real = out_real;
+    next_sol->decomp_scheme->out_imag = out_imag;
+    next_sol->decomp_scheme->flags = initial_flags;
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");

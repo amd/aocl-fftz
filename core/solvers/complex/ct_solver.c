@@ -95,11 +95,9 @@ static INT32 execute_ct_solver(aoclfftz_solution_t *sol)
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 #endif
-
     INT32 status = SOLVER_SUCCESS;
-    aoclfftz_solution_t *radix_r_sol = sol->next_sol;
-    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol;
-
+    aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
+    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
     // update radix-m & radix-r solution data pointers
     radix_m_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
     radix_m_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;

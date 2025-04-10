@@ -115,8 +115,8 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     {
         // capture stats
     }
-
-    sel->solution->next_sol = cur_sel->solution;
+    sel->solution->next_sol = alloc_sol_array(n_threads);
+    sel->solution->next_sol[0] = cur_sel->solution;
 
     // destroy only the selector not the solution within it
     destroy_selector_without_solution(cur_sel);

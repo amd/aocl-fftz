@@ -76,7 +76,7 @@ static INT32 execute_real_ct_solver(aoclfftz_solution_t *sol)
     INT32 ret = SOLVER_SUCCESS;
 
     // Execute the next direct solution
-    ret = sol->next_sol->solver->execute_solver(sol->next_sol);
+    ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0]);
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");

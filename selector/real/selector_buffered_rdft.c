@@ -81,13 +81,14 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         goto exit_batched_dft;
     }
 
-    sel->solution->next_sol = cur_sel->solution;
+    sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
+    sel->solution->next_sol[0] = cur_sel->solution;
 
     // Set the out_ptr to last direct solution's output
-    aoclfftz_solution_t *temp_sol = sel->solution->next_sol;
-    while (temp_sol->next_sol != NULL)
+    aoclfftz_solution_t *temp_sol = sel->solution->next_sol[0];
+    while (temp_sol->next_sol != NULL && temp_sol->next_sol[0] != NULL)
     {
-        temp_sol = temp_sol->next_sol;
+        temp_sol = temp_sol->next_sol[0];
     }
     sel->solution->dft_bufs->buffered->out_ptr = &temp_sol->decomp_scheme->out_real;
 

@@ -179,7 +179,7 @@ static INT32 execute_real_batched_solver(aoclfftz_solution_t *sol)
 #endif
 
     INT32 status = SOLVER_SUCCESS;
-    aoclfftz_solution_t *next_sol = sol->next_sol;
+    aoclfftz_solution_t *next_sol = sol->next_sol[0];
 
     next_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
     next_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
