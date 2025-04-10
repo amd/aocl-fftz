@@ -76,6 +76,9 @@ VOID r2hc_rfft2c_fp32_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                           UINT8 flag)
 {
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
     FLOAT *in = (FLOAT *)in_real;
     FLOAT *out = (FLOAT *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
@@ -104,12 +107,18 @@ VOID r2hc_rfft2c_fp32_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
         in = in + v_in_stride;
         out = out + v_out_stride;
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 
 VOID r2hc_rfft2c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                           UINT8 flag)
 {
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
     FLOAT *in = (FLOAT *)in_real;
     FLOAT *out = (FLOAT *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
@@ -138,12 +147,18 @@ VOID r2hc_rfft2c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
         in = in + v_in_stride;
         out = out + v_out_stride;
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 
 VOID r2hc_rfft2c_fp64_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                           UINT8 flag)
 {
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
     DOUBLE *in = (DOUBLE *)in_real;
     DOUBLE *out = (DOUBLE *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
@@ -172,12 +187,18 @@ VOID r2hc_rfft2c_fp64_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
         in = in + v_in_stride;
         out = out + v_out_stride;
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 
 VOID r2hc_rfft2c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                           UINT8 flag)
 {
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
+#endif
     DOUBLE *in = (DOUBLE *)in_real;
     DOUBLE *out = (DOUBLE *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
@@ -206,6 +227,9 @@ VOID r2hc_rfft2c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
         in = in + v_in_stride;
         out = out + v_out_stride;
     }
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
+#endif
 }
 
 kfft_ register_kernel_r2hc_rfft2c(UINT8 precision, UINT8 direction)
