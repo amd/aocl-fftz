@@ -97,7 +97,7 @@ static VOID r2hcf_rfft3c_fp32_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        // Standard DFT
+        /* Standard DFT */
         FLOAT av0, av1, av2;
         FLOAT at0, at1, at2, at3;
 
@@ -115,7 +115,7 @@ static VOID r2hcf_rfft3c_fp32_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
         out[out_strides[3]] = av0 - at2;    // Output point 4: X(3)
         out[out_strides[4]] = -at3;         // Output point 5: X(4)
 
-        // Shifted DFT
+        /* Shifted DFT */
         FLOAT bv0, bv1, bv2;
         FLOAT bt0, bt1, bt2, bt3;
 
@@ -166,7 +166,7 @@ static VOID r2hcf_rfft3c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        // Standard DFT
+        /* Standard DFT */
         FLOAT av0, av1, av2;
         FLOAT at0, at1, at2;
 
@@ -183,7 +183,7 @@ static VOID r2hcf_rfft3c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
         out[out_strides[2]] = at0 - at1;    // Output point 3: X(2)
         out[out_strides[4]] = at0 + at1;    // Output point 5: X(4)
 
-        // Shifted DFT
+        /* Shifted DFT */
         FLOAT bv0, bv1, bv2;
         FLOAT bt0, bt1, bt2;
 
@@ -233,7 +233,7 @@ static VOID r2hcf_rfft3c_fp64_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        // Standard DFT
+        /* Standard DFT */
         DOUBLE av0, av1, av2;
         DOUBLE at0, at1, at2, at3;
 
@@ -251,7 +251,7 @@ static VOID r2hcf_rfft3c_fp64_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
         out[out_strides[3]] = av0 - at2;    // Output point 4: X(3)
         out[out_strides[4]] = -at3;         // Output point 5: X(4)
 
-        // Shifted DFT
+        /* Shifted DFT */
         DOUBLE bv0, bv1, bv2;
         DOUBLE bt0, bt1, bt2, bt3;
 
@@ -302,7 +302,7 @@ static VOID r2hcf_rfft3c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        // Standard DFT
+        /* Standard DFT */
         DOUBLE av0, av1, av2;
         DOUBLE at0, at1, at2;
 
@@ -319,7 +319,7 @@ static VOID r2hcf_rfft3c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
         out[out_strides[2]] = at0 - at1;    // Output point 3: X(2)
         out[out_strides[4]] = at0 + at1;    // Output point 5: X(4)
 
-        // Shifted DFT
+        /* Shifted DFT */
         DOUBLE bv0, bv1, bv2;
         DOUBLE bt0, bt1, bt2;
 

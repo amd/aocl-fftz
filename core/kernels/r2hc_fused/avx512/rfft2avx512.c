@@ -96,6 +96,7 @@ static VOID r2hcf_rfft2avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m512 av_in0, av_in1;
         __m512 v_out0, v_out1, v_out2;
 
@@ -116,6 +117,7 @@ static VOID r2hcf_rfft2avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
         v_out1 = _mm512_sub_ps(av_in0, av_in1);
         STR_512_S(curr_out, v_out_stride, v_out1);
 
+        /* Shifted DFT */
         __m512 bv_in0, bv_in1;
 
         // Input point 2: x(1)
@@ -136,6 +138,7 @@ static VOID r2hcf_rfft2avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 8)
     {
+        /* Standard DFT */
         __m256 av_in0, av_in1;
         __m256 v_out0, v_out1, v_out2;
 
@@ -156,6 +159,7 @@ static VOID r2hcf_rfft2avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
         v_out1 = _mm256_sub_ps(av_in0, av_in1);
         STR_256_S(curr_out, v_out_stride, v_out1);
 
+        /* Shifted DFT */
         __m256 bv_in0, bv_in1;
 
         // Input point 2: x(1)
@@ -176,6 +180,7 @@ static VOID r2hcf_rfft2avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 4)
     {
+        /* Standard DFT */
         __m128 av_in0, av_in1;
         __m128 v_out0, v_out1, v_out2;
 
@@ -196,6 +201,7 @@ static VOID r2hcf_rfft2avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
         v_out1 = _mm_sub_ps(av_in0, av_in1);
         STR_128_S(curr_out, v_out_stride, v_out1);
 
+        /* Shifted DFT */
         __m128 bv_in0, bv_in1;
 
         // Input point 2: x(1)
@@ -216,6 +222,7 @@ static VOID r2hcf_rfft2avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
 
     if (n & 2)
     {
+        /* Standard DFT */
         __m128 av_in0, av_in1;
         __m128 v_out0, v_out1, v_out2;
 
@@ -236,6 +243,7 @@ static VOID r2hcf_rfft2avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
         v_out1 = _mm_sub_ps(av_in0, av_in1);
         STHR_128_S(curr_out, v_out_stride, v_out1);
 
+        /* Shifted DFT */
         __m128 bv_in0, bv_in1;
 
         // Input point 2: x(1)
@@ -256,17 +264,21 @@ static VOID r2hcf_rfft2avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
 
     if (n & 1)
     {
-        FLOAT av_in0, bv_in0, av_in1, bv_in1;
-
+        /* Standard DFT */
+        FLOAT av_in0, av_in1;
         av_in0 = *in;
-        bv_in0 = in[in_strides[1]];
         av_in1 = in[in_strides[2]];
-        bv_in1 = in[in_strides[3]];
 
         *out = av_in0 + av_in1;
+        out[out_strides[3]] = av_in0 - av_in1;
+
+        /* Shifted DFT */
+        FLOAT bv_in0, bv_in1;
+        bv_in0 = in[in_strides[1]];
+        bv_in1 = in[in_strides[3]];
+
         out[out_strides[1]] = bv_in0;
         out[out_strides[2]] = -bv_in1;
-        out[out_strides[3]] = av_in0 - av_in1;
     }
 }
 
@@ -292,6 +304,7 @@ static VOID r2hcf_rfft2avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m512 av_in0, av_in1;
         __m512 v_out0, v_out1, v_out2, v_out3;
 
@@ -312,6 +325,7 @@ static VOID r2hcf_rfft2avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
         v_out2 = _mm512_sub_ps(av_in0, av_in1);
         STR_512_S(curr_out, v_out_stride, v_out2);
 
+        /* Shifted DFT */
         __m512 bv_in0, bv_in1;
 
         // Input point 2: x(1) & Input point 3: x(2)
@@ -333,6 +347,7 @@ static VOID r2hcf_rfft2avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 8)
     {
+        /* Standard DFT */
         __m256 av_in0, av_in1;
         __m256 v_out0, v_out1, v_out2, v_out3;
 
@@ -353,6 +368,7 @@ static VOID r2hcf_rfft2avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
         v_out2 = _mm256_sub_ps(av_in0, av_in1);
         STR_256_S(curr_out, v_out_stride, v_out2);
 
+        /* Shifted DFT */
         __m256 bv_in0, bv_in1;
 
         // Input point 2: x(1) & Input point 3: x(2)
@@ -374,6 +390,7 @@ static VOID r2hcf_rfft2avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
     // tailcases
     if (n & 4)
     {
+        /* Standard DFT */
         __m128 av_in0, av_in1;
         __m128 v_out0, v_out1, v_out2, v_out3;
 
@@ -394,6 +411,7 @@ static VOID r2hcf_rfft2avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
         v_out2 = _mm_sub_ps(av_in0, av_in1);
         STR_128_S(curr_out, v_out_stride, v_out2);
 
+        /* Shifted DFT */
         __m128 bv_in0, bv_in1;
 
         // Input point 2: x(1) & Input point 3: x(2)
@@ -415,6 +433,7 @@ static VOID r2hcf_rfft2avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
 
     if (n & 2)
     {
+        /* Standard DFT */
         __m128 av_in0, av_in1;
         __m128 v_out0, v_out1, v_out2, v_out3;
 
@@ -435,6 +454,7 @@ static VOID r2hcf_rfft2avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
         v_out2 = _mm_sub_ps(av_in0, av_in1);
         STHR_128_S(curr_out, v_out_stride, v_out2);
 
+        /* Shifted DFT */
         __m128 bv_in0, bv_in1;
 
         // Input point 2: x(1) & Input point 3: x(2)
@@ -456,17 +476,21 @@ static VOID r2hcf_rfft2avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
 
     if (n & 1)
     {
-        FLOAT av_in0, bv_in0, av_in1, bv_in1;
-
+        /* Standard DFT */
+        FLOAT av_in0, av_in1;
         av_in0 = *in;
-        bv_in0 = in[in_strides[1]];
-        bv_in1 = in[in_strides[2]];
         av_in1 = in[in_strides[3]];
 
         *out = av_in0 + av_in1;
-        out[out_strides[1]] = bv_in0 + bv_in0;
         out[out_strides[2]] = av_in0 - av_in1;
-        out[out_strides[3]] = -bv_in1 - bv_in1;
+
+        /* Shifted DFT */
+        FLOAT bv_in0, bv_in1;
+        bv_in0 = in[in_strides[1]];
+        bv_in1 = in[in_strides[2]];
+
+        out[out_strides[1]] = bv_in0 + bv_in0;
+        out[out_strides[3]] = -(bv_in1 + bv_in1);
     }
 }
 
@@ -492,6 +516,7 @@ static VOID r2hcf_rfft2avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m512d av_in0, av_in1;
         __m512d v_out0, v_out1, v_out2;
 
@@ -512,6 +537,7 @@ static VOID r2hcf_rfft2avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
         v_out1 = _mm512_sub_pd(av_in0, av_in1);
         STR_512_D(curr_out, v_out_stride, v_out1);
 
+        /* Shifted DFT */
         __m512d bv_in0, bv_in1;
 
         // Input point 2: x(1)
@@ -532,6 +558,7 @@ static VOID r2hcf_rfft2avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 4)
     {
+        /* Standard DFT */
         __m256d av_in0, av_in1;
         __m256d v_out0, v_out1, v_out2;
 
@@ -552,6 +579,7 @@ static VOID r2hcf_rfft2avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
         v_out1 = _mm256_sub_pd(av_in0, av_in1);
         STR_256_D(curr_out, v_out_stride, v_out1);
 
+        /* Shifted DFT */
         __m256d bv_in0, bv_in1;
 
         // Input point 2: x(1)
@@ -572,6 +600,7 @@ static VOID r2hcf_rfft2avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
     // tailcases
     if (n & 2)
     {
+        /* Standard DFT */
         __m128d av_in0, av_in1;
         __m128d v_out0, v_out1, v_out2;
 
@@ -592,6 +621,7 @@ static VOID r2hcf_rfft2avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
         v_out1 = _mm_sub_pd(av_in0, av_in1);
         STR_128_D(curr_out, v_out_stride, v_out1);
 
+        /* Shifted DFT */
         __m128d bv_in0, bv_in1;
 
         // Input point 2: x(1)
@@ -612,17 +642,21 @@ static VOID r2hcf_rfft2avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 1)
     {
-        DOUBLE av_in0, bv_in0, av_in1, bv_in1;
-
+        /* Standard DFT */
+        DOUBLE av_in0, av_in1;
         av_in0 = *in;
-        bv_in0 = in[in_strides[1]];
         av_in1 = in[in_strides[2]];
-        bv_in1 = in[in_strides[3]];
 
         *out = av_in0 + av_in1;
+        out[out_strides[3]] = av_in0 - av_in1;
+
+        /* Shifted DFT */
+        DOUBLE bv_in0, bv_in1;
+        bv_in0 = in[in_strides[1]];
+        bv_in1 = in[in_strides[3]];
+
         out[out_strides[1]] = bv_in0;
         out[out_strides[2]] = -bv_in1;
-        out[out_strides[3]] = av_in0 - av_in1;
     }
 }
 
@@ -648,6 +682,7 @@ static VOID r2hcf_rfft2avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m512d av_in0, av_in1;
         __m512d v_out0, v_out1, v_out2, v_out3;
 
@@ -668,6 +703,7 @@ static VOID r2hcf_rfft2avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
         v_out2 = _mm512_sub_pd(av_in0, av_in1);
         STR_512_D(curr_out, v_out_stride, v_out2);
 
+        /* Shifted DFT */
         __m512d bv_in0, bv_in1;
 
         // Input point 2: x(1) & Input point 3: x(2)
@@ -689,6 +725,7 @@ static VOID r2hcf_rfft2avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 4)
     {
+        /* Standard DFT */
         __m256d av_in0, av_in1;
         __m256d v_out0, v_out1, v_out2, v_out3;
 
@@ -709,6 +746,7 @@ static VOID r2hcf_rfft2avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
         v_out2 = _mm256_sub_pd(av_in0, av_in1);
         STR_256_D(curr_out, v_out_stride, v_out2);
 
+        /* Shifted DFT */
         __m256d bv_in0, bv_in1;
 
         // Input point 2: x(1) & Input point 3: x(2)
@@ -730,6 +768,7 @@ static VOID r2hcf_rfft2avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
     // tailcases
     if (n & 2)
     {
+        /* Standard DFT */
         __m128d av_in0, av_in1;
         __m128d v_out0, v_out1, v_out2, v_out3;
 
@@ -750,6 +789,7 @@ static VOID r2hcf_rfft2avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
         v_out2 = _mm_sub_pd(av_in0, av_in1);
         STR_128_D(curr_out, v_out_stride, v_out2);
 
+        /* Shifted DFT */
         __m128d bv_in0, bv_in1;
 
         // Input point 2: x(1) & Input point 3: x(2)
@@ -771,17 +811,21 @@ static VOID r2hcf_rfft2avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 1)
     {
-        DOUBLE av_in0, bv_in0, av_in1, bv_in1;
-
+        /* Standard DFT */
+        DOUBLE av_in0, av_in1;
         av_in0 = *in;
-        bv_in0 = in[in_strides[1]];
-        bv_in1 = in[in_strides[2]];
         av_in1 = in[in_strides[3]];
 
         *out = av_in0 + av_in1;
-        out[out_strides[1]] = bv_in0 + bv_in0;
         out[out_strides[2]] = av_in0 - av_in1;
-        out[out_strides[3]] = -bv_in1 - bv_in1;
+
+        /* Shifted DFT */
+        DOUBLE bv_in0, bv_in1;
+        bv_in0 = in[in_strides[1]];
+        bv_in1 = in[in_strides[2]];
+
+        out[out_strides[1]] = bv_in0 + bv_in0;
+        out[out_strides[3]] = -(bv_in1 + bv_in1);
     }
 }
 

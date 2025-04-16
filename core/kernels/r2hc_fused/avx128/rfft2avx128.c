@@ -96,6 +96,7 @@ static VOID r2hcf_rfft2avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m128 av_in0, av_in1;
         __m128 v_out0, v_out1, v_out2;
 
@@ -116,6 +117,7 @@ static VOID r2hcf_rfft2avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
         v_out1 = _mm_sub_ps(av_in0, av_in1);
         STR_128_S(curr_out, v_out_stride, v_out1);
 
+        /* Shifted DFT */
         __m128 bv_in0, bv_in1;
 
         // Input point 2: x(1)
@@ -136,6 +138,7 @@ static VOID r2hcf_rfft2avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 2)
     {
+        /* Standard DFT */
        __m128 av_in0, av_in1;
        __m128 v_out0, v_out1, v_out2;
 
@@ -156,6 +159,7 @@ static VOID r2hcf_rfft2avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
        v_out1 = _mm_sub_ps(av_in0, av_in1);
        STHR_128_S(curr_out, v_out_stride, v_out1);
 
+        /* Shifted DFT */
        __m128 bv_in0, bv_in1;
 
        // Input point 2: x(1)
@@ -176,7 +180,7 @@ static VOID r2hcf_rfft2avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 1)
     {
-        // Standard DFT
+        /* Standard DFT */
         FLOAT av_in0, av_in1;
         av_in0 = *in;
         av_in1 = in[in_strides[2]];
@@ -184,7 +188,7 @@ static VOID r2hcf_rfft2avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
         *out = av_in0 + av_in1;
         out[out_strides[3]] = av_in0 - av_in1;
 
-        // Shifted DFT
+        /* Shifted DFT */
         FLOAT bv_in0, bv_in1;
         bv_in0 = in[in_strides[1]];
         bv_in1 = in[in_strides[3]];
@@ -216,6 +220,7 @@ static VOID r2hcf_rfft2avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m128 av_in0, av_in1;
         __m128 v_out0, v_out1, v_out2, v_out3;
 
@@ -236,6 +241,7 @@ static VOID r2hcf_rfft2avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
         v_out2 = _mm_sub_ps(av_in0, av_in1);
         STR_128_S(curr_out, v_out_stride, v_out2);
 
+        /* Shifted DFT */
         __m128 bv_in0, bv_in1;
 
         // Input point 2: x(1) & Input point 3: x(2)
@@ -257,6 +263,7 @@ static VOID r2hcf_rfft2avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 2)
     {
+        /* Standard DFT */
        __m128 av_in0, av_in1;
        __m128 v_out0, v_out1, v_out2, v_out3;
 
@@ -277,6 +284,7 @@ static VOID r2hcf_rfft2avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
        v_out2 = _mm_sub_ps(av_in0, av_in1);
        STHR_128_S(curr_out, v_out_stride, v_out2);
 
+        /* Shifted DFT */
        __m128 bv_in0, bv_in1;
 
        // Input point 2: x(1) & Input point 3: x(2)
@@ -298,7 +306,7 @@ static VOID r2hcf_rfft2avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 1)
     {
-        // Standard DFT
+        /* Standard DFT */
         FLOAT av_in0, av_in1;
         av_in0 = *in;
         av_in1 = in[in_strides[3]];
@@ -306,7 +314,7 @@ static VOID r2hcf_rfft2avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
         *out = av_in0 + av_in1;
         out[out_strides[2]] = av_in0 - av_in1;
 
-        // Shifted DFT
+        /* Shifted DFT */
         FLOAT bv_in0, bv_in1;
         bv_in0 = in[in_strides[1]];
         bv_in1 = in[in_strides[2]];
@@ -338,6 +346,7 @@ static VOID r2hcf_rfft2avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m128d av_in0, av_in1;
         __m128d v_out0, v_out1, v_out2;
 
@@ -358,6 +367,7 @@ static VOID r2hcf_rfft2avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
         v_out1 = _mm_sub_pd(av_in0, av_in1);
         STR_128_D(curr_out, v_out_stride, v_out1);
 
+        /* Shifted DFT */
         __m128d bv_in0, bv_in1;
 
         // Input point 2: x(1)
@@ -378,7 +388,7 @@ static VOID r2hcf_rfft2avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 1)
     {
-        // Standard DFT
+        /* Standard DFT */
         DOUBLE av_in0, av_in1;
         av_in0 = *in;
         av_in1 = in[in_strides[2]];
@@ -386,7 +396,7 @@ static VOID r2hcf_rfft2avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
         *out = av_in0 + av_in1;
         out[out_strides[3]] = av_in0 - av_in1;
 
-        // Shifted DFT
+        /* Shifted DFT */
         DOUBLE bv_in0, bv_in1;
         bv_in0 = in[in_strides[1]];
         bv_in1 = in[in_strides[3]];
@@ -418,6 +428,7 @@ static VOID r2hcf_rfft2avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m128d av_in0, av_in1;
         __m128d v_out0, v_out1, v_out2, v_out3;
 
@@ -438,6 +449,7 @@ static VOID r2hcf_rfft2avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
         v_out2 = _mm_sub_pd(av_in0, av_in1);
         STR_128_D(curr_out, v_out_stride, v_out2);
 
+        /* Shifted DFT */
         __m128d bv_in0, bv_in1;
 
         // Input point 2: x(1) & Input point 3: x(2)
@@ -459,7 +471,7 @@ static VOID r2hcf_rfft2avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 1)
     {
-        // Standard DFT
+        /* Standard DFT */
         DOUBLE av_in0, av_in1;
         av_in0 = *in;
         av_in1 = in[in_strides[3]];
@@ -467,7 +479,7 @@ static VOID r2hcf_rfft2avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
         *out = av_in0 + av_in1;
         out[out_strides[2]] = av_in0 - av_in1;
 
-        // Shifted DFT
+        /* Shifted DFT */
         DOUBLE bv_in0, bv_in1;
         bv_in0 = in[in_strides[1]];
         bv_in1 = in[in_strides[2]];

@@ -94,7 +94,7 @@ VOID r2hcf_rfft2c_fp32_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        // Standard DFT
+        /* Standard DFT */
         FLOAT av0, av1;
         av0 = *in;                          // Input point 1: x(0)
         av1 = in[in_strides[2]];            // Input point 3: x(2)
@@ -102,7 +102,7 @@ VOID r2hcf_rfft2c_fp32_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
         *out = av0 + av1;                   // Output point 1: X(0)
         out[out_strides[3]] = av0 - av1;    // Output point 4: X(3)
 
-        // Shifted DFT
+        /* Shifted DFT */
         FLOAT bv0, bv1;
         bv0 = in[in_strides[1]];            // Input point 2: x(1)
         bv1 = in[in_strides[3]];            // Input point 4: x(3)
@@ -142,7 +142,7 @@ VOID r2hcf_rfft2c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        // Standard DFT
+        /* Standard DFT */
         FLOAT av0, av1;
         av0 = *in;                            // Input point 1: x(0)
         av1 = in[in_strides[3]];              // Input point 4: x(3)
@@ -150,7 +150,7 @@ VOID r2hcf_rfft2c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
         *out = av0 + av1;                     // Output point 1: X(0)
         out[out_strides[2]] = av0 - av1;      // Output point 3: X(2)
 
-        // Shifted DFT
+        /* Shifted DFT */
         FLOAT bv0, bv1;
         bv0 = in[in_strides[1]];              // Input point 2: x(1)
         bv1 = in[in_strides[2]];              // Input point 3: x(2)
@@ -188,7 +188,7 @@ VOID r2hcf_rfft2c_fp64_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        // Standard DFT
+        /* Standard DFT */
         DOUBLE av0, av1;
         av0 = *in;                          // Input point 1: x(0)
         av1 = in[in_strides[2]];            // Input point 3: x(2)
@@ -236,7 +236,7 @@ VOID r2hcf_rfft2c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        // Standard DFT
+        /* Standard DFT */
         DOUBLE av0, av1;
         av0 = *in;                            // Input point 1: x(0)
         av1 = in[in_strides[3]];              // Input point 4: x(3)

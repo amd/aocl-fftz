@@ -605,6 +605,7 @@ static VOID r2hcf_rfft7c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
+        /* Standard DFT */
         DOUBLE av0, av1, av2, av3, av4, av5, av6;
         DOUBLE at0, at1, at2, at3, at4, at5, at6, at7, at8, at9,
               at10, at11, at12, at13, at14, at15, at16, at17, at18, at19,

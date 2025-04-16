@@ -141,6 +141,7 @@ static VOID r2hcf_rfft15avx256_fp32_fwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m256 av_in0, av_in1, av_in2, av_in3;
         __m256 av_s0, av_s1, av_s2, av_s3, av_s4, av_s5, av_s6, av_s7, av_s8,
                av_s9, av_s10, av_s11, av_s12, av_s13, av_s15, av_s16, av_s17,
@@ -517,6 +518,7 @@ static VOID r2hcf_rfft15avx256_fp32_fwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 4)
     {
+        /* Standard DFT */
         __m128 av_in0, av_in1, av_in2, av_in3;
         __m128 av_s0, av_s1, av_s2, av_s3, av_s4, av_s5, av_s6, av_s7, av_s8,
                av_s9, av_s10, av_s11, av_s12, av_s13, av_s15, av_s16, av_s17,
@@ -906,6 +908,7 @@ static VOID r2hcf_rfft15avx256_fp32_fwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 2)
     {
+        /* Standard DFT */
         __m128 av_in0, av_in1, av_in2, av_in3;
         __m128 av_s0, av_s1, av_s2, av_s3, av_s4, av_s5, av_s6, av_s7, av_s8,
                av_s9, av_s10, av_s11, av_s12, av_s13, av_s15, av_s16, av_s17,
@@ -1583,6 +1586,7 @@ static VOID r2hcf_rfft15avx256_fp32_bwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m256 av_in0, av_in1, av_in2, av_in3;
         __m256 av_s0, av_s1, av_s2, av_s3, av_s4, av_s5, av_s6, av_s7, av_s8,
                av_s9, av_s10, av_s11, av_s12, av_s13, av_s14, av_s15, av_s16,
@@ -1984,6 +1988,7 @@ static VOID r2hcf_rfft15avx256_fp32_bwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 4)
     {
+        /* Standard DFT */
         __m128 av_in0, av_in1, av_in2, av_in3;
         __m128 av_s0, av_s1, av_s2, av_s3, av_s4, av_s5, av_s6, av_s7, av_s8,
                av_s9, av_s10, av_s11, av_s12, av_s13, av_s14, av_s15, av_s16,
@@ -2400,6 +2405,7 @@ static VOID r2hcf_rfft15avx256_fp32_bwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 2)
     {
+        /* Standard DFT */
         __m128 av_in0, av_in1, av_in2, av_in3;
         __m128 av_s0, av_s1, av_s2, av_s3, av_s4, av_s5, av_s6, av_s7, av_s8,
                av_s9, av_s10, av_s11, av_s12, av_s13, av_s14, av_s15, av_s16,
@@ -3189,6 +3195,7 @@ static VOID r2hcf_rfft15avx256_fp64_fwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m256d av_in0, av_in1, av_in2, av_in3;
         __m256d av_s0, av_s1, av_s2, av_s3, av_s4, av_s5, av_s6, av_s7, av_s8,
                 av_s9, av_s10, av_s11, av_s12, av_s13, av_s15, av_s16, av_s17,
@@ -3565,6 +3572,7 @@ static VOID r2hcf_rfft15avx256_fp64_fwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 2)
     {
+        /* Standard DFT */
         __m128d av_in0, av_in1, av_in2, av_in3;
         __m128d av_s0, av_s1, av_s2, av_s3, av_s4, av_s5, av_s6, av_s7, av_s8,
                 av_s9, av_s10, av_s11, av_s12, av_s13, av_s15, av_s16, av_s17,
@@ -4243,6 +4251,7 @@ static VOID r2hcf_rfft15avx256_fp64_bwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m256d av_in0, av_in1, av_in2, av_in3;
         __m256d av_s0, av_s1, av_s2, av_s3, av_s4, av_s5, av_s6, av_s7, av_s8,
                 av_s9, av_s10, av_s11, av_s12, av_s13, av_s14, av_s15, av_s16,
@@ -4644,6 +4653,7 @@ static VOID r2hcf_rfft15avx256_fp64_bwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 2)
     {
+        /* Standard DFT */
         __m128d av_in0, av_in1, av_in2, av_in3;
         __m128d av_s0, av_s1, av_s2, av_s3, av_s4, av_s5, av_s6, av_s7, av_s8,
                 av_s9, av_s10, av_s11, av_s12, av_s13, av_s14, av_s15, av_s16,

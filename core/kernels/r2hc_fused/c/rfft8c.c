@@ -223,11 +223,11 @@ static VOID r2hcf_rfft8c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
+        /* Standard DFT */
         FLOAT av0, av1, av2, av3, av4, av5, av6, av7;
         FLOAT at0, at1, at2, at3, at4, at5, at6, at7, at8, at9,
               at10, at11, at12, at13, at14, at15, at16, at17;
 
-        /* Standard DFT */
         av0 = *in;                  // Input point 1: x(0)
         av1 = in[in_strides[3]];    // Input point 4: x(3)
         av2 = in[in_strides[4]];    // Input point 5: x(4)
@@ -477,11 +477,11 @@ static VOID r2hcf_rfft8c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     for (cnt = 0; cnt < n; cnt++)
     {
+        /* Standard DFT */
         DOUBLE av0, av1, av2, av3, av4, av5, av6, av7;
         DOUBLE at0, at1, at2, at3, at4, at5, at6, at7, at8, at9,
                at10, at11, at12, at13, at14, at15, at16, at17;
 
-        /* Standard DFT */
         av0 = *in;                  // Input point 1: x(0)
         av1 = in[in_strides[3]];    // Input point 4: x(3)
         av2 = in[in_strides[4]];    // Input point 5: x(4)

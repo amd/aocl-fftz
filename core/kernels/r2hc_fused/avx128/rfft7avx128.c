@@ -109,6 +109,7 @@ static VOID r2hcf_rfft7avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m128 av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6;
         __m128 av_sv1, av_sv2, av_sv3, av_sv4, av_sv5, av_sv6, av_sv7, av_sv8,
                av_tv1, av_tv2, av_tv3, av_sv9, av_sv10, av_tv4, av_tv5, av_tv6,
@@ -205,6 +206,7 @@ static VOID r2hcf_rfft7avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
         v_out12 = _mm_add_ps(av_sv17, av_tv18);
         STRI_2x128_S(curr_out, v_out_stride, v_out11, v_out12);
 
+        /* Shifted DFT */
         __m128 bv_in0, bv_in1, bv_in2, bv_in3, bv_in4, bv_in5, bv_in6;
         __m128 bv_sv1, bv_sv2, bv_sv3, bv_sv4, bv_sv5, bv_sv6, bv_tv1, bv_tv2,
                bv_tv3, bv_sv7, bv_sv8, bv_tv4, bv_tv5, bv_tv6, bv_sv9, bv_tv7,
@@ -304,6 +306,7 @@ static VOID r2hcf_rfft7avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 2)
     {
+        /* Standard DFT */
         __m128 av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6;
         __m128 av_sv1, av_sv2, av_sv3, av_sv4, av_sv5, av_sv6, av_sv7, av_sv8,
                av_tv1, av_tv2, av_tv3, av_sv9, av_sv10, av_tv4, av_tv5, av_tv6,
@@ -400,6 +403,7 @@ static VOID r2hcf_rfft7avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
         v_out12 = _mm_add_ps(av_sv17, av_tv18);
         STHRI_2x128_S(curr_out, v_out_stride, v_out11, v_out12);
 
+        /* Shifted DFT */
         __m128 bv_in0, bv_in1, bv_in2, bv_in3, bv_in4, bv_in5, bv_in6;
         __m128 bv_sv1, bv_sv2, bv_sv3, bv_sv4, bv_sv5, bv_sv6, bv_tv1, bv_tv2,
                bv_tv3, bv_sv7, bv_sv8, bv_tv4, bv_tv5, bv_tv6, bv_sv9, bv_tv7,
@@ -667,6 +671,7 @@ static VOID r2hcf_rfft7avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m128 av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6;
         __m128 av_tv1, av_tv2, av_tv3, av_sv1, av_sv2, av_sv3, av_tv4, av_tv5,
                av_tv6, av_sv4, av_sv5, av_tv7, av_tv8, av_tv9, av_sv6, av_sv7,
@@ -762,6 +767,7 @@ static VOID r2hcf_rfft7avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
         v_out12 = _mm_add_ps(av_sv3, av_sv5);
         STR_128_S(curr_out, v_out_stride, v_out12);
 
+        /* Shifted DFT */
         __m128 bv_in0, bv_in1, bv_in2, bv_in3, bv_in4, bv_in5, bv_in6;
         __m128 bv_tv1, bv_tv2, bv_tv3, bv_sv1, bv_sv2, bv_sv3, bv_tv4, bv_tv5,
                bv_tv6, bv_sv4, bv_sv5, bv_tv7, bv_tv8, bv_tv9, bv_sv6, bv_sv7,
@@ -859,6 +865,7 @@ static VOID r2hcf_rfft7avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 2)
     {
+        /* Standard DFT */
         __m128 av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6;
         __m128 av_tv1, av_tv2, av_tv3, av_sv1, av_sv2, av_sv3, av_tv4, av_tv5,
                av_tv6, av_sv4, av_sv5, av_tv7, av_tv8, av_tv9, av_sv6, av_sv7,
@@ -954,6 +961,7 @@ static VOID r2hcf_rfft7avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
         v_out12 = _mm_add_ps(av_sv3, av_sv5);
         STHR_128_S(curr_out, v_out_stride, v_out12);
 
+        /* Shifted DFT */
         __m128 bv_in0, bv_in1, bv_in2, bv_in3, bv_in4, bv_in5, bv_in6;
         __m128 bv_tv1, bv_tv2, bv_tv3, bv_sv1, bv_sv2, bv_sv3, bv_tv4, bv_tv5,
                bv_tv6, bv_sv4, bv_sv5, bv_tv7, bv_tv8, bv_tv9, bv_sv6, bv_sv7,
@@ -1223,6 +1231,7 @@ static VOID r2hcf_rfft7avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m128d av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6;
         __m128d av_sv1, av_sv2, av_sv3, av_sv4, av_sv5, av_sv6, av_sv7, av_sv8,
                 av_tv1, av_tv2, av_tv3, av_sv9, av_sv10, av_tv4, av_tv5, av_tv6,
@@ -1319,6 +1328,7 @@ static VOID r2hcf_rfft7avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
         v_out12 = _mm_add_pd(av_sv17, av_tv18);
         STRI_2x128_D(curr_out, v_out_stride, v_out11, v_out12);
 
+        /* Shifted DFT */
         __m128d bv_in0, bv_in1, bv_in2, bv_in3, bv_in4, bv_in5, bv_in6;
         __m128d bv_sv1, bv_sv2, bv_sv3, bv_sv4, bv_sv5, bv_sv6, bv_tv1, bv_tv2,
                 bv_tv3, bv_sv7, bv_sv8, bv_tv4, bv_tv5, bv_tv6, bv_sv9, bv_tv7,
@@ -1586,6 +1596,7 @@ static VOID r2hcf_rfft7avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
 
     for (cnt = 0; cnt < N; cnt++)
     {
+        /* Standard DFT */
         __m128d av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6;
         __m128d av_tv1, av_tv2, av_tv3, av_sv1, av_sv2, av_sv3, av_tv4, av_tv5,
                av_tv6, av_sv4, av_sv5, av_tv7, av_tv8, av_tv9, av_sv6, av_sv7,
@@ -1681,6 +1692,7 @@ static VOID r2hcf_rfft7avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
         v_out12 = _mm_add_pd(av_sv3, av_sv5);
         STR_128_D(curr_out, v_out_stride, v_out12);
 
+        /* Shifted DFT */
         __m128d bv_in0, bv_in1, bv_in2, bv_in3, bv_in4, bv_in5, bv_in6;
         __m128d bv_tv1, bv_tv2, bv_tv3, bv_sv1, bv_sv2, bv_sv3, bv_tv4, bv_tv5,
                bv_tv6, bv_sv4, bv_sv5, bv_tv7, bv_tv8, bv_tv9, bv_sv6, bv_sv7,
@@ -1779,6 +1791,7 @@ static VOID r2hcf_rfft7avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
     // tail cases
     if (n & 1)
     {
+        /* Standard DFT */
         DOUBLE av0, av1, av2, av3, av4, av5, av6;
         DOUBLE at0, at1, at2, at3, at4, at5, at6, at7, at8, at9,
               at10, at11, at12, at13, at14, at15, at16, at17, at18, at19,
