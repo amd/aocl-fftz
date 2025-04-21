@@ -42,12 +42,6 @@
 #include "core/kernels/kernel.h"
 #include "core/common/twiddle.h"
 
-// Tables of kernels that are populated with applicable kernels at setup time.
-// There are 4 sets of kernels contained in the kernels_table which are :
-// c, avx128, avx256, avx512
-// Each set is having 64 entries populated based on support for the kernels of
-// those radices.
-kernel_t kernels_table[NUM_KERNELS_IN_TABLE] = {{0x0}};
 
 //Register all applicable solvers and kernels into the respective tables
 //based on the input problem and cpu arch flags
@@ -69,7 +63,7 @@ INT32 register_solvers_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE], INT32 dt,
     return ret;
 }
 
-INT32 check_FFT_kernel_support(INTP n)
+INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table)
 {
     INT32 is_supported = 0, i;
     for (i = 0; i < NUM_KERNELS_IN_TABLE; i++)
@@ -142,7 +136,8 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel, kernel_t *kertab)
     INT32 ret = SELECTOR_FAILURE;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 is_FFT_ker_supported =
-            check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n);
+            check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n,
+                                     kertab);
     INT32 is_solvable_by_bluestein =
             check_prime_solvability_bluestein(sel->solution->decomp_scheme,
                                               is_FFT_ker_supported, kertab);
@@ -323,7 +318,8 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel, kernel_t *kertab,
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 is_FFT_ker_supported =
-            check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n);
+            check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n,
+                                     kertab);
     INT32 is_solvable_by_bluestein = 0;
     INT32 level1_cond1 = 0;
     INT32 level1_cond2 = 0;
@@ -485,6 +481,12 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
     aoclfftz_selector_t *sel_obj = NULL;
 
+    // Tables of kernels contains 4 sets of kernels which are :
+    // c, avx128, avx256, avx512
+    // Each set is having 64 entries populated based on support for the kernels
+    // of those radices.
+    kernel_t kernels_table[NUM_KERNELS_IN_TABLE] = {{0x0}};
+
     // shrink dim_rank
     // used in n dim case where size one problems are removed
     INT32 dim_rank = 1;
@@ -549,6 +551,12 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     INT32 cpu_flags = 0;
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
     aoclfftz_selector_t *sel_obj = NULL;
+
+    // Tables of kernels contains 4 sets of kernels which are :
+    // c, avx128, avx256, avx512
+    // Each set is having 64 entries populated based on support for the kernels
+    // of those radices.
+    kernel_t kernels_table[NUM_KERNELS_IN_TABLE] = {{0x0}};
 
     // shrink dim_rank
     // used in n dim case where size one problems are removed
@@ -615,6 +623,12 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
     aoclfftz_selector_t *sel_obj = NULL;
 
+    // Tables of kernels contains 4 sets of kernels which are :
+    // c, avx128, avx256, avx512
+    // Each set is having 64 entries populated based on support for the kernels
+    // of those radices.
+    kernel_t kernels_table[NUM_KERNELS_IN_TABLE] = {{0x0}};
+
     // shrink dim_rank
     // used in n dim case where size one problems are removed
     INT32 dim_rank = 1;
@@ -679,6 +693,12 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     INT32 cpu_flags = 0;
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
     aoclfftz_selector_t *sel_obj = NULL;
+
+    // Tables of kernels contains 4 sets of kernels which are :
+    // c, avx128, avx256, avx512
+    // Each set is having 64 entries populated based on support for the kernels
+    // of those radices.
+    kernel_t kernels_table[NUM_KERNELS_IN_TABLE] = {{0x0}};
 
     // shrink dim_rank
     // used in n dim case where size one problems are removed
@@ -757,8 +777,6 @@ exit_setup_dft_d_64_:
 
 VOID destroy_handle(VOID *handle)
 {
-    // clear the global kernels_table since it is bound to the setup api
-    memset(kernels_table, 0, NUM_KERNELS_IN_TABLE * sizeof(kernel_t));
     destroy_selector((aoclfftz_selector_t *)handle);
 }
 
