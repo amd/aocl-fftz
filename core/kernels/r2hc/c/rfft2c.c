@@ -74,7 +74,6 @@ VOID r2hc_rfft2c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP v_out_stride = strides->v_out_stride;
     INTP cnt;
 
-    // both R2C and C2R uses same approach
     for (cnt = 0; cnt < n; cnt++)
     {
         FLOAT v0, v1;
@@ -114,7 +113,7 @@ VOID r2hc_rfft2c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP v_out_stride = strides->v_out_stride;
     INTP cnt;
 
-    // both R2C and C2R uses same approach
+
     for (cnt = 0; cnt < n; cnt++)
     {
         DOUBLE v0, v1;

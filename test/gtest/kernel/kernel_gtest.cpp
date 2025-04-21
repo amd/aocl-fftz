@@ -520,7 +520,9 @@ aoclfftz_kernel_test_params_t param_float_r2hc_c_kernels[] =
     {8, aocl_fftz_kernel_type::STANDARD_R2HC_C,
         aoclfftz_kernel_test_type::ALL},
     {10, aocl_fftz_kernel_type::STANDARD_R2HC_C,
-         aoclfftz_kernel_test_type::ALL}
+        aoclfftz_kernel_test_type::ALL},
+    {12, aocl_fftz_kernel_type::STANDARD_R2HC_C,
+        aoclfftz_kernel_test_type::ALL}
 };
 
 // R2HC - C Kernels - Double
@@ -541,7 +543,9 @@ aoclfftz_kernel_test_params_t param_double_r2hc_c_kernels[] =
     {8, aocl_fftz_kernel_type::STANDARD_R2HC_C,
         aoclfftz_kernel_test_type::ALL},
     {10, aocl_fftz_kernel_type::STANDARD_R2HC_C,
-         aoclfftz_kernel_test_type::ALL}
+        aoclfftz_kernel_test_type::ALL},
+    {12, aocl_fftz_kernel_type::STANDARD_R2HC_C,
+        aoclfftz_kernel_test_type::ALL}
 };
 
 // R2HC-Fused - C Kernels - Float
@@ -562,7 +566,9 @@ aoclfftz_kernel_test_params_t param_float_r2hcf_c_kernels[] =
     {8, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
         aoclfftz_kernel_test_type::ALL},
     {10, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
-         aoclfftz_kernel_test_type::ALL}
+        aoclfftz_kernel_test_type::ALL},
+    {12, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
+        aoclfftz_kernel_test_type::ALL}
 };
 
 // R2HC-Fused - C Kernels - Double
@@ -583,7 +589,9 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_c_kernels[] =
     {8, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
         aoclfftz_kernel_test_type::ALL},
     {10, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
-         aoclfftz_kernel_test_type::ALL}
+        aoclfftz_kernel_test_type::ALL},
+    {12, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
+        aoclfftz_kernel_test_type::ALL}
 };
 
 #ifdef ENABLE_AVX128
@@ -601,7 +609,7 @@ aoclfftz_kernel_test_params_t param_double_r2hc_avx128_kernels[] =
     {5, aocl_fftz_kernel_type::STANDARD_R2HC_AVX128,
         aoclfftz_kernel_test_type::ALL},
     {5, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX128,
-        aoclfftz_kernel_test_type::ALL},
+        aoclfftz_kernel_test_type::ALL}
 };
 
 // R2HC - AVX128 Kernels - Float
@@ -618,7 +626,7 @@ aoclfftz_kernel_test_params_t param_float_r2hc_avx128_kernels[] =
     {5, aocl_fftz_kernel_type::STANDARD_R2HC_AVX128,
         aoclfftz_kernel_test_type::ALL},
     {5, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX128,
-        aoclfftz_kernel_test_type::ALL},
+        aoclfftz_kernel_test_type::ALL}
 };
 
 // R2HC-Fused - AVX128 Kernels - Double
@@ -631,7 +639,7 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_avx128_kernels[] =
     {7, aocl_fftz_kernel_type::STANDARD_R2HCF_AVX128,
         aoclfftz_kernel_test_type::ALL},
     {7, aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX128,
-        aoclfftz_kernel_test_type::ALL},
+        aoclfftz_kernel_test_type::ALL}
 };
 
 // R2HC-Fused - AVX128 Kernels - Float
@@ -644,7 +652,7 @@ aoclfftz_kernel_test_params_t param_float_r2hcf_avx128_kernels[] =
     {7, aocl_fftz_kernel_type::STANDARD_R2HCF_AVX128,
         aoclfftz_kernel_test_type::ALL},
     {7, aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX128,
-        aoclfftz_kernel_test_type::ALL},
+        aoclfftz_kernel_test_type::ALL}
 };
 #endif
 
@@ -663,7 +671,7 @@ aoclfftz_kernel_test_params_t param_double_r2hc_avx256_kernels[] =
     {5, aocl_fftz_kernel_type::STANDARD_R2HC_AVX256,
         aoclfftz_kernel_test_type::ALL},
     {5, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX256,
-        aoclfftz_kernel_test_type::ALL},
+        aoclfftz_kernel_test_type::ALL}
 };
 
 // R2HC - AVX256 Kernels - Float
@@ -680,7 +688,7 @@ aoclfftz_kernel_test_params_t param_float_r2hc_avx256_kernels[] =
     {5, aocl_fftz_kernel_type::STANDARD_R2HC_AVX256,
         aoclfftz_kernel_test_type::ALL},
     {5, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX256,
-        aoclfftz_kernel_test_type::ALL},
+        aoclfftz_kernel_test_type::ALL}
 };
 
 // R2HC-Fused - AVX256 Kernels - Double
@@ -689,7 +697,7 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_avx256_kernels[] =
     {2, aocl_fftz_kernel_type::STANDARD_R2HCF_AVX256,
         aoclfftz_kernel_test_type::ALL},
     {2, aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX256,
-        aoclfftz_kernel_test_type::ALL},
+        aoclfftz_kernel_test_type::ALL}
 };
 
 // R2HC-Fused - AVX256 Kernels - Float
@@ -698,7 +706,7 @@ aoclfftz_kernel_test_params_t param_float_r2hcf_avx256_kernels[] =
     {2, aocl_fftz_kernel_type::STANDARD_R2HCF_AVX256,
         aoclfftz_kernel_test_type::ALL},
     {2, aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX256,
-        aoclfftz_kernel_test_type::ALL},
+        aoclfftz_kernel_test_type::ALL}
 };
 #endif
 
@@ -717,7 +725,7 @@ aoclfftz_kernel_test_params_t param_double_r2hc_avx512_kernels[] =
     {5, aocl_fftz_kernel_type::STANDARD_R2HC_AVX512,
         aoclfftz_kernel_test_type::ALL},
     {5, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX512,
-        aoclfftz_kernel_test_type::ALL},
+        aoclfftz_kernel_test_type::ALL}
 };
 
 // R2HC - AVX512 Kernels - Float
@@ -734,7 +742,7 @@ aoclfftz_kernel_test_params_t param_float_r2hc_avx512_kernels[] =
     {5, aocl_fftz_kernel_type::STANDARD_R2HC_AVX512,
         aoclfftz_kernel_test_type::ALL},
     {5, aocl_fftz_kernel_type::PERMUTED_R2HC_AVX512,
-        aoclfftz_kernel_test_type::ALL},
+        aoclfftz_kernel_test_type::ALL}
 };
 
 // R2HC-Fused - AVX512 Kernels - Double
@@ -743,7 +751,7 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_avx512_kernels[] =
     {2, aocl_fftz_kernel_type::STANDARD_R2HCF_AVX512,
         aoclfftz_kernel_test_type::ALL},
     {2, aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX512,
-        aoclfftz_kernel_test_type::ALL},
+        aoclfftz_kernel_test_type::ALL}
 };
 
 // R2HC-Fused - AVX512 Kernels - Float
@@ -752,7 +760,7 @@ aoclfftz_kernel_test_params_t param_float_r2hcf_avx512_kernels[] =
     {2, aocl_fftz_kernel_type::STANDARD_R2HCF_AVX512,
         aoclfftz_kernel_test_type::ALL},
     {2, aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX512,
-        aoclfftz_kernel_test_type::ALL},
+        aoclfftz_kernel_test_type::ALL}
 };
 #endif
 // IO params as {in-stride, out-stride , batch size, dir of FFT(0->FWD/1-> BWD),

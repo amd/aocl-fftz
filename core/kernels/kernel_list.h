@@ -164,7 +164,8 @@ kernel_fp_list_t kernels_r2hc_c[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_r2hc_rfft6c, get_ops_cnt_r2hc_rfft6c, 6},    // radix-6
     {register_kernel_r2hc_rfft7c, get_ops_cnt_r2hc_rfft7c, 7},    // radix-7
     {register_kernel_r2hc_rfft8c, get_ops_cnt_r2hc_rfft8c, 8},    // radix-8
-    {register_kernel_r2hc_rfft10c, get_ops_cnt_r2hc_rfft10c, 10}  // radix-10
+    {register_kernel_r2hc_rfft10c, get_ops_cnt_r2hc_rfft10c, 10}, // radix-10
+    {register_kernel_r2hc_rfft12c, get_ops_cnt_r2hc_rfft12c, 12}  // radix-12
 };
 
 // R2HC-Fused - C Kernel List
@@ -177,7 +178,8 @@ kernel_fp_list_t kernels_r2hcf_c[NUM_KERNELS_IN_EACH_CATEGORY] =
     {register_kernel_r2hcf_rfft6c, get_ops_cnt_r2hcf_rfft6c, 6},    // radix-6
     {register_kernel_r2hcf_rfft7c, get_ops_cnt_r2hcf_rfft7c, 7},    // radix-7
     {register_kernel_r2hcf_rfft8c, get_ops_cnt_r2hcf_rfft8c, 8},    // radix-8
-    {register_kernel_r2hcf_rfft10c, get_ops_cnt_r2hcf_rfft10c, 10}  // radix-10
+    {register_kernel_r2hcf_rfft10c, get_ops_cnt_r2hcf_rfft10c, 10}, // radix-10
+    {register_kernel_r2hcf_rfft12c, get_ops_cnt_r2hcf_rfft12c, 12}  // radix-12
 };
 
 #ifdef ENABLE_AVX128
