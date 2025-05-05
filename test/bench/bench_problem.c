@@ -401,18 +401,6 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     {
         status = MAX(status, SIZE_PARSING_ERROR);
     }
-    // TODO: Support ND batched real problems
-    else if (bench_params->vec_rank > 1 && bench_params->fft_type != C2C)
-    {
-        printf("ERROR: ND batched real problems are not supported");
-        status = MAX(status, UNSUPPORTED_OPTION_ERROR);
-    }
-    // TODO: Support ND real problems
-    else if (bench_params->dim_rank > 1 && bench_params->fft_type != C2C)
-    {
-        printf("ERROR: ND real problems are not supported");
-        status = MAX(status, UNSUPPORTED_OPTION_ERROR);
-    }
 
     if (status != PARSER_SUCCESS)
     {
@@ -514,16 +502,16 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     UINT32 is_align = bench_params->aligned_alloc;
     INTP input_bytes = bench_params->sz_info.input_bytes;
     INTP output_bytes = bench_params->sz_info.output_bytes;
-    // For real FFT transforms, input and output have different data formats:
-    // R2C: N real values → N complex values and
-    // C2R: N complex values → N real values
-    // In-place operations require buffer size to accommodate the larger format.
-    if (bench_params->fft_type != C2C &&
-        bench_params->res_placement == IN_PLACE)
-    {
-        input_bytes = MAX(input_bytes, output_bytes);
-    }
+
+    // Adjust buffer sizes for real FFT types (R2C/C2R)
+    EXPAND_REAL_BUFFER_SIZES(bench_params, input_bytes, output_bytes);
+
     ALLOC_UNINIT(bench_params->in, VOID, input_bytes, is_align);
+    if (bench_params->in == NULL)
+    {
+        printf("ERROR: Memory allocation failed for input buffer\n");
+        return MEMORY_FAILURE;
+    }
 
     // use input buffer as output for in-place problems and create new output
     // buffer for out-of-place problems
@@ -534,6 +522,11 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     else
     {
         ALLOC_INIT(bench_params->out, VOID, output_bytes, is_align);
+        if (bench_params->out == NULL)
+        {
+            printf("ERROR: Memory allocation failed for output buffer\n");
+            return MEMORY_FAILURE;
+        }
     }
 
     AOCLFFTZ_LOG(TRACE, bench_params->logger_mode,

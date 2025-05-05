@@ -204,10 +204,14 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                         dftref_in_map, dftref_out_map);
 
         // Compare library output with DFT reference output
-        status = params->compare(params, buffers.out_ref, buffers.complex_out,
-                                 params->sz_info.batches, params->sz_info.n_out,
-                                 cmp_in_map, cmp_out_map,
-                                 params->sz_info.out_data_stride);
+        status = params->compare(
+            params, buffers.out_ref, buffers.complex_out,
+            params->sz_info.batches,
+            (params->fft_type == R2C ? params->sz_info.n_in
+                                     : params->sz_info.n_out),
+            cmp_in_map, cmp_out_map, params->sz_info.out_data_stride
+        );
+
         if (status != BENCH_SUCCESS)
         {
             AOCLFFTZ_ERROR("\nResults mismatch on accuracy "
@@ -375,7 +379,7 @@ INT32 execute_fft_and_postprocess(aoclfftz_bench_params_t *params,
         // comparison
         memset(buffers->complex_out, 0, complex_output_bytes);
         convert_half_complex_to_complex(
-            buffers->complex_out, params->out, params->sz_info.n,
+            buffers->complex_out, params->out, params->dims, params->dim_rank,
             params->sz_info.batches, out_idx_map, params->precision);
     }
     else if (params->fft_type == C2R)
@@ -387,7 +391,7 @@ INT32 execute_fft_and_postprocess(aoclfftz_bench_params_t *params,
 
         // Convert half-complex input to full complex for FFT
         convert_half_complex_to_complex(
-            buffers->complex_in, params->in, params->sz_info.n,
+            buffers->complex_in, params->in, params->dims, params->dim_rank,
             params->sz_info.batches, in_idx_map, params->precision);
 
         // Execute library FFT (params->in -> params->out)

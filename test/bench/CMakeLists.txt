@@ -252,6 +252,17 @@ set(STANDARD_TEST_SUITE
     "AVX256_C2C_5D_IP ./aocl_fftz_bench 2x3x4x5x6:2:2 -b a --dir f -p f -r i"                                 # accuracy | complex  | float    | LP64       | 5D  |  no      | NDim      | inplace   | forward   | AVX256  | AVX256 MT 5D
     "C_C2C_5D_CTBS ./aocl_fftz_bench 3x3x3x74x18:4:4 -b a --dir f -p f -o 0"                                  # accuracy | complex  | float    | LP64       | 5D  |  no      | NDimCT+BS | outplace  | forward   | C       | 5D CT+BS, float, outplace, forward
     "AVX512_C2C_5D_CTBS_BATCHED ./aocl_fftz_bench 3v6x3x3x18x18:4:4 -b a -p d -o 3 --dir b"                   # accuracy | complex  | double   | LP64       | 5D  | yes      | NDimCT+BS | outplace  | backward  | AVX512  | 5D batched CT+BS, double, outplace, backward
+    "R2C_C_3D_WITH_STRIDE_GREATER_THAN_DIM ./aocl_fftz_bench 12x28:4:5x2 -b a -f r2c -p f"                    # accuracy | real     | float    | LP64       | 3D  |  no      | NDim      | outplace  | forward   | C       | C 3D real FFT
+    "R2C_C_4D_WITH_STRIDE ./aocl_fftz_bench 4x6x18x20:3:4 -b a -f r2c -p f"                                   # accuracy | real     | float    | LP64       | 4D  |  no      | NDim      | outplace  | forward   | C       | C 4D real FFT
+    "R2C_C_3D_WITH_BATCH ./aocl_fftz_bench 6v9x19x24 -b a -f r2c -o 3 -m i"                                   # accuracy | real     | double   | ILP64      | 3D  | yes      | NDim      | outplace  | forward   | C       | C 3D real batched FFT ILP64
+    "R2C_C_4D_WITH_BATCH_STRIDE ./aocl_fftz_bench 13v4x20x5x7:3:3 -b a -p f -f r2c -r i"                      # accuracy | real     | float    | LP64       | 4D  | yes      | NDim      | inplace   | forward   | C       | C 4D real batched FFT, inplace
+    "R2C_AVX512_4D_BATCHED ./aocl_fftz_bench 4v33x2x6x10:2:2 -b a -f r2c -o 3"                                # accuracy | real     | double   | LP64       | 4D  | yes      | NDim      | outplace  | forward   | AVX512  | AVX512 batched 4D real accuracy
+    "R2C_C_2D_BATCHED_STRIDED_IP ./aocl_fftz_bench 10:24:12v3:8:4x6:1:1 -b a -f r2c -r i"                     # accuracy | real     | double   | LP64       | 2D  | yes      | NDim      | inplace   | forward   | C       | C 2D real batched FFT, inplace
+    "R2C_AVX128_2D_BATCHED_STRIDED_OP ./aocl_fftz_bench 10:36:24v3:12:8x6:2:3 -b a -p f -f r2c -o 1"          # accuracy | real     | float    | LP64       | 2D  | yes      | NDim      | outplace  | forward   | AVX128  | AVX128 2D real batched strided
+    "R2C_MULTI_BATCHED_2D_CT_IP ./aocl_fftz_bench 24x2x20v3x18 -b a -f r2c -r i"                              # accuracy | real     | double   | LP64       | 2D  | yes      | NDimCT    | inplace   | forward   | C       | C 2D real Batched CT inplace
+    "R2C_C_4D_COLMAJOR ./aocl_fftz_bench 2:1:1v10:168:168x2:84:84x7:12:12x6:2:2 -b a -f r2c"                  # accuracy | real     | double   | LP64       | 4D  | yes      | CT        | outplace  | forward   | C       | C 4D column major, forward
+    # TODO: Real ND backward test cases are not supported due to test bench limitations.
+    #       Fix the test bench and add backward test cases.
     )
 
     set(EXHAUSTIVE_TEST_SUITE
@@ -351,6 +362,11 @@ set(STANDARD_TEST_SUITE
     "EXT_C2C_AVX128_5D_CTBS ./aocl_fftz_bench 4x4x8x17x18:4:4 -b a --dir b -p d -o 1"                         # accuracy | complex  | double   | LP64       | 5D  |  no     | CT+BS     | outplace  | backward  | AVX128  | 5D CT+BS, double, outplace, backward
     "EXT_C2C_AVX256_5D_CTBS_BATCHED ./aocl_fftz_bench 4v4x8x12x17x20:4:4 -b a -p f -o 2 --dir f"              # accuracy | complex  | float    | LP64       | 5D  | yes     | CT+BS     | outplace  | forward   | AVX256  | 5D batched CT+BS, float, outplace, forward
     "EXT_C2C_C_ND_CTBS ./aocl_fftz_bench 4x6x8x10x12x14:4:4 -b a --dir f -p f"                                # accuracy | complex  | float    | LP64       | 6D  |  no     | CT+BS     | outplace  | forward   | C       | 6D CT+BS, float, outplace, forward
+    "EXT_R2C_C_3D_IP_FWD ./aocl_fftz_bench 26x25x32 -b a -f r2c -p d -r i"                                    # accuracy | real     | double   | LP64       | 3D  |  no     | CT+BS     | inplace   | forward   | C       | 3D real CT+BS, inplace, forward
+    "EXT_R2C_AVX512_MULTI_BATCHED_CT ./aocl_fftz_bench 36x20v10x12x24 -b a -f r2c -o 3"                       # accuracy | real     | double   | LP64       | 3D  | yes     | CT        | outplace  | forward   | AVX512  | AVX512 multibatched 3D real CT
+    "EXT_R2C_AVX128_MULTI_BATCHED_CT ./aocl_fftz_bench 12x16v16x12x24:6:6 -b a -f r2c -o 1"                   # accuracy | real     | double   | LP64       | 3D  | yes     | CT        | outplace  | forward   | AVX128  | AVX128 multibatched 3D real CT
+    "EXT_R2C_AVX256_STRIDED_IP_FWD ./aocl_fftz_bench 32:1088:544x32:34:17x32:1:1 -b a -f r2c -p f -r i -o 2"  # accuracy | real     | float    | LP64       | 3D  |  no     | CT        | inplace   | forward   | AVX256  | AVX256 3D strided real CT, inplace, forward
+    "EXT_R2C_C_BATCHED_CT_IP_FWD ./aocl_fftz_bench 8x16v15x20x25:4:4 -b a -f r2c -p f -r i"                   # accuracy | real     | double   | LP64       | 3D  | yes     | CT        | inplace   | forward   | C       | Large batched mixed-size 3D real CT, inplace, forward
     # TODO: Add more test cases with different combinations. This list is expected to be larger than TEST_SUITE.
     )
 
@@ -378,4 +394,7 @@ foreach(index RANGE ${N})
         COMMAND ${TEST_CASE_ARGS}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
+    # Set SKIP_RETURN_CODE for CTest skip detection
+    set_tests_properties(AOCL_FFTZ_TESTBENCH_${TEST_CASE_NAME}
+        PROPERTIES SKIP_RETURN_CODE 77)
 endforeach()

@@ -628,6 +628,10 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     SET_SELECTOR_MODE(sel->solution->decomp_scheme->flags,
                       AOCLFFTZ_FIXED_SELECTOR);
 
+    if (sel->solution->decomp_scheme->vec_rank > 1)
+    {
+        fuse_vecs(sel->solution);
+    }
     // SOLVER_BATCHED
     level1_cond1 =
         ((sel->solution->decomp_scheme->dims[0].n != 1) && /* size one */
@@ -677,9 +681,14 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     // Multi-dimentional FFT Solver
     if (level1_cond1 & 0x2)
     {
-        AOCLFFTZ_ERROR("SELECTOR_FAILURE : "
-                                "Multi-dimentional RealFFT is not supported");
-        return SELECTOR_FAILURE;
+        solver_obj->solver_type = SOLVER_REAL_NDIM;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+
+        ret = selector_ndim_rdft(sel, kertab, realhelper);
+        return ret;
     }
     // Large Primes - Bluestein FFT Solver
     if (level1_cond1 & 0x4)
@@ -787,6 +796,11 @@ INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
     SET_SELECTOR_MODE(sel->solution->decomp_scheme->flags,
                       AOCLFFTZ_FIXED_SELECTOR);
 
+    if (sel->solution->decomp_scheme->vec_rank > 1)
+    {
+        fuse_vecs(sel->solution);
+    }
+
     // SOLVER_BATCHED
     level1_cond1 =
         ((sel->solution->decomp_scheme->dims[0].n != 1) && /* size one */
@@ -836,9 +850,14 @@ INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
     // Multi-dimensional FFT Solver
     if (level1_cond1 & 0x2)
     {
-        AOCLFFTZ_ERROR("SELECTOR_FAILURE : "
-                                "Multi-dimensional RealFFT is not supported");
-        return SELECTOR_FAILURE;
+        solver_obj->solver_type = SOLVER_REAL_NDIM;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+
+        ret = selector_ndim_rdft(sel, kertab, realhelper);
+        return ret;
     }
     // Large Primes - Bluestein FFT Solver
     if (level1_cond1 & 0x4)

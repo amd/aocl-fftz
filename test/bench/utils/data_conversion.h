@@ -34,69 +34,215 @@
  *  from R2C fft to full complex and vice-versa.
  *
  *  @author D. Vijay Krishna
+ *  @author Jeevanantham N
  */
 
-// Expands half-complex data to complex data
-#define convert_half_complex_to_complex_impl(out, in, n, batches, map, dt_t)   \
+// Increment N-dimensional index with carry propagation
+#define INCREMENT_NDIM_INDEX(indices_arr, dim_rank, dim_sizes, dim0_limit,     \
+                             done_flag)                                        \
     do                                                                         \
     {                                                                          \
-        dt_t *in_t = (dt_t *)in;                                               \
-        dt_t *out_t = (dt_t *)out;                                             \
-        INTP in_idx = 0;                                                       \
-        INTP out_idx = 0;                                                      \
-        INTP mirror_idx = 0;                                                   \
-        for (INTP b = 0; b < batches; b++)                                     \
+        UINT8 carry = 1;                                                       \
+        for (INT32 dim_idx = dim_rank - 1; dim_idx >= 0 && carry; dim_idx--)   \
         {                                                                      \
-            INTP idx = map[in_idx] * DATA_STRIDE;                              \
-            /* DC point */                                                     \
-            out_t[out_idx] = in_t[idx];                                        \
-            out_t[out_idx + 1] = 0.0;                                          \
-            in_idx++;                                                          \
-            out_idx += DATA_STRIDE;                                            \
-            /* half complex points */                                          \
-            for (INTP i = 1; i < (n / 2 + (n & 0x1)); i++)                     \
+            indices_arr[dim_idx]++;                                            \
+            if (dim_idx == 0)                                                  \
             {                                                                  \
-                INTP idx = map[in_idx] * DATA_STRIDE;                          \
-                out_t[out_idx] = in_t[idx];                                    \
-                out_t[out_idx + 1] = in_t[idx + 1];                            \
-                in_idx++;                                                      \
-                out_idx += DATA_STRIDE;                                        \
+                if (indices_arr[dim_idx] >= dim0_limit)                        \
+                {                                                              \
+                    done_flag = 1;                                             \
+                    carry = 0;                                                 \
+                }                                                              \
+                else                                                           \
+                {                                                              \
+                    carry = 0;                                                 \
+                }                                                              \
             }                                                                  \
-            mirror_idx = in_idx - 1;                                           \
-            /* Nyquist point */                                                \
-            if (n % 2 == 0)                                                    \
+            else                                                               \
             {                                                                  \
-                INTP idx = map[in_idx] * 2;                                    \
-                out_t[out_idx] = in_t[idx];                                    \
-                out_t[out_idx + 1] = 0.0;                                      \
-                in_idx++;                                                      \
-                out_idx += DATA_STRIDE;                                        \
-            }                                                                  \
-            /* mirror complex points */                                        \
-            for (INTP i = 1; i < (n / 2 + (n & 0x1)); i++)                     \
-            {                                                                  \
-                INTP idx = map[mirror_idx] * 2;                                \
-                out_t[out_idx] = in_t[idx];                                    \
-                out_t[out_idx + 1] = -in_t[idx + 1];                           \
-                mirror_idx--;                                                  \
-                out_idx += DATA_STRIDE;                                        \
+                if (indices_arr[dim_idx] >= dim_sizes[dim_idx])                \
+                {                                                              \
+                    indices_arr[dim_idx] = 0;                                  \
+                    carry = 1;                                                 \
+                }                                                              \
+                else                                                           \
+                {                                                              \
+                    carry = 0;                                                 \
+                }                                                              \
             }                                                                  \
         }                                                                      \
     } while (0)
 
-#define convert_half_complex_to_complex(out, in, n, batches, map, dt_t)        \
+// Universal N-dimensional half-complex to full-complex conversion
+// Works for any number of dimensions: 1D, 2D, 3D, 4D, 5D, etc.
+//
+#define convert_half_complex_to_complex_impl(out, in, dims, dim_rank,          \
+                                             batches, map, dt_t)               \
     do                                                                         \
     {                                                                          \
-        if (dt_t == FLOAT_P)                                                   \
+        dt_t *in_t = (dt_t *)in;                                               \
+        dt_t *out_t = (dt_t *)out;                                             \
+        /* Extract dimension information */                                    \
+        INTP dim0 = dims[0].n;       /* Last dimension (memory) */             \
+        INTP dim0_hc = dim0 / 2 + 1; /* Half-complex size */                   \
+                                                                               \
+        /* Allocate arrays for dimension sizes and strides */                  \
+        INTP *dim_sizes = NULL;                                                \
+        INTP *strides_full = NULL;                                             \
+        INTP *strides_hc = NULL;                                               \
+        INTP *copy_indices = NULL;                                             \
+        ALLOC_UNALIGN_UNINIT(dim_sizes, INTP, dim_rank * sizeof(INTP))         \
+        ALLOC_UNALIGN_UNINIT(strides_full, INTP, dim_rank * sizeof(INTP))      \
+        ALLOC_UNALIGN_UNINIT(strides_hc, INTP, dim_rank * sizeof(INTP))        \
+        ALLOC_UNALIGN_UNINIT(copy_indices, INTP, dim_rank * sizeof(INTP))      \
+        if (!dim_sizes || !strides_full || !strides_hc || !copy_indices)       \
         {                                                                      \
-            convert_half_complex_to_complex_impl(out, in, n, batches, map,     \
-                                                 FLOAT);                       \
+            printf("ERROR: Failed to allocate memory for dimension arrays\n"); \
+            FREE_UNALIGN_ALLOCATED_MEM(dim_sizes)                              \
+            FREE_UNALIGN_ALLOCATED_MEM(strides_full)                           \
+            FREE_UNALIGN_ALLOCATED_MEM(strides_hc)                             \
+            FREE_UNALIGN_ALLOCATED_MEM(copy_indices)                           \
+            break;                                                             \
         }                                                                      \
-        else                                                                   \
+                                                                               \
+        /* Calculate strides and total sizes for full and half-complex */      \
+        INTP stride_full = 1;                                                  \
+        INTP stride_hc = 1;                                                    \
+        INTP n_full = 1;                                                       \
+        INTP n_hc = 1;                                                         \
+                                                                               \
+        /* Build dimension sizes and strides (innermost to outermost) */       \
+        for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)                 \
         {                                                                      \
-            convert_half_complex_to_complex_impl(out, in, n, batches, map,     \
-                                                 DOUBLE);                      \
+            INTP dim_size = (dim_idx == 0) ? dim0 : dims[dim_idx].n;           \
+            INTP dim_size_hc = (dim_idx == 0) ? dim0_hc : dims[dim_idx].n;     \
+                                                                               \
+            dim_sizes[dim_idx] = dim_size;                                     \
+            strides_full[dim_idx] = stride_full;                               \
+            strides_hc[dim_idx] = stride_hc;                                   \
+                                                                               \
+            stride_full *= dim_size;                                           \
+            stride_hc *= dim_size_hc;                                          \
+            n_full *= dim_size;                                                \
+            n_hc *= dim_size_hc;                                               \
         }                                                                      \
+                                                                               \
+        /* Process each batch */                                               \
+        for (INTP batch_idx = 0; batch_idx < batches; batch_idx++)             \
+        {                                                                      \
+            INTP in_base = batch_idx * n_hc;                                   \
+            INTP out_base = batch_idx * n_full;                                \
+                                                                               \
+            /* Step 1: Copy stored half-complex data to output */              \
+            for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)             \
+            {                                                                  \
+                copy_indices[dim_idx] = 0;                                     \
+            }                                                                  \
+                                                                               \
+            UINT8 done_copying = 0;                                            \
+            while (!done_copying)                                              \
+            {                                                                  \
+                /* Compute HC linear index */                                  \
+                INTP hc_idx = 0;                                               \
+                for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)         \
+                {                                                              \
+                    hc_idx += copy_indices[dim_idx] * strides_hc[dim_idx];     \
+                }                                                              \
+                                                                               \
+                /* Compute Full linear index (same multi-indices) */           \
+                INTP full_idx = 0;                                             \
+                for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)         \
+                {                                                              \
+                    full_idx +=                                                \
+                        copy_indices[dim_idx] * strides_full[dim_idx];         \
+                }                                                              \
+                                                                               \
+                /* Copy real and imaginary parts */                            \
+                INTP src_idx = map ? map[in_base + hc_idx] * DATA_STRIDE       \
+                                   : (in_base + hc_idx) * DATA_STRIDE;         \
+                INTP dst_idx = (out_base + full_idx) * DATA_STRIDE;            \
+                out_t[dst_idx] = in_t[src_idx];                                \
+                out_t[dst_idx + 1] = in_t[src_idx + 1];                        \
+                                                                               \
+                /* Increment multi-dimensional index */                        \
+                INCREMENT_NDIM_INDEX(copy_indices, dim_rank, dim_sizes,        \
+                                     dim0_hc, done_copying);                   \
+            }                                                                  \
+                                                                               \
+            /* Step 2: Fill missing region via Hermitian symmetry */           \
+            if (dim0_hc < dim0)                                                \
+            {                                                                  \
+                INTP *indices = NULL;                                          \
+                INTP *mirror_indices = NULL;                                   \
+                ALLOC_UNALIGN_UNINIT(indices, INTP, dim_rank * sizeof(INTP))   \
+                ALLOC_UNALIGN_UNINIT(mirror_indices, INTP,                     \
+                                     dim_rank * sizeof(INTP))                  \
+                if (!indices || !mirror_indices)                               \
+                {                                                              \
+                    printf("ERROR: Failed to allocate memory for indices and " \
+                            "mirror_indices\n");                               \
+                    FREE_UNALIGN_ALLOCATED_MEM(indices)                        \
+                    FREE_UNALIGN_ALLOCATED_MEM(mirror_indices)                 \
+                    FREE_UNALIGN_ALLOCATED_MEM(dim_sizes)                      \
+                    FREE_UNALIGN_ALLOCATED_MEM(strides_full)                   \
+                    FREE_UNALIGN_ALLOCATED_MEM(strides_hc)                     \
+                    FREE_UNALIGN_ALLOCATED_MEM(copy_indices)                   \
+                    break;                                                     \
+                }                                                              \
+                                                                               \
+                /* Start at first missing index (dim0_hc onwards in dim0) */   \
+                for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)         \
+                {                                                              \
+                    indices[dim_idx] = (dim_idx == 0) ? dim0_hc : 0;           \
+                }                                                              \
+                                                                               \
+                UINT8 done = 0;                                                \
+                while (!done)                                                  \
+                {                                                              \
+                    /* Compute missing position linear index */                \
+                    INTP miss_idx = 0;                                         \
+                    for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)     \
+                    {                                                          \
+                        miss_idx +=                                            \
+                            indices[dim_idx] * strides_full[dim_idx];          \
+                    }                                                          \
+                                                                               \
+                    /* Hermitian mirror: F[i] = conj(F[-i mod N]) */           \
+                    for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)     \
+                    {                                                          \
+                        mirror_indices[dim_idx] =                              \
+                            (dim_sizes[dim_idx] - indices[dim_idx]) %          \
+                            dim_sizes[dim_idx];                                \
+                    }                                                          \
+                                                                               \
+                    /* Compute mirror linear index */                          \
+                    INTP mirr_idx = 0;                                         \
+                    for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)     \
+                    {                                                          \
+                        mirr_idx +=                                            \
+                            mirror_indices[dim_idx] * strides_full[dim_idx];   \
+                    }                                                          \
+                                                                               \
+                    /* Set conjugate: real stays same, imaginary negated */    \
+                    INTP dst_idx = (out_base + miss_idx) * DATA_STRIDE;        \
+                    INTP src_idx = (out_base + mirr_idx) * DATA_STRIDE;        \
+                    out_t[dst_idx] = out_t[src_idx];                           \
+                    out_t[dst_idx + 1] = -out_t[src_idx + 1];                  \
+                                                                               \
+                    /* Increment multi-dimensional index */                    \
+                    INCREMENT_NDIM_INDEX(indices, dim_rank, dim_sizes, dim0,   \
+                                         done);                                \
+                }                                                              \
+                FREE_UNALIGN_ALLOCATED_MEM(indices)                            \
+                FREE_UNALIGN_ALLOCATED_MEM(mirror_indices)                     \
+            }                                                                  \
+        }                                                                      \
+                                                                               \
+        /* Cleanup */                                                          \
+        FREE_UNALIGN_ALLOCATED_MEM(dim_sizes)                                  \
+        FREE_UNALIGN_ALLOCATED_MEM(strides_full)                               \
+        FREE_UNALIGN_ALLOCATED_MEM(strides_hc)                                 \
+        FREE_UNALIGN_ALLOCATED_MEM(copy_indices)                               \
     } while (0)
 
 // Converts complex data to half-complex data in a same buffer
@@ -202,5 +348,24 @@
                           1] = 0.0;                                            \
                 }                                                              \
             }                                                                  \
+        }                                                                      \
+    } while (0)
+
+// Macro wrapper that dispatches to the N-dimensional conversion implementation
+// based on the data type
+
+#define convert_half_complex_to_complex(out, in, dims, dim_rank, batches,      \
+                                        map, dt_t)                             \
+    do                                                                         \
+    {                                                                          \
+        if (dt_t == FLOAT_P)                                                   \
+        {                                                                      \
+            convert_half_complex_to_complex_impl(out, in, dims, dim_rank,      \
+                                                 batches, map, FLOAT);         \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
+            convert_half_complex_to_complex_impl(out, in, dims, dim_rank,      \
+                                                 batches, map, DOUBLE);        \
         }                                                                      \
     } while (0)

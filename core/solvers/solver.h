@@ -139,6 +139,11 @@ INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
 INT32 setup_real_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
                            aoclfftz_solution_t *sol_m, UINT32 radix_r,
                            UINT32 radix_m, aoclfftz_realhelper_t * realhelper);
+INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
+                             aoclfftz_solution_t *real_dim_sol,
+                             aoclfftz_solution_t *complex_dims_sol,
+                             aoclfftz_realhelper_t * realhelper);
+
 #ifdef MULTI_THREADING
 INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
                                   cost_analysis_t *cost,
@@ -174,6 +179,7 @@ dft_solver_ register_execute_real_direct_solver(VOID);
 dft_solver_ register_execute_real_batched_solver(VOID);
 dft_solver_ register_execute_real_buffered_solver(VOID);
 dft_solver_ register_execute_real_ct_solver(VOID);
+dft_solver_ register_execute_real_ndim_solver(VOID);
 
 #ifdef MULTI_THREADING
 dft_solver_ register_execute_real_mt_direct_solver(VOID);

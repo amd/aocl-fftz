@@ -288,4 +288,30 @@
         }                                                                      \
     }
 
+// Ensure CRT buffer sizes match for real/complex FFT input/output
+#define EXPAND_REAL_BUFFER_SIZES(bench_params, input_bytes, output_bytes)     \
+    {                                                                         \
+        if (bench_params->fft_type == R2C &&                                  \
+            bench_params->dir == FORWARD) /* R2C problem */                   \
+        {                                                                     \
+            input_bytes *= 2;                                                 \
+        }                                                                     \
+        else if (bench_params->fft_type == C2R &&                             \
+                 bench_params->dir == BACKWARD)                               \
+        {                                                                     \
+            output_bytes *= 2;                                                \
+        }                                                                     \
+        /* FIXME: This is a temporary fix to ensure that the input and output \
+         * buffers are of the same size.                                      \
+         */                                                                   \
+        if (input_bytes > output_bytes)                                       \
+        {                                                                     \
+            output_bytes = input_bytes;                                       \
+        }                                                                     \
+        else                                                                  \
+        {                                                                     \
+            input_bytes = output_bytes;                                       \
+        }                                                                     \
+    }
+
 #endif // BENCH_UTILS_H

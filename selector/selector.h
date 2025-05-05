@@ -864,6 +864,8 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                              aoclfftz_realhelper_t *realhelper);
 INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                        aoclfftz_realhelper_t *realhelper);
+INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+                         aoclfftz_realhelper_t *realhelper);
 VOID destroy_handle(VOID *handle);
 VOID fuse_vecs(aoclfftz_solution_t *sol);
 VOID setup_inplace_buffers(aoclfftz_selector_t *sel);

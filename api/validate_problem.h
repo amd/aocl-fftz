@@ -78,13 +78,6 @@
     {                                                                          \
         INTP in_scale = (flags.fft_direction == FORWARD_FFT_DIR) ? 2 : 1;      \
         INTP out_scale = (flags.fft_direction == BACKWARD_FFT_DIR) ? 2 : 1;    \
-        if (dim_rank != 1)                                                     \
-        {                                                                      \
-            AOCLFFTZ_ERROR("N-Dimensional real problems are "                  \
-                                       "not supported");                       \
-            errno = AOCLFFTZ_INVALID_INPUT;                                    \
-            goto validation_exit;                                              \
-        }                                                                      \
         /* Validate R2C/C2R dims */                                            \
         /* For R2C, in_stride should be the double of out_stride */            \
         /* (or vice versa for C2R) except for dims[0] for which in_stride */   \
@@ -415,6 +408,15 @@ static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
     }                                                                          \
     if ((ret = validate_flags(&(problem->flags))) != 0)                        \
     {                                                                          \
+        goto validation_exit;                                                  \
+    }                                                                          \
+    /* ND C2R transforms are not supported */                                  \
+    if (problem->flags.fft_type && problem->dim_rank != 1 &&                   \
+        problem->flags.fft_direction == BACKWARD_FFT_DIR)                      \
+    {                                                                          \
+        AOCLFFTZ_ERROR("N-Dimensional C2R transforms are "                     \
+                       "currently not supported");                             \
+        ret = AOCLFFTZ_INVALID_INPUT;                                          \
         goto validation_exit;                                                  \
     }                                                                          \
     if (!problem->flags.fft_placement)                                         \

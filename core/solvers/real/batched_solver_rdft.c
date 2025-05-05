@@ -142,9 +142,6 @@ INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
     return status;
 }
 
-/*
- * TODO: Check and fix ND batches for real problems
- */
 static INT32 execute_real_batched_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
