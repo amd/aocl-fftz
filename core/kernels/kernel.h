@@ -251,6 +251,7 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft7avx128(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft10avx128(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft14avx128(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft15avx128(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_r2hcf_rfft16avx128(UINT8 precision, UINT8 direction);
 #endif
 
 #ifdef ENABLE_AVX256
@@ -271,6 +272,7 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft2avx256(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft10avx256(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft14avx256(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft15avx256(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_r2hcf_rfft16avx256(UINT8 precision, UINT8 direction);
 #endif
 
 #ifdef ENABLE_AVX512
@@ -291,6 +293,7 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft2avx512(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft10avx512(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft14avx512(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft15avx512(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_r2hcf_rfft16avx512(UINT8 precision, UINT8 direction);
 #endif
 
 // Register kernels
@@ -413,6 +416,7 @@ kfft_ register_kernel_r2hcf_rfft7avx128(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft10avx128(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft14avx128(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft15avx128(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_r2hcf_rfft16avx128(UINT8 precision, UINT8 direction);
 #endif
 
 #ifdef ENABLE_AVX256
@@ -433,6 +437,7 @@ kfft_ register_kernel_r2hcf_rfft2avx256(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft10avx256(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft14avx256(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft15avx256(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_r2hcf_rfft16avx256(UINT8 precision, UINT8 direction);
 #endif
 
 
@@ -454,6 +459,7 @@ kfft_ register_kernel_r2hcf_rfft2avx512(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft10avx512(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft14avx512(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft15avx512(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_r2hcf_rfft16avx512(UINT8 precision, UINT8 direction);
 #endif
 
 // Permuted Copy Kernels
