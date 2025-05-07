@@ -126,22 +126,22 @@ public:
         {
             if (problem->in)
             {
-                free(problem->in);
+                delete[] problem->in;
                 problem->in = NULL;
             }
             if (problem->out)
             {
-                free(problem->out);
+                delete[] problem->out;
                 problem->out = NULL;
             }
             if (problem->dims)
             {
-                free(problem->dims);
+                delete[] problem->dims;
                 problem->dims = NULL;
             }
             if (problem->vecs)
             {
-                free(problem->vecs);
+                delete[] problem->vecs;
                 problem->vecs = NULL;
             }
         }
@@ -162,10 +162,10 @@ public:
             return;
         }
         INT32 in_size = 0, out_size = 0;
-        problem->dim_rank = 3; // Set dim_rank to 3
+        problem->dim_rank = 3;
         problem->vec_rank = 1;
-        problem->dims = (DimT*)malloc(problem->dim_rank * sizeof(DimT));
-        problem->vecs = (DimT*)malloc(problem->vec_rank * sizeof(DimT));
+        problem->dims = new DimT[problem->dim_rank];
+        problem->vecs = new DimT[problem->vec_rank];
         if (problem->dims == NULL || problem->vecs == NULL)
         {
             cleanup_problem();
@@ -205,10 +205,10 @@ public:
             out_size += (problem->vecs[i].n) * (problem->vecs[i].out_stride);
         }
 
-        input_size = in_size * sizeof(DataType);
+        input_size  = in_size * sizeof(DataType);
         output_size = out_size * sizeof(DataType);
-        problem->in = (DataType*)malloc(input_size);
-        problem->out = (DataType*)malloc(output_size);
+        problem->in  = new DataType[in_size];
+        problem->out = new DataType[out_size];
 
         if (problem->in == NULL || problem->out == NULL)
         {
@@ -324,26 +324,21 @@ public:
         if (err_no == INVALID)
         {
             handle = aoclfftz_setup(problem);
-            std::cout << "Debug: handle = " << handle << std::endl; // Debug print
             EXPECT_EQ(handle, nullptr);
         }
         else if (err_no == VALID)
         {
             handle = aoclfftz_setup(problem);
-            std::cout << "Debug: handle = " << handle << std::endl; // Debug print
             EXPECT_NE(handle, nullptr);
             aoclfftz_destroy(handle);
         }
     }
 
+    // FIXME : remove this
     // Function to check if the handle is destroyed
     static bool is_handle_null(VOID *handle)
     {
-        if (handle == NULL)
-        {
-            return true;
-        }
-        return false;
+        return (handle == NULL);
     }
 };
 #endif // AOCLFFTZ_API_GTEST_H

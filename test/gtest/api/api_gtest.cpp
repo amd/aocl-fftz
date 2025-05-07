@@ -101,7 +101,7 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_PROBLEM_DESCRIPTOR)
     if (this->problem != NULL)
     {
         this->cleanup_problem();
-        free(this->problem);
+        delete this->problem;
         this->problem = NULL;
     }
     this->run_setup_and_validate(INVALID); // Run setup with invalid case
@@ -111,7 +111,7 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_IN_BUFFER)
 {
     if (this->problem != NULL && this->problem->in != NULL)
     {
-        free(this->problem->in);
+        delete[] this->problem->in;
         this->problem->in = NULL;
     }
     this->run_setup_and_validate(INVALID);
@@ -121,7 +121,7 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_OUT_BUFFER)
 {
     if (this->problem->out != NULL)
     {
-        free(this->problem->out);
+        delete[] this->problem->out;
         this->problem->out = NULL;
     }
     this->run_setup_and_validate(INVALID);
@@ -181,7 +181,7 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_DIMS)
 {
     if (this->problem->dims != NULL)
     {
-        free(this->problem->dims);
+        delete[] this->problem->dims;
         this->problem->dims = NULL;
     }
     this->run_setup_and_validate(INVALID);
@@ -191,7 +191,7 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_VECS)
 {
     if (this->problem->vecs != NULL)
     {
-        free(this->problem->vecs);
+        delete[] this->problem->vecs;
         this->problem->vecs = NULL;
     }
     this->run_setup_and_validate(INVALID);
@@ -274,6 +274,7 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_VALIDHANDLE)
     out = NULL;
 }
 
+// FIXME : Revisit the logic
 // Destroy API test cases
 TYPED_TEST_P(AoclfftzAPITest, PTEST_DESTROY_VALIDHANDLE_SOLUTION)
 {
@@ -281,7 +282,6 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_DESTROY_VALIDHANDLE_SOLUTION)
     INT32 exe = aoclfftz_execute(this->handle);
     aoclfftz_destroy(this->handle);
     ASSERT_FALSE(this->is_handle_null(this->handle));
-                                                // Handle is not destroyed
 }
 
 TYPED_TEST_P(AoclfftzAPITest, PTEST_DESTROY_WITHOUT_EXECUTE)
@@ -289,7 +289,6 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_DESTROY_WITHOUT_EXECUTE)
     this->handle = this->aoclfftz_setup(this->problem);
     aoclfftz_destroy(this->handle);
     ASSERT_FALSE(this->is_handle_null(this->handle));
-                                                // Handle must be destroyed
 }
 
 // Register all test cases together
