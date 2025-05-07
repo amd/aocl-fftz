@@ -582,6 +582,8 @@ aoclfftz_kernel_test_params_t param_float_r2hcf_c_kernels[] =
     {12, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
         aoclfftz_kernel_test_type::ALL},
     {14, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
+         aoclfftz_kernel_test_type::ALL},
+    {15, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
          aoclfftz_kernel_test_type::ALL}
 };
 
@@ -607,6 +609,8 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_c_kernels[] =
     {12, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
         aoclfftz_kernel_test_type::ALL},
     {14, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
+         aoclfftz_kernel_test_type::ALL},
+    {15, aocl_fftz_kernel_type::STANDARD_R2HCF_C,
          aoclfftz_kernel_test_type::ALL}
 };
 

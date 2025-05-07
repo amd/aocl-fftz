@@ -380,6 +380,10 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft14c_wrapper(UINT8 precision, UINT8 direction)
 {
     return get_ops_cnt_r2hcf_rfft14c(precision, direction);
 }
+ops_cycles_t get_ops_cnt_r2hcf_rfft15c_wrapper(UINT8 precision, UINT8 direction)
+{
+    return get_ops_cnt_r2hcf_rfft15c(precision, direction);
+}
 
 #ifdef ENABLE_AVX128
 ops_cycles_t get_ops_cnt_r2hc_rfft2avx128_wrapper(UINT8 precision,
@@ -827,6 +831,10 @@ kfft_ register_kernel_r2hcf_rfft12c_wrapper(UINT8 precision, UINT8 direction)
 kfft_ register_kernel_r2hcf_rfft14c_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_r2hcf_rfft14c(precision, direction);
+}
+kfft_ register_kernel_r2hcf_rfft15c_wrapper(UINT8 precision, UINT8 direction)
+{
+    return register_kernel_r2hcf_rfft15c(precision, direction);
 }
 
 #ifdef ENABLE_AVX128

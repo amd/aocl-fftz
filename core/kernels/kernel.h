@@ -229,6 +229,7 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft8c(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft10c(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft12c(UINT8 precision, UINT8 direction);
 ops_cycles_t get_ops_cnt_r2hcf_rfft14c(UINT8 precision, UINT8 direction);
+ops_cycles_t get_ops_cnt_r2hcf_rfft15c(UINT8 precision, UINT8 direction);
 
 #ifdef ENABLE_AVX128
 // R2HC AVX128 Kernels
@@ -365,6 +366,7 @@ kfft_ register_kernel_r2hcf_rfft8c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft10c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft12c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_r2hcf_rfft14c(UINT8 precision, UINT8 direction);
+kfft_ register_kernel_r2hcf_rfft15c(UINT8 precision, UINT8 direction);
 
 #ifdef ENABLE_AVX128
 // R2HC AVX128 Kernels
