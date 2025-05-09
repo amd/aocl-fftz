@@ -94,21 +94,7 @@ static inline INT32 validate_flags(UINT32 flags)
         errno = AOCLFFTZ_INVALID_INPUT;                                        \
         goto validation_exit;                                                  \
     }                                                                          \
-    if (dims[0].n <= 0)                                                        \
-    {                                                                          \
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "dimension[0]: size must "          \
-                                 "be at least 1");                             \
-        errno = AOCLFFTZ_INVALID_INPUT;                                        \
-        goto validation_exit;                                                  \
-    }                                                                          \
-    if (dims[0].in_stride == 0 || dims[0].out_stride == 0)                     \
-    {                                                                          \
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "dimension[0]: dimension "          \
-                                 "stride(s) cannot be 0");                     \
-        errno = AOCLFFTZ_INVALID_INPUT;                                        \
-        goto validation_exit;                                                  \
-    }                                                                          \
-    for (INT32 i = 1; i < dim_rank; i++)                                       \
+    for (INT32 i = 0; i < dim_rank; i++)                                       \
     {                                                                          \
         if (dims[i].n <= 0)                                                    \
         {                                                                      \
@@ -117,32 +103,18 @@ static inline INT32 validate_flags(UINT32 flags)
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
             goto validation_exit;                                              \
         }                                                                      \
-        if (dims[i].in_stride == 0 || dims[i].out_stride == 0)                 \
+        if (dims[i].in_stride <= 0)                                            \
         {                                                                      \
-            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "dimension[%d]: "                 \
-                                   "dimension stride(s) cannot be 0", i);      \
+            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "dimension[%d]: in_stride "       \
+                                   "must be greater than zero\n", i);          \
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
             goto validation_exit;                                              \
         }                                                                      \
-        INTP min_in_stride = dims[i - 1].in_stride * dims[i - 1].n;            \
-        if (dims[i].in_stride < min_in_stride)                                 \
+        if (dims[i].out_stride <= 0)                                           \
         {                                                                      \
-            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "Invalid input stride "           \
-                                   "value : %td provided for dim[%d]. Minimum "\
-                                   "value expected : %td",                     \
-                                   (INTP)dims[i].in_stride, i, min_in_stride); \
-            errno =  AOCLFFTZ_INVALID_INPUT;                                   \
-            goto validation_exit;                                              \
-        }                                                                      \
-        INTP min_out_stride = dims[i - 1].out_stride * dims[i - 1].n;          \
-        if (dims[i].out_stride < min_out_stride)                               \
-        {                                                                      \
-            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "Invalid output stride "          \
-                                   "value : %td provided for dim[%d]. Minimum "\
-                                   "value expected : %td",                     \
-                                   (INTP)dims[i].out_stride, i,                \
-                                    min_out_stride);                           \
-            errno =  AOCLFFTZ_INVALID_INPUT;                                   \
+            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "dimension[%d]: out_stride "      \
+                                   "must be greater than zero\n", i);          \
+            errno = AOCLFFTZ_INVALID_INPUT;                                    \
             goto validation_exit;                                              \
         }                                                                      \
     }                                                                          \
@@ -160,64 +132,24 @@ static inline INT32 validate_flags(UINT32 flags)
     {                                                                          \
         if (vecs[i].n <= 0)                                                    \
         {                                                                      \
-            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "vector[%d]: n "                  \
-                                   "must be positive\n", i);                   \
+            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "vector[%d]: size "               \
+                                   "must be at least 1", i);                   \
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
             goto validation_exit;                                              \
         }                                                                      \
         if (vecs[i].in_stride <= 0)                                            \
         {                                                                      \
             AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "vector[%d]: in_stride "          \
-                                   "must be positive\n", i);                   \
+                                   "must be greater than zero\n", i);          \
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
             goto validation_exit;                                              \
         }                                                                      \
         if (vecs[i].out_stride <= 0)                                           \
         {                                                                      \
             AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "vector[%d]: out_stride "         \
-                                   "must be positive\n", i);                   \
+                                   "must be greater than zero\n", i);          \
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
             goto validation_exit;                                              \
-        }                                                                      \
-    }                                                                          \
-    /* Check vector dimensions for batched cases */                            \
-    if (vec_rank > 1 || vecs[0].n > 1)                                         \
-    {                                                                          \
-        for (INT32 i = 0; i < vec_rank; i++)                                   \
-        {                                                                      \
-            if (vecs[i].n <= 0)                                                \
-            {                                                                  \
-                AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "vector[%d]: size"            \
-                                       " must be at least 1", i);              \
-                errno = AOCLFFTZ_INVALID_INPUT;                                \
-                goto validation_exit;                                          \
-            }                                                                  \
-            INTP min_in_stride = (i == 0) ?                                    \
-                    dims[dim_rank -1].n * dims[dim_rank - 1].in_stride :       \
-                        (vecs[i - 1]. n * vecs[i - 1].in_stride);              \
-            if (vecs[i].in_stride < min_in_stride)                             \
-            {                                                                  \
-                AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "Invalid input stride "       \
-                                       "value : %td provided for vec[%d]. "    \
-                                       "Minimum value expected : %td",         \
-                                       (INTP)vecs[i].in_stride, i,             \
-                                       min_in_stride);                         \
-                errno = AOCLFFTZ_INVALID_INPUT;                                \
-                goto validation_exit;                                          \
-            }                                                                  \
-            INTP min_out_stride = (i == 0) ?                                   \
-                    dims[dim_rank -1].n * dims[dim_rank - 1].out_stride :      \
-                        (vecs[i - 1]. n * vecs[i - 1].out_stride);             \
-            if (vecs[i].out_stride < min_out_stride)                           \
-            {                                                                  \
-                AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "Invalid output stride "      \
-                                       "value : %td provided for vec[%d]. "    \
-                                       "Minimum value expected : %td",         \
-                                       (INTP)vecs[i].out_stride, i,            \
-                                        min_out_stride);                       \
-                errno = AOCLFFTZ_INVALID_INPUT;                                \
-                goto validation_exit;                                          \
-            }                                                                  \
         }                                                                      \
     }                                                                          \
 }
