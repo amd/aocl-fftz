@@ -155,6 +155,27 @@ static inline INT32 validate_flags(UINT32 flags)
     }                                                                          \
 }
 
+static inline UINT32 get_max_num_threads(VOID)
+{
+#ifdef MULTI_THREADING
+    return omp_get_num_procs();
+#else
+    return 1;
+#endif
+}
+
+#define VALIDATE_N_THREADS(num_threads)                                        \
+{                                                                              \
+    UINT32 max_threads = get_max_num_threads();                                \
+    if (num_threads > max_threads)                                             \
+    {                                                                          \
+        printf("WARNING: Requested num_threads (%d) exceeds "                  \
+                "available logical CPUs (%d), using %d\n as num_threads",      \
+                num_threads, max_threads, max_threads);                        \
+        num_threads = max_threads;                                             \
+    }                                                                          \
+}
+
 static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
 {
     if (cntrl_p->logger_mode < 0 || cntrl_p->logger_mode > 4)
@@ -248,6 +269,10 @@ static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
                                      " in Inplace problem must be equal");     \
             goto validation_exit;                                              \
         }                                                                      \
+    }                                                                          \
+    if ((problem->pthr_fft.num_threads != 1))                                  \
+    {                                                                          \
+        VALIDATE_N_THREADS(problem->pthr_fft.num_threads)                      \
     }                                                                          \
     validation_exit:                                                           \
     if (ret)                                                                   \

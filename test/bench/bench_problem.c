@@ -274,7 +274,6 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             {
                 printf("WARNING: Invalid num threads value given, "
                        "running bench with default threads (1)\n");
-                bench_params->num_threads = 1;
             }
 #ifndef MULTI_THREADING
             if (bench_params->num_threads > 1)

@@ -1041,6 +1041,10 @@ class AoclfftzSelectorTestBase
                     ret &= (cur_sol->solver->solver_type == SOLVER_REAL_NDIM);
                     nd_sol = cur_sol->dft_bufs->nd_sol;
                     break;
+                case SOLVER_REAL_MT_DIRECT:
+                    ret &= (cur_sol->solver->solver_type ==
+                            SOLVER_REAL_MT_DIRECT);
+                    break;
                 default:
                     ret = false;
                     break;

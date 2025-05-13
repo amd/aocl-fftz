@@ -622,7 +622,7 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, UINT32 n)
             {
                 INT32 solver_type = cur_sol->solver->solver_type;
                 UINT32 n_sols = cur_sol->decomp_scheme->thread_info->n_threads;
-                n_sols = (solver_type == SOLVER_MT_BATCHED) ? n_sols : 1;
+                n_sols = solver_type == SOLVER_MT_BATCHED ? n_sols : 1;
                 destroy_solutions(cur_sol->next_sol, n_sols);
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver->kernel_c2c);
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver->kernel_r2hc);

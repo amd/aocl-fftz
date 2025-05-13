@@ -278,9 +278,11 @@ typedef struct aoclfftz_selector
     aoclfftz_solution_t *next = NULL;                                          \
     if (sel->solution->next_sol != NULL) {                                     \
       /* swap first CT node */                                                 \
-      if ((sel->solution->solver->solver_type == SOLVER_REAL_CT) &&            \
+      if (sel->solution->solver->solver_type == SOLVER_REAL_CT &&              \
           (sel->solution->next_sol[0]->solver->solver_type ==                  \
-                SOLVER_REAL_DIRECT)) {                                         \
+           SOLVER_REAL_DIRECT ||                                               \
+           sel->solution->next_sol[0]->solver->solver_type ==                  \
+           SOLVER_REAL_MT_DIRECT)) {                                           \
         sel->solution = curr->next_sol[0];                                     \
         curr->next_sol[0] = sel->solution->next_sol[0];                        \
         sel->solution->next_sol[0] = curr;                                     \
@@ -290,8 +292,9 @@ typedef struct aoclfftz_selector
       curr = curr->next_sol[0];                                                \
       while (curr && curr->next_sol && curr->next_sol[0]) {                    \
         next = curr->next_sol[0];                                              \
-        if ((curr->solver->solver_type == SOLVER_REAL_CT) &&                   \
-            (next->solver->solver_type == SOLVER_REAL_DIRECT)) {              \
+        if (curr->solver->solver_type == SOLVER_REAL_CT &&                     \
+            (next->solver->solver_type == SOLVER_REAL_DIRECT ||                \
+             next->solver->solver_type == SOLVER_REAL_MT_DIRECT)) {            \
           prev->next_sol[0] = next;                                            \
           curr->next_sol[0] = next->next_sol[0];                               \
           next->next_sol[0] = curr;                                            \

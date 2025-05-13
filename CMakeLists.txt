@@ -187,7 +187,8 @@ add_compile_definitions(CFLAGS_SET2="${CMAKE_C_FLAGS}")
 
 if(ENABLE_MULTI_THREADING)
     file(GLOB MT_SRC_FILES CONFIGURE_DEPENDS
-                        ${CORE_PATH}/solvers/complex/multithread/*.c)
+                        ${CORE_PATH}/solvers/complex/multithread/*.c
+                        ${CORE_PATH}/solvers/real/multithread/*.c)
     if (WIN32)
 	set(OpenMP_libomp_LIBRARY "C:/Program Files/LLVM/lib/libomp.lib" CACHE STRING "openmp library path")
 	message(STATUS "OpenMP custom path to look for openMP: ${OpenMP_libomp_LIBRARY}")

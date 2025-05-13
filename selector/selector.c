@@ -618,6 +618,10 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     INT32 ret = SELECTOR_FAILURE;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    INT32 batch = sel->solution->decomp_scheme->vecs[0].n;
+    INT32 avl_threads =
+            sel->solution->decomp_scheme->thread_info->avl_threads;
+
     INT32 is_FFT_ker_supported =
             check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n,
                                      kertab);
@@ -715,7 +719,16 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     }
     else if (level2_cond & 0x1)
     {
-        solver_obj->solver_type = SOLVER_REAL_DIRECT;
+        // Single threaded direct solver to be executed for batch <= 1,
+        // irrespective of avl_threads
+        if (avl_threads <= 1 || realhelper->is_CT || batch <= 1)
+        {
+            solver_obj->solver_type = SOLVER_REAL_DIRECT;
+        }
+        else
+        {
+            solver_obj->solver_type = SOLVER_REAL_MT_DIRECT;
+        }
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
             return SELECTOR_FAILURE;
@@ -1262,7 +1275,8 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
             {
                 // goto next direct node to setup twiddle buffer
                 while (curr != NULL &&
-                       curr->solver->solver_type != SOLVER_REAL_DIRECT)
+                       curr->solver->solver_type != SOLVER_REAL_DIRECT &&
+                       curr->solver->solver_type != SOLVER_REAL_MT_DIRECT)
                 {
                     curr->twiddle->TW = prev->twiddle->TW;
                     curr = curr->next_sol[0];
@@ -1297,7 +1311,8 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
         FOR_EACH_SOLUTION(curr, (solution->next_sol) ? solution->next_sol[0] : NULL)
         {
             if (curr->solver->solver_type == SOLVER_REAL_CT &&
-                prev->solver->solver_type == SOLVER_REAL_DIRECT)
+                (prev->solver->solver_type == SOLVER_REAL_DIRECT ||
+                 prev->solver->solver_type == SOLVER_REAL_MT_DIRECT))
             {
                 INTP n = prev->decomp_scheme->dims[0].n;
                 INTP no_of_groups = prev->solver->batches[R2HCF_KERNEL] > 0
