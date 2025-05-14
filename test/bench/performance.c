@@ -54,10 +54,11 @@
  *
  * @param params aoclfftz_bench_params_t type contains parsed arguments
  * @param handle handle object of VOID* type
+ * @param stats performance statistics object
  * @return INT32 status code
  */
 INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
-                                      VOID *handle)
+                                      VOID *handle, perf_stats_t *stats)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
@@ -67,8 +68,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     timer clk_tick;
 #endif
     timeVal start_time, end_time;
-    DOUBLE min_time = DBL_MAX, avg_time = 0.0, tot_time = 0.0, cur_time = 0.0;
-    DOUBLE avg_mflops = 0.0, max_mflops = 0.0;
+    DOUBLE tot_time = 0.0, cur_time = 0.0;
     INTP n = calculate_size(params->dims, params->dim_rank);
     INTP batches = calculate_size(params->vecs, params->vec_rank);
     UINTP input_size = 0;
@@ -95,7 +95,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     if (status != AOCLFFTZ_SUCCESS)
     {
         PRINT_FAILURE(
-            "\nTest bench failed [REASON: aoclfftz_execute  failed]\n\n");
+            "\nTest bench failed [REASON: aoclfftz_execute failed]\n\n");
         return EXECUTION_FAILURE;
     }
 
@@ -135,26 +135,29 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
         cur_time = diffTime(clk_tick, start_time, end_time);
         cur_time = cur_time / iter;
         tot_time = tot_time + cur_time;
-        if (cur_time < min_time)
+        if (cur_time < stats->min_time)
         {
-            min_time = cur_time;
+            stats->min_time = cur_time;
         }
-        avg_time = (DOUBLE)tot_time / params->num_iterations;
+        stats->avg_time = (DOUBLE)tot_time / params->num_iterations;
         bench_sleep(1e8); // 0.1 seconds
     }
 
     // compute MFLOPS from execution time
     if (params->fft_type == C2C)
     {
-        max_mflops = (5.0 * n * batches * log2(n)) / (min_time * 1E-3);
-        avg_mflops = (5.0 * n * batches * log2(n)) / (avg_time * 1E-3);
+        stats->max_mflops = (5.0 * n * batches * log2(n)) /
+                             (stats->min_time * 1E-3);
+        stats->avg_mflops = (5.0 * n * batches * log2(n)) /
+                             (stats->avg_time * 1E-3);
     }
     else
     {
-        max_mflops = (2.5 * n * batches * log2(n)) / (min_time * 1E-3);
-        avg_mflops = (2.5 * n * batches * log2(n)) / (avg_time * 1E-3);
+        stats->max_mflops = (2.5 * n * batches * log2(n)) /
+                             (stats->min_time * 1E-3);
+        stats->avg_mflops = (2.5 * n * batches * log2(n)) /
+                             (stats->avg_time * 1E-3);
     }
-    print_perf_stats(min_time, avg_time, avg_mflops, max_mflops);
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
@@ -165,8 +168,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
 /**
  * @brief prints performance stats
  */
-VOID print_perf_stats(DOUBLE min_time, DOUBLE avg_time, DOUBLE avg_mflops,
-                      DOUBLE max_mflops)
+VOID print_perf_stats(perf_stats_t *stats)
 {
     // prepare suitable execution time unit
     DOUBLE time_multiplier = 1.0;
@@ -174,19 +176,19 @@ VOID print_perf_stats(DOUBLE min_time, DOUBLE avg_time, DOUBLE avg_mflops,
     // units will be decided based on minimum of min_time and avg_time
     // which is min_time
     // print time in seconds
-    if (min_time > 1E9)
+    if (stats->min_time > 1E9)
     {
         time_multiplier = 1E-9;
         STRCPY(time_unit, 3, "s");
     }
     // print time in milli-seconds
-    else if (min_time > 1E6)
+    else if (stats->min_time > 1E6)
     {
         time_multiplier = 1E-6;
         STRCPY(time_unit, 3, "ms");
     }
     // print time in micro-seconds
-    else if (min_time > 1E3)
+    else if (stats->min_time > 1E3)
     {
         time_multiplier = 1E-3;
         STRCPY(time_unit, 3, "us");
@@ -199,14 +201,67 @@ VOID print_perf_stats(DOUBLE min_time, DOUBLE avg_time, DOUBLE avg_mflops,
     }
 
     printf("\n=====================================\n");
-    printf("  Min Execution time : %6.3lf %s\n", min_time * time_multiplier,
-           time_unit);
-    printf("  Avg Execution time : %6.3lf %s\n", avg_time * time_multiplier,
-           time_unit);
+    printf("  Min Execution time : %6.3lf %s\n",
+           stats->min_time * time_multiplier, time_unit);
+    printf("  Avg Execution time : %6.3lf %s\n",
+           stats->avg_time * time_multiplier, time_unit);
     printf("=====================================\n");
-    printf("      Max MFLOPS : %9.6lf\n", max_mflops);
-    printf("      Avg MFLOPS : %9.6lf\n", avg_mflops);
+    printf("      Max MFLOPS : %9.6lf\n", stats->max_mflops);
+    printf("      Avg MFLOPS : %9.6lf\n", stats->avg_mflops);
     printf("=====================================\n");
+}
+
+VOID calculate_and_print_scaling(perf_stats_t st, perf_stats_t mt)
+{
+    printf("\nPerformance numbers in Multi threaded mode\n");
+    print_perf_stats(&mt);
+    printf("\nPerformance numbers in Single threaded mode\n");
+    print_perf_stats(&st);
+    DOUBLE scaling_factor = st.avg_time / mt.avg_time;
+    if (scaling_factor < 1)
+    {
+        PRINT_FAILURE_FORMATTED("Scaling Factor (Single->Multi): %.2fx\n",
+                                 scaling_factor);
+    }
+    else
+    {
+        PRINT_SUCCESS_FORMATTED("Scaling Factor (Single->Multi): %.2fx\n",
+                                 scaling_factor);
+    }
+}
+
+/**
+ * @brief run the test bench on performance mode and calculate MFLOPS.
+ *
+ * @param params bench params object
+ * @param stats performance statistic object
+ * @return INT32 bench status code
+ */
+INT32 run_bench_on_perf_mode_and_get_stats(aoclfftz_bench_params_t *params,
+                                           perf_stats_t *stats)
+{
+    INT32 status = BENCH_SUCCESS;
+
+    VOID *handle = params->setup_problem(params);
+    if (handle == NULL)
+    {
+        PRINT_FAILURE("\nTest bench failed [REASON: Setup problem failed]\n\n");
+        status = SETUP_FAILURE;
+        goto exit;
+    }
+
+    status = run_problem_on_performance_mode(params, handle, stats);
+    if (status != BENCH_SUCCESS)
+    {
+        PRINT_FAILURE(
+            "\nTest bench failed [REASON: Execute problem failed]\n\n");
+        status = EXECUTION_FAILURE;
+        goto exit;
+    }
+
+exit:
+    aoclfftz_destroy(handle);
+    return status;
 }
 
 /**
@@ -218,32 +273,51 @@ VOID print_perf_stats(DOUBLE min_time, DOUBLE avg_time, DOUBLE avg_mflops,
 INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params)
 {
     INT32 status = BENCH_SUCCESS;
-
-    // setup the FFT problem
-    VOID *handle = params->setup_problem(params);
-    if (handle == NULL)
+    perf_stats_t stats =
     {
-        PRINT_FAILURE("\nTest bench failed [REASON: Setup problem failed]\n\n");
-        status = SETUP_FAILURE;
-        goto exit_performance_mode;
-    }
+        .min_time = DBL_MAX,
+        .avg_time = 0.0,
+        .avg_mflops = 0.0,
+        .max_mflops = 0.0
+    };
 
-    // run the FFT problem
-    status = run_problem_on_performance_mode(params, handle);
+    status = run_bench_on_perf_mode_and_get_stats(params, &stats);
     if (status != BENCH_SUCCESS)
     {
-        PRINT_FAILURE(
-            "\nTest bench failed [REASON: Execute problem failed]\n\n");
-        status = EXECUTION_FAILURE;
-        goto exit_performance_mode;
+        goto exit;
+    }
+
+    // Multi-threaded scaling comparisons against single-threaded mode are
+    // performed only when logging is set to INFO level or higher.
+    if (params->logger_mode >= INFO && params->num_threads > 1)
+    {
+        // Running in single threaded mode
+        params->num_threads = 1;
+        perf_stats_t st_stats =
+        {
+            .min_time = DBL_MAX,
+            .avg_time = 0.0,
+            .avg_mflops = 0.0,
+            .max_mflops = 0.0
+        };
+
+        status = run_bench_on_perf_mode_and_get_stats(params, &st_stats);
+        if (status != BENCH_SUCCESS)
+        {
+            goto exit;
+        }
+
+        calculate_and_print_scaling(st_stats, stats);
+    }
+    else
+    {
+        // print stat and exit
+        print_perf_stats(&stats);
     }
 
     PRINT_SUCCESS("\nTest bench completed on performance mode\n\n");
-
-exit_performance_mode:
-    // destroy the handle object
-    aoclfftz_destroy(handle);
-    return BENCH_SUCCESS;
+exit:
+    return status;
 }
 
 /**

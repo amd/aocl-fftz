@@ -49,8 +49,17 @@
 #define MAX(a, b) ((a > b) ? a : b)
 
 #define PRINT_SUCCESS(str) printf("\033[1;32m" str "\033[1;0m");
-
 #define PRINT_FAILURE(str) printf("\033[1;31m" str "\033[1;0m");
+
+#define PRINT_SUCCESS_FORMATTED(str, ...)                                      \
+{                                                                              \
+    printf("\033[1;32m" str "\033[1;0m", __VA_ARGS__);                         \
+}
+
+#define PRINT_FAILURE_FORMATTED(str, ...)                                      \
+{                                                                              \
+    printf("\033[1;31m" str "\033[1;0m", __VA_ARGS__);                         \
+}
 
 /**
  * @brief handle the bench status error codes
@@ -163,8 +172,8 @@
                 if (status > 0)                                                \
                 {                                                              \
                     printf("Use -h / --help for more information.\n");         \
-                    PRINT_FAILURE("\nTest bench failed [REASON: Argument       \
-                                   parsing failed]\n\n");                      \
+                    PRINT_FAILURE("\nTest bench failed [REASON: Argument "     \
+                                   "parsing failed]\n\n");                     \
                 }                                                              \
                 else                                                           \
                 {                                                              \

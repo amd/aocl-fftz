@@ -44,13 +44,23 @@
 #include <float.h>
 #include "test/bench/aoclfftz_bench.h"
 
+// Structures for test bench
+typedef struct perf_stats
+{
+    DOUBLE min_time;
+    DOUBLE avg_time;
+    DOUBLE avg_mflops;
+    DOUBLE max_mflops;
+} perf_stats_t;
+
+
 INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params);
 INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
-                                      VOID *handle);
+                                      VOID *handle, perf_stats_t *stats);
 INT32 calibrate_iterations(VOID *handle, DOUBLE min_bench_time,
                             aoclfftz_bench_params_t *params);
 VOID bench_sleep(INT64 nano_seconds);
-VOID print_perf_stats(DOUBLE min_time, DOUBLE avg_time, DOUBLE avg_mflops,
-                      DOUBLE max_mflops);
+VOID print_perf_stats(perf_stats_t *stats);
+VOID calculate_and_print_scaling(perf_stats_t single, perf_stats_t multi);
 
 #endif // PERFORMANCE_H
