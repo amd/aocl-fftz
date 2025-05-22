@@ -169,9 +169,9 @@ static inline UINT32 get_max_num_threads(VOID)
     UINT32 max_threads = get_max_num_threads();                                \
     if (num_threads > max_threads)                                             \
     {                                                                          \
-        printf("WARNING: Requested num_threads (%d) exceeds "                  \
-                "available logical CPUs (%d), using %d\n as num_threads",      \
-                num_threads, max_threads, max_threads);                        \
+        AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Requested num_threads "            \
+                "(%d) exceeds available logical CPUs (%d), using %d\n as "     \
+                "num_threads", num_threads, max_threads, max_threads);         \
         num_threads = max_threads;                                             \
     }                                                                          \
 }

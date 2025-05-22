@@ -251,8 +251,8 @@ typedef struct aoclfftz_selector
  *
  * `sol` can be any solution in the hierarchy of solutions.
  *
- * NOTE: 
- * Reasoning: 
+ * NOTE:
+ * Reasoning:
  * * In a generic solution plan, `TW` is `NULL` for all solutions before first CT. Hence `TW == NULL` ensures current solution isn't after a CT.
  * * `sol->next_sol == NULL` checks if the solution is the last one in the hierarchy.
  * * When both are true, it checks that we have walked the entire solution hierarchy and found no CT solution.
@@ -261,7 +261,7 @@ typedef struct aoclfftz_selector
  * @param sol Pointer to the solution structure.
  *
  */
-#define IS_DIRECT_ONLY_PROBLEM(sol) ( sol->twiddle->TW == NULL && sol->next_sol == NULL ) 
+#define IS_DIRECT_ONLY_PROBLEM(sol) ( sol->twiddle->TW == NULL && sol->next_sol == NULL )
 
 
 /**
@@ -305,6 +305,17 @@ typedef struct aoclfftz_selector
     }                                                                          \
 }
 
+/**
+ * @brief Swap the buffers of two pointers
+ *
+ */
+#define SWAP_BUFFERS(buf1, buf2)                                               \
+{                                                                              \
+    VOID *temp_buffer_for_swap = buf1;                                         \
+    buf1 = buf2;                                                               \
+    buf2 = temp_buffer_for_swap;                                               \
+}
+
 // Few additional steps are required for RealFFT problems before and after
 // the setup stages.
 // FIXIT: These additional initialization steps will only work for 1D problems.
@@ -319,6 +330,7 @@ typedef struct aoclfftz_selector
         realhelper->stage = 0;                                                 \
         realhelper->is_CT = 0;                                                 \
         realhelper->is_buffered_invoked = 0;                                   \
+        realhelper->num_aux_buf = 1;                                           \
         realhelper->problem_size = sel_obj->solution->decomp_scheme->dims[0].n;\
         if (FFT_DIR(sel_obj->solution->decomp_scheme->flags) ==                \
             FORWARD_FFT_DIR)                                                   \
@@ -671,8 +683,8 @@ typedef struct aoclfftz_selector
     sol->cost_analysis->time = 0;                                              \
 }
 
-// Shrink_dim_rank : returns the new dim rank by adding the no of dimentions
-// those size is not equal to one.
+// Shrink_dim_rank : returns the new dim rank by adding the number of dimensions
+// whose size is not equal to one.
 // Ex:- 2x1x3x1, returns 2
 #define SHRINK_DIM_RANK(dims, dim_rank, ret)                                   \
 {                                                                              \
@@ -695,7 +707,7 @@ typedef struct aoclfftz_selector
 }
 
 // Function declarations
-INT32 register_solvers_kernels(kernel_t[NUM_KERNELS_IN_TABLE], 
+INT32 register_solvers_kernels(kernel_t[NUM_KERNELS_IN_TABLE],
                                kernel_t[NUM_KERNELS_IN_TABLE],
                                kernel_t[NUM_KERNELS_IN_TABLE], INT32 dt,
                                INT32 dir, INT32 is_real, INT32 cpu_flags);

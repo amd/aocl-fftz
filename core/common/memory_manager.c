@@ -442,7 +442,8 @@ VOID destroy_solution(aoclfftz_solution_t* sol)
     {
         INT32 solver_type = sol->solver->solver_type;
         UINT32 n_sols = sol->decomp_scheme->thread_info->n_threads;
-        n_sols = (solver_type == SOLVER_MT_BATCHED) ? n_sols : 1;
+        n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
+                  (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
         destroy_decomp_scheme(sol->decomp_scheme);
         destroy_strides(sol);
 
@@ -483,7 +484,8 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, UINT32 n)
             {
                 INT32 solver_type = cur_sol->solver->solver_type;
                 UINT32 n_sols = cur_sol->decomp_scheme->thread_info->n_threads;
-                n_sols = (solver_type == SOLVER_MT_BATCHED) ? n_sols : 1;
+                n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
+                          (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
                 destroy_solutions(cur_sol->next_sol, n_sols);
                 destroy_decomp_scheme(cur_sol->decomp_scheme);
                 destroy_strides(cur_sol);
@@ -500,11 +502,13 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, UINT32 n)
                 //
                 // Clearing these buffers will happen only once (which will be
                 // from destroy_handle).
-                if (solver_type == SOLVER_BUFFERED ||
-                    solver_type == SOLVER_REAL_BUFFERED)
+                if ((i == 0) && (solver_type == SOLVER_BUFFERED ||
+                     solver_type == SOLVER_REAL_BUFFERED))
                 {
-                    FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_1);
-                    FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_2);
+                    FREE_ALIGN_ALLOCATED_MEM(
+                        cur_sol->dft_bufs->buffered->aux_buffer_1);
+                    FREE_ALIGN_ALLOCATED_MEM(
+                        cur_sol->dft_bufs->buffered->aux_buffer_2);
                 }
                 destroy_solution(cur_sol->dft_bufs->nd_sol);
 
@@ -577,7 +581,8 @@ VOID destroy_solution(aoclfftz_solution_t *sol)
     {
         INT32 solver_type = sol->solver->solver_type;
         UINT32 n_sols = sol->decomp_scheme->thread_info->n_threads;
-        n_sols = (solver_type == SOLVER_MT_BATCHED) ? n_sols : 1;
+        n_sols = (((solver_type == SOLVER_MT_BATCHED)) ||
+                  (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
         FREE_ALIGN_ALLOCATED_MEM(sol->solver->kernel_c2c);
         FREE_ALIGN_ALLOCATED_MEM(sol->solver->kernel_r2hc);
         FREE_ALIGN_ALLOCATED_MEM(sol->solver->kernel_r2hcf);
@@ -598,8 +603,8 @@ VOID destroy_solution(aoclfftz_solution_t *sol)
         //
         // Clearing these buffers will happen only once (which will be from
         // destroy_handle).
-        if (solver_type == SOLVER_BUFFERED ||
-            solver_type == SOLVER_REAL_BUFFERED)
+        if ((i == 0) && (solver_type == SOLVER_BUFFERED ||
+            solver_type == SOLVER_REAL_BUFFERED))
         {
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
@@ -622,7 +627,8 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, UINT32 n)
             {
                 INT32 solver_type = cur_sol->solver->solver_type;
                 UINT32 n_sols = cur_sol->decomp_scheme->thread_info->n_threads;
-                n_sols = solver_type == SOLVER_MT_BATCHED ? n_sols : 1;
+                n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
+                          (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
                 destroy_solutions(cur_sol->next_sol, n_sols);
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver->kernel_c2c);
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver->kernel_r2hc);
@@ -644,8 +650,8 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, UINT32 n)
                 //
                 // Clearing these buffers will happen only once (which will be
                 // from destroy_handle).
-                if (solver_type == SOLVER_BUFFERED ||
-                    solver_type == SOLVER_REAL_BUFFERED)
+                if ((i == 0) && (solver_type == SOLVER_BUFFERED ||
+                    solver_type == SOLVER_REAL_BUFFERED))
                 {
                     FREE_ALIGN_ALLOCATED_MEM(cur_sol->buffered->aux_buffer_1);
                     FREE_ALIGN_ALLOCATED_MEM(cur_sol->buffered->aux_buffer_2);

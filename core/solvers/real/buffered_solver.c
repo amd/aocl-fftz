@@ -46,8 +46,8 @@ INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 #endif
     INT32 status = SOLVER_SUCCESS;
-
     realhelper->is_buffered_invoked = 1;
+    INT32 num_aux_buf = realhelper->num_aux_buf;
 
     INT32 dt_prec, dt_bytes;
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
@@ -57,8 +57,10 @@ INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
     // Copy input to temp buffer
     FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
     FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
-    ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_1, VOID, n * dt_bytes);
-    ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_2, VOID, n * dt_bytes);
+    ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_1, VOID,
+                     num_aux_buf * n * dt_bytes);
+    ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_2, VOID,
+                     num_aux_buf * n * dt_bytes);
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");

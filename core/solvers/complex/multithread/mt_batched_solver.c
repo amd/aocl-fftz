@@ -113,7 +113,7 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
     else
     {
         for (rnk_offset = 0;
-             rnk_offset < sol->decomp_scheme->vecs[vec_rank-1].n; rnk_offset++)
+             rnk_offset < sol->decomp_scheme->vecs[vec_rank - 1].n; rnk_offset++)
         {
             // save pointer to restore it below since
             // they will be moved while execution

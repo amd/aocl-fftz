@@ -63,6 +63,8 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
 #ifdef MULTI_THREADING
         solvers_table[SOLVER_REAL_MT_DIRECT] =
             register_execute_real_mt_direct_solver();
+        solvers_table[SOLVER_REAL_MT_BATCHED] =
+            register_execute_real_mt_batched_solver();
 #endif
     }
     else

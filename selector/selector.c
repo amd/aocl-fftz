@@ -662,7 +662,15 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     // Batched/vector FFT Solver
     if (level1_cond1 & 0x1)
     {
-        solver_obj->solver_type = SOLVER_REAL_BATCHED;
+        if (avl_threads <= 1)
+        {
+            solver_obj->solver_type = SOLVER_REAL_BATCHED;
+        }
+        else
+        {
+            solver_obj->solver_type = SOLVER_REAL_MT_BATCHED;
+        }
+
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
             return SELECTOR_FAILURE;
@@ -1364,7 +1372,8 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src)
     // Initiate deep copy of next_sol recursively until leaf node
     if (src->next_sol)
     {
-        int n = (src->solver->solver_type == SOLVER_MT_BATCHED) ?
+        int n = (src->solver->solver_type == SOLVER_MT_BATCHED ||
+                 src->solver->solver_type == SOLVER_REAL_MT_BATCHED) ?
                               src->decomp_scheme->thread_info->n_threads : 1;
         dst->next_sol = alloc_sol_array(n);
 
@@ -1384,7 +1393,8 @@ VOID post_process_solution(aoclfftz_solution_t *sol)
 {
     while (sol != NULL)
     {
-        if (sol->solver->solver_type == SOLVER_MT_BATCHED)
+        if ((sol->solver->solver_type == SOLVER_MT_BATCHED) ||
+             (sol->solver->solver_type == SOLVER_REAL_MT_BATCHED))
         {
             // call post process recursively to find the innermost MT batched
             // solution
@@ -1398,7 +1408,7 @@ VOID post_process_solution(aoclfftz_solution_t *sol)
             }
             break;
         }
-        if (sol->solver->solver_type == SOLVER_NDIM && sol->dft_bufs->nd_sol)
+        if ((sol->solver->solver_type == SOLVER_NDIM) && sol->dft_bufs->nd_sol)
         {
             post_process_solution(sol->dft_bufs->nd_sol);
         }

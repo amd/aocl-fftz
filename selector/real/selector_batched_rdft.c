@@ -54,7 +54,6 @@ INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     INT32 rnk = 0;
     INTP batch_size = 1;
     INT32 ret = SELECTOR_FAILURE;
-    UINT32 n_threads = 1;
 
     cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space);
     if (cur_sel == NULL)
@@ -65,10 +64,29 @@ INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     // copy solution object from sel to cur_sel
     COPY_SOLUTION_OBJ(cur_sel->solution, sel->solution);
 
+    UINT32 n_threads = 1;
+#ifdef MULTI_THREADING
+    UINT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
+    UINT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
+    n_threads = (inner_batch < avl_threads) ? inner_batch : avl_threads;
+    sel->solution->decomp_scheme->thread_info->n_threads = n_threads;
+#endif
+
+
     // Setup batched solver to find the next solution for a single set/unit
     // of the vector problem
-    ret = setup_real_batched_solver(sel->solution, cur_sel->solution,
-                                    realhelper);
+    if (n_threads <= 1)
+    {
+        ret = setup_real_batched_solver(sel->solution, cur_sel->solution,
+                                        realhelper);
+    }
+#ifdef MULTI_THREADING
+    else
+    {
+        ret = setup_real_mt_batched_solver(sel->solution, cur_sel->solution,
+                                           realhelper);
+    }
+#endif
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_batched_dft;

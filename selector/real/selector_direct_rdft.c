@@ -55,7 +55,7 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     INT32 vec_rank = decomp_scheme->vec_rank;
     INT32 dim_rank = decomp_scheme->dim_rank;
     INT32 stats_mode = decomp_scheme->cntrl_params->measure_stats;
-    INT32 avl_threads = decomp_scheme->thread_info->avl_threads;
+    UINT32 avl_threads = decomp_scheme->thread_info->avl_threads;
     UINT32 precision = DT_PRECISION_FLAG(decomp_scheme->flags);
     UINT32 selector_mode = GET_SELECTOR_MODE(decomp_scheme->flags);
     UINT32 radix = 0;
@@ -104,11 +104,11 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
             kernel_r2hc = &kertab[ker_idx];
             kernel_r2hcf = &kertab[ker_idx + 1];
             cur_sel->solution->solver->kernel_c2c->kfft =
-                    kertab[ker_idx - 1].kfft;
+                kertab[ker_idx - 1].kfft;
             cur_sel->solution->solver->kernel_r2hc->kfft =
-                    kertab[ker_idx].kfft;
+                kertab[ker_idx].kfft;
             cur_sel->solution->solver->kernel_r2hcf->kfft =
-                    kertab[ker_idx + 1].kfft;
+                kertab[ker_idx + 1].kfft;
 
             cur_sel->solution->solver->kernel_c2c->sets =
                 kertab[ker_idx - 1].sets[precision - 2];

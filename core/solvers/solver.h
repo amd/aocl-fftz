@@ -74,6 +74,7 @@ typedef enum
     SOLVER_REAL_BATCHED,
     SOLVER_REAL_PERM_KER,
     SOLVER_REAL_MT_DIRECT,
+    SOLVER_REAL_MT_BATCHED,
     NUM_SOLVERS_END
 } aoclfftz_solver_type;
 
@@ -145,6 +146,9 @@ INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
                                   const kernel_t *kernel_r2hc,
                                   const kernel_t *kernel_r2hcf,
                                   aoclfftz_realhelper_t *realhelper);
+INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
+                                   aoclfftz_solution_t *next_sol,
+                                   aoclfftz_realhelper_t *realhelper);
 #endif
 
 dft_solver_ register_execute_direct_solver(VOID);
@@ -166,5 +170,6 @@ dft_solver_ register_execute_real_ct_solver(VOID);
 
 #ifdef MULTI_THREADING
 dft_solver_ register_execute_real_mt_direct_solver(VOID);
+dft_solver_ register_execute_real_mt_batched_solver(VOID);
 #endif
 #endif // AOCLFFTZ_SOLVER_H

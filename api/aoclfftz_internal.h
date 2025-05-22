@@ -116,7 +116,7 @@
 #define NUM_FFT_DIRS 2
 #define FORWARD_FFT_DIR 0
 #define BACKWARD_FFT_DIR 1
-#define NUM_SOLVERS 23
+#define NUM_SOLVERS 24
 #define NUM_KERNELS_IN_TABLE 256
 #define NUM_KERNEL_CATEGORIES 4
 #define NUM_KERNELS_IN_EACH_CATEGORY 64
@@ -422,6 +422,7 @@ typedef struct aoclfftz_realhelper
     UINT8 is_last_stage;
     UINT8 is_CT;
     UINT8 is_buffered_invoked;
+    UINT8 num_aux_buf;
 } aoclfftz_realhelper_t;
 
 // float LP64
