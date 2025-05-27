@@ -40,7 +40,7 @@
 #ifndef AOCLFFTZ_R2HC_SIMD_AVX256_H
 #define AOCLFFTZ_R2HC_SIMD_AVX256_H
 
-#include "core/kernels/real_simd/avx128/r2hc_simd_avx128.h"
+#include "core/kernels/simd_includes/r2hc_simd_avx128.h"
 
 
 /************************ MACRO FUNCTIONS ************************/

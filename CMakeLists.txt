@@ -98,25 +98,24 @@ list(APPEND CORE_SRC_FILES ${CORE_C_FILES})
 if(ENABLE_AVX512)
     set(ENABLE_AVX256 ON)
     add_compile_definitions(ENABLE_AVX512)
-    file(GLOB CORE_AVX512_FILES CONFIGURE_DEPENDS
-                            ${CORE_PATH}/kernels/c2c/avx512/*.c ${CORE_PATH}/kernels/avx512/*.h)
+    file(GLOB CORE_AVX512_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/c2c/avx512/*.c)
     list(APPEND CORE_SRC_FILES ${CORE_AVX512_FILES})
 endif()
 if(ENABLE_AVX256)
     set(ENABLE_AVX128 ON)
     add_compile_definitions(ENABLE_AVX256)
-    file(GLOB CORE_AVX256_FILES CONFIGURE_DEPENDS
-                            ${CORE_PATH}/kernels/c2c/avx256/*.c ${CORE_PATH}/kernels/c2c/avx256/*.h
-                            ${CORE_PATH}/kernels/r2hc/avx256/*.c ${CORE_PATH}/kernels/r2hc/avx256/*.h
-                            ${CORE_PATH}/kernels/r2hc_fused/avx256/*.c ${CORE_PATH}/kernels/real_simd/avx256/*.h)
+    file(GLOB CORE_AVX256_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/c2c/avx256/*.c
+                                                  ${CORE_PATH}/kernels/r2hc/avx256/*.c
+                                                  ${CORE_PATH}/kernels/r2hc_fused/avx256/*.c
+                                                  ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx256.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX256_FILES})
 endif()
 if(ENABLE_AVX128)
     add_compile_definitions(ENABLE_AVX128)
-    file(GLOB CORE_AVX128_FILES CONFIGURE_DEPENDS
-                            ${CORE_PATH}/kernels/c2c/avx128/*.c ${CORE_PATH}/kernels/c2c/avx128/*.h
-                            ${CORE_PATH}/kernels/r2hc/avx128/*.c ${CORE_PATH}/kernels/r2hc/avx128/*.h
-                            ${CORE_PATH}/kernels/r2hc_fused/avx128/*.c ${CORE_PATH}/kernels/real_simd/avx128/*.h)
+    file(GLOB CORE_AVX128_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/c2c/avx128/*.c
+                                                  ${CORE_PATH}/kernels/r2hc/avx128/*.c
+                                                  ${CORE_PATH}/kernels/r2hc_fused/avx128/*.c
+                                                  ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx128.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX128_FILES})
 endif()
 

@@ -38,7 +38,7 @@
  */
 
 #include "core/kernels/kernel.h"
-#include "core/kernels/real_simd/avx128/r2hc_simd_avx128.h"
+#include "core/kernels/simd_includes/r2hc_simd_avx128.h"
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS][NUM_FFT_DIRS] =
                                                     {{{0, 6, 12, 32, 22, 0},
