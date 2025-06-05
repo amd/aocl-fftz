@@ -31,7 +31,7 @@
  *  @brief Multi threaded direct real fft solver that enables multi threading
  *  for the available real fft direct kernels
  *
- *  This file contains the functions that setup, execute the solver.
+ *  This file contains the functions that setup and execute the solver.
  *
  *  @author Partiksha
  */
@@ -80,6 +80,9 @@ INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
     UINT8 sets_c2c = kernel_c2c->sets[precision - 2];
     UINT8 sets_r2hc = kernel_r2hc->sets[precision - 2];
     UINT8 sets_r2hcf = kernel_r2hcf->sets[precision - 2];
+    INT32 avl_threads = sol->decomp_scheme->thread_info->avl_threads;
+    INTP total_batches = 0;
+
     INTP p = 0;
     INTP p_last = 0;
     INTP q = 0;
@@ -181,6 +184,22 @@ INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
         v_out_stride = is_backward ? org_v_out_stride : org_v_out_stride * 2;
     }
 
+    // Setting the number of threads based on the batches
+    if (sol->solver->batches[C2C_KERNEL])
+    {
+        total_batches = sol->solver->batches[C2C_KERNEL] +
+                        (sol->solver->batches[R2HC_KERNEL] + 1) / 2 +
+                        sol->solver->batches[R2HCF_KERNEL];
+    }
+    else
+    {
+        total_batches = sol->solver->batches[C2C_KERNEL] +
+                        sol->solver->batches[R2HC_KERNEL] +
+                        sol->solver->batches[R2HCF_KERNEL];
+    }
+    UINT32 n_threads = (total_batches < avl_threads) ?
+                       total_batches : avl_threads;
+    sol->decomp_scheme->thread_info->n_threads = n_threads;
     INTP no_of_groups = sol->solver->batches[R2HCF_KERNEL] > 0
                             ? sol->solver->batches[R2HCF_KERNEL]
                             : sol->solver->batches[R2HC_KERNEL];
@@ -428,6 +447,101 @@ INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
     return status;
 }
 
+static VOID execute_real_kernel(aoclfftz_solution_t *sol, UINT32 n_threads_real)
+{
+
+    UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+
+    VOID *in = sol->decomp_scheme->in_real;
+    VOID *out = sol->decomp_scheme->out_real;
+
+    omp_set_num_threads(n_threads_real);
+    /* Execute R2HC Kernels */
+    if (sol->solver->batches[R2HC_KERNEL] != 0)
+    {
+        kfft_ kernel_r2hc = sol->solver->kernel_r2hc->kfft;
+        UINT8 num_sets_r2hc = sol->solver->kernel_r2hc->sets;
+
+        // vector stride prep for R2HC kernels
+        INTP v_in_stride_r2hc, v_out_stride_r2hc;
+        v_in_stride_r2hc  = sol->strides_grp->strides_r2hc->v_in_stride
+                            * dt_bytes;
+        v_out_stride_r2hc = sol->strides_grp->strides_r2hc->v_out_stride
+                            * dt_bytes;
+        INTP num_iters_r2hc = sol->solver->batches[R2HC_KERNEL] / num_sets_r2hc;
+        INTP rem_iters_r2hc = sol->solver->batches[R2HC_KERNEL] -
+                              (num_iters_r2hc * num_sets_r2hc);
+
+        #pragma omp parallel for
+        for (INTP batch = 0; batch < num_iters_r2hc; batch++)
+        {
+            INTP v_istride = batch * v_in_stride_r2hc;
+            INTP v_ostride = batch * v_out_stride_r2hc;
+            kernel_r2hc((VOID *)((CHAR *)in + v_istride),
+                        (VOID *)((CHAR *)in + v_istride),
+                        (VOID *)((CHAR *)out + v_ostride),
+                        (VOID *)((CHAR *)out + v_ostride),
+                        num_sets_r2hc, sol->strides_grp->strides_r2hc,
+                        sol->twiddle->TW, FFT_DIR(sol->decomp_scheme->flags));
+        }
+        /* Process the tail cases of the kernel */
+        if(rem_iters_r2hc)
+        {
+            INTP v_istride = num_iters_r2hc * v_in_stride_r2hc;
+            INTP v_ostride = num_iters_r2hc * v_out_stride_r2hc;
+            kernel_r2hc((VOID *)((CHAR *)in + v_istride),
+                        (VOID *)((CHAR *)in + v_istride),
+                        (VOID *)((CHAR *)out + v_ostride),
+                        (VOID *)((CHAR *)out + v_ostride),
+                        rem_iters_r2hc, sol->strides_grp->strides_r2hc,
+                        sol->twiddle->TW, FFT_DIR(sol->decomp_scheme->flags));
+        }
+    }
+    /* Execute R2HCF Kernels */
+    else if (sol->solver->batches[R2HCF_KERNEL] != 0)
+    {
+        kfft_ kernel_r2hcf = sol->solver->kernel_r2hcf->kfft;
+        UINT8 num_sets_r2hcf = sol->solver->kernel_r2hcf->sets;
+
+        // vector stride prep for R2HCF kernels
+        INTP v_in_stride_r2hcf, v_out_stride_r2hcf;
+        v_in_stride_r2hcf  = sol->strides_grp->strides_r2hcf->v_in_stride
+                             * dt_bytes;
+        v_out_stride_r2hcf = sol->strides_grp->strides_r2hcf->v_out_stride
+                             * dt_bytes;
+        INTP num_iters_r2hcf = sol->solver->batches[R2HCF_KERNEL]
+                               / num_sets_r2hcf;
+        INTP rem_iters_r2hcf = sol->solver->batches[R2HCF_KERNEL] -
+                               (num_iters_r2hcf * num_sets_r2hcf);
+
+        #pragma omp parallel for
+        for (INTP batch = 0; batch < num_iters_r2hcf; batch++)
+        {
+            INTP v_istride = batch * v_in_stride_r2hcf;
+            INTP v_ostride = batch * v_out_stride_r2hcf;
+            kernel_r2hcf((VOID *)((CHAR *)in + v_istride),
+                         (VOID *)((CHAR *)in + v_istride),
+                         (VOID *)((CHAR *)out + v_ostride),
+                         (VOID *)((CHAR *)out + v_ostride),
+                         num_sets_r2hcf, sol->strides_grp->strides_r2hcf,
+                         sol->twiddle->TW, FFT_DIR(sol->decomp_scheme->flags));
+        }
+        /* Process the tail cases of the kernel */
+        if(rem_iters_r2hcf)
+        {
+            INTP v_istride = num_iters_r2hcf * v_in_stride_r2hcf;
+            INTP v_ostride = num_iters_r2hcf * v_out_stride_r2hcf;
+            kernel_r2hcf((VOID *)((CHAR *)in + v_istride),
+                         (VOID *)((CHAR *)in + v_istride),
+                         (VOID *)((CHAR *)out + v_ostride),
+                         (VOID *)((CHAR *)out + v_ostride),
+                         rem_iters_r2hcf, sol->strides_grp->strides_r2hcf,
+                         sol->twiddle->TW, FFT_DIR(sol->decomp_scheme->flags));
+        }
+    }
+}
+
 /* This function will execute the kernels for both real direct and CT problems.
 
    For real direct problem, it will execute R2HC kernels.
@@ -449,72 +563,29 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
 
     INT32 ret = SOLVER_SUCCESS;
 
-    kfft_ kernel_r2hc = sol->solver->kernel_r2hc->kfft;
-    UINT8 num_sets_r2hc = sol->solver->kernel_r2hc->sets;
-
-    UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
-
     VOID *in = sol->decomp_scheme->in_real;
     VOID *out = sol->decomp_scheme->out_real;
-
-    // vector stride prep for R2HC kernels
-    INTP v_in_stride_r2hc, v_out_stride_r2hc;
-    v_in_stride_r2hc = sol->strides_grp->strides_r2hc->v_in_stride * dt_bytes;
-    v_out_stride_r2hc = sol->strides_grp->strides_r2hc->v_out_stride * dt_bytes;
-    INTP num_iters_r2hc = sol->solver->batches[R2HC_KERNEL] / num_sets_r2hc;
-    INTP rem_iters_r2hc = sol->solver->batches[R2HC_KERNEL] -
-                          (num_iters_r2hc * num_sets_r2hc);
 
     // Kernel execution order : R2HC / R2HCF -> C2C
     // R2HC and R2HCF will not come together
 
     // Execute R2HC Kernels
-    if (sol->solver->batches[R2HC_KERNEL] != 0)
+    UINT8 is_direct_only_problem = IS_DIRECT_ONLY_PROBLEM(sol);
+    if (is_direct_only_problem)
     {
-        // Execute R2HC Kernels
-        // Set threads for parallel execution
-        omp_set_num_threads(sol->decomp_scheme->thread_info->n_threads);
-        #pragma omp parallel for
-        for (INTP batch = 0; batch < num_iters_r2hc; batch++)
+        execute_real_kernel(sol, sol->decomp_scheme->thread_info->n_threads);
+        if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
         {
-            INTP v_istride = batch * v_in_stride_r2hc;
-            INTP v_ostride = batch * v_out_stride_r2hc;
-            kernel_r2hc((VOID *)((CHAR *)in + v_istride),
-                        (VOID *)((CHAR *)in + v_istride),
-                        (VOID *)((CHAR *)out + v_ostride),
-                        (VOID *)((CHAR *)out + v_ostride),
-                        num_sets_r2hc, sol->strides_grp->strides_r2hc,
-                        sol->twiddle->TW, FFT_DIR(sol->decomp_scheme->flags));
+            set_zero_for_dc_and_nyquist_batched(sol);
         }
-
-        // Process the tail cases of the kernel
-        if (rem_iters_r2hc)
-        {
-            INTP v_istride = num_iters_r2hc * v_in_stride_r2hc;
-            INTP v_ostride = num_iters_r2hc * v_out_stride_r2hc;
-            kernel_r2hc((VOID *)((CHAR *)in + v_istride),
-                        (VOID *)((CHAR *)in + v_istride),
-                        (VOID *)((CHAR *)out + v_ostride),
-                        (VOID *)((CHAR *)out + v_ostride),
-                        rem_iters_r2hc, sol->strides_grp->strides_r2hc,
-                        sol->twiddle->TW, FFT_DIR(sol->decomp_scheme->flags));
-        }
-        UINT8 is_direct_only_problem = IS_DIRECT_ONLY_PROBLEM(sol);
-        if (is_direct_only_problem)
-        {
-            if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
-            {
-                set_zero_for_dc_and_nyquist_batched(sol);
-            }
-            return ret;
-        }
+        return ret;
     }
 
+    UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
     UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
-
+    UINT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
     kfft_ kernel_c2c = sol->solver->kernel_c2c->kfft;
-    kfft_ kernel_r2hcf = sol->solver->kernel_r2hcf->kfft;
 
     INTP radix = sol->decomp_scheme->dims[0].n;
     INTP no_of_groups = sol->solver->batches[R2HCF_KERNEL] > 0
@@ -549,125 +620,267 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
         r2hc_out_stride = (c2c_out_stride - 1) * 2 + 1;
     }
 
-    // Execute R2HCF Kernels
-    if (sol->solver->batches[R2HCF_KERNEL] != 0)
-    {
-        kernel_r2hcf(in, in, out, out, sol->solver->batches[R2HCF_KERNEL],
-                     sol->strides_grp->strides_r2hcf, sol->twiddle->TW,
-                     FFT_DIR(sol->decomp_scheme->flags));
-    }
-
-    in = MOVE_ADDR(in, r2hc_in_stride * dt_bytes);
-    out = MOVE_ADDR(out, r2hc_out_stride * dt_bytes);
-    if (is_last_stage)
-    {
-        out = MOVE_ADDR(out, dt_bytes);
-    }
-
+    // vector stride prep for C2C kernels
+    INTP v_in_stride_c2c, v_out_stride_c2c;
+    v_in_stride_c2c = sol->strides_grp->strides_c2c->v_in_stride * dt_bytes;
+    v_out_stride_c2c = sol->strides_grp->strides_c2c->v_out_stride * dt_bytes;
+    INTP batch_real = 0;
+    INTP total_batches = 0;
     // Execute C2C Kernels
-    if (sol->solver->batches[C2C_KERNEL] != 0)
+    if (sol->solver->batches[C2C_KERNEL])
     {
-        INTP half_stride_start = (radix + 1) >> 1;
-        INTP half_stride_n = radix - half_stride_start;
+        batch_real = (sol->solver->batches[R2HC_KERNEL] > 0) ?
+                      (sol->solver->batches[R2HC_KERNEL] + 1) / 2 :
+                      sol->solver->batches[R2HCF_KERNEL];
+        // Calculate the number of threads for real solver and complex kernels
+        // based on their respective number of batches
+        total_batches = sol->solver->batches[C2C_KERNEL] +
+                        (sol->solver->batches[R2HC_KERNEL] + 1) / 2  +
+                        sol->solver->batches[R2HCF_KERNEL];
+    }
+    else
+    {
+        batch_real = (sol->solver->batches[R2HC_KERNEL] > 0) ?
+                      sol->solver->batches[R2HC_KERNEL] :
+                      sol->solver->batches[R2HCF_KERNEL];
+        // Calculate the number of threads for real solver and complex kernels
+        // based on their respective number of batches
+        total_batches = sol->solver->batches[C2C_KERNEL] +
+                        sol->solver->batches[R2HC_KERNEL] +
+                        sol->solver->batches[R2HCF_KERNEL];
+    }
 
-        if (is_backward)
+    UINT32 n_threads_real = (n_threads * batch_real) / total_batches;
+    UINT32 n_threads_c2c = n_threads - n_threads_real;
+
+    /*
+     * Parallelization Strategy:
+     * Parallelize the execution blocks of both real and complex kernels only
+     * when there are batches[R2HC/R2HCF] > 0 and batches[C2C] > 0.
+     */
+    int enable_parallelism = (sol->solver->batches[C2C_KERNEL] > 0);
+
+    // Kernel execution order : R2HC / R2HCF -> C2C
+    // R2HC and R2HCF will not come together
+    if (enable_parallelism)
+    {
+        #pragma omp parallel sections
         {
-            // Move in buffer by one element only for the first CT stage
-            // where the no. of group of C2C kernel is 1
-            if (no_of_groups == 1)
+            #pragma omp section
             {
-                in = MOVE_ADDR(in, dt_bytes);
+                // this function will execute the real kernels r2hc/r2hcf and
+                // the reason behind to move the code to a separate function
+                // is to avoid the code duplication in the case of CT problem
+                // where the real kernels are executed in parallel with C2C
+                // kernels.
+                execute_real_kernel(sol, n_threads_real);
             }
-
-            // Copy unmodified in-stride values from strides to strides_c2c
-            // and then modify strides_c2c values within loop iterations
-            memcpy(sol->strides_grp->strides_c2c->in_strides + half_stride_start,
-                   sol->strides_grp->strides->in_strides + half_stride_start,
-                   half_stride_n * sizeof(INTP));
-
-            INTP stride_offset = c2c_in_stride * 4;
-            for (INTP group_id = 0; group_id < group_size; group_id++)
+            // Execute C2C Kernels
+            #pragma omp section
             {
-                // Take complex conjucate for the required points
-                // TODO: this should be moved into C2C kernel
-                compute_conjugates(
-                    in, radix, no_of_groups, sol->strides_grp->strides_c2c->in_strides,
-                    sol->strides_grp->strides_c2c->v_in_stride,
-                    DT_PRECISION_FLAG(sol->decomp_scheme->flags));
-
-                // Kernel execution
-                // swapping real & imag points for backward kernel
-                kernel_c2c(MOVE_ADDR(in, dt_bytes), in,
-                           MOVE_ADDR(out, dt_bytes), out, no_of_groups,
-                           sol->strides_grp->strides_c2c,
-                           sol->twiddle->TW,
-                           FFT_DIR(sol->decomp_scheme->flags));
-
-                // Update the C2C in-strides for next iteration by subtracting
-                // it by stride_offset
-                INTP *strides =
-                    sol->strides_grp->strides_c2c->in_strides + half_stride_start;
-                for (INTP i = 0; i < half_stride_n; i++)
+                VOID *in_c2c = MOVE_ADDR(in, r2hc_in_stride * dt_bytes);
+                VOID *out_c2c = MOVE_ADDR(out, r2hc_out_stride * dt_bytes);
+                if (is_last_stage)
                 {
-                    strides[i] -= stride_offset;
+                    out_c2c = MOVE_ADDR(out_c2c, dt_bytes);
                 }
-
-                // Move the in & out buffers to point the next valid data
-                in = MOVE_ADDR(in, c2c_in_stride * 2 * dt_bytes);
-                out = MOVE_ADDR(out, c2c_out_stride * 2 * dt_bytes);
-            }
-
-            // FIXIT:
-            // Real CT executor uses Direct-R -> CT -> Direct-M flow, so in this
-            // approach it is not possible to get the Direct-R info for the next
-            // CT executor to perform twiddle multiplication.
-            // Hence the twiddle multiplication is performed here itself.
-            //
-            // Selective twiddle multiplication on C2C kernel output points only
-            twiddle_multiplier_for_real(sol, p);
-        }
-        else
-        {
-            // Selective twiddle multiplication on C2C kernel input points only
-            twiddle_multiplier_for_real(sol, p);
-
-            // Copy unmodified out-stride values from strides to strides_c2c
-            // and then modify strides_c2c values within loop iterations
-            memcpy(sol->strides_grp->strides_c2c->out_strides + half_stride_start,
-                   sol->strides_grp->strides->out_strides + half_stride_start,
-                   half_stride_n * sizeof(INTP));
-
-            INTP stride_offset = c2c_out_stride * 4;
-            for (INTP group_id = 0; group_id < group_size; group_id++)
-            {
-                // Kernel execution
-                kernel_c2c(in, MOVE_ADDR(in, dt_bytes), out,
-                           MOVE_ADDR(out, dt_bytes), no_of_groups,
-                           sol->strides_grp->strides_c2c,
-                           sol->twiddle->TW,
-                           FFT_DIR(sol->decomp_scheme->flags));
-
-                // Take complex conjucate for the required points
-                // TODO: this should be moved into C2C kernel
-                compute_conjugates(
-                    out, radix, no_of_groups, sol->strides_grp->strides_c2c->out_strides,
-                    sol->strides_grp->strides_c2c->v_out_stride,
-                    DT_PRECISION_FLAG(sol->decomp_scheme->flags));
-
-                // Update the C2C out-strides for next iteration by subtracting
-                // it by stride_offset
-                INTP *strides =
-                    sol->strides_grp->strides_c2c->out_strides + half_stride_start;
-                for (INTP i = 0; i < half_stride_n; i++)
+                if (sol->solver->batches[C2C_KERNEL] != 0)
                 {
-                    strides[i] -= stride_offset;
-                }
+                    // setting the number of threads for inner C2C kernel
+                    // execution
+                    UINT32 n_threads_c2c_outer = n_threads_c2c > group_size ?
+                                                 group_size : n_threads_c2c;
+                    UINT32 n_threads_c2c_inner = n_threads_c2c /
+                                                 n_threads_c2c_outer;
+                    INTP half_stride_start = (radix + 1) >> 1;
+                    INTP half_stride_n = radix - half_stride_start;
+                    if (is_backward)
+                    {
+                        // Move in buffer by one element only for the first CT
+                        // stage where the no. of group of C2C kernel is 1
+                        if (no_of_groups == 1)
+                        {
+                            in_c2c = MOVE_ADDR(in_c2c, dt_bytes);
+                        }
 
-                // Move the in & out buffers to point the next valid data
-                in = MOVE_ADDR(in, c2c_in_stride * 2 * dt_bytes);
-                out = MOVE_ADDR(out, c2c_out_stride * 2 * dt_bytes);
+                        // Copy unmodified in-stride values from strides to
+                        // strides_c2c and then modify strides_c2c values 
+                        // within loop iterations
+                        memcpy(sol->strides_grp->strides_c2c->in_strides
+                               + half_stride_start,
+                               sol->strides_grp->strides->in_strides
+                                + half_stride_start,
+                               half_stride_n * sizeof(INTP));
+
+                        INTP stride_offset = c2c_in_stride * 4;
+                        #pragma omp parallel for \
+                                num_threads(n_threads_c2c_outer)
+                        for (INTP group_id = 0; group_id < group_size;
+                             group_id++)
+                        {
+                            VOID *in_local = MOVE_ADDR(in_c2c,
+                                    group_id * c2c_in_stride * 2 * dt_bytes);
+                            VOID *out_local = MOVE_ADDR(out_c2c,
+                                    group_id * c2c_out_stride * 2 * dt_bytes);
+
+                            aoclfftz_strides_t *strides_c2c_per_thread;
+                            ALLOC_ALIGN_UNINIT(strides_c2c_per_thread,
+                                aoclfftz_strides_t, sizeof(aoclfftz_strides_t));
+                            memcpy(strides_c2c_per_thread,
+                                   sol->strides_grp->strides_c2c,
+                                   sizeof(aoclfftz_strides_t));
+
+                            // Allocate and copy a private in_strides array for
+                            // this thread
+                            INTP *local_in_strides;
+                            ALLOC_ALIGN_UNINIT(local_in_strides, INTP,
+                                sizeof(INTP) * radix);
+                            memcpy(local_in_strides,
+                                   sol->strides_grp->strides_c2c->in_strides,
+                                   sizeof(INTP) * radix);
+                            strides_c2c_per_thread->in_strides =
+                                                    local_in_strides;
+
+                            // Update the C2C in-strides for next iteration by
+                            // subtracting it by stride_offset
+                            for (INTP i = 0; i < half_stride_n; i++) {
+                                local_in_strides[half_stride_start + i] -=
+                                        group_id * stride_offset;
+                            }
+                            // Take complex conjucate for the required points
+                            // TODO: this should be moved into C2C kernel
+                            compute_conjugates(
+                                in_local, radix, no_of_groups,
+                                strides_c2c_per_thread->in_strides,
+                                strides_c2c_per_thread->v_in_stride,
+                                DT_PRECISION_FLAG(sol->decomp_scheme->flags));
+
+                            #pragma omp parallel for \
+                                    num_threads(n_threads_c2c_inner)
+                            for (INTP group_num = 0; group_num < no_of_groups;
+                                 group_num++)
+                            {
+                                INTP v_istride = group_num * v_in_stride_c2c;
+                                INTP v_ostride = group_num * v_out_stride_c2c;
+                                kernel_c2c((VOID *)((CHAR *)in_local +
+                                            v_istride + dt_bytes),
+                                           (VOID *)((CHAR *)in_local +
+                                            v_istride),
+                                           (VOID *)((CHAR *)out_local +
+                                            v_ostride + dt_bytes),
+                                           (VOID *)((CHAR *)out_local +
+                                            v_ostride),
+                                           1 /* num_sets_c2c */,
+                                           strides_c2c_per_thread,
+                                           sol->twiddle->TW,
+                                           FFT_DIR(sol->decomp_scheme->flags));
+                            }
+                            FREE_ALIGN_ALLOCATED_MEM(local_in_strides);
+                            FREE_ALIGN_ALLOCATED_MEM(strides_c2c_per_thread);
+                        }
+
+                        /* FIXIT: */
+                        // Real CT executor uses Direct-R -> CT -> Direct-M
+                        // flow, so in this approach it is not possible to get
+                        // the Direct-R info for the next CT executor to perform
+                        // twiddle multiplication. Hence the twiddle
+                        // multiplication is performed here itself.
+
+                        // Selective twiddle multiplication on C2C kernel output
+                        // points only
+                        twiddle_multiplier_for_real(sol, p);
+                    }
+                    else
+                    {
+                        // Selective twiddle multiplication on C2C kernel input
+                        // points only
+                        twiddle_multiplier_for_real(sol, p);
+
+                        // Copy unmodified out-stride values from strides to
+                        // strides_c2c and then modify strides_c2c values within
+                        // loop iterations
+                        memcpy(sol->strides_grp->strides_c2c->out_strides
+                               + half_stride_start,
+                               sol->strides_grp->strides->out_strides
+                               + half_stride_start,
+                               half_stride_n * sizeof(INTP));
+
+                        INTP stride_offset = c2c_out_stride * 4;
+                        #pragma omp parallel for \
+                                num_threads(n_threads_c2c_outer)
+                        for (INTP group_id = 0; group_id < group_size;
+                             group_id++)
+                        {
+                            VOID *in_local = MOVE_ADDR(in_c2c,
+                                    group_id * c2c_in_stride * 2 * dt_bytes);
+                            VOID *out_local = MOVE_ADDR(out_c2c,
+                                    group_id * c2c_out_stride * 2 * dt_bytes);
+
+                            aoclfftz_strides_t *strides_c2c_per_thread;
+                            ALLOC_ALIGN_UNINIT(strides_c2c_per_thread,
+                                aoclfftz_strides_t, sizeof(aoclfftz_strides_t));
+                            memcpy(strides_c2c_per_thread,
+                                   sol->strides_grp->strides_c2c,
+                                   sizeof(aoclfftz_strides_t));
+
+                            // Allocate and copy a private in_strides array for
+                            // this thread
+                            INTP *local_out_strides;
+                            ALLOC_ALIGN_UNINIT(local_out_strides, INTP,
+                                sizeof(INTP) * radix);
+                            memcpy(local_out_strides,
+                                   sol->strides_grp->strides_c2c->out_strides,
+                                   sizeof(INTP) * radix);
+                            strides_c2c_per_thread->out_strides =
+                                                    local_out_strides;
+
+                            // Update the C2C in-strides for next iteration by
+                            // subtracting it by stride_offset
+                            for (INTP i = 0; i < half_stride_n; i++) {
+                                local_out_strides[half_stride_start + i] -=
+                                                group_id * stride_offset;
+                            }
+
+                            #pragma omp parallel for \
+                                    num_threads(n_threads_c2c_inner)
+                            for (INTP group_num = 0; group_num < no_of_groups;
+                                 group_num++)
+                            {
+                                INTP v_istride = group_num * v_in_stride_c2c;
+                                INTP v_ostride = group_num * v_out_stride_c2c;
+                                kernel_c2c((VOID *)((CHAR *)in_local
+                                            + v_istride),
+                                           (VOID *)((CHAR *)in_local
+                                            + v_istride + dt_bytes),
+                                           (VOID *)((CHAR *)out_local
+                                            + v_ostride),
+                                           (VOID *)((CHAR *)out_local
+                                            + v_ostride + dt_bytes),
+                                           1 /* num_sets_c2c */,
+                                           strides_c2c_per_thread,
+                                           sol->twiddle->TW,
+                                           FFT_DIR(sol->decomp_scheme->flags));
+                            }
+                            // Take complex conjucate for the required points
+                            // TODO: this should be moved into C2C kernel
+                            compute_conjugates(
+                                out_local, radix, no_of_groups,
+                                strides_c2c_per_thread->out_strides,
+                                strides_c2c_per_thread->v_out_stride,
+                                DT_PRECISION_FLAG(sol->decomp_scheme->flags));
+
+                            FREE_ALIGN_ALLOCATED_MEM(local_out_strides);
+                            FREE_ALIGN_ALLOCATED_MEM(strides_c2c_per_thread);
+                        }
+                    }
+                }
             }
         }
+    }
+    else
+    {
+        // Execute when problem is not direct and batches[R2HC/R2HCF] > 0
+        execute_real_kernel(sol, n_threads_real);
     }
 
     // Iteratively execute the next solution

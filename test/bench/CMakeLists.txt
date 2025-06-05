@@ -120,10 +120,17 @@ set(TEST_SUITE
     "R2C_C_MT_DIRECT_SAME_STRIDE_F_1 ./aocl_fftz_bench 16v3:5:5 -f r2c -b a -p f --dir f -r i -n 6"           # accuracy | real     |  float    | LP64       | 1D  |  no     | direct      | inplace   | forward  | C       | C accuracy
     "C2R_C_MT_BATCHED_DIRECT_SAME_STRIDE ./aocl_fftz_bench 16v7:6:6 -f r2c -b a --dir b -r i -n 8"            # accuracy | real     |  double   | LP64       | 1D  |  yes    | direct      | inplace   | backward | C       | C accuracy
     "R2C_C_MT_BATCHED_DIRECT_SAME_STRIDE_F ./aocl_fftz_bench 30v6:7:7 -f r2c -b a -p f --dir f -r i -n 10"    # accuracy | real     |  float    | LP64       | 1D  |  yes    | direct      | inplace   | forward  | C       | C accuracy
-    "R2C_C_MT_BATCHED_CT_WITH_STRIDE_1 ./aocl_fftz_bench 24v60:3:5 -f r2c -b a --dir f -n 24"                   # accuracy | real     |  double   | LP64       | 1D  |  yes    | CT          | outplace  | forward  | C       | C accuracy
-    "C2R_C_MT_BATCHED_CT_WITH_STRIDE_1 ./aocl_fftz_bench 16v96:7:9 -f r2c -b a --dir b -n 15"                   # accuracy | real     |  double   | LP64       | 1D  |  yes    | CT          | outplace  | backward | C       | C accuracy
+    "R2C_C_MT_BATCHED_CT_WITH_STRIDE_1 ./aocl_fftz_bench 24v60:3:5 -f r2c -b a --dir f -n 24"                 # accuracy | real     |  double   | LP64       | 1D  |  yes    | CT          | outplace  | forward  | C       | C accuracy
+    "C2R_C_MT_BATCHED_CT_WITH_STRIDE_1 ./aocl_fftz_bench 16v96:7:9 -f r2c -b a --dir b -n 15"                 # accuracy | real     |  double   | LP64       | 1D  |  yes    | CT          | outplace  | backward | C       | C accuracy
     "R2C_C_MT_BATCHED_CT_WITH_STRIDE_2 ./aocl_fftz_bench 32v56:5:5 -f r2c -b a --dir f -r i -n 24"            # accuracy | real     |  double   | LP64       | 1D  |  yes    | CT          | inplace   | forward  | C       | C accuracy
     "C2R_C_MT_BATCHED_CT_WITH_STRIDE_2 ./aocl_fftz_bench 12v108:9:9 -f r2c -b a --dir b -r i -n 15"           # accuracy | real     |  double   | LP64       | 1D  |  yes    | CT          | inplace   | backward | C       | C accuracy
+    "R2C_C_MT_CT ./aocl_fftz_bench 54 -f r2c -b a --dir f -n 3"                                               # accuracy | real     |  double   | LP64       | 1D  |  no     | CT          | outplace  | forward  | C       | C accuracy
+    "C2R_C_MT_CT ./aocl_fftz_bench 72 -f r2c -b a --dir b -r i -n 7"                                          # accuracy | real     |  double   | LP64       | 1D  |  no     | CT          | inplace   | backward | C       | C accuracy
+    "R2C_C_MT_CT_WITH_STRIDE ./aocl_fftz_bench 64:3:5 -f r2c -b a --dir f -n 24"                              # accuracy | real     |  double   | LP64       | 1D  |  yes    | CT          | outplace  | forward  | C       | C accuracy
+    "C2R_C_MT_CT_WITH_STRIDE ./aocl_fftz_bench 96:9:9 -f r2c -b a --dir b -r i -n 15"                         # accuracy | real     |  double   | LP64       | 1D  |  yes    | CT          | inplace   | backward | C       | C accuracy
+    "R2C_C_MT_BATCHED_CT ./aocl_fftz_bench 4v54 -f r2c -b a --dir f -n 13"                                    # accuracy | real     |  double   | LP64       | 1D  |  no     | CT          | outplace  | forward  | C       | C accuracy
+    "C2R_C_MT_BATCHED_CT ./aocl_fftz_bench 15v120 -f r2c -b a --dir b -r i -n 17"                              # accuracy | real     |  double   | LP64       | 1D  |  no     | CT          | inplace   | backward | C       | C accuracy
+
     # TODO: Real ND backward test cases are not supported due to test bench limitations.
     #       Fix the test bench and add backward test cases.
     )

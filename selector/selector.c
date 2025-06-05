@@ -729,7 +729,7 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     {
         // Single threaded direct solver to be executed for batch <= 1,
         // irrespective of avl_threads
-        if (avl_threads <= 1 || realhelper->is_CT || batch <= 1)
+        if ((avl_threads <= 1) || batch <= 1)
         {
             solver_obj->solver_type = SOLVER_REAL_DIRECT;
         }
@@ -1408,7 +1408,9 @@ VOID post_process_solution(aoclfftz_solution_t *sol)
             }
             break;
         }
-        if ((sol->solver->solver_type == SOLVER_NDIM) && sol->dft_bufs->nd_sol)
+        if (((sol->solver->solver_type == SOLVER_NDIM) ||
+             (sol->solver->solver_type == SOLVER_REAL_NDIM)) &&
+              sol->dft_bufs->nd_sol)
         {
             post_process_solution(sol->dft_bufs->nd_sol);
         }
