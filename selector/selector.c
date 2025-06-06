@@ -197,13 +197,13 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     UINT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
 
-    // TODO: Should be removed after supporting MT in N-D and bluestein solver
-    if ((dim_rank > 1 || check_bluestein_problem(sel->solution->decomp_scheme))
-                                                         && avl_threads > 1)
+    // TODO: Should be removed after supporting MT in bluestein solver
+    if (check_bluestein_problem(sel->solution->decomp_scheme) &&
+        (avl_threads > 1))
     {
         AOCLFFTZ_LOG_UNFORMATTED(INFO, INFO, "Multi Threaded execution is"
-            " not suported for N-D & Bluestein solver, falling back to Single"
-            " Threaded execution");
+            " not supported for Bluestein solver, falling back to single"
+            " threaded Execution");
         sel->solution->decomp_scheme->thread_info->avl_threads = 1;
         avl_threads = 1;
     }
@@ -1340,7 +1340,10 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src)
     aoclfftz_solution_t* dst = alloc_solution(vec_rank, dim_rank);
     COPY_SOLUTION_OBJ(dst, src);
     COPY_STRIDES(dst, src);
-    dst->dft_bufs->nd_sol = NULL;
+
+    // Recursively copy nd_sol if present (for NDIM solvers)
+    dst->dft_bufs->nd_sol = src->dft_bufs->nd_sol ?
+                        deep_copy_solution_tree(src->dft_bufs->nd_sol) : NULL;
 
     // Initiate deep copy of next_sol recursively until leaf node
     if (src->next_sol)
@@ -1378,6 +1381,10 @@ VOID post_process_solution(aoclfftz_solution_t *sol)
                 sol->next_sol[i] = deep_copy_solution_tree(sol->next_sol[0]);
             }
             break;
+        }
+        if (sol->solver->solver_type == SOLVER_NDIM && sol->dft_bufs->nd_sol)
+        {
+            post_process_solution(sol->dft_bufs->nd_sol);
         }
         sol = sol->next_sol ? sol->next_sol[0] : NULL;
     }
