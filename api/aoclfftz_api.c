@@ -99,7 +99,8 @@ INT32 aoclfftz_execute_io(VOID *handle, VOID *in, VOID *out)
     aoclfftz_solution_t *sol = executor_obj->solution;
     UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
-    if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
+    if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR ||
+        IS_REAL(sol->decomp_scheme->flags))
     {
         sol->decomp_scheme->in_real = in;
         sol->decomp_scheme->in_imag = MOVE_ADDR(in, dt_bytes);

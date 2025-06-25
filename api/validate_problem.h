@@ -46,8 +46,13 @@
 #include "utils/utils.h"
 
 // checks if input & output strides are the same for of an inplace problem
-#define VALIDATE_INPLACE_STRIDES(dims, vecs, dim_rank, vec_rank, errno)        \
+// TODO: Fix for R2C/C2R ND problems
+#define VALIDATE_INPLACE_STRIDES(dims, vecs, dim_rank, vec_rank, flags, errno) \
 {                                                                              \
+    INTP in_scale =                                                            \
+            (IS_REAL(flags) && FFT_DIR(flags) == FORWARD_FFT_DIR) ? 2 : 1;     \
+    INTP out_scale =                                                           \
+            (IS_REAL(flags) && FFT_DIR(flags) == BACKWARD_FFT_DIR) ? 2 : 1;    \
     for (INT32 i = 0; i < dim_rank; i++)                                       \
     {                                                                          \
         if (dims[i].in_stride != dims[i].out_stride)                           \
@@ -57,7 +62,11 @@
     }                                                                          \
     for (INT32 i = 0; i < vec_rank; i++)                                       \
     {                                                                          \
-        if (vecs[i].in_stride != vecs[i].out_stride)                           \
+        /* For R2C/C2R, both in_stride & out_stride should be 1 (unit stride)*/\
+        /* or one should be the double of the other */                         \
+        if (vecs[i].in_stride != 1 && vecs[i].out_stride != 1 &&               \
+            (vecs[i].in_stride * out_scale !=                                  \
+             vecs[i].out_stride * in_scale))                                   \
         {                                                                      \
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
         }                                                                      \
@@ -231,7 +240,8 @@ static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
     if (!IS_OUT_OF_PLACE(problem->flags))                                      \
     {                                                                          \
         VALIDATE_INPLACE_STRIDES(problem->dims,problem->vecs,                  \
-                                    problem->dim_rank, problem->vec_rank, ret) \
+                                 problem->dim_rank, problem->vec_rank,         \
+                                 problem->flags, ret)                       \
         if (ret)                                                               \
         {                                                                      \
             AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "Input & Output strides"        \

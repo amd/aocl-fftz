@@ -38,8 +38,8 @@
  *  @author Srirammaswamy Srinivasan
  */
 
-#include <stdio.h>
 #include "dims_vecs_helper.h"
+#include "utils/utils.h"
 
 /**
  * @brief find the rank of the dimensions from the given string argument
@@ -84,16 +84,15 @@ INT32 find_dim_vec_ranks(CHAR *arg, INT32 *dim_rank, INT32 *vec_rank)
  * @param default_stride default stride value to be used for dims and vecs
  * @return INT32
  */
-
 INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
                                   aoclfftz_dim_t_64_ **dims,
                                   aoclfftz_dim_t_64_ **vecs,
                                   INTP default_stride)
 {
-    ALLOC_ALIGN_INIT((*dims),
-        aoclfftz_dim_t_64_, dim_rank * sizeof(aoclfftz_dim_t_64_));
-    ALLOC_ALIGN_INIT((*vecs),
-        aoclfftz_dim_t_64_, vec_rank * sizeof(aoclfftz_dim_t_64_));
+    ALLOC_ALIGN_INIT((*dims), aoclfftz_dim_t_64_,
+                     dim_rank * sizeof(aoclfftz_dim_t_64_));
+    ALLOC_ALIGN_INIT((*vecs), aoclfftz_dim_t_64_,
+                     vec_rank * sizeof(aoclfftz_dim_t_64_));
     INT32 max_rank = dim_rank > vec_rank ? dim_rank : vec_rank;
     aoclfftz_dim_t_64_ *desc = NULL;
     ALLOC_ALIGN_INIT(desc, aoclfftz_dim_t_64_,
@@ -139,8 +138,7 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
             for (INT32 i = vec_rank - 1, j = 0; i >= 0; i--, j++)
             {
                 (*vecs)[i].n = desc[j].n;
-                (*vecs)[i].in_stride =
-                    (is_stride >= 1) ? desc[j].in_stride : 0;
+                (*vecs)[i].in_stride = (is_stride >= 1) ? desc[j].in_stride : 0;
                 (*vecs)[i].out_stride =
                     (is_stride == 2) ? desc[j].out_stride : 0;
             }
@@ -180,7 +178,7 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
                 if (val == 0)
                 {
                     printf("Invalid dim/vec size (zero) at rank : %d",
-                            rank_count);
+                           rank_count);
                     status = SIZE_PARSING_ERROR;
                     goto exit_func;
                 }
@@ -198,7 +196,7 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         }
         else
         {
-            status =  SIZE_PARSING_ERROR;
+            status = SIZE_PARSING_ERROR;
             goto exit_func;
         }
     }
@@ -211,47 +209,7 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         (*dims)[i].out_stride = desc[j].out_stride;
     }
 
-    // set strides for dims if not provided
-    for (INT32 i = 0; i < dim_rank; i++)
-    {
-        INTP min_stride = (i == 0) ?
-                1 : ((*dims)[i - 1]. n * (*dims)[i - 1].in_stride);
-        if ((*dims)[i].in_stride == 0)
-        {
-            (*dims)[i].in_stride = min_stride;
-            printf("INFO: in stride for dim[%d] is set to default value\n", i);
-        }
-        min_stride = (i == 0) ?
-                1 : ((*dims)[i - 1]. n * (*dims)[i - 1].out_stride);
-        if ((*dims)[i].out_stride == 0)
-        {
-            (*dims)[i].out_stride = min_stride;
-            printf("INFO: out stride for dim[%d] is set to default value\n", i);
-        }
-    }
-
-    // set strides for vecs if not provided
-    for (INT32 i = 0; i < vec_rank; i++)
-    {
-        INTP min_stride = (i == 0) ?
-                (*dims)[dim_rank -1].n * (*dims)[dim_rank - 1].in_stride :
-                    ((*vecs) [i - 1]. n * (*vecs) [i - 1].in_stride);
-        if ((*vecs)[i].in_stride == 0)
-        {
-            // stride of fcd should atleast be the length of dims
-            (*vecs)[i].in_stride = min_stride;
-        }
-        min_stride = (i == 0) ?
-                (*dims)[dim_rank -1].n * (*dims)[dim_rank - 1].out_stride :
-                    ((*vecs) [i - 1]. n * (*vecs) [i - 1].out_stride);
-        if ((*vecs)[i].out_stride == 0)
-        {
-            // stride of fcd should atleast be the length of dims
-            (*vecs)[i].out_stride = min_stride;
-        }
-    }
-
-    // Initialize vector size to default value when no vector is encountered.
+    // Initialize vector to default value when no vector is encountered.
     if (vec_count == 0)
     {
         (*vecs)[0].n = 1;
@@ -259,7 +217,166 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         (*vecs)[0].out_stride = default_stride;
     }
 
-exit_func :
+exit_func:
     FREE_ALIGN_ALLOCATED_MEM(desc);
     return status;
+}
+
+/**
+ * @brief Set default stride values for dims and vecs.
+ *
+ * This function calculates appropriate default stride values for dims and vecs
+ * when they are not explicitly provided. The stride calculations vary based on
+ * the FFT type and whether the operation is in-place or out-of-place.
+ *
+ * Stride Calculation Rules:
+ *
+ * For dims:
+ * - dims[0]: Unit stride (1) for both input and output
+ * - dims[1]: Stride calculations based on FFT type:
+ *   * consider, n = n, is = in_stride, os = out_stride of dims[0]
+ *   ------------------|--------------------|--------------------
+ *    Type             | in_stride          | out_stride
+ *   ------------------|--------------------|--------------------
+ *    C2C              | n * is             | n * os
+ *    R2C out-of-place | n * is             | (n/2 + 1) * os
+ *    R2C in-place     | (n/2 + 1) * is * 2 | (n/2 + 1) * os     (where is = os)
+ *    C2R out-of-place | (n/2 + 1) * is     | n * os
+ *    C2R in-place     | (n/2 + 1) * is     | (n/2 + 1) * os * 2 (where is = os)
+ *   ------------------|--------------------|--------------------
+ * - dims[2] or above: dims[i-1].n * dims[i-1].stride
+ *                     (where stride = in_stride or out_stride)
+ *
+ * For vecs:
+ * - vecs[0]: This is same as dims[1] configuration
+ *            where, n = n, is = in_stride, os = out_stride of dims[dim_rank-1]
+ * - vecs[1] or above: vecs[i-1].n * vecs[i-1].stride
+ *                     (where stride = in_stride or out_stride)
+ *
+ * @param dim_rank rank of the dimensions
+ * @param vec_rank rank of the vectors
+ * @param dims dims structure to set default strides
+ * @param vecs vecs structure to set default strides
+ * @param type fft_type -> 0: C2C, 1: R2C, 2: C2R
+ * @param is_in_place 1: in-place, 0: out-of-place
+ * @return VOID
+ */
+VOID set_default_dims_vecs(INT32 dim_rank, INT32 vec_rank,
+                            aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
+                            aoclfftz_bench_fft_type_t type, UINT8 is_in_place,
+                            UINT8 logger_mode)
+{
+    // Set default strides for dims if not explicitly provided
+    for (INT32 i = 0; i < dim_rank; i++)
+    {
+        INTP def_in_stride = 0;
+        INTP def_out_stride = 0;
+        if (i == 0)
+        {
+            def_in_stride = 1;
+            def_out_stride = 1;
+        }
+        else if (i == 1)
+        {
+            if (type == R2C && is_in_place)
+            {
+                def_in_stride = (dims[0].n / 2 + 1) * dims[0].in_stride * 2;
+                def_out_stride = (dims[0].n / 2 + 1) * dims[0].out_stride;
+            }
+            else if (type == R2C && !is_in_place)
+            {
+                def_in_stride = dims[0].n * dims[0].in_stride;
+                def_out_stride = (dims[0].n / 2 + 1) * dims[0].out_stride;
+            }
+            else if (type == C2R && is_in_place)
+            {
+                def_in_stride = (dims[0].n / 2 + 1) * dims[0].in_stride;
+                def_out_stride = (dims[0].n / 2 + 1) * dims[0].out_stride * 2;
+            }
+            else if (type == C2R && !is_in_place)
+            {
+                def_in_stride = (dims[0].n / 2 + 1) * dims[0].in_stride;
+                def_out_stride = dims[0].n * dims[0].out_stride;
+            }
+            else /* C2C */
+            {
+                def_in_stride = dims[0].n * dims[0].in_stride;
+                def_out_stride = dims[0].n * dims[0].out_stride;
+            }
+        }
+        else /* i > 1 */
+        {
+            def_in_stride = dims[i - 1].n * dims[i - 1].in_stride;
+            def_out_stride = dims[i - 1].n * dims[i - 1].out_stride;
+        }
+        if (dims[i].in_stride == 0)
+        {
+            dims[i].in_stride = def_in_stride;
+            AOCLFFTZ_LOG_FORMATTED(
+                INFO, logger_mode,
+                "in stride for dim[%d] is set to default value", i);
+        }
+        if (dims[i].out_stride == 0)
+        {
+            dims[i].out_stride = def_out_stride;
+            AOCLFFTZ_LOG_FORMATTED(
+                INFO, logger_mode,
+                "out stride for dim[%d] is set to default value", i);
+        }
+    }
+
+    // set strides for vecs if not provided
+    for (INT32 i = 0; i < vec_rank; i++)
+    {
+        INTP def_in_stride = 0;
+        INTP def_out_stride = 0;
+        if (i == 0)
+        {
+            aoclfftz_dim_t_64_ last_dim = dims[dim_rank - 1];
+            if (type == R2C && is_in_place)
+            {
+                def_in_stride = (last_dim.n / 2 + 1) * last_dim.in_stride * 2;
+                def_out_stride = (last_dim.n / 2 + 1) * last_dim.out_stride;
+            }
+            else if (type == R2C && !is_in_place)
+            {
+                def_in_stride = last_dim.n * last_dim.in_stride;
+                def_out_stride = (last_dim.n / 2 + 1) * last_dim.out_stride;
+            }
+            else if (type == C2R && is_in_place)
+            {
+                def_in_stride = (last_dim.n / 2 + 1) * last_dim.in_stride;
+                def_out_stride = (last_dim.n / 2 + 1) * last_dim.out_stride * 2;
+            }
+            else if (type == C2R && !is_in_place)
+            {
+                def_in_stride = (last_dim.n / 2 + 1) * last_dim.in_stride;
+                def_out_stride = last_dim.n * last_dim.out_stride;
+            }
+            else /* C2C */
+            {
+                def_in_stride = last_dim.n * last_dim.in_stride;
+                def_out_stride = last_dim.n * last_dim.out_stride;
+            }
+        }
+        else /* i > 0 */
+        {
+            def_in_stride = vecs[i - 1].n * vecs[i - 1].in_stride;
+            def_out_stride = vecs[i - 1].n * vecs[i - 1].out_stride;
+        }
+        if (vecs[i].in_stride == 0)
+        {
+            AOCLFFTZ_LOG_FORMATTED(
+                INFO, logger_mode,
+                "in stride for vec[%d] is set to default value", i);
+            vecs[i].in_stride = def_in_stride;
+        }
+        if (vecs[i].out_stride == 0)
+        {
+            AOCLFFTZ_LOG_FORMATTED(
+                INFO, logger_mode,
+                "out stride for vec[%d] is set to default value", i);
+            vecs[i].out_stride = def_out_stride;
+        }
+    }
 }

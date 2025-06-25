@@ -64,15 +64,6 @@ INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
         sol->decomp_scheme->vecs[0].in_stride *= 2;
     }
 
-    // Update the vec in-stride for batched in-place forward problem
-    // for complex adjusted values.
-    // For batched direct in-place forward problem, it is done in direct solver.
-    if (!IS_OUT_OF_PLACE(next_sol->decomp_scheme->flags) &&
-        FFT_DIR(next_sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
-    {
-        sol->decomp_scheme->vecs[0].in_stride *= 2;
-    }
-
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 #endif

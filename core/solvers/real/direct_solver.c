@@ -98,18 +98,6 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     UINT32 is_first_stage = realhelper->stage == 0;
     UINT32 is_last_stage = realhelper->is_last_stage;
 
-    // Update the vec in-stride for batched direct in-place forward problem
-    // for complex adjusted values.
-    // For batched non-direct in-place forward problem, it is done in batch
-    // solver.
-    // Direct problem case is handled here since the batched solver is skipped
-    // for batched direct problems.
-    if (!realhelper->is_CT && !is_backward &&
-        !IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
-    {
-        sol->decomp_scheme->vecs[0].in_stride *= 2;
-    }
-
     // Compute batches and strides for different kernel types
     // Original strides for the given problem
     INTP org_in_stride = sol->decomp_scheme->dims[0].in_stride;
@@ -224,6 +212,15 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     UINT32 is_half_complex_input = is_backward ? 1 : 0;
     UINT32 is_half_complex_output = is_backward ? 0 : 1;
 
+    // FIXME: Moving this inside the if condition below causes issue with
+    // the C2R CT problem
+    if (sol->strides_grp->strides->in_strides == NULL)
+    {
+        ALLOC_ALIGN_UNINIT(sol->strides_grp->strides->in_strides, INTP,
+                           radix * sizeof(INTP));
+        ALLOC_ALIGN_UNINIT(sol->strides_grp->strides->out_strides, INTP,
+                           radix * sizeof(INTP));
+    }
     if (sol->solver->batches[C2C_KERNEL] != 0)
     {
         if (sol->strides_grp->strides->in_strides == NULL)

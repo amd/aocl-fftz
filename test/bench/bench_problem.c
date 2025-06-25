@@ -414,12 +414,26 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     {
         status = MAX(status, SIZE_REQUIRED_ERROR);
     }
-
     else if (bench_params->dim_rank == 0 || bench_params->vec_rank == 0 ||
              bench_params->dims == NULL || bench_params->vecs == NULL)
     {
         status = MAX(status, SIZE_PARSING_ERROR);
     }
+    // TODO: Support ND batched real problems
+    else if (bench_params->vec_rank > 1 && bench_params->fft_type != C2C)
+    {
+        printf("ERROR: ND batched real problems are not supported");
+        status = MAX(status, UNSUPPORTED_OPTION_ERROR);
+    }
+    // else if (bench_params->fft_type != C2C &&
+    //          bench_params->res_placement == IN_PLACE)
+    // {
+    //     // FIXME: In-place problems are not supported due to the default stride
+    //     // changes
+    //     printf("ERROR: In-place result placement is not supported for real "
+    //            "problems\n");
+    //     status = MAX(status, UNSUPPORTED_OPTION_ERROR);
+    // }
     if (status != PARSER_SUCCESS)
     {
         return status;
@@ -495,6 +509,18 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             bench_params->tolerance = 1E-10;
         }
     }
+
+    aoclfftz_bench_fft_type_t fft_type = bench_params->fft_type;
+    if (bench_params->fft_type == R2C && bench_params->dir == BACKWARD)
+    {
+        fft_type = C2R;
+    }
+    // set default dims & vecs values
+    set_default_dims_vecs(bench_params->dim_rank, bench_params->vec_rank,
+                          bench_params->dims, bench_params->vecs, fft_type,
+                          bench_params->res_placement == IN_PLACE,
+                          bench_params->logger_mode);
+
     // create input and output buffers
     INT32 dt_bytes =
         (bench_params->precision == FLOAT_P) ? sizeof(FLOAT) : sizeof(DOUBLE);

@@ -296,6 +296,8 @@ class AoclfftzSelectorTestBase
             FREE_ALIGN_ALLOCATED_MEM(vecs);
             return NULL;
         }
+        set_default_dims_vecs(dim_rank, vec_rank, dims, vecs, C2C, is_in_place,
+                              0);
 
         ALLOC_ALIGN_UNINIT(p_desc, prob_desc_t, sizeof(prob_desc_t));
         p_desc->dim_rank = dim_rank;
@@ -416,6 +418,8 @@ class AoclfftzSelectorTestBase
             FREE_ALIGN_ALLOCATED_MEM(vecs);
             return;
         }
+        set_default_dims_vecs(dim_rank, vec_rank, dims, vecs, C2C, is_in_place,
+                              0);
 
         INT32 new_dim_rank = 1;
         SHRINK_DIM_RANK(dims, dim_rank, new_dim_rank);

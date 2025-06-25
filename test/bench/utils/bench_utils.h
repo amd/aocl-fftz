@@ -173,7 +173,7 @@
                 {                                                              \
                     printf("Use -h / --help for more information.\n");         \
                     PRINT_FAILURE("\nTest bench failed [REASON: Argument "     \
-                                   "parsing failed]\n\n");                     \
+                                  "parsing failed]\n\n");                      \
                 }                                                              \
                 else                                                           \
                 {                                                              \

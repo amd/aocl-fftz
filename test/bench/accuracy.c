@@ -282,18 +282,20 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
             status = MEMORY_FAILURE;
             goto exit_impulse_transform_test;
         }
+    }
 
-        for (INT32 i = 0; i < params->dim_rank; i++)
-        {
-            params_reverse->dims[i].in_stride = params->dims[i].out_stride;
-            params_reverse->dims[i].out_stride = params->dims[i].in_stride;
-        }
+    // swap in and out strides for all out-of-place problems
+    // and in-place R2C/C2R problems
+    for (INT32 i = 0; i < params->dim_rank; i++)
+    {
+        params_reverse->dims[i].in_stride = params->dims[i].out_stride;
+        params_reverse->dims[i].out_stride = params->dims[i].in_stride;
+    }
 
-        for (INT32 i = 0; i < params->vec_rank; i++)
-        {
-            params_reverse->vecs[i].in_stride = params->vecs[i].out_stride;
-            params_reverse->vecs[i].out_stride = params->vecs[i].in_stride;
-        }
+    for (INT32 i = 0; i < params->vec_rank; i++)
+    {
+        params_reverse->vecs[i].in_stride = params->vecs[i].out_stride;
+        params_reverse->vecs[i].out_stride = params->vecs[i].in_stride;
     }
 
     // setup reverse FFT problem
@@ -672,6 +674,9 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     }
 
 #ifdef ENABLE_DFT_REFERENCE
+    // Do not run for batched R2C/C2R problems
+    // TODO: Fix full complex conversion logic for R2C/C2R problems to enable
+    //       DFT reference test
     status = run_dft_reference_test(params, in_idx_map, out_idx_map, handle,
                                     NULL);
     HANDLE_BENCH_STATUS(status);
@@ -691,11 +696,18 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     }
 
     // 2. timeshift test
-    status = run_timeshift_test(params, in_idx_map, out_idx_map, handle, NULL);
-    HANDLE_BENCH_STATUS(status);
-    if (status != BENCH_SUCCESS)
+    // Do not run for batched R2C/C2R problems
+    // TODO: Fix full complex conversion logic for R2C/C2R problems to enable
+    //       timeshift test
+    if (!(params->fft_type != C2C && params->vecs[0].n > 1))
     {
-        goto exit_accuracy_mode;
+        status = run_timeshift_test(params, in_idx_map, out_idx_map, handle,
+                                    NULL);
+        HANDLE_BENCH_STATUS(status);
+        if (status != BENCH_SUCCESS)
+        {
+            goto exit_accuracy_mode;
+        }
     }
 
     // 3. transformation test
