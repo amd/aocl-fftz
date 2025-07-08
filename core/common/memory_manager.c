@@ -37,6 +37,7 @@
  */
 
 #include "core/common/memory_manager.h"
+#include "api/aoclfftz_internal.h"
 
 aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank)
 {

@@ -37,9 +37,7 @@
  *  @author S. Biplab Raut
  */
 
-#include "selector/selector.h"
 #include "core/common/memory_manager.h"
-#include "utils/utils.h"
 
 INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                             aoclfftz_realhelper_t *realhelper)

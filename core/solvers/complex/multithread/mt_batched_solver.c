@@ -38,7 +38,6 @@
  */
 
 #include "core/common/memory_manager.h"
-#include "utils/utils.h"
 
 INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol, UINT32 num_threads_used)
 {

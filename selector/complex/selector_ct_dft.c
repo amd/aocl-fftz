@@ -156,7 +156,8 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         ret = selector_model_dft_(cur_sel);//Call direct solver instead
 #else
         aoclfftz_generic_solver_t* solver_obj = cur_sel->solution->solver;
-        UINT32 avl_threads = cur_sel->solution->decomp_scheme->thread_info->avl_threads;
+        UINT32 avl_threads =
+            cur_sel->solution->decomp_scheme->thread_info->avl_threads;
         if (avl_threads <= 1)
         {
             solver_obj->solver_type = SOLVER_DIRECT;

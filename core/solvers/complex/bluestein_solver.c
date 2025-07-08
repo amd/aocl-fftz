@@ -37,10 +37,8 @@
  */
 
 #include <string.h> /* for memset, memcpy */
-#include "core/solvers/complex/bluestein_solver.h"
 #include "core/common/bluestein_utils.h"
 #include "core/common/memory_manager.h"
-#include "utils/utils.h"
 
 INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
                              aoclfftz_solution_t *next_sol, INTP m)

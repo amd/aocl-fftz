@@ -37,7 +37,6 @@
  *  @author Murugan Vairavel
  */
 
-#include "core/solvers/complex/direct_solver.h"
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 

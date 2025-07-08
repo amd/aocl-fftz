@@ -110,4 +110,7 @@
 VOID compute_conjugates(VOID *data, INTP radix, INTP n, INTP *strides,
                         INTP vec_stride, UINT32 prec);
 
+VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t *sol);
+VOID set_zero_for_dc_and_nyquist(aoclfftz_solution_t *sol);
+
 #endif // REALFFT_UTILS_H

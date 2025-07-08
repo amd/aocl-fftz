@@ -36,8 +36,6 @@
  */
 
 #include "core/solvers/complex/sizeone_solver.h"
-#include "core/common/memory_manager.h"
-#include "utils/utils.h"
 
 static VOID execute_float_kernel(VOID *in_real, VOID *in_imag, VOID *out_real,
                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,

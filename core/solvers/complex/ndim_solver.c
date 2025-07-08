@@ -37,8 +37,7 @@
  */
 
 #include "core/solvers/complex/ndim_solver.h"
-#include "core/common/memory_manager.h"
-#include "utils/utils.h"
+#include "selector/selector.h"
 
 INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
                         aoclfftz_solution_t *n_minus1_sol,

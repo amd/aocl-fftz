@@ -36,6 +36,7 @@
  *  @author Srirammaswamy Srinivsan
  */
 
+#include "api/aoclfftz_internal.h"
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"

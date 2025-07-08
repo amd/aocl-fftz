@@ -229,8 +229,8 @@ typedef struct aoclfftz_decomp_scheme
 // memory pointer is used across array of next solutions.
 typedef struct aoclfftz_twiddle
 {
-    VOID *twiddle_buf_ptr;
-    VOID *TW;
+    VOID *twiddle_buf_ptr; /*< pointer to owned twiddle buffer. It has to be allocated/freed with current struct. */
+    VOID *TW; /*< pointer to shared twiddle buffer. It must not be freed/allocated with the struct. */
 } aoclfftz_twiddle_t;
 
 // Holds bluestein sequence B used by the bluestein solver

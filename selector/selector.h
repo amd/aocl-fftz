@@ -81,6 +81,13 @@ typedef struct aoclfftz_selector
     void* scratch_space;
 } aoclfftz_selector_t;
 
+/*
+ * @brief Helper function to iterate over the solutions
+ */
+#define FOR_EACH_SOLUTION(var, start_solution)                                     \
+    for (aoclfftz_solution_t *var = start_solution; var != NULL;                   \
+         var = var->next_sol ? *(var->next_sol) : NULL)
+
 // macro functions
 #ifdef MULTI_THREADING
 // if dynamic_load_model is set we are allowing the library to take all the
@@ -237,6 +244,25 @@ typedef struct aoclfftz_selector
     to_decomp_scheme->thread_info->n_threads = 1;                               \
     to_decomp_scheme->flags = from_decomp_scheme->flags;                        \
 }
+
+/*
+ * @brief Check if the Root problem is a Direct Problem or not.
+ * If a problem is not direct, it will be a multi stage with atleast one CT Problem.
+ *
+ * `sol` can be any solution in the hierarchy of solutions.
+ *
+ * NOTE: 
+ * Reasoning: 
+ * * In a generic solution plan, `TW` is `NULL` for all solutions before first CT. Hence `TW == NULL` ensures current solution isn't after a CT.
+ * * `sol->next_sol == NULL` checks if the solution is the last one in the hierarchy.
+ * * When both are true, it checks that we have walked the entire solution hierarchy and found no CT solution.
+ * * This is only possible for a Direct only porblem.
+ *
+ * @param sol Pointer to the solution structure.
+ *
+ */
+#define IS_DIRECT_ONLY_PROBLEM(sol) ( sol->twiddle->TW == NULL && sol->next_sol == NULL ) 
+
 
 /**
  * @brief Swap the CT and direct solution nodes for the iterative execution

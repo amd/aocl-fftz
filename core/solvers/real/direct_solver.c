@@ -37,11 +37,12 @@
  */
 
 #include "core/solvers/real/direct_solver.h"
+#include "api/aoclfftz_internal.h"
 #include "core/common/memory_manager.h"
 #include "core/common/realfft_utils.h"
 #include "core/common/strides.h"
 #include "core/common/twiddle.h"
-#include "utils/utils.h"
+#include "selector/selector.h"
 
 /* This function will setup the direct solution with the required information
    to execute both direct and CT problems.
@@ -450,16 +451,36 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
 
     INT32 ret = SOLVER_SUCCESS;
 
+    kfft_ kernel_r2hc = sol->solver->kernel_r2hc->kfft;
+
+    VOID *in = sol->decomp_scheme->in_real;
+    VOID *out = sol->decomp_scheme->out_real;
+
+    // Kernel execution order : R2HC / R2HCF -> C2C
+    // R2HC and R2HCF will not come together
+
+    // Execute R2HC Kernels
+    if (sol->solver->batches[R2HC_KERNEL] != 0)
+    {
+        kernel_r2hc(in, in, out, out, sol->solver->batches[R2HC_KERNEL],
+                    sol->strides_grp->strides_r2hc, FFT_DIR(sol->decomp_scheme->flags));
+        UINT8 is_direct_only_problem = IS_DIRECT_ONLY_PROBLEM(sol);
+        if (is_direct_only_problem)
+        {
+            if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
+            {
+                set_zero_for_dc_and_nyquist_batched(sol);
+            }
+            return ret;
+        }
+    }
+
     UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
     UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
 
     kfft_ kernel_c2c = sol->solver->kernel_c2c->kfft;
-    kfft_ kernel_r2hc = sol->solver->kernel_r2hc->kfft;
     kfft_ kernel_r2hcf = sol->solver->kernel_r2hcf->kfft;
-
-    VOID *in = sol->decomp_scheme->in_real;
-    VOID *out = sol->decomp_scheme->out_real;
 
     INTP radix = sol->decomp_scheme->dims[0].n;
     INTP no_of_groups = sol->solver->batches[R2HCF_KERNEL] > 0
@@ -494,14 +515,8 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
         r2hc_out_stride = (c2c_out_stride - 1) * 2 + 1;
     }
 
-    // Kernel execution order : R2HC / R2HCF -> C2C
-    // R2HC and R2HCF will not come together
-
-    // Execute R2HC Kernels
     if (sol->solver->batches[R2HC_KERNEL] != 0)
     {
-        kernel_r2hc(in, in, out, out, sol->solver->batches[R2HC_KERNEL],
-                    sol->strides_grp->strides_r2hc, FFT_DIR(sol->decomp_scheme->flags));
         in = MOVE_ADDR(in, r2hc_in_stride * dt_bytes);
         out = MOVE_ADDR(out, r2hc_out_stride * dt_bytes);
         // TODO: Fix the design
@@ -635,23 +650,7 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
     }
     else if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
     {
-        // For R2C (real forward) problems, set the imaginary part of first and
-        // last points in half-complex buffer to 0.
-        // TODO: This should be moved to a separate solver
-        INTP n = sol->decomp_scheme->dims[0].n * sol->decomp_scheme->vecs[0].n;
-        INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
-        if (DT_PRECISION_FLAG(sol->decomp_scheme->flags) == DT_FLOAT)
-        {
-            FLOAT *out = (FLOAT *)sol->decomp_scheme->out_real;
-            out[1] = 0.0f;
-            out[n * out_stride + 1] = 0.0f;
-        }
-        else
-        {
-            DOUBLE *out = (DOUBLE *)sol->decomp_scheme->out_real;
-            out[1] = 0.0;
-            out[n * out_stride + 1] = 0.0;
-        }
+        set_zero_for_dc_and_nyquist(sol);
     }
 
 #ifdef AOCL_ENABLE_LOG

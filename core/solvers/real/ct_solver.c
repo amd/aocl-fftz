@@ -37,9 +37,7 @@
  */
 
 #include "core/solvers/real/ct_solver.h"
-#include "core/common/twiddle.h"
 #include "core/common/memory_manager.h"
-#include "utils/utils.h"
 
 INT32 setup_real_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
                            aoclfftz_solution_t *sol_m, UINT32 radix_r,

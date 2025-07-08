@@ -1252,15 +1252,18 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
     UINT32 dt_prec = DT_PRECISION_FLAG(solution->decomp_scheme->flags);
     if (FFT_DIR(solution->decomp_scheme->flags) == FORWARD_FFT_DIR)
     {
-        aoclfftz_solution_t *curr = solution;
-        while (curr != NULL)
+        // aoclfftz_solution_t *curr = solution;
+        aoclfftz_solution_t *prev = solution;
+        FOR_EACH_SOLUTION(curr, solution)
         {
+            // Always inherit the parent's twiddle buffer reference.
+            curr->twiddle->TW = prev->twiddle->TW;
             if (curr->solver->solver_type == SOLVER_CT)
             {
                 // goto next direct node to setup twiddle buffer
-                while (curr != NULL &&
-                       curr->solver->solver_type != SOLVER_DIRECT)
+                while (curr != NULL && curr->solver->solver_type != SOLVER_DIRECT)
                 {
+                    curr->twiddle->TW = prev->twiddle->TW;
                     curr = curr->next_sol[0];
                 }
                 INTP n = curr->decomp_scheme->dims[0].n;
@@ -1268,32 +1271,29 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                                         ? curr->solver->batches[R2HCF_KERNEL]
                                         : curr->solver->batches[R2HC_KERNEL];
                 // No. of c2c kernels per group that require twiddle computation
-                INTP group_sz =
-                    curr->solver->batches[C2C_KERNEL] / no_of_groups;
-                INTP tw_buf_sz = n * group_sz * DATA_STRIDE;
+                INTP group_size = curr->solver->batches[C2C_KERNEL] / no_of_groups;
+                INTP tw_buf_size = n * group_size * DATA_STRIDE;
                 // Allocate Twiddle buffer to store twiddle values for every
                 // radix-n c2c kernel of a group
-                VOID *TW = alloc_twiddle_buffer(tw_buf_sz, dt_prec);
+                VOID *TW = alloc_twiddle_buffer(tw_buf_size, dt_prec);
                 if (TW != NULL)
                 {
                     INTP p = (curr->decomp_scheme->vecs[0].n *
                               curr->decomp_scheme->dims[0].n) /
                              no_of_groups;
-                    compute_twiddle_buffer_real(TW, group_sz, n, p,
-                                                FORWARD_FFT_DIR, dt_prec);
+                    compute_twiddle_buffer_real(TW, group_size, n, p, FORWARD_FFT_DIR,
+                                                dt_prec);
                     curr->twiddle->TW = TW;
                     curr->twiddle->twiddle_buf_ptr = TW;
                 }
             }
-            curr = curr->next_sol ? curr->next_sol[0] : NULL;
+            prev = curr;
         }
     }
     else
     {
         aoclfftz_solution_t *prev = solution;
-        aoclfftz_solution_t *curr =
-                            (solution->next_sol) ? solution->next_sol[0] : NULL;
-        while (curr != NULL)
+        FOR_EACH_SOLUTION(curr, (solution->next_sol) ? solution->next_sol[0] : NULL)
         {
             if (curr->solver->solver_type == SOLVER_CT &&
                 prev->solver->solver_type == SOLVER_DIRECT)
@@ -1303,8 +1303,7 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                                         ? prev->solver->batches[R2HCF_KERNEL]
                                         : prev->solver->batches[R2HC_KERNEL];
                 // No. of c2c kernels per group that require twiddle computation
-                INTP group_sz =
-                    prev->solver->batches[C2C_KERNEL] / no_of_groups;
+                INTP group_sz = prev->solver->batches[C2C_KERNEL] / no_of_groups;
                 INTP tw_buf_sz = n * group_sz * DATA_STRIDE;
                 // Allocate Twiddle buffer to store twiddle factors for every
                 // radix-n c2c kernel of a group
@@ -1320,8 +1319,9 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                     prev->twiddle->twiddle_buf_ptr = TW;
                 }
             }
+            // Always inherit the parent's twiddle buffer reference.
+            curr->twiddle->TW = prev->twiddle->TW;
             prev = curr;
-            curr = curr->next_sol ? curr->next_sol[0] : NULL;
         }
     }
 #endif

@@ -40,8 +40,6 @@
 #include "core/solvers/solver.h"
 #include "core/solvers/transpose_solver.h"
 #include "core/common/memory_manager.h"
-#include "core/kernels/transpose/transpose_utils.h"
-#include "core/kernels/transpose/transpose_config.h"
 #include "core/kernels/transpose/transpose_kernels.h"
 
 // Returns a pointer to the best suited transpose kernel for this problem

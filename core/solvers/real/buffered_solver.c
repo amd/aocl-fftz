@@ -37,7 +37,6 @@
  */
 
 #include "core/common/memory_manager.h"
-#include "utils/utils.h"
 
 INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
                                  aoclfftz_realhelper_t *realhelper)

@@ -34,6 +34,7 @@
  *  RealFFT problems.
  *
  *  @author Srirammaswamy Srinivasan
+ *  @author Avinash Thakur
  */
 
 #include "core/common/realfft_utils.h"
@@ -53,12 +54,12 @@
  * @param radix radix of the C2C kernel
  * @param n batch of the C2C kernels
  * @param strides strides array for the buffer
- * @param vec_stride vector stride for the buffer
+ * @param v_out_stride vector stride for the buffer
  * @param prec precision flag (DT_FLOAT or DT_DOUBLE)
  * @return VOID
  */
 VOID compute_conjugates(VOID *data, INTP radix, INTP n, INTP *strides,
-                        INTP vec_stride, UINT32 prec)
+                        INTP v_out_stride, UINT32 prec)
 {
     INTP points = (radix + 1) >> 1; // ceil div
     if (prec == DT_FLOAT)
@@ -70,7 +71,7 @@ VOID compute_conjugates(VOID *data, INTP radix, INTP n, INTP *strides,
             {
                 data_i[strides[j]] = -data_i[strides[j]];
             }
-            data_i += vec_stride;
+            data_i += v_out_stride;
         }
     }
     else
@@ -82,7 +83,86 @@ VOID compute_conjugates(VOID *data, INTP radix, INTP n, INTP *strides,
             {
                 data_i[strides[j]] = -data_i[strides[j]];
             }
-            data_i += vec_stride;
+            data_i += v_out_stride;
         }
+    }
+}
+
+/**
+ * @brief Sets imaginary parts of DC and Nyquist frequencies to zero for
+ * batched R2C transforms.
+ *
+ * For R2C (real forward) problems, this function sets the imaginary part of
+ * the first complex number (DC component) and the complex number
+ * corresponding to the Nyquist frequency to zero. This is a property of the
+ * discrete Fourier transform of a real-valued signal. This function handles
+ * batched transforms.
+ *
+ * @param sol [in, out] The solution object containing problem details,
+ *            including the output buffer to be modified.
+ */
+VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t *sol)
+{
+    UINTP transform_len = sol->decomp_scheme->dims[0].n;
+    UINTP num_batches = sol->decomp_scheme->vecs[0].n;
+    UINTP out_stride = sol->decomp_scheme->dims[0].out_stride;
+    UINTP v_out_stride = sol->decomp_scheme->vecs[0].out_stride * 2;
+    UINTP nyquist_im_offset =
+        transform_len % 2 == 0 ? transform_len * out_stride + 1 : 1;
+    if (DT_PRECISION_FLAG(sol->decomp_scheme->flags) == DT_FLOAT)
+    {
+        FLOAT *out = (FLOAT *)sol->decomp_scheme->out_real;
+        for (UINTP b = 0; b < num_batches; b++)
+        {
+            out[1] = 0.0f;
+            out[nyquist_im_offset] = 0.0f;
+            out += v_out_stride;
+        }
+    }
+    else
+    {
+        DOUBLE *out = (DOUBLE *)sol->decomp_scheme->out_real;
+        for (UINTP b = 0; b < num_batches; b++)
+        {
+            out[1] = 0.0;
+            out[nyquist_im_offset] = 0.0;
+            out += v_out_stride;
+        }
+    }
+}
+
+/**
+ * @brief Sets imaginary parts of DC and Nyquist frequencies to zero for R2C
+ * transforms.
+ *
+ * For R2C (real forward) problems, this function sets the imaginary part of
+ * the first complex number (DC component) and the complex number
+ * corresponding to the Nyquist frequency to zero. This is a property of the
+ * discrete Fourier transform of a real-valued signal.
+ *
+ * @param sol [in, out] The solution object containing problem details,
+ *            including the output buffer to be modified.
+ */
+VOID set_zero_for_dc_and_nyquist(aoclfftz_solution_t *sol)
+{
+    // For R2C (real forward) problems, set the imaginary part of first and
+    // last points in half-complex buffer to 0.
+    INTP transform_len =
+        sol->decomp_scheme->dims[0].n * sol->decomp_scheme->vecs[0].n;
+    INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
+    INTP nyquist_im_offset =
+        transform_len % 2 == 0 ? transform_len * out_stride + 1 : 1;
+
+    if (DT_PRECISION_FLAG(sol->decomp_scheme->flags) == DT_FLOAT)
+    {
+        FLOAT *out = (FLOAT *)sol->decomp_scheme->out_real;
+        out[1] = 0.0f;
+        out[nyquist_im_offset] = 0.0f;
+    }
+    else
+    {
+        DOUBLE *out = (DOUBLE *)sol->decomp_scheme->out_real;
+        out[1] = 0.0;
+        out[nyquist_im_offset] = 0.0;
     }
 }
