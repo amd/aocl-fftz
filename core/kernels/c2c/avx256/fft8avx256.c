@@ -88,16 +88,9 @@ static VOID fft8avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     __m256 v_cv1, v_cv2, v_cv3, v_cv4;
 
     __m256 v_C1 = _mm256_broadcast_ss(&CRTM_8[0]);
+    v_C1 = _mm256_xor_ps(v_C1, _neg_256_f[flag].s);
     __m256 v_C2 = _mm256_broadcast_ss(&CRTM_8[1]);
-    __m256 v_C3 = v_C2;
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_C1 = -v_C1;
-        v_C3 = -v_C2;
-    }
+    __m256 v_C3 = _mm256_xor_ps(v_C2, _neg_256_f[flag].s);
 
     for (count = 0; count < N; count++)
     {
@@ -451,16 +444,9 @@ static VOID fft8avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     __m256d v_cv1, v_cv2, v_cv3, v_cv4;
 
     __m256d v_C1 = _mm256_broadcast_sd(&CRTM_8[0]);
+    v_C1 = _mm256_xor_pd(v_C1, _neg_256_d[flag].d);
     __m256d v_C2 = _mm256_broadcast_sd(&CRTM_8[1]);
-    __m256d v_C3 = v_C2;
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_C1 = -v_C1;
-        v_C3 = -v_C2;
-    }
+    __m256d v_C3 = _mm256_xor_pd(v_C2, _neg_256_d[flag].d);
 
     for (count = 0; count < N; count++)
     {

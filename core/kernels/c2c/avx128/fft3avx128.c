@@ -88,13 +88,7 @@ static VOID fft3avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     __m128 v_K1 = _mm_broadcast_ss(&CRTM_3[0]);
     __m128 v_K2 = _mm_broadcast_ss(&CRTM_3[1]);
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_K2 = -v_K2;
-    }
+    v_K2 = _mm_xor_ps(v_K2, _neg_128_f[flag].s);
 
     for (count = 0; count < N; count++)
     {
@@ -199,13 +193,7 @@ static VOID fft3avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     __m128d v_K1 = _mm_set1_pd(CRTM_3[0]);
     __m128d v_K2 = _mm_set1_pd(CRTM_3[1]);
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_K2 = -v_K2;
-    }
+    v_K2 = _mm_xor_pd(v_K2, _neg_128_d[flag].d);
 
     for (count = 0; count < N; count++)
     {

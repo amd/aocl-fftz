@@ -113,17 +113,11 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     INTP count;
 
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-
-        v_C2 = NEG_S(v_C2);
-        v_C4 = NEG_S(v_C4);
-        v_C6 = NEG_S(v_C6);
-        v_C8 = NEG_S(v_C8);
-        v_C10 = NEG_S(v_C10);
-    }
+    v_C2 = NEG_S(v_C2, flag);
+    v_C4 = NEG_S(v_C4, flag);
+    v_C6 = NEG_S(v_C6, flag);
+    v_C8 = NEG_S(v_C8, flag);
+    v_C10 = NEG_S(v_C10, flag);
 
     for (count = 0; count < N; count++)
     {
@@ -1241,17 +1235,11 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
     VREGTYPE_D v_C9 = BCAST_D(CRTM_11[8]);
     VREGTYPE_D v_C10 = BCAST_D(CRTM_11[9]);
 
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-
-        v_C2 = NEG_D(v_C2);
-        v_C4 = NEG_D(v_C4);
-        v_C6 = NEG_D(v_C6);
-        v_C8 = NEG_D(v_C8);
-        v_C10 = NEG_D(v_C10);
-    }
+    v_C2 = NEG_D(v_C2, flag);
+    v_C4 = NEG_D(v_C4, flag);
+    v_C6 = NEG_D(v_C6, flag);
+    v_C8 = NEG_D(v_C8, flag);
+    v_C10 = NEG_D(v_C10, flag);
 
     for (count = 0; count < N; count++)
     {

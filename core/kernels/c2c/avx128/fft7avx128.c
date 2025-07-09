@@ -97,17 +97,11 @@ static VOID fft7avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     __m128 v_K2 = _mm_broadcast_ss(&CRTM_7[1]);
     __m128 v_K3 = _mm_broadcast_ss(&CRTM_7[2]);
     __m128 v_K4 = _mm_broadcast_ss(&CRTM_7[3]);
+    v_K4 = _mm_xor_ps(v_K4, _neg_128_f[flag].s);
     __m128 v_K5 = _mm_broadcast_ss(&CRTM_7[4]);
+    v_K5 = _mm_xor_ps(v_K5, _neg_128_f[flag].s);
     __m128 v_K6 = _mm_broadcast_ss(&CRTM_7[5]);
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_K4 = -v_K4;
-        v_K5 = -v_K5;
-        v_K6 = -v_K6;
-    }
+    v_K6 = _mm_xor_ps(v_K6, _neg_128_f[flag].s);
 
     for (count = 0; count < N; count++)
     {
@@ -332,17 +326,11 @@ static VOID fft7avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     __m128d v_K2 = _mm_set1_pd(CRTM_7[1]);
     __m128d v_K3 = _mm_set1_pd(CRTM_7[2]);
     __m128d v_K4 = _mm_set1_pd(CRTM_7[3]);
+    v_K4 = _mm_xor_pd(v_K4, _neg_128_d[flag].d);
     __m128d v_K5 = _mm_set1_pd(CRTM_7[4]);
+    v_K5 = _mm_xor_pd(v_K5, _neg_128_d[flag].d);
     __m128d v_K6 = _mm_set1_pd(CRTM_7[5]);
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_K4 = -v_K4;
-        v_K5 = -v_K5;
-        v_K6 = -v_K6;
-    }
+    v_K6 = _mm_xor_pd(v_K6, _neg_128_d[flag].d);
 
     for (count = 0; count < n; count++)
     {

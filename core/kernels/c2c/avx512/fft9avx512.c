@@ -91,22 +91,16 @@ static VOID fft9avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     __m512 v_C1 = _mm512_set1_ps(CRTM_9[0]);
     __m512 v_C2 = _mm512_set1_ps(CRTM_9[1]);
+    v_C2 = _mm512_xor_ps(v_C2, _neg_512_f[flag].s);
     __m512 v_C3 = _mm512_set1_ps(CRTM_9[2]);
+    v_C3 = _mm512_xor_ps(v_C3, _neg_512_f[flag].s);
     __m512 v_C4 = _mm512_set1_ps(CRTM_9[3]);
     __m512 v_C5 = _mm512_set1_ps(CRTM_9[4]);
+    v_C5 = _mm512_xor_ps(v_C5, _neg_512_f[flag].s);
     __m512 v_C6 = _mm512_set1_ps(CRTM_9[5]);
     __m512 v_C7 = _mm512_set1_ps(CRTM_9[6]);
     __m512 v_C8 = _mm512_set1_ps(CRTM_9[7]);
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_C8 = -v_C8;
-        v_C5 = -v_C5;
-        v_C3 = -v_C3;
-        v_C2 = -v_C2;
-    }
+    v_C8 = _mm512_xor_ps(v_C8, _neg_512_f[flag].s);
 
     for (count = 0; count < N; count++)
     {
@@ -689,22 +683,16 @@ VOID fft9avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     __m512d v_C1 = _mm512_set1_pd(CRTM_9[0]);
     __m512d v_C2 = _mm512_set1_pd(CRTM_9[1]);
+    v_C2 = _mm512_xor_pd(v_C2, _neg_512_d[flag].d);
     __m512d v_C3 = _mm512_set1_pd(CRTM_9[2]);
+    v_C3 = _mm512_xor_pd(v_C3, _neg_512_d[flag].d);
     __m512d v_C4 = _mm512_set1_pd(CRTM_9[3]);
     __m512d v_C5 = _mm512_set1_pd(CRTM_9[4]);
+    v_C5 = _mm512_xor_pd(v_C5, _neg_512_d[flag].d);
     __m512d v_C6 = _mm512_set1_pd(CRTM_9[5]);
     __m512d v_C7 = _mm512_set1_pd(CRTM_9[6]);
     __m512d v_C8 = _mm512_set1_pd(CRTM_9[7]);
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_C8 = -v_C8;
-        v_C5 = -v_C5;
-        v_C3 = -v_C3;
-        v_C2 = -v_C2;
-    }
+    v_C8 = _mm512_xor_pd(v_C8, _neg_512_d[flag].d);
 
     for (count = 0; count < N; count++)
     {

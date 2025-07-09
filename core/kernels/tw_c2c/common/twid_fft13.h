@@ -137,26 +137,20 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
     VREGTYPE_S v_DG11 = BCAST_S(DGC[10]);
     VREGTYPE_S v_DG12 = BCAST_S(DGC[11]);
 
-    VREGTYPE_S v_ZERO = flag ? NEG_ZERO_S : SET_ZERO_S();
+    VREGTYPE_S v_ZERO = NEG_ZERO_S(flag);
 
     INTP count;
 
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-
-        v_C3 = NEG_S(v_C3);
-        v_C4 = NEG_S(v_C4);
-        v_C5 = NEG_S(v_C5);
-        v_C7 = NEG_S(v_C7);
-        v_C9 = NEG_S(v_C9);
-        v_DG3 = NEG_S(v_DG3);
-        v_DG5 = NEG_S(v_DG5);
-        v_DG7 = NEG_S(v_DG7);
-        v_DG9 = NEG_S(v_DG9);
-        v_DG11 = NEG_S(v_DG11);
-    }
+    v_C3 = NEG_S(v_C3, flag);
+    v_C4 = NEG_S(v_C4, flag);
+    v_C5 = NEG_S(v_C5, flag);
+    v_C7 = NEG_S(v_C7, flag);
+    v_C9 = NEG_S(v_C9, flag);
+    v_DG3 = NEG_S(v_DG3, flag);
+    v_DG5 = NEG_S(v_DG5, flag);
+    v_DG7 = NEG_S(v_DG7, flag);
+    v_DG9 = NEG_S(v_DG9, flag);
+    v_DG11 = NEG_S(v_DG11, flag);
 
     for (count = 0; count < N; count++)
     {
@@ -1550,24 +1544,18 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
     VREGTYPE_D v_DG11 = BCAST_D(DGC[10]);
     VREGTYPE_D v_DG12 = BCAST_D(DGC[11]);
 
-    VREGTYPE_D v_ZERO = flag ? NEG_ZERO_D : SET_ZERO_D();
+    VREGTYPE_D v_ZERO = NEG_ZERO_D(flag);
 
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-
-        v_C3 = NEG_D(v_C3);
-        v_C4 = NEG_D(v_C4);
-        v_C5 = NEG_D(v_C5);
-        v_C7 = NEG_D(v_C7);
-        v_C9 = NEG_D(v_C9);
-        v_DG3 = NEG_D(v_DG3);
-        v_DG5 = NEG_D(v_DG5);
-        v_DG7 = NEG_D(v_DG7);
-        v_DG9 = NEG_D(v_DG9);
-        v_DG11 = NEG_D(v_DG11);
-    }
+    v_C3 = NEG_D(v_C3, flag);
+    v_C4 = NEG_D(v_C4, flag);
+    v_C5 = NEG_D(v_C5, flag);
+    v_C7 = NEG_D(v_C7, flag);
+    v_C9 = NEG_D(v_C9, flag);
+    v_DG3 = NEG_D(v_DG3, flag);
+    v_DG5 = NEG_D(v_DG5, flag);
+    v_DG7 = NEG_D(v_DG7, flag);
+    v_DG9 = NEG_D(v_DG9, flag);
+    v_DG11 = NEG_D(v_DG11, flag);
 
     for (count = 0; count < N; count++)
     {

@@ -296,15 +296,7 @@ static VOID transpose_buffer(aoclfftz_solution_t *sol,
 
         INTP available = scratch_space_capacity / (2 * (1 << precision));
 
-        VOID *in;
-        if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
-        {
-            in = sol->decomp_scheme->out_real;
-        }
-        else
-        {
-            in = sol->decomp_scheme->out_imag;
-        }
+        VOID *in = sol->decomp_scheme->out_real;
 
         if (total_size > available || sol->dft_bufs->scratch_space == NULL)
         {

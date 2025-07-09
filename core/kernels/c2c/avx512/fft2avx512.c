@@ -78,12 +78,6 @@ static VOID fft2avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP remaining_sets = n % NUM_SETS_512_S;
     INTP count;
 
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-    }
-
     for (count = 0; count < N; count++)
     {
         __m512 v_in0, v_in1;
@@ -201,12 +195,6 @@ static VOID fft2avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP N = n / NUM_SETS_512_D;
     INTP remaining_sets = n % NUM_SETS_512_D;
     INTP count;
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-    }
 
     for (count = 0; count < N; count++)
     {

@@ -1616,20 +1616,18 @@ VOID post_process_buffered_inplace(aoclfftz_solution_t *solution,
     if (!IS_REAL(solution->decomp_scheme->flags) && dim_rank > 1)
     {
         VOID *out_real_ptr, *out_imag_ptr;
-        UINT32 is_forward =
-            (FFT_DIR(solution->decomp_scheme->flags) == FORWARD_FFT_DIR);
         if (IS_OUT_OF_PLACE(solution->decomp_scheme->flags))
         {
-            out_real_ptr = is_forward ? out_real : out_imag;
-            out_imag_ptr = is_forward ? out_imag : out_real;
+            out_real_ptr = out_real;
+            out_imag_ptr = out_imag;
         }
         else
         {
             UINT32 dt_bytes = DT_PRECISION_BYTES(
                 DT_PRECISION_FLAG(solution->decomp_scheme->flags));
             VOID *base = solution->dft_bufs->inplace_ndim_buffer;
-            out_real_ptr = is_forward ? base : MOVE_ADDR(base, dt_bytes);
-            out_imag_ptr = is_forward ? MOVE_ADDR(base, dt_bytes) : base;
+            out_real_ptr = base;
+            out_imag_ptr = MOVE_ADDR(base, dt_bytes);
         }
         post_process_ndim(solution, out_real_ptr, out_imag_ptr);
     }
@@ -1653,14 +1651,9 @@ VOID setup_inplace_buffers(aoclfftz_solution_t *solution)
         alloc_inplace_buffer(solution, &solution->dft_bufs->inplace_buffer);
         UINT32 dt_bytes = DT_PRECISION_BYTES(
                 DT_PRECISION_FLAG(solution->decomp_scheme->flags));
-        UINT32 is_forward =
-            (FFT_DIR(solution->decomp_scheme->flags) == FORWARD_FFT_DIR);
-        solution->decomp_scheme->out_real = is_forward ?
-            solution->dft_bufs->inplace_buffer :
-            MOVE_ADDR(solution->dft_bufs->inplace_buffer, dt_bytes);
-        solution->decomp_scheme->out_imag = is_forward ?
-            MOVE_ADDR(solution->dft_bufs->inplace_buffer, dt_bytes) :
-            solution->dft_bufs->inplace_buffer;
+        solution->decomp_scheme->out_real = solution->dft_bufs->inplace_buffer;
+        solution->decomp_scheme->out_imag = 
+                    MOVE_ADDR(solution->dft_bufs->inplace_buffer, dt_bytes);
 
         /* complex inplace NDim cases*/
         if ((!IS_OUT_OF_PLACE(solution->decomp_scheme->flags)) &&

@@ -36,16 +36,6 @@
 #ifndef GENERIC_KERNELS_COMMON_H
 #define GENERIC_KERNELS_COMMON_H
 
-/**
- * @brief Generic macro definitions for different SIMD variants
- * 
- * This file maps generic operation names to specific SIMD intrinsics
- * based on compile-time flags (KERNEL_USE_AVX128/256/512).
- * 
- * Each macro includes a cost comment showing the operation complexity
- * in terms of {fma, mul, add, move, perm, other} cycles.
- */
-
 #ifdef KERNEL_USE_AVX128
     #define NUM_SETS_S NUM_SETS_128_S
     #define NUM_SETS_D NUM_SETS_128_D
@@ -99,9 +89,9 @@
     #define BCAST_D _mm_set1_pd
 
     // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 1}
-    #define NEG_S(x) _mm_xor_ps((x), _mm_set1_ps(-0.0f))
+    #define NEG_S(x, f) _mm_xor_ps(x, _neg_128_f[f].s)
     // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 1}
-    #define NEG_D(x) _mm_xor_pd((x), _mm_set1_pd(-0.0))
+    #define NEG_D(x, f) _mm_xor_pd(x, _neg_128_d[f].d)
 
     // No cast needed for AVX128 (it's the lowest level)
 
@@ -120,11 +110,8 @@
     // Cost: {fma: 0, mul: 0, add: 1, move: 0, perm: 2, other: 0}
     #define SUBADD_SWAPA_D SUBADD_SWAPA_128_D
 
-    #define NEG_ZERO_S _neg_zero_128_f.s
-    #define NEG_ZERO_D _neg_zero_128_d.d
-
-    #define SET_ZERO_S _mm_setzero_ps
-    #define SET_ZERO_D _mm_setzero_pd
+    #define NEG_ZERO_S(flag) _neg_128_f[flag].s
+    #define NEG_ZERO_D(flag) _neg_128_d[flag].d
 #endif
 
 #ifdef KERNEL_USE_AVX256
@@ -180,9 +167,9 @@
     #define BCAST_D _mm256_set1_pd
 
     // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 1}
-    #define NEG_S(x) _mm256_xor_ps((x), _mm256_set1_ps(-0.0f))
+    #define NEG_S(x, f) _mm256_xor_ps(x, _neg_256_f[f].s)
     // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 1}
-    #define NEG_D(x) _mm256_xor_pd((x), _mm256_set1_pd(-0.0))
+    #define NEG_D(x, f) _mm256_xor_pd(x, _neg_256_d[f].d)
 
     // Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 0, other: 0}
     #define CAST_256_TO_128_S _mm256_castps256_ps128
@@ -204,11 +191,8 @@
     // Cost: {fma: 0, mul: 0, add: 1, move: 0, perm: 2, other: 0}
     #define SUBADD_SWAPA_D SUBADD_SWAPA_256_D
 
-    #define NEG_ZERO_S _neg_zero_256_f.s
-    #define NEG_ZERO_D _neg_zero_256_d.d
-
-    #define SET_ZERO_S _mm256_setzero_ps
-    #define SET_ZERO_D _mm256_setzero_pd
+    #define NEG_ZERO_S(flag) _neg_256_f[flag].s
+    #define NEG_ZERO_D(flag) _neg_256_d[flag].d
 #endif
 
 #ifdef KERNEL_USE_AVX512
@@ -264,9 +248,9 @@
     #define BCAST_D _mm512_set1_pd
 
     // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 1}
-    #define NEG_S(x) _mm512_xor_ps((x), _mm512_set1_ps(-0.0f))
+    #define NEG_S(x, f) _mm512_xor_ps(x, _neg_512_f[f].s)
     // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 1}
-    #define NEG_D(x) _mm512_xor_pd((x), _mm512_set1_pd(-0.0))
+    #define NEG_D(x, f) _mm512_xor_pd(x, _neg_512_d[f].d)
 
     // Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 0, other: 0}
     #define CAST_512_TO_256_S _mm512_castps512_ps256
@@ -293,11 +277,8 @@
     // Cost: {fma: 1, mul: 0, add: 0, move: 0, perm: 2, other: 0}
     #define SUBADD_SWAPA_D SUBADD_SWAPA_512_D
 
-    #define NEG_ZERO_S _neg_zero_512_f.s
-    #define NEG_ZERO_D _neg_zero_512_d.d
-
-    #define SET_ZERO_S _mm512_setzero_ps
-    #define SET_ZERO_D _mm512_setzero_pd
+    #define NEG_ZERO_S(flag) _neg_512_f[flag].s
+    #define NEG_ZERO_D(flag) _neg_512_d[flag].d
 #endif
 
 #endif // GENERIC_KERNELS_COMMON_H

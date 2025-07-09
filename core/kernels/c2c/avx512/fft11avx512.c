@@ -94,25 +94,19 @@ static VOID fft11avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     __m512 v_C1 = _mm512_set1_ps(CRTM_11[0]);
     __m512 v_C2 = _mm512_set1_ps(CRTM_11[1]);
+    v_C2 = _mm512_xor_ps(v_C2, _neg_512_f[flag].s);
     __m512 v_C3 = _mm512_set1_ps(CRTM_11[2]);
     __m512 v_C4 = _mm512_set1_ps(CRTM_11[3]);
+    v_C4 = _mm512_xor_ps(v_C4, _neg_512_f[flag].s);
     __m512 v_C5 = _mm512_set1_ps(CRTM_11[4]);
     __m512 v_C6 = _mm512_set1_ps(CRTM_11[5]);
+    v_C6 = _mm512_xor_ps(v_C6, _neg_512_f[flag].s);
     __m512 v_C7 = _mm512_set1_ps(CRTM_11[6]);
     __m512 v_C8 = _mm512_set1_ps(CRTM_11[7]);
+    v_C8 = _mm512_xor_ps(v_C8, _neg_512_f[flag].s);
     __m512 v_C9 = _mm512_set1_ps(CRTM_11[8]);
     __m512 v_C10 = _mm512_set1_ps(CRTM_11[9]);
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_C2 = -v_C2;
-        v_C4 = -v_C4;
-        v_C6 = -v_C6;
-        v_C8 = -v_C8;
-        v_C10 = -v_C10;
-    }
+    v_C10 = _mm512_xor_ps(v_C10, _neg_512_f[flag].s);
 
     for (count = 0; count < N; count++)
     {
@@ -1088,25 +1082,19 @@ static VOID fft11avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     __m512d v_C1 = _mm512_set1_pd(CRTM_11[0]);
     __m512d v_C2 = _mm512_set1_pd(CRTM_11[1]);
+    v_C2 = _mm512_xor_pd(v_C2, _neg_512_d[flag].d);
     __m512d v_C3 = _mm512_set1_pd(CRTM_11[2]);
     __m512d v_C4 = _mm512_set1_pd(CRTM_11[3]);
+    v_C4 = _mm512_xor_pd(v_C4, _neg_512_d[flag].d);
     __m512d v_C5 = _mm512_set1_pd(CRTM_11[4]);
     __m512d v_C6 = _mm512_set1_pd(CRTM_11[5]);
+    v_C6 = _mm512_xor_pd(v_C6, _neg_512_d[flag].d);
     __m512d v_C7 = _mm512_set1_pd(CRTM_11[6]);
     __m512d v_C8 = _mm512_set1_pd(CRTM_11[7]);
+    v_C8 = _mm512_xor_pd(v_C8, _neg_512_d[flag].d);
     __m512d v_C9 = _mm512_set1_pd(CRTM_11[8]);
     __m512d v_C10 = _mm512_set1_pd(CRTM_11[9]);
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_C2 = -v_C2;
-        v_C4 = -v_C4;
-        v_C6 = -v_C6;
-        v_C8 = -v_C8;
-        v_C10 = -v_C10;
-    }
+    v_C10 = _mm512_xor_pd(v_C10, _neg_512_d[flag].d);
 
     for (count = 0; count < N; count++)
     {

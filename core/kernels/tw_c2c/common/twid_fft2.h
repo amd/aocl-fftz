@@ -88,12 +88,6 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     INTP count;
 
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-    }
-
     for (count = 0; count < N; count++)
     {
         VREGTYPE_S v_in0, v_in1;
@@ -278,11 +272,6 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
     // nothing, since double doesn't have any tail cases to process
 #endif
 
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-    }
 
     for (count = 0; count < N; count++)
     {

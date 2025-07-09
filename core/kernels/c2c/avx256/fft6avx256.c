@@ -87,13 +87,7 @@ static VOID fft6avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     __m256 v_C1 = _mm256_broadcast_ss(&CRTM_6[0]);
     __m256 v_C2 = _mm256_broadcast_ss(&CRTM_6[1]);
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_C2 = -v_C2;
-    }
+    v_C2 = _mm256_xor_ps(v_C2, _neg_256_f[flag].s);
 
     for (count = 0; count < N; count++)
     {
@@ -347,13 +341,7 @@ static VOID fft6avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     __m256d v_C1 = _mm256_broadcast_sd(&CRTM_6[0]);
     __m256d v_C2 = _mm256_broadcast_sd(&CRTM_6[1]);
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_C2 = -v_C2;
-    }
+    v_C2 = _mm256_xor_pd(v_C2, _neg_256_d[flag].d);
 
     for (count = 0; count < N; count++)
     {

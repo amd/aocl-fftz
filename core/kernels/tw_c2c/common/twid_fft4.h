@@ -90,12 +90,7 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     INTP count;
 
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_C1 = NEG_S(v_C1);
-    }
+    v_C1 = NEG_S(v_C1, flag);
 
     for (count = 0; count < N; count++)
     {
@@ -398,12 +393,7 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     VREGTYPE_D v_C1 = BCAST_D(CRTM_4_1);
 
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_C1 = NEG_D(v_C1);
-    }
+    v_C1 = NEG_D(v_C1, flag);
 
     for (count = 0; count < N; count++)
     {

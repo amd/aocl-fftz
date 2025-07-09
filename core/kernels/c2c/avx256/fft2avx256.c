@@ -82,12 +82,6 @@ static VOID fft2avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     __m256 _in0, _in1;
     __m256 _out0, _out1;
 
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-    }
-
     for (count = 0; count < N; count++)
     {
         curr_in = in_r;
@@ -179,12 +173,6 @@ static VOID fft2avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     __m256d _in0, _in1;
     __m256d _out0, _out1;
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-    }
 
     for (count = 0; count < N; count++)
     {

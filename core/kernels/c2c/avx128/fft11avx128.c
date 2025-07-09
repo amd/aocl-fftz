@@ -99,25 +99,19 @@ static VOID fft11avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     __m128 v_K1 = _mm_broadcast_ss(&CRTM_11[0]);
     __m128 v_K2 = _mm_broadcast_ss(&CRTM_11[1]);
+    v_K2 = _mm_xor_ps(v_K2, _neg_128_f[flag].s);
     __m128 v_K3 = _mm_broadcast_ss(&CRTM_11[2]);
     __m128 v_K4 = _mm_broadcast_ss(&CRTM_11[3]);
+    v_K4 = _mm_xor_ps(v_K4, _neg_128_f[flag].s);
     __m128 v_K5 = _mm_broadcast_ss(&CRTM_11[4]);
     __m128 v_K6 = _mm_broadcast_ss(&CRTM_11[5]);
+    v_K6 = _mm_xor_ps(v_K6, _neg_128_f[flag].s);
     __m128 v_K7 = _mm_broadcast_ss(&CRTM_11[6]);
     __m128 v_K8 = _mm_broadcast_ss(&CRTM_11[7]);
+    v_K8 = _mm_xor_ps(v_K8, _neg_128_f[flag].s);
     __m128 v_K9 = _mm_broadcast_ss(&CRTM_11[8]);
     __m128 v_K10 = _mm_broadcast_ss(&CRTM_11[9]);
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_K2 = -v_K2;
-        v_K4 = -v_K4;
-        v_K6 = -v_K6;
-        v_K8 = -v_K8;
-        v_K10 = -v_K10;
-    }
+    v_K10 = _mm_xor_ps(v_K10, _neg_128_f[flag].s);
 
     for (count = 0; count < N; count++)
     {
@@ -607,25 +601,19 @@ static VOID fft11avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     __m128d v_K1 = _mm_set1_pd(CRTM_11[0]);
     __m128d v_K2 = _mm_set1_pd(CRTM_11[1]);
+    v_K2 = _mm_xor_pd(v_K2, _neg_128_d[flag].d);
     __m128d v_K3 = _mm_set1_pd(CRTM_11[2]);
     __m128d v_K4 = _mm_set1_pd(CRTM_11[3]);
+    v_K4 = _mm_xor_pd(v_K4, _neg_128_d[flag].d);
     __m128d v_K5 = _mm_set1_pd(CRTM_11[4]);
     __m128d v_K6 = _mm_set1_pd(CRTM_11[5]);
+    v_K6 = _mm_xor_pd(v_K6, _neg_128_d[flag].d);
     __m128d v_K7 = _mm_set1_pd(CRTM_11[6]);
     __m128d v_K8 = _mm_set1_pd(CRTM_11[7]);
+    v_K8 = _mm_xor_pd(v_K8, _neg_128_d[flag].d);
     __m128d v_K9 = _mm_set1_pd(CRTM_11[8]);
     __m128d v_K10 = _mm_set1_pd(CRTM_11[9]);
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_K2 = -v_K2;
-        v_K4 = -v_K4;
-        v_K6 = -v_K6;
-        v_K8 = -v_K8;
-        v_K10 = -v_K10;
-    }
+    v_K10 = _mm_xor_pd(v_K10, _neg_128_d[flag].d);
 
     for (count = 0; count < N; count++)
     {

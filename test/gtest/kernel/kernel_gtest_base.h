@@ -267,15 +267,15 @@ class AoclfftzKernelTestBase
         k_stride.v_in_stride  = in_stride_w_ds * radix;
         k_stride.v_out_stride = out_stride_w_ds * radix;
 
-        k_in_r  = (is_bwd) ? (k_in + 1) : (k_in);
-        k_in_i  = (is_bwd) ? (k_in) : (k_in + 1);
-        k_out_r = (is_bwd) ? (k_out + 1) : (k_out);
-        k_out_i = (is_bwd) ? (k_out) : (k_out + 1);
+        k_in_r  = k_in;
+        k_in_i  = k_in + 1;
+        k_out_r = k_out;
+        k_out_i = k_out + 1;
 
-        twk_in_r = (is_bwd) ? (twk_in + 1) : (twk_in);
-        twk_in_i = (is_bwd) ? (twk_in) : (twk_in + 1);
-        twk_out_r = (is_bwd) ? (twk_out + 1) : (twk_out);
-        twk_out_i = (is_bwd) ? (twk_out) : (twk_out + 1);
+        twk_in_r  = twk_in;
+        twk_in_i  = twk_in + 1;
+        twk_out_r = twk_out;
+        twk_out_i = twk_out + 1;
 
         // setup the twiddle buffer
         ALLOC_ALIGN_INIT(twiddle_buffer, UINT8,
@@ -296,9 +296,18 @@ class AoclfftzKernelTestBase
         // this is to simulate the condition where the m (offset) fft has been
         // performed and the twiddle multiplication followed by the kernel
         // (radix/r) fft has to be done next.
-        error = gtest_twiddle_multiplier_no_transpose(
+        if (is_bwd)
+        {
+            error = gtest_twiddle_multiplier_no_transpose(
+            k_in_i, k_in_r, radix, offset, in_stride_w_ds,
+            k_stride.v_in_stride, twiddle_buffer);
+        }
+        else
+        {
+            error = gtest_twiddle_multiplier_no_transpose(
             k_in_r, k_in_i, radix, offset, in_stride_w_ds,
             k_stride.v_in_stride, twiddle_buffer);
+        }
 
         if (error == 0)
         {

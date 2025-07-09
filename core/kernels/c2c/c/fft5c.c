@@ -71,10 +71,23 @@ static VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     const DOUBLE CRTM_5_4 =
         +0.58778525229247301629891039327884007596190389052978;
 
-    DOUBLE *in_r = (DOUBLE *)in_real;
-    DOUBLE *in_i = (DOUBLE *)in_imag;
-    DOUBLE *out_r = (DOUBLE *)out_real;
-    DOUBLE *out_i = (DOUBLE *)out_imag;
+    DOUBLE *in_r, *in_i, *out_r, *out_i;
+
+    if (flag) // non-zero flag indicates that the fft is inverse
+    {
+        in_r = (DOUBLE *)in_imag;
+        in_i = (DOUBLE *)in_real;
+        out_r = (DOUBLE *)out_imag;
+        out_i = (DOUBLE *)out_real;
+    }
+    else
+    {
+        in_r = (DOUBLE *)in_real;
+        in_i = (DOUBLE *)in_imag;
+        out_r = (DOUBLE *)out_real;
+        out_i = (DOUBLE *)out_imag;
+    }
+
 #ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
@@ -187,10 +200,7 @@ static VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     const FLOAT CRTM_5_4 =
         +0.58778525229247301629891039327884007596190389052978;
 
-    FLOAT *in_r = (FLOAT *)in_real;
-    FLOAT *in_i = (FLOAT *)in_imag;
-    FLOAT *out_r = (FLOAT *)out_real;
-    FLOAT *out_i = (FLOAT *)out_imag;
+    FLOAT *in_r, *in_i, *out_r, *out_i;
 #ifdef VOLATILE_STRIDE_ARRAY
     volatile INTP *in_strides = strides->in_strides;
     volatile INTP *out_strides = strides->out_strides;
@@ -201,6 +211,21 @@ static VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP v_in_stride = strides->v_in_stride;
     INTP v_out_stride = strides->v_out_stride;
     INTP cnt;
+
+    if (flag) // non-zero flag indicates that the fft is inverse
+    {
+        in_r = (FLOAT *)in_imag;
+        in_i = (FLOAT *)in_real;
+        out_r = (FLOAT *)out_imag;
+        out_i = (FLOAT *)out_real;
+    }
+    else
+    {
+        in_r = (FLOAT *)in_real;
+        in_i = (FLOAT *)in_imag;
+        out_r = (FLOAT *)out_real;
+        out_i = (FLOAT *)out_imag;
+    }
 
     for (cnt = 0; cnt < n; cnt++)
     {

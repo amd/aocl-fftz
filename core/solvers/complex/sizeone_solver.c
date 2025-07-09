@@ -93,12 +93,8 @@ INT32 setup_sizeone_solver(aoclfftz_solution_t *sol)
     strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
     strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
 
-    VOID *in = (FFT_DIR(sol->decomp_scheme->flags)) ?
-                sol->decomp_scheme->in_imag :
-                sol->decomp_scheme->in_real;
-    VOID *out = (FFT_DIR(sol->decomp_scheme->flags)) ?
-                sol->decomp_scheme->out_imag :
-                sol->decomp_scheme->out_real;
+    VOID *in  = sol->decomp_scheme->in_real;
+    VOID *out = sol->decomp_scheme->out_real;
     sol->decomp_scheme->in_real = in;
     sol->decomp_scheme->out_real = out;
 

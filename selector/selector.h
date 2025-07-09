@@ -157,20 +157,10 @@ typedef struct aoclfftz_selector
         sel_obj->solution->decomp_scheme->vecs[cnt].out_stride =               \
             problem->vecs[cnt].out_stride;                                     \
     }                                                                          \
-    if (FFT_DIR(problem->flags) == FORWARD_FFT_DIR || IS_REAL(problem->flags)) \
-    {                                                                          \
-        sel_obj->solution->decomp_scheme->in_real = problem->in;               \
-        sel_obj->solution->decomp_scheme->in_imag = problem->in + 1;           \
-        sel_obj->solution->decomp_scheme->out_real = problem->out;             \
-        sel_obj->solution->decomp_scheme->out_imag = problem->out + 1;         \
-    }                                                                          \
-    else                                                                       \
-    {                                                                          \
-        sel_obj->solution->decomp_scheme->in_real = problem->in + 1;           \
-        sel_obj->solution->decomp_scheme->in_imag = problem->in;               \
-        sel_obj->solution->decomp_scheme->out_real = problem->out + 1;         \
-        sel_obj->solution->decomp_scheme->out_imag = problem->out;             \
-    }                                                                          \
+    sel_obj->solution->decomp_scheme->in_real = problem->in;                   \
+    sel_obj->solution->decomp_scheme->in_imag = problem->in + 1;               \
+    sel_obj->solution->decomp_scheme->out_real = problem->out;                 \
+    sel_obj->solution->decomp_scheme->out_imag = problem->out + 1;             \
     sel_obj->solution->decomp_scheme->cntrl_params->opt_level =                \
         problem->cntrl_params.opt_level;                                       \
     sel_obj->solution->decomp_scheme->cntrl_params->opt_off =                  \

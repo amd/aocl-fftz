@@ -130,44 +130,38 @@ static VOID fft13avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     __m512 v_C1  = _mm512_set1_ps(CRTM_13[0]);
     __m512 v_C2  = _mm512_set1_ps(CRTM_13[1]);
     __m512 v_C3  = _mm512_set1_ps(CRTM_13[2]);
+    v_C3 = _mm512_xor_ps(v_C3, _neg_512_f[flag].s);
     __m512 v_C4  = _mm512_set1_ps(CRTM_13[3]);
+    v_C4 = _mm512_xor_ps(v_C4, _neg_512_f[flag].s);
     __m512 v_C5  = _mm512_set1_ps(CRTM_13[4]);
+    v_C5 = _mm512_xor_ps(v_C5, _neg_512_f[flag].s);
     __m512 v_C6  = _mm512_set1_ps(CRTM_13[5]);
     __m512 v_C7  = _mm512_set1_ps(CRTM_13[6]);
+    v_C7 = _mm512_xor_ps(v_C7, _neg_512_f[flag].s);
     __m512 v_C8  = _mm512_set1_ps(CRTM_13[7]);
     __m512 v_C9  = _mm512_set1_ps(CRTM_13[8]);
+    v_C9 = _mm512_xor_ps(v_C9, _neg_512_f[flag].s);
     __m512 v_C10 = _mm512_set1_ps(CRTM_13[9]);
 
     __m512 v_DG1  = _mm512_set1_ps(DGC[0]);
     __m512 v_DG2  = _mm512_set1_ps(DGC[1]);
     __m512 v_DG3  = _mm512_set1_ps(DGC[2]);
+    v_DG3 = _mm512_xor_ps(v_DG3, _neg_512_f[flag].s);
     __m512 v_DG4  = _mm512_set1_ps(DGC[3]);
     __m512 v_DG5  = _mm512_set1_ps(DGC[4]);
+    v_DG5 = _mm512_xor_ps(v_DG5, _neg_512_f[flag].s);
     __m512 v_DG6  = _mm512_set1_ps(DGC[5]);
     __m512 v_DG7  = _mm512_set1_ps(DGC[6]);
+    v_DG7 = _mm512_xor_ps(v_DG7, _neg_512_f[flag].s);
     __m512 v_DG8  = _mm512_set1_ps(DGC[7]);
     __m512 v_DG9  = _mm512_set1_ps(DGC[8]);
+    v_DG9 = _mm512_xor_ps(v_DG9, _neg_512_f[flag].s);
     __m512 v_DG10 = _mm512_set1_ps(DGC[9]);
     __m512 v_DG11 = _mm512_set1_ps(DGC[10]);
+    v_DG11 = _mm512_xor_ps(v_DG11, _neg_512_f[flag].s);
     __m512 v_DG12 = _mm512_set1_ps(DGC[11]);
 
-    __m512 v_ZERO  = flag ? _neg_zero_512_f.s : _mm512_setzero_ps();
-
-    if (flag)
-    {
-        in_r  = in_imag;
-        out_r = out_imag;
-        v_C3  = -v_C3;
-        v_C4  = -v_C4;
-        v_C5  = -v_C5;
-        v_C7  = -v_C7;
-        v_C9  = -v_C9;
-        v_DG3  = -v_DG3;
-        v_DG5  = -v_DG5;
-        v_DG7  = -v_DG7;
-        v_DG9  = -v_DG9;
-        v_DG11 = -v_DG11;
-    }
+    __m512 v_ZERO  = _neg_512_f[flag].s;
 
     for (count = 0; count < N; count++)
     {
@@ -1364,44 +1358,38 @@ static VOID fft13avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     __m512d v_C1  = _mm512_set1_pd(CRTM_13[0]);
     __m512d v_C2  = _mm512_set1_pd(CRTM_13[1]);
     __m512d v_C3  = _mm512_set1_pd(CRTM_13[2]);
+    v_C3 = _mm512_xor_pd(v_C3, _neg_512_d[flag].d);
     __m512d v_C4  = _mm512_set1_pd(CRTM_13[3]);
+    v_C4 = _mm512_xor_pd(v_C4, _neg_512_d[flag].d);
     __m512d v_C5  = _mm512_set1_pd(CRTM_13[4]);
+    v_C5 = _mm512_xor_pd(v_C5, _neg_512_d[flag].d);
     __m512d v_C6  = _mm512_set1_pd(CRTM_13[5]);
     __m512d v_C7  = _mm512_set1_pd(CRTM_13[6]);
+    v_C7 = _mm512_xor_pd(v_C7, _neg_512_d[flag].d);
     __m512d v_C8  = _mm512_set1_pd(CRTM_13[7]);
     __m512d v_C9  = _mm512_set1_pd(CRTM_13[8]);
+    v_C9 = _mm512_xor_pd(v_C9, _neg_512_d[flag].d);
     __m512d v_C10 = _mm512_set1_pd(CRTM_13[9]);
 
     __m512d v_DG1  = _mm512_set1_pd(DGC[0]);
     __m512d v_DG2  = _mm512_set1_pd(DGC[1]);
     __m512d v_DG3  = _mm512_set1_pd(DGC[2]);
+    v_DG3 = _mm512_xor_pd(v_DG3, _neg_512_d[flag].d);
     __m512d v_DG4  = _mm512_set1_pd(DGC[3]);
     __m512d v_DG5  = _mm512_set1_pd(DGC[4]);
+    v_DG5 = _mm512_xor_pd(v_DG5, _neg_512_d[flag].d);
     __m512d v_DG6  = _mm512_set1_pd(DGC[5]);
     __m512d v_DG7  = _mm512_set1_pd(DGC[6]);
+    v_DG7 = _mm512_xor_pd(v_DG7, _neg_512_d[flag].d);
     __m512d v_DG8  = _mm512_set1_pd(DGC[7]);
     __m512d v_DG9  = _mm512_set1_pd(DGC[8]);
+    v_DG9 = _mm512_xor_pd(v_DG9, _neg_512_d[flag].d);
     __m512d v_DG10 = _mm512_set1_pd(DGC[9]);
     __m512d v_DG11 = _mm512_set1_pd(DGC[10]);
+    v_DG11 = _mm512_xor_pd(v_DG11, _neg_512_d[flag].d);
     __m512d v_DG12 = _mm512_set1_pd(DGC[11]);
 
-    __m512d v_ZERO  = flag ? _neg_zero_512_d.d : _mm512_setzero_pd();
-
-    if (flag)
-    {
-        in_r  = in_imag;
-        out_r = out_imag;
-        v_C3  = -v_C3;
-        v_C4  = -v_C4;
-        v_C5  = -v_C5;
-        v_C7  = -v_C7;
-        v_C9  = -v_C9;
-        v_DG3  = -v_DG3;
-        v_DG5  = -v_DG5;
-        v_DG7  = -v_DG7;
-        v_DG9  = -v_DG9;
-        v_DG11 = -v_DG11;
-    }
+    __m512d v_ZERO  = _neg_512_d[flag].d;
 
     for (count = 0; count < N; count++)
     {

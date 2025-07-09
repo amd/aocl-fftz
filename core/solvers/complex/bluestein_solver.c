@@ -128,10 +128,8 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     VOID *out_imag = next_sol->decomp_scheme->out_imag;
 
     // Copy input from current sol to next sol
-    VOID *cur_in = (dir == FORWARD_FFT_DIR) ? sol->decomp_scheme->in_real
-                                            : sol->decomp_scheme->in_imag;
-    VOID *cur_out = (dir == FORWARD_FFT_DIR) ? sol->decomp_scheme->out_real
-                                             : sol->decomp_scheme->out_imag;
+    VOID *cur_in  = sol->decomp_scheme->in_real;
+    VOID *cur_out = sol->decomp_scheme->out_real;
     // Elementwise multiplication sign
     UINT8 mul_sign = (dir == FORWARD_FFT_DIR) ? 1 : 0;
 
@@ -217,11 +215,10 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
         return SOLVER_FAILURE;
     }
 
-    // Swapping real, imag parts to achieve FFT backward
-    next_sol->decomp_scheme->in_real = out_imag;
-    next_sol->decomp_scheme->in_imag = out_real;
-    next_sol->decomp_scheme->out_real = in_imag;
-    next_sol->decomp_scheme->out_imag = in_real;
+    next_sol->decomp_scheme->in_real = out_real;
+    next_sol->decomp_scheme->in_imag = out_imag;
+    next_sol->decomp_scheme->out_real = in_real;
+    next_sol->decomp_scheme->out_imag = in_imag;
     next_sol->decomp_scheme->flags ^= mask;
 
     // input  : out_imag

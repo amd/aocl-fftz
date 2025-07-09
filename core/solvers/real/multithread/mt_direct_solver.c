@@ -763,13 +763,13 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                                 INTP v_istride = group_num * v_in_stride_c2c;
                                 INTP v_ostride = group_num * v_out_stride_c2c;
                                 kernel_c2c((VOID *)((CHAR *)in_local +
-                                            v_istride + dt_bytes),
-                                           (VOID *)((CHAR *)in_local +
                                             v_istride),
-                                           (VOID *)((CHAR *)out_local +
-                                            v_ostride + dt_bytes),
+                                           (VOID *)((CHAR *)in_local +
+                                            v_istride + dt_bytes),
                                            (VOID *)((CHAR *)out_local +
                                             v_ostride),
+                                           (VOID *)((CHAR *)out_local +
+                                            v_ostride + dt_bytes),
                                            1 /* num_sets_c2c */,
                                            strides_c2c_per_thread,
                                            sol->twiddle, // FIXME: when adding

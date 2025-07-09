@@ -78,8 +78,18 @@
 
 static VOID twiddle_multiplier_float(aoclfftz_solution_t *sol)
 {
-    FLOAT *in_real = (FLOAT *)sol->decomp_scheme->in_real;
-    FLOAT *in_imag = (FLOAT *)sol->decomp_scheme->in_imag;
+    FLOAT *in_real, *in_imag;
+
+    if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
+    {
+        in_real  = (FLOAT *)sol->decomp_scheme->in_real;
+        in_imag  = (FLOAT *)sol->decomp_scheme->in_imag;
+    }
+    else
+    {
+        in_real  = (FLOAT *)sol->decomp_scheme->in_imag;
+        in_imag  = (FLOAT *)sol->decomp_scheme->in_real;
+    }
 
     INTP sets = sol->decomp_scheme->vecs[0].n;
     INTP radix = sol->decomp_scheme->dims[0].n;
@@ -172,8 +182,18 @@ static VOID twiddle_multiplier_float(aoclfftz_solution_t *sol)
 
 static VOID twiddle_multiplier_double(aoclfftz_solution_t *sol)
 {
-    DOUBLE *in_real = (DOUBLE *)sol->decomp_scheme->in_real;
-    DOUBLE *in_imag = (DOUBLE *)sol->decomp_scheme->in_imag;
+    DOUBLE *in_real, *in_imag;
+
+    if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
+    {
+        in_real  = (DOUBLE *)sol->decomp_scheme->in_real;
+        in_imag  = (DOUBLE *)sol->decomp_scheme->in_imag;
+    }
+    else
+    {
+        in_real  = (DOUBLE *)sol->decomp_scheme->in_imag;
+        in_imag  = (DOUBLE *)sol->decomp_scheme->in_real;
+    }
 
     INTP sets = sol->decomp_scheme->vecs[0].n;
     INTP radix = sol->decomp_scheme->dims[0].n;
@@ -482,26 +502,30 @@ twiddle_multiplier_inplace_buffered_float(aoclfftz_solution_t *sol)
     INTP scratch_col_stride = DATA_STRIDE;
     INTP scratch_row_stride = sc_cols * DATA_STRIDE;
 
-    FLOAT *in_real = (FLOAT *)sol->decomp_scheme->out_real;
-    FLOAT *in_imag = (FLOAT *)sol->decomp_scheme->out_imag;
-    aoclfftz_complex_f_t *in; // decided based on the direction of FFT
-
-    FLOAT *scratch_real; // decided based on the direction of FFT
-    FLOAT *scratch_imag; // decided based on the direction of FFT
-    aoclfftz_complex_f_t *sc = (aoclfftz_complex_f_t *)sol->dft_bufs->scratch_space;
+    // decided based on the direction of FFT
+    FLOAT *in_real, *in_imag;
+    FLOAT *scratch_real;
+    FLOAT *scratch_imag;
+    aoclfftz_complex_f_t *in;
 
     if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
     {
-        in = (aoclfftz_complex_f_t *)sol->decomp_scheme->out_real;
+        in_real = (FLOAT *)sol->decomp_scheme->out_real;
+        in_imag = (FLOAT *)sol->decomp_scheme->out_imag;
         scratch_real = (FLOAT *)sol->dft_bufs->scratch_space;
         scratch_imag = scratch_real + 1;
     }
     else
     {
-        in = (aoclfftz_complex_f_t *)sol->decomp_scheme->out_imag;
+        in_real = (FLOAT *)sol->decomp_scheme->out_imag;
+        in_imag = (FLOAT *)sol->decomp_scheme->out_real;
         scratch_imag = (FLOAT *)sol->dft_bufs->scratch_space;
         scratch_real = scratch_imag + 1;
     }
+
+    in = (aoclfftz_complex_f_t *)sol->decomp_scheme->out_real;
+
+    aoclfftz_complex_f_t *sc = (aoclfftz_complex_f_t *)sol->dft_bufs->scratch_space;
 
     INTP sc_cs = 1;
     INTP sc_rs = rows;
@@ -610,26 +634,30 @@ twiddle_multiplier_inplace_buffered_double(aoclfftz_solution_t *sol)
     INTP scratch_col_stride = DATA_STRIDE;
     INTP scratch_row_stride = sc_cols * DATA_STRIDE;
 
-    DOUBLE *in_real = (DOUBLE *)sol->decomp_scheme->out_real;
-    DOUBLE *in_imag = (DOUBLE *)sol->decomp_scheme->out_imag;
-    aoclfftz_complex_d_t *in; // decided based on the direction of FFT
-
-    DOUBLE *scratch_real; // decided based on the direction of FFT
-    DOUBLE *scratch_imag; // decided based on the direction of FFT
-    aoclfftz_complex_d_t *sc = (aoclfftz_complex_d_t *)sol->dft_bufs->scratch_space;
+    // decided based on the direction of FFT
+    DOUBLE *in_real, *in_imag;
+    DOUBLE *scratch_real;
+    DOUBLE *scratch_imag;
+    aoclfftz_complex_d_t *in;
 
     if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
     {
-        in = (aoclfftz_complex_d_t *)sol->decomp_scheme->out_real;
+        in_real = (DOUBLE *)sol->decomp_scheme->out_real;
+        in_imag = (DOUBLE *)sol->decomp_scheme->out_imag;
         scratch_real = (DOUBLE *)sol->dft_bufs->scratch_space;
         scratch_imag = scratch_real + 1;
     }
     else
     {
-        in = (aoclfftz_complex_d_t *)sol->decomp_scheme->out_imag;
+        in_real = (DOUBLE *)sol->decomp_scheme->out_imag;
+        in_imag = (DOUBLE *)sol->decomp_scheme->out_real;
         scratch_imag = (DOUBLE *)sol->dft_bufs->scratch_space;
         scratch_real = scratch_imag + 1;
     }
+
+    in = (aoclfftz_complex_d_t *)sol->decomp_scheme->out_real;
+
+    aoclfftz_complex_d_t *sc = (aoclfftz_complex_d_t *)sol->dft_bufs->scratch_space;
 
     INTP sc_cs = 1;
     INTP sc_rs = rows;

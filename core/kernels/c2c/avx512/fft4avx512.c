@@ -83,13 +83,7 @@ static VOID fft4avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP count;
 
     __m512 v_C1 = _mm512_set1_ps(CRTM_4_1);
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_C1 = -v_C1;
-    }
+    v_C1 = _mm512_xor_ps(v_C1, _neg_512_f[flag].s);
 
     for (count = 0; count < N; count++)
     {
@@ -314,13 +308,7 @@ static VOID fft4avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP count;
 
     __m512d v_C1 = _mm512_set1_pd(CRTM_4_1);
-
-    if (flag)
-    {
-        in_r = in_imag;
-        out_r = out_imag;
-        v_C1 = -v_C1;
-    }
+    v_C1 = _mm512_xor_pd(v_C1, _neg_512_d[flag].d);
 
     for (count = 0; count < N; count++)
     {
