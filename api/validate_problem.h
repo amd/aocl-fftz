@@ -241,7 +241,7 @@ static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
     {                                                                          \
         VALIDATE_INPLACE_STRIDES(problem->dims,problem->vecs,                  \
                                  problem->dim_rank, problem->vec_rank,         \
-                                 problem->flags, ret)                       \
+                                 problem->flags, ret)                          \
         if (ret)                                                               \
         {                                                                      \
             AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "Input & Output strides"        \

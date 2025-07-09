@@ -458,7 +458,8 @@ VOID destroy_solution(aoclfftz_solution_t* sol)
         //
         // Clearing these buffers will happen only once (which will be from
         // destroy_handle).
-        if (solver_type == SOLVER_BUFFERED)
+        if (solver_type == SOLVER_BUFFERED ||
+            solver_type == SOLVER_REAL_BUFFERED)
         {
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
@@ -499,7 +500,8 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, UINT32 n)
                 //
                 // Clearing these buffers will happen only once (which will be
                 // from destroy_handle).
-                if (solver_type == SOLVER_BUFFERED)
+                if (solver_type == SOLVER_BUFFERED ||
+                    solver_type == SOLVER_REAL_BUFFERED)
                 {
                     FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_1);
                     FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_2);
@@ -596,7 +598,8 @@ VOID destroy_solution(aoclfftz_solution_t *sol)
         //
         // Clearing these buffers will happen only once (which will be from
         // destroy_handle).
-        if (solver_type == SOLVER_BUFFERED)
+        if (solver_type == SOLVER_BUFFERED ||
+            solver_type == SOLVER_REAL_BUFFERED)
         {
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
@@ -641,7 +644,8 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, UINT32 n)
                 //
                 // Clearing these buffers will happen only once (which will be
                 // from destroy_handle).
-                if (solver_type == SOLVER_BUFFERED)
+                if (solver_type == SOLVER_BUFFERED ||
+                    solver_type == SOLVER_REAL_BUFFERED)
                 {
                     FREE_ALIGN_ALLOCATED_MEM(cur_sol->buffered->aux_buffer_1);
                     FREE_ALIGN_ALLOCATED_MEM(cur_sol->buffered->aux_buffer_2);

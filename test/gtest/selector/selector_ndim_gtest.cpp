@@ -57,9 +57,12 @@ std::string dims_and_vecs[] =
 
 INT32 flags[] =
 {
-    0b0000, // complex, forward, in-order, in-place problem
-    0b0001, // complex, forward, in-order, out-of-place problem
-    0b0100  // complex, backward, in-order, in-place problem
+    FLAG_COMPLEX_FWD_IORDER_OPLACE,
+    FLAG_COMPLEX_BWD_IORDER_OPLACE
+    // TODO: Add separate list of dims_and_vecs with same instride
+    //       and outstride for in-place problems
+    // FLAG_COMPLEX_FWD_IORDER_IPLACE,
+    // FLAG_COMPLEX_BWD_IORDER_IPLACE
 };
 
 INT32 opt_levels[] =

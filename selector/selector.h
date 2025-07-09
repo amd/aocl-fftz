@@ -271,15 +271,16 @@ typedef struct aoclfftz_selector
  * After swap : Direct -> CT -> Direct -> CT -> Direct -> CT -> Direct
  *
  */
-#define SWAP_CT_SOLUTIONS(sel)                                                 \
+#define SWAP_REAL_CT_SOLUTIONS(sel)                                            \
 {                                                                              \
     aoclfftz_solution_t *curr = sel->solution;                                 \
     aoclfftz_solution_t *prev = NULL;                                          \
     aoclfftz_solution_t *next = NULL;                                          \
     if (sel->solution->next_sol != NULL) {                                     \
       /* swap first CT node */                                                 \
-      if (sel->solution->solver->solver_type == SOLVER_CT &&                   \
-          sel->solution->next_sol[0]->solver->solver_type == SOLVER_DIRECT) {  \
+      if ((sel->solution->solver->solver_type == SOLVER_REAL_CT) &&            \
+          (sel->solution->next_sol[0]->solver->solver_type ==                  \
+                SOLVER_REAL_DIRECT)) {                                         \
         sel->solution = curr->next_sol[0];                                     \
         curr->next_sol[0] = sel->solution->next_sol[0];                        \
         sel->solution->next_sol[0] = curr;                                     \
@@ -289,8 +290,8 @@ typedef struct aoclfftz_selector
       curr = curr->next_sol[0];                                                \
       while (curr && curr->next_sol && curr->next_sol[0]) {                    \
         next = curr->next_sol[0];                                              \
-        if (curr->solver->solver_type == SOLVER_CT &&                          \
-            next->solver->solver_type == SOLVER_DIRECT) {                      \
+        if ((curr->solver->solver_type == SOLVER_REAL_CT) &&                   \
+            (next->solver->solver_type == SOLVER_REAL_DIRECT)) {              \
           prev->next_sol[0] = next;                                            \
           curr->next_sol[0] = next->next_sol[0];                               \
           next->next_sol[0] = curr;                                            \
@@ -328,7 +329,7 @@ typedef struct aoclfftz_selector
             realhelper->q = 1;                                                 \
         }                                                                      \
         ret = setup_rdft_(sel_obj, realhelper);                                \
-        SWAP_CT_SOLUTIONS(sel_obj);                                            \
+        SWAP_REAL_CT_SOLUTIONS(sel_obj);                                       \
         setup_twiddle_buffer_real(sel_obj->solution);                          \
         FREE_ALIGN_ALLOCATED_MEM(realhelper);                                  \
     }                                                                          \

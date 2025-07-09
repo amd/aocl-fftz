@@ -513,29 +513,19 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
         r2hc_out_stride = (c2c_out_stride - 1) * 2 + 1;
     }
 
-    if (sol->solver->batches[R2HC_KERNEL] != 0)
-    {
-        in = MOVE_ADDR(in, r2hc_in_stride * dt_bytes);
-        out = MOVE_ADDR(out, r2hc_out_stride * dt_bytes);
-        // TODO: Fix the design
-        // Currently using full complex format only in last stage
-        if (is_last_stage)
-        {
-            out = MOVE_ADDR(out, dt_bytes);
-        }
-    }
     // Execute R2HCF Kernels
-    else if (sol->solver->batches[R2HCF_KERNEL] != 0)
+    if (sol->solver->batches[R2HCF_KERNEL] != 0)
     {
         kernel_r2hcf(in, in, out, out, sol->solver->batches[R2HCF_KERNEL],
                      sol->strides_grp->strides_r2hcf, sol->twiddle->TW, 
                      FFT_DIR(sol->decomp_scheme->flags));
-        in = MOVE_ADDR(in, r2hc_in_stride * dt_bytes);
-        out = MOVE_ADDR(out, r2hc_out_stride * dt_bytes);
-        if (is_last_stage)
-        {
-            out = MOVE_ADDR(out, dt_bytes);
-        }
+    }
+
+    in = MOVE_ADDR(in, r2hc_in_stride * dt_bytes);
+    out = MOVE_ADDR(out, r2hc_out_stride * dt_bytes);
+    if (is_last_stage)
+    {
+        out = MOVE_ADDR(out, dt_bytes);
     }
 
     // Execute C2C Kernels

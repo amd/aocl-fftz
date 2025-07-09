@@ -49,6 +49,16 @@ extern "C"
 }
 #include "test/gtest/gtest_types.h"
 
+// Flag macros for selector level test cases
+#define FLAG_COMPLEX_FWD_IORDER_IPLACE 0b0000
+#define FLAG_COMPLEX_FWD_IORDER_OPLACE 0b0001
+#define FLAG_COMPLEX_BWD_IORDER_IPLACE 0b0100
+#define FLAG_COMPLEX_BWD_IORDER_OPLACE 0b0101
+#define FLAG_REAL_FWD_IORDER_IPLACE    0b1000
+#define FLAG_REAL_FWD_IORDER_OPLACE    0b1001
+#define FLAG_REAL_BWD_IORDER_IPLACE    0b1100
+#define FLAG_REAL_BWD_IORDER_OPLACE    0b1101
+
 /****** Utility functions for Bluestein solver ******/
 INTP get_extended_length_ref(INTP n)
 {
@@ -296,8 +306,21 @@ class AoclfftzSelectorTestBase
             FREE_ALIGN_ALLOCATED_MEM(vecs);
             return NULL;
         }
-        set_default_dims_vecs(dim_rank, vec_rank, dims, vecs, C2C, is_in_place,
-                              0);
+        aoclfftz_bench_fft_type_t fft_type;
+        if (IS_REAL(flags) && FFT_DIR(flags) == FORWARD)
+        {
+            fft_type = R2C;
+        }
+        else if (IS_REAL(flags))
+        {
+            fft_type = C2R;
+        }
+        else
+        {
+            fft_type = C2C;
+        }
+        set_default_dims_vecs(dim_rank, vec_rank, dims, vecs, fft_type,
+                              is_in_place, 0);
 
         ALLOC_ALIGN_UNINIT(p_desc, prob_desc_t, sizeof(prob_desc_t));
         p_desc->dim_rank = dim_rank;
@@ -307,30 +330,14 @@ class AoclfftzSelectorTestBase
         {
             p_desc->dims[i].n = (dm_t)dims[i].n;
             p_desc->dims[i].in_stride = (dm_t)dims[i].in_stride;
-            // Strides must be equal for inplace problems
-            if (is_in_place)
-            {
-                p_desc->dims[i].out_stride = (dm_t)dims[i].in_stride;
-            }
-            else
-            {
-                p_desc->dims[i].out_stride = (dm_t)dims[i].out_stride;
-            }
+            p_desc->dims[i].out_stride = (dm_t)dims[i].out_stride;
         }
         ALLOC_ALIGN_UNINIT(p_desc->vecs, dim_t, vec_rank * sizeof(dim_t));
         for (INT32 i = 0; i < vec_rank; i++)
         {
             p_desc->vecs[i].n = (dm_t)vecs[i].n;
             p_desc->vecs[i].in_stride = (dm_t)vecs[i].in_stride;
-            // Strides must be equal for inplace problems
-            if (is_in_place)
-            {
-                p_desc->vecs[i].out_stride = (dm_t)vecs[i].in_stride;
-            }
-            else
-            {
-                p_desc->vecs[i].out_stride = (dm_t)vecs[i].out_stride;
-            }
+            p_desc->vecs[i].out_stride = (dm_t)vecs[i].out_stride;
         }
         FREE_ALIGN_ALLOCATED_MEM(dims);
         FREE_ALIGN_ALLOCATED_MEM(vecs);
@@ -418,9 +425,21 @@ class AoclfftzSelectorTestBase
             FREE_ALIGN_ALLOCATED_MEM(vecs);
             return;
         }
-        set_default_dims_vecs(dim_rank, vec_rank, dims, vecs, C2C, is_in_place,
-                              0);
-
+        aoclfftz_bench_fft_type_t fft_type;
+        if (IS_REAL(flags) && FFT_DIR(flags) == FORWARD)
+        {
+            fft_type = R2C;
+        }
+        else if (IS_REAL(flags))
+        {
+            fft_type = C2R;
+        }
+        else
+        {
+            fft_type = C2C;
+        }
+        set_default_dims_vecs(dim_rank, vec_rank, dims, vecs, fft_type,
+                              is_in_place, 0);
         INT32 new_dim_rank = 1;
         SHRINK_DIM_RANK(dims, dim_rank, new_dim_rank);
 
@@ -479,15 +498,7 @@ class AoclfftzSelectorTestBase
         {
             sol->decomp_scheme->vecs[idx].n = vecs[idx].n;
             sol->decomp_scheme->vecs[idx].in_stride = vecs[idx].in_stride;
-            // Strides must be equal for inplace problems
-            if (is_in_place)
-            {
-                sol->decomp_scheme->vecs[idx].out_stride = vecs[idx].in_stride;
-            }
-            else
-            {
-                sol->decomp_scheme->vecs[idx].out_stride = vecs[idx].out_stride;
-            }
+            sol->decomp_scheme->vecs[idx].out_stride = vecs[idx].out_stride;
         }
         FREE_ALIGN_ALLOCATED_MEM(dims);
         FREE_ALIGN_ALLOCATED_MEM(vecs);
@@ -1012,6 +1023,23 @@ class AoclfftzSelectorTestBase
                     break;
                 case SOLVER_SIZEONE:
                     ret &= (cur_sol->solver->solver_type == SOLVER_SIZEONE);
+                    break;
+                case SOLVER_REAL_DIRECT:
+                    ret &= (cur_sol->solver->solver_type == SOLVER_REAL_DIRECT);
+                    break;
+                case SOLVER_REAL_BATCHED:
+                    ret &= (cur_sol->solver->solver_type == SOLVER_REAL_BATCHED);
+                    break;
+                case SOLVER_REAL_CT:
+                    ret &= (cur_sol->solver->solver_type == SOLVER_REAL_CT);
+                    break;
+                case SOLVER_REAL_BUFFERED:
+                    ret &= (cur_sol->solver->solver_type ==
+                            SOLVER_REAL_BUFFERED);
+                    break;
+                case SOLVER_REAL_NDIM:
+                    ret &= (cur_sol->solver->solver_type == SOLVER_REAL_NDIM);
+                    nd_sol = cur_sol->dft_bufs->nd_sol;
                     break;
                 default:
                     ret = false;

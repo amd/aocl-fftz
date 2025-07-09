@@ -658,7 +658,7 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     // Batched/vector FFT Solver
     if (level1_cond1 & 0x1)
     {
-        solver_obj->solver_type = SOLVER_BATCHED;
+        solver_obj->solver_type = SOLVER_REAL_BATCHED;
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
             return SELECTOR_FAILURE;
@@ -684,7 +684,7 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     // Buffered FFT Solver
     if (level1_cond2 & 0x1)
     {
-        solver_obj->solver_type = SOLVER_BUFFERED;
+        solver_obj->solver_type = SOLVER_REAL_BUFFERED;
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
             return SELECTOR_FAILURE;
@@ -715,7 +715,7 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     }
     else if (level2_cond & 0x1)
     {
-        solver_obj->solver_type = SOLVER_DIRECT;
+        solver_obj->solver_type = SOLVER_REAL_DIRECT;
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
             return SELECTOR_FAILURE;
@@ -727,7 +727,7 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     }
     else
     {
-        solver_obj->solver_type = SOLVER_CT;
+        solver_obj->solver_type = SOLVER_REAL_CT;
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
             return SELECTOR_FAILURE;
@@ -1258,10 +1258,11 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
         {
             // Always inherit the parent's twiddle buffer reference.
             curr->twiddle->TW = prev->twiddle->TW;
-            if (curr->solver->solver_type == SOLVER_CT)
+            if (curr->solver->solver_type == SOLVER_REAL_CT)
             {
                 // goto next direct node to setup twiddle buffer
-                while (curr != NULL && curr->solver->solver_type != SOLVER_DIRECT)
+                while (curr != NULL &&
+                       curr->solver->solver_type != SOLVER_REAL_DIRECT)
                 {
                     curr->twiddle->TW = prev->twiddle->TW;
                     curr = curr->next_sol[0];
@@ -1295,8 +1296,8 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
         aoclfftz_solution_t *prev = solution;
         FOR_EACH_SOLUTION(curr, (solution->next_sol) ? solution->next_sol[0] : NULL)
         {
-            if (curr->solver->solver_type == SOLVER_CT &&
-                prev->solver->solver_type == SOLVER_DIRECT)
+            if (curr->solver->solver_type == SOLVER_REAL_CT &&
+                prev->solver->solver_type == SOLVER_REAL_DIRECT)
             {
                 INTP n = prev->decomp_scheme->dims[0].n;
                 INTP no_of_groups = prev->solver->batches[R2HCF_KERNEL] > 0
