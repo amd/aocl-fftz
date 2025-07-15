@@ -188,13 +188,17 @@ add_compile_definitions(CFLAGS_SET2="${CMAKE_C_FLAGS}")
 if(ENABLE_MULTI_THREADING)
     file(GLOB MT_SRC_FILES CONFIGURE_DEPENDS
                         ${CORE_PATH}/solvers/complex/multithread/*.c)
+    if (WIN32)
+	set(OpenMP_libomp_LIBRARY "C:/Program Files/LLVM/lib/libomp.lib" CACHE STRING "openmp library path")
+	message(STATUS "OpenMP custom path to look for openMP: ${OpenMP_libomp_LIBRARY}")
+    endif()
     find_package(OpenMP)
-    if(OpenMP_C_FOUND)
+    if(OPENMP_FOUND)
         message(STATUS "OpenMP found")
         add_compile_definitions(MULTI_THREADING)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     else()
-        message(FATAL_ERROR "OpenMP Missing! Please install OpenMP to enable mult-threading")
+	message(FATAL_ERROR "OpenMP Missing! Please install OpenMP to enable multi-threading")
     endif()
     list(APPEND CORE_SRC_FILES ${MT_SRC_FILES})
 endif()
@@ -223,12 +227,12 @@ set(BENCH_UTILS_DIR test/bench/utils)
 
 #set library dependencies
 if(UNIX)
-set(lib_deps m) #math library
+    set(lib_deps m) #math library
 endif()
 
 #add macro for math constants
 if(WIN32)
-add_compile_definitions(_USE_MATH_DEFINES)
+    add_compile_definitions(_USE_MATH_DEFINES)
 endif()
 
 # NOTE: disable versioning of loops for strides.
@@ -334,6 +338,11 @@ if(BUILD_STATIC_LIBS)
 else()
     add_library(${lib_name} SHARED ${SRC_FILES})
     message(STATUS "Library type being built is: Shared")
+endif()
+
+#add openmp flags for windows
+if(WIN32 AND ENABLE_MULTI_THREADING)
+    target_link_libraries(${lib_name} PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
 endif()
 
 # add the compiler and linker flags for code coverage
