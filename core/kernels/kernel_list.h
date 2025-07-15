@@ -174,7 +174,7 @@ static kernel_fp_list_t kernels_real[NUM_REAL_KERNELS_VARIANTS]
         //{KREG(r2hcf_rfft, 9)},  // radix  9
         {KREG(r2hcf_rfft, 10)}, // radix 10
         //{KREG(r2hcf_rfft, 11)}, // radix 11
-        //{KREG(r2hcf_rfft, 12)}, // radix 12
+        {KREG(r2hcf_rfft, 12)}, // radix 12
         //{KREG(r2hcf_rfft, 13)}, // radix 13
         {KREG(r2hcf_rfft, 14)}, // radix 14
         {KREG(r2hcf_rfft, 15)}, // radix 15
@@ -191,7 +191,7 @@ static kernel_fp_list_t kernels_real[NUM_REAL_KERNELS_VARIANTS]
         //{KREG(fft, 9)},  // radix  9
         {KREG(fft, 10)}, // radix 10
         //{KREG(fft, 11)}, // radix 11
-        // {KREG(fft, 12)}, // radix 12
+        {KREG(fft, 12)}, // radix 12
         //{KREG(fft, 13)}, // radix 13
         {KREG(fft, 14)}, // radix 14
         {KREG(fft, 15)}, // radix 15
