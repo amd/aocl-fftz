@@ -231,11 +231,13 @@ typedef struct aoclfftz_selector
         }                                                                      \
         ret = setup_rdft_(sel_obj, (kernel_t *)kernels_table, realhelper);     \
         SWAP_CT_SOLUTIONS(sel_obj);                                            \
+        setup_twiddle_buffer_real(sel_obj->solution);                          \
         FREE_ALIGN_ALLOCATED_MEM(realhelper);                                  \
     }                                                                          \
     else                                                                       \
     {                                                                          \
         ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);                  \
+        setup_twiddle_buffer_complex(sel_obj->solution);                       \
     }                                                                          \
 }
 
@@ -596,6 +598,8 @@ INT32 register_solvers_kernels(kernel_t[NUM_KERNELS_IN_TABLE], INT32 dt,
 INT32 setup_dft_(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 setup_rdft_(aoclfftz_selector_t *sel, kernel_t *kertab,
                   aoclfftz_realhelper_t *realhelper);
+VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *sel);
+VOID setup_twiddle_buffer_real(aoclfftz_solution_t *sel);
 INT32 setup_dft_f_(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 setup_dft_d_(aoclfftz_selector_t *sel, kernel_t *kertab);
 VOID *setup_dft_f(aoclfftz_prob_desc_f *problem);

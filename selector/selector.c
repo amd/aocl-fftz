@@ -809,26 +809,6 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     {
         goto exit_setup_dft_d_64_;
     }
-
-    // TODO: Allocate the twiddle buffers after the setup?
-    //
-    //aoclfftz_solution_t *copy = sel_obj->solution;
-    //while (copy != NULL)
-    //{
-    //    if (copy->solver->solver_type == SOLVER_CT)
-    //    {
-    //        INTP r = copy->next_sol->decomp_scheme->dims[0].n;
-    //        INTP m = copy->next_sol->next_sol->decomp_scheme->dims[0].n;
-    //        VOID *TW = alloc_twiddle_buffer(r * m, DT_DOUBLE);
-    //        if (TW != NULL)
-    //        {
-    //            setup_twiddle_buffer(TW, r, m, DT_DOUBLE);
-    //            copy->next_sol->twiddle->TW = TW;
-    //        }
-    //    }
-    //    copy = copy->next_sol;
-    //}
-
     return sel_obj;
 
 exit_setup_dft_d_64_:
@@ -886,4 +866,106 @@ VOID fuse_vecs(aoclfftz_solution_t *sol)
     vecs[fused_rank].out_stride = vecs[last_fused_idx].out_stride;
     vecs[fused_rank].in_stride = vecs[last_fused_idx].in_stride;
     sol->decomp_scheme->vec_rank = fused_rank + 1;
+}
+
+VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
+{
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+    aoclfftz_solution_t *curr = solution;
+    UINT32 dt_prec = DT_PRECISION_FLAG(solution->decomp_scheme->flags);
+    while (curr != NULL)
+    {
+        if (curr->solver->solver_type == SOLVER_CT)
+        {
+            INTP r = curr->next_sol->decomp_scheme->dims[0].n;
+            INTP m = curr->next_sol->next_sol->decomp_scheme->dims[0].n;
+
+            VOID *TW = alloc_twiddle_buffer(r * m, dt_prec);
+            if (TW != NULL)
+            {
+                compute_twiddle_buffer(TW, r, m, dt_prec);
+                curr->next_sol->twiddle->TW = TW;
+            }
+        }
+        curr = curr->next_sol;
+    }
+#endif
+}
+
+VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
+{
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+    UINT32 dt_prec = DT_PRECISION_FLAG(solution->decomp_scheme->flags);
+    if (FFT_DIR(solution->decomp_scheme->flags) == FORWARD_FFT_DIR)
+    {
+        aoclfftz_solution_t *curr = solution;
+        while (curr != NULL)
+        {
+            if (curr->solver->solver_type == SOLVER_CT)
+            {
+                // goto next direct node to setup twiddle buffer
+                while (curr != NULL &&
+                       curr->solver->solver_type != SOLVER_DIRECT)
+                {
+                    curr = curr->next_sol;
+                }
+                INTP n = curr->decomp_scheme->dims[0].n;
+                INTP no_of_groups = curr->solver->batches[R2HCF_KERNEL] > 0
+                                        ? curr->solver->batches[R2HCF_KERNEL]
+                                        : curr->solver->batches[R2HC_KERNEL];
+                // No. of c2c kernels per group that require twiddle computation
+                INTP group_sz =
+                    curr->solver->batches[C2C_KERNEL] / no_of_groups;
+                INTP tw_buf_sz = n * group_sz * DATA_STRIDE;
+                // Allocate Twiddle buffer to store twiddle values for every
+                // radix-n c2c kernel of a group
+                VOID *TW = alloc_twiddle_buffer(tw_buf_sz, dt_prec);
+                if (TW != NULL)
+                {
+                    INTP p = (curr->decomp_scheme->vecs[0].n *
+                              curr->decomp_scheme->dims[0].n) /
+                             no_of_groups;
+                    compute_twiddle_buffer_real(TW, group_sz, n, p,
+                                                FORWARD_FFT_DIR, dt_prec);
+                    curr->twiddle->TW = TW;
+                }
+            }
+            curr = curr->next_sol;
+        }
+    }
+    else
+    {
+        aoclfftz_solution_t *prev = solution;
+        aoclfftz_solution_t *curr = solution->next_sol;
+        while (curr != NULL)
+        {
+            if (curr->solver->solver_type == SOLVER_CT &&
+                prev->solver->solver_type == SOLVER_DIRECT)
+            {
+                INTP n = prev->decomp_scheme->dims[0].n;
+                INTP no_of_groups = prev->solver->batches[R2HCF_KERNEL] > 0
+                                        ? prev->solver->batches[R2HCF_KERNEL]
+                                        : prev->solver->batches[R2HC_KERNEL];
+                // No. of c2c kernels per group that require twiddle computation
+                INTP group_sz =
+                    prev->solver->batches[C2C_KERNEL] / no_of_groups;
+                INTP tw_buf_sz = n * group_sz * DATA_STRIDE;
+                // Allocate Twiddle buffer to store twiddle factors for every
+                // radix-n c2c kernel of a group
+                VOID *TW = alloc_twiddle_buffer(tw_buf_sz, dt_prec);
+                if (TW != NULL)
+                {
+                    INTP p = (prev->decomp_scheme->vecs[0].n *
+                              prev->decomp_scheme->dims[0].n) /
+                             no_of_groups;
+                    compute_twiddle_buffer_real(TW, group_sz, n, p,
+                                                BACKWARD_FFT_DIR, dt_prec);
+                    prev->twiddle->TW = TW;
+                }
+            }
+            prev = curr;
+            curr = curr->next_sol;
+        }
+    }
+#endif
 }

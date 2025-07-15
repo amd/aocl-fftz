@@ -53,7 +53,9 @@ typedef enum
 } twiddle_status;
 
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
-VOID setup_twiddle_buffer(VOID* twiddle_buffer, INTP r, INTP m, UINT32 dt_prec);
+VOID compute_twiddle_buffer(VOID* twiddle_buffer, INTP r, INTP m, UINT32 dt_prec);
+VOID compute_twiddle_buffer_real(VOID *twiddle_buffer,INTP group_sz, INTP m,
+                                 INTP p, UINT8 dir, UINT32 dt_prec);
 #endif
 
 INT32 twiddle_multiplier(aoclfftz_solution_t *sol);

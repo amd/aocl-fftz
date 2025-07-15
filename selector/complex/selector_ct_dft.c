@@ -228,18 +228,6 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         }
     }
 
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
-    UINT32 dt_prec = DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags);
-    VOID* TW = alloc_twiddle_buffer(n, dt_prec);
-    if (TW != NULL)
-    {
-        INTP r = sel->solution->next_sol->decomp_scheme->dims[0].n;
-        INTP m = sel->solution->next_sol->next_sol->decomp_scheme->dims[0].n;
-        setup_twiddle_buffer(TW, r, m, dt_prec);
-        sel->solution->next_sol->twiddle->TW = TW;
-    }
-#endif
-
 exit_ct_dft:
     destroy_selector_without_scratch_space(cur_sel);
     destroy_selector_without_scratch_space(cur_sel_m);
