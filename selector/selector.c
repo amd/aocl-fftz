@@ -1247,23 +1247,36 @@ VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
     aoclfftz_solution_t *curr = solution;
     UINT32 dt_prec = DT_PRECISION_FLAG(solution->decomp_scheme->flags);
-    while (curr != NULL)
+    aoclfftz_solution_t *nd_sol = NULL;
+    do // for ND support
     {
-        if (curr->solver->solver_type == SOLVER_CT)
+        if (nd_sol != NULL)
         {
-            INTP r = curr->next_sol[0]->decomp_scheme->dims[0].n;
-            INTP m = curr->next_sol[0]->next_sol[0]->decomp_scheme->dims[0].n;
-
-            VOID *TW = alloc_twiddle_buffer(r * m, dt_prec);
-            if (TW != NULL)
-            {
-                compute_twiddle_buffer(TW, r, m, dt_prec);
-                curr->next_sol[0]->twiddle->TW = TW;
-                curr->next_sol[0]->twiddle->twiddle_buf_ptr = TW;
-            }
+            curr = nd_sol;
+            nd_sol = NULL;
         }
-        curr = curr->next_sol ? curr->next_sol[0] : NULL;
-    }
+        while (curr != NULL)
+        {
+            if (curr->solver->solver_type == SOLVER_CT)
+            {
+                INTP r = curr->next_sol[0]->decomp_scheme->dims[0].n;
+                INTP m = curr->next_sol[0]->next_sol[0]->decomp_scheme->dims[0].n;
+
+                VOID *TW = alloc_twiddle_buffer(r * m, dt_prec);
+                if (TW != NULL)
+                {
+                    compute_twiddle_buffer(TW, r, m, dt_prec);
+                    curr->next_sol[0]->twiddle->TW = TW;
+                    curr->next_sol[0]->twiddle->twiddle_buf_ptr = TW;
+                }
+            }
+            if (curr->solver->solver_type == SOLVER_NDIM)
+            {
+                nd_sol = curr->dft_bufs->nd_sol;
+            }
+            curr = curr->next_sol ? curr->next_sol[0] : NULL;
+        }
+    }while(nd_sol!=NULL);
 #endif
 }
 
