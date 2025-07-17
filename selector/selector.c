@@ -1276,7 +1276,7 @@ VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
             }
             curr = curr->next_sol ? curr->next_sol[0] : NULL;
         }
-    }while(nd_sol!=NULL);
+    } while (nd_sol != NULL);
 #endif
 }
 
