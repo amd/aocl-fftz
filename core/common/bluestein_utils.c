@@ -82,7 +82,7 @@ INT32 prepare_bluestein_sequence(aoclfftz_solution_t *sol, INTP m)
 
     if (precision == DT_FLOAT)
     {
-        FLOAT *B = (FLOAT *)sol->bluestein->B;
+        FLOAT *B = (FLOAT *)sol->dft_bufs->bluestein->B;
         for (INTP i = 0; i < n; i++)
         {
             // Handle overflow to improve accuracy for larger values
@@ -101,7 +101,7 @@ INT32 prepare_bluestein_sequence(aoclfftz_solution_t *sol, INTP m)
     }
     else
     {
-        DOUBLE *B = (DOUBLE *)sol->bluestein->B;
+        DOUBLE *B = (DOUBLE *)sol->dft_bufs->bluestein->B;
         for (INTP i = 0; i < n; i++)
         {
             // Handle overflow to improve accuracy for larger values

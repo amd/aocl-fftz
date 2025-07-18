@@ -50,7 +50,7 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 #endif
 
-    aoclfftz_strides_t *strides = sol->strides;
+    aoclfftz_strides_t *strides = sol->strides_grp->strides;
     ops_cycles_t ops_cycles;
     INTP n = decomp_scheme->vecs[0].n;
     INTP radix = decomp_scheme->dims[0].n;
@@ -172,7 +172,7 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
 
     kfft_ kernel = sol->solver->kernel_c2c->kfft;
     UINT8 num_sets = sol->solver->kernel_c2c->sets;
-    aoclfftz_strides_t *strides = sol->strides;
+    aoclfftz_strides_t *strides = sol->strides_grp->strides;
 
     UINT32 dt_prec, dt_bytes;
     INTP v_in_stride, v_out_stride, data_offset;

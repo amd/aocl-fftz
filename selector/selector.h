@@ -311,41 +311,41 @@ typedef struct aoclfftz_selector
         from_sol_obj->decomp_scheme->thread_info->n_threads;                   \
     to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;     \
     to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;                       \
-    to_sol_obj->bluestein->B = from_sol_obj->bluestein->B;                     \
-    to_sol_obj->bluestein->B_out = from_sol_obj->bluestein->B_out;             \
-    to_sol_obj->bluestein->in = from_sol_obj->bluestein->in;                   \
-    to_sol_obj->bluestein->out = from_sol_obj->bluestein->out;                 \
-    to_sol_obj->bluestein->is_B_out_valid =                                    \
-        from_sol_obj->bluestein->is_B_out_valid;                               \
-    to_sol_obj->buffered->aux_buffer_1 = from_sol_obj->buffered->aux_buffer_1; \
-    to_sol_obj->buffered->aux_buffer_2 = from_sol_obj->buffered->aux_buffer_2; \
-    to_sol_obj->buffered->out_ptr = from_sol_obj->buffered->out_ptr;           \
-    if (from_sol_obj->transpose && to_sol_obj->transpose)                      \
+    to_sol_obj->dft_bufs->bluestein->B = from_sol_obj->dft_bufs->bluestein->B;                     \
+    to_sol_obj->dft_bufs->bluestein->B_out = from_sol_obj->dft_bufs->bluestein->B_out;             \
+    to_sol_obj->dft_bufs->bluestein->in = from_sol_obj->dft_bufs->bluestein->in;                   \
+    to_sol_obj->dft_bufs->bluestein->out = from_sol_obj->dft_bufs->bluestein->out;                 \
+    to_sol_obj->dft_bufs->bluestein->is_B_out_valid =                                    \
+        from_sol_obj->dft_bufs->bluestein->is_B_out_valid;                               \
+    to_sol_obj->dft_bufs->buffered->aux_buffer_1 = from_sol_obj->dft_bufs->buffered->aux_buffer_1; \
+    to_sol_obj->dft_bufs->buffered->aux_buffer_2 = from_sol_obj->dft_bufs->buffered->aux_buffer_2; \
+    to_sol_obj->dft_bufs->buffered->out_ptr = from_sol_obj->dft_bufs->buffered->out_ptr;           \
+    if (from_sol_obj->dft_bufs->transpose && to_sol_obj->dft_bufs->transpose)                      \
     {                                                                          \
-        to_sol_obj->transpose->row_info = from_sol_obj->transpose->row_info;   \
-        to_sol_obj->transpose->col_info = from_sol_obj->transpose->col_info;   \
-        to_sol_obj->transpose->kernel = from_sol_obj->transpose->kernel;       \
-        if (from_sol_obj->transpose->aux_mem &&                                \
-            from_sol_obj->transpose->aux_mem->data &&                          \
-            from_sol_obj->transpose->aux_mem->size > 0)                        \
+        to_sol_obj->dft_bufs->transpose->row_info = from_sol_obj->dft_bufs->transpose->row_info;   \
+        to_sol_obj->dft_bufs->transpose->col_info = from_sol_obj->dft_bufs->transpose->col_info;   \
+        to_sol_obj->dft_bufs->transpose->kernel = from_sol_obj->dft_bufs->transpose->kernel;       \
+        if (from_sol_obj->dft_bufs->transpose->aux_mem &&                                \
+            from_sol_obj->dft_bufs->transpose->aux_mem->data &&                          \
+            from_sol_obj->dft_bufs->transpose->aux_mem->size > 0)                        \
         {                                                                      \
-            if (!to_sol_obj->transpose->aux_mem->data)                         \
+            if (!to_sol_obj->dft_bufs->transpose->aux_mem->data)                         \
             {                                                                  \
-                ALLOC_ALIGN_INIT(to_sol_obj->transpose->aux_mem->data, UINT8,  \
-                                 from_sol_obj->transpose->aux_mem->size);      \
+                ALLOC_ALIGN_INIT(to_sol_obj->dft_bufs->transpose->aux_mem->data, UINT8,  \
+                                 from_sol_obj->dft_bufs->transpose->aux_mem->size);      \
             }                                                                  \
             else                                                               \
             {                                                                  \
-                FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->transpose->aux_mem->data) \
-                ALLOC_ALIGN_INIT(to_sol_obj->transpose->aux_mem->data, UINT8,  \
-                                 from_sol_obj->transpose->aux_mem->size);      \
+                FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->dft_bufs->transpose->aux_mem->data) \
+                ALLOC_ALIGN_INIT(to_sol_obj->dft_bufs->transpose->aux_mem->data, UINT8,  \
+                                 from_sol_obj->dft_bufs->transpose->aux_mem->size);      \
             }                                                                  \
-            memcpy(to_sol_obj->transpose->aux_mem->data,                       \
-                   from_sol_obj->transpose->aux_mem->data,                     \
-                   from_sol_obj->transpose->aux_mem->size);                    \
+            memcpy(to_sol_obj->dft_bufs->transpose->aux_mem->data,                       \
+                   from_sol_obj->dft_bufs->transpose->aux_mem->data,                     \
+                   from_sol_obj->dft_bufs->transpose->aux_mem->size);                    \
         }                                                                      \
-        to_sol_obj->transpose->aux_mem->size =                                 \
-            from_sol_obj->transpose->aux_mem->size;                            \
+        to_sol_obj->dft_bufs->transpose->aux_mem->size =                                 \
+            from_sol_obj->dft_bufs->transpose->aux_mem->size;                            \
     }                                                                          \
     to_sol_obj->next_sol = from_sol_obj->next_sol;                             \
 }
@@ -439,127 +439,127 @@ typedef struct aoclfftz_selector
         from_sol_obj->decomp_scheme->thread_info->n_threads;                   \
     to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;     \
     to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;                       \
-    to_sol_obj->bluestein->B = from_sol_obj->bluestein->B;                     \
-    to_sol_obj->bluestein->B_out = from_sol_obj->bluestein->B_out;             \
-    to_sol_obj->bluestein->in = from_sol_obj->bluestein->in;                   \
-    to_sol_obj->bluestein->out = from_sol_obj->bluestein->out;                 \
-    to_sol_obj->bluestein->is_B_out_valid =                                    \
-        from_sol_obj->bluestein->is_B_out_valid;                               \
-    to_sol_obj->buffered->aux_buffer_1 = from_sol_obj->buffered->aux_buffer_1; \
-    to_sol_obj->buffered->aux_buffer_2 = from_sol_obj->buffered->aux_buffer_2; \
-    to_sol_obj->buffered->out_ptr = from_sol_obj->buffered->out_ptr;           \
+    to_sol_obj->dft_bufs->bluestein->B = from_sol_obj->dft_bufs->bluestein->B;                     \
+    to_sol_obj->dft_bufs->bluestein->B_out = from_sol_obj->dft_bufs->bluestein->B_out;             \
+    to_sol_obj->dft_bufs->bluestein->in = from_sol_obj->dft_bufs->bluestein->in;                   \
+    to_sol_obj->dft_bufs->bluestein->out = from_sol_obj->dft_bufs->bluestein->out;                 \
+    to_sol_obj->dft_bufs->bluestein->is_B_out_valid =                                    \
+        from_sol_obj->dft_bufs->bluestein->is_B_out_valid;                               \
+    to_sol_obj->dft_bufs->buffered->aux_buffer_1 = from_sol_obj->dft_bufs->buffered->aux_buffer_1; \
+    to_sol_obj->dft_bufs->buffered->aux_buffer_2 = from_sol_obj->dft_bufs->buffered->aux_buffer_2; \
+    to_sol_obj->dft_bufs->buffered->out_ptr = from_sol_obj->dft_bufs->buffered->out_ptr;           \
     to_sol_obj->next_sol = from_sol_obj->next_sol;                             \
 }
 
 // Copy strides from one solution to another
 #define COPY_STRIDES(to_sol_obj, from_sol_obj)                                 \
 {                                                                              \
-    if (from_sol_obj->strides->in_strides != NULL)                             \
+    if (from_sol_obj->strides_grp->strides->in_strides != NULL)                             \
     {                                                                          \
-        FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides->in_strides);             \
-        ALLOC_ALIGN_UNINIT(to_sol_obj->strides->in_strides, INTP,              \
+        FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_grp->strides->in_strides);             \
+        ALLOC_ALIGN_UNINIT(to_sol_obj->strides_grp->strides->in_strides, INTP,              \
                             from_sol_obj->decomp_scheme->dims[0].n *           \
                                 sizeof(INTP));                                 \
-        memcpy(to_sol_obj->strides->in_strides,                                \
-                from_sol_obj->strides->in_strides,                             \
+        memcpy(to_sol_obj->strides_grp->strides->in_strides,                                \
+                from_sol_obj->strides_grp->strides->in_strides,                             \
                 from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));        \
     }                                                                          \
-    if (from_sol_obj->strides->out_strides != NULL)                            \
+    if (from_sol_obj->strides_grp->strides->out_strides != NULL)                            \
     {                                                                          \
-        FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides->out_strides);            \
-        ALLOC_ALIGN_UNINIT(to_sol_obj->strides->out_strides, INTP,             \
+        FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_grp->strides->out_strides);            \
+        ALLOC_ALIGN_UNINIT(to_sol_obj->strides_grp->strides->out_strides, INTP,             \
                             from_sol_obj->decomp_scheme->dims[0].n *           \
                                 sizeof(INTP));                                 \
-        memcpy(to_sol_obj->strides->out_strides,                               \
-                from_sol_obj->strides->out_strides,                            \
+        memcpy(to_sol_obj->strides_grp->strides->out_strides,                               \
+                from_sol_obj->strides_grp->strides->out_strides,                            \
                 from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));        \
     }                                                                          \
-    to_sol_obj->strides->v_in_stride = from_sol_obj->strides->v_in_stride;     \
-    to_sol_obj->strides->v_out_stride =                                        \
-        from_sol_obj->strides->v_out_stride;                                   \
+    to_sol_obj->strides_grp->strides->v_in_stride = from_sol_obj->strides_grp->strides->v_in_stride;     \
+    to_sol_obj->strides_grp->strides->v_out_stride =                                        \
+        from_sol_obj->strides_grp->strides->v_out_stride;                                   \
                                                                                \
     if (from_sol_obj->solver->batches[C2C_KERNEL] != 0)                        \
     {                                                                          \
-        if (from_sol_obj->strides_c2c->in_strides != NULL)                     \
+        if (from_sol_obj->strides_grp->strides_c2c->in_strides != NULL)                     \
         {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_c2c->in_strides);     \
-            ALLOC_ALIGN_UNINIT(to_sol_obj->strides_c2c->in_strides, INTP,      \
+            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_grp->strides_c2c->in_strides);     \
+            ALLOC_ALIGN_UNINIT(to_sol_obj->strides_grp->strides_c2c->in_strides, INTP,      \
                                from_sol_obj->decomp_scheme->dims[0].n *        \
                                    sizeof(INTP));                              \
-            memcpy(to_sol_obj->strides_c2c->in_strides,                        \
-                   from_sol_obj->strides_c2c->in_strides,                      \
+            memcpy(to_sol_obj->strides_grp->strides_c2c->in_strides,                        \
+                   from_sol_obj->strides_grp->strides_c2c->in_strides,                      \
                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));     \
         }                                                                      \
-        if (from_sol_obj->strides_c2c->out_strides != NULL)                    \
+        if (from_sol_obj->strides_grp->strides_c2c->out_strides != NULL)                    \
         {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_c2c->out_strides);    \
-            ALLOC_ALIGN_UNINIT(to_sol_obj->strides_c2c->out_strides, INTP,     \
+            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_grp->strides_c2c->out_strides);    \
+            ALLOC_ALIGN_UNINIT(to_sol_obj->strides_grp->strides_c2c->out_strides, INTP,     \
                                from_sol_obj->decomp_scheme->dims[0].n *        \
                                    sizeof(INTP));                              \
-            memcpy(to_sol_obj->strides_c2c->out_strides,                       \
-                   from_sol_obj->strides_c2c->out_strides,                     \
+            memcpy(to_sol_obj->strides_grp->strides_c2c->out_strides,                       \
+                   from_sol_obj->strides_grp->strides_c2c->out_strides,                     \
                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));     \
         }                                                                      \
-        to_sol_obj->strides_c2c->v_in_stride =                                 \
-            from_sol_obj->strides_c2c->v_in_stride;                            \
-        to_sol_obj->strides_c2c->v_out_stride =                                \
-            from_sol_obj->strides_c2c->v_out_stride;                           \
+        to_sol_obj->strides_grp->strides_c2c->v_in_stride =                                 \
+            from_sol_obj->strides_grp->strides_c2c->v_in_stride;                            \
+        to_sol_obj->strides_grp->strides_c2c->v_out_stride =                                \
+            from_sol_obj->strides_grp->strides_c2c->v_out_stride;                           \
     }                                                                          \
                                                                                \
     if (from_sol_obj->solver->batches[R2HC_KERNEL] != 0)                       \
     {                                                                          \
-        if (from_sol_obj->strides_r2hc->in_strides != NULL)                    \
+        if (from_sol_obj->strides_grp->strides_r2hc->in_strides != NULL)                    \
         {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_r2hc->in_strides);    \
-            ALLOC_ALIGN_UNINIT(to_sol_obj->strides_r2hc->in_strides, INTP,     \
+            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_grp->strides_r2hc->in_strides);    \
+            ALLOC_ALIGN_UNINIT(to_sol_obj->strides_grp->strides_r2hc->in_strides, INTP,     \
                                 from_sol_obj->decomp_scheme->dims[0].n *       \
                                     sizeof(INTP));                             \
-            memcpy(to_sol_obj->strides_r2hc->in_strides,                       \
-                from_sol_obj->strides_r2hc->in_strides,                        \
+            memcpy(to_sol_obj->strides_grp->strides_r2hc->in_strides,                       \
+                from_sol_obj->strides_grp->strides_r2hc->in_strides,                        \
                 from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));        \
         }                                                                      \
-        if (from_sol_obj->strides_r2hc->out_strides != NULL)                   \
+        if (from_sol_obj->strides_grp->strides_r2hc->out_strides != NULL)                   \
         {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_r2hc->out_strides);   \
-            ALLOC_ALIGN_UNINIT(to_sol_obj->strides_r2hc->out_strides, INTP,    \
+            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_grp->strides_r2hc->out_strides);   \
+            ALLOC_ALIGN_UNINIT(to_sol_obj->strides_grp->strides_r2hc->out_strides, INTP,    \
                                 from_sol_obj->decomp_scheme->dims[0].n *       \
                                     sizeof(INTP));                             \
-            memcpy(to_sol_obj->strides_r2hc->out_strides,                      \
-                from_sol_obj->strides_r2hc->out_strides,                       \
+            memcpy(to_sol_obj->strides_grp->strides_r2hc->out_strides,                      \
+                from_sol_obj->strides_grp->strides_r2hc->out_strides,                       \
                 from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));        \
         }                                                                      \
-        to_sol_obj->strides_r2hc->v_in_stride =                                \
-            from_sol_obj->strides_r2hc->v_in_stride;                           \
-        to_sol_obj->strides_r2hc->v_out_stride =                               \
-            from_sol_obj->strides_r2hc->v_out_stride;                          \
+        to_sol_obj->strides_grp->strides_r2hc->v_in_stride =                                \
+            from_sol_obj->strides_grp->strides_r2hc->v_in_stride;                           \
+        to_sol_obj->strides_grp->strides_r2hc->v_out_stride =                               \
+            from_sol_obj->strides_grp->strides_r2hc->v_out_stride;                          \
     }                                                                          \
                                                                                \
     if (from_sol_obj->solver->batches[R2HCF_KERNEL] != 0)                      \
     {                                                                          \
-        if (from_sol_obj->strides_r2hcf->in_strides != NULL)                   \
+        if (from_sol_obj->strides_grp->strides_r2hcf->in_strides != NULL)                   \
         {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_r2hcf->in_strides);   \
-            ALLOC_ALIGN_UNINIT(to_sol_obj->strides_r2hcf->in_strides, INTP,    \
+            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_grp->strides_r2hcf->in_strides);   \
+            ALLOC_ALIGN_UNINIT(to_sol_obj->strides_grp->strides_r2hcf->in_strides, INTP,    \
                                 from_sol_obj->decomp_scheme->dims[0].n *       \
                                     2 * sizeof(INTP));                         \
-            memcpy(to_sol_obj->strides_r2hcf->in_strides,                      \
-                from_sol_obj->strides_r2hcf->in_strides,                       \
+            memcpy(to_sol_obj->strides_grp->strides_r2hcf->in_strides,                      \
+                from_sol_obj->strides_grp->strides_r2hcf->in_strides,                       \
                 from_sol_obj->decomp_scheme->dims[0].n * 2 * sizeof(INTP));    \
         }                                                                      \
-        if (from_sol_obj->strides_r2hcf->out_strides != NULL)                  \
+        if (from_sol_obj->strides_grp->strides_r2hcf->out_strides != NULL)                  \
         {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_r2hcf->out_strides);  \
-            ALLOC_ALIGN_UNINIT(to_sol_obj->strides_r2hcf->out_strides, INTP,   \
+            FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_grp->strides_r2hcf->out_strides);  \
+            ALLOC_ALIGN_UNINIT(to_sol_obj->strides_grp->strides_r2hcf->out_strides, INTP,   \
                                 from_sol_obj->decomp_scheme->dims[0].n *       \
                                     2 * sizeof(INTP));                         \
-            memcpy(to_sol_obj->strides_r2hcf->out_strides,                     \
-                from_sol_obj->strides_r2hcf->out_strides,                      \
+            memcpy(to_sol_obj->strides_grp->strides_r2hcf->out_strides,                     \
+                from_sol_obj->strides_grp->strides_r2hcf->out_strides,                      \
                 from_sol_obj->decomp_scheme->dims[0].n * 2 * sizeof(INTP));    \
         }                                                                      \
-        to_sol_obj->strides_r2hcf->v_in_stride =                               \
-            from_sol_obj->strides_r2hcf->v_in_stride;                          \
-        to_sol_obj->strides_r2hcf->v_out_stride =                              \
-            from_sol_obj->strides_r2hcf->v_out_stride;                         \
+        to_sol_obj->strides_grp->strides_r2hcf->v_in_stride =                               \
+            from_sol_obj->strides_grp->strides_r2hcf->v_in_stride;                          \
+        to_sol_obj->strides_grp->strides_r2hcf->v_out_stride =                              \
+            from_sol_obj->strides_grp->strides_r2hcf->v_out_stride;                         \
     }                                                                          \
 }
 

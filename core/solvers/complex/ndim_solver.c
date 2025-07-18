@@ -117,7 +117,7 @@ static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 #endif
 
-    aoclfftz_solution_t *n_minus1_sol = sol->nd_sol;
+    aoclfftz_solution_t *n_minus1_sol = sol->dft_bufs->nd_sol;
     aoclfftz_solution_t *outer_dim_sol = sol->next_sol;
 
     // update solution data pointers

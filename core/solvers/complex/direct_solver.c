@@ -50,7 +50,7 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 #endif
 
-    aoclfftz_strides_t *strides = sol->strides;
+    aoclfftz_strides_t *strides = sol->strides_grp->strides;
     INTP batch = sol->decomp_scheme->vecs[0].n;
     INTP radix = sol->decomp_scheme->dims[0].n;
     ops_cycles_t ops_cycles;
@@ -139,7 +139,7 @@ static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
 #endif
 
     kfft_ kernel = sol->solver->kernel_c2c->kfft;
-    aoclfftz_strides_t *strides = sol->strides;
+    aoclfftz_strides_t *strides = sol->strides_grp->strides;
     UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
 
     // execute the direct kernel

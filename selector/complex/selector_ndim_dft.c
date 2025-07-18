@@ -138,7 +138,7 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     sel->solution->next_sol = outer_dim_sel->solution;
-    sel->solution->nd_sol = n_minus1_sel->solution;
+    sel->solution->dft_bufs->nd_sol = n_minus1_sel->solution;
 
     destroy_selector_without_solution(n_minus1_sel);
     destroy_selector_without_solution(outer_dim_sel);

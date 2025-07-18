@@ -88,7 +88,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     sel->solution->next_sol->next_sol = alloc_solution(vec_rank, dim_rank);
 
     COPY_SOLUTION_OBJ(org_sol, sel->solution);
-    org_sol->scratch_space = sel->scratch_space;
+    org_sol->dft_bufs->scratch_space = sel->scratch_space;
     org_sol->next_sol = NULL;
 
     // Flag to store whether the previous solution is selected
@@ -178,7 +178,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                     sel->solution->next_sol->next_sol;
                 COPY_SOLUTION_OBJ(sel->solution->next_sol, cur_sel->solution);
                 COPY_STRIDES(sel->solution->next_sol, cur_sel->solution);
-                sel->solution->next_sol->scratch_space = sel->scratch_space;
+                sel->solution->next_sol->dft_bufs->scratch_space = sel->scratch_space;
 
                 // Restore the original next_sol after copy
                 sel->solution->next_sol->next_sol = sel_next_sol;
@@ -186,7 +186,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                                   cur_sel_m->solution);
                 COPY_STRIDES(sel->solution->next_sol->next_sol,
                              cur_sel_m->solution);
-                sel->solution->next_sol->next_sol->scratch_space =
+                sel->solution->next_sol->next_sol->dft_bufs->scratch_space =
                     sel->scratch_space;
 
                 // Break the link from cur_sel and cur_sel_m

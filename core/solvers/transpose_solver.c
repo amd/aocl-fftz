@@ -124,7 +124,7 @@ INT32 setup_transpose_solver(aoclfftz_solution_t *sol, INT32 cpu_flags)
 #endif
 
     // setup all the info
-    aoclfftz_transpose_t *transpose = sol->transpose;
+    aoclfftz_transpose_t *transpose = sol->dft_bufs->transpose;
 
     // Get the datatype of the incoming data
     aoclfftz_transpose_dtype dtype =
@@ -176,16 +176,16 @@ static INT32 execute_transpose_solver(aoclfftz_solution_t *sol)
 
     aoclfftz_decomp_scheme_t *decomp_scheme = sol->decomp_scheme;
 
-    if (sol->transpose->aux_mem->size > 0)
+    if (sol->dft_bufs->transpose->aux_mem->size > 0)
     {
-        memset(sol->transpose->aux_mem->data, 0,
-               sol->transpose->aux_mem->size * sizeof(UINT8));
+        memset(sol->dft_bufs->transpose->aux_mem->data, 0,
+               sol->dft_bufs->transpose->aux_mem->size * sizeof(UINT8));
     }
 
-    sol->transpose->kernel((VOID *)decomp_scheme->in_real,
+    sol->dft_bufs->transpose->kernel((VOID *)decomp_scheme->in_real,
                            (VOID *)decomp_scheme->out_real,
-                           sol->transpose->row_info, sol->transpose->col_info,
-                           sol->transpose->aux_mem);
+                           sol->dft_bufs->transpose->row_info, sol->dft_bufs->transpose->col_info,
+                           sol->dft_bufs->transpose->aux_mem);
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");

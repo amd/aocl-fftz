@@ -91,7 +91,7 @@ INT32 setup_sizeone_solver(aoclfftz_solution_t *sol)
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 #endif
-    aoclfftz_strides_t *strides = sol->strides;
+    aoclfftz_strides_t *strides = sol->strides_grp->strides;
     strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
     strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
 
@@ -124,7 +124,7 @@ static INT32 execute_sizeone_solver_internal(aoclfftz_solution_t *sol, INTP vec_
     if (vec_rank == 1)
     {
         kfft_ execute_innermost_batch = sol->solver->kernel_c2c->kfft;
-        aoclfftz_strides_t *strides = sol->strides;
+        aoclfftz_strides_t *strides = sol->strides_grp->strides;
 
         execute_innermost_batch(
             sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,

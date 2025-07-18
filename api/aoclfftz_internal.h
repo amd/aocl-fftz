@@ -223,16 +223,6 @@ typedef struct aoclfftz_decomp_scheme
     UINT32 flags;
 } aoclfftz_decomp_scheme_t;
 
-// Holds element-wise and radix-wise strides of the sub-problem decomposition
-// that is acted upon by a specific kernel
-typedef struct aoclfftz_strides
-{
-    INTP *in_strides;
-    INTP *out_strides;
-    INTP v_in_stride;
-    INTP v_out_stride;
-} aoclfftz_strides_t;
-
 // Holds twiddle factors used by a specific kernel for the given problem
 typedef struct aoclfftz_twiddle
 {
@@ -305,24 +295,116 @@ typedef struct aoclfftz_transpose
     aoclfftz_transpose_aux_mem_t *aux_mem;
 } aoclfftz_transpose_t;
 
+/////////////////////////// STRIDE RELATED : START ////////////////////////////
+
+// Holds element-wise and radix-wise strides of the sub-problem decomposition
+// that is acted upon by a specific kernel
+typedef struct aoclfftz_strides
+{
+    INTP *in_strides;
+    INTP *out_strides;
+    INTP v_in_stride;
+    INTP v_out_stride;
+} aoclfftz_strides_t;
+
+#if 0 //New - union based
+typedef enum {
+    STRIDE_TYPE_CFFT,
+    STRIDE_TYPE_RFFT,
+    STRIDE_TYPE_RFFT_C2C,
+    STRIDE_TYPE_RFFT_R2HC,
+    STRIDE_TYPE_RFFT_R2HCF
+} stride_type_t;
+
+typedef struct aoclfftz_strides_grp 
+{
+    stride_type_t active_type;
+    union 
+    {
+        aoclfftz_strides_t* strides;  // Use only this strides for complex ffts
+        struct 
+        {                      // Use multiple strides for real ffts
+            aoclfftz_strides_t* strides;
+            aoclfftz_strides_t* strides_c2c;
+            aoclfftz_strides_t* strides_r2hc;
+            aoclfftz_strides_t* strides_r2hcf;
+            uint8_t active_mask;
+        } strides_real;
+    } strides_data;
+} aoclfftz_strides_grp_t;
+#else //New - separate struct of pointers based
+typedef struct aoclfftz_strides_grp
+{
+    aoclfftz_strides_t* strides;        // for complex Kernels
+    aoclfftz_strides_t* strides_c2c;    // for real C2C Kernels
+    aoclfftz_strides_t* strides_r2hc;   // for real R2HC Kernels
+    aoclfftz_strides_t* strides_r2hcf;  // for real R2HC-Fused Kernels
+} aoclfftz_strides_grp_t;
+#endif //New variants
+
+/////////////////////////// STRIDE RELATED : END //////////////////////////////
+
+/////////////////////////// BUFS RELATED : START //////////////////////////////
+#if 0 //New - union based
+typedef struct aoclfftz_dft_bufs
+{
+    union {
+        aoclfftz_bluestein_t* bluestein;
+        aoclfftz_buffered_t* buffered;
+        aoclfftz_transpose_t* transpose;
+        aoclfftz_solution_t* nd_sol; // may hold one of the solutions of ND
+        VOID* scratch_space;
+    } dft_bufs_data;
+} aoclfftz_dft_bufs_t;
+#else //New - separate struct of pointers based
+typedef struct aoclfftz_dft_bufs
+{
+    aoclfftz_bluestein_t* bluestein;
+    aoclfftz_buffered_t* buffered;
+    aoclfftz_transpose_t* transpose;
+    aoclfftz_solution_t* nd_sol; // may hold one of the solutions of ND
+    VOID* scratch_space;
+} aoclfftz_dft_bufs_t;
+#endif
+/////////////////////////// BUFS RELATED : END ////////////////////////////////
+
 // Solution data structure that is returned as a handle by the setup API and
 // used by the execute API.
+// Recommended memory layout recommendations: (use jemalloc)
+// (aoclfftz_solution_t *sol) => nodes chained by next_sol links should come 
+// from a contiguous memory pool
+// Elements within a node => solver->decomp_scheme->strides_grpdft_bufs shall
+// come from contiguous memory region. twiddle (one-time separate alloc region)
+#if 1
 typedef struct aoclfftz_solution
 {
     aoclfftz_generic_solver_t *solver;
     aoclfftz_decomp_scheme_t *decomp_scheme;
-    aoclfftz_strides_t *strides;        // for complex Kernels
-    aoclfftz_strides_t *strides_c2c;    // for real C2C Kernels
-    aoclfftz_strides_t *strides_r2hc;   // for real R2HC Kernels
-    aoclfftz_strides_t *strides_r2hcf;  // for real R2HC-Fused Kernels
+    aoclfftz_strides_grp_t *strides_grp;
+    aoclfftz_dft_bufs_t *dft_bufs;
     aoclfftz_twiddle_t *twiddle;
-    aoclfftz_bluestein_t *bluestein;
-    aoclfftz_buffered_t *buffered;
-    aoclfftz_transpose_t *transpose;
-    aoclfftz_solution_t *nd_sol; // holds one of the solutions of ND, else NULL
     aoclfftz_solution_t *next_sol;
-    void *scratch_space;
+    UINT8* extra1;
+    UINT8* extra2;
 } aoclfftz_solution_t;
+#else
+typedef struct aoclfftz_solution
+{
+    aoclfftz_generic_solver_t* solver;
+    aoclfftz_decomp_scheme_t* decomp_scheme;
+    aoclfftz_strides_t* strides;        // for complex Kernels
+    aoclfftz_strides_t* strides_c2c;    // for real C2C Kernels
+    aoclfftz_strides_t* strides_r2hc;   // for real R2HC Kernels
+    aoclfftz_strides_t* strides_r2hcf;  // for real R2HC-Fused Kernels
+    aoclfftz_twiddle_t* twiddle;
+    aoclfftz_bluestein_t* bluestein;
+    aoclfftz_buffered_t* buffered;
+    aoclfftz_transpose_t* transpose;
+    aoclfftz_solution_t* nd_sol; // holds one of the solutions of ND, else NULL
+    aoclfftz_solution_t* next_sol;
+    void* scratch_space;
+} aoclfftz_solution_t;
+#endif
 
 // Helper data structure to store setup-time information related to real solvers
 // and selectors.

@@ -59,18 +59,18 @@ INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
     UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
 
-    if (alloc_bluestein_buffers(sol->bluestein, m * DATA_STRIDE * dt_bytes) !=
+    if (alloc_bluestein_buffers(sol->dft_bufs->bluestein, m * DATA_STRIDE * dt_bytes) !=
         AOCLFFTZ_SUCCESS)
     {
         return AOCLFFTZ_MEMORY_FAILURE;
     }
 
     // Map the internal in, out buffers to the next solution
-    next_sol->decomp_scheme->in_real = sol->bluestein->in;
-    next_sol->decomp_scheme->in_imag = MOVE_ADDR(sol->bluestein->in, dt_bytes);
-    next_sol->decomp_scheme->out_real = sol->bluestein->out;
+    next_sol->decomp_scheme->in_real = sol->dft_bufs->bluestein->in;
+    next_sol->decomp_scheme->in_imag = MOVE_ADDR(sol->dft_bufs->bluestein->in, dt_bytes);
+    next_sol->decomp_scheme->out_real = sol->dft_bufs->bluestein->out;
     next_sol->decomp_scheme->out_imag =
-        MOVE_ADDR(sol->bluestein->out, dt_bytes);
+        MOVE_ADDR(sol->dft_bufs->bluestein->out, dt_bytes);
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
@@ -112,19 +112,19 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
 
     INTP unit_val = 1;
 
-    // Using sol->strides for permuted copy
+    // Using sol->strides_grp->strides for permuted copy
     // FIX: A variable is referenced to stride pointer instead of using array
     // TODO: Revamp the permuted copy function to avoid this fix
-    sol->strides->in_strides = &unit_val;
-    sol->strides->out_strides = &unit_val;
-    sol->strides->v_in_stride = 1;
-    sol->strides->v_out_stride = 1;
+    sol->strides_grp->strides->in_strides = &unit_val;
+    sol->strides_grp->strides->out_strides = &unit_val;
+    sol->strides_grp->strides->v_in_stride = 1;
+    sol->strides_grp->strides->v_out_stride = 1;
 
-    // Store the default in, out buffer addresses in seperate pointers
-    // next_sol->bluestein->in
+    // Store the default in, out buffer addresses in separate pointers
+    // next_sol->dft_bufs->bluestein->in
     VOID *in_real = sol->next_sol->decomp_scheme->in_real;
     VOID *in_imag = sol->next_sol->decomp_scheme->in_imag;
-    // next_sol->bluestein->out
+    // next_sol->dft_bufs->bluestein->out
     VOID *out_real = sol->next_sol->decomp_scheme->out_real;
     VOID *out_imag = sol->next_sol->decomp_scheme->out_imag;
 
@@ -143,17 +143,17 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     // with stride 1.
     if (in_stride > 1)
     {
-        sol->strides->in_strides = &in_stride;
-        sol->strides->out_strides = &unit_val;
+        sol->strides_grp->strides->in_strides = &in_stride;
+        sol->strides_grp->strides->out_strides = &unit_val;
         // TODO: Use registered function to avoid precision based condition
         if (dt_prec == DT_FLOAT)
         {
-            permuted_copy_c_fp32(cur_in, in_real, 1, n, sol->strides,
+            permuted_copy_c_fp32(cur_in, in_real, 1, n, sol->strides_grp->strides,
                                  DATA_STRIDE);
         }
         else
         {
-            permuted_copy_c_fp64(cur_in, in_real, 1, n, sol->strides,
+            permuted_copy_c_fp64(cur_in, in_real, 1, n, sol->strides_grp->strides,
                                  DATA_STRIDE);
         }
     }
@@ -167,7 +167,7 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
 
     // Prepare bluestein sequence A
     // A = input * B_inv
-    status = elementwise_multiplication(in_real, in_real, sol->bluestein->B, n,
+    status = elementwise_multiplication(in_real, in_real, sol->dft_bufs->bluestein->B, n,
                                         mul_sign, dt_prec);
     if (status != BLUESTEIN_SUCCESS)
     {
@@ -189,30 +189,30 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     // this will be triggered only during the first execution of a bluestein
     // solution, further executions with same solution will re-use the computed
     // B_out data
-    if (!sol->bluestein->is_B_out_valid)
+    if (!sol->dft_bufs->bluestein->is_B_out_valid)
     {
-        sol->next_sol->decomp_scheme->in_real = sol->bluestein->B;
+        sol->next_sol->decomp_scheme->in_real = sol->dft_bufs->bluestein->B;
         sol->next_sol->decomp_scheme->in_imag =
-            MOVE_ADDR(sol->bluestein->B, dt_bytes);
-        sol->next_sol->decomp_scheme->out_real = sol->bluestein->B_out;
+            MOVE_ADDR(sol->dft_bufs->bluestein->B, dt_bytes);
+        sol->next_sol->decomp_scheme->out_real = sol->dft_bufs->bluestein->B_out;
         sol->next_sol->decomp_scheme->out_imag =
-            MOVE_ADDR(sol->bluestein->B_out, dt_bytes);
+            MOVE_ADDR(sol->dft_bufs->bluestein->B_out, dt_bytes);
 
-        // input  : sol->bluestein->B
-        // output : sol->bluestein->B_out
+        // input  : sol->dft_bufs->bluestein->B
+        // output : sol->dft_bufs->bluestein->B_out
         status = sol->next_sol->solver->execute_solver(sol->next_sol);
         if (status != SOLVER_SUCCESS)
         {
             return SOLVER_FAILURE;
         }
 
-        sol->bluestein->is_B_out_valid = 1;
+        sol->dft_bufs->bluestein->is_B_out_valid = 1;
     }
 
     // 3. Perform FFT backward for AB_out
     // AB_out = A_out * B_out (stored in A_out)
     status = elementwise_multiplication(
-        out_real, out_real, sol->bluestein->B_out, m, !mul_sign, dt_prec);
+        out_real, out_real, sol->dft_bufs->bluestein->B_out, m, !mul_sign, dt_prec);
     if (status != BLUESTEIN_SUCCESS)
     {
         return SOLVER_FAILURE;
@@ -245,31 +245,31 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     // output stride.
     if (out_stride > 1)
     {
-        sol->strides->in_strides = &unit_val;
-        sol->strides->out_strides = &out_stride;
-        status = elementwise_multiplication(in_real, in_real, sol->bluestein->B,
+        sol->strides_grp->strides->in_strides = &unit_val;
+        sol->strides_grp->strides->out_strides = &out_stride;
+        status = elementwise_multiplication(in_real, in_real, sol->dft_bufs->bluestein->B,
                                             n, mul_sign, dt_prec);
         // TODO: Use registered function to avoid precision based condition
         if (dt_prec == DT_FLOAT)
         {
-            permuted_copy_c_fp32(in_real, cur_out, 1, n, sol->strides,
+            permuted_copy_c_fp32(in_real, cur_out, 1, n, sol->strides_grp->strides,
                                  DATA_STRIDE);
         }
         else
         {
-            permuted_copy_c_fp64(in_real, cur_out, 1, n, sol->strides,
+            permuted_copy_c_fp64(in_real, cur_out, 1, n, sol->strides_grp->strides,
                                  DATA_STRIDE);
         }
     }
     else
     {
-        status = elementwise_multiplication(cur_out, in_real, sol->bluestein->B,
+        status = elementwise_multiplication(cur_out, in_real, sol->dft_bufs->bluestein->B,
                                             n, mul_sign, dt_prec);
     }
 
     // Reset the stride pointers to NULL
-    sol->strides->in_strides = NULL;
-    sol->strides->out_strides = NULL;
+    sol->strides_grp->strides->in_strides = NULL;
+    sol->strides_grp->strides->out_strides = NULL;
 
     // Reset the in, out buffers of next solution to the original state
     sol->next_sol->decomp_scheme->in_real = in_real;

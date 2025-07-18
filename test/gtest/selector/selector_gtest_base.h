@@ -526,13 +526,13 @@ class AoclfftzSelectorTestBase
         {
             if (cur_a->solver->solver_type == SOLVER_DIRECT)
             {
-                ret &= (cur_a->strides->in_strides[1]) ==
+                ret &= (cur_a->strides_grp->strides->in_strides[1]) ==
                        (cur_a->decomp_scheme->dims[0].in_stride * DATA_STRIDE);
-                ret &= (cur_a->strides->out_strides[1]) ==
+                ret &= (cur_a->strides_grp->strides->out_strides[1]) ==
                        (cur_a->decomp_scheme->dims[0].out_stride * DATA_STRIDE);
-                ret &= cur_a->strides->v_in_stride ==
+                ret &= cur_a->strides_grp->strides->v_in_stride ==
                        cur_a->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
-                ret &= cur_a->strides->v_out_stride ==
+                ret &= cur_a->strides_grp->strides->v_out_stride ==
                        cur_a->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
                 if (ret == false)
                 {
@@ -648,7 +648,7 @@ class AoclfftzSelectorTestBase
                 UINT8 dt_prec = DT_PRECISION_FLAG(cur_a->decomp_scheme->flags);
                 UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
                 INTP m = cur_a->next_sol->decomp_scheme->dims[0].n;
-                VOID *B = cur_a->bluestein->B;
+                VOID *B = cur_a->dft_bufs->bluestein->B;
                 VOID *B_ref = NULL;
                 ALLOC_ALIGN_UNINIT(B_ref, VOID, m * DATA_STRIDE * dt_bytes);
                 prepare_bluestein_sequence_ref(B_ref, m, n, dt_prec);
@@ -674,7 +674,7 @@ class AoclfftzSelectorTestBase
                         ERR, ERR, "sol_1d is NULL [NDim solver]");
                     return false;
                 }
-                aoclfftz_solution_t *sol_nd = cur_a->nd_sol;
+                aoclfftz_solution_t *sol_nd = cur_a->dft_bufs->nd_sol;
                 if (sol_nd == NULL)
                 {
                     AOCLFFTZ_LOG_UNFORMATTED(
@@ -990,7 +990,7 @@ class AoclfftzSelectorTestBase
                     break;
                 case SOLVER_NDIM:
                     ret &= (cur_sol->solver->solver_type == SOLVER_NDIM);
-                    nd_sol = cur_sol->nd_sol;
+                    nd_sol = cur_sol->dft_bufs->nd_sol;
                     break;
                 case SOLVER_SIZEONE:
                     ret &= (cur_sol->solver->solver_type == SOLVER_SIZEONE);

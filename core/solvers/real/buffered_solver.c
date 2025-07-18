@@ -56,10 +56,10 @@ INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
     INTP n = sol->decomp_scheme->dims[0].n;
 
     // Copy input to temp buffer
-    FREE_ALIGN_ALLOCATED_MEM(sol->buffered->aux_buffer_1);
-    FREE_ALIGN_ALLOCATED_MEM(sol->buffered->aux_buffer_2);
-    ALLOC_ALIGN_INIT(sol->buffered->aux_buffer_1, VOID, n * dt_bytes);
-    ALLOC_ALIGN_INIT(sol->buffered->aux_buffer_2, VOID, n * dt_bytes);
+    FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
+    FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
+    ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_1, VOID, n * dt_bytes);
+    ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_2, VOID, n * dt_bytes);
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
@@ -79,7 +79,7 @@ static INT32 execute_real_buffered_solver(aoclfftz_solution_t *sol)
     // composite problem input
     sol->next_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
     // composite problem output
-    *sol->buffered->out_ptr = sol->decomp_scheme->out_real;
+    *sol->dft_bufs->buffered->out_ptr = sol->decomp_scheme->out_real;
 
     ret = sol->next_sol->solver->execute_solver(sol->next_sol);
 

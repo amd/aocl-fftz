@@ -69,10 +69,10 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     }
 
     // Copy the auxiliary buffers (address) from sel to cur_sel (i.e. next_sol)
-    cur_sel->solution->buffered->aux_buffer_1 =
-        sel->solution->buffered->aux_buffer_1;
-    cur_sel->solution->buffered->aux_buffer_2 =
-        sel->solution->buffered->aux_buffer_2;
+    cur_sel->solution->dft_bufs->buffered->aux_buffer_1 =
+        sel->solution->dft_bufs->buffered->aux_buffer_1;
+    cur_sel->solution->dft_bufs->buffered->aux_buffer_2 =
+        sel->solution->dft_bufs->buffered->aux_buffer_2;
 
     // Call selector for solving it as a non-buffered problem
     ret = setup_rdft_(cur_sel, kertab, realhelper);
@@ -89,7 +89,7 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     {
         temp_sol = temp_sol->next_sol;
     }
-    sel->solution->buffered->out_ptr = &temp_sol->decomp_scheme->out_real;
+    sel->solution->dft_bufs->buffered->out_ptr = &temp_sol->decomp_scheme->out_real;
 
     // destroy only the selector not the solution within it
     destroy_selector_without_solution(cur_sel);

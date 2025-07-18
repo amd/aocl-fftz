@@ -488,18 +488,18 @@ twiddle_multiplier_inplace_buffered_float(aoclfftz_solution_t *sol)
 
     FLOAT *scratch_real; // decided based on the direction of FFT
     FLOAT *scratch_imag; // decided based on the direction of FFT
-    aoclfftz_complex_f_t *sc = (aoclfftz_complex_f_t *)sol->scratch_space;
+    aoclfftz_complex_f_t *sc = (aoclfftz_complex_f_t *)sol->dft_bufs->scratch_space;
 
     if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
     {
         in = (aoclfftz_complex_f_t *)sol->decomp_scheme->out_real;
-        scratch_real = (FLOAT *)sol->scratch_space;
+        scratch_real = (FLOAT *)sol->dft_bufs->scratch_space;
         scratch_imag = scratch_real + 1;
     }
     else
     {
         in = (aoclfftz_complex_f_t *)sol->decomp_scheme->out_imag;
-        scratch_imag = (FLOAT *)sol->scratch_space;
+        scratch_imag = (FLOAT *)sol->dft_bufs->scratch_space;
         scratch_real = scratch_imag + 1;
     }
 
@@ -616,18 +616,18 @@ twiddle_multiplier_inplace_buffered_double(aoclfftz_solution_t *sol)
 
     DOUBLE *scratch_real; // decided based on the direction of FFT
     DOUBLE *scratch_imag; // decided based on the direction of FFT
-    aoclfftz_complex_d_t *sc = (aoclfftz_complex_d_t *)sol->scratch_space;
+    aoclfftz_complex_d_t *sc = (aoclfftz_complex_d_t *)sol->dft_bufs->scratch_space;
 
     if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
     {
         in = (aoclfftz_complex_d_t *)sol->decomp_scheme->out_real;
-        scratch_real = (DOUBLE *)sol->scratch_space;
+        scratch_real = (DOUBLE *)sol->dft_bufs->scratch_space;
         scratch_imag = scratch_real + 1;
     }
     else
     {
         in = (aoclfftz_complex_d_t *)sol->decomp_scheme->out_imag;
-        scratch_imag = (DOUBLE *)sol->scratch_space;
+        scratch_imag = (DOUBLE *)sol->dft_bufs->scratch_space;
         scratch_real = scratch_imag + 1;
     }
 
@@ -727,7 +727,7 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol)
     INTP radix = sol->decomp_scheme->dims[0].n;
     INT32 status = TW_FAILURE;
 
-    if (sol->scratch_space == NULL)
+    if (sol->dft_bufs->scratch_space == NULL)
     {
         if (precision == DT_FLOAT)
         {
@@ -846,7 +846,7 @@ INT32 twiddle_multiplier_for_real_float(aoclfftz_solution_t *sol, INTP p)
     VOID *out = sol->decomp_scheme->out_real;
     INTP *batches = sol->solver->batches;
     INTP radix = sol->decomp_scheme->dims[0].n;
-    aoclfftz_strides_t *strides = sol->strides;
+    aoclfftz_strides_t *strides = sol->strides_grp->strides;
     // FIXIT: Fix for fully strided CT problems (i.e. strides in all CT stages)
     INTP base_stride = 1;
 
@@ -944,7 +944,7 @@ INT32 twiddle_multiplier_for_real_double(aoclfftz_solution_t *sol, INTP p)
     VOID *out = sol->decomp_scheme->out_real;
     INTP *batches = sol->solver->batches;
     INTP radix = sol->decomp_scheme->dims[0].n;
-    aoclfftz_strides_t *strides = sol->strides;
+    aoclfftz_strides_t *strides = sol->strides_grp->strides;
     // FIXIT: Fix for fully strided CT problems (i.e. strides in all CT stages)
     INTP base_stride = 1;
 

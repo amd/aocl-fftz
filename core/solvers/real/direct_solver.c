@@ -225,89 +225,89 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
     if (sol->solver->batches[C2C_KERNEL] != 0)
     {
-        if (sol->strides->in_strides == NULL)
+        if (sol->strides_grp->strides->in_strides == NULL)
         {
-            ALLOC_ALIGN_UNINIT(sol->strides->in_strides, INTP,
+            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides->in_strides, INTP,
                                radix * sizeof(INTP));
-            ALLOC_ALIGN_UNINIT(sol->strides->out_strides, INTP,
+            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides->out_strides, INTP,
                                radix * sizeof(INTP));
         }
-        populate_stride_array(sol->strides->in_strides,
+        populate_stride_array(sol->strides_grp->strides->in_strides,
                               is_backward ? in_stride * 2 : in_stride, radix,
                               0, 0); /* half-complex flags are false */
-        populate_stride_array(sol->strides->out_strides,
+        populate_stride_array(sol->strides_grp->strides->out_strides,
                               is_backward ? out_stride : out_stride * 2, radix,
                               0, 0); /* half-complex flags are false */
-        if (sol->strides_c2c->in_strides == NULL)
+        if (sol->strides_grp->strides_c2c->in_strides == NULL)
         {
-            ALLOC_ALIGN_UNINIT(sol->strides_c2c->in_strides, INTP,
+            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_c2c->in_strides, INTP,
                                radix * sizeof(INTP));
-            ALLOC_ALIGN_UNINIT(sol->strides_c2c->out_strides, INTP,
+            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_c2c->out_strides, INTP,
                                radix * sizeof(INTP));
         }
-        memcpy(sol->strides_c2c->in_strides, sol->strides->in_strides,
+        memcpy(sol->strides_grp->strides_c2c->in_strides, sol->strides_grp->strides->in_strides,
                radix * sizeof(INTP));
-        memcpy(sol->strides_c2c->out_strides, sol->strides->out_strides,
+        memcpy(sol->strides_grp->strides_c2c->out_strides, sol->strides_grp->strides->out_strides,
                radix * sizeof(INTP));
 
         if (is_backward)
         {
             prepare_real_c2c_kernel_strides(
-                sol->strides->in_strides, sol->strides->in_strides,
+                sol->strides_grp->strides->in_strides, sol->strides_grp->strides->in_strides,
                 radix, p, c2c_in_stride);
         }
         else
         {
             prepare_real_c2c_kernel_strides(
-                sol->strides->out_strides, sol->strides->out_strides,
+                sol->strides_grp->strides->out_strides, sol->strides_grp->strides->out_strides,
                 radix, p, c2c_out_stride);
         }
     }
     if (sol->solver->batches[R2HC_KERNEL] != 0)
     {
-        if (sol->strides_r2hc->in_strides == NULL)
+        if (sol->strides_grp->strides_r2hc->in_strides == NULL)
         {
-            ALLOC_ALIGN_UNINIT(sol->strides_r2hc->in_strides, INTP,
+            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hc->in_strides, INTP,
                                radix * sizeof(INTP));
-            ALLOC_ALIGN_UNINIT(sol->strides_r2hc->out_strides, INTP,
+            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hc->out_strides, INTP,
                                radix * sizeof(INTP));
         }
-        populate_stride_array(sol->strides_r2hc->in_strides, in_stride, radix,
+        populate_stride_array(sol->strides_grp->strides_r2hc->in_strides, in_stride, radix,
                               is_half_complex_input, input_in_full_complex);
-        populate_stride_array(sol->strides_r2hc->out_strides, out_stride, radix,
+        populate_stride_array(sol->strides_grp->strides_r2hc->out_strides, out_stride, radix,
                               is_half_complex_output, output_in_full_complex);
     }
     if (sol->solver->batches[R2HCF_KERNEL] != 0)
     {
-        if (sol->strides_r2hcf->in_strides == NULL)
+        if (sol->strides_grp->strides_r2hcf->in_strides == NULL)
         {
-            ALLOC_ALIGN_UNINIT(sol->strides_r2hcf->in_strides, INTP,
+            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hcf->in_strides, INTP,
                                radix * 2 * sizeof(INTP));
-            ALLOC_ALIGN_UNINIT(sol->strides_r2hcf->out_strides, INTP,
+            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hcf->out_strides, INTP,
                                radix * 2 * sizeof(INTP));
         }
-        populate_stride_array(sol->strides_r2hcf->in_strides,
+        populate_stride_array(sol->strides_grp->strides_r2hcf->in_strides,
                               is_backward ? in_stride / 2 : in_stride,
                               is_backward ? radix * 2 : radix,
                               is_half_complex_input, input_in_full_complex);
-        populate_stride_array(sol->strides_r2hcf->out_strides,
+        populate_stride_array(sol->strides_grp->strides_r2hcf->out_strides,
                               is_backward ? out_stride : out_stride / 2,
                               is_backward ? radix : radix * 2,
                               is_half_complex_output, output_in_full_complex);
         prepare_fused_kernel_strides(is_backward
-                                         ? sol->strides_r2hcf->out_strides
-                                         : sol->strides_r2hcf->in_strides,
+                                         ? sol->strides_grp->strides_r2hcf->out_strides
+                                         : sol->strides_grp->strides_r2hcf->in_strides,
                                      radix, group_size * 2 + 1);
     }
 
-    sol->strides->v_in_stride = v_in_stride;
-    sol->strides->v_out_stride = v_out_stride;
-    sol->strides_c2c->v_in_stride = v_in_stride;
-    sol->strides_c2c->v_out_stride = v_out_stride;
-    sol->strides_r2hc->v_in_stride = v_in_stride;
-    sol->strides_r2hc->v_out_stride = v_out_stride;
-    sol->strides_r2hcf->v_in_stride = v_in_stride;
-    sol->strides_r2hcf->v_out_stride = v_out_stride;
+    sol->strides_grp->strides->v_in_stride = v_in_stride;
+    sol->strides_grp->strides->v_out_stride = v_out_stride;
+    sol->strides_grp->strides_c2c->v_in_stride = v_in_stride;
+    sol->strides_grp->strides_c2c->v_out_stride = v_out_stride;
+    sol->strides_grp->strides_r2hc->v_in_stride = v_in_stride;
+    sol->strides_grp->strides_r2hc->v_out_stride = v_out_stride;
+    sol->strides_grp->strides_r2hcf->v_in_stride = v_in_stride;
+    sol->strides_grp->strides_r2hcf->v_out_stride = v_out_stride;
 
     UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
@@ -338,13 +338,13 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         VOID *out_real = NULL;
         if (realhelper->stage & 0x1) // odd stage
         {
-            in_real = sol->buffered->aux_buffer_2;
-            out_real = sol->buffered->aux_buffer_1;
+            in_real = sol->dft_bufs->buffered->aux_buffer_2;
+            out_real = sol->dft_bufs->buffered->aux_buffer_1;
         }
         else // even stage
         {
-            in_real = sol->buffered->aux_buffer_1;
-            out_real = sol->buffered->aux_buffer_2;
+            in_real = sol->dft_bufs->buffered->aux_buffer_1;
+            out_real = sol->dft_bufs->buffered->aux_buffer_2;
         }
         if (realhelper->stage == 0)
         {
@@ -501,7 +501,7 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
     if (sol->solver->batches[R2HC_KERNEL] != 0)
     {
         kernel_r2hc(in, in, out, out, sol->solver->batches[R2HC_KERNEL],
-                    sol->strides_r2hc, FFT_DIR(sol->decomp_scheme->flags));
+                    sol->strides_grp->strides_r2hc, FFT_DIR(sol->decomp_scheme->flags));
         in = MOVE_ADDR(in, r2hc_in_stride * dt_bytes);
         out = MOVE_ADDR(out, r2hc_out_stride * dt_bytes);
         // TODO: Fix the design
@@ -515,7 +515,7 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
     else if (sol->solver->batches[R2HCF_KERNEL] != 0)
     {
         kernel_r2hcf(in, in, out, out, sol->solver->batches[R2HCF_KERNEL],
-                     sol->strides_r2hcf, FFT_DIR(sol->decomp_scheme->flags));
+                     sol->strides_grp->strides_r2hcf, FFT_DIR(sol->decomp_scheme->flags));
         in = MOVE_ADDR(in, r2hc_in_stride * dt_bytes);
         out = MOVE_ADDR(out, r2hc_out_stride * dt_bytes);
         if (is_last_stage)
@@ -541,8 +541,8 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
 
             // Copy unmodified in-stride values from strides to strides_c2c
             // and then modify strides_c2c values within loop iterations
-            memcpy(sol->strides_c2c->in_strides + half_stride_start,
-                   sol->strides->in_strides + half_stride_start,
+            memcpy(sol->strides_grp->strides_c2c->in_strides + half_stride_start,
+                   sol->strides_grp->strides->in_strides + half_stride_start,
                    half_stride_n * sizeof(INTP));
 
             INTP stride_offset = c2c_in_stride * 4;
@@ -551,21 +551,21 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
                 // Take complex conjucate for the required points
                 // TODO: this should be moved into C2C kernel
                 compute_conjugates(
-                    in, radix, no_of_groups, sol->strides_c2c->in_strides,
-                    sol->strides_c2c->v_in_stride,
+                    in, radix, no_of_groups, sol->strides_grp->strides_c2c->in_strides,
+                    sol->strides_grp->strides_c2c->v_in_stride,
                     DT_PRECISION_FLAG(sol->decomp_scheme->flags));
 
                 // Kernel execution
                 // swapping real & imag points for backward kernel
                 kernel_c2c(MOVE_ADDR(in, dt_bytes), in,
                            MOVE_ADDR(out, dt_bytes), out, no_of_groups,
-                           sol->strides_c2c,
+                           sol->strides_grp->strides_c2c,
                            FFT_DIR(sol->decomp_scheme->flags));
 
                 // Update the C2C in-strides for next iteration by subtracting
                 // it by stride_offset
                 INTP *strides =
-                    sol->strides_c2c->in_strides + half_stride_start;
+                    sol->strides_grp->strides_c2c->in_strides + half_stride_start;
                 for (INTP i = 0; i < half_stride_n; i++)
                 {
                     strides[i] -= stride_offset;
@@ -592,8 +592,8 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
 
             // Copy unmodified out-stride values from strides to strides_c2c
             // and then modify strides_c2c values within loop iterations
-            memcpy(sol->strides_c2c->out_strides + half_stride_start,
-                   sol->strides->out_strides + half_stride_start,
+            memcpy(sol->strides_grp->strides_c2c->out_strides + half_stride_start,
+                   sol->strides_grp->strides->out_strides + half_stride_start,
                    half_stride_n * sizeof(INTP));
 
             INTP stride_offset = c2c_out_stride * 4;
@@ -602,20 +602,20 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
                 // Kernel execution
                 kernel_c2c(in, MOVE_ADDR(in, dt_bytes), out,
                            MOVE_ADDR(out, dt_bytes), no_of_groups,
-                           sol->strides_c2c,
+                           sol->strides_grp->strides_c2c,
                            FFT_DIR(sol->decomp_scheme->flags));
 
                 // Take complex conjucate for the required points
                 // TODO: this should be moved into C2C kernel
                 compute_conjugates(
-                    out, radix, no_of_groups, sol->strides_c2c->out_strides,
-                    sol->strides_c2c->v_out_stride,
+                    out, radix, no_of_groups, sol->strides_grp->strides_c2c->out_strides,
+                    sol->strides_grp->strides_c2c->v_out_stride,
                     DT_PRECISION_FLAG(sol->decomp_scheme->flags));
 
                 // Update the C2C out-strides for next iteration by subtracting
                 // it by stride_offset
                 INTP *strides =
-                    sol->strides_c2c->out_strides + half_stride_start;
+                    sol->strides_grp->strides_c2c->out_strides + half_stride_start;
                 for (INTP i = 0; i < half_stride_n; i++)
                 {
                     strides[i] -= stride_offset;
