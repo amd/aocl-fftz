@@ -114,14 +114,14 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     // Invoke selector for solving ND-1 sub-problem
-    ret = setup_dft_(n_minus1_sel, kertab);
+    ret = selector_model_dft_(n_minus1_sel);
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_nd_dft;
     }
 
     // Invoke selector for solving 1D sub-problem
-    ret = setup_dft_(outer_dim_sel, kertab);
+    ret = selector_model_dft_(outer_dim_sel);
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_nd_dft;

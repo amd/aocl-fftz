@@ -96,7 +96,7 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     // Call selector for solving a single set/unit of the vector problem
-    ret = setup_dft_(cur_sel, kertab);
+    ret = selector_model_dft_(cur_sel);
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_batched_dft;

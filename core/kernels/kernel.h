@@ -127,6 +127,8 @@ typedef struct kernel
 // Function declarations for the common routines
 INT32 register_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE], INT32 dt,
                        INT32 dir, INT32 is_real, INT32 cpu_flags);
+INT32 register_twid_kernels(kernel_t kertab[NUM_KERNELS_IN_TABLE], INT32 dt,
+    INT32 dir, INT32 is_real, INT32 cpu_flags);
 
 // Kernel function declarations for different floating point precision types
 // supported in scalar and vector compute variants

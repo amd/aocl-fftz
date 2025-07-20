@@ -111,7 +111,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 #endif
             if (SELECTOR_SUCCESS == ret)
             {
-                if (selector_mode == AOCLFFTZ_FIXED_SELECTOR_MODE)
+                if (selector_mode == AOCLFFTZ_FIXED_SELECTOR)
                 {
                     if (!sel->cost_analysis->ops)
                     {

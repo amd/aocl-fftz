@@ -367,7 +367,7 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
     // Compute cost
     if (GET_SELECTOR_MODE(sol->decomp_scheme->flags) ==
-        AOCLFFTZ_FIXED_SELECTOR_MODE)
+        AOCLFFTZ_FIXED_SELECTOR)
     {
         /** Fixed mode **/
         ops_cycles_t ops_cycles_c2c, ops_cycles_r2hc, ops_cycles_r2hcf;

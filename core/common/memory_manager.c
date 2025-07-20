@@ -189,19 +189,19 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
 #else
 aoclfftz_solution_t* alloc_solution(INT32 vec_rank, INT32 dim_rank)
 {
-    aoclfftz_solution_t *sol = NULL;
+    aoclfftz_solution_t* sol = NULL;
 
     ALLOC_ALIGN_UNINIT(sol, aoclfftz_solution_t, sizeof(aoclfftz_solution_t));
     if (sol)
     {
         ALLOC_ALIGN_UNINIT(sol->solver, aoclfftz_generic_solver_t,
-                           sizeof(aoclfftz_generic_solver_t));
+            sizeof(aoclfftz_generic_solver_t));
         ALLOC_ALIGN_UNINIT(sol->solver->kernel_c2c, kernel_info_t,
-                           sizeof(kernel_info_t));
+            sizeof(kernel_info_t));
         ALLOC_ALIGN_UNINIT(sol->solver->kernel_r2hc, kernel_info_t,
-                           sizeof(kernel_info_t));
+            sizeof(kernel_info_t));
         ALLOC_ALIGN_UNINIT(sol->solver->kernel_r2hcf, kernel_info_t,
-                           sizeof(kernel_info_t));
+            sizeof(kernel_info_t));
         sol->solver->execute_solver = NULL;
         sol->solver->kernel_c2c->kfft = NULL;
         sol->solver->kernel_r2hc->kfft = NULL;
@@ -459,7 +459,7 @@ VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t* decomp_scheme)
     return;
 }
 
-VOID destroy_transpose(aoclfftz_transpose_t *transpose)
+VOID destroy_transpose(aoclfftz_transpose_t* transpose)
 {
     if (transpose)
     {
@@ -486,7 +486,7 @@ VOID destroy_bluestein(aoclfftz_bluestein_t* bluestein)
 
 VOID destroy_solution(aoclfftz_solution_t* sol)
 {
-    aoclfftz_solution_t *cur_sol = NULL;
+    aoclfftz_solution_t* cur_sol = NULL;
     while (sol != NULL)
     {
         cur_sol = sol;

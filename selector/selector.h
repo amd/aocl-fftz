@@ -42,8 +42,20 @@
 #include "core/solvers/solver.h"
 #include "core/executor.h"
 
-#define AOCLFFTZ_FIXED_SELECTOR_MODE 0 // Fixed decision logic
-#define AOCLFFTZ_AUTO_SELECTOR_MODE 1  // Auto tuner
+#define AOCLFFTZ_FIXED_SELECTOR_MODE
+//#define AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_MODE
+//#define AOCLFFTZ_FIXED_SELECTOR_TRANS_DFT_MODE
+//#define AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_PLUS_TRANS_DFT_MODE
+//#define AOCLFFTZ_AUTO_SELECTOR_MODE
+
+typedef enum {
+    AOCLFFTZ_FIXED_SELECTOR = 0,                            // Fixed decision logic
+    AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT,                 // Fixed decision logic + Fused Twiddle and DFT kernels
+    AOCLFFTZ_FIXED_SELECTOR_TRANS_DFT,                      // Fixed decision logic + Transpose operation before/after DFT
+    AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_PLUS_TRANS_DFT,  // Fixed decision logic + Fused Twiddle and DFT kernels + Transpose operation before/after DFT
+    AOCLFFTZ_AUTO_SELECTOR,                                 // Auto tuner mode
+    AOCLFFTZ_SELECTOR_MODELS                                // Total selector models
+} selector_model_t;
 
 // Error return codes related to selector
 // Add more codes at the top
@@ -166,6 +178,66 @@ typedef struct aoclfftz_selector
     sel_obj->solution->decomp_scheme->flags = problem->flags;                  \
 }
 
+#define COPY_DECOMP_SCHEME(to_decomp_scheme, from_decomp_scheme)                \
+{                                                                               \
+    to_decomp_scheme->vec_rank = from_decomp_scheme->vec_rank;                  \
+    to_decomp_scheme->dim_rank = from_decomp_scheme->dim_rank;                  \
+    UINT32 cnt, idx = 0;                                                        \
+    for (cnt = 0; cnt < from_decomp_scheme->dim_rank; cnt++)                    \
+    {                                                                           \
+        if (from_decomp_scheme->dims[cnt].n != 1)                               \
+        {                                                                       \
+            to_decomp_scheme->dims[idx].n =                                     \
+                from_decomp_scheme->dims[cnt].n;                                \
+            to_decomp_scheme->dims[idx].in_stride =                             \
+                from_decomp_scheme->dims[cnt].in_stride;                        \
+            to_decomp_scheme->dims[idx].out_stride =                            \
+                from_decomp_scheme->dims[cnt].out_stride;                       \
+            idx++;                                                              \
+        }                                                                       \
+    }                                                                           \
+    /* Gets Executed in scenario where the shrinked dim_rank is one and         \
+       the problem size is also one.                                            \
+       Example: 1x1x1 or 1 */                                                   \
+    if (idx == 0)                                                               \
+    {                                                                           \
+        to_decomp_scheme->dims[0].n = from_decomp_scheme->dims[0].n;            \
+        to_decomp_scheme->dims[0].in_stride =                                   \
+            from_decomp_scheme->dims[0].in_stride;                              \
+        to_decomp_scheme->dims[0].out_stride =                                  \
+            from_decomp_scheme->dims[0].out_stride;                             \
+    }                                                                           \
+    for (cnt = 0; cnt < from_decomp_scheme->vec_rank; cnt++)                    \
+    {                                                                           \
+        to_decomp_scheme->vecs[cnt].n =                                         \
+            from_decomp_scheme->vecs[cnt].n;                                    \
+        to_decomp_scheme->vecs[cnt].in_stride =                                 \
+            from_decomp_scheme->vecs[cnt].in_stride;                            \
+        to_decomp_scheme->vecs[cnt].out_stride =                                \
+            from_decomp_scheme->vecs[cnt].out_stride;                           \
+    }                                                                           \
+    to_decomp_scheme->in_real = from_decomp_scheme->in_real;                    \
+    to_decomp_scheme->in_imag = from_decomp_scheme->in_imag;                    \
+    to_decomp_scheme->out_real = from_decomp_scheme->out_real;                  \
+    to_decomp_scheme->out_imag = from_decomp_scheme->out_imag;                  \
+    to_decomp_scheme->cntrl_params->opt_level =                                 \
+        from_decomp_scheme->cntrl_params->opt_level;                            \
+    to_decomp_scheme->cntrl_params->opt_off =                                   \
+        from_decomp_scheme->cntrl_params->opt_off;                              \
+    to_decomp_scheme->cntrl_params->logger_mode =                               \
+        from_decomp_scheme->cntrl_params->logger_mode;                          \
+    to_decomp_scheme->cntrl_params->measure_stats =                             \
+        from_decomp_scheme->cntrl_params->measure_stats;                        \
+    to_decomp_scheme->thread_info->pthr_fft->dynamic_load_model =               \
+        from_decomp_scheme->thread_info->pthr_fft->dynamic_load_model;          \
+    to_decomp_scheme->thread_info->pthr_fft->num_threads =                      \
+        from_decomp_scheme->thread_info->pthr_fft->num_threads;                 \
+    to_decomp_scheme->thread_info->avl_threads =                                \
+        from_decomp_scheme->thread_info->avl_threads;                           \
+    to_decomp_scheme->thread_info->n_threads = 1;                               \
+    to_decomp_scheme->flags = from_decomp_scheme->flags;                        \
+}
+
 /**
  * @brief Swap the CT and direct solution nodes for the iterative execution
  *
@@ -206,7 +278,7 @@ typedef struct aoclfftz_selector
 // Few additional steps are required for RealFFT problems before and after
 // the setup stages.
 // FIXIT: These additional initialization steps will only work for 1D problems.
-#define PREPARE_AND_SETUP_DFT(sel_obj, kernels_table, ret)                     \
+#define PREPARE_AND_SETUP_DFT(sel_obj, ret)                                    \
 {                                                                              \
     sel_obj->execute = register_execute_dft();                                 \
     if (IS_REAL(sel_obj->solution->decomp_scheme->flags))                      \
@@ -229,14 +301,14 @@ typedef struct aoclfftz_selector
             realhelper->p = realhelper->problem_size;                          \
             realhelper->q = 1;                                                 \
         }                                                                      \
-        ret = setup_rdft_(sel_obj, (kernel_t *)kernels_table, realhelper);     \
+        ret = setup_rdft_(sel_obj, realhelper);                                \
         SWAP_CT_SOLUTIONS(sel_obj);                                            \
         setup_twiddle_buffer_real(sel_obj->solution);                          \
         FREE_ALIGN_ALLOCATED_MEM(realhelper);                                  \
     }                                                                          \
     else                                                                       \
     {                                                                          \
-        ret = setup_dft_(sel_obj, (kernel_t *)kernels_table);                  \
+        ret = selector_driver_dft_(sel_obj);                                   \
         setup_twiddle_buffer_complex(sel_obj->solution);                       \
     }                                                                          \
 }
@@ -593,10 +665,13 @@ typedef struct aoclfftz_selector
 }
 
 // Function declarations
-INT32 register_solvers_kernels(kernel_t[NUM_KERNELS_IN_TABLE], INT32 dt,
+INT32 register_solvers_kernels(kernel_t[NUM_KERNELS_IN_TABLE], 
+                               kernel_t[NUM_KERNELS_IN_TABLE],
+                               kernel_t[NUM_KERNELS_IN_TABLE], INT32 dt,
                                INT32 dir, INT32 is_real, INT32 cpu_flags);
-INT32 setup_dft_(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 setup_rdft_(aoclfftz_selector_t *sel, kernel_t *kertab,
+INT32 selector_driver_dft_(aoclfftz_selector_t *);
+INT32 selector_model_dft_(aoclfftz_selector_t *);
+INT32 setup_rdft_(aoclfftz_selector_t *sel,
                   aoclfftz_realhelper_t *realhelper);
 VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *sel);
 VOID setup_twiddle_buffer_real(aoclfftz_solution_t *sel);

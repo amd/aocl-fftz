@@ -136,27 +136,45 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         }
 
         // Call selector for applying CT on the m set of sub-problems (radix-m)
-        ret = setup_dft_(cur_sel_m, kertab);
+        ret = selector_model_dft_(cur_sel_m);
         if (ret != SELECTOR_SUCCESS)
         {
             goto exit_ct_dft;
         }
 
         if (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
-            AOCLFFTZ_AUTO_SELECTOR_MODE)
+            AOCLFFTZ_AUTO_SELECTOR)
         {
             // Call twiddle multiplier
         }
 
         // Call selector for the radix-r sub-problem
-        ret = setup_dft_(cur_sel, kertab);
+#if 0
+        ret = selector_model_dft_(cur_sel);//Call direct solver instead
+#else
+        aoclfftz_generic_solver_t* solver_obj = cur_sel->solution->solver;
+        UINT32 avl_threads = cur_sel->solution->decomp_scheme->thread_info->avl_threads;
+        if (avl_threads <= 1)
+        {
+            solver_obj->solver_type = SOLVER_DIRECT;
+        }
+        else
+        {
+            solver_obj->solver_type = SOLVER_MT_DIRECT;
+        }
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            goto exit_ct_dft;
+        }
+        ret = selector_direct_dft(cur_sel, kertab);
         if (ret != SELECTOR_SUCCESS)
         {
             goto exit_ct_dft;
         }
+#endif
 
         if (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
-            AOCLFFTZ_FIXED_SELECTOR_MODE)
+            AOCLFFTZ_FIXED_SELECTOR)
         {
             if (sel->cost_analysis->ops == 0 ||
                 ((cur_sel->cost_analysis->ops + cur_sel_m->cost_analysis->ops) <

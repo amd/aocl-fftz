@@ -161,7 +161,7 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         }
 
         // Call selector for applying CT on the m set of sub-problems (radix-m)
-        ret = setup_rdft_(cur_sel_m, kertab, realhelper);
+        ret = setup_rdft_(cur_sel_m, realhelper);
         if (ret != SELECTOR_SUCCESS)
         {
             goto exit_ct_dft;
@@ -181,20 +181,20 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         realhelper->is_last_stage = 0;
 
         // Call selector for the radix-r sub-problem
-        ret = setup_rdft_(cur_sel, kertab, realhelper);
+        ret = setup_rdft_(cur_sel, realhelper);
         if (ret != SELECTOR_SUCCESS)
         {
             goto exit_ct_dft;
         }
 
         if (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
-            AOCLFFTZ_AUTO_SELECTOR_MODE)
+            AOCLFFTZ_AUTO_SELECTOR)
         {
             // Call twiddle multiplier
         }
 
         if (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
-            AOCLFFTZ_FIXED_SELECTOR_MODE)
+            AOCLFFTZ_FIXED_SELECTOR)
         {
             if (sel->cost_analysis->ops == 0 ||
                 ((cur_sel->cost_analysis->ops + cur_sel_m->cost_analysis->ops) <

@@ -75,7 +75,7 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     strides->v_in_stride = decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
     strides->v_out_stride = decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
 
-    if (GET_SELECTOR_MODE(decomp_scheme->flags) == AOCLFFTZ_FIXED_SELECTOR_MODE)
+    if (GET_SELECTOR_MODE(decomp_scheme->flags) == AOCLFFTZ_FIXED_SELECTOR)
     {
         /** Fixed mode **/
         cost->time = 0;

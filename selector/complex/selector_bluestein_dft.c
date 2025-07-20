@@ -85,7 +85,7 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     // Invoke CT/direct selectors of extended length `m`
-    ret = setup_dft_(next_sel, kertab);
+    ret = selector_model_dft_(next_sel);
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_bluestein_dft;
