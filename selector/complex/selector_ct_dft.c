@@ -251,7 +251,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 exit_ct_dft:
     destroy_selector_without_scratch_space(cur_sel);
     destroy_selector_without_scratch_space(cur_sel_m);
-    destroy_solution(org_sol);
+    destroy_solution(org_sol, 0);
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 #endif

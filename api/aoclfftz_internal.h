@@ -370,6 +370,10 @@ typedef struct aoclfftz_dft_bufs
     aoclfftz_transpose_t* transpose;
     aoclfftz_solution_t* nd_sol; // may hold one of the solutions of ND
     VOID* scratch_space;
+    VOID *inplace_buffer;
+    VOID *inplace_ndim_buffer;
+    VOID *nd_sol_out_real; // required to switch between buffers in ND
+    VOID *nd_sol_out_imag;
 } aoclfftz_dft_bufs_t;
 #endif
 /////////////////////////// BUFS RELATED : END ////////////////////////////////

@@ -736,7 +736,15 @@ class AoclfftzSelectorTestBase
                                sizeof(aoclfftz_dim_t_64_) * rank_nd) == 0);
 
                 // verify the dims & vecs of solution-1d
+                #if defined (PERFORM_INTER_STAGE_PERMUTE)
                 ret &= !(IS_OUT_OF_PLACE(sol_1d->decomp_scheme->flags));
+                #else
+                // with introduction of extra buffers for inplace problems,
+                // regular inplace problems &
+                // NDim out-of-place problems, where outer_dim_sol should
+                // operate as inplace, are now out-of-place
+                ret &= (IS_OUT_OF_PLACE(sol_1d->decomp_scheme->flags));
+                #endif
 
                 ret &= (sol_1d->decomp_scheme->dim_rank == 1);
                 ret &= (sol_1d->decomp_scheme->dims[0].n ==

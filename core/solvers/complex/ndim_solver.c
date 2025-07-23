@@ -74,12 +74,14 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
 
     COPY_SOLUTION_OBJ_WO_DIMS(outer_dim_sol, sol);
 
+#if defined (PERFORM_INTER_STAGE_PERMUTE)
     // In the context of an out-of-place problem, outer_dim_sol has to operate
     // on the output buffer (populated by n_minus1_sol's result), perform
     // computation and store the result back in same buffer, typically like an
     // inplace problem. So, it is necessary to convert the the out-to-place
     // problem to in-place, for the in & out strides to be properly set.
     SET_INPLACE(outer_dim_sol->decomp_scheme->flags);
+#endif
 
     outer_dim_sol->decomp_scheme->dim_rank = 1;
     outer_dim_sol->decomp_scheme->dims[0].n =
@@ -109,7 +111,8 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
-static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
+
+static INT32 execute_last_stage_ip_ndim_solver(aoclfftz_solution_t *sol)
 {
 #ifdef AOCL_ENABLE_LOG
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
@@ -122,6 +125,48 @@ static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
     // update solution data pointers
     n_minus1_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
     n_minus1_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
+    n_minus1_sol->decomp_scheme->out_real = sol->dft_bufs->nd_sol_out_real;
+    n_minus1_sol->decomp_scheme->out_imag = sol->dft_bufs->nd_sol_out_imag;
+
+    // propagate the pointers to next solution for it to set to the solution
+    // after it ie., n_minus1_sol->next_sol->next_sol
+    // only required for n_minus1_sol sub-problem since outer_dim_sol
+    // will not have an NDim sub-problem
+    n_minus1_sol->dft_bufs->nd_sol_out_real = sol->decomp_scheme->out_real;
+    n_minus1_sol->dft_bufs->nd_sol_out_imag = sol->decomp_scheme->out_imag;
+
+    outer_dim_sol->decomp_scheme->in_real  = sol->dft_bufs->nd_sol_out_real;
+    outer_dim_sol->decomp_scheme->in_imag  = sol->dft_bufs->nd_sol_out_imag;
+    outer_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->in_real;
+    outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->in_imag;
+
+    // execute nd sub-problem
+    n_minus1_sol->solver->execute_solver(n_minus1_sol);
+
+    // execute 1d sub-problem
+    outer_dim_sol->solver->execute_solver(outer_dim_sol);
+
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
+    return SOLVER_SUCCESS;
+}
+
+static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
+{
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+
+    aoclfftz_solution_t *n_minus1_sol = sol->dft_bufs->nd_sol;
+    aoclfftz_solution_t *outer_dim_sol = sol->next_sol[0];
+
+#if defined (PERFORM_INTER_STAGE_PERMUTE)
+
+    // update solution data pointers
+    n_minus1_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
+    n_minus1_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
     n_minus1_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
     n_minus1_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
 
@@ -129,6 +174,28 @@ static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
     outer_dim_sol->decomp_scheme->in_imag  = sol->decomp_scheme->out_imag;
     outer_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
     outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+
+#else
+
+    // update solution data pointers
+    n_minus1_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
+    n_minus1_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
+    n_minus1_sol->decomp_scheme->out_real = sol->dft_bufs->nd_sol_out_real;
+    n_minus1_sol->decomp_scheme->out_imag = sol->dft_bufs->nd_sol_out_imag;
+
+    // propagate the pointers to next solution for it to set to the solution
+    // after it ie., n_minus1_sol->next_sol->next_sol
+    // only required for n_minus1_sol sub-problem since outer_dim_sol
+    // will not have an NDim sub-problem
+    n_minus1_sol->dft_bufs->nd_sol_out_real = sol->decomp_scheme->out_real;
+    n_minus1_sol->dft_bufs->nd_sol_out_imag = sol->decomp_scheme->out_imag;
+
+    // outer_dim_sol pointer updates
+    outer_dim_sol->decomp_scheme->in_real  = sol->dft_bufs->nd_sol_out_real;
+    outer_dim_sol->decomp_scheme->in_imag  = sol->dft_bufs->nd_sol_out_imag;
+    outer_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+    outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+#endif
 
     // execute nd sub-problem
     n_minus1_sol->solver->execute_solver(n_minus1_sol);
@@ -145,4 +212,9 @@ static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
 dft_solver_ register_execute_ndim_solver(VOID)
 {
     return execute_ndim_solver;
+}
+
+dft_solver_ register_execute_last_stage_ip_ndim_solver(VOID)
+{
+    return execute_last_stage_ip_ndim_solver;
 }

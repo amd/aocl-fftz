@@ -54,12 +54,13 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
                                     VOID *scratch_space);
 
 VOID *alloc_twiddle_buffer(UINTP size, UINT32 dt_prec);
+VOID alloc_inplace_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr);
 
 VOID destroy_selector(aoclfftz_selector_t *sel);
 VOID destroy_selector_without_solution(aoclfftz_selector_t *sel);
 VOID destroy_selector_without_scratch_space(aoclfftz_selector_t *sel);
 
-VOID destroy_solution(aoclfftz_solution_t *sol);
+VOID destroy_solution(aoclfftz_solution_t *sol, UINT8 destroy_buffers);
 VOID destroy_solutions(aoclfftz_solution_t **sol, UINT32 n);
 VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme);
 VOID destroy_bluestein(aoclfftz_bluestein_t *bluestein);

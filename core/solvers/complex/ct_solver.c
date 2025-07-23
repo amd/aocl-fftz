@@ -59,16 +59,25 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
     sol_m->decomp_scheme->dims[0].in_stride =
         radix_r * sol->decomp_scheme->dims[0].in_stride;
     sol_m->decomp_scheme->dims[0].out_stride =
+    #if defined PERFORM_INTER_STAGE_PERMUTE
         (IS_OUT_OF_PLACE(sol->decomp_scheme->flags)) ?
         sol->decomp_scheme->dims[0].out_stride :
         radix_r * sol->decomp_scheme->dims[0].out_stride;
+    #else
+        sol->decomp_scheme->dims[0].out_stride;
+    #endif
+
     sol_m->decomp_scheme->vecs[0].n = radix_r;
     sol_m->decomp_scheme->vecs[0].in_stride =
         sol->decomp_scheme->dims[0].in_stride;
     sol_m->decomp_scheme->vecs[0].out_stride =
+    #if defined PERFORM_INTER_STAGE_PERMUTE
         (IS_OUT_OF_PLACE(sol->decomp_scheme->flags)) ?
         radix_m * sol->decomp_scheme->dims[0].out_stride :
         sol->decomp_scheme->dims[0].out_stride;
+    #else
+        radix_m * sol->decomp_scheme->dims[0].out_stride;
+    #endif
 
     // Setup radix-r sub-problem
     // out-of-order -> out-of-order for inplace & out-of-place problems
@@ -90,53 +99,7 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
 	return SOLVER_SUCCESS;
 }
 
-static INT32 execute_ct_solver(aoclfftz_solution_t *sol)
-{
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
-    INT32 status = SOLVER_SUCCESS;
-    aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
-    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
-    // update radix-m & radix-r solution data pointers
-    radix_m_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
-    radix_m_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
-    radix_m_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    radix_m_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-    radix_m_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
-
-    radix_r_sol->decomp_scheme->in_real  = sol->decomp_scheme->out_real;
-    radix_r_sol->decomp_scheme->in_imag  = sol->decomp_scheme->out_imag;
-    radix_r_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-    radix_r_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
-
-    // execute radix-m sub-problem
-    radix_m_sol->solver->execute_solver(radix_m_sol);
-
-    if (IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
-    {
-        status = twiddle_multiplier(radix_r_sol);
-    }
-    else
-    {
-        status = twiddle_multiplier_inplace(radix_r_sol);
-    }
-
-    if (status != SOLVER_SUCCESS)
-    {
-        return SOLVER_FAILURE;
-    }
-
-    // execute radix-r DFT
-    radix_r_sol->solver->execute_solver(radix_r_sol);
-
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
-    return status;
-}
+#if defined PERFORM_INTER_STAGE_PERMUTE
 
 static VOID transpose_buffer_float(INTP rows, INTP cols, INTP cstride, VOID *in)
 {
@@ -314,31 +277,9 @@ static VOID transpose_using_scratch_buffer_float(INTP rows, INTP cols,
     }
 }
 
-static INT32 execute_ct_twiddle_solver(aoclfftz_solution_t *sol)
+static VOID transpose_buffer(aoclfftz_solution_t *sol,
+                              aoclfftz_solution_t *radix_r_sol )
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
-    INT32 status = SOLVER_SUCCESS;
-    aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
-    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
-    // update radix-m & radix-r solution data pointers
-    radix_m_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
-    radix_m_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
-    radix_m_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    radix_m_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-    radix_m_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
-
-    radix_r_sol->decomp_scheme->in_real  = sol->decomp_scheme->out_real;
-    radix_r_sol->decomp_scheme->in_imag  = sol->decomp_scheme->out_imag;
-    radix_r_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-    radix_r_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
-
-    // execute radix-m sub-problem
-    radix_m_sol->solver->execute_solver(radix_m_sol);
-
     // for in place problems, we must first transpose the output of the "m"
     // subproblem. this is done using 2 different algorithms based on how large
     // the problem size is. if the problem size is small enough to fit inside
@@ -395,10 +336,135 @@ static INT32 execute_ct_twiddle_solver(aoclfftz_solution_t *sol)
         }
     }
 
+    return;
+}
+
+#endif
+
+// The only difference between this & execute_ct_solver is that the out pointers
+// of radix_r point to user buffer, thats being pointed by in pointers.
+//
+// This function is executed only by the final CT (as per recursive execution)
+// of inplace problems, where we want the results to be written back to
+// user buffer, without which we may need explicit memcpy
+static INT32 execute_last_stage_ip_ct_solver(aoclfftz_solution_t *sol)
+{
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+
+    INT32 status = SOLVER_SUCCESS;
+    aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
+    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
+
+    // update radix-m & radix-r solution data pointers
+    radix_m_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
+    radix_m_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
+    radix_m_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+    radix_m_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    radix_m_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
+
+    // point out pointers to user buffer thats being pointed by in pointers
+    radix_r_sol->decomp_scheme->in_real  = sol->decomp_scheme->out_real;
+    radix_r_sol->decomp_scheme->in_imag  = sol->decomp_scheme->out_imag;
+    radix_r_sol->decomp_scheme->out_real = sol->decomp_scheme->in_real;
+    radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->in_imag;
+    radix_r_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
+
+    // execute radix-m sub-problem
+    radix_m_sol->solver->execute_solver(radix_m_sol);
+
+#if defined PERFORM_INTER_STAGE_PERMUTE
+    transpose_buffer(sol, radix_r_sol);
+#endif
+
+    // execute radix-r DFT
+    radix_r_sol->solver->execute_solver(radix_r_sol);
+
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
+    return status;
+}
+
+static INT32 execute_ct_solver(aoclfftz_solution_t *sol)
+{
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+    INT32 status = SOLVER_SUCCESS;
+    aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
+    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
+    // update radix-m & radix-r solution data pointers
+    radix_m_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
+    radix_m_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
+    radix_m_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+    radix_m_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    radix_m_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
+
+    radix_r_sol->decomp_scheme->in_real  = sol->decomp_scheme->out_real;
+    radix_r_sol->decomp_scheme->in_imag  = sol->decomp_scheme->out_imag;
+    radix_r_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+    radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    radix_r_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
+
+    // execute radix-m sub-problem
+    radix_m_sol->solver->execute_solver(radix_m_sol);
+
+    if (IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
+    {
+        status = twiddle_multiplier(radix_r_sol);
+    }
+    else
+    {
+        status = twiddle_multiplier_inplace(radix_r_sol);
+    }
+
     if (status != SOLVER_SUCCESS)
     {
         return SOLVER_FAILURE;
     }
+
+    // execute radix-r DFT
+    radix_r_sol->solver->execute_solver(radix_r_sol);
+
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
+    return status;
+}
+
+
+static INT32 execute_ct_twiddle_solver(aoclfftz_solution_t *sol)
+{
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+    INT32 status = SOLVER_SUCCESS;
+    aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
+    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
+    // update radix-m & radix-r solution data pointers
+    radix_m_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
+    radix_m_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
+    radix_m_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+    radix_m_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    radix_m_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
+
+    radix_r_sol->decomp_scheme->in_real  = sol->decomp_scheme->out_real;
+    radix_r_sol->decomp_scheme->in_imag  = sol->decomp_scheme->out_imag;
+    radix_r_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+    radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    radix_r_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
+
+    // execute radix-m sub-problem
+    radix_m_sol->solver->execute_solver(radix_m_sol);
+
+#if defined PERFORM_INTER_STAGE_PERMUTE
+    transpose_buffer(sol, radix_r_sol);
+#endif
 
     // execute radix-r DFT
     radix_r_sol->solver->execute_solver(radix_r_sol);
@@ -417,4 +483,9 @@ dft_solver_ register_execute_ct_solver(VOID)
 dft_solver_ register_execute_ct_twiddle_solver(VOID)
 {
     return execute_ct_twiddle_solver;
+}
+
+dft_solver_ register_execute_last_stage_ip_ct_solver (VOID)
+{
+    return execute_last_stage_ip_ct_solver;
 }

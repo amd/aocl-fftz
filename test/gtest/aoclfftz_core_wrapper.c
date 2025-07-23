@@ -1953,7 +1953,7 @@ VOID destroy_selector_wrapper(aoclfftz_selector_t *sel)
 }
 VOID destroy_solution_wrapper(aoclfftz_solution_t *sol)
 {
-    destroy_solution(sol);
+    destroy_solution(sol, 1);
 }
 VOID destroy_decomp_scheme_wrapper(aoclfftz_decomp_scheme_t *decomp_scheme)
 {

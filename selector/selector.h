@@ -48,6 +48,9 @@
 //#define AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_PLUS_TRANS_DFT_MODE
 //#define AOCLFFTZ_AUTO_SELECTOR_MODE
 
+/* !! Do not enable this macro for now !! */
+// #define PERFORM_INTER_STAGE_PERMUTE
+
 typedef enum {
     AOCLFFTZ_FIXED_SELECTOR = 0,                            // Fixed decision logic
     AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT,                 // Fixed decision logic + Fused Twiddle and DFT kernels
@@ -322,6 +325,7 @@ typedef struct aoclfftz_selector
 #define PREPARE_AND_SETUP_DFT(sel_obj, ret)                                    \
 {                                                                              \
     sel_obj->execute = register_execute_dft();                                 \
+    setup_inplace_buffers(sel_obj->solution);                                   \
     if (IS_REAL(sel_obj->solution->decomp_scheme->flags))                      \
     {                                                                          \
         aoclfftz_realhelper_t *realhelper;                                     \
@@ -352,6 +356,8 @@ typedef struct aoclfftz_selector
     {                                                                          \
         ret = selector_driver_dft_(sel_obj);                                   \
         setup_twiddle_buffer_complex(sel_obj->solution);                       \
+        post_process_buffered_inplace(sel_obj->solution, problem->dim_rank,    \
+                    (VOID *)problem->out, (VOID *)(problem->out + 1));         \
     }                                                                          \
 }
 
@@ -435,6 +441,8 @@ typedef struct aoclfftz_selector
     to_sol_obj->dft_bufs->buffered->aux_buffer_1 = from_sol_obj->dft_bufs->buffered->aux_buffer_1; \
     to_sol_obj->dft_bufs->buffered->aux_buffer_2 = from_sol_obj->dft_bufs->buffered->aux_buffer_2; \
     to_sol_obj->dft_bufs->buffered->out_ptr = from_sol_obj->dft_bufs->buffered->out_ptr;           \
+    to_sol_obj->dft_bufs->nd_sol_out_real = from_sol_obj->dft_bufs->nd_sol_out_real; \
+    to_sol_obj->dft_bufs->nd_sol_out_imag = from_sol_obj->dft_bufs->nd_sol_out_imag; \
     if (from_sol_obj->dft_bufs->transpose && to_sol_obj->dft_bufs->transpose)                      \
     {                                                                          \
         to_sol_obj->dft_bufs->transpose->row_info = from_sol_obj->dft_bufs->transpose->row_info;   \
@@ -745,5 +753,8 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 VOID destroy_handle(VOID *handle);
 VOID fuse_vecs(aoclfftz_solution_t *sol);
 VOID post_process_solution(aoclfftz_solution_t *sol);
+VOID post_process_buffered_inplace(aoclfftz_solution_t *solution,
+                    INTP dim_rank, VOID *out_real, VOID *out_imag);
+VOID setup_inplace_buffers(aoclfftz_solution_t *solution);
 
 #endif // AOCLFFTZ_SELECTOR_H

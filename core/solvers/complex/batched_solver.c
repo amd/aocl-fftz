@@ -81,6 +81,14 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
 
     if (vec_rank == 1)
     {
+        // save pointer to reset it after all executions
+        VOID *in_real = next_sol->decomp_scheme->in_real;
+        VOID *in_imag = next_sol->decomp_scheme->in_imag;
+        VOID *out_real = next_sol->decomp_scheme->out_real;
+        VOID *out_imag = next_sol->decomp_scheme->out_imag;
+        VOID *nd_sol_out_real = next_sol->dft_bufs->nd_sol_out_real;
+        VOID *nd_sol_out_imag = next_sol->dft_bufs->nd_sol_out_imag;
+
         // For innermost vector rank, execute the solver
         INTP batches = sol->decomp_scheme->vecs[0].n;
         for (INTP b = 0; b < batches; b++)
@@ -99,10 +107,37 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
                     MOVE_ADDR(next_sol->decomp_scheme->out_real, v_out_stride);
             next_sol->decomp_scheme->out_imag =
                     MOVE_ADDR(next_sol->decomp_scheme->out_imag, v_out_stride);
+
+        #if !defined (PERFORM_INTER_STAGE_PERMUTE)
+            if (next_sol->dft_bufs->nd_sol_out_real != NULL)
+            {
+                // If the next solution has nd_sol_out buffers, move them too
+                next_sol->dft_bufs->nd_sol_out_real =
+                MOVE_ADDR(next_sol->dft_bufs->nd_sol_out_real, v_out_stride);
+                next_sol->dft_bufs->nd_sol_out_imag =
+                MOVE_ADDR(next_sol->dft_bufs->nd_sol_out_imag, v_out_stride);
+            }
+        #endif
         }
+
+        // reset pointers to enable multiple executions
+        next_sol->decomp_scheme->in_real = in_real;
+        next_sol->decomp_scheme->in_imag = in_imag;
+        next_sol->decomp_scheme->out_real = out_real;
+        next_sol->decomp_scheme->out_imag = out_imag;
+        next_sol->dft_bufs->nd_sol_out_real = nd_sol_out_real;
+        next_sol->dft_bufs->nd_sol_out_imag = nd_sol_out_imag;
     }
     else
     {
+        // save pointer to reset it after all executions
+        VOID *in_real = next_sol->decomp_scheme->in_real;
+        VOID *in_imag = next_sol->decomp_scheme->in_imag;
+        VOID *out_real = next_sol->decomp_scheme->out_real;
+        VOID *out_imag = next_sol->decomp_scheme->out_imag;
+        VOID *nd_sol_out_real = next_sol->dft_bufs->nd_sol_out_real;
+        VOID *nd_sol_out_imag = next_sol->dft_bufs->nd_sol_out_imag;
+
         for (rnk_offset = 0;
              rnk_offset < sol->decomp_scheme->vecs[vec_rank - 1].n;
              rnk_offset++)
@@ -113,6 +148,10 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
             VOID *in_imag = next_sol->decomp_scheme->in_imag;
             VOID *out_real = next_sol->decomp_scheme->out_real;
             VOID *out_imag = next_sol->decomp_scheme->out_imag;
+        #if !defined (PERFORM_INTER_STAGE_PERMUTE)
+            VOID *nd_sol_out_real = next_sol->dft_bufs->nd_sol_out_real;
+            VOID *nd_sol_out_imag = next_sol->dft_bufs->nd_sol_out_imag;
+        #endif
 
             //recursive call to solve the inner batches
             status = execute_batched_solver_internal(sol, next_sol,
@@ -131,7 +170,25 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
                 (VOID *)((CHAR *)out_real + v_out_stride);
             next_sol->decomp_scheme->out_imag =
                 (VOID *)((CHAR *)out_imag + v_out_stride);
+        #if !defined (PERFORM_INTER_STAGE_PERMUTE)
+            if (next_sol->dft_bufs->nd_sol_out_real != NULL)
+            {
+                // If the next solution has nd_sol_out buffers, move them too
+                next_sol->dft_bufs->nd_sol_out_real =
+                        MOVE_ADDR(nd_sol_out_real, v_out_stride);
+                next_sol->dft_bufs->nd_sol_out_imag =
+                        MOVE_ADDR(nd_sol_out_imag, v_out_stride);
+            }
+        #endif
         }
+
+        // reset pointers to enable multiple executions
+        next_sol->decomp_scheme->in_real = in_real;
+        next_sol->decomp_scheme->in_imag = in_imag;
+        next_sol->decomp_scheme->out_real = out_real;
+        next_sol->decomp_scheme->out_imag = out_imag;
+        next_sol->dft_bufs->nd_sol_out_real = nd_sol_out_real;
+        next_sol->dft_bufs->nd_sol_out_imag = nd_sol_out_imag;
     }
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
@@ -162,6 +219,17 @@ static INT32 execute_batched_solver(aoclfftz_solution_t *sol)
     next_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
     next_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
     next_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+
+#if !defined (PERFORM_INTER_STAGE_PERMUTE)
+    // propagate the pointers to next solution for it to set to the solution
+    // after it ie., next->next
+    if (sol->dft_bufs->nd_sol_out_real != NULL)
+    {
+        next_sol->dft_bufs->nd_sol_out_real = sol->dft_bufs->nd_sol_out_real;
+        next_sol->dft_bufs->nd_sol_out_imag = sol->dft_bufs->nd_sol_out_imag;
+    }
+#endif
+
     next_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
 
     status = execute_batched_solver_internal(sol, next_sol,
