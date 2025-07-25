@@ -130,10 +130,11 @@ VOID AoclfftzKernelTestBase<T>::run_linearity_test_real(
     }
 
 
-    fft_kernel(in1, in1, out1, out1, offset, &k_stride, is_bwd);
-    fft_kernel(in2, in2, out2, out2, offset, &k_stride, is_bwd);
+    VOID *twid = NULL; // For twiddle kernels, this needd to be updated with pre-computed twiddle values
+    fft_kernel(in1, in1, out1, out1, offset, &k_stride, twid, is_bwd);
+    fft_kernel(in2, in2, out2, out2, offset, &k_stride, twid, is_bwd);
     fft_kernel(in_combined, in_combined, out_combined, out_combined,
-               offset, &k_stride, is_bwd);
+               offset, &k_stride, twid, is_bwd);
 
     for (INTP idx = 0; idx < output_length; ++idx)
     {
@@ -359,12 +360,13 @@ VOID AoclfftzKernelTestBase<T>::run_unit_impulse_transform_test_real(
         memcpy(temp_in, in, input_length *sizeof(T));
     }
 
+    VOID *twid = NULL; // For twiddle kernels, this needd to be updated with pre-computed twiddle values
     // Initialize kernel input/output variables
-    fft_kernel(temp_in, temp_in, out, out, offset, &k_stride, is_bwd);
+    fft_kernel(temp_in, temp_in, out, out, offset, &k_stride, twid, is_bwd);
     // convert the FFT kernel output from in-order to out-of-order for
     // standard kernel and vise versa for permuted kernel
     fft_reverse_kernel(out, out, inv_out, inv_out, offset, &k_stride_rev,
-                       !is_bwd);
+                       twid, !is_bwd);
     if (is_bwd)
     {
         for (INTP i = 0; i < offset; i++)
@@ -466,6 +468,7 @@ VOID AoclfftzKernelTestBase<T>::run_timeshift_test_real(
     ALLOC_ALIGN_INIT(out2_shifted_dft, T,
         output_length * data_stride * sizeof(T));
 
+    VOID *twid = NULL; // For twiddle kernels, this needd to be updated with pre-computed twiddle values
 
     T *out1 = NULL;
     T *out2 = NULL;
@@ -646,8 +649,8 @@ VOID AoclfftzKernelTestBase<T>::run_timeshift_test_real(
             &pc_stride, data_stride, buf_size_multiplier);
         memcpy(in2, temp, sizeof(T) * input_length * data_stride);
 
-        fft_kernel(in1, in1, out1, out1, offset, &k_stride, is_bwd);
-        fft_kernel(in2, in2, out2, out2, offset, &k_stride, is_bwd);
+        fft_kernel(in1, in1, out1, out1, offset, &k_stride, twid, is_bwd);
+        fft_kernel(in2, in2, out2, out2, offset, &k_stride, twid, is_bwd);
 
         if (is_fused)
         {
@@ -873,9 +876,9 @@ VOID AoclfftzKernelTestBase<T>::run_timeshift_test_real(
 
         // convert the inputs from in-order to out-of-order
         fft_kernel(in1, in1, out1, out1, offset, &k_stride,
-                   is_bwd);
+                   twid, is_bwd);
         fft_kernel(in2, in2, out2, out2, offset, &k_stride,
-                   is_bwd);
+                   twid, is_bwd);
         // convert the outputs from out-of-order to in-order
         permuted_copy<T>(out1, temp, offset, radix,
                          &pc_stride, data_stride);
@@ -1018,11 +1021,12 @@ VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_real(
     kernel_stride.v_out_stride = out_stride_w_ds * buf_size_multiplier * radix;
 
     // populating strides and executing FFT for real kernels
+    VOID *twid = NULL; // For twiddle kernels, this needd to be updated with pre-computed twiddle values
     populate_stride_array_wrapper(kernel_stride.in_strides,
         in_stride_w_ds, buf_size_multiplier * radix, is_bwd, 0);
     populate_stride_array_wrapper(kernel_stride.out_strides,
         out_stride_w_ds, buf_size_multiplier * radix, !is_bwd, 0);
-    fft_kernel(in, in, out, out, offset, &kernel_stride, is_bwd);
+    fft_kernel(in, in, out, out, offset, &kernel_stride, twid, is_bwd);
 
     // for real problems,
     // forward:

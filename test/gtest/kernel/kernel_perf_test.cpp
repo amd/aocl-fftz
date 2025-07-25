@@ -69,6 +69,7 @@ class PerformanceTest : public benchmark::Fixture {
         UINT8 is_real = state.range(7);
         INT32 data_stride = is_real ? 1 : 2;
 
+        VOID *twid = NULL; // For twiddle kernels, this needd to be updated with pre-computed twiddle values
         wrapper_kernel_fp_list *table = get_kernel_table(kernel_type);
         kfft_ fft_kernel = get_kernel<T>(table, is_bwd, radix);
         if (fft_kernel == nullptr)
@@ -114,7 +115,8 @@ class PerformanceTest : public benchmark::Fixture {
         {
             benchmark::DoNotOptimize(out_r);
             benchmark::DoNotOptimize(out_i);
-            fft_kernel(in_r, in_i, out_r, out_i, batches, &strides, is_bwd);
+            fft_kernel(in_r, in_i, out_r, out_i, batches, &strides, twid, 
+		       is_bwd);
             benchmark::ClobberMemory();
         }
 

@@ -124,7 +124,7 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                          (VOID *)((CHAR *)decomp_scheme->in_imag  + v_istride),
                          (VOID *)((CHAR *)decomp_scheme->out_real + v_ostride),
                          (VOID *)((CHAR *)decomp_scheme->out_imag + v_ostride),
-                         num_sets, strides, FFT_DIR(decomp_scheme->flags));
+                         num_sets, strides, sol->twiddle->TW, FFT_DIR(decomp_scheme->flags));
         }
 
         // Process the tail cases of the kernel
@@ -136,7 +136,7 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                          (VOID *)((CHAR *)decomp_scheme->in_imag  + v_istride),
                          (VOID *)((CHAR *)decomp_scheme->out_real + v_ostride),
                          (VOID *)((CHAR *)decomp_scheme->out_imag + v_ostride),
-                         rem_iters, strides, FFT_DIR(decomp_scheme->flags));
+                         rem_iters, strides, sol->twiddle->TW, FFT_DIR(decomp_scheme->flags));
         }
 
         getTime(endTime);
@@ -195,7 +195,7 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
                (VOID *)((CHAR *)decomp_scheme->in_imag  + v_istride),
                (VOID *)((CHAR *)decomp_scheme->out_real + v_ostride),
                (VOID *)((CHAR *)decomp_scheme->out_imag + v_ostride),
-               num_sets, strides, FFT_DIR(decomp_scheme->flags));
+               num_sets, strides, sol->twiddle->TW, FFT_DIR(decomp_scheme->flags));
     }
 
     // Process the tail cases of the kernel
@@ -207,7 +207,7 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
                (VOID *)((CHAR *)decomp_scheme->in_imag  + v_istride),
                (VOID *)((CHAR *)decomp_scheme->out_real + v_ostride),
                (VOID *)((CHAR *)decomp_scheme->out_imag + v_ostride),
-               rem_iters, strides, FFT_DIR(decomp_scheme->flags));
+               rem_iters, strides, sol->twiddle->TW, FFT_DIR(decomp_scheme->flags));
     }
 
 #ifdef AOCL_ENABLE_LOG

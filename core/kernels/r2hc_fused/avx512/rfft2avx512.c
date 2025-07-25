@@ -76,7 +76,7 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft2avx512(UINT8 precision, UINT8 direction)
 
 static VOID r2hcf_rfft2avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
                                        VOID *out_real, VOID *out_imag, INTP n,
-                                       aoclfftz_strides_t *strides, UINT8 flag)
+                                       aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
 {
     FLOAT *in = (FLOAT *)in_real;
     FLOAT *out = (FLOAT *)out_real;
@@ -284,7 +284,7 @@ static VOID r2hcf_rfft2avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
 
 static VOID r2hcf_rfft2avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
                                        VOID *out_real, VOID *out_imag, INTP n,
-                                       aoclfftz_strides_t *strides, UINT8 flag)
+                                       aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
 {
     FLOAT *in = (FLOAT *)in_real;
     FLOAT *out = (FLOAT *)out_real;
@@ -496,7 +496,7 @@ static VOID r2hcf_rfft2avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
 
 static VOID r2hcf_rfft2avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
                                        VOID *out_real, VOID *out_imag, INTP n,
-                                       aoclfftz_strides_t *strides, UINT8 flag)
+                                       aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
 {
     DOUBLE *in = (DOUBLE *)in_real;
     DOUBLE *out = (DOUBLE *)out_real;
@@ -662,7 +662,7 @@ static VOID r2hcf_rfft2avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
 
 static VOID r2hcf_rfft2avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
                                        VOID *out_real, VOID *out_imag, INTP n,
-                                       aoclfftz_strides_t *strides, UINT8 flag)
+                                       aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
 {
     DOUBLE *in = (DOUBLE *)in_real;
     DOUBLE *out = (DOUBLE *)out_real;

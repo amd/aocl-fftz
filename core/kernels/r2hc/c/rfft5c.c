@@ -72,7 +72,7 @@ ops_cycles_t get_ops_cnt_r2hc_rfft5c(UINT8 precision, UINT8 direction)
 
 static VOID r2hc_rfft5c_fp32_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
                                  VOID *out_imag, INTP n,
-                                 aoclfftz_strides_t *strides, UINT8 flag)
+                                 aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -153,7 +153,7 @@ static VOID r2hc_rfft5c_fp32_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
 static VOID r2hc_rfft5c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
                                  VOID *out_imag, INTP n,
-                                 aoclfftz_strides_t *strides, UINT8 flag)
+                                 aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -235,7 +235,7 @@ static VOID r2hc_rfft5c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
 static VOID r2hc_rfft5c_fp64_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
                                  VOID *out_imag, INTP n,
-                                 aoclfftz_strides_t *strides, UINT8 flag)
+                                 aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -316,7 +316,7 @@ static VOID r2hc_rfft5c_fp64_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
 
 static VOID r2hc_rfft5c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
                                  VOID *out_imag, INTP n,
-                                 aoclfftz_strides_t *strides, UINT8 flag)
+                                 aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");

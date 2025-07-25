@@ -151,7 +151,8 @@ typedef struct cost_analysis
 typedef VOID (*kfft_) (VOID *in_real, VOID *in_imag,
                        VOID *out_real, VOID *out_imag,
                        INTP n,
-                       aoclfftz_strides_t *strides, UINT8 flag);
+                       aoclfftz_strides_t *strides,
+                       VOID *twd, UINT8 flag);
 
 // Kernel information data structure holds the kernel function pointer and the
 // number of sets it can process in parallel based on the kernel type(C/SIMD).

@@ -39,7 +39,7 @@
 
 static VOID execute_float_kernel(VOID *in_real, VOID *in_imag, VOID *out_real,
                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                          UINT8 flag)
+                          VOID *twd, UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -62,7 +62,7 @@ static VOID execute_float_kernel(VOID *in_real, VOID *in_imag, VOID *out_real,
 
 static VOID execute_double_kernel(VOID *in_real, VOID *in_imag, VOID *out_real,
                            VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                           UINT8 flag)
+                           VOID *twd, UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -128,6 +128,7 @@ static INT32 execute_sizeone_solver_internal(aoclfftz_solution_t *sol, INTP vec_
             sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
             sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
             sol->decomp_scheme->vecs[0].n, strides,
+            sol->twiddle->TW,
             FFT_DIR(sol->decomp_scheme->flags));
         return SOLVER_SUCCESS;
     }

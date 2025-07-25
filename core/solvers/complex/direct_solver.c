@@ -107,7 +107,7 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         // execute the direct kernel
         kernel->kfft(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
                      sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
-                     batch, strides, direction);
+                     batch, strides, sol->twiddle->TW, direction);
 
         getTime(endTime);
         cost->time = diffTime(clkTick, startTime, endTime);
@@ -145,7 +145,7 @@ static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
     // execute the direct kernel
     kernel(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
            sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
-           sol->decomp_scheme->vecs[0].n, strides, direction);
+           sol->decomp_scheme->vecs[0].n, strides, sol->twiddle->TW, direction);
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");

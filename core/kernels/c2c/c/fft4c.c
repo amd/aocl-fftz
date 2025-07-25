@@ -56,7 +56,7 @@ ops_cycles_t get_ops_cnt_fft4c(UINT8 precision, UINT8 direction)
 
 static VOID fft4c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                       UINT8 flag)
+                       VOID *twd, UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
@@ -139,7 +139,7 @@ static VOID fft4c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
 static VOID fft4c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                       UINT8 flag)
+                       VOID *twd, UINT8 flag)
 {
     FLOAT *in_r = (FLOAT *)in_real;
     FLOAT *in_i = (FLOAT *)in_imag;
