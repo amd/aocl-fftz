@@ -58,6 +58,7 @@ extern "C"
 #ifndef FLT_TRUE_MIN
 #define FLT_TRUE_MIN 1.40129846e-45F
 #endif
+
 /**
  * @brief Get the kernel object from the kernel table based on the given radix
  *
@@ -88,6 +89,252 @@ kfft_ get_kernel(const wrapper_kernel_fp_list *kernel_table, const INT32 dir,
         kernel_table++;
     }
     return nullptr;
+}
+
+/**
+ * @brief Get the twiddle kernel pointer for the given radix
+ *
+ * @tparam T data type (float or double)
+ * @param radix radix of the FFT kernel
+ * @param dir direction (forward / backward)
+ * @param kernel_type kernel type - [STANDARD|PERMUTED] _C2C_TWID_ [C|AVX128|AVX256|AVX512]
+ * @return kffft_ a kernel pointer; returns nullptr if kernel not found
+ */
+template <class T>
+kfft_ get_twiddle_kernel(const UINT32 radix, const INT32 dir,
+                            const UINT8 kernel_type)
+{
+    UINT8 prec;
+
+    if (typeid(T) == typeid(float))
+    {
+        prec = DT_FLOAT;
+    }
+    else
+    {
+        prec = DT_DOUBLE;
+    }
+
+    switch (kernel_type)
+    {
+    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_C:
+    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_C:
+        switch (radix)
+        {
+        case 2:
+            return register_kernel_twid_fft2c_wrapper(prec, dir);
+        case 3:
+            return register_kernel_twid_fft3c_wrapper(prec, dir);
+        case 4:
+            return register_kernel_twid_fft4c_wrapper(prec, dir);
+        case 5:
+            return register_kernel_twid_fft5c_wrapper(prec, dir);
+        case 6:
+            return register_kernel_twid_fft6c_wrapper(prec, dir);
+        case 7:
+            return register_kernel_twid_fft7c_wrapper(prec, dir);
+        case 8:
+            return register_kernel_twid_fft8c_wrapper(prec, dir);
+        case 9:
+            return register_kernel_twid_fft9c_wrapper(prec, dir);
+        case 10:
+            return register_kernel_twid_fft10c_wrapper(prec, dir);
+        case 11:
+            return register_kernel_twid_fft11c_wrapper(prec, dir);
+        case 12:
+            return register_kernel_twid_fft12c_wrapper(prec, dir);
+        case 13:
+            return register_kernel_twid_fft13c_wrapper(prec, dir);
+        case 14:
+            return register_kernel_twid_fft14c_wrapper(prec, dir);
+        case 15:
+            return register_kernel_twid_fft15c_wrapper(prec, dir);
+        case 16:
+            return register_kernel_twid_fft16c_wrapper(prec, dir);
+        }
+        break;
+
+#ifdef ENABLE_AVX128
+//    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX128:
+//    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX128:
+//        switch (radix)
+//        {
+//        case 2:
+//            return register_kernel_twid_fft2avx128_wrapper(prec, dir);
+//        case 3:
+//            return register_kernel_twid_fft3avx128_wrapper(prec, dir);
+//        case 4:
+//            return register_kernel_twid_fft4avx128_wrapper(prec, dir);
+//        case 5:
+//            return register_kernel_twid_fft5avx128_wrapper(prec, dir);
+//        case 6:
+//            return register_kernel_twid_fft6avx128_wrapper(prec, dir);
+//        case 7:
+//            return register_kernel_twid_fft7avx128_wrapper(prec, dir);
+//        case 8:
+//            return register_kernel_twid_fft8avx128_wrapper(prec, dir);
+//        case 9:
+//            return register_kernel_twid_fft9avx128_wrapper(prec, dir);
+//        case 10:
+//            return register_kernel_twid_fft10avx128_wrapper(prec, dir);
+//        case 11:
+//            return register_kernel_twid_fft11avx128_wrapper(prec, dir);
+//        case 12:
+//            return register_kernel_twid_fft12avx128_wrapper(prec, dir);
+//        case 13:
+//            return register_kernel_twid_fft13avx128_wrapper(prec, dir);
+//        case 14:
+//            return register_kernel_twid_fft14avx128_wrapper(prec, dir);
+//        case 15:
+//            return register_kernel_twid_fft15avx128_wrapper(prec, dir);
+//        case 16:
+//            return register_kernel_twid_fft16avx128_wrapper(prec, dir);
+//        }
+//        break;
+#endif
+#ifdef ENABLE_AVX256
+//    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX256:
+//    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX256:
+//        switch (radix)
+//        {
+//        case 2:
+//            return register_kernel_twid_fft2avx256_wrapper(prec, dir);
+//        case 3:
+//            return register_kernel_twid_fft3avx256_wrapper(prec, dir);
+//        case 4:
+//            return register_kernel_twid_fft4avx256_wrapper(prec, dir);
+//        case 5:
+//            return register_kernel_twid_fft5avx256_wrapper(prec, dir);
+//        case 6:
+//            return register_kernel_twid_fft6avx256_wrapper(prec, dir);
+//        case 7:
+//            return register_kernel_twid_fft7avx256_wrapper(prec, dir);
+//        case 8:
+//            return register_kernel_twid_fft8avx256_wrapper(prec, dir);
+//        case 9:
+//            return register_kernel_twid_fft9avx256_wrapper(prec, dir);
+//        case 10:
+//            return register_kernel_twid_fft10avx256_wrapper(prec, dir);
+//        case 11:
+//            return register_kernel_twid_fft11avx256_wrapper(prec, dir);
+//        case 12:
+//            return register_kernel_twid_fft12avx256_wrapper(prec, dir);
+//        case 13:
+//            return register_kernel_twid_fft13avx256_wrapper(prec, dir);
+//        case 14:
+//            return register_kernel_twid_fft14avx256_wrapper(prec, dir);
+//        case 15:
+//            return register_kernel_twid_fft15avx256_wrapper(prec, dir);
+//        case 16:
+//            return register_kernel_twid_fft16avx256_wrapper(prec, dir);
+//        }
+//        break;
+#endif
+#ifdef ENABLE_AVX512
+//    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX512:
+//    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX512:
+//        switch (radix)
+//        {
+//        case 2:
+//            return register_kernel_twid_fft2avx512_wrapper(prec, dir);
+//        case 3:
+//            return register_kernel_twid_fft3avx512_wrapper(prec, dir);
+//        case 4:
+//            return register_kernel_twid_fft4avx512_wrapper(prec, dir);
+//        case 5:
+//            return register_kernel_twid_fft5avx512_wrapper(prec, dir);
+//        case 6:
+//            return register_kernel_twid_fft6avx512_wrapper(prec, dir);
+//        case 7:
+//            return register_kernel_twid_fft7avx512_wrapper(prec, dir);
+//        case 8:
+//            return register_kernel_twid_fft8avx512_wrapper(prec, dir);
+//        case 9:
+//            return register_kernel_twid_fft9avx512_wrapper(prec, dir);
+//        case 10:
+//            return register_kernel_twid_fft10avx512_wrapper(prec, dir);
+//        case 11:
+//            return register_kernel_twid_fft11avx512_wrapper(prec, dir);
+//        case 12:
+//            return register_kernel_twid_fft12avx512_wrapper(prec, dir);
+//        case 13:
+//            return register_kernel_twid_fft13avx512_wrapper(prec, dir);
+//        case 14:
+//            return register_kernel_twid_fft14avx512_wrapper(prec, dir);
+//        case 15:
+//            return register_kernel_twid_fft15avx512_wrapper(prec, dir);
+//        case 16:
+//            return register_kernel_twid_fft16avx512_wrapper(prec, dir);
+//        }
+//        break;
+#endif
+    }
+    return nullptr;
+}
+
+/**
+ * @brief Run the twiddle multiplication without transpose
+ * 
+ * @tparam T data type (float or double)
+ * @param in_real input real buffer
+ * @param in_imag input imaginary buffer
+ * @param radix radix of the FFT kernel
+ * @param sets number of sets (or) offset
+ * @param in_stride in-stride of the kernel
+ * @param v_in_stride virtual in-stride of the kernel
+ * @param twiddle_buffer twiddle buffer
+ *
+ * @return INT32 1 if successful, 0 if failed
+ */
+template <typename T>
+INT32 gtest_twiddle_multiplier_no_transpose(T *in_real, T *in_imag, INTP radix,
+                                            INTP sets, INTP in_stride,
+                                            INTP v_in_stride,
+                                            VOID *twiddle_buffer)
+{
+    T *twiddle_buffer_real = (T *)twiddle_buffer;
+    T *twiddle_buffer_imag = twiddle_buffer_real + 1;
+
+    for (INTP r = 1; r < radix; r++)
+    {
+        INTP in_index = r * in_stride + v_in_stride;
+        INTP tw_in_index =  DATA_STRIDE * (r * sets + 1);
+
+        for (INTP s = 1; s < sets; s++)
+        {
+            T TW_real = twiddle_buffer_real[tw_in_index];
+            T TW_imag = twiddle_buffer_imag[tw_in_index];
+
+            T real = in_real[in_index];
+            T imag = in_imag[in_index];
+
+            T result_real = real * TW_real - imag * TW_imag;
+            T result_imag = real * TW_imag + imag * TW_real;
+
+            in_real[in_index] = result_real;
+            in_imag[in_index] = result_imag;
+
+            in_index += v_in_stride;
+            tw_in_index += DATA_STRIDE;
+        }
+    }
+    return 1;
+}
+
+template <typename T>
+VOID compute_twiddle_buffer_wrapper(VOID *twiddle_buffer, INTP r, INTP m);
+
+template <>
+VOID compute_twiddle_buffer_wrapper<FLOAT>(VOID *twiddle_buffer, INTP r, INTP m)
+{
+    compute_twiddle_buffer_float_wrapper(twiddle_buffer, r, m);
+}
+
+template <>
+VOID compute_twiddle_buffer_wrapper<DOUBLE>(VOID *twiddle_buffer, INTP r,
+                                            INTP m)
+{
+    compute_twiddle_buffer_double_wrapper(twiddle_buffer, r, m);
 }
 
 /**
@@ -167,18 +414,10 @@ std::string get_kernel_type_as_string(UINT8 kernel_type)
         return "_STANDARD_C2C_C";
     case aocl_fftz_kernel_type::PERMUTED_C2C_C:
         return "_PERMUTED_C2C_C";
-    case aocl_fftz_kernel_type::STANDARD_C2C_AVX128:
-        return "_STANDARD_C2C_AVX128";
-    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX128:
-        return "_PERMUTED_C2C_AVX128";
-    case aocl_fftz_kernel_type::STANDARD_C2C_AVX256:
-        return "_STANDARD_C2C_AVX256";
-    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX256:
-        return "_PERMUTED_C2C_AVX256";
-    case aocl_fftz_kernel_type::STANDARD_C2C_AVX512:
-        return "_STANDARD_C2C_AVX512";
-    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX512:
-        return "_PERMUTED_C2C_AVX512";
+    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_C:
+        return "_STANDARD_C2C_TWID_C";
+    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_C:
+        return "_PERMUTED_C2C_TWID_C";
     case aocl_fftz_kernel_type::STANDARD_R2HC_C:
         return "_STANDARD_R2HC_C";
     case aocl_fftz_kernel_type::PERMUTED_R2HC_C:
@@ -188,6 +427,14 @@ std::string get_kernel_type_as_string(UINT8 kernel_type)
     case aocl_fftz_kernel_type::PERMUTED_R2HCF_C:
         return "_PERMUTED_R2HCF_C";
 #ifdef ENABLE_AVX128
+    case aocl_fftz_kernel_type::STANDARD_C2C_AVX128:
+        return "_STANDARD_C2C_AVX128";
+    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX128:
+        return "_PERMUTED_C2C_AVX128";
+    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX128:
+        return "_STANDARD_C2C_TWID_AVX128";
+    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX128:
+        return "_PERMUTED_C2C_TWID_AVX128";
     case aocl_fftz_kernel_type::STANDARD_R2HC_AVX128:
         return "_STANDARD_R2HC_AVX128";
     case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX128:
@@ -198,6 +445,14 @@ std::string get_kernel_type_as_string(UINT8 kernel_type)
         return "_PERMUTED_R2HCF_AVX128";
 #endif
 #ifdef ENABLE_AVX256
+    case aocl_fftz_kernel_type::STANDARD_C2C_AVX256:
+        return "_STANDARD_C2C_AVX256";
+    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX256:
+        return "_PERMUTED_C2C_AVX256";
+    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX256:
+        return "_STANDARD_C2C_TWID_AVX256";
+    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX256:
+        return "_PERMUTED_C2C_TWID_AVX256";
     case aocl_fftz_kernel_type::STANDARD_R2HC_AVX256:
         return "_STANDARD_R2HC_AVX256";
     case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX256:
@@ -208,6 +463,10 @@ std::string get_kernel_type_as_string(UINT8 kernel_type)
         return "_PERMUTED_R2HCF_AVX256";
 #endif
 #ifdef ENABLE_AVX512
+    case aocl_fftz_kernel_type::STANDARD_C2C_AVX512:
+        return "_STANDARD_C2C_AVX512";
+    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX512:
+        return "_PERMUTED_C2C_AVX512";
     case aocl_fftz_kernel_type::STANDARD_R2HC_AVX512:
         return "_STANDARD_R2HC_AVX512";
     case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX512:
@@ -216,6 +475,10 @@ std::string get_kernel_type_as_string(UINT8 kernel_type)
         return "_STANDARD_R2HCF_AVX512";
     case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX512:
         return "_PERMUTED_R2HCF_AVX512";
+    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX512:
+        return "_STANDARD_C2C_TWID_AVX512";
+    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX512:
+        return "_PERMUTED_C2C_TWID_AVX512";
 #endif
     default:
         return "_UNKNOWN";

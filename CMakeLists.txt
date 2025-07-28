@@ -68,7 +68,7 @@ option(ENABLE_AVX512 "Compile with AVX512 instruction set support" OFF)
 #option(ENABLE_MPI "Compile with distributed MPI FFTZ support" OFF)
 option(AOCL_TEST_COVERAGE "Enable GTest and AOCL test bench based CTest suite (Disabled by default)" OFF)
 option(CODE_COVERAGE "Enable source code coverage (only on Linux with GCC compiler)" OFF)
-option(ASAN "Enable Address Sanitizer checks (only on Linux/Debug build)" OFF)
+option(ASAN "Enable Address Sanitizer checks (only on Linux builds)" OFF)
 option(VALGRIND "Enable Valgrind checks (only on Linux/Debug. Incompatible with ASAN=ON)" OFF)
 option(BUILD_DOC "Build documentation for aocl-fftz (Disabled by default)" OFF)
 option(ENABLE_STRICT_WARNINGS "Enable compiler flags to treat all warnings as errors (Enabled by default)" ON)
@@ -91,7 +91,8 @@ file(GLOB CORE_SRC_FILES CONFIGURE_DEPENDS ${CORE_PATH}/*.c ${CORE_PATH}/*.h
 file(GLOB CORE_C_FILES CONFIGURE_DEPENDS
                         ${CORE_PATH}/kernels/c2c/c/*.c ${CORE_PATH}/kernels/c2c/c/*.h
                         ${CORE_PATH}/kernels/r2hc/c/*.c ${CORE_PATH}/kernels/r2hc/c/*.h
-                        ${CORE_PATH}/kernels/r2hc_fused/c/*.c ${CORE_PATH}/kernels/r2hc_fused/c/*.h)
+                        ${CORE_PATH}/kernels/r2hc_fused/c/*.c ${CORE_PATH}/kernels/r2hc_fused/c/*.h
+                        ${CORE_PATH}/kernels/tw_c2c/c/*.c)
 list(APPEND CORE_SRC_FILES ${CORE_C_FILES})
 
 #Add AVX Kernels based on the flags ENABLE_AVX128, ENABLE_AVX256 & ENABLE_AVX512
@@ -261,10 +262,10 @@ endif()
 
 # setup to run memory check using AddressSanitizer
 if(ASAN)
-    if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND CMAKE_BUILD_TYPE MATCHES "Debug"))
+    if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Linux"))
         # Switch off ASAN: target not supported
         set(ASAN OFF)
-        message(WARNING "Target not supported. ASAN is only supported on Linux/Debug build")
+        message(WARNING "Target not supported. ASAN is only supported on Linux builds")
     endif()
 endif()
 
@@ -286,7 +287,7 @@ if(FUZZTEST)
 endif()
 
 # Enable CTest for any of the cases
-if(VALGRIND OR ASAN OR CODE_COVERAGE OR FUZZTEST)
+if(VALGRIND OR CODE_COVERAGE OR FUZZTEST)
     set(AOCL_TEST_COVERAGE ON)
 endif()
 

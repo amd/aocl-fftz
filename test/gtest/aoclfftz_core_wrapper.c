@@ -35,6 +35,7 @@
  *  with `__declspec(dllexport)` attribute for Windows compatibility.
  *
  *  @author Srirammaswamy Srinivasan
+ *  @author Ashwin K. Godbole
  */
 
 #include "aoclfftz_core_wrapper.h"
@@ -289,6 +290,256 @@ ops_cycles_t get_ops_cnt_fft16avx512_wrapper(UINT8 precision, UINT8 direction)
 {
     return get_ops_cnt_fft16avx512(precision, direction);
 }
+#endif
+
+ops_cycles_t get_ops_cnt_twid_fft2c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft2c(prec, dir);
+}
+ops_cycles_t get_ops_cnt_twid_fft3c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft3c(prec, dir);
+}
+ops_cycles_t get_ops_cnt_twid_fft4c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft4c(prec, dir);
+}
+ops_cycles_t get_ops_cnt_twid_fft5c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft5c(prec, dir);
+}
+ops_cycles_t get_ops_cnt_twid_fft6c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft6c(prec, dir);
+}
+ops_cycles_t get_ops_cnt_twid_fft7c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft7c(prec, dir);
+}
+ops_cycles_t get_ops_cnt_twid_fft8c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft8c(prec, dir);
+}
+ops_cycles_t get_ops_cnt_twid_fft9c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft9c(prec, dir);
+}
+ops_cycles_t get_ops_cnt_twid_fft10c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft10c(prec, dir);
+}
+ops_cycles_t get_ops_cnt_twid_fft11c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft11c(prec, dir);
+}
+ops_cycles_t get_ops_cnt_twid_fft12c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft12c(prec, dir);
+}
+ops_cycles_t get_ops_cnt_twid_fft13c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft13c(prec, dir);
+}
+ops_cycles_t get_ops_cnt_twid_fft14c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft14c(prec, dir);
+}
+ops_cycles_t get_ops_cnt_twid_fft15c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft15c(prec, dir);
+}
+ops_cycles_t get_ops_cnt_twid_fft16c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return get_ops_cnt_twid_fft16c(prec, dir);
+}
+
+#ifdef ENABLE_AVX128
+// ops_cycles_t get_ops_cnt_twid_fft2avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft2avx128(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft3avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft3avx128(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft4avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft4avx128(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft5avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft5avx128(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft6avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft6avx128(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft7avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft7avx128(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft8avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft8avx128(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft9avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft9avx128(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft10avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft10avx128(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft11avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft11avx128(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft12avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft12avx128(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft13avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft13avx128(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft14avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft14avx128(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft15avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft15avx128(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft16avx128_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft16avx128(prec, dir);
+// }
+#endif
+
+#ifdef ENABLE_AVX256
+// ops_cycles_t get_ops_cnt_twid_fft2avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft2avx256(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft3avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft3avx256(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft4avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft4avx256(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft5avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft5avx256(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft6avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft6avx256(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft7avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft7avx256(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft8avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft8avx256(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft9avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft9avx256(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft10avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft10avx256(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft11avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft11avx256(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft12avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft12avx256(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft13avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft13avx256(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft14avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft14avx256(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft15avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft15avx256(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft16avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft16avx256(prec, dir);
+// }
+#endif
+
+#ifdef ENABLE_AVX512
+// ops_cycles_t get_ops_cnt_twid_fft2avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft2avx512(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft3avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft3avx512(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft4avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft4avx512(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft5avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft5avx512(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft6avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft6avx512(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft7avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft7avx512(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft8avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft8avx512(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft9avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft9avx512(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft10avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft10avx512(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft11avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft11avx512(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft12avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft12avx512(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft13avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft13avx512(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft14avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft14avx512(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft15avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft15avx512(prec, dir);
+// }
+// ops_cycles_t get_ops_cnt_twid_fft16avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return get_ops_cnt_twid_fft16avx512(prec, dir);
+// }
 #endif
 
 ops_cycles_t get_ops_cnt_r2hc_rfft2c_wrapper(UINT8 precision, UINT8 direction)
@@ -985,6 +1236,256 @@ kfft_ register_kernel_fft16avx512_wrapper(UINT8 precision, UINT8 direction)
 }
 #endif
 
+kfft_ register_kernel_twid_fft2c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft2c(prec, dir);
+}
+kfft_ register_kernel_twid_fft3c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft3c(prec, dir);
+}
+kfft_ register_kernel_twid_fft4c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft4c(prec, dir);
+}
+kfft_ register_kernel_twid_fft5c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft5c(prec, dir);
+}
+kfft_ register_kernel_twid_fft6c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft6c(prec, dir);
+}
+kfft_ register_kernel_twid_fft7c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft7c(prec, dir);
+}
+kfft_ register_kernel_twid_fft8c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft8c(prec, dir);
+}
+kfft_ register_kernel_twid_fft9c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft9c(prec, dir);
+}
+kfft_ register_kernel_twid_fft10c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft10c(prec, dir);
+}
+kfft_ register_kernel_twid_fft11c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft11c(prec, dir);
+}
+kfft_ register_kernel_twid_fft12c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft12c(prec, dir);
+}
+kfft_ register_kernel_twid_fft13c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft13c(prec, dir);
+}
+kfft_ register_kernel_twid_fft14c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft14c(prec, dir);
+}
+kfft_ register_kernel_twid_fft15c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft15c(prec, dir);
+}
+kfft_ register_kernel_twid_fft16c_wrapper(UINT8 prec, UINT8 dir)
+{
+    return register_kernel_twid_fft16c(prec, dir);
+}
+
+#ifdef ENABLE_AVX128
+//kfft_ register_kernel_twid_fft2avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft2avx128(prec, dir);
+//}
+//kfft_ register_kernel_twid_fft3avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft3avx128(prec, dir);
+//}
+//kfft_ register_kernel_twid_fft4avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft4avx128(prec, dir);
+//}
+//kfft_ register_kernel_twid_fft5avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft5avx128(prec, dir);
+//}
+//kfft_ register_kernel_twid_fft6avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft6avx128(prec, dir);
+//}
+//kfft_ register_kernel_twid_fft7avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft7avx128(prec, dir);
+//}
+//kfft_ register_kernel_twid_fft8avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft8avx128(prec, dir);
+//}
+//kfft_ register_kernel_twid_fft9avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft9avx128(prec, dir);
+//}
+//kfft_ register_kernel_twid_fft10avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft10avx128(prec, dir);
+//}
+//kfft_ register_kernel_twid_fft11avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft11avx128(prec, dir);
+//}
+//kfft_ register_kernel_twid_fft12avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft12avx128(prec, dir);
+//}
+//kfft_ register_kernel_twid_fft13avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft13avx128(prec, dir);
+//}
+//kfft_ register_kernel_twid_fft14avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft14avx128(prec, dir);
+//}
+//kfft_ register_kernel_twid_fft15avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft15avx128(prec, dir);
+//}
+//kfft_ register_kernel_twid_fft16avx128_wrapper(UINT8 prec, UINT8 dir)
+//{
+//    return register_kernel_twid_fft16avx128(prec, dir);
+//}
+#endif
+
+#ifdef ENABLE_AVX256
+// kfft_ register_kernel_twid_fft2avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft2avx256(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft3avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft3avx256(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft4avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft4avx256(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft5avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft5avx256(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft6avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft6avx256(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft7avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft7avx256(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft8avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft8avx256(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft9avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft9avx256(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft10avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft10avx256(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft11avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft11avx256(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft12avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft12avx256(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft13avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft13avx256(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft14avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft14avx256(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft15avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft15avx256(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft16avx256_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft16avx256(prec, dir);
+// }
+#endif
+
+#ifdef ENABLE_AVX512
+// kfft_ register_kernel_twid_fft2avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft2avx512(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft3avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft3avx512(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft4avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft4avx512(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft5avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft5avx512(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft6avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft6avx512(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft7avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft7avx512(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft8avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft8avx512(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft9avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft9avx512(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft10avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft10avx512(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft11avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft11avx512(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft12avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft12avx512(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft13avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft13avx512(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft14avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft14avx512(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft15avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft15avx512(prec, dir);
+// }
+// kfft_ register_kernel_twid_fft16avx512_wrapper(UINT8 prec, UINT8 dir)
+// {
+//     return register_kernel_twid_fft16avx512(prec, dir);
+// }
+#endif
+
 kfft_ register_kernel_r2hc_rfft2c_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_r2hc_rfft2c(precision, direction);
@@ -1491,18 +1992,41 @@ VOID prepare_fused_kernel_strides_wrapper(INTP *strides, INTP radix,
     {                                                                          \
         FUNC(kernel_name, TYPE, c)(in_ptr, out_ptr, row_metadata,              \
                                    column_metadata, aux_mem);                  \
-    }
+    }                                                                          \
+
 
 #define TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(kernel_name, isa)                     \
-    TRANSPOSE_WRAPPER_DEFN(kernel_name, FLOAT, isa);                           \
-    TRANSPOSE_WRAPPER_DEFN(kernel_name, DOUBLE, isa);                          \
-    TRANSPOSE_WRAPPER_DEFN(kernel_name, aoclfftz_complex_f_t, isa);            \
-    TRANSPOSE_WRAPPER_DEFN(kernel_name, aoclfftz_complex_d_t, isa);
+    TRANSPOSE_WRAPPER_DEFN(kernel_name, FLOAT, isa)                            \
+    TRANSPOSE_WRAPPER_DEFN(kernel_name, DOUBLE, isa)                           \
+    TRANSPOSE_WRAPPER_DEFN(kernel_name, aoclfftz_complex_f_t, isa)             \
+    TRANSPOSE_WRAPPER_DEFN(kernel_name, aoclfftz_complex_d_t, isa)
 
-TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tiq_iterative, c);
-TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tisq_iterative, c);
-TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tiq_recursive_buf, c);
-TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tir_cycles, c);
-TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tisr_cycles, c);
-TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tos_iterative, c);
-TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tos_blocked, c);
+TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tiq_iterative, c)
+TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tisq_iterative, c)
+TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tiq_recursive_buf, c)
+TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tir_cycles, c)
+TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tisr_cycles, c)
+TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tos_iterative, c)
+TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tos_blocked, c)
+
+// for the gtests, we want to use the in-memory twiddle factors
+// so we define IN_MEMORY_TWIDDLE_FACTORS to 1 if not explicitly set/defined
+#if !defined(IN_MEMORY_TWIDDLE_FACTORS)
+    #define IN_MEMORY_TWIDDLE_FACTORS 1
+#elif IN_MEMORY_TWIDDLE_FACTORS == 0
+    #undef IN_MEMORY_TWIDDLE_FACTORS
+    #define IN_MEMORY_TWIDDLE_FACTORS 1
+#endif
+
+// twiddle buffer setup wrappers
+EXPORT_SYM_DYN VOID compute_twiddle_buffer_float_wrapper(VOID *twiddle_buffer,
+                                                       INTP r, INTP m)
+{
+    compute_twiddle_buffer(twiddle_buffer, r, m, DT_FLOAT);
+}
+
+EXPORT_SYM_DYN VOID compute_twiddle_buffer_double_wrapper(VOID *twiddle_buffer,
+                                                        INTP r, INTP m)
+{
+    compute_twiddle_buffer(twiddle_buffer, r, m, DT_DOUBLE);
+}

@@ -576,6 +576,7 @@ class AoclfftzSelectorTestBase
                     return false;
                 }
                 ret &= ((next_sol->solver->solver_type == SOLVER_CT) ||
+                        (next_sol->solver->solver_type == SOLVER_CT_TWIDDLE) ||
                         (next_sol->solver->solver_type == SOLVER_BLUESTEIN) ||
                         (next_sol->solver->solver_type == SOLVER_NDIM) ||
                         (next_sol->solver->solver_type == SOLVER_SIZEONE) ||
@@ -590,7 +591,8 @@ class AoclfftzSelectorTestBase
                 }
                 cur_a = next_sol;
             }
-            else if (cur_a->solver->solver_type == SOLVER_CT)
+            else if (cur_a->solver->solver_type == SOLVER_CT ||
+                     cur_a->solver->solver_type == SOLVER_CT_TWIDDLE)
             {
                 aoclfftz_solution_t *sol_r = cur_a->next_sol[0];
                 if (sol_r == NULL)
@@ -1013,6 +1015,9 @@ class AoclfftzSelectorTestBase
                     break;
                 case SOLVER_CT:
                     ret &= (cur_sol->solver->solver_type == SOLVER_CT);
+                    break;
+                case SOLVER_CT_TWIDDLE:
+                    ret &= (cur_sol->solver->solver_type == SOLVER_CT_TWIDDLE);
                     break;
                 case SOLVER_BLUESTEIN:
                     ret &= (cur_sol->solver->solver_type == SOLVER_BLUESTEIN);

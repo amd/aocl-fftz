@@ -588,7 +588,7 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t* sel)
     }
     else
     {
-        solver_obj->solver_type = SOLVER_CT;
+        solver_obj->solver_type = SOLVER_CT_TWIDDLE;
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
             return SELECTOR_FAILURE;
@@ -1259,7 +1259,8 @@ VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
         }
         while (curr != NULL)
         {
-            if (curr->solver->solver_type == SOLVER_CT)
+            if (curr->solver->solver_type == SOLVER_CT ||
+                curr->solver->solver_type == SOLVER_CT_TWIDDLE)
             {
                 INTP r = curr->next_sol[0]->decomp_scheme->dims[0].n;
                 INTP m = curr->next_sol[0]->next_sol[0]->decomp_scheme->dims[0].n;

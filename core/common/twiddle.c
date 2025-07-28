@@ -1058,9 +1058,20 @@ VOID compute_twiddle_buffer_float(VOID *twiddle_buffer, INTP r, INTP m)
     INTP c_stride = 1 * DATA_STRIDE;
     INTP r_stride = m * DATA_STRIDE;
 
+    for (INTP i = 0; i < r; ++i)
+    {
+        twiddle_buffer_real[LINEAR_IDX_2D(i, 0, c_stride, r_stride)] = 1.0f;
+        twiddle_buffer_imag[LINEAR_IDX_2D(i, 0, c_stride, r_stride)] = 0.0f;
+    }
+    for (INTP j = 1; j < m; ++j)
+    {
+        twiddle_buffer_real[LINEAR_IDX_2D(0, j, c_stride, r_stride)] = 1.0f;
+        twiddle_buffer_imag[LINEAR_IDX_2D(0, j, c_stride, r_stride)] = 0.0f;
+    }
+
     for (INTP i = 1; i < r; ++i)
     {
-        for (INTP j = i; j < m; ++j)
+        for (INTP j = 1; j < m; ++j)
         {
             FLOAT angle = angle_base * i * j;
             FLOAT sin_val = sinf(angle);
@@ -1069,24 +1080,6 @@ VOID compute_twiddle_buffer_float(VOID *twiddle_buffer, INTP r, INTP m)
                 cos_val;
             twiddle_buffer_imag[LINEAR_IDX_2D(i, j, c_stride, r_stride)] =
                 sin_val;
-
-            // The value in the twiddle buffer at location [i, j] is dependent
-            // on the product `i x j`. Therefore the point [j, i] also contains
-            // the same value as the point [i, j].
-            //
-            // The twiddle buffer is rectangular in shape (`r x m`).
-            // Therefore, not every point [i, j] has a corresponding point
-            // [j, i] in the buffer. So if and only if there is a corresponding
-            // [j, i] for the current [i, j], we initialize its value in the
-            // same iteration.
-
-            if (i < m && j < r)
-            {
-                twiddle_buffer_real[LINEAR_IDX_2D(j, i, c_stride, r_stride)]
-                    = cos_val;
-                twiddle_buffer_imag[LINEAR_IDX_2D(j, i, c_stride, r_stride)]
-                    = sin_val;
-            }
         }
     }
 }
@@ -1101,9 +1094,20 @@ VOID compute_twiddle_buffer_double(VOID *twiddle_buffer, INTP r, INTP m)
     INTP c_stride = 1 * DATA_STRIDE;
     INTP r_stride = m * DATA_STRIDE;
 
+    for (INTP i = 0; i < r; ++i)
+    {
+        twiddle_buffer_real[LINEAR_IDX_2D(i, 0, c_stride, r_stride)] = 1.0;
+        twiddle_buffer_imag[LINEAR_IDX_2D(i, 0, c_stride, r_stride)] = 0.0;
+    }
+    for (INTP j = 1; j < m; ++j)
+    {
+        twiddle_buffer_real[LINEAR_IDX_2D(0, j, c_stride, r_stride)] = 1.0;
+        twiddle_buffer_imag[LINEAR_IDX_2D(0, j, c_stride, r_stride)] = 0.0;
+    }
+
     for (INTP i = 1; i < r; ++i)
     {
-        for (INTP j = i; j < m; ++j)
+        for (INTP j = 1; j < m; ++j)
         {
             DOUBLE angle = angle_base * i * j;
             DOUBLE sin_val = sin(angle);
@@ -1112,24 +1116,6 @@ VOID compute_twiddle_buffer_double(VOID *twiddle_buffer, INTP r, INTP m)
                 cos_val;
             twiddle_buffer_imag[LINEAR_IDX_2D(i, j, c_stride, r_stride)] =
                 sin_val;
-
-            // The value in the twiddle buffer at location [i, j] is dependent
-            // on the product `i x j`. Therefore the point [j, i] also contains
-            // the same value as the point [i, j].
-            //
-            // The twiddle buffer is rectangular in shape (`r x m`).
-            // Therefore, not every point [i, j] has a corresponding point
-            // [j, i] in the buffer. So if and only if there is a corresponding
-            // [j, i] for the current [i, j], we initialize its value in the
-            // same iteration.
-
-            if (i < m && j < r)
-            {
-                twiddle_buffer_real[LINEAR_IDX_2D(j, i, c_stride, r_stride)]
-                    = cos_val;
-                twiddle_buffer_imag[LINEAR_IDX_2D(j, i, c_stride, r_stride)]
-                    = sin_val;
-            }
         }
     }
 }

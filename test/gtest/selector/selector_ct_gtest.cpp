@@ -67,22 +67,22 @@ INT32 opt_levels[] =
 
 TEST_P(AoclfftzSelectorTestFloatLP64, TEST_SELECTOR_CT_FLOAT_LP64)
 {
-    run_selector_test_and_verify_solutions(SOLVER_CT);
+    run_selector_test_and_verify_solutions(SOLVER_CT_TWIDDLE);
 }
 
 TEST_P(AoclfftzSelectorTestDoubleLP64, TEST_SELECTOR_CT_DOUBLE_LP64)
 {
-    run_selector_test_and_verify_solutions(SOLVER_CT);
+    run_selector_test_and_verify_solutions(SOLVER_CT_TWIDDLE);
 }
 
 TEST_P(AoclfftzSelectorTestFloatILP64, TEST_SELECTOR_CT_FLOAT_ILP64)
 {
-    run_selector_test_and_verify_solutions(SOLVER_CT);
+    run_selector_test_and_verify_solutions(SOLVER_CT_TWIDDLE);
 }
 
 TEST_P(AoclfftzSelectorTestDoubleILP64, TEST_SELECTOR_CT_DOUBLE_ILP64)
 {
-    run_selector_test_and_verify_solutions(SOLVER_CT);
+    run_selector_test_and_verify_solutions(SOLVER_CT_TWIDDLE);
 }
 
 INSTANTIATE_TEST_SUITE_P(

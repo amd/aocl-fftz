@@ -34,6 +34,7 @@
  * for running kernel unit tests using GTest.
  *
  * @author Srirammaswamy Srinivasan
+ * @author Ashwin K. Godbole
  *
  */
 
@@ -43,6 +44,7 @@
 #include <gtest/gtest.h>
 #include <math.h>
 #include <utility>
+
 extern "C"
 {
 #include "core/common/strides.h"
@@ -98,6 +100,232 @@ class AoclfftzKernelTestBase
                            .count()) %
                       UINT32_MAX;
         srand(random_seed);
+    }
+
+    /**
+     * @brief A high level function to run the twiddle kernel tests based on the
+     * given test parameter (aoclfftz_kernel_test_params_t)
+     *
+     * @param special if true, special values like NaN, infinity and
+     * sub-normals values will be used in input data (default: false)
+     *
+     */
+    VOID run_twiddle_kernel_test()
+    {
+        auto param      = std::get<0>(GetParam());
+        auto io_param   = std::get<1>(GetParam());
+        in_stride       = std::get<0>(io_param);
+        out_stride      = std::get<1>(io_param);
+        offset          = std::get<2>(io_param);
+        is_bwd          = std::get<3>(io_param);
+        is_out_of_place = std::get<4>(io_param);
+        radix           = std::get<0>(param);
+        kernel_type     = std::get<1>(param);
+        UINT8 test_type = std::get<2>(param);
+
+        // to prevent the "goto jumps over variable initialization" issue
+        kfft_ tw_kernel = nullptr;
+        wrapper_kernel_fp_list *table = nullptr;
+        fft_kernel = nullptr;
+        T *k_in = nullptr;
+        T *twk_in = nullptr;
+        T *k_out = nullptr;
+        T *twk_out = nullptr;
+        VOID *twiddle_buffer = nullptr;
+        aoclfftz_strides_t k_stride;
+        k_stride.in_strides = nullptr;
+        k_stride.out_strides = nullptr;
+        INT32 error = 0;
+        T *k_in_r = nullptr;
+        T *k_in_i = nullptr;
+        T *k_out_r = nullptr;
+        T *k_out_i = nullptr;
+        T *twk_in_r = nullptr;
+        T *twk_in_i = nullptr;
+        T *twk_out_r = nullptr;
+        T *twk_out_i = nullptr;
+        T* twiddle_ptr = nullptr;
+
+        bool use_input_params = !is_out_of_place;
+        INT32 _stride = use_input_params ? in_stride : out_stride;
+        _stride *= data_stride;
+        INTP _length = output_length * data_stride;
+        INTP reg = 0;
+        INTP twk = 0;
+        aocl_fftz_test_input input_type = aocl_fftz_test_input::RANDOM;
+
+        if (test_type != aoclfftz_kernel_test_type::ALL)
+        {
+            GTEST_LOG_(WARNING) << "Twiddle kernels have only one test type, "
+                                   "using test_type = ALL by default.";
+        }
+
+        if (kernel_type < aocl_fftz_kernel_type::STANDARD_C2C_TWID_C ||
+            kernel_type > aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX512)
+        {
+            GTEST_NONFATAL_FAILURE_("Given kernel is not a twiddle kernel.");
+            return;
+        }
+
+        tw_kernel = get_twiddle_kernel<T>(radix, is_bwd, kernel_type);
+        if (tw_kernel == nullptr)
+        {
+            GTEST_NONFATAL_FAILURE_(std::string("Twiddle kernel for radix " +
+                                                std::to_string(radix) +
+                                                " not found.")
+                                        .c_str());
+            goto cleanup;
+        }
+
+        table = get_kernel_table(aocl_fftz_kernel_type::STANDARD_C2C_C);
+
+        if (table == nullptr)
+        {
+            GTEST_NONFATAL_FAILURE_("Kernel table of C2C kernels is empty.");
+            goto cleanup;
+        }
+
+        fft_kernel = get_kernel<T>(table, is_bwd, radix);
+        if (fft_kernel == nullptr)
+        {
+            GTEST_NONFATAL_FAILURE_(std::string("C2C kernel for radix " +
+                                                std::to_string(radix) +
+                                                " not found.")
+                                        .c_str());
+            goto cleanup;
+        }
+
+        length = radix * offset; // offset is actually the number of sets
+        input_length  = length * in_stride;
+        output_length = length * out_stride;
+        in_stride_w_ds  = in_stride * data_stride;
+        out_stride_w_ds = out_stride * data_stride;
+
+        k_in = prepare_input(input_type); // the input to the regular kernel
+        if (k_in == nullptr)
+        {
+            goto cleanup;
+        }
+
+        twk_in = nullptr; // the input to the twiddle kernel
+        ALLOC_ALIGN_UNINIT(twk_in, T, sizeof(T) * input_length * data_stride);
+        if (twk_in == nullptr)
+        {
+            goto cleanup;
+        }
+
+        // copy the regular kernel's input to the twiddle kernel's input
+        memcpy(twk_in, k_in, input_length * data_stride * sizeof(T));
+
+        k_out = nullptr; // the output of the regular kernel
+        twk_out = nullptr; // the output of the twiddle kernel
+
+        if (is_out_of_place)
+        {
+            ALLOC_ALIGN_UNINIT(k_out, T,
+                               sizeof(T) * output_length * data_stride);
+            ALLOC_ALIGN_UNINIT(twk_out, T,
+                               sizeof(T) * output_length * data_stride);
+
+            if (k_out == nullptr || twk_out == nullptr)
+            {
+                goto cleanup;
+            }
+        }
+        else
+        {
+            k_out = k_in;
+            twk_out = twk_in;
+        }
+
+        // prepare the strides for the regular kernel
+        ALLOC_ALIGN_UNINIT(k_stride.in_strides, INTP, radix * sizeof(INTP));
+        if (k_stride.in_strides == nullptr)
+        {
+            goto cleanup;
+        }
+        populate_stride_array_wrapper(k_stride.in_strides, in_stride_w_ds,
+                                      radix, 0, 0);
+
+        if (is_out_of_place)
+        {
+            ALLOC_ALIGN_UNINIT(k_stride.out_strides, INTP,
+                               radix * sizeof(INTP));
+            if (k_stride.out_strides == nullptr)
+            {
+                goto cleanup;
+            }
+            populate_stride_array_wrapper(k_stride.out_strides, out_stride_w_ds,
+                                          radix, 0, 0);
+        }
+        else
+        {
+            k_stride.out_strides = k_stride.in_strides;
+        }
+
+        k_stride.v_in_stride  = in_stride_w_ds * radix;
+        k_stride.v_out_stride = out_stride_w_ds * radix;
+
+        k_in_r  = (is_bwd) ? (k_in + 1) : (k_in);
+        k_in_i  = (is_bwd) ? (k_in) : (k_in + 1);
+        k_out_r = (is_bwd) ? (k_out + 1) : (k_out);
+        k_out_i = (is_bwd) ? (k_out) : (k_out + 1);
+
+        twk_in_r = (is_bwd) ? (twk_in + 1) : (twk_in);
+        twk_in_i = (is_bwd) ? (twk_in) : (twk_in + 1);
+        twk_out_r = (is_bwd) ? (twk_out + 1) : (twk_out);
+        twk_out_i = (is_bwd) ? (twk_out) : (twk_out + 1);
+
+        // setup the twiddle buffer
+        ALLOC_ALIGN_INIT(twiddle_buffer, VOID,
+                           data_stride * sizeof(T) * offset * radix);
+
+        if (twiddle_buffer == nullptr)
+        {
+            goto cleanup;
+        }
+
+        compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, offset);
+
+        // perform the twiddle multiplication on the kernel's input buffer
+        // this is to simulate the condition where the m (offset) fft has been
+        // performed and the twiddle multiplication followed by the kernel
+        // (radix/r) fft has to be done next.
+        error = gtest_twiddle_multiplier_no_transpose(
+            k_in_r, k_in_i, radix, offset, in_stride_w_ds,
+            k_stride.v_in_stride, twiddle_buffer);
+
+        if (error == 0)
+        {
+            GTEST_NONFATAL_FAILURE_(
+                "Twiddle multiplication (after regular kernel) failed");
+            goto cleanup;
+        }
+
+        // execute the regular kernel
+        fft_kernel(k_in_r, k_in_i, k_out_r, k_out_i, offset, &k_stride, NULL,
+                   is_bwd);
+
+        // execute the twiddle kernel
+        tw_kernel(twk_in_r, twk_in_i, twk_out_r, twk_out_i, offset, &k_stride,
+                  twiddle_buffer, is_bwd);
+
+        EXPECT_TRUE(is_error_safe(k_out, twk_out, output_length * data_stride,
+                                  tolerance, use_input_params))
+            << "Twiddle kernel failed, seed: " << random_seed << "\n";
+
+cleanup:
+        // Free allocated memory
+        FREE_ALIGN_ALLOCATED_MEM(k_in);
+        FREE_ALIGN_ALLOCATED_MEM(twk_in);
+        FREE_ALIGN_ALLOCATED_MEM(k_stride.in_strides);
+        if (is_out_of_place)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(k_out);
+            FREE_ALIGN_ALLOCATED_MEM(twk_out);
+            FREE_ALIGN_ALLOCATED_MEM(k_stride.out_strides);
+        }
+        FREE_ALIGN_ALLOCATED_MEM(twiddle_buffer);
     }
 
     /**
@@ -227,7 +455,10 @@ class AoclfftzKernelTestBase
         for (INTP idx = 0; idx < input_length * data_stride; ++idx)
         {
             // range: [-10.0, 10.0) with 3 decimal precision
-            input[idx] = (T)((rand() % 2000) / 200.0) - 10.0;
+            // generate an integer in the range [0, 19999]
+            // divide it by 1000 to get in the range of [0.000, 19.999]
+            // subtract by 10.0 to get in the range of [-10.000, 9.999]
+            input[idx] = (((T)(rand() % 20000)) / (T)(1000)) - (T)(10);
         }
         return input;
     } // prepare_random_input
@@ -355,6 +586,7 @@ class AoclfftzKernelTestBase
             max_e   = (std::max)(max_e, e);
             max_mag = (std::max)(max_mag, mag);
         }
+
         // FIXME: fix these contraints for tiny values
         // Verify output correctness when the max_e and max_mag values are too
         // small. When max_mag value is too small, dividing with very small
@@ -368,6 +600,81 @@ class AoclfftzKernelTestBase
             return max_e;
         }
         return (max_e / max_mag);
+    }
+
+    /**
+    * @brief Get the relative error of the two complex arrays `a` and `b`
+    *
+    * @param a first data array to compare
+    * @param b second data array to compare
+    * @param use_input_params if true, input-length and input-stride will be
+    * used instead of output-length and output-stride
+    * @return T calculated error value
+    */
+    bool is_error_safe(T *a, T *b, INTP _length, T tolerance,
+                       bool use_input_params = false)
+    {
+        T max_e = 0.0;
+        T max_mag = 0.0;
+        INT32 _stride = use_input_params ? in_stride : out_stride;
+        _stride *= data_stride;
+
+        bool passed_checks = true;
+        // check if there are any NaNs or Infs in the buffers
+        for (INTP idx = 0; idx < _length; idx += _stride)
+        {
+            if (std::isnan(a[idx]) || std::isinf(a[idx]) ||
+                std::isnan(a[idx + 1]) || std::isinf(a[idx + 1]))
+            {
+                GTEST_LOG_(INFO) << "Buffer 'a' has NaN or Inf at idx " << idx
+                                 << " or " << idx + 1 << std::endl;
+                passed_checks = false;
+            }
+            if (std::isnan(b[idx]) || std::isinf(b[idx]) ||
+                std::isnan(b[idx + 1]) || std::isinf(b[idx + 1]))
+            {
+                GTEST_LOG_(INFO) << "Buffer 'b' has NaN or Inf at idx " << idx
+                                 << " or " << idx + 1 << std::endl;
+                passed_checks = false;
+            }
+        }
+
+        if (!passed_checks)
+        {
+            // dump the buffers one by one to stderr
+            for (INTP idx = 0; idx < _length; idx += _stride)
+            {
+                GTEST_LOG_(INFO) << a[idx] << ", " << a[idx + 1] << " | "
+                                 << b[idx] << ", " << b[idx + 1];
+            }
+            GTEST_LOG_(INFO) << std::endl << std::endl;
+            return false;
+        }
+
+        for (INTP idx = 0; idx < _length; idx += _stride)
+        {
+            T e;
+            T mag;
+            e = (std::max)(std::abs(a[idx] - b[idx]),
+                           std::abs(a[idx + 1] - b[idx + 1]));
+            mag =
+                (std::min)((std::max)(std::abs(a[idx]), std::abs(a[idx + 1])),
+                           (std::max)(std::abs(b[idx]), std::abs(b[idx + 1])));
+            max_e = (std::max)(max_e, e);
+            max_mag = (std::max)(max_mag, mag);
+        }
+
+        GTEST_LOG_(INFO) << "max error: " << max_e
+                         << " -- acceptable error (relative): "
+                         << tolerance * max_mag;
+
+        // FIXME: if the max_mag is zero, then we need some other metric to
+        // compute the error.
+        if (max_mag == 0.0)
+        {
+            max_mag = 1.0;
+        }
+        return max_e <= tolerance * max_mag;
     }
 
     /**
@@ -881,6 +1188,38 @@ class AoclfftzKernelTestDouble : public AoclfftzKernelTestBase<DOUBLE>
 {
   public:
     AoclfftzKernelTestDouble()
+    {
+        is_complex          = true;
+        data_stride         = 2;
+        tolerance           = TOLERANCE_D;
+        buf_size_multiplier = 1;
+    }
+};
+
+/**
+ * @brief A derived class from AoclfftzTwiddleKernelTestBase for FLOAT type
+ *
+ */
+class AoclfftzTwiddleKernelTestFloat : public AoclfftzKernelTestBase<FLOAT>
+{
+  public:
+    AoclfftzTwiddleKernelTestFloat()
+    {
+        is_complex          = true;
+        data_stride         = 2;
+        tolerance           = TOLERANCE_F;
+        buf_size_multiplier = 1;
+    }
+};
+
+/**
+ * @brief A derived class from AoclfftzTwiddleKernelTestBase for DOUBLE type
+ *
+ */
+class AoclfftzTwiddleKernelTestDouble : public AoclfftzKernelTestBase<DOUBLE>
+{
+  public:
+    AoclfftzTwiddleKernelTestDouble()
     {
         is_complex          = true;
         data_stride         = 2;
