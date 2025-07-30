@@ -1270,6 +1270,7 @@ VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
                     curr->next_sol[0]->twiddle->twiddle_buf_ptr = TW;
                 }
             }
+            // Process N-D solution after the current solution
             if (curr->solver->solver_type == SOLVER_NDIM)
             {
                 nd_sol = curr->dft_bufs->nd_sol;
