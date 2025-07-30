@@ -625,7 +625,9 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     INT32 is_FFT_ker_supported =
             check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n,
                                      kertab);
-    INT32 is_solvable_by_bluestein = 0;
+    INT32 is_solvable_by_bluestein =
+            check_prime_solvability_bluestein(sel->solution->decomp_scheme,
+                                              is_FFT_ker_supported, kertab);
     INT32 level1_cond1 = 0;
     INT32 level1_cond2 = 0;
     INT32 level2_cond = 0;

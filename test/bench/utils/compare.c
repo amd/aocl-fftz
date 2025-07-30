@@ -38,20 +38,28 @@
 
 #include "test/bench/utils/compare.h"
 #include "test/bench/utils/bench_utils.h"
+#include <stdio.h>
 /**
  * @brief Compare the two data of length n (FLOAT type)
  *        Used to compare output with reference output.
  *
- * @param params aoclfftz_bench_params_t struct containing the req info
- * @param a first data
- * @param b second data
- * @param batches batch/vec size
- * @param n problem size
- * @param idx_map index map
- * @return INT32 if the data points are same, return 1 else 0
+ *        This function is used to compare the output of the FFT implementation
+ *        against a reference output. It checks each element of the two arrays
+ *        (optionally using index maps for strided or permuted access) and
+ *        reports if any element differs by more than the allowed tolerance.
+ *
+ * @param params   Pointer to aoclfftz_bench_params_t containing test configuration and tolerance.
+ * @param a        Pointer to the first data array (FLOAT type).
+ * @param b        Pointer to the second data array (FLOAT type).
+ * @param batches  Number of batches (or vectors) to compare.
+ * @param n        Number of elements per batch.
+ * @param a_map    Optional index map for the first array (NULL for linear access).
+ * @param b_map    Optional index map for the second array (NULL for linear access).
+ * @param data_stride Stride between elements in the data arrays.
+ * @return         BENCH_SUCCESS (0) if all data points match within tolerance, or an error code.
  */
 INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *idx_map, INT32 data_stride)
+                INTP n, INTP *a_map, INTP *b_map, INT32 data_stride)
 {
     DOUBLE tol = params->tolerance;
     INT32 logger_mode = params->logger_mode;
@@ -93,21 +101,22 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     INTP N = batches * n;
     for (INTP i = 0; i < N * data_stride; i++)
     {
-        INTP idx = idx_map[i / data_stride];
+        INTP idx_a = a_map ? a_map[i / data_stride] : i / data_stride;
+        INTP idx_b = b_map ? b_map[i / data_stride] : i / data_stride;
         FLOAT abs_err =
-            fabsf(a_f[idx * data_stride + (i % data_stride)] -
-                 b_f[idx * data_stride + (i % data_stride)]);
-        FLOAT mag = fminf((fabsf(a_f[idx * data_stride + (i % data_stride)])),
-                          (fabsf(b_f[idx * data_stride + (i % data_stride)])));
+            fabsf(a_f[idx_a * data_stride + (i % data_stride)] -
+                 b_f[idx_b * data_stride + (i % data_stride)]);
+        FLOAT mag = fminf((fabsf(a_f[idx_a * data_stride + (i % data_stride)])),
+                          (fabsf(b_f[idx_b * data_stride + (i % data_stride)])));
         if (abs_err > max_abs_err)
         {
-            max_err_idx = idx;
+            max_err_idx = idx_b;
             max_abs_err = abs_err;
             COPY_ND_COORDS(d_maxerr_coords, dim_counter, dim_rank);
             COPY_ND_COORDS(b_maxerr_coords, vec_counter, vec_rank);
-            if (idx < first_err_idx && abs_err > tol)
+            if (idx_b < first_err_idx && abs_err > tol)
             {
-                first_err_idx = idx;
+                first_err_idx = idx_b;
                 first_abs_err = abs_err;
                 COPY_ND_COORDS(d_err_coords, dim_counter, dim_rank);
                 COPY_ND_COORDS(b_err_coords, vec_counter, vec_rank);
@@ -155,20 +164,20 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             PRINT_ND_COUNTER(d_err_coords, b_err_coords, dim_rank,
                              vec_rank);
             printf("\n  expected = %.6g + %.6gj\n",
-                   b_f[first_err_idx * data_stride],
-                   b_f[first_err_idx * data_stride  + 1]);
-            printf("  got      = %.6g + %.6gj\n",
                    a_f[first_err_idx * data_stride],
                    a_f[first_err_idx * data_stride  + 1]);
+            printf("  got      = %.6g + %.6gj\n",
+                   b_f[first_err_idx * data_stride],
+                   b_f[first_err_idx * data_stride  + 1]);
         }
         printf("  max abs error = %.6g\n", first_abs_err);
         printf("Max absolute error at index %td -> ", max_err_idx);
         PRINT_ND_COUNTER(d_maxerr_coords, b_maxerr_coords, dim_rank, vec_rank);
         printf("\n  expected = %.6g + %.6gj\n",
-               b_f[max_err_idx * data_stride],
-               b_f[max_err_idx * data_stride  + 1]);
-        printf("  got      = %.6g + %.6gj\n", a_f[max_err_idx * data_stride],
+               a_f[max_err_idx * data_stride],
                a_f[max_err_idx * data_stride  + 1]);
+        printf("  got      = %.6g + %.6gj\n", b_f[max_err_idx * data_stride],
+               b_f[max_err_idx * data_stride  + 1]);
         printf("  max abs error = %.6g\n", max_abs_err);
         if (logger_mode >= DEBUG)
         {
@@ -185,7 +194,7 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             }
             for (INTP i = 0, c = 100; i < N && c > 0; i++, c--)
             {
-                INTP idx = idx_map[i];
+                INTP idx = b_map ? b_map[i] : i;
                 printf("%7td -> ", idx);
                 PRINT_ND_COUNTER(dim_counter, vec_counter, dim_rank, vec_rank);
                 if (data_stride == 1)
@@ -222,7 +231,7 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             }
             for (INTP i = 0; i < N; i++)
             {
-                INTP idx = idx_map[i];
+                INTP idx = b_map ? b_map[i] : i;
                 fprintf(out_file, "%7td -> ", idx);
                 PRINT_ND_COUNTER_TO_FILE(out_file, dim_counter, vec_counter,
                                          dim_rank, vec_rank);
@@ -277,16 +286,21 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
  * @brief Compare the two data of length n (DOUBLE type)
  *        Used to compare output with reference output.
  *
- * @param params aoclfftz_bench_params_t struct containing the req info
- * @param a first data
- * @param b second data
- * @param batches batch/vec size
- * @param n problem size
- * @param idx_map index map
- * @return INT32 if the data points are same, return 1 else 0
+ * This function is typically used to compare the output of a computation with a reference output.
+ * It supports optional index mapping for strided or non-contiguous data layouts.
+ *
+ * @param params Pointer to aoclfftz_bench_params_t containing test configuration and tolerance.
+ * @param a Pointer to the first data buffer.
+ * @param b Pointer to the second data buffer.
+ * @param batches Number of batches (vector size).
+ * @param n Number of elements per batch (problem size).
+ * @param a_map Optional index map for buffer a (NULL for linear access).
+ * @param b_map Optional index map for buffer b (NULL for linear access).
+ * @param data_stride Stride between elements (1 for real, 2 for complex).
+ * @return INT32 BENCH_SUCCESS if all data points match within tolerance, VERIFICATION_FAILURE otherwise.
  */
 INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *idx_map, INT32 data_stride)
+                INTP n, INTP *a_map, INTP *b_map, INT32 data_stride)
 {
     DOUBLE tol = params->tolerance;
     INT32 logger_mode = params->logger_mode;
@@ -320,20 +334,21 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     INTP N = batches * n;
     for (INTP i = 0; i < N * data_stride; i++)
     {
-        INTP idx = idx_map[i / data_stride];
-        DOUBLE abs_err = fabs(a_d[idx * data_stride + (i % data_stride)] -
-                              b_d[idx * data_stride + (i % data_stride)]);
-        DOUBLE mag = fmin((fabs(a_d[idx * data_stride + (i % data_stride)])),
-                          (fabs(b_d[idx * data_stride + (i % data_stride)])));
+        INTP idx_a = a_map ? a_map[i / data_stride] : i / data_stride;
+        INTP idx_b = b_map ? b_map[i / data_stride] : i / data_stride;
+        DOUBLE abs_err = fabs(a_d[idx_a * data_stride + (i % data_stride)] -
+                              b_d[idx_b * data_stride + (i % data_stride)]);
+        DOUBLE mag = fmin((fabs(a_d[idx_a * data_stride + (i % data_stride)])),
+                          (fabs(b_d[idx_b * data_stride + (i % data_stride)])));
         if (abs_err > max_abs_err)
         {
-            max_err_idx = idx;
+            max_err_idx = idx_b;
             max_abs_err = abs_err;
             COPY_ND_COORDS(d_maxerr_coords, dim_counter, dim_rank);
             COPY_ND_COORDS(b_maxerr_coords, vec_counter, vec_rank);
-            if (idx < first_err_idx && abs_err > tol)
+            if (idx_b < first_err_idx && abs_err > tol)
             {
-                first_err_idx = idx;
+                first_err_idx = idx_b;
                 first_abs_err = abs_err;
                 COPY_ND_COORDS(d_err_coords, dim_counter, dim_rank);
                 COPY_ND_COORDS(b_err_coords, vec_counter, vec_rank);
@@ -380,15 +395,16 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             PRINT_ND_COUNTER(d_err_coords, b_err_coords, dim_rank,
                              vec_rank);
             printf("\n  expected = %.6g + %.6gj\n",
-                   b_d[first_err_idx * data_stride],
-                   b_d[first_err_idx * data_stride + 1]);
-            printf("  got      = %.6g + %.6gj\n",
                    a_d[first_err_idx * data_stride],
                    a_d[first_err_idx * data_stride + 1]);
+            printf("  got      = %.6g + %.6gj\n",
+                   b_d[first_err_idx * data_stride],
+                   b_d[first_err_idx * data_stride + 1]);
         }
         printf("  max abs error = %.6g\n", first_abs_err);
         printf("Max absolute error at index %td -> ", max_err_idx);
         PRINT_ND_COUNTER(d_maxerr_coords, b_maxerr_coords, dim_rank, vec_rank);
+        fflush(stdout);
         printf("\n  expected = %.6g + %.6gj\n",
                a_d[max_err_idx * data_stride],
                a_d[max_err_idx * data_stride + 1]);
@@ -411,7 +427,7 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             }
             for (INTP i = 0, c = 100; i < N && c > 0; i++, c--)
             {
-                INTP idx = idx_map[i];
+                INTP idx = b_map ? b_map[i] : i;
                 // vecs
                 printf("%7td -> ", idx);
                 PRINT_ND_COUNTER(dim_counter, vec_counter, dim_rank, vec_rank);
@@ -450,7 +466,7 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             }
             for (INTP i = 0; i < N; i++)
             {
-                INTP idx = idx_map[i];
+                INTP idx = b_map ? b_map[i] : i;
                 fprintf(out_file, "%7td -> ", idx);
                 PRINT_ND_COUNTER_TO_FILE(out_file, dim_counter, vec_counter,
                                          dim_rank, vec_rank);

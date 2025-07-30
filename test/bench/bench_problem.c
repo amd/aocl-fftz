@@ -39,6 +39,7 @@
  */
 
 #include "test/bench/bench_problem.h"
+#include "test/bench/aoclfftz_bench.h"
 
 /**
  * @brief init bench params with default values
@@ -93,8 +94,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     UCHAR use_cust_tolerance = 0;
     // setting the data strides based on complex type and will be modified
     // later for real problems
-    bench_params->in_data_stride = 2;
-    bench_params->out_data_stride = 2;
+    bench_params->sz_info.in_data_stride = 2;
+    bench_params->sz_info.out_data_stride = 2;
 
     INT32 status = PARSER_SUCCESS;
     INT32 ret = PARSER_SUCCESS;
@@ -424,19 +425,12 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         printf("ERROR: ND batched real problems are not supported");
         status = MAX(status, UNSUPPORTED_OPTION_ERROR);
     }
-    // else if (bench_params->fft_type != C2C &&
-    //          bench_params->res_placement == IN_PLACE)
-    // {
-    //     // FIXME: In-place problems are not supported due to the default stride
-    //     // changes
-    //     printf("ERROR: In-place result placement is not supported for real "
-    //            "problems\n");
-    //     status = MAX(status, UNSUPPORTED_OPTION_ERROR);
-    // }
+
     if (status != PARSER_SUCCESS)
     {
         return status;
     }
+
     if (valid_iters_arg_found == 0)
     {
         if (bench_params->bench_type == ACCURACY)
@@ -462,37 +456,31 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         bench_params->num_iterations = 1;
     }
 
-    // NOTE: 'c2r' mode is internally converted to 'r2c' mode
-    // i.e. c2r forward  -> r2c backward
-    //      c2r backward -> r2c forward
-    if (bench_params->fft_type == C2R)
+    // NOTE: 'r2c/c2r backward' modes are internally converted to 'c2r/r2c
+    // forward' modes
+    // i.e. r2c backward  -> c2r forward or just 'c2r'
+    //      c2r backward  -> r2c forward or just 'r2c'
+    if (bench_params->fft_type == R2C && bench_params->dir == BACKWARD)
+    {
+        bench_params->fft_type = C2R;
+        bench_params->dir = FORWARD;
+    }
+    else if (bench_params->fft_type == C2R && bench_params->dir == BACKWARD)
     {
         bench_params->fft_type = R2C;
-        if (bench_params->dir == FORWARD)
-        {
-            printf("NOTE: 'c2r forward' maps to 'r2c backward'\n");
-            bench_params->dir = BACKWARD;
-        }
-        else
-        {
-            printf("NOTE: 'c2r backward' maps to 'r2c forward'\n");
-            bench_params->dir = FORWARD;
-        }
+        bench_params->dir = FORWARD;
     }
 
     // set the data strides for an 'r2c' problem
     if (bench_params->fft_type == R2C)
     {
-        if (bench_params->dir == FORWARD)
-        {
-            bench_params->in_data_stride = 1;
-            bench_params->out_data_stride = 2;
-        }
-        else
-        {
-            bench_params->in_data_stride = 2;
-            bench_params->out_data_stride = 1;
-        }
+        bench_params->sz_info.in_data_stride = 1;
+        bench_params->sz_info.out_data_stride = 2;
+    }
+    else if (bench_params->fft_type == C2R)
+    {
+        bench_params->sz_info.in_data_stride = 2;
+        bench_params->sz_info.out_data_stride = 1;
     }
 
     // change the min_bench_time unit from ms to ns
@@ -509,32 +497,37 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         }
     }
 
-    aoclfftz_bench_fft_type_t fft_type = bench_params->fft_type;
-    if (bench_params->fft_type == R2C && bench_params->dir == BACKWARD)
-    {
-        fft_type = C2R;
-    }
     // set default dims & vecs values
     set_default_dims_vecs(bench_params->dim_rank, bench_params->vec_rank,
-                          bench_params->dims, bench_params->vecs, fft_type,
+                          bench_params->dims, bench_params->vecs,
+                          bench_params->fft_type,
                           bench_params->res_placement == IN_PLACE,
                           bench_params->logger_mode);
 
-    // create input and output buffers
-    INT32 dt_bytes =
+    bench_params->sz_info.dt_bytes =
         (bench_params->precision == FLOAT_P) ? sizeof(FLOAT) : sizeof(DOUBLE);
 
+    // get size info
     UINTP in_buffer_size = 0;
     UINTP out_buffer_size = 0;
-    UINT32 is_align = bench_params->aligned_alloc;
     calculate_buffer_sizes(bench_params->dim_rank, bench_params->vec_rank,
                            bench_params->dims, bench_params->vecs,
                            &in_buffer_size, &out_buffer_size);
-    UINTP input_bytes =
-        dt_bytes * in_buffer_size * bench_params->in_data_stride;
-    UINTP output_bytes =
-        dt_bytes * out_buffer_size * bench_params->out_data_stride;
+    bench_params->sz_info.input_size = in_buffer_size;
+    bench_params->sz_info.output_size = out_buffer_size;
 
+    bench_params->sz_info.input_bytes = in_buffer_size *
+                                        bench_params->sz_info.in_data_stride *
+                                        bench_params->sz_info.dt_bytes;
+    bench_params->sz_info.output_bytes = out_buffer_size *
+                                         bench_params->sz_info.out_data_stride *
+                                         bench_params->sz_info.dt_bytes;
+
+    // create input and output buffers
+    UINT32 is_align = bench_params->aligned_alloc;
+    INTP input_bytes = bench_params->sz_info.input_bytes;
+    INTP output_bytes = bench_params->sz_info.output_bytes;
+    // TODO: Check and remove this MAX logic if possible
     // In an R2C problem, input will have N real points and output will have N
     // complex points.
     // For in-place R2C problem, since the same buffer will be used for input
@@ -906,6 +899,7 @@ INT32 get_option(CHAR **argv, INT32 arg_idx)
         return 308;
     }
 }
+
 /**
  * @brief set the flag value based on bench params
  *
@@ -917,35 +911,41 @@ UINT32 set_flag(aoclfftz_bench_params_t *params)
     UINT32 flag = 0;
     if (params->res_placement == IN_PLACE)
     {
-        flag = flag | (0 << 0);
+        flag &= ~(1 << 0); // set 0th bit to 0
     }
     else
     {
-        flag = flag | (1 << 0);
+        flag |= (1 << 0);  // set 0th bit to 1
     }
     if (params->order == IN_ORDER)
     {
-        flag = flag | (0 << 1);
+        flag &= ~(1 << 1); // set 1st bit to 0
     }
     else
     {
-        flag = flag | (1 << 1);
-    }
-    if (params->dir == FORWARD)
-    {
-        flag = flag | (0 << 2);
-    }
-    else
-    {
-        flag = flag | (1 << 2);
+        flag |= (1 << 1);  // set 1st bit to 1
     }
     if (params->fft_type == C2C)
     {
-        flag = flag | (0 << 3);
+        flag &= ~(1 << 3); // set 3rd bit to 0
+        if (params->dir == FORWARD)
+        {
+            flag &= ~(1 << 2); // set 2nd bit to 0
+        }
+        else
+        {
+            flag |= (1 << 2);  // set 2nd bit to 1
+        }
     }
-    else
+    else if (params->fft_type == R2C)
     {
-        flag = flag | (1 << 3);
+        flag &= ~(1 << 2); // set 2nd bit to 0
+        flag |= (1 << 3);  // set 3rd bit to 1
+    }
+    else // C2R
+    {
+        flag |= (1 << 2);  // set 2nd bit to 1
+        flag |= (1 << 3);  // set 3rd bit to 1
     }
     return flag;
 }

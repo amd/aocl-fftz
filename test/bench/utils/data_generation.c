@@ -102,7 +102,7 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
     else if (input_type == SINUSOIDAL_SIGNAL_INPUT)
     {
         // Sine wave cycles
-        INTP half_size = n >=2 ? (n / 2) : 1;
+        INTP half_size = n >= 2 ? (n / 2) : 1;
         INTP cycles = (rand() % half_size) + 2;
         FLOAT size = BENCH_2_PI * cycles;
         // Shift the origin of the wave from 0 to a positive integer `shift`,
@@ -160,8 +160,9 @@ VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
         {
             for (idx = 0; idx < n * data_stride; ++idx)
             {
-                input_d[idx_map[idx / data_stride] * data_stride
-                    + (idx % data_stride)] = (20.0 / RAND_MAX) * rand() - 10.0;
+                input_d[idx_map[idx / data_stride] * data_stride +
+                        (idx % data_stride)] =
+                    (20.0 / RAND_MAX) * rand() - 10.0;
             }
         }
     }
@@ -188,7 +189,7 @@ VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
     else if (input_type == SINUSOIDAL_SIGNAL_INPUT)
     {
         // Sine wave cycles
-        INTP half_size = n >=2 ? (n / 2) : 1;
+        INTP half_size = n >= 2 ? (n / 2) : 1;
         INTP cycles = (rand() % half_size) + 2;
         DOUBLE size = BENCH_2_PI * cycles;
         // Shift the origin of the wave from 0 to a positive integer `shift`,

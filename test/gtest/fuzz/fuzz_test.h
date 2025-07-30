@@ -175,8 +175,8 @@ VOID fuzz_input_buffer_test(const std::string& problem_size)
     INT32 result = run_linearity_test(params, in_idx_map, out_idx_map, handle,
                                          (VOID *)input);
     EXPECT_EQ(result, BENCH_SUCCESS);
-    result = run_impulse_transform_test(params, in_idx_map, out_idx_map,
-                                     handle, (VOID *)input);
+    result = run_impulse_transform_test(params, in_idx_map, out_idx_map, handle,
+                                        (VOID *)input);
     EXPECT_EQ(result, BENCH_SUCCESS);
     result = run_timeshift_test(params, in_idx_map, out_idx_map, handle,
                                  (VOID *)input);
@@ -288,8 +288,8 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
     VOID *handle = params->setup_problem(params);
     if (handle != NULL)
     {
-        INT32 result = run_impulse_transform_test(params, in_idx_map,
-                                        out_idx_map, handle, (VOID *)input);
+        INT32 result = run_impulse_transform_test(
+            params, in_idx_map, out_idx_map, handle, (VOID *)input);
         EXPECT_EQ(result, BENCH_SUCCESS);
     }
     else

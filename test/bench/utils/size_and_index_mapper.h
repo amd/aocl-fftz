@@ -44,27 +44,16 @@
 #include "api/aoclfftz.h"
 #include "test/bench/aoclfftz_bench.h"
 
-/**
- * @brief check whether the dims are currently supported or not
- *
- */
-#define CHECK_SUPPORTED_DIMS(dims, vecs, dim_rank, vec_rank, status)           \
-    {                                                                          \
-        if (vec_rank > 3)                                                      \
-        {                                                                      \
-            status = UNSUPPORTED_SIZE_ERROR;                                   \
-        }                                                                      \
-    }
-
 INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank);
 VOID calculate_buffer_sizes(INT32 dim_rank,  INT32 vec_rank,
                             aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
                             UINTP *in_buffer_size, UINTP *out_buffer_size);
-VOID prepare_index_map(INT32 dim_rank,  INT32 vec_rank,
-                       aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                       INTP *in_idx_map, INTP *out_idx_map, UINT32 is_aligned);
-VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
-                       INTP dst_in_idx, INTP dst_out_idx,
-                       aoclfftz_dim_t_64_ *dims, INT32 rank);
+VOID prepare_index_map(INT32 dim_rank, INT32 vec_rank, aoclfftz_dim_t_64_ *dims,
+                       aoclfftz_dim_t_64_ *vecs, INTP *in_idx_map,
+                       INTP *out_idx_map, aoclfftz_bench_fft_type_t fft_type,
+                       UINT32 is_aligned);
+VOID compute_index_map(INTP *idx_map, INTP *src_idx, INTP dst_idx,
+                       aoclfftz_dim_t_64_ *dims, INT32 rank, UINT8 is_input,
+                       UINT8 is_half_complex);
 
 #endif // SIZE_AND_INDEX_MAPPER_H

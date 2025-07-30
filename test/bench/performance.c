@@ -89,7 +89,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
 
     // prepare random input data
     params->prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT,
-                               params->in_data_stride);
+                               params->sz_info.in_data_stride);
 
     status = aoclfftz_execute(handle);
     if (status != AOCLFFTZ_SUCCESS)

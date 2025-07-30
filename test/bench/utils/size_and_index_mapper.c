@@ -125,9 +125,10 @@ VOID calculate_buffer_sizes(INT32 dim_rank,  INT32 vec_rank,
  * @param out_idx_map buffer to store output index map
  * @return VOID
  */
-VOID prepare_index_map(INT32 dim_rank,  INT32 vec_rank,
-                       aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                       INTP *in_idx_map, INTP *out_idx_map, UINT32 is_aligned)
+VOID prepare_index_map(INT32 dim_rank, INT32 vec_rank, aoclfftz_dim_t_64_ *dims,
+                       aoclfftz_dim_t_64_ *vecs, INTP *in_idx_map,
+                       INTP *out_idx_map, aoclfftz_bench_fft_type_t fft_type,
+                       UINT32 is_aligned)
 {
     // combine dims and vecs
     aoclfftz_dim_t_64_ *combined_dims = NULL;
@@ -137,11 +138,20 @@ VOID prepare_index_map(INT32 dim_rank,  INT32 vec_rank,
     memcpy((combined_dims + dim_rank), vecs,
            (sizeof(aoclfftz_dim_t_64_) * vec_rank));
     INT32 combined_rank = dim_rank + vec_rank;
+
+    UINT8 is_half_complex_input = fft_type == C2R ? 1 : 0;
+    UINT8 is_half_complex_output = fft_type == R2C ? 1 : 0;
+
+    // Compute index map for input
     INTP src_idx = 0;
-    INTP dst_in_idx = 0;
-    INTP dst_out_idx = 0;
-    compute_index_map(in_idx_map, out_idx_map, &src_idx, dst_in_idx,
-                      dst_out_idx, combined_dims, combined_rank);
+    INTP dst_idx = 0;
+    compute_index_map(in_idx_map, &src_idx, dst_idx, combined_dims,
+                      combined_rank, 1 /* input */, is_half_complex_input);
+    // Compute index map for output
+    src_idx = 0;
+    dst_idx = 0;
+    compute_index_map(out_idx_map, &src_idx, dst_idx, combined_dims,
+                      combined_rank, 0 /* output */, is_half_complex_output);
     FREE_ALLOCATED_MEM(combined_dims, is_aligned);
 }
 
@@ -157,27 +167,32 @@ VOID prepare_index_map(INT32 dim_rank,  INT32 vec_rank,
  * @param rank current rank of the nD problem
  * @return VOID
  */
-VOID compute_index_map(INTP *in_idx_map, INTP *out_idx_map, INTP *src_idx,
-                       INTP dst_in_idx, INTP dst_out_idx,
-                       aoclfftz_dim_t_64_ *dims, INT32 rank)
+VOID compute_index_map(INTP *idx_map, INTP *src_idx, INTP dst_idx,
+                       aoclfftz_dim_t_64_ *dims, INT32 rank, UINT8 is_input,
+                       UINT8 is_half_complex)
 {
     if (rank == 0)
     {
-        in_idx_map[*src_idx] = dst_in_idx;
-        out_idx_map[*src_idx] = dst_out_idx;
+        idx_map[*src_idx] = dst_idx;
         (*src_idx)++;
     }
     else
     {
         INTP n = dims[rank - 1].n;
-        INTP in_stride = dims[rank - 1].in_stride;
-        INTP out_stride = dims[rank - 1].out_stride;
+        // TODO: Check and update this logic for Real ND problems
+        // Here rank = 1 represents the innermost dimension of the problem
+        // which should be treated as half-complex for C2R and R2C transforms
+        if (is_half_complex && rank == 1)
+        {
+            n = (n / 2) + 1;
+        }
+        INTP stride =
+            is_input ? dims[rank - 1].in_stride : dims[rank - 1].out_stride;
         for (INTP i = 0; i < n; i++)
         {
-            compute_index_map(in_idx_map, out_idx_map, src_idx, dst_in_idx,
-                              dst_out_idx, dims, rank - 1);
-            dst_in_idx += in_stride;
-            dst_out_idx += out_stride;
+            compute_index_map(idx_map, src_idx, dst_idx, dims, rank - 1,
+                              is_input, is_half_complex);
+            dst_idx += stride;
         }
     }
 }

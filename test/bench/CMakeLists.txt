@@ -130,9 +130,6 @@ set(TEST_SUITE
     "C2R_C_MT_CT_WITH_STRIDE ./aocl_fftz_bench 96:9:9 -f r2c -b a --dir b -r i -n 15"                         # accuracy | real     |  double   | LP64       | 1D  |  yes    | CT          | inplace   | backward | C       | C accuracy
     "R2C_C_MT_BATCHED_CT ./aocl_fftz_bench 4v54 -f r2c -b a --dir f -n 13"                                    # accuracy | real     |  double   | LP64       | 1D  |  no     | CT          | outplace  | forward  | C       | C accuracy
     "C2R_C_MT_BATCHED_CT ./aocl_fftz_bench 15v120 -f r2c -b a --dir b -r i -n 17"                              # accuracy | real     |  double   | LP64       | 1D  |  no     | CT          | inplace   | backward | C       | C accuracy
-
-    # TODO: Real ND backward test cases are not supported due to test bench limitations.
-    #       Fix the test bench and add backward test cases.
     )
 
 list(LENGTH TEST_SUITE N)

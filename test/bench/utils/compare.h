@@ -169,8 +169,8 @@
 
 
 INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *idx_map, INT32 data_stride);
+                INTP n, INTP *a_map, INTP *b_map, INT32 data_stride);
 INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *idx_map, INT32 data_stride);
+                INTP n, INTP *a_map, INTP *b_map, INT32 data_stride);
 
 #endif // COMPARE_H

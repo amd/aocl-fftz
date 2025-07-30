@@ -64,7 +64,7 @@ typedef VOID *(*setup_problem_) (aoclfftz_bench_params_t *params);
 typedef VOID (*prepare_input_data_) (VOID *input, INTP n, INTP *idx_map,
                                      INT32 input_type, INT32 data_stride);
 typedef INT32 (*compare_) (aoclfftz_bench_params_t *params, VOID *a, VOID *b,
-                           INTP batches, INTP n, INTP *idx_map,
+                           INTP batches, INTP n, INTP *a_map, INTP *b_map,
                            INT32 data_stride);
 
 // Enumerators for test bench
@@ -141,10 +141,17 @@ typedef enum
 
 typedef struct aoclfftz_bench_sz_info
 {
-    INTP n;
+    INTP n; // product of all dims->n
+    INTP n_in; // n for C2C problems; n/2+1 on first dim for C2R
+    INTP n_out; // n for C2C problems; n/2+1 on first dim for R2C
     INTP batches;
     UINTP input_size;
     UINTP output_size;
+    UINTP input_bytes;
+    UINTP output_bytes;
+    INT32 in_data_stride; // 1 for C2C, 1 for R2C, 2 for C2R
+    INT32 out_data_stride; // 1 for C2C, 2 for R2C, 1 for C2R
+    INT32 dt_bytes; // sizeof(FLOAT) or sizeof(DOUBLE)
 } aoclfftz_bench_sz_info_t;
 
 // Structures for test bench
@@ -163,8 +170,6 @@ typedef struct aoclfftz_bench_params
     INT32 vec_rank;
     aoclfftz_dim_t_64_ *dims;
     aoclfftz_dim_t_64_ *vecs;
-    INT32 in_data_stride;
-    INT32 out_data_stride;
     INT32 num_iterations;
     INT32 seed;
     UCHAR use_random_seed;
