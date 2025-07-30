@@ -23,7 +23,7 @@ Building on Linux
    Additional options that can be specified for build configuration are:
    ```
    cmake -B <build directory> <CMakeLists.txt filepath>
-   -DAOCL_TEST_COVERAGE=<ON or OFF>
+   -DAOCL_TEST_COVERAGE=<OFF/STANDARD/STANDARD+DFT_REF/EXHAUSTIVE>
    -DCMAKE_INSTALL_PREFIX=<install path>
    -DCMAKE_BUILD_TYPE=<Debug or Release>
    -DENABLE_STRICT_WARNINGS=<ON or OFF>
@@ -86,23 +86,23 @@ Additional Library Build Options
 Use the following additional options to configure your build:
 
 Option                              |  Description
-------------------------------------|----------------------------------------------------------------------------------------
-AOCL_TEST_COVERAGE                  |  Enables GTest and AOCL test bench based CTest suite (Disabled by default)
-ASAN                                |  Enable Address Sanitizer checks (only on Linux/Debug build)
-BUILD_DOC                           |  Build documentation for aocl-fftz (Disabled by default)
+------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------
+AOCL_ENABLE_LOG                     |  Enable logging support within the library (Disabled by default)
+AOCL_TEST_COVERAGE                  |  Enables GTest and AOCL test bench based CTest suite (OFF / STANDARD / STANDARD+DFT_REF / EXHAUSTIVE, default: OFF)
+ASAN                                |  Enables address sanitizer checks. Supported only on Linux Debug build (Disabled by default)
+BUILD_DOC                           |  Build documentation for library (Disabled by default)
 BUILD_STATIC_LIBS                   |  Build static library (Default build type is shared library)
-CODE_COVERAGE                       |  Enable source code coverage (only on Linux with GCC compiler)
-ENABLE_AVX128                       |  Compile with AVX 128-bit instruction set support
-ENABLE_AVX256                       |  Compile with AVX 256-bit instruction set support
-ENABLE_STRICT_WARNINGS              |  Enables strict warnings (Enabled by default)
+CODE_COVERAGE                       |  Enables source code coverage and generates coverage report. Supported only on Linux with GCC compiler (Disabled by default)
 ENABLE_AVX128                       |  Compiles library with AVX 128-bit kernels support (Disabled by default)
 ENABLE_AVX256                       |  Compiles library with AVX 256-bit kernels support (Disabled by default)
-CODE_COVERAGE                       |  Enables source code coverage and generates coverage report. Only supported on Linux with GCC compiler (Disabled by default)
-ASAN                                |  Enables address sanitizer checks. Supported only on Linux Debug build (Disabled by default)
+ENABLE_AVX512                       |  Compiles library with AVX 512-bit kernels support (Disabled by default)
+ENABLE_MULTI_THREADING              |  Compiles library with multi-threading support using OpenMP (Disabled by default)
+ENABLE_STRICT_WARNINGS              |  Enable compiler flags to treat all warnings as errors (Enabled by default)
+FUZZTEST                            |  Enable Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)
 VALGRIND                            |  Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)
 
-
 Note : Enabling ENABLE_AVX256 turns on ENABLE_AVX128 implicitly.
+       Enabling ENABLE_AVX512 turns on ENABLE_AVX256 and ENABLE_AVX128 implicitly.
 
 Running Test Bench On Linux & Windows
 -------------------------------------
@@ -129,7 +129,12 @@ Following are a few sample commands to use and test with the test bench:
 
 Running tests with CTest
 ------------------------
-Use the AOCL_TEST_COVERAGE option to enable testing with CTest.
+Use the AOCL_TEST_COVERAGE option to enable testing with CTest:
+- `OFF`: Disables all tests (default)
+- `STANDARD`: Enables standard test suite (TEST_SUITE)
+- `STANDARD+DFT_REF`: Enables standard test suite (TEST_SUITE) along with DFT reference verification
+- `EXHAUSTIVE`: Enables both standard and exhaustive test suites (TEST_SUITE + TEST_SUITE_EXHAUSTIVE)
+*NOTE*: The EXHAUSTIVE+DFT_REF combination is not supported, as running DFT reference checks with the exhaustive suite would significantly increase test duration.
 
 Here are a few sample commands that can be executed within the build directory to run test cases with CTest.
 

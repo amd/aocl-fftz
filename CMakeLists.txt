@@ -61,20 +61,21 @@ endif()
 
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
 
-option(BUILD_STATIC_LIBS "Build static library (Default build type is shared library)" OFF)
-option(ENABLE_AVX128 "Compile with AVX 128-bit instruction set support" OFF)
-option(ENABLE_AVX256 "Compile with AVX 256-bit instruction set support" OFF)
-option(ENABLE_AVX512 "Compile with AVX512 instruction set support" OFF)
-#option(ENABLE_MPI "Compile with distributed MPI FFTZ support" OFF)
-option(AOCL_TEST_COVERAGE "Enable GTest and AOCL test bench based CTest suite (Disabled by default)" OFF)
-option(CODE_COVERAGE "Enable source code coverage (only on Linux with GCC compiler)" OFF)
-option(ASAN "Enable Address Sanitizer checks (only on Linux builds)" OFF)
-option(VALGRIND "Enable Valgrind checks (only on Linux/Debug. Incompatible with ASAN=ON)" OFF)
-option(BUILD_DOC "Build documentation for aocl-fftz (Disabled by default)" OFF)
-option(ENABLE_STRICT_WARNINGS "Enable compiler flags to treat all warnings as errors (Enabled by default)" ON)
 option(AOCL_ENABLE_LOG "Enable logging support within the library (Disabled by default)" OFF)
-option(FUZZTEST "Enable Compilation of fuzz test with fuzzing mode (only on Clang/Debug, Disabled by default)" OFF)
-option(ENABLE_MULTI_THREADING "Compile with multi-threading support using OpenMP (Disabled by default)" OFF)
+set(AOCL_TEST_COVERAGE "OFF" CACHE STRING "Enable GTest and AOCL test bench based CTest suite (OFF / STANDARD / STANDARD+DFT_REF / EXHAUSTIVE, default: OFF)")
+set_property(CACHE AOCL_TEST_COVERAGE PROPERTY STRINGS "OFF" "STANDARD" "STANDARD+DFT_REF" "EXHAUSTIVE")
+option(ASAN "Enables address sanitizer checks. Supported only on Linux Debug build (Disabled by default)" OFF)
+option(BUILD_DOC "Build documentation for library (Disabled by default)" OFF)
+option(BUILD_STATIC_LIBS "Build static library (Default build type is shared library)" OFF)
+option(CODE_COVERAGE "Enables source code coverage and generates coverage report. Supported only on Linux with GCC compiler (Disabled by default)" OFF)
+option(ENABLE_AVX128 "Compiles library with AVX 128-bit kernels support (Disabled by default)" OFF)
+option(ENABLE_AVX256 "Compiles library with AVX 256-bit kernels support (Disabled by default)" OFF)
+option(ENABLE_AVX512 "Compiles library with AVX 512-bit kernels support (Disabled by default)" OFF)
+option(ENABLE_MULTI_THREADING "Compiles library with multi-threading support using OpenMP (Disabled by default)" OFF)
+#option(ENABLE_MPI "Compiles library with MPI support (Disabled by default)" OFF)
+option(ENABLE_STRICT_WARNINGS "Enable compiler flags to treat all warnings as errors (Enabled by default)" ON)
+option(FUZZTEST "Enable Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)" OFF)
+option(VALGRIND "Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)" OFF)
 
 #list source files to be compiled for the library
 set(CORE_PATH core)
@@ -254,6 +255,14 @@ if(COMPILER_SUPPORTS_VERSION_LOOPS_FOR_STRIDES)
     set_source_files_properties(${CORE_C_FILES} PROPERTIES COMPILE_OPTIONS "-fno-version-loops-for-strides")
 endif()
 
+# validate AOCL_TEST_COVERAGE values
+if(NOT AOCL_TEST_COVERAGE STREQUAL "OFF"
+   AND NOT AOCL_TEST_COVERAGE STREQUAL "STANDARD"
+   AND NOT AOCL_TEST_COVERAGE STREQUAL "STANDARD+DFT_REF"
+   AND NOT AOCL_TEST_COVERAGE STREQUAL "EXHAUSTIVE")
+    message(FATAL_ERROR "Invalid value for AOCL_TEST_COVERAGE: '${AOCL_TEST_COVERAGE}'\nAllowed values are: OFF, STANDARD, STANDARD+DFT_REF, EXHAUSTIVE.")
+endif()
+
 # setup to get source code coverage(GCOV)
 if(CODE_COVERAGE)
     if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND ${CMAKE_C_COMPILER_ID} STREQUAL "GNU"))
@@ -289,9 +298,9 @@ if(FUZZTEST)
     endif()
 endif()
 
-# Enable CTest for any of the cases
-if(VALGRIND OR CODE_COVERAGE OR FUZZTEST)
-    set(AOCL_TEST_COVERAGE ON)
+# Setting AOCL_TEST_COVERAGE to STANDARD to enable CTests and GTests for VALGRIND / CODE_COVERAGE / FUZZTEST
+if((VALGRIND OR CODE_COVERAGE OR FUZZTEST) AND (AOCL_TEST_COVERAGE STREQUAL "OFF"))
+    set(AOCL_TEST_COVERAGE "STANDARD")
 endif()
 
 message(STATUS ASAN : ${ASAN})
@@ -302,12 +311,24 @@ message(STATUS FUZZTEST : ${FUZZTEST})
 message(STATUS MULTI-THREADING : ${ENABLE_MULTI_THREADING})
 
 #setup CTest for GoogleTest and test bench
-if(AOCL_TEST_COVERAGE)
+if(NOT AOCL_TEST_COVERAGE STREQUAL "OFF")
     # enabling ctest
     enable_testing()
     set(GTEST_DIR test/gtest)
     add_subdirectory(${GTEST_DIR})
     add_subdirectory(${BENCH_DIR})
+
+    # Set test mode for bench directory
+    if(AOCL_TEST_COVERAGE STREQUAL "EXHAUSTIVE")
+        message(STATUS "AOCL_TEST_COVERAGE: EXHAUSTIVE - Runs both TEST_SUITE and TEST_SUITE_EXHAUSTIVE")
+    elseif(AOCL_TEST_COVERAGE STREQUAL "STANDARD+DFT_REF")
+        add_compile_definitions(ENABLE_DFT_REFERENCE)
+        message(STATUS "AOCL_TEST_COVERAGE: STANDARD+DFT_REF - Runs TEST_SUITE with DFT REFERENCE test (ENABLE_DFT_REFERENCE macro defined)")
+    elseif(AOCL_TEST_COVERAGE STREQUAL "STANDARD")
+        message(STATUS "AOCL_TEST_COVERAGE: STANDARD - Using TEST_SUITE only")
+    endif()
+else()
+    message(STATUS "AOCL_TEST_COVERAGE: OFF - Tests disabled")
 endif()
 
 # compile kernel files with only the relevant simd flags.
@@ -395,7 +416,7 @@ message(STATUS "AOCL-FFTZ Library, Interface header files and Test binary will b
 install(TARGETS ${exe_name} DESTINATION ${DEST_BIN_PATH})
 install(TARGETS ${lib_name} DESTINATION ${DEST_LIB_PATH})
 install(FILES ${INC_FILES} DESTINATION ${DEST_INC_PATH})
-if((NOT BUILD_STATIC_LIBS) AND WIN32 AND AOCL_TEST_COVERAGE)
+if((NOT BUILD_STATIC_LIBS) AND WIN32 AND (NOT AOCL_TEST_COVERAGE STREQUAL "OFF"))
     add_custom_command(
         TARGET ${lib_name}
         POST_BUILD
