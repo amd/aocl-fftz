@@ -145,6 +145,7 @@ class AoclfftzKernelTestBase
         T *twk_out_r = nullptr;
         T *twk_out_i = nullptr;
         T* twiddle_ptr = nullptr;
+        aoclfftz_twiddle_t tws;
 
         bool use_input_params = !is_out_of_place;
         INT32 _stride = use_input_params ? in_stride : out_stride;
@@ -277,8 +278,8 @@ class AoclfftzKernelTestBase
         twk_out_i = (is_bwd) ? (twk_out) : (twk_out + 1);
 
         // setup the twiddle buffer
-        ALLOC_ALIGN_INIT(twiddle_buffer, VOID,
-                           data_stride * sizeof(T) * offset * radix);
+        ALLOC_ALIGN_INIT(twiddle_buffer, UINT8,
+                         data_stride * sizeof(T) * offset * radix);
 
         if (twiddle_buffer == nullptr)
         {
@@ -286,6 +287,10 @@ class AoclfftzKernelTestBase
         }
 
         compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, offset);
+
+        tws.TW = twiddle_buffer;
+        tws.twiddle_buf_ptr = twiddle_buffer;
+        tws.cols = offset;
 
         // perform the twiddle multiplication on the kernel's input buffer
         // this is to simulate the condition where the m (offset) fft has been
@@ -308,7 +313,7 @@ class AoclfftzKernelTestBase
 
         // execute the twiddle kernel
         tw_kernel(twk_in_r, twk_in_i, twk_out_r, twk_out_i, offset, &k_stride,
-                  twiddle_buffer, is_bwd);
+                  &tws, is_bwd);
 
         EXPECT_TRUE(is_error_safe(k_out, twk_out, output_length * data_stride,
                                   tolerance, use_input_params))

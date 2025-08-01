@@ -232,6 +232,7 @@ typedef struct aoclfftz_twiddle
 {
     VOID *twiddle_buf_ptr; /*< pointer to owned twiddle buffer. It has to be allocated/freed with current struct. */
     VOID *TW; /*< pointer to shared twiddle buffer. It must not be freed/allocated with the struct. */
+    UINTP cols; /*< number of columns/batches/sets that are used to set up the twiddle buffer in a CT problem */
 } aoclfftz_twiddle_t;
 
 // Holds bluestein sequence B used by the bluestein solver

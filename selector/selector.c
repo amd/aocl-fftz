@@ -1269,6 +1269,7 @@ VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
                 if (TW != NULL)
                 {
                     compute_twiddle_buffer(TW, r, m, dt_prec);
+                    curr->next_sol[0]->twiddle->cols = m;
                     curr->next_sol[0]->twiddle->TW = TW;
                     curr->next_sol[0]->twiddle->twiddle_buf_ptr = TW;
                 }
@@ -1323,6 +1324,7 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                              no_of_groups;
                     compute_twiddle_buffer_real(TW, group_size, n, p, FORWARD_FFT_DIR,
                                                 dt_prec);
+                    curr->twiddle->cols = p; // FIXME
                     curr->twiddle->TW = TW;
                     curr->twiddle->twiddle_buf_ptr = TW;
                 }
@@ -1356,6 +1358,7 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                              no_of_groups;
                     compute_twiddle_buffer_real(TW, group_sz, n, p,
                                                 BACKWARD_FFT_DIR, dt_prec);
+                    prev->twiddle->cols = p; // FIXME
                     prev->twiddle->TW = TW;
                     prev->twiddle->twiddle_buf_ptr = TW;
                 }

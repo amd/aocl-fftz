@@ -460,7 +460,7 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
     if (sol->solver->batches[R2HC_KERNEL] != 0)
     {
         kernel_r2hc(in, in, out, out, sol->solver->batches[R2HC_KERNEL],
-                    sol->strides_grp->strides_r2hc, sol->twiddle->TW, 
+                    sol->strides_grp->strides_r2hc, sol->twiddle,
                     FFT_DIR(sol->decomp_scheme->flags));
         UINT8 is_direct_only_problem = IS_DIRECT_ONLY_PROBLEM(sol);
         if (is_direct_only_problem)
@@ -517,7 +517,7 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
     if (sol->solver->batches[R2HCF_KERNEL] != 0)
     {
         kernel_r2hcf(in, in, out, out, sol->solver->batches[R2HCF_KERNEL],
-                     sol->strides_grp->strides_r2hcf, sol->twiddle->TW, 
+                     sol->strides_grp->strides_r2hcf, sol->twiddle,
                      FFT_DIR(sol->decomp_scheme->flags));
     }
 
@@ -564,7 +564,7 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
                 kernel_c2c(MOVE_ADDR(in, dt_bytes), in,
                            MOVE_ADDR(out, dt_bytes), out, no_of_groups,
                            sol->strides_grp->strides_c2c,
-                           sol->twiddle->TW,
+                           sol->twiddle,
                            FFT_DIR(sol->decomp_scheme->flags));
 
                 // Update the C2C in-strides for next iteration by subtracting
@@ -608,7 +608,7 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
                 kernel_c2c(in, MOVE_ADDR(in, dt_bytes), out,
                            MOVE_ADDR(out, dt_bytes), no_of_groups,
                            sol->strides_grp->strides_c2c,
-                           sol->twiddle->TW,
+                           sol->twiddle,
                            FFT_DIR(sol->decomp_scheme->flags));
 
                 // Take complex conjucate for the required points

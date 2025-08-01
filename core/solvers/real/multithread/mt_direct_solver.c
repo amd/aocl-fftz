@@ -483,7 +483,7 @@ static VOID execute_real_kernel(aoclfftz_solution_t *sol, UINT32 n_threads_real)
                         (VOID *)((CHAR *)out + v_ostride),
                         (VOID *)((CHAR *)out + v_ostride),
                         num_sets_r2hc, sol->strides_grp->strides_r2hc,
-                        sol->twiddle->TW, FFT_DIR(sol->decomp_scheme->flags));
+                        sol->twiddle, FFT_DIR(sol->decomp_scheme->flags));
         }
         /* Process the tail cases of the kernel */
         if(rem_iters_r2hc)
@@ -495,7 +495,7 @@ static VOID execute_real_kernel(aoclfftz_solution_t *sol, UINT32 n_threads_real)
                         (VOID *)((CHAR *)out + v_ostride),
                         (VOID *)((CHAR *)out + v_ostride),
                         rem_iters_r2hc, sol->strides_grp->strides_r2hc,
-                        sol->twiddle->TW, FFT_DIR(sol->decomp_scheme->flags));
+                        sol->twiddle, FFT_DIR(sol->decomp_scheme->flags));
         }
     }
     /* Execute R2HCF Kernels */
@@ -525,7 +525,7 @@ static VOID execute_real_kernel(aoclfftz_solution_t *sol, UINT32 n_threads_real)
                          (VOID *)((CHAR *)out + v_ostride),
                          (VOID *)((CHAR *)out + v_ostride),
                          num_sets_r2hcf, sol->strides_grp->strides_r2hcf,
-                         sol->twiddle->TW, FFT_DIR(sol->decomp_scheme->flags));
+                         sol->twiddle, FFT_DIR(sol->decomp_scheme->flags));
         }
         /* Process the tail cases of the kernel */
         if(rem_iters_r2hcf)
@@ -537,7 +537,7 @@ static VOID execute_real_kernel(aoclfftz_solution_t *sol, UINT32 n_threads_real)
                          (VOID *)((CHAR *)out + v_ostride),
                          (VOID *)((CHAR *)out + v_ostride),
                          rem_iters_r2hcf, sol->strides_grp->strides_r2hcf,
-                         sol->twiddle->TW, FFT_DIR(sol->decomp_scheme->flags));
+                         sol->twiddle, FFT_DIR(sol->decomp_scheme->flags));
         }
     }
 }
@@ -772,7 +772,10 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                                             v_ostride),
                                            1 /* num_sets_c2c */,
                                            strides_c2c_per_thread,
-                                           sol->twiddle->TW,
+                                           sol->twiddle, // FIXME: when adding
+                                                         // a support for
+                                                         // twiddle kernels,
+                                                         // fix this
                                            FFT_DIR(sol->decomp_scheme->flags));
                             }
                             FREE_ALIGN_ALLOCATED_MEM(local_in_strides);
@@ -858,7 +861,10 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                                             + v_ostride + dt_bytes),
                                            1 /* num_sets_c2c */,
                                            strides_c2c_per_thread,
-                                           sol->twiddle->TW,
+                                           sol->twiddle, // FIXME: when adding
+                                                         // a support for
+                                                         // twiddle kernels,
+                                                         // fix this
                                            FFT_DIR(sol->decomp_scheme->flags));
                             }
                             // Take complex conjucate for the required points

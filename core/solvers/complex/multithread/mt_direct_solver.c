@@ -189,17 +189,28 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
     #pragma omp parallel for
     for (INTP batch = 0; batch < num_iters; batch++)
     {
+        aoclfftz_twiddle_t tw_local = {
+            .TW = MOVE_ADDR(sol->twiddle->TW, DATA_STRIDE * dt_bytes * batch),
+            .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
+            .cols = sol->twiddle->cols,
+        };
+
         INTP v_istride = batch * v_in_stride;
         INTP v_ostride = batch * v_out_stride;
         kernel((VOID *)((CHAR *)decomp_scheme->in_real  + v_istride),
                (VOID *)((CHAR *)decomp_scheme->in_imag  + v_istride),
                (VOID *)((CHAR *)decomp_scheme->out_real + v_ostride),
                (VOID *)((CHAR *)decomp_scheme->out_imag + v_ostride),
-               num_sets, strides, sol->twiddle->TW, FFT_DIR(decomp_scheme->flags));
+               num_sets, strides, &tw_local, FFT_DIR(decomp_scheme->flags));
     }
 
     // Process the tail cases of the kernel
-    if(rem_iters)
+    aoclfftz_twiddle_t tw_local = {
+        .TW = MOVE_ADDR(sol->twiddle->TW, DATA_STRIDE * dt_bytes * num_iters),
+        .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
+        .cols = sol->twiddle->cols,
+    };
+    if (rem_iters)
     {
         INTP v_istride = num_iters * v_in_stride;
         INTP v_ostride = num_iters * v_out_stride;
@@ -207,7 +218,7 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
                (VOID *)((CHAR *)decomp_scheme->in_imag  + v_istride),
                (VOID *)((CHAR *)decomp_scheme->out_real + v_ostride),
                (VOID *)((CHAR *)decomp_scheme->out_imag + v_ostride),
-               rem_iters, strides, sol->twiddle->TW, FFT_DIR(decomp_scheme->flags));
+               rem_iters, strides, &tw_local, FFT_DIR(decomp_scheme->flags));
     }
 
 #ifdef AOCL_ENABLE_LOG

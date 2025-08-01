@@ -58,7 +58,7 @@ ops_cycles_t get_ops_cnt_twid_fft16c(UINT8 precision, UINT8 direction)
 
 static VOID twid_fft16c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                              VOID *out_imag, INTP n,
-                             aoclfftz_strides_t *strides, VOID *twid_buf,
+                             aoclfftz_strides_t *strides, VOID *twd,
                              UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
@@ -86,7 +86,9 @@ static VOID twid_fft16c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP v_out_stride = strides->v_out_stride;
     INTP cnt;
 
-    DOUBLE *tw = (DOUBLE *)twid_buf;
+    aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
+    DOUBLE *tw = (DOUBLE *)(tws->TW);
+    UINTP cols = tws->cols;
 
     for (cnt = 0; cnt < n; cnt++)
     {
@@ -102,10 +104,10 @@ static VOID twid_fft16c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         {
             {
-                UINTP twid_addr1 = DATA_STRIDE * (1 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (1 * cols + cnt);
                 DOUBLE twid_r1 = tw[twid_addr1];
                 DOUBLE twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (15 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (15 * cols + cnt);
                 DOUBLE twid_r2 = tw[twid_addr2];
                 DOUBLE twid_i2 = tw[1 + twid_addr2];
 
@@ -126,10 +128,10 @@ static VOID twid_fft16c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
             }
 
             {
-                UINTP twid_addr1 = DATA_STRIDE * (7 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (7 * cols + cnt);
                 DOUBLE twid_r1 = tw[twid_addr1];
                 DOUBLE twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (9 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (9 * cols + cnt);
                 DOUBLE twid_r2 = tw[twid_addr2];
                 DOUBLE twid_i2 = tw[1 + twid_addr2];
 
@@ -160,10 +162,10 @@ static VOID twid_fft16c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
             cav3i = sb1 - sb7;
 
             {
-                UINTP twid_addr1 = DATA_STRIDE * (3 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (3 * cols + cnt);
                 DOUBLE twid_r1 = tw[twid_addr1];
                 DOUBLE twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (13 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (13 * cols + cnt);
                 DOUBLE twid_r2 = tw[twid_addr2];
                 DOUBLE twid_i2 = tw[1 + twid_addr2];
 
@@ -184,10 +186,10 @@ static VOID twid_fft16c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
             }
 
             {
-                UINTP twid_addr1 = DATA_STRIDE * (5 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (5 * cols + cnt);
                 DOUBLE twid_r1 = tw[twid_addr1];
                 DOUBLE twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (11 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (11 * cols + cnt);
                 DOUBLE twid_r2 = tw[twid_addr2];
                 DOUBLE twid_i2 = tw[1 + twid_addr2];
 
@@ -229,10 +231,10 @@ static VOID twid_fft16c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         {
             {
-                UINTP twid_addr1 = DATA_STRIDE * (2 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (2 * cols + cnt);
                 DOUBLE twid_r1 = tw[twid_addr1];
                 DOUBLE twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (14 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (14 * cols + cnt);
                 DOUBLE twid_r2 = tw[twid_addr2];
                 DOUBLE twid_i2 = tw[1 + twid_addr2];
 
@@ -253,10 +255,10 @@ static VOID twid_fft16c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
             }
 
             {
-                UINTP twid_addr1 = DATA_STRIDE * (6 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (6 * cols + cnt);
                 DOUBLE twid_r1 = tw[twid_addr1];
                 DOUBLE twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (10 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (10 * cols + cnt);
                 DOUBLE twid_r2 = tw[twid_addr2];
                 DOUBLE twid_i2 = tw[1 + twid_addr2];
 
@@ -297,10 +299,10 @@ static VOID twid_fft16c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         {
             {
-                UINTP twid_addr1 = DATA_STRIDE * (4 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (4 * cols + cnt);
                 DOUBLE twid_r1 = tw[twid_addr1];
                 DOUBLE twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (12 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (12 * cols + cnt);
                 DOUBLE twid_r2 = tw[twid_addr2];
                 DOUBLE twid_i2 = tw[1 + twid_addr2];
 
@@ -321,10 +323,10 @@ static VOID twid_fft16c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
             }
 
             {
-                UINTP twid_addr1 = DATA_STRIDE * (0 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (0 * cols + cnt);
                 DOUBLE twid_r1 = tw[twid_addr1];
                 DOUBLE twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (8 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (8 * cols + cnt);
                 DOUBLE twid_r2 = tw[twid_addr2];
                 DOUBLE twid_i2 = tw[1 + twid_addr2];
 
@@ -443,7 +445,7 @@ static VOID twid_fft16c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
 static VOID twid_fft16c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                              VOID *out_imag, INTP n,
-                             aoclfftz_strides_t *strides, VOID *twid_buf,
+                             aoclfftz_strides_t *strides, VOID *twd,
                              UINT8 flag)
 {
 #ifdef AOCL_ENABLE_LOG
@@ -471,7 +473,9 @@ static VOID twid_fft16c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP v_out_stride = strides->v_out_stride;
     INTP cnt;
 
-    FLOAT *tw = (FLOAT *)twid_buf;
+    aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
+    FLOAT *tw = (FLOAT *)(tws->TW);
+    UINTP cols = tws->cols;
 
     for (cnt = 0; cnt < n; cnt++)
     {
@@ -487,10 +491,10 @@ static VOID twid_fft16c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         {
             {
-                UINTP twid_addr1 = DATA_STRIDE * (1 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (1 * cols + cnt);
                 FLOAT twid_r1 = tw[twid_addr1];
                 FLOAT twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (15 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (15 * cols + cnt);
                 FLOAT twid_r2 = tw[twid_addr2];
                 FLOAT twid_i2 = tw[1 + twid_addr2];
 
@@ -511,10 +515,10 @@ static VOID twid_fft16c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
             }
 
             {
-                UINTP twid_addr1 = DATA_STRIDE * (7 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (7 * cols + cnt);
                 FLOAT twid_r1 = tw[twid_addr1];
                 FLOAT twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (9 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (9 * cols + cnt);
                 FLOAT twid_r2 = tw[twid_addr2];
                 FLOAT twid_i2 = tw[1 + twid_addr2];
 
@@ -545,10 +549,10 @@ static VOID twid_fft16c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
             cav3i = sb1 - sb7;
 
             {
-                UINTP twid_addr1 = DATA_STRIDE * (3 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (3 * cols + cnt);
                 FLOAT twid_r1 = tw[twid_addr1];
                 FLOAT twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (13 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (13 * cols + cnt);
                 FLOAT twid_r2 = tw[twid_addr2];
                 FLOAT twid_i2 = tw[1 + twid_addr2];
 
@@ -569,10 +573,10 @@ static VOID twid_fft16c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
             }
 
             {
-                UINTP twid_addr1 = DATA_STRIDE * (5 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (5 * cols + cnt);
                 FLOAT twid_r1 = tw[twid_addr1];
                 FLOAT twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (11 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (11 * cols + cnt);
                 FLOAT twid_r2 = tw[twid_addr2];
                 FLOAT twid_i2 = tw[1 + twid_addr2];
 
@@ -614,10 +618,10 @@ static VOID twid_fft16c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         {
             {
-                UINTP twid_addr1 = DATA_STRIDE * (2 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (2 * cols + cnt);
                 FLOAT twid_r1 = tw[twid_addr1];
                 FLOAT twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (14 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (14 * cols + cnt);
                 FLOAT twid_r2 = tw[twid_addr2];
                 FLOAT twid_i2 = tw[1 + twid_addr2];
 
@@ -638,10 +642,10 @@ static VOID twid_fft16c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
             }
 
             {
-                UINTP twid_addr1 = DATA_STRIDE * (6 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (6 * cols + cnt);
                 FLOAT twid_r1 = tw[twid_addr1];
                 FLOAT twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (10 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (10 * cols + cnt);
                 FLOAT twid_r2 = tw[twid_addr2];
                 FLOAT twid_i2 = tw[1 + twid_addr2];
 
@@ -682,10 +686,10 @@ static VOID twid_fft16c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         {
             {
-                UINTP twid_addr1 = DATA_STRIDE * (4 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (4 * cols + cnt);
                 FLOAT twid_r1 = tw[twid_addr1];
                 FLOAT twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (12 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (12 * cols + cnt);
                 FLOAT twid_r2 = tw[twid_addr2];
                 FLOAT twid_i2 = tw[1 + twid_addr2];
 
@@ -706,10 +710,10 @@ static VOID twid_fft16c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
             }
 
             {
-                UINTP twid_addr1 = DATA_STRIDE * (0 * n + cnt);
+                UINTP twid_addr1 = DATA_STRIDE * (0 * cols + cnt);
                 FLOAT twid_r1 = tw[twid_addr1];
                 FLOAT twid_i1 = tw[1 + twid_addr1];
-                UINTP twid_addr2 = DATA_STRIDE * (8 * n + cnt);
+                UINTP twid_addr2 = DATA_STRIDE * (8 * cols + cnt);
                 FLOAT twid_r2 = tw[twid_addr2];
                 FLOAT twid_i2 = tw[1 + twid_addr2];
 

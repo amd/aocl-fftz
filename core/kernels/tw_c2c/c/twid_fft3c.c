@@ -79,7 +79,10 @@ static VOID twid_fft3c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP v_in_stride = strides->v_in_stride;
     INTP v_out_stride = strides->v_out_stride;
     INTP cnt;
-    FLOAT *tw = (FLOAT *)twd;
+
+    aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
+    FLOAT *tw = (FLOAT *)(tws->TW);
+    UINTP cols = tws->cols;
     FLOAT twr, twi;
 
     for (cnt = 0; cnt < n; cnt++)
@@ -92,7 +95,7 @@ static VOID twid_fft3c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Input point 2: x(1)
         FLOAT v2r_t = in_r[in_strides[1]];
         FLOAT v2i_t = in_i[in_strides[1]];
-        UINTP twid_addr2 = DATA_STRIDE * (1 * n + cnt);
+        UINTP twid_addr2 = DATA_STRIDE * (1 * cols + cnt);
         twr = tw[twid_addr2];
         twi = tw[1 + twid_addr2];
         FLOAT v2r = v2r_t * twr - v2i_t * twi;
@@ -100,7 +103,7 @@ static VOID twid_fft3c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Input point 2: x(1)
         FLOAT v3r_t = in_r[in_strides[2]];
         FLOAT v3i_t = in_i[in_strides[2]];
-        UINTP twid_addr3 = DATA_STRIDE * (2 * n + cnt);
+        UINTP twid_addr3 = DATA_STRIDE * (2 * cols + cnt);
         twr = tw[twid_addr3];
         twi = tw[1 + twid_addr3];
         FLOAT v3r = v3r_t * twr - v3i_t * twi;
@@ -165,7 +168,9 @@ static VOID twid_fft3c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP v_out_stride = strides->v_out_stride;
     INTP cnt;
 
-    DOUBLE *tw = (DOUBLE *)twd;
+    aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
+    DOUBLE *tw = (DOUBLE *)(tws->TW);
+    UINTP cols = tws->cols;
     DOUBLE twr, twi;
 
     for (cnt = 0; cnt < n; cnt++)
@@ -178,7 +183,7 @@ static VOID twid_fft3c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Input point 2: x(1)
         DOUBLE v2r_t = in_r[in_strides[1]];
         DOUBLE v2i_t = in_i[in_strides[1]];
-        UINTP twid_addr2 = DATA_STRIDE * (1 * n + cnt);
+        UINTP twid_addr2 = DATA_STRIDE * (1 * cols + cnt);
         twr = tw[twid_addr2];
         twi = tw[1 + twid_addr2];
         DOUBLE v2r = v2r_t * twr - v2i_t * twi;
@@ -186,7 +191,7 @@ static VOID twid_fft3c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Input point 2: x(1)
         DOUBLE v3r_t = in_r[in_strides[2]];
         DOUBLE v3i_t = in_i[in_strides[2]];
-        UINTP twid_addr3 = DATA_STRIDE * (2 * n + cnt);
+        UINTP twid_addr3 = DATA_STRIDE * (2 * cols + cnt);
         twr = tw[twid_addr3];
         twi = tw[1 + twid_addr3];
         DOUBLE v3r = v3r_t * twr - v3i_t * twi;

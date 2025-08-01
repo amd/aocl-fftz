@@ -91,7 +91,9 @@ static VOID twid_fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP v_out_stride = strides->v_out_stride;
     INTP cnt;
 
-    DOUBLE *tw = (DOUBLE *)twd;
+    aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
+    DOUBLE *tw = (DOUBLE *)(tws->TW);
+    UINTP cols = tws->cols;
     DOUBLE twr, twi;
     UINTP twaddr;
 
@@ -107,7 +109,7 @@ static VOID twid_fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         DOUBLE t_v1r = in_r[in_strides[1]];
         DOUBLE t_v1i = in_i[in_strides[1]];
-        twaddr = DATA_STRIDE * (1 * n + cnt);
+        twaddr = DATA_STRIDE * (1 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v1r = t_v1r * twr - t_v1i * twi;
@@ -115,7 +117,7 @@ static VOID twid_fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         DOUBLE t_v2r = in_r[in_strides[13]];
         DOUBLE t_v2i = in_i[in_strides[13]];
-        twaddr = DATA_STRIDE * (13 * n + cnt);
+        twaddr = DATA_STRIDE * (13 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v2r = t_v2r * twr - t_v2i * twi;
@@ -129,7 +131,7 @@ static VOID twid_fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v1r = in_r[in_strides[3]];
         t_v1i = in_i[in_strides[3]];
-        twaddr = DATA_STRIDE * (3 * n + cnt);
+        twaddr = DATA_STRIDE * (3 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v1r = t_v1r * twr - t_v1i * twi;
@@ -137,7 +139,7 @@ static VOID twid_fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v2r = in_r[in_strides[11]];
         t_v2i = in_i[in_strides[11]];
-        twaddr = DATA_STRIDE * (11 * n + cnt);
+        twaddr = DATA_STRIDE * (11 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v2r = t_v2r * twr - t_v2i * twi;
@@ -151,7 +153,7 @@ static VOID twid_fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v1r = in_r[in_strides[5]];
         t_v1i = in_i[in_strides[5]];
-        twaddr = DATA_STRIDE * (5 * n + cnt);
+        twaddr = DATA_STRIDE * (5 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v1r = t_v1r * twr - t_v1i * twi;
@@ -159,7 +161,7 @@ static VOID twid_fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v2r = in_r[in_strides[9]];
         t_v2i = in_i[in_strides[9]];
-        twaddr = DATA_STRIDE * (9 * n + cnt);
+        twaddr = DATA_STRIDE * (9 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v2r = t_v2r * twr - t_v2i * twi;
@@ -173,7 +175,7 @@ static VOID twid_fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         DOUBLE t_v8r = in_r[in_strides[7]];
         DOUBLE t_v8i = in_i[in_strides[7]];
-        twaddr = DATA_STRIDE * (7 * n + cnt);
+        twaddr = DATA_STRIDE * (7 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v8r = t_v8r * twr - t_v8i * twi;
@@ -181,7 +183,7 @@ static VOID twid_fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         DOUBLE t_v3r = in_r[in_strides[2]];
         DOUBLE t_v3i = in_i[in_strides[2]];
-        twaddr = DATA_STRIDE * (2 * n + cnt);
+        twaddr = DATA_STRIDE * (2 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v3r = t_v3r * twr - t_v3i * twi;
@@ -189,7 +191,7 @@ static VOID twid_fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         DOUBLE t_v4r = in_r[in_strides[12]];
         DOUBLE t_v4i = in_i[in_strides[12]];
-        twaddr = DATA_STRIDE * (12 * n + cnt);
+        twaddr = DATA_STRIDE * (12 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v4r = t_v4r * twr - t_v4i * twi;
@@ -203,7 +205,7 @@ static VOID twid_fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v3r = in_r[in_strides[4]];
         t_v3i = in_i[in_strides[4]];
-        twaddr = DATA_STRIDE * (4 * n + cnt);
+        twaddr = DATA_STRIDE * (4 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v3r = t_v3r * twr - t_v3i * twi;
@@ -211,7 +213,7 @@ static VOID twid_fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v4r = in_r[in_strides[10]];
         t_v4i = in_i[in_strides[10]];
-        twaddr = DATA_STRIDE * (10 * n + cnt);
+        twaddr = DATA_STRIDE * (10 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v4r = t_v4r * twr - t_v4i * twi;
@@ -242,7 +244,7 @@ static VOID twid_fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v3r = in_r[in_strides[6]];
         t_v3i = in_i[in_strides[6]];
-        twaddr = DATA_STRIDE * (6 * n + cnt);
+        twaddr = DATA_STRIDE * (6 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v3r = t_v3r * twr - t_v3i * twi;
@@ -250,7 +252,7 @@ static VOID twid_fft14c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v4r = in_r[in_strides[8]];
         t_v4i = in_i[in_strides[8]];
-        twaddr = DATA_STRIDE * (8 * n + cnt);
+        twaddr = DATA_STRIDE * (8 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v4r = t_v4r * twr - t_v4i * twi;
@@ -420,7 +422,9 @@ static VOID twid_fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP v_in_stride = strides->v_in_stride;
     INTP v_out_stride = strides->v_out_stride;
     INTP cnt;
-    FLOAT *tw = (FLOAT *)twd;
+    aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
+    FLOAT *tw = (FLOAT *)(tws->TW);
+    UINTP cols = tws->cols;
     FLOAT twr, twi;
     UINTP twaddr;
 
@@ -436,7 +440,7 @@ static VOID twid_fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         FLOAT t_v1r = in_r[in_strides[1]];
         FLOAT t_v1i = in_i[in_strides[1]];
-        twaddr = DATA_STRIDE * (1 * n + cnt);
+        twaddr = DATA_STRIDE * (1 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v1r = t_v1r * twr - t_v1i * twi;
@@ -444,7 +448,7 @@ static VOID twid_fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         FLOAT t_v2r = in_r[in_strides[13]];
         FLOAT t_v2i = in_i[in_strides[13]];
-        twaddr = DATA_STRIDE * (13 * n + cnt);
+        twaddr = DATA_STRIDE * (13 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v2r = t_v2r * twr - t_v2i * twi;
@@ -458,7 +462,7 @@ static VOID twid_fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v1r = in_r[in_strides[3]];
         t_v1i = in_i[in_strides[3]];
-        twaddr = DATA_STRIDE * (3 * n + cnt);
+        twaddr = DATA_STRIDE * (3 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v1r = t_v1r * twr - t_v1i * twi;
@@ -466,7 +470,7 @@ static VOID twid_fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v2r = in_r[in_strides[11]];
         t_v2i = in_i[in_strides[11]];
-        twaddr = DATA_STRIDE * (11 * n + cnt);
+        twaddr = DATA_STRIDE * (11 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v2r = t_v2r * twr - t_v2i * twi;
@@ -480,7 +484,7 @@ static VOID twid_fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v1r = in_r[in_strides[5]];
         t_v1i = in_i[in_strides[5]];
-        twaddr = DATA_STRIDE * (5 * n + cnt);
+        twaddr = DATA_STRIDE * (5 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v1r = t_v1r * twr - t_v1i * twi;
@@ -488,7 +492,7 @@ static VOID twid_fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v2r = in_r[in_strides[9]];
         t_v2i = in_i[in_strides[9]];
-        twaddr = DATA_STRIDE * (9 * n + cnt);
+        twaddr = DATA_STRIDE * (9 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v2r = t_v2r * twr - t_v2i * twi;
@@ -502,7 +506,7 @@ static VOID twid_fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         FLOAT t_v8r = in_r[in_strides[7]];
         FLOAT t_v8i = in_i[in_strides[7]];
-        twaddr = DATA_STRIDE * (7 * n + cnt);
+        twaddr = DATA_STRIDE * (7 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v8r = t_v8r * twr - t_v8i * twi;
@@ -510,7 +514,7 @@ static VOID twid_fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         FLOAT t_v3r = in_r[in_strides[2]];
         FLOAT t_v3i = in_i[in_strides[2]];
-        twaddr = DATA_STRIDE * (2 * n + cnt);
+        twaddr = DATA_STRIDE * (2 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v3r = t_v3r * twr - t_v3i * twi;
@@ -518,7 +522,7 @@ static VOID twid_fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         FLOAT t_v4r = in_r[in_strides[12]];
         FLOAT t_v4i = in_i[in_strides[12]];
-        twaddr = DATA_STRIDE * (12 * n + cnt);
+        twaddr = DATA_STRIDE * (12 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v4r = t_v4r * twr - t_v4i * twi;
@@ -532,7 +536,7 @@ static VOID twid_fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v3r = in_r[in_strides[4]];
         t_v3i = in_i[in_strides[4]];
-        twaddr = DATA_STRIDE * (4 * n + cnt);
+        twaddr = DATA_STRIDE * (4 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v3r = t_v3r * twr - t_v3i * twi;
@@ -540,7 +544,7 @@ static VOID twid_fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v4r = in_r[in_strides[10]];
         t_v4i = in_i[in_strides[10]];
-        twaddr = DATA_STRIDE * (10 * n + cnt);
+        twaddr = DATA_STRIDE * (10 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v4r = t_v4r * twr - t_v4i * twi;
@@ -571,7 +575,7 @@ static VOID twid_fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v3r = in_r[in_strides[6]];
         t_v3i = in_i[in_strides[6]];
-        twaddr = DATA_STRIDE * (6 * n + cnt);
+        twaddr = DATA_STRIDE * (6 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v3r = t_v3r * twr - t_v3i * twi;
@@ -579,7 +583,7 @@ static VOID twid_fft14c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         t_v4r = in_r[in_strides[8]];
         t_v4i = in_i[in_strides[8]];
-        twaddr = DATA_STRIDE * (8 * n + cnt);
+        twaddr = DATA_STRIDE * (8 * cols + cnt);
         twr = tw[twaddr];
         twi = tw[1 + twaddr];
         v4r = t_v4r * twr - t_v4i * twi;

@@ -162,6 +162,7 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->strides_grp->strides_r2hc->out_strides = NULL;
         sol->strides_grp->strides_r2hcf->in_strides = NULL;
         sol->strides_grp->strides_r2hcf->out_strides = NULL;
+        sol->twiddle->cols = 0;
         sol->twiddle->TW = NULL;
         sol->twiddle->twiddle_buf_ptr = NULL;
         sol->dft_bufs->bluestein->B = NULL;
@@ -262,6 +263,7 @@ aoclfftz_solution_t* alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->strides_grp->strides_r2hc->out_strides = NULL;
         sol->strides_grp->strides_r2hcf->in_strides = NULL;
         sol->strides_grp->strides_r2hcf->out_strides = NULL;
+        sol->twiddle->cols = 0;
         sol->twiddle->twiddle_buf_ptr = NULL;
         sol->twiddle->TW = NULL;
         sol->dft_bufs->bluestein->B = NULL;

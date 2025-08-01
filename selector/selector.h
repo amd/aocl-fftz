@@ -425,6 +425,7 @@ typedef struct aoclfftz_selector
         from_sol_obj->decomp_scheme->thread_info->n_threads;                   \
     to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;     \
     to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;                       \
+    to_sol_obj->twiddle->cols = from_sol_obj->twiddle->cols;                   \
     to_sol_obj->dft_bufs->bluestein->B = from_sol_obj->dft_bufs->bluestein->B;                     \
     to_sol_obj->dft_bufs->bluestein->B_out = from_sol_obj->dft_bufs->bluestein->B_out;             \
     to_sol_obj->dft_bufs->bluestein->in = from_sol_obj->dft_bufs->bluestein->in;                   \

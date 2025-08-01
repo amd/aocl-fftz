@@ -128,7 +128,7 @@ static INT32 execute_sizeone_solver_internal(aoclfftz_solution_t *sol, INTP vec_
             sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
             sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
             sol->decomp_scheme->vecs[0].n, strides,
-            sol->twiddle->TW,
+            sol->twiddle,
             FFT_DIR(sol->decomp_scheme->flags));
         return SOLVER_SUCCESS;
     }
