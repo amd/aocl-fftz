@@ -148,57 +148,57 @@ EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft15c_wrapper(UINT8 prec, UINT8 di
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft16c_wrapper(UINT8 prec, UINT8 dir);
 
 #ifdef ENABLE_AVX128
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft2avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft3avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft4avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft5avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft6avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft7avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft8avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft9avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft10avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft11avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft12avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft13avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft14avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft15avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft16avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft2avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft3avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft4avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft5avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft6avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft7avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft8avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft9avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft10avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft11avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft12avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft13avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft14avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft15avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft16avx128_wrapper(UINT8 prec, UINT8 dir);
 #endif
 
 #ifdef ENABLE_AVX256
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft2avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft3avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft4avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft5avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft6avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft7avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft8avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft9avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft10avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft11avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft12avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft13avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft14avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft15avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft16avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft2avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft3avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft4avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft5avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft6avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft7avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft8avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft9avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft10avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft11avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft12avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft13avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft14avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft15avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft16avx256_wrapper(UINT8 prec, UINT8 dir);
 #endif
 
 #if ENABLE_AVX512
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft2avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft3avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft4avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft5avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft6avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft7avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft8avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft9avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft10avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft11avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft12avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft13avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft14avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft15avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft16avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft2avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft3avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft4avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft5avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft6avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft7avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft8avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft9avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft10avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft11avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft12avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft13avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft14avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft15avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_twid_fft16avx512_wrapper(UINT8 prec, UINT8 dir);
 #endif
 
 // R2HC Kernels
@@ -493,57 +493,57 @@ EXPORT_SYM_DYN kfft_ register_kernel_twid_fft15c_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN kfft_ register_kernel_twid_fft16c_wrapper(UINT8 prec, UINT8 dir);
 
 #ifdef ENABLE_AVX128
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft2avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft3avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft4avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft5avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft6avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft7avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft8avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft9avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft10avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft11avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft12avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft13avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft14avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft15avx128_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft16avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft2avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft3avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft4avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft5avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft6avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft7avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft8avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft9avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft10avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft11avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft12avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft13avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft14avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft15avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft16avx128_wrapper(UINT8 prec, UINT8 dir);
 #endif
 
 #ifdef ENABLE_AVX256
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft2avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft3avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft4avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft5avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft6avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft7avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft8avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft9avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft10avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft11avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft12avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft13avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft14avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft15avx256_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft16avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft2avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft3avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft4avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft5avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft6avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft7avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft8avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft9avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft10avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft11avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft12avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft13avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft14avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft15avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft16avx256_wrapper(UINT8 prec, UINT8 dir);
 #endif
 
 #ifdef ENABLE_AVX512
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft2avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft3avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft4avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft5avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft6avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft7avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft8avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft9avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft10avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft11avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft12avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft13avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft14avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft15avx512_wrapper(UINT8 prec, UINT8 dir);
-//EXPORT_SYM_DYN kfft_ register_kernel_twid_fft16avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft2avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft3avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft4avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft5avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft6avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft7avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft8avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft9avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft10avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft11avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft12avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft13avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft14avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft15avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_twid_fft16avx512_wrapper(UINT8 prec, UINT8 dir);
 #endif
 
 // R2HC Kernels

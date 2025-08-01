@@ -51,6 +51,7 @@
  * and offset into 128 bit register.
  * Operations : 2 MOV(load)
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 2, perm: 0, other: 0}
 #define GATHER2_128_S(base, offset, dest)                                      \
 {                                                                              \
     dest = _mm_loadu_ps(base);                                                 \
@@ -63,6 +64,7 @@
  * specified by base address and offset.
  * Operations : 2 MOV(store)
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 2, perm: 0, other: 0}
 #define SCATTER2_128_S(base, offset, src)                                      \
 {                                                                              \
     _mm_storel_pi((__m64 *)(base), src);                                       \
@@ -75,6 +77,7 @@
  * into 128 bit register.
  * Operation : 1 MOV(load)
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
 #define LD_LOW_128_S(base, dest)                                               \
 {                                                                              \
     dest = _mm_loadl_pi(_mm_setzero_ps(), (__m64 *)(base));                    \
@@ -86,6 +89,7 @@
  * specified by base address.
  * Operation : 1 MOV(store)
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
 #define ST_LOW_128_S(base, src)                                                \
 {                                                                              \
     _mm_storel_pi((__m64 *)(base), src);                                       \
@@ -97,7 +101,17 @@
  * into 128 bit register.
  * Operation : 1 MOV(load)
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
 #define LD_128_D(base, dest)                                                   \
+{                                                                              \
+    dest = _mm_loadu_pd(base);                                                 \
+}
+
+// Generic kernels require a variant of LD_128_D with 3 args. Instead of
+// changing the signature of LD_128_D and causing unnecessary edits in all the
+// existing functions that use LD_128_D, we create a copy.
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+#define LD_128_OFFSET_D(base, offset, dest)                                    \
 {                                                                              \
     dest = _mm_loadu_pd(base);                                                 \
 }
@@ -108,7 +122,17 @@
  * specified by base address.
  * Operation : 1 MOV(store)
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
 #define ST_128_D(base, src)                                                    \
+{                                                                              \
+    _mm_storeu_pd(base, src);                                                  \
+}
+
+// Generic kernels require a variant of ST_128_D with 3 args. Instead of
+// changing the signature of ST_128_D and causing unnecessary edits in all the
+// existing functions that use ST_128_D, we create a copy.
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+#define ST_128_OFFSET_D(base, offset, src)                                     \
 {                                                                              \
     _mm_storeu_pd(base, src);                                                  \
 }
@@ -120,6 +144,7 @@
  * Operations : 4 MOV(load), 1 PERM(shuffle), 1 OTHERS(insert).Cast is excluded
  * as it will be a compile time operation.
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 1, other: 1}
 #define GATHER4_256_S(base, offset, dest)                                      \
 {                                                                              \
     __m128 _low, _high, _tmp;                                                  \
@@ -138,6 +163,7 @@
  * Operations : 4 MOV(store), 1 OTHERS(extract). Cast is excluded as it
  * will be a compile time operation.
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 0, other: 1}
 #define SCATTER4_256_S(base, offset, src)                                      \
 {                                                                              \
     __m128 _high = _mm256_extractf128_ps(src, 1);                              \
@@ -155,6 +181,7 @@
  * Operations : 2 MOV(load), 1 OTHERS(insert). Cast is excluded as it
  * will be a compile time operation.
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 2, perm: 0, other: 1}
 #define GATHER2_256_D(base, offset, dest)                                      \
 {                                                                              \
     __m128d _low, _high;                                                       \
@@ -170,6 +197,7 @@
  * Operations : 2 MOV(store), 1 OTHERS(extract). Cast is excluded as it
  * will be a compile time operation.
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 2, perm: 0, other: 1}
 #define SCATTER2_256_D(base, offset, src)                                      \
 {                                                                              \
     __m128d _high = _mm256_extractf128_pd(src, 1);                             \
@@ -185,6 +213,7 @@
  * Operations : 8 MOV(load), 3 PERM(shuffle), 3 OTHERS(insert).
  * Cast is excluded as it will be a compile time operation.
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 8, perm: 3, other: 3}
 #define GATHER8_512_S(base, offset, dest)                                      \
 {                                                                              \
     __m128 _low, _high, _tmp;                                                  \
@@ -212,6 +241,7 @@
  * Operations : 8 MOV(store), 3 OTHERS(extract).
  * Cast is excluded as it will be a compile time operation.
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 8, perm: 0, other: 3}
 #define SCATTER8_512_S(base, offset, src)                                      \
 {                                                                              \
     __m256 _256high = _mm512_extractf32x8_ps(src, 1);                          \
@@ -238,6 +268,7 @@
  * Operations : 4 MOV(load), 3 OTHERS(insert).
  * Cast is excluded as it will be a compile time operation
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 0, other: 3}
 #define GATHER4_512_D(base, offset, dest)                                      \
 {                                                                              \
     __m128d _low, _high;                                                       \
@@ -258,6 +289,7 @@
  * Operations : 4 MOV(store), 3 OTHERS(extract).
  * Cast is excluded as it will be a compile time operation.
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 0, other: 3}
 #define SCATTER4_512_D(base, offset, src)                                      \
 {                                                                              \
     __m256d _m256high = _mm512_extractf64x4_pd(src, 1);                        \
@@ -273,211 +305,226 @@
     _mm_storeu_pd((base) + 3 * offset, _high);                                 \
 }
 
-#define ITW_GATHER_128_D(gbase, starr, stidx, gdest, twbuf, n, col)            \
-    {                                                                          \
-        const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));              \
-        const __m128d cd = _mm_loadu_pd((twbuf) + addr);                       \
-        const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)]);           \
-        const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);       \
-        const __m128d ca_da = _mm_mul_pd(cd, aa);                              \
-        const __m128d cb_db = _mm_mul_pd(cd, bb);                              \
-        const __m128d db_cb = SWAP_RI_128_D(cb_db);                            \
-        gdest = SWAP_RI_128_D(_mm_addsub_pd(ca_da, db_cb));                    \
-    }
+// Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 2, other: 0}
+#define ITW_GATHER_128_D(gbase, starr, stidx, offset, gdest, twbuf, n, col)    \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m128d cd = _mm_loadu_pd((twbuf) + addr);                           \
+    const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)]);               \
+    const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);           \
+    const __m128d ca_da = _mm_mul_pd(cd, aa);                                  \
+    const __m128d cb_db = _mm_mul_pd(cd, bb);                                  \
+    const __m128d db_cb = SWAP_RI_128_D(cb_db);                                \
+    gdest = SWAP_RI_128_D(_mm_addsub_pd(ca_da, db_cb));                        \
+}
 
-#define TW_GATHER_128_D(gbase, starr, stidx, gdest, twbuf, n, col)             \
-    {                                                                          \
-        const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));              \
-        const __m128d cd = _mm_loadu_pd((twbuf) + addr);                       \
-        const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)]);           \
-        const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);       \
-        const __m128d ca_da = _mm_mul_pd(cd, aa);                              \
-        const __m128d cb_db = _mm_mul_pd(cd, bb);                              \
-        const __m128d db_cb = SWAP_RI_128_D(cb_db);                            \
-        gdest = _mm_addsub_pd(ca_da, db_cb);                                   \
-    }
+// Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 1, other: 0}
+#define TW_GATHER_128_D(gbase, starr, stidx, offset, gdest, twbuf, n, col)     \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m128d cd = _mm_loadu_pd((twbuf) + addr);                           \
+    const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)]);               \
+    const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);           \
+    const __m128d ca_da = _mm_mul_pd(cd, aa);                                  \
+    const __m128d cb_db = _mm_mul_pd(cd, bb);                                  \
+    const __m128d db_cb = SWAP_RI_128_D(cb_db);                                \
+    gdest = _mm_addsub_pd(ca_da, db_cb);                                       \
+}
 
+// Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 4, other: 1}
 #define ITW_GATHER_256_D(gbase, starr, stidx, offset, gdest, twbuf, n, col)    \
-    {                                                                          \
-        const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));              \
-        const __m256d twv = _mm256_loadu_pd((twbuf) + addr);                   \
-        __m256d tmp_in;                                                        \
-        GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in);             \
-        const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                      \
-        const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);       \
-        const __m256d lo_1 = _mm256_unpacklo_pd(tmp_1, tmp_0);                 \
-        const __m256d hi_1 = _mm256_unpackhi_pd(tmp_1, tmp_0);                 \
-        gdest = SWAP_RI_256_D(_mm256_addsub_pd(lo_1, hi_1));                   \
-    }
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m256d twv = _mm256_loadu_pd((twbuf) + addr);                       \
+    __m256d tmp_in;                                                            \
+    GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
+    const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
+    const __m256d lo_1 = _mm256_unpacklo_pd(tmp_1, tmp_0);                     \
+    const __m256d hi_1 = _mm256_unpackhi_pd(tmp_1, tmp_0);                     \
+    gdest = SWAP_RI_256_D(_mm256_addsub_pd(lo_1, hi_1));                       \
+}
 
+// Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 3, other: 1}
 #define TW_GATHER_256_D(gbase, starr, stidx, offset, gdest, twbuf, n, col)     \
-    {                                                                          \
-        const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));              \
-        const __m256d twv = _mm256_loadu_pd((twbuf) + addr);                   \
-        __m256d tmp_in;                                                        \
-        GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in);             \
-        const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                      \
-        const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);       \
-        const __m256d lo_1 = _mm256_unpacklo_pd(tmp_0, tmp_1);                 \
-        const __m256d hi_1 = _mm256_unpackhi_pd(tmp_0, tmp_1);                 \
-        gdest = _mm256_addsub_pd(lo_1, hi_1);                                  \
-    }
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m256d twv = _mm256_loadu_pd((twbuf) + addr);                       \
+    __m256d tmp_in;                                                            \
+    GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
+    const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
+    const __m256d lo_1 = _mm256_unpacklo_pd(tmp_0, tmp_1);                     \
+    const __m256d hi_1 = _mm256_unpackhi_pd(tmp_0, tmp_1);                     \
+    gdest = _mm256_addsub_pd(lo_1, hi_1);                                      \
+}
 
+// Cost: {fma: 1, mul: 2, add: 0, move: 6, perm: 4, other: 3}
 #define ITW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col)    \
-    {                                                                          \
-        __m512d ones = _mm512_set1_pd(1.0);                                    \
-        const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));              \
-        const __m512d twv = _mm512_loadu_pd((twbuf) + addr);                   \
-        __m512d tmp_in;                                                        \
-        GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);             \
-        const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                      \
-        const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);       \
-        const __m512d lo_1 = _mm512_unpacklo_pd(tmp_1, tmp_0);                 \
-        const __m512d hi_1 = _mm512_unpackhi_pd(tmp_1, tmp_0);                 \
-        gdest = SWAP_RI_512_D(_mm512_fmaddsub_pd(ones, lo_1, hi_1));           \
-    }
+{                                                                              \
+    __m512d ones = _mm512_set1_pd(1.0);                                        \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m512d twv = _mm512_loadu_pd((twbuf) + addr);                       \
+    __m512d tmp_in;                                                            \
+    GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
+    const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);           \
+    const __m512d lo_1 = _mm512_unpacklo_pd(tmp_1, tmp_0);                     \
+    const __m512d hi_1 = _mm512_unpackhi_pd(tmp_1, tmp_0);                     \
+    gdest = SWAP_RI_512_D(_mm512_fmaddsub_pd(ones, lo_1, hi_1));               \
+}
 
+// Cost: {fma: 1, mul: 2, add: 0, move: 6, perm: 3, other: 3}
 #define TW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col)     \
-    {                                                                          \
-        __m512d ones = _mm512_set1_pd(1.0);                                    \
-        const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));              \
-        const __m512d twv = _mm512_loadu_pd((twbuf) + addr);                   \
-        __m512d tmp_in;                                                        \
-        GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);             \
-        const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                      \
-        const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);       \
-        const __m512d lo_1 = _mm512_unpacklo_pd(tmp_0, tmp_1);                 \
-        const __m512d hi_1 = _mm512_unpackhi_pd(tmp_0, tmp_1);                 \
-        gdest = _mm512_fmaddsub_pd(ones, lo_1, hi_1);                          \
-    }
+{                                                                              \
+    __m512d ones = _mm512_set1_pd(1.0);                                        \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m512d twv = _mm512_loadu_pd((twbuf) + addr);                       \
+    __m512d tmp_in;                                                            \
+    GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
+    const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);           \
+    const __m512d lo_1 = _mm512_unpacklo_pd(tmp_0, tmp_1);                     \
+    const __m512d hi_1 = _mm512_unpackhi_pd(tmp_0, tmp_1);                     \
+    gdest = _mm512_fmaddsub_pd(ones, lo_1, hi_1);                              \
+}
 
+// Cost: {fma: 1, mul: 2, add: 0, move: 10, perm: 9, other: 3}
 #define ITW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col)    \
-    {                                                                          \
-        __m512 ones = _mm512_set1_ps(1.0);                                     \
-        const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));              \
-        const __m512 twv = _mm512_loadu_ps((twbuf) + addr);                    \
-        __m512 tmp_in;                                                         \
-        GATHER8_512_S((gbase) + starr[(stidx)], (offset), tmp_in);             \
-        __m512 tmp_0 = _mm512_mul_ps(tmp_in, twv);                             \
-        __m512 tmp_1 = _mm512_mul_ps(SWAP_RI_512_S(tmp_in), twv);              \
-        tmp_0 = _mm512_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                 \
-        tmp_1 = _mm512_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                 \
-        const __m512 lo_1 = _mm512_unpacklo_ps(tmp_1, tmp_0);                  \
-        const __m512 hi_1 = _mm512_unpackhi_ps(tmp_1, tmp_0);                  \
-        gdest = SWAP_RI_512_S(_mm512_fmaddsub_ps(ones, lo_1, hi_1));           \
-    }
+{                                                                              \
+    __m512 ones = _mm512_set1_ps(1.0);                                         \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m512 twv = _mm512_loadu_ps((twbuf) + addr);                        \
+    __m512 tmp_in;                                                             \
+    GATHER8_512_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    __m512 tmp_0 = _mm512_mul_ps(tmp_in, twv);                                 \
+    __m512 tmp_1 = _mm512_mul_ps(SWAP_RI_512_S(tmp_in), twv);                  \
+    tmp_0 = _mm512_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                     \
+    tmp_1 = _mm512_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                     \
+    const __m512 lo_1 = _mm512_unpacklo_ps(tmp_1, tmp_0);                      \
+    const __m512 hi_1 = _mm512_unpackhi_ps(tmp_1, tmp_0);                      \
+    gdest = SWAP_RI_512_S(_mm512_fmaddsub_ps(ones, lo_1, hi_1));               \
+}
 
+// Cost: {fma: 1, mul: 2, add: 0, move: 10, perm: 8, other: 3}
 #define TW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col)     \
-    {                                                                          \
-        __m512 ones = _mm512_set1_ps(1.0);                                     \
-        const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));              \
-        const __m512 twv = _mm512_loadu_ps((twbuf) + addr);                    \
-        __m512 tmp_in;                                                         \
-        GATHER8_512_S((gbase) + starr[(stidx)], (offset), tmp_in);             \
-        __m512 tmp_0 = _mm512_mul_ps(tmp_in, twv);                             \
-        __m512 tmp_1 = _mm512_mul_ps(SWAP_RI_512_S(tmp_in), twv);              \
-        tmp_0 = _mm512_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                 \
-        tmp_1 = _mm512_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                 \
-        const __m512 lo_1 = _mm512_unpacklo_ps(tmp_0, tmp_1);                  \
-        const __m512 hi_1 = _mm512_unpackhi_ps(tmp_0, tmp_1);                  \
-        gdest = _mm512_fmaddsub_ps(ones, lo_1, hi_1);                          \
-    }
+{                                                                              \
+    __m512 ones = _mm512_set1_ps(1.0);                                         \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m512 twv = _mm512_loadu_ps((twbuf) + addr);                        \
+    __m512 tmp_in;                                                             \
+    GATHER8_512_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    __m512 tmp_0 = _mm512_mul_ps(tmp_in, twv);                                 \
+    __m512 tmp_1 = _mm512_mul_ps(SWAP_RI_512_S(tmp_in), twv);                  \
+    tmp_0 = _mm512_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                     \
+    tmp_1 = _mm512_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                     \
+    const __m512 lo_1 = _mm512_unpacklo_ps(tmp_0, tmp_1);                      \
+    const __m512 hi_1 = _mm512_unpackhi_ps(tmp_0, tmp_1);                      \
+    gdest = _mm512_fmaddsub_ps(ones, lo_1, hi_1);                              \
+}
 
+// Cost: {fma: 0, mul: 2, add: 1, move: 5, perm: 7, other: 1}
 #define ITW_GATHER_256_S(gbase, starr, stidx, offset, gdest, twbuf, n, col)    \
-    {                                                                          \
-        const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));              \
-        const __m256 twv = _mm256_loadu_ps((twbuf) + addr);                    \
-        __m256 tmp_in;                                                         \
-        GATHER4_256_S((gbase) + starr[(stidx)], (offset), tmp_in);             \
-        __m256 tmp_0 = _mm256_mul_ps(tmp_in, twv);                             \
-        __m256 tmp_1 = _mm256_mul_ps(SWAP_RI_256_S(tmp_in), twv);              \
-        tmp_0 = _mm256_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                 \
-        tmp_1 = _mm256_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                 \
-        const __m256 lo_1 = _mm256_unpacklo_ps(tmp_1, tmp_0);                  \
-        const __m256 hi_1 = _mm256_unpackhi_ps(tmp_1, tmp_0);                  \
-        gdest = SWAP_RI_256_S(_mm256_addsub_ps(lo_1, hi_1));                   \
-    }
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m256 twv = _mm256_loadu_ps((twbuf) + addr);                        \
+    __m256 tmp_in;                                                             \
+    GATHER4_256_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    __m256 tmp_0 = _mm256_mul_ps(tmp_in, twv);                                 \
+    __m256 tmp_1 = _mm256_mul_ps(SWAP_RI_256_S(tmp_in), twv);                  \
+    tmp_0 = _mm256_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                     \
+    tmp_1 = _mm256_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                     \
+    const __m256 lo_1 = _mm256_unpacklo_ps(tmp_1, tmp_0);                      \
+    const __m256 hi_1 = _mm256_unpackhi_ps(tmp_1, tmp_0);                      \
+    gdest = SWAP_RI_256_S(_mm256_addsub_ps(lo_1, hi_1));                       \
+}
 
+// Cost: {fma: 0, mul: 2, add: 1, move: 5, perm: 6, other: 1}
 #define TW_GATHER_256_S(gbase, starr, stidx, offset, gdest, twbuf, n, col)     \
-    {                                                                          \
-        const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));              \
-        const __m256 twv = _mm256_loadu_ps((twbuf) + addr);                    \
-        __m256 tmp_in;                                                         \
-        GATHER4_256_S((gbase) + starr[(stidx)], (offset), tmp_in);             \
-        __m256 tmp_0 = _mm256_mul_ps(tmp_in, twv);                             \
-        __m256 tmp_1 = _mm256_mul_ps(SWAP_RI_256_S(tmp_in), twv);              \
-        tmp_0 = _mm256_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                 \
-        tmp_1 = _mm256_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                 \
-        const __m256 lo_1 = _mm256_unpacklo_ps(tmp_0, tmp_1);                  \
-        const __m256 hi_1 = _mm256_unpackhi_ps(tmp_0, tmp_1);                  \
-        gdest = _mm256_addsub_ps(lo_1, hi_1);                                  \
-    }
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m256 twv = _mm256_loadu_ps((twbuf) + addr);                        \
+    __m256 tmp_in;                                                             \
+    GATHER4_256_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    __m256 tmp_0 = _mm256_mul_ps(tmp_in, twv);                                 \
+    __m256 tmp_1 = _mm256_mul_ps(SWAP_RI_256_S(tmp_in), twv);                  \
+    tmp_0 = _mm256_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                     \
+    tmp_1 = _mm256_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                     \
+    const __m256 lo_1 = _mm256_unpacklo_ps(tmp_0, tmp_1);                      \
+    const __m256 hi_1 = _mm256_unpackhi_ps(tmp_0, tmp_1);                      \
+    gdest = _mm256_addsub_ps(lo_1, hi_1);                                      \
+}
 
+// Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 6, other: 0}
 #define ITW_GATHER_128_S(gbase, starr, stidx, offset, gdest, twbuf, n, col)    \
-    {                                                                          \
-        const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));              \
-        const __m128 twv = _mm_loadu_ps((twbuf) + addr);                       \
-        __m128 tmp_in;                                                         \
-        GATHER2_128_S((gbase) + starr[(stidx)], (offset), tmp_in);             \
-        __m128 tmp_0 = _mm_mul_ps(tmp_in, twv);                                \
-        __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(tmp_in), twv);                 \
-        tmp_0 = _mm_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                    \
-        tmp_1 = _mm_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                    \
-        const __m128 lo_1 = _mm_unpacklo_ps(tmp_1, tmp_0);                     \
-        const __m128 hi_1 = _mm_unpackhi_ps(tmp_1, tmp_0);                     \
-        gdest = SWAP_RI_128_S(_mm_addsub_ps(lo_1, hi_1));                      \
-    }
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m128 twv = _mm_loadu_ps((twbuf) + addr);                           \
+    __m128 tmp_in;                                                             \
+    GATHER2_128_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    __m128 tmp_0 = _mm_mul_ps(tmp_in, twv);                                    \
+    __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(tmp_in), twv);                     \
+    tmp_0 = _mm_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                        \
+    tmp_1 = _mm_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                        \
+    const __m128 lo_1 = _mm_unpacklo_ps(tmp_1, tmp_0);                         \
+    const __m128 hi_1 = _mm_unpackhi_ps(tmp_1, tmp_0);                         \
+    gdest = SWAP_RI_128_S(_mm_addsub_ps(lo_1, hi_1));                          \
+}
 
+// Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 5, other: 0}
 #define TW_GATHER_128_S(gbase, starr, stidx, offset, gdest, twbuf, n, col)     \
-    {                                                                          \
-        const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));              \
-        const __m128 twv = _mm_loadu_ps((twbuf) + addr);                       \
-        __m128 tmp_in;                                                         \
-        GATHER2_128_S((gbase) + starr[(stidx)], (offset), tmp_in);             \
-        __m128 tmp_0 = _mm_mul_ps(tmp_in, twv);                                \
-        __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(tmp_in), twv);                 \
-        tmp_0 = _mm_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                    \
-        tmp_1 = _mm_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                    \
-        const __m128 lo_1 = _mm_unpacklo_ps(tmp_0, tmp_1);                     \
-        const __m128 hi_1 = _mm_unpackhi_ps(tmp_0, tmp_1);                     \
-        gdest = _mm_addsub_ps(lo_1, hi_1);                                     \
-    }
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m128 twv = _mm_loadu_ps((twbuf) + addr);                           \
+    __m128 tmp_in;                                                             \
+    GATHER2_128_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    __m128 tmp_0 = _mm_mul_ps(tmp_in, twv);                                    \
+    __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(tmp_in), twv);                     \
+    tmp_0 = _mm_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                        \
+    tmp_1 = _mm_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                        \
+    const __m128 lo_1 = _mm_unpacklo_ps(tmp_0, tmp_1);                         \
+    const __m128 hi_1 = _mm_unpackhi_ps(tmp_0, tmp_1);                         \
+    gdest = _mm_addsub_ps(lo_1, hi_1);                                         \
+}
 
+// Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 6, other: 0}
 #define ITW_GATHER_LOW_128_S(gbase, starr, stidx, gdest, twbuf, n, col)        \
-    {                                                                          \
-        const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));              \
-        __m128 tmp_in, twv;                                                    \
-        LD_LOW_128_S((twbuf) + addr, twv);                                     \
-        LD_LOW_128_S((gbase) + starr[(stidx)], tmp_in);                        \
-        __m128 tmp_0 = _mm_mul_ps(tmp_in, twv);                                \
-        __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(tmp_in), twv);                 \
-        tmp_0 = _mm_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                    \
-        tmp_1 = _mm_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                    \
-        const __m128 lo_1 = _mm_unpacklo_ps(tmp_1, tmp_0);                     \
-        const __m128 hi_1 = _mm_unpackhi_ps(tmp_1, tmp_0);                     \
-        gdest = SWAP_RI_128_S(_mm_addsub_ps(lo_1, hi_1));                      \
-    }
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    __m128 tmp_in, twv;                                                        \
+    LD_LOW_128_S((twbuf) + addr, twv);                                         \
+    LD_LOW_128_S((gbase) + starr[(stidx)], tmp_in);                            \
+    __m128 tmp_0 = _mm_mul_ps(tmp_in, twv);                                    \
+    __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(tmp_in), twv);                     \
+    tmp_0 = _mm_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                        \
+    tmp_1 = _mm_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                        \
+    const __m128 lo_1 = _mm_unpacklo_ps(tmp_1, tmp_0);                         \
+    const __m128 hi_1 = _mm_unpackhi_ps(tmp_1, tmp_0);                         \
+    gdest = SWAP_RI_128_S(_mm_addsub_ps(lo_1, hi_1));                          \
+}
 
+// Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 5, other: 0}
 #define TW_GATHER_LOW_128_S(gbase, starr, stidx, gdest, twbuf, n, col)         \
-    {                                                                          \
-        const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));              \
-        __m128 tmp_in, twv;                                                    \
-        LD_LOW_128_S((twbuf) + addr, twv);                                     \
-        LD_LOW_128_S((gbase) + starr[(stidx)], tmp_in);                        \
-        __m128 tmp_0 = _mm_mul_ps(tmp_in, twv);                                \
-        __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(tmp_in), twv);                 \
-        tmp_0 = _mm_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                    \
-        tmp_1 = _mm_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                    \
-        const __m128 lo_1 = _mm_unpacklo_ps(tmp_0, tmp_1);                     \
-        const __m128 hi_1 = _mm_unpackhi_ps(tmp_0, tmp_1);                     \
-        gdest = _mm_addsub_ps(lo_1, hi_1);                                     \
-    }
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    __m128 tmp_in, twv;                                                        \
+    LD_LOW_128_S((twbuf) + addr, twv);                                         \
+    LD_LOW_128_S((gbase) + starr[(stidx)], tmp_in);                            \
+    __m128 tmp_0 = _mm_mul_ps(tmp_in, twv);                                    \
+    __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(tmp_in), twv);                     \
+    tmp_0 = _mm_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                        \
+    tmp_1 = _mm_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                        \
+    const __m128 lo_1 = _mm_unpacklo_ps(tmp_0, tmp_1);                         \
+    const __m128 hi_1 = _mm_unpackhi_ps(tmp_0, tmp_1);                         \
+    gdest = _mm_addsub_ps(lo_1, hi_1);                                         \
+}
 
 /**
  * @brief interchanges the real and imaginary values in a 128 bit register
  * for single precision floating point.
  * Operation : 1 PERM(shuffle)
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
 #define SWAP_RI_128_S(val) _mm_shuffle_ps(val, val, 177)
 
 /**
@@ -485,6 +532,7 @@
  * for double precision floating point.
  * Operation : 1 PERM(shuffle)
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
 #define SWAP_RI_128_D(val) _mm_shuffle_pd(val, val, 1)
 
 /**
@@ -493,6 +541,7 @@
  * integer argument(b 10 11 00 01)
  * Operation : 1 PERM
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
 #define SWAP_RI_256_S(val) _mm256_permute_ps(val, 177)
 
 /**
@@ -501,6 +550,7 @@
  * integer argument(b 01 01)
  * Operation : 1 PERM
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
 #define SWAP_RI_256_D(val) _mm256_permute_pd(val, 5)
 
 /**
@@ -508,6 +558,7 @@
  * for single precision floating point using the control value in the last
  * integer argument(b 10 11 00 01)
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
 #define SWAP_RI_512_S(val) _mm512_permute_ps(val, 177)
 
 /**
@@ -515,6 +566,7 @@
  * for double precision floating point using the control value in the last
  * integer argument(b 01 01 01 01)
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
 #define SWAP_RI_512_D(val) _mm512_permute_pd(val, 85)
 
 /**
@@ -604,11 +656,17 @@ static const union zero_conj_512
  * @brief take conjugate of the complex number A+Bi => A-Bi
  * Operation : 1 OTHERS(xor)
  */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 0, other: 1}
 #define CONJ_128_S(x) _mm_xor_ps(_conj_128_f.s, x)
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 0, other: 1}
 #define CONJ_128_D(x) _mm_xor_pd(_conj_128_d.d, x)
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 0, other: 1}
 #define CONJ_256_S(x) _mm256_xor_ps(_conj_256_f.s, x)
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 0, other: 1}
 #define CONJ_256_D(x) _mm256_xor_pd(_conj_256_d.d, x)
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 0, other: 1}
 #define CONJ_512_S(x) _mm512_xor_ps(_conj_512_f.s, x)
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 0, other: 1}
 #define CONJ_512_D(x) _mm512_xor_pd(_conj_512_d.d, x)
 
 /**
@@ -616,7 +674,8 @@ static const union zero_conj_512
  * for single precision floating point.
  * Operation : 2 PERM, 1 ADD
  */
-#define SUBADD_128_S(a, b, c)                                                  \
+// Cost: {fma: 0, mul: 0, add: 1, move: 0, perm: 2, other: 0}
+#define SUBADD_SWAPA_128_S(a, b, c)                                            \
 {                                                                              \
     a = SWAP_RI_128_S(a);                                                      \
     c = SWAP_RI_128_S(_mm_addsub_ps(a, b));                                    \
@@ -627,7 +686,8 @@ static const union zero_conj_512
  * for double precision floating point.
  * Operation : 2 PERM, 1 ADD
  */
-#define SUBADD_128_D(a, b, c)                                                  \
+// Cost: {fma: 0, mul: 0, add: 1, move: 0, perm: 2, other: 0}
+#define SUBADD_SWAPA_128_D(a, b, c)                                            \
 {                                                                              \
     a = SWAP_RI_128_D(a);                                                      \
     c = SWAP_RI_128_D(_mm_addsub_pd(a, b));                                    \
@@ -637,7 +697,8 @@ static const union zero_conj_512
  * for single precision floating point.
  * Operation : 2 PERM, 1 ADD
  */
-#define SUBADD_256_S(a, b, c)                                                  \
+// Cost: {fma: 0, mul: 0, add: 1, move: 0, perm: 2, other: 0}
+#define SUBADD_SWAPA_256_S(a, b, c)                                            \
 {                                                                              \
     a = SWAP_RI_256_S(a);                                                      \
     c = SWAP_RI_256_S(_mm256_addsub_ps(a, b));                                 \
@@ -648,10 +709,34 @@ static const union zero_conj_512
  * for double precision floating point.
  * Operation : 2 PERM, 1 ADD
  */
-#define SUBADD_256_D(a, b, c)                                                  \
+// Cost: {fma: 0, mul: 0, add: 1, move: 0, perm: 2, other: 0}
+#define SUBADD_SWAPA_256_D(a, b, c)                                            \
 {                                                                              \
     a = SWAP_RI_256_D(a);                                                      \
     c = SWAP_RI_256_D(_mm256_addsub_pd(a, b));                                 \
+}
+/**
+ * @brief alternatively performs addition & subtraction in a 512 bit register
+ * for single precision floating point.
+ * Operation : 2 PERM, 1 FMA
+ */
+// Cost: {fma: 1, mul: 0, add: 0, move: 0, perm: 2, other: 0}
+#define SUBADD_SWAPA_512_S(a, b, c)                                            \
+{                                                                              \
+    a = SWAP_RI_512_S(a);                                                      \
+    c = SWAP_RI_512_S(_mm512_fmaddsub_ps(_mm512_set1_ps(1.0f), a, b));         \
+}
+
+/**
+ * @brief alternatively performs addition & subtraction in a 512 bit register
+ * for double precision floating point.
+ * Operation : 2 PERM, 1 FMA
+ */
+// Cost: {fma: 1, mul: 0, add: 0, move: 0, perm: 2, other: 0}
+#define SUBADD_SWAPA_512_D(a, b, c)                                            \
+{                                                                              \
+    a = SWAP_RI_512_D(a);                                                      \
+    c = SWAP_RI_512_D(_mm512_fmaddsub_pd(_mm512_set1_pd(1.0), a, b));          \
 }
 
 #endif // AOCLFFTZ_SIMD_COMMON_H

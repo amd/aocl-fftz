@@ -174,10 +174,10 @@ static VOID fft9avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         v_tv3 = _mm_mul_ps(v_cv5, v_K6);
         v_tv4 = _mm_mul_ps(v_cv5, v_K5);
-        SUBADD_128_S(v_tv3, v_tv4, v_cv5);
+        SUBADD_SWAPA_128_S(v_tv3, v_tv4, v_cv5);
         v_tv3 = _mm_mul_ps(v_cv8, v_K4);
         v_tv4 = _mm_mul_ps(v_cv8, v_K3);
-        SUBADD_128_S(v_tv3, v_tv4, v_cv8);
+        SUBADD_SWAPA_128_S(v_tv3, v_tv4, v_cv8);
         v_av1 = _mm_add_ps(v_cv5, v_cv8);
 
         // Output point 2: X[1]
@@ -194,10 +194,10 @@ static VOID fft9avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         v_tv3 = _mm_mul_ps(v_cv6, v_K4);
         v_tv4 = _mm_mul_ps(v_cv6, v_K3);
-        SUBADD_128_S(v_tv3, v_tv4, v_cv6);
+        SUBADD_SWAPA_128_S(v_tv3, v_tv4, v_cv6);
         v_tv3 = _mm_mul_ps(v_cv9, v_K1);
         v_tv4 = _mm_mul_ps(v_cv9, v_K2);
-        SUBADD_128_S(v_tv3, v_tv4, v_cv9);
+        SUBADD_SWAPA_128_S(v_tv3, v_tv4, v_cv9);
         v_av1 = _mm_add_ps(v_cv6, v_cv9);
 
         // Output point 3: X[2]
@@ -297,10 +297,10 @@ static VOID fft9avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         v_tv3 = _mm_mul_ps(v_cv5, v_K6);
         v_tv4 = _mm_mul_ps(v_cv5, v_K5);
-        SUBADD_128_S(v_tv3, v_tv4, v_cv5);
+        SUBADD_SWAPA_128_S(v_tv3, v_tv4, v_cv5);
         v_tv3 = _mm_mul_ps(v_cv8, v_K4);
         v_tv4 = _mm_mul_ps(v_cv8, v_K3);
-        SUBADD_128_S(v_tv3, v_tv4, v_cv8);
+        SUBADD_SWAPA_128_S(v_tv3, v_tv4, v_cv8);
         v_av1 = _mm_add_ps(v_cv5, v_cv8);
 
         // Output point 2: X[1]
@@ -317,10 +317,10 @@ static VOID fft9avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         v_tv3 = _mm_mul_ps(v_cv6, v_K4);
         v_tv4 = _mm_mul_ps(v_cv6, v_K3);
-        SUBADD_128_S(v_tv3, v_tv4, v_cv6);
+        SUBADD_SWAPA_128_S(v_tv3, v_tv4, v_cv6);
         v_tv3 = _mm_mul_ps(v_cv9, v_K1);
         v_tv4 = _mm_mul_ps(v_cv9, v_K2);
-        SUBADD_128_S(v_tv3, v_tv4, v_cv9);
+        SUBADD_SWAPA_128_S(v_tv3, v_tv4, v_cv9);
         v_av1 = _mm_add_ps(v_cv6, v_cv9);
 
         // Output point 3: X[2]
@@ -476,10 +476,10 @@ static VOID fft9avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         v_tv3 = _mm_mul_pd(v_cv5, v_K6);
         v_tv4 = _mm_mul_pd(v_cv5, v_K5);
-        SUBADD_128_D(v_tv3, v_tv4, v_cv5);
+        SUBADD_SWAPA_128_D(v_tv3, v_tv4, v_cv5);
         v_tv3 = _mm_mul_pd(v_cv8, v_K4);
         v_tv4 = _mm_mul_pd(v_cv8, v_K3);
-        SUBADD_128_D(v_tv3, v_tv4, v_cv8);
+        SUBADD_SWAPA_128_D(v_tv3, v_tv4, v_cv8);
         v_av1 = _mm_add_pd(v_cv5, v_cv8);
 
         // Output point 2: X[1]
@@ -496,10 +496,10 @@ static VOID fft9avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         v_tv3 = _mm_mul_pd(v_cv6, v_K4);
         v_tv4 = _mm_mul_pd(v_cv6, v_K3);
-        SUBADD_128_D(v_tv3, v_tv4, v_cv6);
+        SUBADD_SWAPA_128_D(v_tv3, v_tv4, v_cv6);
         v_tv3 = _mm_mul_pd(v_cv9, v_K1);
         v_tv4 = _mm_mul_pd(v_cv9, v_K2);
-        SUBADD_128_D(v_tv3, v_tv4, v_cv9);
+        SUBADD_SWAPA_128_D(v_tv3, v_tv4, v_cv9);
         v_av1 = _mm_add_pd(v_cv6, v_cv9);
 
         // Output point 3: X[2]s

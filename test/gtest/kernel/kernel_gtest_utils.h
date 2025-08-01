@@ -155,118 +155,118 @@ kfft_ get_twiddle_kernel(const UINT32 radix, const INT32 dir,
         break;
 
 #ifdef ENABLE_AVX128
-//    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX128:
-//    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX128:
-//        switch (radix)
-//        {
-//        case 2:
-//            return register_kernel_twid_fft2avx128_wrapper(prec, dir);
-//        case 3:
-//            return register_kernel_twid_fft3avx128_wrapper(prec, dir);
-//        case 4:
-//            return register_kernel_twid_fft4avx128_wrapper(prec, dir);
-//        case 5:
-//            return register_kernel_twid_fft5avx128_wrapper(prec, dir);
-//        case 6:
-//            return register_kernel_twid_fft6avx128_wrapper(prec, dir);
-//        case 7:
-//            return register_kernel_twid_fft7avx128_wrapper(prec, dir);
-//        case 8:
-//            return register_kernel_twid_fft8avx128_wrapper(prec, dir);
-//        case 9:
-//            return register_kernel_twid_fft9avx128_wrapper(prec, dir);
-//        case 10:
-//            return register_kernel_twid_fft10avx128_wrapper(prec, dir);
-//        case 11:
-//            return register_kernel_twid_fft11avx128_wrapper(prec, dir);
-//        case 12:
-//            return register_kernel_twid_fft12avx128_wrapper(prec, dir);
-//        case 13:
-//            return register_kernel_twid_fft13avx128_wrapper(prec, dir);
-//        case 14:
-//            return register_kernel_twid_fft14avx128_wrapper(prec, dir);
-//        case 15:
-//            return register_kernel_twid_fft15avx128_wrapper(prec, dir);
-//        case 16:
-//            return register_kernel_twid_fft16avx128_wrapper(prec, dir);
-//        }
-//        break;
+    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX128:
+    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX128:
+        switch (radix)
+        {
+        case 2:
+            return register_kernel_twid_fft2avx128_wrapper(prec, dir);
+        case 3:
+            return register_kernel_twid_fft3avx128_wrapper(prec, dir);
+        case 4:
+            return register_kernel_twid_fft4avx128_wrapper(prec, dir);
+        case 5:
+            return register_kernel_twid_fft5avx128_wrapper(prec, dir);
+        case 6:
+            return register_kernel_twid_fft6avx128_wrapper(prec, dir);
+        case 7:
+            return register_kernel_twid_fft7avx128_wrapper(prec, dir);
+        case 8:
+            return register_kernel_twid_fft8avx128_wrapper(prec, dir);
+        case 9:
+            return register_kernel_twid_fft9avx128_wrapper(prec, dir);
+        case 10:
+            return register_kernel_twid_fft10avx128_wrapper(prec, dir);
+        case 11:
+            return register_kernel_twid_fft11avx128_wrapper(prec, dir);
+        case 12:
+            return register_kernel_twid_fft12avx128_wrapper(prec, dir);
+        case 13:
+            return register_kernel_twid_fft13avx128_wrapper(prec, dir);
+        case 14:
+            return register_kernel_twid_fft14avx128_wrapper(prec, dir);
+        case 15:
+            return register_kernel_twid_fft15avx128_wrapper(prec, dir);
+        case 16:
+            return register_kernel_twid_fft16avx128_wrapper(prec, dir);
+        }
+        break;
 #endif
 #ifdef ENABLE_AVX256
-//    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX256:
-//    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX256:
-//        switch (radix)
-//        {
-//        case 2:
-//            return register_kernel_twid_fft2avx256_wrapper(prec, dir);
-//        case 3:
-//            return register_kernel_twid_fft3avx256_wrapper(prec, dir);
-//        case 4:
-//            return register_kernel_twid_fft4avx256_wrapper(prec, dir);
-//        case 5:
-//            return register_kernel_twid_fft5avx256_wrapper(prec, dir);
-//        case 6:
-//            return register_kernel_twid_fft6avx256_wrapper(prec, dir);
-//        case 7:
-//            return register_kernel_twid_fft7avx256_wrapper(prec, dir);
-//        case 8:
-//            return register_kernel_twid_fft8avx256_wrapper(prec, dir);
-//        case 9:
-//            return register_kernel_twid_fft9avx256_wrapper(prec, dir);
-//        case 10:
-//            return register_kernel_twid_fft10avx256_wrapper(prec, dir);
-//        case 11:
-//            return register_kernel_twid_fft11avx256_wrapper(prec, dir);
-//        case 12:
-//            return register_kernel_twid_fft12avx256_wrapper(prec, dir);
-//        case 13:
-//            return register_kernel_twid_fft13avx256_wrapper(prec, dir);
-//        case 14:
-//            return register_kernel_twid_fft14avx256_wrapper(prec, dir);
-//        case 15:
-//            return register_kernel_twid_fft15avx256_wrapper(prec, dir);
-//        case 16:
-//            return register_kernel_twid_fft16avx256_wrapper(prec, dir);
-//        }
-//        break;
+    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX256:
+    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX256:
+        switch (radix)
+        {
+        case 2:
+            return register_kernel_twid_fft2avx256_wrapper(prec, dir);
+        case 3:
+            return register_kernel_twid_fft3avx256_wrapper(prec, dir);
+        case 4:
+            return register_kernel_twid_fft4avx256_wrapper(prec, dir);
+        case 5:
+            return register_kernel_twid_fft5avx256_wrapper(prec, dir);
+        case 6:
+            return register_kernel_twid_fft6avx256_wrapper(prec, dir);
+        case 7:
+            return register_kernel_twid_fft7avx256_wrapper(prec, dir);
+        case 8:
+            return register_kernel_twid_fft8avx256_wrapper(prec, dir);
+        case 9:
+            return register_kernel_twid_fft9avx256_wrapper(prec, dir);
+        case 10:
+            return register_kernel_twid_fft10avx256_wrapper(prec, dir);
+        case 11:
+            return register_kernel_twid_fft11avx256_wrapper(prec, dir);
+        case 12:
+            return register_kernel_twid_fft12avx256_wrapper(prec, dir);
+        case 13:
+            return register_kernel_twid_fft13avx256_wrapper(prec, dir);
+        case 14:
+            return register_kernel_twid_fft14avx256_wrapper(prec, dir);
+        case 15:
+            return register_kernel_twid_fft15avx256_wrapper(prec, dir);
+        case 16:
+            return register_kernel_twid_fft16avx256_wrapper(prec, dir);
+        }
+        break;
 #endif
 #ifdef ENABLE_AVX512
-//    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX512:
-//    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX512:
-//        switch (radix)
-//        {
-//        case 2:
-//            return register_kernel_twid_fft2avx512_wrapper(prec, dir);
-//        case 3:
-//            return register_kernel_twid_fft3avx512_wrapper(prec, dir);
-//        case 4:
-//            return register_kernel_twid_fft4avx512_wrapper(prec, dir);
-//        case 5:
-//            return register_kernel_twid_fft5avx512_wrapper(prec, dir);
-//        case 6:
-//            return register_kernel_twid_fft6avx512_wrapper(prec, dir);
-//        case 7:
-//            return register_kernel_twid_fft7avx512_wrapper(prec, dir);
-//        case 8:
-//            return register_kernel_twid_fft8avx512_wrapper(prec, dir);
-//        case 9:
-//            return register_kernel_twid_fft9avx512_wrapper(prec, dir);
-//        case 10:
-//            return register_kernel_twid_fft10avx512_wrapper(prec, dir);
-//        case 11:
-//            return register_kernel_twid_fft11avx512_wrapper(prec, dir);
-//        case 12:
-//            return register_kernel_twid_fft12avx512_wrapper(prec, dir);
-//        case 13:
-//            return register_kernel_twid_fft13avx512_wrapper(prec, dir);
-//        case 14:
-//            return register_kernel_twid_fft14avx512_wrapper(prec, dir);
-//        case 15:
-//            return register_kernel_twid_fft15avx512_wrapper(prec, dir);
-//        case 16:
-//            return register_kernel_twid_fft16avx512_wrapper(prec, dir);
-//        }
-//        break;
+    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX512:
+    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX512:
+        switch (radix)
+        {
+        case 2:
+            return register_kernel_twid_fft2avx512_wrapper(prec, dir);
+        case 3:
+            return register_kernel_twid_fft3avx512_wrapper(prec, dir);
+        case 4:
+            return register_kernel_twid_fft4avx512_wrapper(prec, dir);
+        case 5:
+            return register_kernel_twid_fft5avx512_wrapper(prec, dir);
+        case 6:
+            return register_kernel_twid_fft6avx512_wrapper(prec, dir);
+        case 7:
+            return register_kernel_twid_fft7avx512_wrapper(prec, dir);
+        case 8:
+            return register_kernel_twid_fft8avx512_wrapper(prec, dir);
+        case 9:
+            return register_kernel_twid_fft9avx512_wrapper(prec, dir);
+        case 10:
+            return register_kernel_twid_fft10avx512_wrapper(prec, dir);
+        case 11:
+            return register_kernel_twid_fft11avx512_wrapper(prec, dir);
+        case 12:
+            return register_kernel_twid_fft12avx512_wrapper(prec, dir);
+        case 13:
+            return register_kernel_twid_fft13avx512_wrapper(prec, dir);
+        case 14:
+            return register_kernel_twid_fft14avx512_wrapper(prec, dir);
+        case 15:
+            return register_kernel_twid_fft15avx512_wrapper(prec, dir);
+        case 16:
+            return register_kernel_twid_fft16avx512_wrapper(prec, dir);
+        }
+        break;
 #endif
     }
     return nullptr;

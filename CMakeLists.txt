@@ -103,6 +103,7 @@ if(ENABLE_AVX512)
                             ${CORE_PATH}/kernels/c2c/avx512/*.c
                             ${CORE_PATH}/kernels/r2hc/avx512/*.c
                             ${CORE_PATH}/kernels/r2hc_fused/avx512/*.c
+                            ${CORE_PATH}/kernels/tw_c2c/avx512/*.c
                             ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx512.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX512_FILES})
 endif()
@@ -112,6 +113,7 @@ if(ENABLE_AVX256)
     file(GLOB CORE_AVX256_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/c2c/avx256/*.c
                                                   ${CORE_PATH}/kernels/r2hc/avx256/*.c
                                                   ${CORE_PATH}/kernels/r2hc_fused/avx256/*.c
+                                                  ${CORE_PATH}/kernels/tw_c2c/avx256/*.c
                                                   ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx256.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX256_FILES})
 endif()
@@ -120,6 +122,7 @@ if(ENABLE_AVX128)
     file(GLOB CORE_AVX128_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/c2c/avx128/*.c
                                                   ${CORE_PATH}/kernels/r2hc/avx128/*.c
                                                   ${CORE_PATH}/kernels/r2hc_fused/avx128/*.c
+                                                  ${CORE_PATH}/kernels/tw_c2c/avx128/*.c
                                                   ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx128.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX128_FILES})
 endif()
