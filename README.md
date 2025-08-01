@@ -117,6 +117,7 @@ BUILD_DOC                           |  Build documentation for aocl-fftz (Disabl
 CODE_COVERAGE                       |  Enables source code coverage and generates coverage report. Only supported on Linux with GCC compiler (Disabled by default)
 ASAN                                |  Enables address sanitizer checks. Supported only on Linux Debug build (Disabled by default)
 VALGRIND                            |  Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)
+ENABLE_MULTI_THREADING              |  Compile with multi-threading support using OpenMP (Disabled by default)
 
 
 Note : Enabling ENABLE_AVX256 turns on ENABLE_AVX128 implicitly.

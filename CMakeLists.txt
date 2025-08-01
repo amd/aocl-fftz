@@ -345,9 +345,13 @@ else()
     message(STATUS "Library type being built is: Shared")
 endif()
 
-#add openmp flags for windows
-if(WIN32 AND ENABLE_MULTI_THREADING)
-    target_link_libraries(${lib_name} PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+#add required openmp flags
+if(ENABLE_MULTI_THREADING)
+    if(WIN32)
+        target_link_libraries(${lib_name} PRIVATE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+    else()
+        target_link_options(${lib_name} PUBLIC -fopenmp)
+    endif()
 endif()
 
 # add the compiler and linker flags for code coverage
