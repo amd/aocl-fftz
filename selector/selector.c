@@ -403,8 +403,8 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t* sel)
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     UINT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
 
-    // TODO: Should be removed after supporting MT in N-D and bluestein solver
-    if ((dim_rank > 1 || check_bluestein_problem(sel->solution->decomp_scheme))
+    // TODO: Should be removed after supporting MT in bluestein solver
+    if (check_bluestein_problem(sel->solution->decomp_scheme)
         && avl_threads > 1)
     {
         AOCLFFTZ_LOG_UNFORMATTED(INFO, INFO, "Multi Threaded execution is"
