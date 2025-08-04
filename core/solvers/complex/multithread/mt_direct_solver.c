@@ -190,7 +190,8 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
     for (INTP batch = 0; batch < num_iters; batch++)
     {
         aoclfftz_twiddle_t tw_local = {
-            .TW = MOVE_ADDR(sol->twiddle->TW, DATA_STRIDE * dt_bytes * batch),
+            .TW = MOVE_ADDR(sol->twiddle->TW,
+                            DATA_STRIDE * dt_bytes * batch * num_sets),
             .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
             .cols = sol->twiddle->cols,
         };
@@ -206,7 +207,8 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
 
     // Process the tail cases of the kernel
     aoclfftz_twiddle_t tw_local = {
-        .TW = MOVE_ADDR(sol->twiddle->TW, DATA_STRIDE * dt_bytes * num_iters),
+        .TW = MOVE_ADDR(sol->twiddle->TW,
+                        DATA_STRIDE * dt_bytes * num_iters * num_sets),
         .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
         .cols = sol->twiddle->cols,
     };
