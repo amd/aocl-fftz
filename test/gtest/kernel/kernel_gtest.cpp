@@ -2022,7 +2022,8 @@ std::vector<std::tuple<INTP, INTP, INTP, UINT8, UINT8>> io_params_batch32 = {
                                                             {11,  5, 16, 1, 1},
                                                             {3,  10, 31, 0, 1},
                                                             {17, 2, 32, 1, 1}};
-#ifdef ENABLE_AVX512
+
+#if defined(ENABLE_AVX512) && defined(AVX512_SUPPORTED)
 INSTANTIATE_TEST_SUITE_P(
     C2C_AVX512_KernelTest, AoclfftzKernelTestFloat,
     ::testing::Combine(::testing::ValuesIn(param_float_c2c_avx512_kernels),
@@ -2034,9 +2035,7 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(::testing::ValuesIn(param_double_c2c_avx512_kernels),
                        ::testing::ValuesIn(io_params_batch16)),
     name_generator);
-#endif
 
-#ifdef ENABLE_AVX512
 INSTANTIATE_TEST_SUITE_P(
     C2C_TWID_AVX512_KernelTest, AoclfftzTwiddleKernelTestFloat,
     ::testing::Combine(::testing::ValuesIn(param_float_c2c_twid_avx512_kernels),
@@ -2132,7 +2131,7 @@ INSTANTIATE_TEST_SUITE_P(
     name_generator);
 #endif
 
-#ifdef ENABLE_AVX512
+#if defined(ENABLE_AVX512) && defined(AVX512_SUPPORTED)
 // R2HC AVX512 Kernels
 INSTANTIATE_TEST_SUITE_P(
     R2HC_AVX512_KernelTest, AoclfftzKernelTestFloatReal,

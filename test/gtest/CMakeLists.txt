@@ -135,11 +135,37 @@ foreach(FILE ${GTEST_SRC_FILES})
     gtest_discover_tests(${TNAME})
 endforeach()
 
+<<<<<<< HEAD
 if(ENABLE_MULTI_THREADING)
     if(WIN32)
         target_link_libraries(${gtest_lib_name} PRIVATE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
     else()
         target_link_options(${gtest_lib_name} PUBLIC -fopenmp)
+=======
+if(ENABLE_AVX512)
+    include(CheckCXXSourceRuns)
+
+    set(CHECK_AVX512_CODE "
+    #include <immintrin.h>
+    #include <cpuid.h>
+    int main() {
+        unsigned int eax, ebx, ecx, edx;
+        __cpuid_count(7, 0, eax, ebx, ecx, edx);
+        return (ebx & (1 << 16)) ? 0 : 1;  // 0 if supported, 1 if not
+    }
+    ")
+
+    file(WRITE "${CMAKE_BINARY_DIR}/check_avx512.cpp" "${CHECK_AVX512_CODE}")
+    try_run(RUN_RESULT COMPILE_RESULT
+        "${CMAKE_BINARY_DIR}"
+        "${CMAKE_BINARY_DIR}/check_avx512.cpp"
+    )
+
+    if(RUN_RESULT EQUAL 0)
+        target_compile_definitions(kernel_gtest PRIVATE -DAVX512_SUPPORTED)
+    else()
+        message(WARNING "AVX512 not supported by hardware. Skipping 512 tests.")
+>>>>>>> 3a7d1e0 ([CPUPL-6935] Detect ISA compatibility during CMake Config)
     endif()
 endif()
 
