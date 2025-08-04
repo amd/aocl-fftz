@@ -162,6 +162,7 @@ typedef VOID (*kfft_) (VOID *in_real, VOID *in_imag,
 typedef struct kernel_info
 {
     kfft_ kfft;
+    UINTP count; // used for Real FFT solvers: at any time, r2hc->count + 2 * r2hcf->count + 2 * c2c->count = vecs->n
     UINT8 sets;
 } kernel_info_t;
 
@@ -190,7 +191,6 @@ typedef struct aoclfftz_generic_solver
     kernel_info_t *kernel_c2c;
     kernel_info_t *kernel_r2hc;
     kernel_info_t *kernel_r2hcf;
-    INTP batches[3];  // for real kernels
 } aoclfftz_generic_solver_t;
 
 // Holds info on the main problem or decomposed sub-problem in current dimension

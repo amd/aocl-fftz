@@ -42,10 +42,13 @@
 #include "core/kernels/kernel.h"
 #include "core/common/twiddle.h"
 
-// Function pointer to communicate the exact selector model for executing the problem
+// Function pointers to communicate the exact selector model for executing the problem
 // Not thread-safe
 typedef INT32(*selector_model_func_)(aoclfftz_selector_t*);
+typedef INT32 (*selector_model_rdft_func_)(aoclfftz_selector_t *,
+                                           aoclfftz_realhelper_t *);
 selector_model_func_ sel_fp = NULL;
+selector_model_rdft_func_ sel_rdft_fp = NULL;
 
 // Different tables of kernels contains 4 sets of kernels which are :
 // c, avx128, avx256, avx512
@@ -772,6 +775,14 @@ INT32 selector_autotuner_mode_dft_(aoclfftz_selector_t* sel)
     return SELECTOR_FAILURE;
 }
 
+INT32 selector_autotuner_mode_rdft_(aoclfftz_selector_t* sel)
+{
+    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(INFO, logger_mode,
+        "Autotuner selector for RealFFT is not yet available for evaluation");
+    return SELECTOR_FAILURE;
+}
+
 // Main selector driver that invokes the complementary/alternate selector
 // algorithms/models and decides on the final selector based on its suitability
 // and performance.
@@ -793,24 +804,30 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
         alloc_selector(vec_rank, dim_rank, sel->scratch_space, 0 /*unused*/);
     if (sel_models[AOCLFFTZ_FIXED_SELECTOR] != NULL)
     {
-        COPY_DECOMP_SCHEME(sel_models[AOCLFFTZ_FIXED_SELECTOR]->solution->decomp_scheme,
+        COPY_DECOMP_SCHEME(
+            sel_models[AOCLFFTZ_FIXED_SELECTOR]->solution->decomp_scheme,
             sel->solution->decomp_scheme);
-        SET_PRECISION(sel_models[AOCLFFTZ_FIXED_SELECTOR]->solution->decomp_scheme->flags,
+        SET_PRECISION(
+            sel_models[AOCLFFTZ_FIXED_SELECTOR]->solution->decomp_scheme->flags,
             DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags));
-        SET_STANDALONE_TRANSPOSE(sel_models[AOCLFFTZ_FIXED_SELECTOR]->solution->decomp_scheme->flags,
+        SET_STANDALONE_TRANSPOSE(
+            sel_models[AOCLFFTZ_FIXED_SELECTOR]->solution->decomp_scheme->flags,
             GET_STANDALONE_TRANSPOSE(sel->solution->decomp_scheme->flags));
-        sel_models[AOCLFFTZ_FIXED_SELECTOR]->solution->dft_bufs->inplace_buffer =
+        sel_models[AOCLFFTZ_FIXED_SELECTOR]
+            ->solution->dft_bufs->inplace_buffer =
             sel->solution->dft_bufs->inplace_buffer;
-        sel_models[AOCLFFTZ_FIXED_SELECTOR]->solution->dft_bufs->inplace_ndim_buffer =
+        sel_models[AOCLFFTZ_FIXED_SELECTOR]
+            ->solution->dft_bufs->inplace_ndim_buffer =
             sel->solution->dft_bufs->inplace_ndim_buffer;
 
         // Fixed decision logic and CPI based selector mode
-        //ret = selector_fixed_mode_dft_(sel_models[AOCLFFTZ_FIXED_SELECTOR]);
+        // ret = selector_fixed_mode_dft_(sel_models[AOCLFFTZ_FIXED_SELECTOR]);
         sel_fp = selector_fixed_mode_dft_;
         ret = selector_model_dft_(sel_models[AOCLFFTZ_FIXED_SELECTOR]);
         if (ret != SELECTOR_FAILURE)
         {
-            *(sel_models[AOCLFFTZ_FIXED_SELECTOR]->cost_analysis) = *(sel->cost_analysis);
+            *(sel_models[AOCLFFTZ_FIXED_SELECTOR]->cost_analysis) =
+                *(sel->cost_analysis);
         }
     }
 
@@ -824,24 +841,33 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
         alloc_selector(vec_rank, dim_rank, sel->scratch_space, 0 /*unused*/);
     if (sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT] != NULL)
     {
-        COPY_DECOMP_SCHEME(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]->solution->decomp_scheme,
-            sel->solution->decomp_scheme);
-        SET_PRECISION(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]->solution->decomp_scheme->flags,
-            DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags));
-        SET_STANDALONE_TRANSPOSE(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]->solution->decomp_scheme->flags,
+        COPY_DECOMP_SCHEME(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
+                               ->solution->decomp_scheme,
+                           sel->solution->decomp_scheme);
+        SET_PRECISION(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
+                          ->solution->decomp_scheme->flags,
+                      DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags));
+        SET_STANDALONE_TRANSPOSE(
+            sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
+                ->solution->decomp_scheme->flags,
             GET_STANDALONE_TRANSPOSE(sel->solution->decomp_scheme->flags));
-        sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]->solution->dft_bufs->inplace_buffer =
+        sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
+            ->solution->dft_bufs->inplace_buffer =
             sel->solution->dft_bufs->inplace_buffer;
-        sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]->solution->dft_bufs->inplace_ndim_buffer =
+        sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
+            ->solution->dft_bufs->inplace_ndim_buffer =
             sel->solution->dft_bufs->inplace_ndim_buffer;
 
         // Fixed decision logic and CPI based selector mode
-        //ret = selector_fixed_mode_fused_twid_dft_(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]);
+        // ret = selector_fixed_mode_fused_twid_dft_(
+        //     sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]);
         sel_fp = selector_fixed_mode_fused_twid_dft_;
-        ret = selector_model_dft_(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]);
+        ret = selector_model_dft_(
+            sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]);
         if (ret != SELECTOR_FAILURE)
         {
-            *(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]->cost_analysis) = *(sel->cost_analysis);
+            *(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
+                  ->cost_analysis) = *(sel->cost_analysis);
         }
     }
 #endif
@@ -854,24 +880,30 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
         alloc_selector(vec_rank, dim_rank, sel->scratch_space, 0 /*unused*/);
     if (sel_models[AOCLFFTZ_AUTO_SELECTOR] != NULL)
     {
-        COPY_DECOMP_SCHEME(sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme,
+        COPY_DECOMP_SCHEME(
+            sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme,
             sel->solution->decomp_scheme);
-        SET_PRECISION(sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme->flags,
+        SET_PRECISION(
+            sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme->flags,
             DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags));
-        SET_STANDALONE_TRANSPOSE(sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme->flags,
+        SET_STANDALONE_TRANSPOSE(
+            sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme->flags,
             GET_STANDALONE_TRANSPOSE(sel->solution->decomp_scheme->flags));
         sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->dft_bufs->inplace_buffer =
             sel->solution->dft_bufs->inplace_buffer;
-        sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->dft_bufs->inplace_ndim_buffer =
+        sel_models[AOCLFFTZ_AUTO_SELECTOR]
+            ->solution->dft_bufs->inplace_ndim_buffer =
             sel->solution->dft_bufs->inplace_ndim_buffer;
 
         // Fixed decision logic and CPI based selector mode
-        //ret = selector_autotuner_mode_dft_(sel_models[AOCLFFTZ_AUTO_SELECTOR]);
+        // ret = selector_autotuner_mode_dft_(
+        //         sel_models[AOCLFFTZ_AUTO_SELECTOR]);
         sel_fp = selector_autotuner_mode_dft_;
         ret = selector_model_dft_(sel_models[AOCLFFTZ_AUTO_SELECTOR]);
         if (ret != SELECTOR_FAILURE)
         {
-            *(sel_models[AOCLFFTZ_AUTO_SELECTOR]->cost_analysis) = *(sel->cost_analysis);
+            *(sel_models[AOCLFFTZ_AUTO_SELECTOR]->cost_analysis) =
+                *(sel->cost_analysis);
         }
     }
 #endif
@@ -890,7 +922,8 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
         }
     }
 
-    // Update the primary selector object with the best selector model based solution
+    // Update the primary selector object with the best selector model based
+    // solution
     aoclfftz_solution_t *org_sol = sel->solution;
     sel->solution = sel_models[best_model_id]->solution;
     *(sel->cost_analysis) = *(sel_models[best_model_id]->cost_analysis);
@@ -911,7 +944,7 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
 }
 
 // Specific Selector model function that invokes the internal recursive
-// selector function pointer passing the selector boject along.
+// selector function pointer passing the selector object along.
 // Common function for both single-precision and double-precision
 INT32 selector_model_dft_(aoclfftz_selector_t *sel)
 {
@@ -922,16 +955,165 @@ INT32 selector_model_dft_(aoclfftz_selector_t *sel)
     return ret;
 }
 
-// Setup to find a solution for the input problem based on the
-// applicable tables of real-solvers and real-kernels
-// Common function for both single-precision and double-precision
-INT32 setup_rdft_(aoclfftz_selector_t *sel,
-                  aoclfftz_realhelper_t *realhelper)
+// Main selector driver that invokes the complementary/alternate selector
+// algorithms/models and decides on the final selector based on its suitability
+// and performance for real-fft problems.
+// Also provides a cleaner approach to init and handle various related
+// solvers and kernel tables
+INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
+                            aoclfftz_realhelper_t *realhelper)
 {
-    INT32 ret;
+    INT32 ret = SELECTOR_FAILURE;
+    aoclfftz_selector_t *sel_models[AOCLFFTZ_SELECTOR_MODELS] = { 0x0, };
+    UINT32 best_model_id = 0;
+    cost_analysis_t best_cost = {INT64_MAX, INT64_MAX};
+    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
 
-    // Fixed decision logic and CPI based selector mode
-    ret = selector_fixed_mode_rdft_(sel, realhelper);
+    // FIXED SELECTOR BASED MODEL : start
+#ifdef AOCLFFTZ_FIXED_SELECTOR_MODE
+    // Allocate selector object
+    sel_models[AOCLFFTZ_FIXED_SELECTOR] =
+        alloc_selector(vec_rank, dim_rank, sel->scratch_space, 0 /*unused*/);
+    if (sel_models[AOCLFFTZ_FIXED_SELECTOR] != NULL)
+    {
+        COPY_DECOMP_SCHEME(
+            sel_models[AOCLFFTZ_FIXED_SELECTOR]->solution->decomp_scheme,
+            sel->solution->decomp_scheme);
+        SET_PRECISION(
+            sel_models[AOCLFFTZ_FIXED_SELECTOR]->solution->decomp_scheme->flags,
+            DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags));
+        SET_STANDALONE_TRANSPOSE(
+            sel_models[AOCLFFTZ_FIXED_SELECTOR]->solution->decomp_scheme->flags,
+            GET_STANDALONE_TRANSPOSE(sel->solution->decomp_scheme->flags));
+
+        // Fixed decision logic and CPI based selector mode
+        // ret = selector_fixed_mode_rdft_(sel_models[AOCLFFTZ_FIXED_SELECTOR]);
+        sel_rdft_fp = selector_fixed_mode_rdft_;
+        ret = selector_model_rdft_(sel_models[AOCLFFTZ_FIXED_SELECTOR],
+                                   realhelper);
+        if (ret != SELECTOR_FAILURE)
+        {
+            *(sel_models[AOCLFFTZ_FIXED_SELECTOR]->cost_analysis) =
+                *(sel->cost_analysis);
+        }
+    }
+#endif
+    // FIXED SELECTOR BASED MODEL : end
+
+    // FIXED SELECTOR + FUSED TWIDDLE DFT BASED MODEL : start
+    // Allocate selector object
+#ifdef AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_MODE
+    sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT] =
+        alloc_selector(vec_rank, dim_rank, sel->scratch_space, 0 /*unused*/);
+    if (sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT] != NULL)
+    {
+        COPY_DECOMP_SCHEME(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
+                               ->solution->decomp_scheme,
+                           sel->solution->decomp_scheme);
+        SET_PRECISION(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
+                          ->solution->decomp_scheme->flags,
+                      DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags));
+        SET_STANDALONE_TRANSPOSE(
+            sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
+                ->solution->decomp_scheme->flags,
+            GET_STANDALONE_TRANSPOSE(sel->solution->decomp_scheme->flags));
+
+        // TODO: Fused twiddle selector mode for RDFT is not implemented yet
+        AOCLFFTZ_LOG_UNFORMATTED(
+            INFO, sel->solution->decomp_scheme->cntrl_params->logger_mode,
+            "Fused twiddle selector mode for RDFT is not implemented yet, so "
+            "falling back to fixed selector mode");
+        // Fixed decision logic and CPI based selector mode
+        // ret = selector_fixed_mode_fused_twid_dft_(
+        //         sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]);
+        sel_rdft_fp = selector_fixed_mode_rdft_;
+        ret = selector_model_rdft_(
+            sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT], realhelper);
+        if (ret != SELECTOR_FAILURE)
+        {
+            *(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
+                  ->cost_analysis) = *(sel->cost_analysis);
+        }
+    }
+#endif
+    // FIXED SELECTOR + FUSED TWIDDLE DFT BASED MODEL : end
+
+    // AUTO TUNED SELECTOR BASED MODEL : start
+    // Allocate selector object
+#ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
+    sel_models[AOCLFFTZ_AUTO_SELECTOR] =
+        alloc_selector(vec_rank, dim_rank, sel->scratch_space, 0 /*unused*/);
+    if (sel_models[AOCLFFTZ_AUTO_SELECTOR] != NULL)
+    {
+        COPY_DECOMP_SCHEME(
+            sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme,
+            sel->solution->decomp_scheme);
+        SET_PRECISION(
+            sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme->flags,
+            DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags));
+        SET_STANDALONE_TRANSPOSE(
+            sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme->flags,
+            GET_STANDALONE_TRANSPOSE(sel->solution->decomp_scheme->flags));
+
+        // TODO: Autotuner mode for RDFT is not implemented yet
+        AOCLFFTZ_LOG_UNFORMATTED(
+            INFO, sel->solution->decomp_scheme->cntrl_params->logger_mode,
+            "Autotuner selector mode for RDFT is not implemented yet");
+        // ret = selector_autotuner_mode_rdft_(
+        //     sel_models[AOCLFFTZ_AUTO_SELECTOR]);
+        sel_rdft_fp = selector_autotuner_mode_rdft_;
+        ret = selector_model_rdft_(sel_models[AOCLFFTZ_AUTO_SELECTOR],
+                                   realhelper);
+        if (ret != SELECTOR_FAILURE)
+        {
+            *(sel_models[AOCLFFTZ_AUTO_SELECTOR]->cost_analysis) =
+                *(sel->cost_analysis);
+        }
+    }
+#endif
+    // AUTO TUNED SELECTOR BASED MODEL : end
+
+    // Compare and find the best performant model for the input problem
+    for (UINT32 model_id = 0; model_id < AOCLFFTZ_SELECTOR_MODELS; model_id++)
+    {
+        if (sel_models[model_id] != NULL)
+        {
+            if (sel_models[model_id]->cost_analysis->ops < best_cost.ops)
+            {
+                best_cost = *(sel_models[model_id]->cost_analysis);
+                best_model_id = model_id;
+            }
+        }
+    }
+    // Update the primary selector object with the best selector model based
+    // solution
+    aoclfftz_solution_t *org_sol = sel->solution;
+    sel->solution = sel_models[best_model_id]->solution;
+    *(sel->cost_analysis) = *(sel_models[best_model_id]->cost_analysis);
+
+    // Destroy and Free unnecessary objects
+    destroy_solution(org_sol, 0 /*destroy_buffers*/);
+    for (UINT32 model_id = 0; model_id < AOCLFFTZ_SELECTOR_MODELS; model_id++)
+    {
+        if (model_id != best_model_id)
+            destroy_selector_without_scratch_space(sel_models[model_id]);
+        else
+            destroy_selector_without_solution(sel_models[model_id]);
+    }
+
+    return ret;
+}
+
+// Specific Selector model function that invokes the internal recursive
+// selector function pointer (for real-fft) passing the selector object along.
+// Common function for both single-precision and double-precision
+INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
+                           aoclfftz_realhelper_t *realhelper)
+{
+    INT32 ret = SELECTOR_FAILURE;
+
+    ret = sel_rdft_fp(sel, realhelper);
 
     return ret;
 }
@@ -1283,7 +1465,8 @@ VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
                 curr->solver->solver_type == SOLVER_CT_TWIDDLE)
             {
                 INTP r = curr->next_sol[0]->decomp_scheme->dims[0].n;
-                INTP m = curr->next_sol[0]->next_sol[0]->decomp_scheme->dims[0].n;
+                INTP m =
+                    curr->next_sol[0]->next_sol[0]->decomp_scheme->dims[0].n;
 
                 VOID *TW = alloc_twiddle_buffer(r * m, dt_prec);
                 if (TW != NULL)
@@ -1328,11 +1511,12 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                     curr = curr->next_sol[0];
                 }
                 INTP n = curr->decomp_scheme->dims[0].n;
-                INTP no_of_groups = curr->solver->batches[R2HCF_KERNEL] > 0
-                                        ? curr->solver->batches[R2HCF_KERNEL]
-                                        : curr->solver->batches[R2HC_KERNEL];
+                INTP no_of_groups = curr->solver->kernel_r2hcf->count > 0
+                                        ? curr->solver->kernel_r2hcf->count
+                                        : curr->solver->kernel_r2hc->count;
                 // No. of c2c kernels per group that require twiddle computation
-                INTP group_size = curr->solver->batches[C2C_KERNEL] / no_of_groups;
+                INTP group_size =
+                    curr->solver->kernel_c2c->count / no_of_groups;
                 INTP tw_buf_size = n * group_size * DATA_STRIDE;
                 // Allocate Twiddle buffer to store twiddle values for every
                 // radix-n c2c kernel of a group
@@ -1342,8 +1526,8 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                     INTP p = (curr->decomp_scheme->vecs[0].n *
                               curr->decomp_scheme->dims[0].n) /
                              no_of_groups;
-                    compute_twiddle_buffer_real(TW, group_size, n, p, FORWARD_FFT_DIR,
-                                                dt_prec);
+                    compute_twiddle_buffer_real(TW, group_size, n, p,
+                                                FORWARD_FFT_DIR, dt_prec);
                     curr->twiddle->cols = p; // FIXME
                     curr->twiddle->TW = TW;
                     curr->twiddle->twiddle_buf_ptr = TW;
@@ -1355,18 +1539,19 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
     else
     {
         aoclfftz_solution_t *prev = solution;
-        FOR_EACH_SOLUTION(curr, (solution->next_sol) ? solution->next_sol[0] : NULL)
+        FOR_EACH_SOLUTION(curr,
+                          (solution->next_sol) ? solution->next_sol[0] : NULL)
         {
             if (curr->solver->solver_type == SOLVER_REAL_CT &&
                 (prev->solver->solver_type == SOLVER_REAL_DIRECT ||
                  prev->solver->solver_type == SOLVER_REAL_MT_DIRECT))
             {
                 INTP n = prev->decomp_scheme->dims[0].n;
-                INTP no_of_groups = prev->solver->batches[R2HCF_KERNEL] > 0
-                                        ? prev->solver->batches[R2HCF_KERNEL]
-                                        : prev->solver->batches[R2HC_KERNEL];
+                INTP no_of_groups = prev->solver->kernel_r2hcf->count > 0
+                                        ? prev->solver->kernel_r2hcf->count
+                                        : prev->solver->kernel_r2hc->count;
                 // No. of c2c kernels per group that require twiddle computation
-                INTP group_sz = prev->solver->batches[C2C_KERNEL] / no_of_groups;
+                INTP group_sz = prev->solver->kernel_c2c->count / no_of_groups;
                 INTP tw_buf_sz = n * group_sz * DATA_STRIDE;
                 // Allocate Twiddle buffer to store twiddle factors for every
                 // radix-n c2c kernel of a group
@@ -1497,13 +1682,14 @@ VOID post_process_inplace_solution(aoclfftz_solution_t *solution)
 
         if (solver->solver_type == SOLVER_NDIM)
         {
-            solver->execute_solver = register_execute_last_stage_ip_ndim_solver();
+            solver->execute_solver =
+                register_execute_last_stage_ip_ndim_solver();
             break;
         }
         else if (solver->solver_type == SOLVER_CT ||
                  solver->solver_type == SOLVER_CT_TWIDDLE)
         {
-            solver->execute_solver = register_execute_last_stage_ip_ct_solver ();
+            solver->execute_solver = register_execute_last_stage_ip_ct_solver();
             break;
         }
         else if (solver->solver_type == SOLVER_DIRECT ||

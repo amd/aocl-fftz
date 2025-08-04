@@ -114,9 +114,9 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
     if (realhelper->is_CT)
     {
-        sol->solver->batches[C2C_KERNEL] = (p_last / 2 - is_even) * q;
-        sol->solver->batches[R2HC_KERNEL] = is_even ? 0 : q;
-        sol->solver->batches[R2HCF_KERNEL] = is_even ? q : 0;
+        sol->solver->kernel_c2c->count = (p_last / 2 - is_even) * q;
+        sol->solver->kernel_r2hc->count = is_even ? 0 : q;
+        sol->solver->kernel_r2hcf->count = is_even ? q : 0;
         // TODO: Reduce redundant assignments
         if (is_backward)
         {
@@ -171,19 +171,19 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     }
     else // direct problem
     {
-        sol->solver->batches[C2C_KERNEL] = 0;
-        sol->solver->batches[R2HC_KERNEL] = batch;
-        sol->solver->batches[R2HCF_KERNEL] = 0;
+        sol->solver->kernel_c2c->count = 0;
+        sol->solver->kernel_r2hc->count = batch;
+        sol->solver->kernel_r2hcf->count = 0;
         in_stride = org_in_stride;
         out_stride = org_out_stride;
         v_in_stride = is_backward ? org_v_in_stride * 2 : org_v_in_stride;
         v_out_stride = is_backward ? org_v_out_stride : org_v_out_stride * 2;
     }
 
-    INTP no_of_groups = sol->solver->batches[R2HCF_KERNEL] > 0
-                            ? sol->solver->batches[R2HCF_KERNEL]
-                            : sol->solver->batches[R2HC_KERNEL];
-    INTP group_size = sol->solver->batches[C2C_KERNEL] / no_of_groups;
+    INTP no_of_groups = sol->solver->kernel_r2hcf->count > 0
+                            ? sol->solver->kernel_r2hcf->count
+                            : sol->solver->kernel_r2hc->count;
+    INTP group_size = sol->solver->kernel_c2c->count / no_of_groups;
 
     // Compute strides for different kernels from the base stride values
     UINT32 input_in_full_complex = 0;
@@ -221,7 +221,7 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         ALLOC_ALIGN_UNINIT(sol->strides_grp->strides->out_strides, INTP,
                            radix * sizeof(INTP));
     }
-    if (sol->solver->batches[C2C_KERNEL] != 0)
+    if (sol->solver->kernel_c2c->count != 0)
     {
         if (sol->strides_grp->strides->in_strides == NULL)
         {
@@ -243,46 +243,49 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
             ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_c2c->out_strides, INTP,
                                radix * sizeof(INTP));
         }
-        memcpy(sol->strides_grp->strides_c2c->in_strides, sol->strides_grp->strides->in_strides,
-               radix * sizeof(INTP));
-        memcpy(sol->strides_grp->strides_c2c->out_strides, sol->strides_grp->strides->out_strides,
-               radix * sizeof(INTP));
+        memcpy(sol->strides_grp->strides_c2c->in_strides,
+               sol->strides_grp->strides->in_strides, radix * sizeof(INTP));
+        memcpy(sol->strides_grp->strides_c2c->out_strides,
+               sol->strides_grp->strides->out_strides, radix * sizeof(INTP));
 
         if (is_backward)
         {
             prepare_real_c2c_kernel_strides(
-                sol->strides_grp->strides->in_strides, sol->strides_grp->strides->in_strides,
-                radix, p, c2c_in_stride);
+                sol->strides_grp->strides->in_strides,
+                sol->strides_grp->strides->in_strides, radix, p, c2c_in_stride);
         }
         else
         {
             prepare_real_c2c_kernel_strides(
-                sol->strides_grp->strides->out_strides, sol->strides_grp->strides->out_strides,
-                radix, p, c2c_out_stride);
+                sol->strides_grp->strides->out_strides,
+                sol->strides_grp->strides->out_strides, radix, p,
+                c2c_out_stride);
         }
     }
-    if (sol->solver->batches[R2HC_KERNEL] != 0)
+    if (sol->solver->kernel_r2hc->count != 0)
     {
         if (sol->strides_grp->strides_r2hc->in_strides == NULL)
         {
-            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hc->in_strides, INTP,
-                               radix * sizeof(INTP));
-            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hc->out_strides, INTP,
-                               radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hc->in_strides,
+                               INTP, radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hc->out_strides,
+                               INTP, radix * sizeof(INTP));
         }
-        populate_stride_array(sol->strides_grp->strides_r2hc->in_strides, in_stride, radix,
-                              is_half_complex_input, input_in_full_complex);
-        populate_stride_array(sol->strides_grp->strides_r2hc->out_strides, out_stride, radix,
-                              is_half_complex_output, output_in_full_complex);
+        populate_stride_array(sol->strides_grp->strides_r2hc->in_strides,
+                              in_stride, radix, is_half_complex_input,
+                              input_in_full_complex);
+        populate_stride_array(sol->strides_grp->strides_r2hc->out_strides,
+                              out_stride, radix, is_half_complex_output,
+                              output_in_full_complex);
     }
-    if (sol->solver->batches[R2HCF_KERNEL] != 0)
+    if (sol->solver->kernel_r2hcf->count != 0)
     {
         if (sol->strides_grp->strides_r2hcf->in_strides == NULL)
         {
-            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hcf->in_strides, INTP,
-                               radix * 2 * sizeof(INTP));
-            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hcf->out_strides, INTP,
-                               radix * 2 * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hcf->in_strides,
+                               INTP, radix * 2 * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hcf->out_strides,
+                               INTP, radix * 2 * sizeof(INTP));
         }
         populate_stride_array(sol->strides_grp->strides_r2hcf->in_strides,
                               is_backward ? in_stride / 2 : in_stride,
@@ -292,10 +295,10 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                               is_backward ? out_stride : out_stride / 2,
                               is_backward ? radix : radix * 2,
                               is_half_complex_output, output_in_full_complex);
-        prepare_fused_kernel_strides(is_backward
-                                         ? sol->strides_grp->strides_r2hcf->out_strides
-                                         : sol->strides_grp->strides_r2hcf->in_strides,
-                                     radix, group_size * 2 + 1);
+        prepare_fused_kernel_strides(
+            is_backward ? sol->strides_grp->strides_r2hcf->out_strides
+                        : sol->strides_grp->strides_r2hcf->in_strides,
+            radix, group_size * 2 + 1);
     }
 
     sol->strides_grp->strides->v_in_stride = v_in_stride;
@@ -373,7 +376,7 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         INT64 c2c_cost = 0;
         INT64 r2hc_cost = 0;
         INT64 r2hcf_cost = 0;
-        if (sol->solver->batches[C2C_KERNEL] != 0)
+        if (sol->solver->kernel_c2c->count != 0)
         {
             ops_cycles_c2c = kernel_c2c->k_ops_cnt(precision, is_backward);
             c2c_cost = ((ops_cycles_c2c.fma * AMD_ZEN_FP_FMA_CYCLES) +
@@ -382,13 +385,13 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                         (ops_cycles_c2c.move * AMD_ZEN_FP_MOVE_CYCLES) +
                         (ops_cycles_c2c.perm * AMD_ZEN_FP_PERM_CYCLES) +
                         (ops_cycles_c2c.other * AMD_ZEN_FP_OTHER_CYCLES));
-            if (sol->solver->batches[C2C_KERNEL] >= sets_c2c)
+            if (sol->solver->kernel_c2c->count >= sets_c2c)
             {
                 c2c_cost = (c2c_cost + sets_c2c - 1) / sets_c2c;
             }
-            c2c_cost = c2c_cost * sol->solver->batches[C2C_KERNEL];
+            c2c_cost = c2c_cost * sol->solver->kernel_c2c->count;
         }
-        if (sol->solver->batches[R2HC_KERNEL] != 0)
+        if (sol->solver->kernel_r2hc->count != 0)
         {
             ops_cycles_r2hc = kernel_r2hc->k_ops_cnt(precision, is_backward);
             r2hc_cost = ((ops_cycles_r2hc.fma * AMD_ZEN_FP_FMA_CYCLES) +
@@ -397,13 +400,13 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                          (ops_cycles_r2hc.move * AMD_ZEN_FP_MOVE_CYCLES) +
                          (ops_cycles_r2hc.perm * AMD_ZEN_FP_PERM_CYCLES) +
                          (ops_cycles_r2hc.other * AMD_ZEN_FP_OTHER_CYCLES));
-            if (sol->solver->batches[R2HC_KERNEL] >= sets_r2hc)
+            if (sol->solver->kernel_r2hc->count >= sets_r2hc)
             {
                 r2hc_cost = (r2hc_cost + sets_r2hc - 1) / sets_r2hc;
             }
-            r2hc_cost = r2hc_cost * sol->solver->batches[R2HC_KERNEL];
+            r2hc_cost = r2hc_cost * sol->solver->kernel_r2hc->count;
         }
-        if (sol->solver->batches[R2HCF_KERNEL] != 0)
+        if (sol->solver->kernel_r2hcf->count != 0)
         {
             ops_cycles_r2hcf = kernel_r2hcf->k_ops_cnt(precision, is_backward);
             r2hcf_cost = ((ops_cycles_r2hcf.fma * AMD_ZEN_FP_FMA_CYCLES) +
@@ -412,11 +415,11 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                           (ops_cycles_r2hcf.move * AMD_ZEN_FP_MOVE_CYCLES) +
                           (ops_cycles_r2hcf.perm * AMD_ZEN_FP_PERM_CYCLES) +
                           (ops_cycles_r2hcf.other * AMD_ZEN_FP_OTHER_CYCLES));
-            if (sol->solver->batches[R2HCF_KERNEL] >= sets_r2hcf)
+            if (sol->solver->kernel_r2hcf->count >= sets_r2hcf)
             {
                 r2hcf_cost = (r2hcf_cost + sets_r2hcf - 1) / sets_r2hcf;
             }
-            r2hcf_cost = r2hcf_cost * sol->solver->batches[R2HCF_KERNEL];
+            r2hcf_cost = r2hcf_cost * sol->solver->kernel_r2hcf->count;
         }
         cost->ops = c2c_cost + r2hc_cost + r2hcf_cost;
     }
@@ -457,9 +460,9 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
     // R2HC and R2HCF will not come together
 
     // Execute R2HC Kernels
-    if (sol->solver->batches[R2HC_KERNEL] != 0)
+    if (sol->solver->kernel_r2hc->count != 0)
     {
-        kernel_r2hc(in, in, out, out, sol->solver->batches[R2HC_KERNEL],
+        kernel_r2hc(in, in, out, out, sol->solver->kernel_r2hc->count,
                     sol->strides_grp->strides_r2hc, sol->twiddle,
                     FFT_DIR(sol->decomp_scheme->flags));
         UINT8 is_direct_only_problem = IS_DIRECT_ONLY_PROBLEM(sol);
@@ -481,10 +484,10 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
     kfft_ kernel_r2hcf = sol->solver->kernel_r2hcf->kfft;
 
     INTP radix = sol->decomp_scheme->dims[0].n;
-    INTP no_of_groups = sol->solver->batches[R2HCF_KERNEL] > 0
-                            ? sol->solver->batches[R2HCF_KERNEL]
-                            : sol->solver->batches[R2HC_KERNEL];
-    INTP group_size = sol->solver->batches[C2C_KERNEL] / no_of_groups;
+    INTP no_of_groups = sol->solver->kernel_r2hcf->count > 0
+                            ? sol->solver->kernel_r2hcf->count
+                            : sol->solver->kernel_r2hc->count;
+    INTP group_size = sol->solver->kernel_c2c->count / no_of_groups;
     INTP p = (sol->decomp_scheme->vecs[0].n * radix) / no_of_groups;
 
     // strides between C2C kernels
@@ -514,9 +517,9 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
     }
 
     // Execute R2HCF Kernels
-    if (sol->solver->batches[R2HCF_KERNEL] != 0)
+    if (sol->solver->kernel_r2hcf->count != 0)
     {
-        kernel_r2hcf(in, in, out, out, sol->solver->batches[R2HCF_KERNEL],
+        kernel_r2hcf(in, in, out, out, sol->solver->kernel_r2hcf->count,
                      sol->strides_grp->strides_r2hcf, sol->twiddle,
                      FFT_DIR(sol->decomp_scheme->flags));
     }
@@ -529,7 +532,7 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
     }
 
     // Execute C2C Kernels
-    if (sol->solver->batches[C2C_KERNEL] != 0)
+    if (sol->solver->kernel_c2c->count != 0)
     {
         INTP half_stride_start = (radix + 1) >> 1;
         INTP half_stride_n = radix - half_stride_start;
@@ -555,7 +558,8 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
                 // Take complex conjucate for the required points
                 // TODO: this should be moved into C2C kernel
                 compute_conjugates(
-                    in, radix, no_of_groups, sol->strides_grp->strides_c2c->in_strides,
+                    in, radix, no_of_groups,
+                    sol->strides_grp->strides_c2c->in_strides,
                     sol->strides_grp->strides_c2c->v_in_stride,
                     DT_PRECISION_FLAG(sol->decomp_scheme->flags));
 
@@ -569,8 +573,8 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
 
                 // Update the C2C in-strides for next iteration by subtracting
                 // it by stride_offset
-                INTP *strides =
-                    sol->strides_grp->strides_c2c->in_strides + half_stride_start;
+                INTP *strides = sol->strides_grp->strides_c2c->in_strides +
+                                half_stride_start;
                 for (INTP i = 0; i < half_stride_n; i++)
                 {
                     strides[i] -= stride_offset;
@@ -597,7 +601,8 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
 
             // Copy unmodified out-stride values from strides to strides_c2c
             // and then modify strides_c2c values within loop iterations
-            memcpy(sol->strides_grp->strides_c2c->out_strides + half_stride_start,
+            memcpy(sol->strides_grp->strides_c2c->out_strides +
+                       half_stride_start,
                    sol->strides_grp->strides->out_strides + half_stride_start,
                    half_stride_n * sizeof(INTP));
 
@@ -614,14 +619,15 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
                 // Take complex conjucate for the required points
                 // TODO: this should be moved into C2C kernel
                 compute_conjugates(
-                    out, radix, no_of_groups, sol->strides_grp->strides_c2c->out_strides,
+                    out, radix, no_of_groups,
+                    sol->strides_grp->strides_c2c->out_strides,
                     sol->strides_grp->strides_c2c->v_out_stride,
                     DT_PRECISION_FLAG(sol->decomp_scheme->flags));
 
                 // Update the C2C out-strides for next iteration by subtracting
                 // it by stride_offset
-                INTP *strides =
-                    sol->strides_grp->strides_c2c->out_strides + half_stride_start;
+                INTP *strides = sol->strides_grp->strides_c2c->out_strides +
+                                half_stride_start;
                 for (INTP i = 0; i < half_stride_n; i++)
                 {
                     strides[i] -= stride_offset;

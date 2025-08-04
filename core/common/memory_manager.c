@@ -182,9 +182,9 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->inplace_ndim_buffer = NULL;
         sol->dft_bufs->nd_sol_out_real = NULL;
         sol->dft_bufs->nd_sol_out_imag = NULL;
-        sol->solver->batches[C2C_KERNEL] = 0;
-        sol->solver->batches[R2HC_KERNEL] = 0;
-        sol->solver->batches[R2HCF_KERNEL] = 0;
+        sol->solver->kernel_c2c->count = 0;
+        sol->solver->kernel_r2hc->count = 0;
+        sol->solver->kernel_r2hcf->count = 0;
         return sol;
     }
     else
@@ -287,9 +287,9 @@ aoclfftz_solution_t* alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->inplace_ndim_buffer = NULL;
         sol->dft_bufs->nd_sol_out_real = NULL;
         sol->dft_bufs->nd_sol_out_imag = NULL;
-        sol->solver->batches[C2C_KERNEL] = 0;
-        sol->solver->batches[R2HC_KERNEL] = 0;
-        sol->solver->batches[R2HCF_KERNEL] = 0;
+        sol->solver->kernel_c2c->count = 0;
+        sol->solver->kernel_r2hc->count = 0;
+        sol->solver->kernel_r2hcf->count = 0;
         return sol;
     }
     else

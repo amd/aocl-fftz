@@ -94,7 +94,7 @@ INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     }
 
     // Call selector for solving a single set/unit of the vector problem
-    ret = setup_rdft_(cur_sel, realhelper);
+    ret = selector_model_rdft_(cur_sel, realhelper);
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_batched_dft;

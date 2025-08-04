@@ -77,7 +77,7 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         sel->solution->dft_bufs->buffered->aux_buffer_2;
 
     // Call selector for solving it as a non-buffered problem
-    ret = setup_rdft_(cur_sel, realhelper);
+    ret = selector_model_rdft_(cur_sel, realhelper);
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_batched_dft;

@@ -872,7 +872,6 @@ INT32 twiddle_multiplier_for_real_float(aoclfftz_solution_t *sol, INTP p)
     UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags);
     VOID *in = sol->decomp_scheme->in_real;
     VOID *out = sol->decomp_scheme->out_real;
-    INTP *batches = sol->solver->batches;
     INTP radix = sol->decomp_scheme->dims[0].n;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
     // FIXIT: Fix for fully strided CT problems (i.e. strides in all CT stages)
@@ -891,9 +890,10 @@ INT32 twiddle_multiplier_for_real_float(aoclfftz_solution_t *sol, INTP p)
         vec_stride = strides->v_in_stride;
     }
 
-    INTP no_of_groups = batches[R2HCF_KERNEL] > 0 ? batches[R2HCF_KERNEL] :
-                        batches[R2HC_KERNEL];
-    INTP group_size = batches[C2C_KERNEL] / no_of_groups;
+    INTP no_of_groups = sol->solver->kernel_r2hcf->count > 0
+                            ? sol->solver->kernel_r2hcf->count
+                            : sol->solver->kernel_r2hc->count;
+    INTP group_size = sol->solver->kernel_c2c->count / no_of_groups;
 
     FLOAT sign = is_backward ? 1.0 : -1.0;
     FLOAT *data_r = is_backward ? (FLOAT *)out : (FLOAT *)in;
@@ -970,7 +970,6 @@ INT32 twiddle_multiplier_for_real_double(aoclfftz_solution_t *sol, INTP p)
     UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags);
     VOID *in = sol->decomp_scheme->in_real;
     VOID *out = sol->decomp_scheme->out_real;
-    INTP *batches = sol->solver->batches;
     INTP radix = sol->decomp_scheme->dims[0].n;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
     // FIXIT: Fix for fully strided CT problems (i.e. strides in all CT stages)
@@ -989,9 +988,10 @@ INT32 twiddle_multiplier_for_real_double(aoclfftz_solution_t *sol, INTP p)
         vec_stride = strides->v_in_stride;
     }
 
-    INTP no_of_groups = batches[R2HCF_KERNEL] > 0 ? batches[R2HCF_KERNEL] :
-                        batches[R2HC_KERNEL];
-    INTP group_size = batches[C2C_KERNEL] / no_of_groups;
+    INTP no_of_groups = sol->solver->kernel_r2hcf->count > 0
+                            ? sol->solver->kernel_r2hcf->count
+                            : sol->solver->kernel_r2hc->count;
+    INTP group_size = sol->solver->kernel_c2c->count / no_of_groups;
     DOUBLE sign = is_backward ? 1.0 : -1.0;
     DOUBLE *data_r = is_backward ? (DOUBLE *)out : (DOUBLE *)in;
     DOUBLE *data_i = is_backward ? (DOUBLE *)out + 1 : (DOUBLE *)in + 1;

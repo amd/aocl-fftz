@@ -169,7 +169,7 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         }
 
         // Call selector for applying CT on the m set of sub-problems (radix-m)
-        ret = setup_rdft_(cur_sel_m, realhelper);
+        ret = selector_model_rdft_(cur_sel_m, realhelper);
         if (ret != SELECTOR_SUCCESS)
         {
             goto exit_ct_dft;
@@ -189,7 +189,7 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         realhelper->is_last_stage = 0;
 
         // Call selector for the radix-r sub-problem
-        ret = setup_rdft_(cur_sel, realhelper);
+        ret = selector_model_rdft_(cur_sel, realhelper);
         if (ret != SELECTOR_SUCCESS)
         {
             goto exit_ct_dft;
