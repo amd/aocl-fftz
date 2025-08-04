@@ -171,7 +171,7 @@ INT32 is_prime(INT32 n)
 INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
     INT32 dim_rank = decomp_scheme->dim_rank;
-    for (int i = 0; i < dim_rank; i++)
+    for (INT32 i = 0; i < dim_rank; i++)
     {
         INTP n = decomp_scheme->dims[i].n;
         // Check for prime factors greater than 13 in (n)
@@ -790,7 +790,7 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
 #ifdef AOCLFFTZ_FIXED_SELECTOR_MODE
     // Allocate selector object
     sel_models[AOCLFFTZ_FIXED_SELECTOR] =
-        alloc_selector(vec_rank, dim_rank, sel->scratch_space);
+        alloc_selector(vec_rank, dim_rank, sel->scratch_space, 0 /*unused*/);
     if (sel_models[AOCLFFTZ_FIXED_SELECTOR] != NULL)
     {
         COPY_DECOMP_SCHEME(sel_models[AOCLFFTZ_FIXED_SELECTOR]->solution->decomp_scheme,
@@ -821,7 +821,7 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
     // Allocate selector object
 #ifdef AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_MODE
     sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT] =
-        alloc_selector(vec_rank, dim_rank, sel->scratch_space);
+        alloc_selector(vec_rank, dim_rank, sel->scratch_space, 0 /*unused*/);
     if (sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT] != NULL)
     {
         COPY_DECOMP_SCHEME(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]->solution->decomp_scheme,
@@ -851,7 +851,7 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
     // Allocate selector object
 #ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
     sel_models[AOCLFFTZ_AUTO_SELECTOR] =
-        alloc_selector(vec_rank, dim_rank, sel->scratch_space);
+        alloc_selector(vec_rank, dim_rank, sel->scratch_space, 0 /*unused*/);
     if (sel_models[AOCLFFTZ_AUTO_SELECTOR] != NULL)
     {
         COPY_DECOMP_SCHEME(sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme,
@@ -951,7 +951,8 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL,
+                             problem->pthr_fft.num_threads);
     if (sel_obj == NULL)
     {
         return NULL;
@@ -1019,7 +1020,8 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL,
+                             problem->pthr_fft.num_threads);
     if (sel_obj == NULL)
     {
         return NULL;
@@ -1087,7 +1089,8 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL,
+                             problem->pthr_fft.num_threads);
     if (sel_obj == NULL)
     {
         return NULL;
@@ -1155,7 +1158,8 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL,
+                             problem->pthr_fft.num_threads);
     if (sel_obj == NULL)
     {
         return NULL;
@@ -1387,7 +1391,8 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
 #endif
 }
 
-aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src)
+aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src,
+                                             UINT32 index)
 {
     if (!src)
     {
@@ -1400,22 +1405,24 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src)
     aoclfftz_solution_t* dst = alloc_solution(vec_rank, dim_rank);
     COPY_SOLUTION_OBJ(dst, src);
     COPY_STRIDES(dst, src);
+    dst->dft_bufs->scratch_space = (VOID *)((CHAR *)src->dft_bufs->scratch_space
+                                    + index * scratch_space_capacity);
 
     // Recursively copy nd_sol if present (for NDIM solvers)
     dst->dft_bufs->nd_sol = src->dft_bufs->nd_sol ?
-                        deep_copy_solution_tree(src->dft_bufs->nd_sol) : NULL;
+                    deep_copy_solution_tree(src->dft_bufs->nd_sol, 0) : NULL;
 
     // Initiate deep copy of next_sol recursively until leaf node
     if (src->next_sol)
     {
-        int n = (src->solver->solver_type == SOLVER_MT_BATCHED ||
-                 src->solver->solver_type == SOLVER_REAL_MT_BATCHED) ?
-                              src->decomp_scheme->thread_info->n_threads : 1;
+        UINT32 n = (src->solver->solver_type == SOLVER_MT_BATCHED ||
+                    src->solver->solver_type == SOLVER_REAL_MT_BATCHED) ?
+                    src->decomp_scheme->thread_info->n_threads : 1;
         dst->next_sol = alloc_sol_array(n);
 
-        for (int i = 0; i < n; i++)
+        for (UINT32 i = 0; i < n; i++)
         {
-            dst->next_sol[i] = deep_copy_solution_tree(src->next_sol[0]);
+            dst->next_sol[i] = deep_copy_solution_tree(src->next_sol[0], i);
         }
     }
     else
@@ -1436,11 +1443,12 @@ VOID post_process_solution(aoclfftz_solution_t *sol)
             // solution
             post_process_solution(sol->next_sol[0]);
 
+            UINT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
             // replicate the solution in next_sol[0] to array of next_sols in
             // each MT batched solution
-            for (int i = 1; i < sol->decomp_scheme->thread_info->n_threads; i++)
+            for (UINT32 i = 1; i < n_threads; i++)
             {
-                sol->next_sol[i] = deep_copy_solution_tree(sol->next_sol[0]);
+                sol->next_sol[i] = deep_copy_solution_tree(sol->next_sol[0], i);
             }
             break;
         }

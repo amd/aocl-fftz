@@ -67,7 +67,8 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     kernel_t *kernel_r2hc = NULL;
     kernel_t *kernel_r2hcf = NULL;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
+                             0 /*unused*/);
     if (cur_sel == NULL)
     {
         return SELECTOR_FAILURE;

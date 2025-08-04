@@ -1940,7 +1940,7 @@ aoclfftz_solution_t *alloc_solution_wrapper(INT32 vec_rank, INT32 dim_rank)
 aoclfftz_selector_t *alloc_selector_wrapper(INT32 vec_rank, INT32 dim_rank,
                                             VOID *scratch_space)
 {
-    return alloc_selector(vec_rank, dim_rank, scratch_space);
+    return alloc_selector(vec_rank, dim_rank, scratch_space, 0 /*unused*/);
 }
 VOID *alloc_twiddle_buffer_wrapper(INTP size, UINT32 dt_prec)
 {

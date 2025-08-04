@@ -318,7 +318,7 @@ aoclfftz_solution_t **alloc_sol_array(UINT32 n)
 // Allocates a new scratch_space iff the argument passed is NULL.
 // Otherwise sets the selector's scratch_space to the passed argument.
 aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
-                                    VOID *scratch_space)
+                                    VOID *scratch_space, UINT32 nthreads)
 {
     aoclfftz_selector_t *selector = NULL;
 
@@ -334,7 +334,7 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
             //       that use the scratch buffer are expected to check if the
             //       buffer is valid (not-null)
             ALLOC_ALIGN_UNINIT(selector->scratch_space, UINT8,
-                               scratch_space_capacity);
+                               scratch_space_capacity * nthreads);
 
         }
         else

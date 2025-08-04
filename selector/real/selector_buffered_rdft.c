@@ -53,7 +53,8 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 ret = SELECTOR_FAILURE;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
+                             0 /*unused*/);
     if (cur_sel == NULL)
     {
         goto exit_batched_dft;

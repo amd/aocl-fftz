@@ -63,7 +63,8 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     // To hold the selector to perform FFT with extended length m
     aoclfftz_selector_t *next_sel = NULL;
-    next_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space);
+    next_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
+                              0 /*unused*/);
     if (next_sel == NULL)
     {
         goto exit_bluestein_dft;
