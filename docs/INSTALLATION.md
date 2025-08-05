@@ -2,7 +2,7 @@
 
 Prerequisites
 -------------
-1. CMake - Version 3.10 or above
+1. CMake - Version 3.26 or above
 2. Linux :
         GCC compiler - Version 7.1 or above (or)
         AOCC compiler - Version 2.0 or above
