@@ -38,6 +38,12 @@
 
 #include "utils/utils.h"
 
+#define AVX512_SUPPORTED 3
+#define AVX256_SUPPORTED 2
+#define AVX128_SUPPORTED 1
+#define C_SUPPORTED 0
+#define UNSUPPORTED -1
+
 INTP is_AVX_supported(INT32 logger_mode)
 {
     INTP ret;
@@ -100,6 +106,20 @@ INTP is_AVX512_supported(INT32 logger_mode)
     return ret;
 }
 
+INTP is_FMA_supported(INT32 logger_mode)
+
+{
+    INTP ret;
+    INTP eax, ebx, ecx, edx;
+    cpu_features_detection(0x00000001, 0, &eax, &ebx, &ecx, &edx);
+    ret = ((ecx & (1 << 12)) != 0);
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode, "FMA %s supported",
+                           (ret ? "is" : "is not"));
+#endif
+    return ret;
+}
+
 // CPU Features detection using CPUID
 #ifdef AOCLFFTZ_CPUID_SIMD_DETECTION
 #ifndef _WINDOWS
@@ -135,42 +155,41 @@ inline VOID cpu_features_detection(INTP fn, INTP optVal,
 EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
                                INT32 logger_mode)
 {
-    INT32 cpu_flags = 0;
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 #endif
 
     if (opt_off)
     {
-        return -1;
+        return UNSUPPORTED;
     }
 
     if (opt_level == 0)
     {
-        return 0;
+        return C_SUPPORTED;
     }
-#ifdef ENABLE_AVX128
-    if (opt_level > 0) // opt_level == 1
+#ifdef ENABLE_AVX512
+    if (opt_level > 2 && is_AVX512_supported(logger_mode)) // opt_level == 3
     {
-        cpu_flags += is_AVX_supported(logger_mode);
+        return AVX512_SUPPORTED;
     }
 #endif
 #ifdef ENABLE_AVX256
-    if (opt_level > 1) // opt_level == 2
+    if (opt_level > 1 && is_AVX_supported(logger_mode) &&
+        is_FMA_supported(logger_mode) == 0) // opt_level == 2
     {
-        cpu_flags += is_AVX_supported(logger_mode);
+        return AVX256_SUPPORTED;
     }
 #endif
-#ifdef ENABLE_AVX512
-    if (opt_level > 2) // opt_level == 3
+#ifdef ENABLE_AVX128
+    if (opt_level > 0 && is_AVX_supported(logger_mode)) // opt_level == 1
     {
-        cpu_flags += is_AVX512_supported(logger_mode);
+        return AVX128_SUPPORTED;
     }
 #endif
+    return C_SUPPORTED;
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 #endif
-
-    return cpu_flags;
 }

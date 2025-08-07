@@ -116,6 +116,7 @@ CODE_COVERAGE                       |  Enables source code coverage and generate
 ENABLE_AVX128                       |  Compiles library with AVX 128-bit kernels support (Disabled by default)
 ENABLE_AVX256                       |  Compiles library with AVX 256-bit kernels support (Disabled by default)
 ENABLE_AVX512                       |  Compiles library with AVX 512-bit kernels support (Disabled by default)
+ENABLE_FMA                          |  Enable -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)
 ENABLE_MULTI_THREADING              |  Compiles library with multi-threading support using OpenMP (Disabled by default)
 ENABLE_STRICT_WARNINGS              |  Enable compiler flags to treat all warnings as errors (Enabled by default)
 FUZZTEST                            |  Enable Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)
@@ -123,6 +124,27 @@ VALGRIND                            |  Enables memory checks using Valgrind. Sup
 
 Note : Enabling ENABLE_AVX256 turns on ENABLE_AVX128 implicitly.
        Enabling ENABLE_AVX512 turns on ENABLE_AVX256 and ENABLE_AVX128 implicitly.
+
+
+CPU Architecture Support and FMA Requirements
+---------------------------------------------
+AOCL-FFTZ leverages advanced CPU features for optimal performance:
+
+**FMA (Fused Multiply-Add) Support:**
+- The library uses FMA3 instructions when available
+- The FMA compiler flag is added only when compiling AVX256 optimized kernels
+- The FMA compiler flag is not added for AVX128 during compilation
+- AVX 512-bit kernels do not require explicit FMA support (FMA is built into AVX-512)
+
+**Runtime Behavior:**
+- Library automatically detects CPU capabilities at runtime
+- If FMA is not supported by the system, the library falls back to AVX128 kernels
+- If AVX is not supported, the library executes using standard C implementation
+
+**SIMD ISA Support:**
+- The library uses x86 SIMD AVX128, AVX256 and AVX512 instructions when available
+- Library uses dynamic dispatcher to automatically detect the CPU capabilities and
+  dispatch the optimal ISA kernels based on selector model
 
 Running Test Bench On Linux & Windows
 -------------------------------------
