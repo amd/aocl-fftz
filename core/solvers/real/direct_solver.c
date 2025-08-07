@@ -36,6 +36,7 @@
  *  @author Srirammaswamy Srinivasan
  */
 
+#include <assert.h>
 #include "core/solvers/real/direct_solver.h"
 #include "api/aoclfftz_internal.h"
 #include "core/common/memory_manager.h"
@@ -564,11 +565,11 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
                     DT_PRECISION_FLAG(sol->decomp_scheme->flags));
 
                 // Kernel execution
-                // swapping real & imag points for backward kernel
+                // TODO: Support twiddle kernels for C2R problems
                 kernel_c2c(in, MOVE_ADDR(in, dt_bytes),
                            out, MOVE_ADDR(out, dt_bytes), no_of_groups,
                            sol->strides_grp->strides_c2c,
-                           sol->twiddle,
+                           NULL, // TODO: Pass twiddle buffer
                            FFT_DIR(sol->decomp_scheme->flags));
 
                 // Update the C2C in-strides for next iteration by subtracting
@@ -585,19 +586,28 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
                 out = MOVE_ADDR(out, c2c_out_stride * 2 * dt_bytes);
             }
 
-            // FIXIT:
+            // TODO: twiddle kernels are not supported for C2R problems,
+            // so falling back to non-twiddle kernels + twiddle multiplication
+            // approach.
+            assert(sol->solver->solver_type != SOLVER_REAL_DIRECT_TWIDDLE);
+
+            // TODO:
             // Real CT executor uses Direct-R -> CT -> Direct-M flow, so in this
             // approach it is not possible to get the Direct-R info for the next
             // CT executor to perform twiddle multiplication.
             // Hence the twiddle multiplication is performed here itself.
-            //
+
             // Selective twiddle multiplication on C2C kernel output points only
             twiddle_multiplier_for_real(sol, p);
         }
         else
         {
-            // Selective twiddle multiplication on C2C kernel input points only
-            twiddle_multiplier_for_real(sol, p);
+            // do twiddle multiplication when twiddle kernels are not used
+            if (sol->solver->solver_type != SOLVER_REAL_DIRECT_TWIDDLE)
+            {
+                // Selective twiddle multiplication on C2C kernel input points only
+                twiddle_multiplier_for_real(sol, p);
+            }
 
             // Copy unmodified out-stride values from strides to strides_c2c
             // and then modify strides_c2c values within loop iterations
@@ -609,11 +619,20 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
             INTP stride_offset = c2c_out_stride * 4;
             for (INTP group_id = 0; group_id < group_size; group_id++)
             {
+                // move twiddle buffer to `no_of_groups` times for every iteration
+                // this is point to the `group_id`-th column of the twiddle matrix
+                aoclfftz_twiddle_t tw_local = {
+                    .TW =
+                        MOVE_ADDR(sol->twiddle->TW, group_id * no_of_groups *
+                                                        DATA_STRIDE * dt_bytes),
+                    .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
+                    .cols = sol->twiddle->cols};
+
                 // Kernel execution
                 kernel_c2c(in, MOVE_ADDR(in, dt_bytes), out,
                            MOVE_ADDR(out, dt_bytes), no_of_groups,
                            sol->strides_grp->strides_c2c,
-                           sol->twiddle,
+                           &tw_local,
                            FFT_DIR(sol->decomp_scheme->flags));
 
                 // Take complex conjucate for the required points

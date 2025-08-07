@@ -1040,6 +1040,10 @@ class AoclfftzSelectorTestBase
                 case SOLVER_REAL_DIRECT:
                     ret &= (cur_sol->solver->solver_type == SOLVER_REAL_DIRECT);
                     break;
+                case SOLVER_REAL_DIRECT_TWIDDLE:
+                    ret &= (cur_sol->solver->solver_type ==
+                            SOLVER_REAL_DIRECT_TWIDDLE);
+                    break;
                 case SOLVER_REAL_BATCHED:
                     ret &= (cur_sol->solver->solver_type == SOLVER_REAL_BATCHED);
                     break;
@@ -1057,6 +1061,10 @@ class AoclfftzSelectorTestBase
                 case SOLVER_REAL_MT_DIRECT:
                     ret &= (cur_sol->solver->solver_type ==
                             SOLVER_REAL_MT_DIRECT);
+                    break;
+                case SOLVER_REAL_MT_DIRECT_TWIDDLE:
+                    ret &= (cur_sol->solver->solver_type ==
+                            SOLVER_REAL_MT_DIRECT_TWIDDLE);
                     break;
                 default:
                     ret = false;

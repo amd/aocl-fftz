@@ -609,4 +609,4 @@ ops_cycles_t GET_OPS_COUNT(UINT8 precision, UINT8 direction)
     {
         return ops_cnt[1];
     }
-} 
+}

@@ -62,13 +62,16 @@ kernel_t kernels_dft_table[NUM_KERNELS_IN_TABLE_COMPLEX] = { {0x0} };
 kernel_t kernels_rdft_table[NUM_KERNELS_IN_TABLE_REAL] = { {0x0} };
 // TDFT kernels (fused twiddle + dft kernels) (Not thread-safe)
 kernel_t kernels_twid_dft_table[NUM_KERNELS_IN_TABLE_COMPLEX] = { {0x0} };
+// TDFT kernels (fused twiddle + rdft kernels) (Not thread-safe)
+kernel_t kernels_twid_rdft_table[NUM_KERNELS_IN_TABLE_REAL] = { {0x0} };
 
 // Register all applicable solvers and kernels into the respective tables
 // based on the input problem and cpu arch flags
 INT32 register_solvers_kernels(
     kernel_t kertab_dft[NUM_KERNELS_IN_TABLE_COMPLEX],
     kernel_t kertab_rdft[NUM_KERNELS_IN_TABLE_REAL],
-    kernel_t kertab_twid_dft[NUM_KERNELS_IN_TABLE_COMPLEX], INT32 dt, INT32 dir,
+    kernel_t kertab_twid_dft[NUM_KERNELS_IN_TABLE_COMPLEX],
+    kernel_t kertab_twid_rdft[NUM_KERNELS_IN_TABLE_REAL], INT32 dt, INT32 dir,
     INT32 is_real, INT32 cpu_flags)
 {
     INT32 ret = SELECTOR_FAILURE;
@@ -85,6 +88,8 @@ INT32 register_solvers_kernels(
     {
         ret = register_kernels_real(kertab_rdft, kernels_real, dt, dir,
                                     cpu_flags);
+        ret |= register_kernels_real(kertab_twid_rdft, kernels_twid_real, dt,
+                                     dir, cpu_flags);
     }
     else
     {
@@ -770,6 +775,169 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     return ret;
 }
 
+// Fixed decision logic and CPI based selector mode execution for the
+// real input problem based on the applicable tables
+// of real solvers and real kernels
+INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
+                                           aoclfftz_realhelper_t *realhelper)
+{
+    aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
+
+    //All the CT sub-problems will use fused twiddle dft kernels
+    // kernel_t *kertab = kernels_twid_dft_table;
+    // kernel_t *kertab = kernels_rdft_table;
+    kernel_t *kertab = kernels_twid_rdft_table;
+
+    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
+    INT32 ret = SELECTOR_FAILURE;
+    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    INT32 batch = sel->solution->decomp_scheme->vecs[0].n;
+    INT32 avl_threads =
+            sel->solution->decomp_scheme->thread_info->avl_threads;
+
+    INT32 is_FFT_ker_supported =
+            check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n,
+                                     kertab);
+    INT32 is_solvable_by_bluestein =
+            check_prime_solvability_bluestein(sel->solution->decomp_scheme,
+                                              is_FFT_ker_supported, kertab);
+    INT32 level1_cond1 = 0;
+    INT32 level1_cond2 = 0;
+    INT32 level2_cond = 0;
+
+    SET_SELECTOR_MODE(sel->solution->decomp_scheme->flags,
+                      AOCLFFTZ_FIXED_SELECTOR);
+
+    // SOLVER_BATCHED
+    level1_cond1 =
+        ((sel->solution->decomp_scheme->dims[0].n != 1) && /* size one */
+         ((vec_rank > 1) ||                                /* ND Batched */
+          /* 1D Batched 1D Non-direct cases*/
+          ((sel->solution->decomp_scheme->vecs[0].n > 1) &&
+           !is_FFT_ker_supported &&
+           (sel->solution->decomp_scheme->dims[0].n ==
+            realhelper->problem_size)) ||
+          /* 1D Batched ND case*/
+          (dim_rank > 1 && sel->solution->decomp_scheme->vecs[0].n > 1)));
+    // SOLVER_NDIM
+    level1_cond1 |= ((dim_rank > 1) << 1);
+    // SOLVER_BLUESTEIN
+    level1_cond1 |= (is_solvable_by_bluestein << 2);
+    // SOLVER_BUFFERED
+    // Buffered solver will be used for all CT problems as of now
+    level1_cond2 = !realhelper->is_buffered_invoked && !is_FFT_ker_supported;
+    // SOLVER_PERM_KER
+    level1_cond2 |= (IS_OUT_OF_ORDER(sel->solution->decomp_scheme->flags) << 1);
+    // SOLVER_DIRECT
+    level2_cond = is_FFT_ker_supported;
+    // SOLVER_PFA
+    // SOLVER_RADER
+
+    /** Level 1 decisions : Solvers **/
+    // Batched/vector FFT Solver
+    if (level1_cond1 & 0x1)
+    {
+        if (avl_threads <= 1)
+        {
+            solver_obj->solver_type = SOLVER_REAL_BATCHED;
+        }
+        else
+        {
+            solver_obj->solver_type = SOLVER_REAL_MT_BATCHED;
+        }
+
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+
+        ret = selector_batched_rdft(sel, kertab, realhelper);
+        return ret;
+    }
+    // Multi-dimensional FFT Solver
+    if (level1_cond1 & 0x2)
+    {
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, logger_mode,
+            "Multi-dimensional RealFFT is not supported");
+        return SELECTOR_FAILURE;
+    }
+    // Large Primes - Bluestein FFT Solver
+    if (level1_cond1 & 0x4)
+    {
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, logger_mode,
+            "Large Prime RealFFT is not supported");
+        return SELECTOR_FAILURE;
+    }
+    // Buffered FFT Solver
+    if (level1_cond2 & 0x1)
+    {
+        solver_obj->solver_type = SOLVER_REAL_BUFFERED;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+
+        ret = selector_buffered_rdft(sel, kertab, realhelper);
+        return ret;
+    }
+    // Permuted (out-of-order output) FFT Solver
+    if (level1_cond2 & 0x2)
+    {
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, logger_mode,
+            "Permuted RealFFT is not supported");
+        return SELECTOR_FAILURE;
+    }
+    /** Level 2 decisions : CT Solver and Kernels **/
+    // Size one problem
+    if (sel->solution->decomp_scheme->dims[0].n == 1)
+    {
+        solver_obj->solver_type = SOLVER_SIZEONE;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+
+        // No setup for SizeOne problem
+        return SELECTOR_SUCCESS;
+    }
+    else if (level2_cond & 0x1)
+    {
+        // Single threaded direct solver to be executed for batch <= 1,
+        // irrespective of avl_threads
+        if ((avl_threads <= 1) || batch <= 1)
+        {
+            solver_obj->solver_type = SOLVER_REAL_DIRECT_TWIDDLE;
+        }
+        else
+        {
+            solver_obj->solver_type = SOLVER_REAL_MT_DIRECT_TWIDDLE;
+        }
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+
+        // Call Direct Solver master
+        ret = selector_direct_rdft(sel, kertab, realhelper);
+        return ret;
+    }
+    else
+    {
+        solver_obj->solver_type = SOLVER_REAL_CT;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+
+        // Call CT Solver master
+        ret = selector_ct_rdft(sel, kertab, realhelper);
+        return ret;
+    }
+
+    return ret;
+}
+
 INT32 selector_autotuner_mode_dft_(aoclfftz_selector_t* sel)
 {
     INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
@@ -1022,15 +1190,22 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
                 ->solution->decomp_scheme->flags,
             GET_STANDALONE_TRANSPOSE(sel->solution->decomp_scheme->flags));
 
-        // TODO: Fused twiddle selector mode for RDFT is not implemented yet
-        AOCLFFTZ_LOG_UNFORMATTED(
-            INFO, sel->solution->decomp_scheme->cntrl_params->logger_mode,
-            "Fused twiddle selector mode for RDFT is not implemented yet, so "
-            "falling back to fixed selector mode");
         // Fixed decision logic and CPI based selector mode
-        // ret = selector_fixed_mode_fused_twid_dft_(
+        // ret = selector_fixed_mode_fused_twid_rdft_(
         //         sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]);
-        sel_rdft_fp = selector_fixed_mode_rdft_;
+        // TODO: Enable twiddle kernels for C2R problems
+        if (FFT_DIR(sel->solution->decomp_scheme->flags) == BACKWARD_FFT_DIR)
+        {
+            AOCLFFTZ_LOG_UNFORMATTED(
+                INFO, sel->solution->decomp_scheme->cntrl_params->logger_mode,
+                "Twiddle kernels are not supported for C2R problems, so using "
+                "non-twiddle kernels + twiddle multiplier approach.");
+            sel_rdft_fp = selector_fixed_mode_rdft_;
+        }
+        else
+        {
+            sel_rdft_fp = selector_fixed_mode_fused_twid_rdft_;
+        }
         ret = selector_model_rdft_(
             sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT], realhelper);
         if (ret != SELECTOR_FAILURE)
@@ -1160,7 +1335,8 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
     ret = register_solvers_kernels(kernels_dft_table,
                                    kernels_rdft_table,
-                                   kernels_twid_dft_table, DT_FLOAT,
+                                   kernels_twid_dft_table,
+                                   kernels_twid_rdft_table, DT_FLOAT,
                                    FFT_DIR(problem->flags),
                                    IS_REAL(problem->flags),
                                    cpu_flags);
@@ -1239,7 +1415,8 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
     ret = register_solvers_kernels(kernels_dft_table,
                                    kernels_rdft_table,
-                                   kernels_twid_dft_table, DT_DOUBLE,
+                                   kernels_twid_dft_table,
+                                   kernels_twid_rdft_table, DT_DOUBLE,
                                    FFT_DIR(problem->flags),
                                    IS_REAL(problem->flags),
                                    cpu_flags);
@@ -1318,7 +1495,8 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
     ret = register_solvers_kernels(kernels_dft_table,
                                    kernels_rdft_table,
-                                   kernels_twid_dft_table, DT_FLOAT,
+                                   kernels_twid_dft_table,
+                                   kernels_twid_rdft_table, DT_FLOAT,
                                    FFT_DIR(problem->flags),
                                    IS_REAL(problem->flags),
                                    cpu_flags);
@@ -1397,7 +1575,8 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
     ret = register_solvers_kernels(kernels_dft_table,
                                    kernels_rdft_table,
-                                   kernels_twid_dft_table, DT_DOUBLE,
+                                   kernels_twid_dft_table,
+                                   kernels_twid_rdft_table, DT_DOUBLE,
                                    FFT_DIR(problem->flags),
                                    IS_REAL(problem->flags),
                                    cpu_flags);
@@ -1546,21 +1725,24 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
             if (curr->solver->solver_type == SOLVER_REAL_CT)
             {
                 // goto next direct node to setup twiddle buffer
-                while (curr != NULL &&
-                       curr->solver->solver_type != SOLVER_REAL_DIRECT &&
-                       curr->solver->solver_type != SOLVER_REAL_MT_DIRECT)
+                while (
+                    curr != NULL &&
+                    curr->solver->solver_type != SOLVER_REAL_DIRECT &&
+                    curr->solver->solver_type != SOLVER_REAL_DIRECT_TWIDDLE &&
+                    curr->solver->solver_type != SOLVER_REAL_MT_DIRECT &&
+                    curr->solver->solver_type != SOLVER_REAL_MT_DIRECT_TWIDDLE)
                 {
                     curr->twiddle->TW = prev->twiddle->TW;
                     curr = curr->next_sol[0];
                 }
-                INTP n = curr->decomp_scheme->dims[0].n;
+                INTP radix = curr->decomp_scheme->dims[0].n;
                 INTP no_of_groups = curr->solver->kernel_r2hcf->count > 0
                                         ? curr->solver->kernel_r2hcf->count
                                         : curr->solver->kernel_r2hc->count;
                 // No. of c2c kernels per group that require twiddle computation
-                INTP group_size =
-                    curr->solver->kernel_c2c->count / no_of_groups;
-                INTP tw_buf_size = n * group_size * DATA_STRIDE;
+                INTP group_size = curr->solver->kernel_c2c->count / no_of_groups;
+                INTP tw_buf_size =
+                    radix * curr->solver->kernel_c2c->count * DATA_STRIDE;
                 // Allocate Twiddle buffer to store twiddle values for every
                 // radix-n c2c kernel of a group
                 VOID *TW = alloc_twiddle_buffer(tw_buf_size, dt_prec);
@@ -1569,9 +1751,10 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                     INTP p = (curr->decomp_scheme->vecs[0].n *
                               curr->decomp_scheme->dims[0].n) /
                              no_of_groups;
-                    compute_twiddle_buffer_real(TW, group_size, n, p,
+                    compute_twiddle_buffer_real(TW, radix, group_size,
+                                                no_of_groups, p,
                                                 FORWARD_FFT_DIR, dt_prec);
-                    curr->twiddle->cols = p; // FIXME
+                    curr->twiddle->cols = curr->solver->kernel_c2c->count;
                     curr->twiddle->TW = TW;
                     curr->twiddle->twiddle_buf_ptr = TW;
                 }
@@ -1587,15 +1770,18 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
         {
             if (curr->solver->solver_type == SOLVER_REAL_CT &&
                 (prev->solver->solver_type == SOLVER_REAL_DIRECT ||
-                 prev->solver->solver_type == SOLVER_REAL_MT_DIRECT))
+                 prev->solver->solver_type == SOLVER_REAL_DIRECT_TWIDDLE ||
+                 prev->solver->solver_type == SOLVER_REAL_MT_DIRECT ||
+                 prev->solver->solver_type == SOLVER_REAL_MT_DIRECT_TWIDDLE))
             {
-                INTP n = prev->decomp_scheme->dims[0].n;
+                INTP radix = prev->decomp_scheme->dims[0].n;
                 INTP no_of_groups = prev->solver->kernel_r2hcf->count > 0
                                         ? prev->solver->kernel_r2hcf->count
                                         : prev->solver->kernel_r2hc->count;
                 // No. of c2c kernels per group that require twiddle computation
                 INTP group_sz = prev->solver->kernel_c2c->count / no_of_groups;
-                INTP tw_buf_sz = n * group_sz * DATA_STRIDE;
+                INTP tw_buf_sz =
+                    radix * prev->solver->kernel_c2c->count * DATA_STRIDE;
                 // Allocate Twiddle buffer to store twiddle factors for every
                 // radix-n c2c kernel of a group
                 VOID *TW = alloc_twiddle_buffer(tw_buf_sz, dt_prec);
@@ -1604,9 +1790,10 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                     INTP p = (prev->decomp_scheme->vecs[0].n *
                               prev->decomp_scheme->dims[0].n) /
                              no_of_groups;
-                    compute_twiddle_buffer_real(TW, group_sz, n, p,
+                    compute_twiddle_buffer_real(TW, radix, group_sz,
+                                                no_of_groups, p,
                                                 BACKWARD_FFT_DIR, dt_prec);
-                    prev->twiddle->cols = p; // FIXME
+                    prev->twiddle->cols = prev->solver->kernel_c2c->count;
                     prev->twiddle->TW = TW;
                     prev->twiddle->twiddle_buf_ptr = TW;
                 }

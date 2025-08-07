@@ -138,7 +138,7 @@ static kernel_fp_list_t kernels_twid_c2c[NUM_KERNELS_IN_EACH_CATEGORY]
     {KREG(twid_fft, 16)}, // radix 16
 };
 
-// Real FFT kernel table
+// Real FFT kernels + C2C kernels table
 // Since this table is used only within the scope of this file, we prefer
 // creating it here. There is no reason for this table to be defined in a
 // header.
@@ -196,6 +196,67 @@ static kernel_fp_list_t kernels_real[NUM_REAL_KERNELS_VARIANTS]
         {KREG(fft, 14)}, // radix 14
         {KREG(fft, 15)}, // radix 15
         {KREG(fft, 16)}, // radix 16
+    }
+};
+
+// Real FFT kernels + Twiddle C2C kernels table
+// Since this table is used only within the scope of this file, we prefer
+// creating it here. There is no reason for this table to be defined in a
+// header.
+static kernel_fp_list_t kernels_twid_real[NUM_REAL_KERNELS_VARIANTS]
+                                         [NUM_KERNELS_IN_EACH_CATEGORY]
+                                         [NUM_KERNEL_CATEGORIES] =
+{
+    {
+        {KREG(r2hc_rfft, 2)},  // radix  2
+        {KREG(r2hc_rfft, 3)},  // radix  3
+        {KREG(r2hc_rfft, 4)},  // radix  4
+        {KREG(r2hc_rfft, 5)},  // radix  5
+        {KREG(r2hc_rfft, 6)},  // radix  6
+        {KREG(r2hc_rfft, 7)},  // radix  7
+        {KREG(r2hc_rfft, 8)},  // radix  8
+        //{KREG(r2hc_rfft, 9)},  // radix  9
+        {KREG(r2hc_rfft, 10)}, // radix 10
+        //{KREG(r2hc_rfft, 11)}, // radix 11
+        {KREG(r2hc_rfft, 12)}, // radix 12
+        //{KREG(r2hc_rfft, 13)}, // radix 13
+        {KREG(r2hc_rfft, 14)}, // radix 14
+        {KREG(r2hc_rfft, 15)}, // radix 15
+        {KREG(r2hc_rfft, 16)}, // radix 16
+    },
+    {
+        {KREG(r2hcf_rfft, 2)},  // radix  2
+        {KREG(r2hcf_rfft, 3)},  // radix  3
+        {KREG(r2hcf_rfft, 4)},  // radix  4
+        {KREG(r2hcf_rfft, 5)},  // radix  5
+        {KREG(r2hcf_rfft, 6)},  // radix  6
+        {KREG(r2hcf_rfft, 7)},  // radix  7
+        {KREG(r2hcf_rfft, 8)},  // radix  8
+        //{KREG(r2hcf_rfft, 9)},  // radix  9
+        {KREG(r2hcf_rfft, 10)}, // radix 10
+        //{KREG(r2hcf_rfft, 11)}, // radix 11
+        {KREG(r2hcf_rfft, 12)}, // radix 12
+        //{KREG(r2hcf_rfft, 13)}, // radix 13
+        {KREG(r2hcf_rfft, 14)}, // radix 14
+        {KREG(r2hcf_rfft, 15)}, // radix 15
+        {KREG(r2hcf_rfft, 16)}, // radix 16
+    },
+    {
+        {KREG(twid_fft, 2)},  // radix  2
+        {KREG(twid_fft, 3)},  // radix  3
+        {KREG(twid_fft, 4)},  // radix  4
+        {KREG(twid_fft, 5)},  // radix  5
+        {KREG(twid_fft, 6)},  // radix  6
+        {KREG(twid_fft, 7)},  // radix  7
+        {KREG(twid_fft, 8)},  // radix  8
+        //{KREG(twid_fft, 9)},  // radix  9
+        {KREG(twid_fft, 10)}, // radix 10
+        //{KREG(twid_fft, 11)}, // radix 11
+        {KREG(twid_fft, 12)}, // radix 12
+        //{KREG(twid_fft, 13)}, // radix 13
+        {KREG(twid_fft, 14)}, // radix 14
+        {KREG(twid_fft, 15)}, // radix 15
+        {KREG(twid_fft, 16)}, // radix 16
     }
 };
 

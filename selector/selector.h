@@ -273,7 +273,11 @@ typedef struct aoclfftz_selector
           (sel->solution->next_sol[0]->solver->solver_type ==                  \
            SOLVER_REAL_DIRECT ||                                               \
            sel->solution->next_sol[0]->solver->solver_type ==                  \
-           SOLVER_REAL_MT_DIRECT)) {                                           \
+           SOLVER_REAL_DIRECT_TWIDDLE ||                                       \
+           sel->solution->next_sol[0]->solver->solver_type ==                  \
+           SOLVER_REAL_MT_DIRECT ||                                            \
+           sel->solution->next_sol[0]->solver->solver_type ==                  \
+           SOLVER_REAL_MT_DIRECT_TWIDDLE)) {                                   \
         sel->solution = curr->next_sol[0];                                     \
         curr->next_sol[0] = sel->solution->next_sol[0];                        \
         sel->solution->next_sol[0] = curr;                                     \
@@ -285,7 +289,10 @@ typedef struct aoclfftz_selector
         next = curr->next_sol[0];                                              \
         if (curr->solver->solver_type == SOLVER_REAL_CT &&                     \
             (next->solver->solver_type == SOLVER_REAL_DIRECT ||                \
-             next->solver->solver_type == SOLVER_REAL_MT_DIRECT)) {            \
+             next->solver->solver_type == SOLVER_REAL_DIRECT_TWIDDLE ||        \
+             next->solver->solver_type == SOLVER_REAL_MT_DIRECT ||             \
+             next->solver->solver_type == SOLVER_REAL_MT_DIRECT_TWIDDLE))      \
+        {                                                                      \
           prev->next_sol[0] = next;                                            \
           curr->next_sol[0] = next->next_sol[0];                               \
           next->next_sol[0] = curr;                                            \
@@ -742,16 +749,20 @@ typedef struct aoclfftz_selector
 }
 
 // Function declarations
-INT32 register_solvers_kernels(kernel_t[NUM_KERNELS_IN_TABLE_COMPLEX],
-                               kernel_t[NUM_KERNELS_IN_TABLE_REAL],
-                               kernel_t[NUM_KERNELS_IN_TABLE_COMPLEX], INT32 dt,
-                               INT32 dir, INT32 is_real, INT32 cpu_flags);
-INT32 selector_driver_dft_(aoclfftz_selector_t *);
-INT32 selector_driver_rdft_(aoclfftz_selector_t *, aoclfftz_realhelper_t *);
-INT32 selector_model_dft_(aoclfftz_selector_t *);
-INT32 selector_model_rdft_(aoclfftz_selector_t *, aoclfftz_realhelper_t *);
-VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *sel);
-VOID setup_twiddle_buffer_real(aoclfftz_solution_t *sel);
+INT32 register_solvers_kernels(
+    kernel_t kertab_dft[NUM_KERNELS_IN_TABLE_COMPLEX],
+    kernel_t kertab_rdft[NUM_KERNELS_IN_TABLE_REAL],
+    kernel_t kertab_twid_dft[NUM_KERNELS_IN_TABLE_COMPLEX],
+    kernel_t kertab_twid_rdft[NUM_KERNELS_IN_TABLE_REAL], INT32 dt, INT32 dir,
+    INT32 is_real, INT32 cpu_flags);
+INT32 selector_driver_dft_(aoclfftz_selector_t *sel);
+INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
+                            aoclfftz_realhelper_t *realhelper);
+INT32 selector_model_dft_(aoclfftz_selector_t *sel);
+INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
+                           aoclfftz_realhelper_t *realhelper);
+VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *sol);
+VOID setup_twiddle_buffer_real(aoclfftz_solution_t *sol);
 INT32 setup_dft_f_(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 setup_dft_d_(aoclfftz_selector_t *sel, kernel_t *kertab);
 VOID *setup_dft_f(aoclfftz_prob_desc_f *problem);

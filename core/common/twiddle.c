@@ -792,7 +792,7 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol)
             status = twiddle_multiplier_inplace_buffered_float(sol);
         }
         else
-    {
+        {
             status = twiddle_multiplier_inplace_buffered_double(sol);
         }
     }
@@ -802,71 +802,6 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol)
     return status;
 }
 
-#if IN_MEMORY_TWIDDLE_FACTORS == 1
-VOID compute_twiddle_buffer_real_float(VOID *twiddle_buffer, INTP group_size,
-                                       INTP m, INTP p, UINT8 dir)
-{
-    FLOAT *twiddle_buffer_real = (FLOAT *)twiddle_buffer;
-    FLOAT *twiddle_buffer_imag = twiddle_buffer_real + 1;
-
-    FLOAT sign = (dir == BACKWARD_FFT_DIR) ? 1.0 : -1.0;
-    FLOAT angle_base = (sign * AOCLFFTZ_2_PI) / (FLOAT)p;
-    INTP c_stride = 1 * DATA_STRIDE;
-    INTP r_stride = m * DATA_STRIDE;
-
-    for (INTP i = 0; i < group_size; ++i)
-    {
-        for (INTP j = 1; j < m; ++j)
-        {
-            FLOAT angle = angle_base * j * (i + 1);
-            FLOAT sin_val = sinf(angle);
-            FLOAT cos_val = cosf(angle);
-            INTP buffer_index = LINEAR_IDX_2D(i, j, c_stride, r_stride);
-            twiddle_buffer_real[buffer_index] = cos_val;
-            twiddle_buffer_imag[buffer_index] = sin_val;
-        }
-    }
-}
-
-VOID compute_twiddle_buffer_real_double(VOID *twiddle_buffer, INTP group_size,
-                                        INTP m, INTP p, UINT8 dir)
-{
-    DOUBLE *twiddle_buffer_real = (DOUBLE *)twiddle_buffer;
-    DOUBLE *twiddle_buffer_imag = twiddle_buffer_real + 1;
-
-    DOUBLE sign = (dir == BACKWARD_FFT_DIR) ? 1.0 : -1.0;
-    DOUBLE angle_base = (sign * AOCLFFTZ_2_PI) / (DOUBLE)p;
-    INTP c_stride = 1 * DATA_STRIDE;
-    INTP r_stride = m * DATA_STRIDE;
-
-    for (INTP i = 0; i < group_size; ++i)
-    {
-        for (INTP j = 1; j < m; ++j)
-        {
-            DOUBLE angle = angle_base * j * (i + 1);
-            DOUBLE sin_val = sin(angle);
-            DOUBLE cos_val = cos(angle);
-            INTP buffer_index = LINEAR_IDX_2D(i, j, c_stride, r_stride);
-            twiddle_buffer_real[buffer_index] = cos_val;
-            twiddle_buffer_imag[buffer_index] = sin_val;
-        }
-    }
-}
-
-VOID compute_twiddle_buffer_real(VOID *twiddle_buffer, INTP group_sz, INTP m,
-                                 INTP p, UINT8 dir, UINT32 dt_prec)
-{
-    if (dt_prec == DT_FLOAT)
-    {
-        compute_twiddle_buffer_real_float(twiddle_buffer, group_sz, m, p, dir);
-    }
-    else
-    {
-        compute_twiddle_buffer_real_double(twiddle_buffer, group_sz, m, p, dir);
-    }
-}
-#endif
-
 INT32 twiddle_multiplier_for_real_float(aoclfftz_solution_t *sol, INTP p)
 {
     UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags);
@@ -874,7 +809,7 @@ INT32 twiddle_multiplier_for_real_float(aoclfftz_solution_t *sol, INTP p)
     VOID *out = sol->decomp_scheme->out_real;
     INTP radix = sol->decomp_scheme->dims[0].n;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    // FIXIT: Fix for fully strided CT problems (i.e. strides in all CT stages)
+    // base_stride is 1 since all intermediate CT stages use unit strided buffers
     INTP base_stride = 1;
 
     INTP *stride_arr = NULL;
@@ -908,29 +843,30 @@ INT32 twiddle_multiplier_for_real_float(aoclfftz_solution_t *sol, INTP p)
     {
         FLOAT *twiddle_buffer_real = (FLOAT *)sol->twiddle->TW;
         FLOAT *twiddle_buffer_imag = twiddle_buffer_real + 1;
-        for (INTP i = 0; i < group_size; i++)
+        for (INTP i = 1; i < radix; i++)
         {
-            for (INTP j = 1; j < radix; j++)
+            for (INTP j = 0; j < group_size; j++)
             {
                 FLOAT *cur_data_r = data_r;
                 FLOAT *cur_data_i = data_i;
-                INTP tw_buf_index = LINEAR_IDX_2D(i, j, DATA_STRIDE,
-                                                  radix * DATA_STRIDE);
-                FLOAT TW_real = twiddle_buffer_real[tw_buf_index];
-                FLOAT TW_imag = twiddle_buffer_imag[tw_buf_index];
-                INTP stride = stride_arr[j];
+                // every `no_of_groups` columns are duplicates
+                // so skip those columns to avoid redundant loads
+                INTP tw_in_index =
+                    LINEAR_IDX_2D(i, j, no_of_groups * DATA_STRIDE,
+                                  sol->solver->kernel_c2c->count * DATA_STRIDE);
+                FLOAT TW_real = twiddle_buffer_real[tw_in_index];
+                FLOAT TW_imag = twiddle_buffer_imag[tw_in_index];
 
                 for (INTP k = 0; k < no_of_groups; k++)
                 {
-                    DOUBLE a = cur_data_r[stride];
-                    DOUBLE b = cur_data_i[stride];
-                    cur_data_r[stride] = a * TW_real - b * TW_imag;
-                    cur_data_i[stride] = b * TW_real + a * TW_imag;
-                    stride += vec_stride;
+                    INTP data_index = stride_arr[i] + (k * vec_stride) +
+                                      (j * base_stride * 2);
+                    FLOAT a = cur_data_r[data_index];
+                    FLOAT b = cur_data_i[data_index];
+                    cur_data_r[data_index] = a * TW_real - b * TW_imag;
+                    cur_data_i[data_index] = b * TW_real + a * TW_imag;
                 }
             }
-            data_r += base_stride * 2;
-            data_i += base_stride * 2;
         }
     }
     else
@@ -972,7 +908,7 @@ INT32 twiddle_multiplier_for_real_double(aoclfftz_solution_t *sol, INTP p)
     VOID *out = sol->decomp_scheme->out_real;
     INTP radix = sol->decomp_scheme->dims[0].n;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    // FIXIT: Fix for fully strided CT problems (i.e. strides in all CT stages)
+    // base_stride is 1 since all intermediate CT stages use unit strided buffers
     INTP base_stride = 1;
 
     INTP *stride_arr = NULL;
@@ -1005,29 +941,30 @@ INT32 twiddle_multiplier_for_real_double(aoclfftz_solution_t *sol, INTP p)
     {
         DOUBLE *twiddle_buffer_real = (DOUBLE *)sol->twiddle->TW;
         DOUBLE *twiddle_buffer_imag = twiddle_buffer_real + 1;
-        for (INTP i = 0; i < group_size; i++)
+        for (INTP i = 1; i < radix; i++)
         {
-            for (INTP j = 1; j < radix; j++)
+            for (INTP j = 0; j < group_size; j++)
             {
                 DOUBLE *cur_data_r = data_r;
                 DOUBLE *cur_data_i = data_i;
-                INTP tw_in_index =  LINEAR_IDX_2D(i, j, DATA_STRIDE,
-                                                  radix * DATA_STRIDE);
+                // every `no_of_groups` columns are duplicates
+                // so skip those columns to avoid redundant loads
+                INTP tw_in_index =
+                    LINEAR_IDX_2D(i, j, no_of_groups * DATA_STRIDE,
+                                  sol->solver->kernel_c2c->count * DATA_STRIDE);
                 DOUBLE TW_real = twiddle_buffer_real[tw_in_index];
                 DOUBLE TW_imag = twiddle_buffer_imag[tw_in_index];
-                INTP stride = stride_arr[j];
 
                 for (INTP k = 0; k < no_of_groups; k++)
                 {
-                    DOUBLE a = cur_data_r[stride];
-                    DOUBLE b = cur_data_i[stride];
-                    cur_data_r[stride] = a * TW_real - b * TW_imag;
-                    cur_data_i[stride] = b * TW_real + a * TW_imag;
-                    stride += vec_stride;
+                    INTP data_index = stride_arr[i] + (k * vec_stride) +
+                                      (j * base_stride * 2);
+                    DOUBLE a = cur_data_r[data_index];
+                    DOUBLE b = cur_data_i[data_index];
+                    cur_data_r[data_index] = a * TW_real - b * TW_imag;
+                    cur_data_i[data_index] = b * TW_real + a * TW_imag;
                 }
             }
-            data_r += base_stride * 2;
-            data_i += base_stride * 2;
         }
     }
     else
@@ -1074,6 +1011,232 @@ INT32 twiddle_multiplier_for_real(aoclfftz_solution_t *sol, INTP p)
     }
     return TW_SUCCESS;
 }
+
+#ifdef MULTI_THREADING
+INT32 twiddle_multiplier_mt_for_real_float(aoclfftz_solution_t *sol, INTP p,
+                                            INTP n_threads_c2c_outer,
+                                            INTP n_threads_c2c_inner)
+{
+    UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags);
+    VOID *in = sol->decomp_scheme->in_real;
+    VOID *out = sol->decomp_scheme->out_real;
+    INTP radix = sol->decomp_scheme->dims[0].n;
+    aoclfftz_strides_t *strides = sol->strides_grp->strides;
+    // base_stride is 1 since all intermediate CT stages use unit strided buffers
+    INTP base_stride = 1;
+
+    INTP *stride_arr = NULL;
+    INTP vec_stride = 1;
+    if (is_backward)
+    {
+        stride_arr = strides->out_strides;
+        vec_stride = strides->v_out_stride;
+    }
+    else
+    {
+        stride_arr = strides->in_strides;
+        vec_stride = strides->v_in_stride;
+    }
+
+    INTP no_of_groups = sol->solver->kernel_r2hcf->count > 0
+                            ? sol->solver->kernel_r2hcf->count
+                            : sol->solver->kernel_r2hc->count;
+    INTP group_size = sol->solver->kernel_c2c->count / no_of_groups;
+
+    FLOAT sign = is_backward ? 1.0 : -1.0;
+    FLOAT *data_r = is_backward ? (FLOAT *)out : (FLOAT *)in;
+    FLOAT *data_i = is_backward ? (FLOAT *)out + 1 : (FLOAT *)in + 1;
+
+    // move the in_r to point first C2C point
+    data_r += base_stride;
+    data_i += base_stride;
+
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+    if (sol->twiddle->TW)
+    {
+        FLOAT *twiddle_buffer_real = (FLOAT *)sol->twiddle->TW;
+        FLOAT *twiddle_buffer_imag = twiddle_buffer_real + 1;
+        #pragma omp parallel for num_threads(n_threads_c2c_outer)
+        for (INTP i = 0; i < group_size; i++)
+        {
+            #pragma omp parallel for num_threads(n_threads_c2c_inner)
+            for (INTP j = 0; j < no_of_groups; j++)
+            {
+                for (INTP k = 1; k < radix; k++)
+                {
+                    FLOAT *cur_data_r = data_r;
+                    FLOAT *cur_data_i = data_i;
+                    // every `no_of_groups` columns are duplicates
+                    // so skip those columns to avoid redundant loads
+                    INTP tw_in_index = LINEAR_IDX_2D(
+                        k, i, no_of_groups * DATA_STRIDE,
+                        sol->solver->kernel_c2c->count * DATA_STRIDE);
+                    FLOAT TW_real = twiddle_buffer_real[tw_in_index];
+                    FLOAT TW_imag = twiddle_buffer_imag[tw_in_index];
+
+                    INTP data_index = stride_arr[k] + (j * vec_stride) +
+                                      (i * base_stride * 2);
+                    FLOAT a = cur_data_r[data_index];
+                    FLOAT b = cur_data_i[data_index];
+                    cur_data_r[data_index] = a * TW_real - b * TW_imag;
+                    cur_data_i[data_index] = b * TW_real + a * TW_imag;
+                }
+            }
+        }
+    }
+    else
+#endif
+    {
+        // TODO: Parallelize these loops
+        for (INTP i = 0; i < group_size; i++)
+        {
+            for (INTP j = 1; j < radix; j++)
+            {
+                FLOAT *cur_data_r = data_r;
+                FLOAT *cur_data_i = data_i;
+
+                FLOAT x = (sign * AOCLFFTZ_2_PI * (i + 1) * j) / p;
+                FLOAT TW_real = cosf(x);
+                FLOAT TW_imag = sinf(x);
+
+                INTP stride = stride_arr[j];
+
+                for (INTP k = 0; k < no_of_groups; k++)
+                {
+                    FLOAT a = cur_data_r[stride];
+                    FLOAT b = cur_data_i[stride];
+                    cur_data_r[stride] = a * TW_real - b * TW_imag;
+                    cur_data_i[stride] = b * TW_real + a * TW_imag;
+                    stride += vec_stride;
+                }
+            }
+            data_r += base_stride * 2;
+            data_i += base_stride * 2;
+        }
+    }
+    return TW_SUCCESS;
+}
+
+INT32 twiddle_multiplier_mt_for_real_double(aoclfftz_solution_t *sol, INTP p,
+                                            INTP n_threads_c2c_outer,
+                                            INTP n_threads_c2c_inner)
+{
+    UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags);
+    VOID *in = sol->decomp_scheme->in_real;
+    VOID *out = sol->decomp_scheme->out_real;
+    INTP radix = sol->decomp_scheme->dims[0].n;
+    aoclfftz_strides_t *strides = sol->strides_grp->strides;
+    // base_stride is 1 since all intermediate CT stages use unit strided buffers
+    INTP base_stride = 1;
+
+    INTP *stride_arr = NULL;
+    INTP vec_stride = 1;
+    if (is_backward)
+    {
+        stride_arr = strides->out_strides;
+        vec_stride = strides->v_out_stride;
+    }
+    else
+    {
+        stride_arr = strides->in_strides;
+        vec_stride = strides->v_in_stride;
+    }
+
+    INTP no_of_groups = sol->solver->kernel_r2hcf->count > 0
+                            ? sol->solver->kernel_r2hcf->count
+                            : sol->solver->kernel_r2hc->count;
+    INTP group_size = sol->solver->kernel_c2c->count / no_of_groups;
+    DOUBLE sign = is_backward ? 1.0 : -1.0;
+    DOUBLE *data_r = is_backward ? (DOUBLE *)out : (DOUBLE *)in;
+    DOUBLE *data_i = is_backward ? (DOUBLE *)out + 1 : (DOUBLE *)in + 1;
+
+    // move the in_r to point first C2C point
+    data_r += base_stride;
+    data_i += base_stride;
+
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+    if (sol->twiddle->TW)
+    {
+        DOUBLE *twiddle_buffer_real = (DOUBLE *)sol->twiddle->TW;
+        DOUBLE *twiddle_buffer_imag = twiddle_buffer_real + 1;
+        #pragma omp parallel for num_threads(n_threads_c2c_outer)
+        for (INTP i = 0; i < group_size; i++)
+        {
+            #pragma omp parallel for num_threads(n_threads_c2c_inner)
+            for (INTP j = 0; j < no_of_groups; j++)
+            {
+                for (INTP k = 1; k < radix; k++)
+                {
+                    DOUBLE *cur_data_r = data_r;
+                    DOUBLE *cur_data_i = data_i;
+                    // every `no_of_groups` columns are duplicates
+                    // so skip those columns to avoid redundant loads
+                    INTP tw_in_index = LINEAR_IDX_2D(
+                        k, i, no_of_groups * DATA_STRIDE,
+                        sol->solver->kernel_c2c->count * DATA_STRIDE);
+                    DOUBLE TW_real = twiddle_buffer_real[tw_in_index];
+                    DOUBLE TW_imag = twiddle_buffer_imag[tw_in_index];
+
+                    INTP data_index = stride_arr[k] + (j * vec_stride) +
+                                      (i * base_stride * 2);
+                    DOUBLE a = cur_data_r[data_index];
+                    DOUBLE b = cur_data_i[data_index];
+                    cur_data_r[data_index] = a * TW_real - b * TW_imag;
+                    cur_data_i[data_index] = b * TW_real + a * TW_imag;
+                }
+            }
+        }
+    }
+    else
+#endif
+    {
+        // TODO: Parallelize these loops
+        for (INTP i = 0; i < group_size; i++)
+        {
+            for (INTP j = 1; j < radix; j++)
+            {
+                DOUBLE *cur_data_r = data_r;
+                DOUBLE *cur_data_i = data_i;
+
+                DOUBLE x = (sign * AOCLFFTZ_2_PI * (i + 1) * j) / p;
+                DOUBLE TW_real = cos(x);
+                DOUBLE TW_imag = sin(x);
+                INTP stride = stride_arr[j];
+
+                for (INTP k = 0; k < no_of_groups; k++)
+                {
+                    DOUBLE a = cur_data_r[stride];
+                    DOUBLE b = cur_data_i[stride];
+                    cur_data_r[stride] = a * TW_real - b * TW_imag;
+                    cur_data_i[stride] = b * TW_real + a * TW_imag;
+                    stride += vec_stride;
+                }
+            }
+            data_r += base_stride * 2;
+            data_i += base_stride * 2;
+        }
+    }
+    return TW_SUCCESS;
+}
+
+INT32 twiddle_multiplier_mt_for_real(aoclfftz_solution_t *sol, INTP p,
+                                     INTP n_threads_c2c_outer,
+                                     INTP n_threads_c2c_inner)
+{
+    UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    if (dt_prec == DT_FLOAT)
+    {
+        twiddle_multiplier_mt_for_real_float(sol, p, n_threads_c2c_outer,
+                                             n_threads_c2c_inner);
+    }
+    else
+    {
+        twiddle_multiplier_mt_for_real_double(sol, p, n_threads_c2c_outer,
+                                              n_threads_c2c_inner);
+    }
+    return TW_SUCCESS;
+}
+#endif
 
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
 // Setup a twiddle buffer of size `r x m`
@@ -1157,6 +1320,116 @@ VOID compute_twiddle_buffer(VOID *twiddle_buffer, INTP r, INTP m, UINT32 dt_prec
     else
     {
         compute_twiddle_buffer_double(twiddle_buffer, r, m);
+    }
+}
+#endif
+
+#if IN_MEMORY_TWIDDLE_FACTORS == 1
+VOID compute_twiddle_buffer_real_float(VOID *twiddle_buffer, INTP r,
+                                       INTP group_size, INTP no_of_groups,
+                                       INTP p, UINT8 dir)
+{
+    FLOAT *twiddle_buffer_real = (FLOAT *)twiddle_buffer;
+    FLOAT *twiddle_buffer_imag = twiddle_buffer_real + 1;
+
+    FLOAT sign = (dir == BACKWARD_FFT_DIR) ? 1.0 : -1.0;
+    FLOAT angle_base = (sign * AOCLFFTZ_2_PI) / (FLOAT)p;
+    INTP c_stride = 1 * DATA_STRIDE;
+    INTP r_stride = group_size * no_of_groups * DATA_STRIDE;
+
+    // set the first column of the twiddle matrix to (1 + 0i)
+    for (INTP j = 0; j < group_size; ++j)
+    {
+        for (INTP k = 0; k < no_of_groups; ++k)
+        {
+            INTP buffer_index =
+                LINEAR_IDX_2D(0, j * no_of_groups + k, c_stride, r_stride);
+            twiddle_buffer_real[buffer_index] = 1.0;
+            twiddle_buffer_imag[buffer_index] = 0.0;
+        }
+    }
+
+    for (INTP i = 1; i < r; ++i)
+    {
+        for (INTP j = 0; j < group_size; ++j)
+        {
+            // duplicate every column to `no_of_groups` times
+            // this makes the twiddle matrix size from `r x group_size` to `r x (group_size * no_of_groups)`
+            // this is required to support existing twiddle C2C kernels
+            // TODO: avoid this column duplication by modifying (or adding new) twiddle C2C kernels
+            FLOAT angle = angle_base * i * (j + 1);
+            FLOAT sin_val = sinf(angle);
+            FLOAT cos_val = cosf(angle);
+            for (INTP k = 0; k < no_of_groups; ++k)
+            {
+                INTP buffer_index =
+                    LINEAR_IDX_2D(i, j * no_of_groups + k, c_stride, r_stride);
+                twiddle_buffer_real[buffer_index] = cos_val;
+                twiddle_buffer_imag[buffer_index] = sin_val;
+            }
+        }
+    }
+}
+
+VOID compute_twiddle_buffer_real_double(VOID *twiddle_buffer, INTP r,
+                                        INTP group_size, INTP no_of_groups,
+                                        INTP p, UINT8 dir)
+{
+    DOUBLE *twiddle_buffer_real = (DOUBLE *)twiddle_buffer;
+    DOUBLE *twiddle_buffer_imag = twiddle_buffer_real + 1;
+
+    DOUBLE sign = (dir == BACKWARD_FFT_DIR) ? 1.0 : -1.0;
+    DOUBLE angle_base = (sign * AOCLFFTZ_2_PI) / (DOUBLE)p;
+    INTP c_stride = 1 * DATA_STRIDE;
+    INTP r_stride = group_size * no_of_groups * DATA_STRIDE;
+
+    // set the first column of the twiddle matrix to (1 + 0i)
+    for (INTP j = 0; j < group_size; ++j)
+    {
+        for (INTP k = 0; k < no_of_groups; ++k)
+        {
+            INTP buffer_index =
+                LINEAR_IDX_2D(0, j * no_of_groups + k, c_stride, r_stride);
+            twiddle_buffer_real[buffer_index] = 1.0;
+            twiddle_buffer_imag[buffer_index] = 0.0;
+        }
+    }
+
+    for (INTP i = 1; i < r; ++i)
+    {
+        for (INTP j = 0; j < group_size; ++j)
+        {
+            DOUBLE angle = angle_base * i * (j + 1);
+            DOUBLE sin_val = sin(angle);
+            DOUBLE cos_val = cos(angle);
+            // duplicate every column to `no_of_groups` times
+            // this makes the twiddle matrix size from `r x group_size` to `r x (group_size * no_of_groups)`
+            // this is required to support existing twiddle C2C kernels
+            // TODO: avoid this column duplication by modifying (or adding new) twiddle C2C kernels
+            for (INTP k = 0; k < no_of_groups; ++k)
+            {
+                INTP buffer_index =
+                    LINEAR_IDX_2D(i, j * no_of_groups + k, c_stride, r_stride);
+                twiddle_buffer_real[buffer_index] = cos_val;
+                twiddle_buffer_imag[buffer_index] = sin_val;
+            }
+        }
+    }
+}
+
+VOID compute_twiddle_buffer_real(VOID *twiddle_buffer, INTP r, INTP group_sz,
+                                 INTP no_of_groups, INTP p, UINT8 dir,
+                                 UINT32 dt_prec)
+{
+    if (dt_prec == DT_FLOAT)
+    {
+        compute_twiddle_buffer_real_float(twiddle_buffer, r, group_sz,
+                                          no_of_groups, p, dir);
+    }
+    else
+    {
+        compute_twiddle_buffer_real_double(twiddle_buffer, r, group_sz,
+                                           no_of_groups, p, dir);
     }
 }
 #endif

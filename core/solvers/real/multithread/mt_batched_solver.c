@@ -141,8 +141,10 @@ INT32 update_pointers_real_buffered_solution(aoclfftz_solution_t *sol, INTP tid)
         sol->decomp_scheme->out_real = aux_out;
         sol->decomp_scheme->out_imag = MOVE_ADDR(aux_out, dt_bytes);
         // swap aux buffers after every direct solution
-        if (sol->solver->solver_type == SOLVER_REAL_DIRECT || 
-            sol->solver->solver_type == SOLVER_REAL_MT_DIRECT)
+        if (sol->solver->solver_type == SOLVER_REAL_DIRECT ||
+            sol->solver->solver_type == SOLVER_REAL_DIRECT_TWIDDLE ||
+            sol->solver->solver_type == SOLVER_REAL_MT_DIRECT ||
+            sol->solver->solver_type == SOLVER_REAL_MT_DIRECT_TWIDDLE)
         {
             SWAP_BUFFERS(aux_in, aux_out);
         }

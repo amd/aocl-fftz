@@ -36,6 +36,7 @@
  *  @author Partiksha
  */
 
+#include <assert.h>
 #include "core/solvers/real/direct_solver.h"
 #include "api/aoclfftz_internal.h"
 #include "core/common/memory_manager.h"
@@ -769,6 +770,7 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                             for (INTP group_num = 0; group_num < num_iters_c2c;
                                  group_num++)
                             {
+                                // TODO: Support twiddle kernels for C2R problems
                                 INTP v_istride = group_num * v_in_stride_c2c;
                                 INTP v_ostride = group_num * v_out_stride_c2c;
                                 kernel_c2c(
@@ -777,10 +779,7 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                                     MOVE_ADDR(out_local, v_ostride),
                                     MOVE_ADDR(out_local, v_ostride + dt_bytes),
                                     num_sets_c2c, strides_c2c_per_thread,
-                                    sol->twiddle, // FIXME: when adding
-                                                  // a support for
-                                                  // twiddle kernels,
-                                                  // fix this
+                                    NULL, // TODO: Pass twiddle buffer
                                     FFT_DIR(sol->decomp_scheme->flags));
                             }
                             if (rem_iters_c2c)
@@ -795,32 +794,41 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                                     MOVE_ADDR(out_local, v_ostride),
                                     MOVE_ADDR(out_local, v_ostride + dt_bytes),
                                     rem_iters_c2c, strides_c2c_per_thread,
-                                    sol->twiddle, // FIXME: when adding
-                                                  // a support for
-                                                  // twiddle kernels,
-                                                  // fix this
+                                    NULL, // TODO: Pass twiddle buffer
                                     FFT_DIR(sol->decomp_scheme->flags));
                             }
                             FREE_ALIGN_ALLOCATED_MEM(local_in_strides);
                             FREE_ALIGN_ALLOCATED_MEM(strides_c2c_per_thread);
                         }
 
-                        /* FIXIT: */
-                        // Real CT executor uses Direct-R -> CT -> Direct-M
-                        // flow, so in this approach it is not possible to get
-                        // the Direct-R info for the next CT executor to perform
-                        // twiddle multiplication. Hence the twiddle
-                        // multiplication is performed here itself.
+                        // TODO: twiddle kernels are not supported for C2R problems,
+                        // so falling back to non-twiddle kernels + twiddle multiplication
+                        // approach.
+                        assert(sol->solver->solver_type !=
+                               SOLVER_REAL_MT_DIRECT_TWIDDLE);
 
-                        // Selective twiddle multiplication on C2C kernel output
-                        // points only
-                        twiddle_multiplier_for_real(sol, p);
+                        // TODO:
+                        // Real CT executor uses Direct-R -> CT -> Direct-M flow, so in this
+                        // approach it is not possible to get the Direct-R info for the next
+                        // CT executor to perform twiddle multiplication.
+                        // Hence the twiddle multiplication is performed here itself.
+
+                        // Selective twiddle multiplication on C2C kernel output points only
+                        twiddle_multiplier_mt_for_real(sol, p,
+                                                       n_threads_c2c_outer,
+                                                       n_threads_c2c_inner);
                     }
                     else
                     {
-                        // Selective twiddle multiplication on C2C kernel input
-                        // points only
-                        twiddle_multiplier_for_real(sol, p);
+                        // do twiddle multiplication when twiddle kernels are not used
+                        if (sol->solver->solver_type !=
+                            SOLVER_REAL_MT_DIRECT_TWIDDLE)
+                        {
+                            // Selective twiddle multiplication on C2C kernel input points only
+                            twiddle_multiplier_mt_for_real(sol, p,
+                                                           n_threads_c2c_outer,
+                                                           n_threads_c2c_inner);
+                        }
 
                         // Copy unmodified out-stride values from strides to
                         // strides_c2c and then modify strides_c2c values within
@@ -872,6 +880,18 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                             for (INTP group_num = 0; group_num < num_iters_c2c;
                                  group_num++)
                             {
+                                // TODO: include num_sets to set column
+                                aoclfftz_twiddle_t tw_local = {
+                                    .TW =
+                                        MOVE_ADDR(sol->twiddle->TW,
+                                                  DATA_STRIDE * dt_bytes *
+                                                      (group_id * no_of_groups +
+                                                       group_num)),
+                                    .twiddle_buf_ptr =
+                                        sol->twiddle->twiddle_buf_ptr,
+                                    .cols = sol->twiddle->cols
+                                };
+
                                 INTP v_istride = group_num * v_in_stride_c2c;
                                 INTP v_ostride = group_num * v_out_stride_c2c;
                                 kernel_c2c(
@@ -880,14 +900,21 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                                     MOVE_ADDR(out_local, v_ostride),
                                     MOVE_ADDR(out_local, v_ostride + dt_bytes),
                                     num_sets_c2c, strides_c2c_per_thread,
-                                    sol->twiddle, // FIXME: when adding
-                                                  // a support for
-                                                  // twiddle kernels,
-                                                  // fix this
+                                    &tw_local,
                                     FFT_DIR(sol->decomp_scheme->flags));
                             }
                             if (rem_iters_c2c)
                             {
+                                aoclfftz_twiddle_t tw_local = {
+                                    .TW =
+                                        MOVE_ADDR(sol->twiddle->TW,
+                                                  DATA_STRIDE * dt_bytes *
+                                                      (group_id * no_of_groups +
+                                                       num_iters_c2c)),
+                                    .twiddle_buf_ptr =
+                                        sol->twiddle->twiddle_buf_ptr,
+                                    .cols = sol->twiddle->cols,
+                                };
                                 INTP v_istride = num_iters_c2c
                                                  * v_in_stride_c2c;
                                 INTP v_ostride = num_iters_c2c
@@ -898,10 +925,7 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                                     MOVE_ADDR(out_local, v_ostride),
                                     MOVE_ADDR(out_local, v_ostride + dt_bytes),
                                     rem_iters_c2c, strides_c2c_per_thread,
-                                    sol->twiddle, // FIXME: when adding
-                                                  // a support for
-                                                  // twiddle kernels,
-                                                  // fix this
+                                    &tw_local,
                                     FFT_DIR(sol->decomp_scheme->flags));
                             }
                             // Take complex conjucate for the required points
