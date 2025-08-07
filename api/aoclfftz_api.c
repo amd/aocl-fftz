@@ -99,19 +99,26 @@ INT32 aoclfftz_execute_io(VOID *handle, VOID *in, VOID *out)
     aoclfftz_solution_t *sol = executor_obj->solution;
     UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+
     sol->decomp_scheme->in_real = in;
     sol->decomp_scheme->in_imag = MOVE_ADDR(in, dt_bytes);
-    #if defined (PERFORM_INTER_STAGE_PERMUTE)
-        sol->decomp_scheme->out_real = out;
-        sol->decomp_scheme->out_imag = MOVE_ADDR(out, dt_bytes);
-    #else
-        if (IS_REAL(sol->decomp_scheme->flags) ||
-            IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
+    sol->decomp_scheme->out_real = out;
+    sol->decomp_scheme->out_imag = MOVE_ADDR(out, dt_bytes);
+
+    if (!IS_REAL(sol->decomp_scheme->flags) &&
+        IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
+    {
+        if (sol->decomp_scheme->dim_rank > 1)
         {
-            sol->decomp_scheme->out_real = out;
-            sol->decomp_scheme->out_imag = MOVE_ADDR(out, dt_bytes);
+            // interim_buf_ptr will be pointing to an internal buffer
+            sol->dft_bufs->ndim_ip_buf_ptr = sol->decomp_scheme->out_real;
         }
-    #endif
+        else
+        {
+            // no role for ndim_ip_buf_ptr in 1D case
+            sol->dft_bufs->interim_buf_ptr = sol->decomp_scheme->out_real;
+        }
+    }
     return aoclfftz_execute(handle);
 }
 

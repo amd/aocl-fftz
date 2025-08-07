@@ -91,8 +91,8 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
         VOID *in_imag = next_sol[0]->decomp_scheme->in_imag;
         VOID *out_real = next_sol[0]->decomp_scheme->out_real;
         VOID *out_imag = next_sol[0]->decomp_scheme->out_imag;
-        VOID *nd_sol_out_real = next_sol[0]->dft_bufs->nd_sol_out_real;
-        VOID *nd_sol_out_imag = next_sol[0]->dft_bufs->nd_sol_out_imag;
+        VOID *interim_buf_ptr = next_sol[0]->dft_bufs->interim_buf_ptr;
+        VOID *ndim_ip_buf_ptr = next_sol[0]->dft_bufs->ndim_ip_buf_ptr;
 
         omp_set_num_threads(sol->decomp_scheme->thread_info->n_threads);
 
@@ -111,13 +111,17 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
                                 (VOID *)((CHAR *)out_imag + b * v_out_stride);
 
         #if !defined (PERFORM_INTER_STAGE_PERMUTE)
-            if (next_sol[0]->dft_bufs->nd_sol_out_real != NULL)
+            if (next_sol[0]->dft_bufs->interim_buf_ptr != NULL)
             {
                 // If the next solution has nd_sol_out buffers, move them too
-                next_sol[tid]->dft_bufs->nd_sol_out_real =
-                (VOID *)((CHAR *)nd_sol_out_real + b * v_out_stride);
-                next_sol[tid]->dft_bufs->nd_sol_out_imag =
-                (VOID *)((CHAR *)nd_sol_out_imag + b * v_out_stride);
+                next_sol[tid]->dft_bufs->interim_buf_ptr =
+                (VOID *)((CHAR *)interim_buf_ptr + b * v_out_stride);
+            }
+            if (next_sol[0]->dft_bufs->ndim_ip_buf_ptr != NULL)
+            {
+                // If the next solution has nd_sol_out buffers, move them too
+                next_sol[tid]->dft_bufs->ndim_ip_buf_ptr =
+                (VOID *)((CHAR *)ndim_ip_buf_ptr + b * v_out_stride);
             }
         #endif
 
@@ -129,8 +133,8 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
         next_sol[0]->decomp_scheme->in_imag = in_imag;
         next_sol[0]->decomp_scheme->out_real = out_real;
         next_sol[0]->decomp_scheme->out_imag = out_imag;
-        next_sol[0]->dft_bufs->nd_sol_out_real = nd_sol_out_real;
-        next_sol[0]->dft_bufs->nd_sol_out_imag = nd_sol_out_imag;
+        next_sol[0]->dft_bufs->interim_buf_ptr = interim_buf_ptr;
+        next_sol[0]->dft_bufs->ndim_ip_buf_ptr = ndim_ip_buf_ptr;
     }
     else
     {
@@ -139,11 +143,12 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
         VOID *in_imag = next_sol[0]->decomp_scheme->in_imag;
         VOID *out_real = next_sol[0]->decomp_scheme->out_real;
         VOID *out_imag = next_sol[0]->decomp_scheme->out_imag;
-        VOID *nd_sol_out_real = next_sol[0]->dft_bufs->nd_sol_out_real;
-        VOID *nd_sol_out_imag = next_sol[0]->dft_bufs->nd_sol_out_imag;
+        VOID *interim_buf_ptr = next_sol[0]->dft_bufs->interim_buf_ptr;
+        VOID *ndim_ip_buf_ptr = next_sol[0]->dft_bufs->ndim_ip_buf_ptr;
 
         for (rnk_offset = 0;
-             rnk_offset < sol->decomp_scheme->vecs[vec_rank - 1].n; rnk_offset++)
+             rnk_offset < sol->decomp_scheme->vecs[vec_rank - 1].n;
+             rnk_offset++)
         {
             // save pointer to restore it below since
             // they will be moved while execution
@@ -152,8 +157,8 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
             VOID *out_real = next_sol[0]->decomp_scheme->out_real;
             VOID *out_imag = next_sol[0]->decomp_scheme->out_imag;
         #if !defined (PERFORM_INTER_STAGE_PERMUTE)
-            VOID *nd_sol_out_real = next_sol[0]->dft_bufs->nd_sol_out_real;
-            VOID *nd_sol_out_imag = next_sol[0]->dft_bufs->nd_sol_out_imag;
+            VOID *interim_buf_ptr = next_sol[0]->dft_bufs->interim_buf_ptr;
+            VOID *ndim_ip_buf_ptr = next_sol[0]->dft_bufs->ndim_ip_buf_ptr;
         #endif
 
             //recursive call to solve the inner batches
@@ -177,13 +182,17 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
                 next_sol[i]->decomp_scheme->out_imag =
                     (VOID *)((CHAR *)out_imag + v_out_stride);
              #if !defined (PERFORM_INTER_STAGE_PERMUTE)
-                if (next_sol[0]->dft_bufs->nd_sol_out_real != NULL)
+                if (next_sol[0]->dft_bufs->interim_buf_ptr != NULL)
                 {
                     // If the next solution has nd_sol_out buffers, move them too
-                    next_sol[i]->dft_bufs->nd_sol_out_real =
-                    (VOID *)((CHAR *)nd_sol_out_real + v_out_stride);
-                    next_sol[i]->dft_bufs->nd_sol_out_imag =
-                    (VOID *)((CHAR *)nd_sol_out_imag + v_out_stride);
+                    next_sol[i]->dft_bufs->interim_buf_ptr =
+                    (VOID *)((CHAR *)interim_buf_ptr + v_out_stride);
+                }
+                if (next_sol[0]->dft_bufs->ndim_ip_buf_ptr != NULL)
+                {
+                    // If the next solution has nd_sol_out buffers, move them too
+                    next_sol[i]->dft_bufs->ndim_ip_buf_ptr =
+                    (VOID *)((CHAR *)ndim_ip_buf_ptr + v_out_stride);
                 }
             #endif
             }
@@ -194,8 +203,8 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
         next_sol[0]->decomp_scheme->in_imag = in_imag;
         next_sol[0]->decomp_scheme->out_real = out_real;
         next_sol[0]->decomp_scheme->out_imag = out_imag;
-        next_sol[0]->dft_bufs->nd_sol_out_real = nd_sol_out_real;
-        next_sol[0]->dft_bufs->nd_sol_out_imag = nd_sol_out_imag;
+        next_sol[0]->dft_bufs->interim_buf_ptr = interim_buf_ptr;
+        next_sol[0]->dft_bufs->ndim_ip_buf_ptr = ndim_ip_buf_ptr;
     }
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
@@ -231,10 +240,15 @@ static INT32 execute_mt_batched_solver(aoclfftz_solution_t *sol)
         next_sol[i]->decomp_scheme->flags = sol->decomp_scheme->flags;
 
     #if !defined (PERFORM_INTER_STAGE_PERMUTE)
-        if (sol->dft_bufs->nd_sol_out_real != NULL)
+        if (sol->dft_bufs->interim_buf_ptr != NULL)
         {
-            next_sol[i]->dft_bufs->nd_sol_out_real = sol->dft_bufs->nd_sol_out_real;
-            next_sol[i]->dft_bufs->nd_sol_out_imag = sol->dft_bufs->nd_sol_out_imag;
+            next_sol[i]->dft_bufs->interim_buf_ptr =
+                sol->dft_bufs->interim_buf_ptr;
+        }
+        if (sol->dft_bufs->ndim_ip_buf_ptr != NULL)
+        {
+            next_sol[i]->dft_bufs->ndim_ip_buf_ptr =
+                sol->dft_bufs->ndim_ip_buf_ptr;
         }
     #endif
     }
