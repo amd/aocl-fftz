@@ -1612,7 +1612,7 @@ VOID post_process_ndim(aoclfftz_solution_t *solution, VOID *out_real,
 VOID post_process_buffered_inplace(aoclfftz_solution_t *solution,
                                 INTP dim_rank, VOID *out_real, VOID *out_imag)
 {
-#if !defined (PERFORM_INTER_STAGE_DFT)
+#if !defined (PERFORM_INTER_STAGE_PERMUTE)
     if (!IS_REAL(solution->decomp_scheme->flags) && dim_rank > 1)
     {
         VOID *out_real_ptr, *out_imag_ptr;
@@ -1645,7 +1645,7 @@ VOID post_process_buffered_inplace(aoclfftz_solution_t *solution,
 
 VOID setup_inplace_buffers(aoclfftz_solution_t *solution)
 {
-#if !defined (PERFORM_INTER_STAGE_DFT)
+#if !defined (PERFORM_INTER_STAGE_PERMUTE)
     if (!IS_REAL(solution->decomp_scheme->flags) &&
         ((!IS_OUT_OF_PLACE(solution->decomp_scheme->flags)) ||
         (solution->decomp_scheme->dim_rank > 1)))
