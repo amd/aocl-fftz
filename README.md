@@ -132,9 +132,8 @@ AOCL-FFTZ leverages advanced CPU features for optimal performance:
 
 **FMA (Fused Multiply-Add) Support:**
 - The library uses FMA3 instructions when available
-- The FMA compiler flag is added only when compiling AVX256 optimized kernels
+- The FMA compiler flag is added only when compiling AVX512 and AVX256 optimized kernels
 - The FMA compiler flag is not added for AVX128 during compilation
-- AVX 512-bit kernels do not require explicit FMA support (FMA is built into AVX-512)
 
 **Runtime Behavior:**
 - Library automatically detects CPU capabilities at runtime
