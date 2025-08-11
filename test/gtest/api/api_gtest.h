@@ -155,7 +155,7 @@ public:
 
     // Function to create a sample problem for testing
     template<typename DataType, typename DimT>
-    VOID create_pdesc()
+    VOID create_pdesc(bool is_forward = true)
     {
         if (problem == NULL)
         {
@@ -172,7 +172,15 @@ public:
             throw std::runtime_error("Memory allocation failed "
                                                         "for dims or vecs!");
         }
-        problem->flags = 0b0001;
+        // Set flags based on transform direction
+        if (is_forward)
+        {
+            problem->flags = 0b0001;
+        }
+        else
+        {
+            problem->flags = 0b0101;
+        }
         // Set dims values
         problem->dims[0].n = 10;
         problem->dims[0].in_stride = 1;
@@ -233,26 +241,26 @@ public:
     }
 
     // Calls the appropriate sample problem creation based on problem type
-    VOID create_default_pdesc()
+    VOID create_default_pdesc(bool is_forward = true)
     {
         if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_f>::value)
         {
-            create_pdesc<FLOAT, aoclfftz_dim_t>();
+            create_pdesc<FLOAT, aoclfftz_dim_t>(is_forward);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_d>::value)
         {
-            create_pdesc<DOUBLE, aoclfftz_dim_t>();
+            create_pdesc<DOUBLE, aoclfftz_dim_t>(is_forward);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_f_64_>::value)
         {
-            create_pdesc<FLOAT, aoclfftz_dim_t_64_>();
+            create_pdesc<FLOAT, aoclfftz_dim_t_64_>(is_forward);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_d_64_>::value)
         {
-            create_pdesc<DOUBLE, aoclfftz_dim_t_64_>();
+            create_pdesc<DOUBLE, aoclfftz_dim_t_64_>(is_forward);
         }
         else
         {
@@ -339,6 +347,43 @@ public:
     static bool is_handle_null(VOID *handle)
     {
         return (handle == NULL);
+    }
+
+    // Validates execute_io correctness using execute output as reference
+    VOID validate_execute_io(bool is_forward)
+    {
+        cleanup_problem();
+        create_default_pdesc(is_forward);
+        
+        handle = aoclfftz_setup(problem);
+
+        // invoke execute API
+        INT32 exe = aoclfftz_execute(handle);
+        EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
+
+        // involve execute_io API
+        UINTP input_size = 0;
+        UINTP output_size = 0;
+        get_inout_size(&input_size, &output_size);
+
+        VOID *in, *out;
+        in = malloc(input_size);
+        out = malloc(output_size);
+
+        memcpy(in, problem->in, input_size);
+        memset(out, 0, output_size);
+        exe = aoclfftz_execute_io(handle, in, out);
+        EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
+
+        // Compare 'out' buffer against output buffer in problem desc
+        INT32 ret = memcmp(out, problem->out, output_size);
+        EXPECT_EQ(ret, 0); // Expect successful comparison
+
+        aoclfftz_destroy(handle);
+        free(in);
+        in = NULL;
+        free(out);
+        out = NULL;
     }
 };
 #endif // AOCLFFTZ_API_GTEST_H

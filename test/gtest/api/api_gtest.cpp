@@ -236,42 +236,26 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_VALIDHANDLE)
     aoclfftz_destroy(this->handle);
 }
 
-// Execute_dft API test cases
-TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_VALIDHANDLE)
+// Execute_dft API test cases - Forward FFT Transform
+TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_VALIDHANDLE_FORWARD)
 {
     // this test compares the outputs obtained through
     //  (a) invoke of execute API where in/out buffers are bound to problem desc
     //  (b) invoke of execute_io API where in/out buffers are passed explicitly
+    // Forward FFT transform: problem->flags = 0b0001
 
-    this->handle = this->aoclfftz_setup(this->problem);
+    this->validate_execute_io(true);
+}
 
-    // invoke execute API
-    INT32 exe = aoclfftz_execute(this->handle);
-    EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
+// Execute_io API test cases - Backward FFT Transform
+TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_VALIDHANDLE_BACKWARD)
+{
+    // this test compares the outputs obtained through
+    //  (a) invoke of execute API where in/out buffers are bound to problem desc
+    //  (b) invoke of execute_io API where in/out buffers are passed explicitly
+    // Backward FFT transform: problem->flags = 0b0001
 
-    // involve execute_io API
-    UINTP input_size = 0;
-    UINTP output_size =0;
-    this->get_inout_size(&input_size, &output_size);
-
-    VOID *in, *out;
-    in = malloc(input_size);
-    out = malloc(output_size);
-
-    memcpy(in, this->problem->in, input_size);
-    memset(out, 0, output_size);
-    exe = aoclfftz_execute_io(this->handle, in, out);
-    EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
-
-    // Compare the 'out' buffer against the output buffer in the problem desc
-    INT32 ret = memcmp(out, this->problem->out, output_size);
-    EXPECT_EQ(ret, 0); // Expect successful comparison
-
-    aoclfftz_destroy(this->handle);
-    free(in);
-    in = NULL;
-    free(out);
-    out = NULL;
+    this->validate_execute_io(false);
 }
 
 // FIXME : Revisit the logic
@@ -311,7 +295,8 @@ REGISTER_TYPED_TEST_SUITE_P(
     NTEST_DIMS_STRIDES,
     NTEST_VECS_STRIDES,
     PTEST_EXECUTE_VALIDHANDLE,
-    PTEST_EXECUTE_IO_VALIDHANDLE,
+    PTEST_EXECUTE_IO_VALIDHANDLE_FORWARD,
+    PTEST_EXECUTE_IO_VALIDHANDLE_BACKWARD,
     PTEST_DESTROY_VALIDHANDLE_SOLUTION,
     PTEST_DESTROY_WITHOUT_EXECUTE
 );
