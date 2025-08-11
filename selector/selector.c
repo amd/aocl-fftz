@@ -1135,9 +1135,17 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
+    UINT32 num_threads = problem->pthr_fft.num_threads;
+#ifdef MULTI_THREADING
+    if (problem->pthr_fft.dynamic_load_model)
+    {
+        num_threads = omp_get_num_procs();
+        AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Dynamic load model is set, taking "
+                    "available logical CPUs (%d), as num_threads", num_threads);
+    }
+#endif
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL,
-                             problem->pthr_fft.num_threads);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, num_threads);
     if (sel_obj == NULL)
     {
         return NULL;
@@ -1181,8 +1189,10 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     {
         goto exit_setup_dft_f;
     }
-
-    post_process_solution(sel_obj->solution);
+#ifdef MULTI_THREADING
+    UINT32 scratch_buf_idx = 0;
+    post_process_solution(sel_obj->solution, &scratch_buf_idx);
+#endif
     return sel_obj;
 
 exit_setup_dft_f:
@@ -1204,9 +1214,17 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
+    UINT32 num_threads = problem->pthr_fft.num_threads;
+#ifdef MULTI_THREADING
+    if (problem->pthr_fft.dynamic_load_model)
+    {
+        num_threads = omp_get_num_procs();
+        AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Dynamic load model is set, taking "
+                    "available logical CPUs (%d), as num_threads", num_threads);
+    }
+#endif
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL,
-                             problem->pthr_fft.num_threads);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, num_threads);
     if (sel_obj == NULL)
     {
         return NULL;
@@ -1250,8 +1268,10 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     {
         goto exit_setup_dft_d;
     }
-
-    post_process_solution(sel_obj->solution);
+#ifdef MULTI_THREADING
+    UINT32 scratch_buf_idx = 0;
+    post_process_solution(sel_obj->solution, &scratch_buf_idx);
+#endif
     return sel_obj;
 
 exit_setup_dft_d:
@@ -1273,9 +1293,17 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
+    UINT32 num_threads = problem->pthr_fft.num_threads;
+#ifdef MULTI_THREADING
+    if (problem->pthr_fft.dynamic_load_model)
+    {
+        num_threads = omp_get_num_procs();
+        AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Dynamic load model is set, taking "
+                    "available logical CPUs (%d), as num_threads", num_threads);
+    }
+#endif
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL,
-                             problem->pthr_fft.num_threads);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, num_threads);
     if (sel_obj == NULL)
     {
         return NULL;
@@ -1319,8 +1347,10 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     {
         goto exit_setup_dft_f_64_;
     }
-
-    post_process_solution(sel_obj->solution);
+#ifdef MULTI_THREADING
+    UINT32 scratch_buf_idx = 0;
+    post_process_solution(sel_obj->solution, &scratch_buf_idx);
+#endif
     return sel_obj;
 
 exit_setup_dft_f_64_:
@@ -1342,9 +1372,17 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
+    UINT32 num_threads = problem->pthr_fft.num_threads;
+#ifdef MULTI_THREADING
+    if (problem->pthr_fft.dynamic_load_model)
+    {
+        num_threads = omp_get_num_procs();
+        AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Dynamic load model is set, taking "
+                    "available logical CPUs (%d), as num_threads", num_threads);
+    }
+#endif
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL,
-                             problem->pthr_fft.num_threads);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, num_threads);
     if (sel_obj == NULL)
     {
         return NULL;
@@ -1388,8 +1426,10 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     {
         goto exit_setup_dft_d_64_;
     }
-
-    post_process_solution(sel_obj->solution);
+#ifdef MULTI_THREADING
+    UINT32 scratch_buf_idx = 0;
+    post_process_solution(sel_obj->solution, &scratch_buf_idx);
+#endif
     return sel_obj;
 
 exit_setup_dft_d_64_:
@@ -1580,7 +1620,7 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
 }
 
 aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src,
-                                             UINT32 index)
+                                             UINT32 *scratch_buf_idx)
 {
     if (!src)
     {
@@ -1593,12 +1633,22 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src,
     aoclfftz_solution_t* dst = alloc_solution(vec_rank, dim_rank);
     COPY_SOLUTION_OBJ(dst, src);
     COPY_STRIDES(dst, src);
-    dst->dft_bufs->scratch_space = (VOID *)((CHAR *)src->dft_bufs->scratch_space
-                                    + index * scratch_space_capacity);
+    dst->dft_bufs->nd_sol = NULL;
 
+    // Assign relevant scratch space to each thread
+    dst->dft_bufs->scratch_space = MOVE_ADDR(src->dft_bufs->scratch_space,
+                                   (*scratch_buf_idx) * scratch_space_capacity);
+
+    // Hold the current scratch buffer index and restore after copy of each ND-subtree
+    // as both nd_sol and next_sol of ND node share the same scratch space
+    UINT32 temp = *scratch_buf_idx;
     // Recursively copy nd_sol if present (for NDIM solvers)
-    dst->dft_bufs->nd_sol = src->dft_bufs->nd_sol ?
-                    deep_copy_solution_tree(src->dft_bufs->nd_sol, 0) : NULL;
+    if (src->dft_bufs->nd_sol)
+    {
+        dst->dft_bufs->nd_sol = deep_copy_solution_tree(src->dft_bufs->nd_sol,
+                                                        scratch_buf_idx);
+        *scratch_buf_idx = temp;
+    }
 
     // Initiate deep copy of next_sol recursively until leaf node
     if (src->next_sol)
@@ -1610,7 +1660,10 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src,
 
         for (UINT32 i = 0; i < n; i++)
         {
-            dst->next_sol[i] = deep_copy_solution_tree(src->next_sol[0], i);
+            dst->next_sol[i] = deep_copy_solution_tree(src->next_sol[0],
+                                                       scratch_buf_idx);
+            // Increment the scratch buffer index only for MT batched solutions
+            *scratch_buf_idx += (n > 1) ? 1 : 0;
         }
     }
     else
@@ -1620,31 +1673,93 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src,
     return dst;
 }
 
-VOID post_process_solution(aoclfftz_solution_t *sol)
+/**
+ * @brief Post-processes FFT solution trees for multi-threaded execution
+ *
+ * This function traverses the solution tree and performs post-processing
+ * for multi-threaded (MT_BATCHED and REAL_MT_BATCHED) solvers:
+ *
+ * 1. Identifies MT_BATCHED solutions in the tree
+ * 2. Recursively processes nested solution trees to find innermost MT_BATCHED nodes
+ * 3. Replicates the primary solution (next_sol[0]) across all thread slots
+ * 4. Assigns unique scratch buffer indices to each thread's solution copy
+ * 5. Maintains same scratch buffer for both nd-sol and next_sol of a single N-D node
+ * 6. Handles both N-dimensional (nd_sol) and sequential (next_sol) solution paths
+ *
+ * The function ensures thread-safe execution by providing each thread with:
+ * - Its own deep copy of the solution tree
+ * - Unique scratch space allocation indexed by scratch_buf_idx
+ * - Proper memory isolation to prevent race conditions
+ *
+ * @param sol             Pointer to the root solution tree to post-process
+ * @param scratch_buf_idx Pointer to scratch buffer index counter for unique allocation
+ *
+ * @note The scratch_buf_idx is incremented for each thread to ensure unique scratch
+ *       space allocation across the entire solution hierarchy.
+ *
+ * @example
+ * Consider a batched 2D problem's solution tree before post-processing with 4 threads:
+ * ```
+ * Input Tree:
+ * MT_BATCHED(2) -> next_sol[0](N-Dim) -> MT_BATCHED(2) -> next_sol[0] -> CT -> Direct -> Direct (scratch_idx: 0)
+ *       |                    |                 |--------> next_sol[1](NULL)
+ *       |                    |
+ *       |                    V
+ *       |             nd_sol(MT_BATCHED(2)) -> next_sol[0] -> CT -> Direct -> Direct (scratch_idx: 0)
+ *       |                           |--------> next_sol[1](NULL)
+ *       |
+ *       |--------> next_sol[1](NULL)
+ *
+ * Initial state: scratch_buf_idx = 0
+ * ```
+ * After post_process_solution():
+ * ```
+ * Output Tree (Fully expanded for all threads):
+ * MT_BATCHED(2) -> next_sol[0](N-Dim) -> MT_BATCHED(2) -> next_sol[0] -> CT -> Direct -> Direct (scratch_idx: 0)
+ *       |                    |                 |--------> next_sol[1] -> CT -> Direct -> Direct (scratch_idx: 1)
+ *       |                    |
+ *       |                    V
+ *       |             nd_sol(MT_BATCHED(2)) -> next_sol[0] -> CT -> Direct -> Direct (scratch_idx: 0)
+ *       |                           |--------> next_sol[1] -> CT -> Direct -> Direct (scratch_idx: 1)
+ *       |
+ *       |--------> next_sol[1](N-Dim) -> MT_BATCHED(2) -> next_sol[0] -> CT -> Direct -> Direct (scratch_idx: 2)
+ *                            |                 |--------> next_sol[1] -> CT -> Direct -> Direct (scratch_idx: 3)
+ *                            |
+ *                            V
+ *                     nd_sol(MT_BATCHED(2)) -> next_sol[0] -> CT -> Direct -> Direct (scratch_idx: 2)
+ *                                   |--------> next_sol[1] -> CT -> Direct -> Direct (scratch_idx: 4)
+ */
+
+VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx)
 {
     while (sol != NULL)
     {
         if ((sol->solver->solver_type == SOLVER_MT_BATCHED) ||
-             (sol->solver->solver_type == SOLVER_REAL_MT_BATCHED))
+            (sol->solver->solver_type == SOLVER_REAL_MT_BATCHED))
         {
             // call post process recursively to find the innermost MT batched
             // solution
-            post_process_solution(sol->next_sol[0]);
+            post_process_solution(sol->next_sol[0], scratch_buf_idx);
 
             UINT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
             // replicate the solution in next_sol[0] to array of next_sols in
             // each MT batched solution
             for (UINT32 i = 1; i < n_threads; i++)
             {
-                sol->next_sol[i] = deep_copy_solution_tree(sol->next_sol[0], i);
+                // Increment the scratch buffer index for MT batched solutions
+                (*scratch_buf_idx)++;
+                sol->next_sol[i] = deep_copy_solution_tree(sol->next_sol[0],
+                                                           scratch_buf_idx);
             }
             break;
         }
-        if (((sol->solver->solver_type == SOLVER_NDIM) ||
-             (sol->solver->solver_type == SOLVER_REAL_NDIM)) &&
-              sol->dft_bufs->nd_sol)
+        // Hold the current scratch buffer index and restore after copy of each ND-subtree
+        // as both nd_sol and next_sol of ND node share the same scratch space
+        UINT32 temp = *scratch_buf_idx;
+        if (sol->dft_bufs->nd_sol)
         {
-            post_process_solution(sol->dft_bufs->nd_sol);
+            post_process_solution(sol->dft_bufs->nd_sol, scratch_buf_idx);
+            *scratch_buf_idx = temp;
         }
         sol = sol->next_sol ? sol->next_sol[0] : NULL;
     }
