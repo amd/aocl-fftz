@@ -139,15 +139,37 @@ set(STANDARD_TEST_SUITE
     "C2R_C_MT_CT_WITH_STRIDE ./aocl_fftz_bench 96:9:9 -f r2c -b a --dir b -r i -n 15"                         # accuracy | real     |  double  | LP64       | 1D  |  yes    | CT        | inplace   | backward  | C       | C accuracy
     "R2C_C_MT_BATCHED_CT ./aocl_fftz_bench 4v54 -f r2c -b a --dir f -n 13"                                    # accuracy | real     |  double  | LP64       | 1D  |  no     | CT        | outplace  | forward   | C       | C accuracy
     "C2R_C_MT_BATCHED_CT ./aocl_fftz_bench 15v120 -f r2c -b a --dir b -r i -n 17"                             # accuracy | real     |  double  | LP64       | 1D  |  no     | CT        | inplace   | backward  | C       | C accuracy
+    "R2C_AVX128_MT_BATCHED_DIRECT_UNIT_STRIDE_F ./aocl_fftz_bench 57v5 -f r2c -b a -r i -n 10 -o 1 -p f"      # accuracy | real     |  float   | LP64       | 1D  |  yes    | direct    | inplace   | forward   | AVX128  | C accuracy
+    "C2R_AVX128_MT_BATCHED_DIRECT_WITH_STRIDE_OP ./aocl_fftz_bench 122v5:2:8 -f c2r -b a -r o -n 10 -o 1"     # accuracy | real     |  double  | LP64       | 1D  |  yes    | direct    | outplace  | backward  | AVX128  | C accuracy
+    "R2C_AVX256_MT_BATCHED_DIRECT_UNIT_STRIDE_F ./aocl_fftz_bench 61v8 -f r2c -b a -r i -o 2 -n 6 -p f"       # accuracy | real     |  float   | LP64       | 1D  |  yes    | direct    | inplace   | forward   | AVX256  | C accuracy
+    "R2C_AVX256_MT_BATCHED_DIRECT_WITH_STRIDE_F ./aocl_fftz_bench 122v10:4:4 -f r2c -b a -r i -o 2 -n 8 -p f" # accuracy | real     |  float   | LP64       | 1D  |  yes    | direct    | inplace   | forward   | AVX256  | C accuracy
+    "R2C_AVX512_MT_BATCHED_DIRECT_UNIT_STRIDE_F ./aocl_fftz_bench 241v6 -f r2c -b a -r i -o 3 -n 13 -p f"     # accuracy | real     |  float   | LP64       | 1D  |  yes    | direct    | inplace   | forward   | AVX512  | C accuracy
+    "R2C_AVX128_MT_CT_WITH_STRIDE_F ./aocl_fftz_bench 35:6:6 -f r2c -b a -r i -o 1 -n 12 -p f"                # accuracy | real     |  float   | LP64       | 1D  |  yes    | CT        | inplace   | forward   | AVX128  | C accuracy
+    "C2R_AVX256_MT_CT_WITH_STRIDE ./aocl_fftz_bench 320:4:4 -f c2r -b a -r i -o 2 -n 13"                      # accuracy | real     |  double  | LP64       | 1D  |  yes    | CT        | inplace   | backward  | AVX256  | C accuracy
+    "R2C_AVX512_MT_CT_WITH_STRIDE_F ./aocl_fftz_bench 180:6:6 -f r2c -b a -r i -o 3 -n 31"                    # accuracy | real     |  double  | LP64       | 1D  |  yes    | CT        | inplace   | forward   | AVX512  | C accuracy
+    "C2R_AVX512_MT_CT_WITH_STRIDE ./aocl_fftz_bench 196:7:7 -f r2c -b a -r i -o 3 -n 31 -p f"                 # accuracy | real     |  double  | LP64       | 1D  |  yes    | CT        | inplace   | backward  | AVX512  | C accuracy
     )
 
-set(EXHAUSTIVE_TEST_SUITE
+    set(EXHAUSTIVE_TEST_SUITE
     "EXT_C_LARGE_PRIME_IP ./aocl_fftz_bench 10007:1:1 -b a --dir f -p f -r i"                                 # accuracy | complex  |  float   | LP64       | 1D  |  no     | bluestein | inplace   | forward   | C       |
     "EXT_C_LARGE_CT_IP ./aocl_fftz_bench 500500:10:10 -b a --dir b -m i -r i"                                 # accuracy | complex  |  double  | ILP64      | 1D  |  no     | CT        | inplace   | backward  | C       |
     "EXT_C_5D_IP ./aocl_fftz_bench 2x3x4x5x6:2:2 -b a --dir f -p f -r i"                                      # accuracy | complex  |  float   | LP64       | 5D  |  no     | NDim      | inplace   | forward   | C       |
     "EXT_C2R_CT_IP ./aocl_fftz_bench 25000 -b a -f c2r -r i"                                                  # accuracy | real     |  double  | LP64       | 1D  |  no     | CT        | inplace   | backward  | C       |
     "EXT_AVX512_CT_IP ./aocl_fftz_bench 100000:10:10 -b a --dir f -p f -m i -o 3 -r i"                        # accuracy | complex  |  float   | ILP64      | 1D  |  no     | CT        | inplace   | forward   | AVX512  |
     "EXT_AVX512_5D_IP ./aocl_fftz_bench 40x50x60:2:2 -b a --dir f -p f -o 3 -r i"                             # accuracy | complex  |  float   | LP64       | 5D  |  no     | NDim      | inplace   | forward   | AVX512  |
+    "EXT_C2R_AVX128_MT_BATCHED_DIRECT ./aocl_fftz_bench 58v5 -f c2r -b a -r i -n 10 -o 1"                     # accuracy | real     |  double  | LP64       | 1D  |  yes    | direct    | inplace   | backward  | AVX128  | C accuracy
+    "EXT_R2C_AVX128_MT_BATCHED_DIRECT_F ./aocl_fftz_bench 121v5:2:2 -f r2c -b a -r i -n 10 -o 1 -p f"         # accuracy | real     |  float   | LP64       | 1D  |  yes    | direct    | inplace   | forward   | AVX128  | C accuracy
+    "EXT_C2R_AVX256_MT_BATCHED_DIRECT ./aocl_fftz_bench 62v8 -f c2r -b a -r i -o 2 -n 7"                      # accuracy | real     |  double  | LP64       | 1D  |  yes    | direct    | inplace   | backward  | AVX256  | C accuracy
+    "EXT_C2R_AVX256_MT_BATCHED_DIRECT_OP ./aocl_fftz_bench 124v10:10:4 -f c2r -b a -r o -o 2 -n 9"            # accuracy | real     |  double  | LP64       | 1D  |  yes    | direct    | outplace  | backward  | AVX256  | C accuracy
+    "EXT_C2R_AVX512_MT_BATCHED_DIRECT_F ./aocl_fftz_bench 242v6 -f c2r -b a -r i -o 3 -n 14 -p f"             # accuracy | real     |  double  | LP64       | 1D  |  yes    | direct    | inplace   | backward  | AVX512  | C accuracy
+    "EXT_C2R_AVX512_MT_BATCHED_DIRECT ./aocl_fftz_bench 247v6:7:7 -f c2r -b a -r i -o 3 -n 18"                # accuracy | real     |  double  | LP64       | 1D  |  yes    | direct    | inplace   | backward  | AVX512  | C accuracy
+    "EXT_R2C_AVX512_MT_BATCHED_DIRECT_F ./aocl_fftz_bench 243v6:7:7 -f r2c -b a -r i -o 3 -n 17 -p f"         # accuracy | real     |  float   | LP64       | 1D  |  yes    | direct    | inplace   | forward   | AVX512  | C accuracy
+    "EXT_R2C_AVX512_MT_BATCHED_DIRECT_OP ./aocl_fftz_bench 248v6:7:9 -f r2c -b a -r o -o 3 -n 19"             # accuracy | real     |  double  | LP64       | 1D  |  yes    | direct    | outplace  | forward   | AVX512  | C accuracy
+    "EXT_R2C_AVX256_MT_CT_F ./aocl_fftz_bench 100:4:4 -f r2c -b a -r i -o 2 -n 12 -p f"                       # accuracy | real     |  float   | LP64       | 1D  |  yes    | CT        | inplace   | forward   | AVX256  | C accuracy
+    "EXT_C2R_AVX128_MT_CT ./aocl_fftz_bench 80:2:2 -f c2r -b a -r i -o 1 -n 3"                                # accuracy | real     |  double  | LP64       | 1D  |  yes    | CT        | inplace   | backward  | AVX128  | C accuracy
+    "EXT_R2C_AVX256_MT_CT_OP_F ./aocl_fftz_bench 1v63:5:3 -f r2c -b a -r o -o 2 -n 20 -p f"                   # accuracy | real     |  floar   | LP64       | 1D  |  yes    | CT        | outplace  | forward   | AVX256  | C accuracy
+    "EXT_R2C_AVX512_MT_CT ./aocl_fftz_bench 200:8:8 -f r2c -b a -r i -o 3 -n 20"                              # accuracy | real     |  double  | LP64       | 1D  |  yes    | CT        | inplace   | forward   | AVX512  | C accuracy
+    "EXT_C2R_AVX512_MT_CT_OP_F ./aocl_fftz_bench 300:5:9 -f r2c -b a -r o -o 3 -n 17 -p f"                    # accuracy | real     |  double  | LP64       | 1D  |  yes    | CT        | outplace  | backward  | AVX512  | C accuracy
     # TODO: Add more test cases with different combinations. This list is expected to be larger than TEST_SUITE.
     )
 

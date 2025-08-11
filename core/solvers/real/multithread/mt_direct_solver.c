@@ -469,15 +469,16 @@ static VOID execute_real_kernel(aoclfftz_solution_t *sol, UINT32 n_threads_real)
         // vector stride prep for R2HC kernels
         INTP v_in_stride_r2hc, v_out_stride_r2hc;
         v_in_stride_r2hc  = sol->strides_grp->strides_r2hc->v_in_stride
-                            * dt_bytes;
+                            * dt_bytes * num_sets_r2hc;
         v_out_stride_r2hc = sol->strides_grp->strides_r2hc->v_out_stride
-                            * dt_bytes;
-        INTP num_iters_r2hc = sol->solver->kernel_r2hc->count / num_sets_r2hc;
-        INTP rem_iters_r2hc = sol->solver->kernel_r2hc->count -
+                            * dt_bytes * num_sets_r2hc;
+        UINTP num_iters_r2hc = sol->solver->kernel_r2hc->count /
+                               num_sets_r2hc;
+        UINTP rem_iters_r2hc = sol->solver->kernel_r2hc->count -
                               (num_iters_r2hc * num_sets_r2hc);
 
         #pragma omp parallel for
-        for (INTP batch = 0; batch < num_iters_r2hc; batch++)
+        for (UINTP batch = 0; batch < num_iters_r2hc; batch++)
         {
             INTP v_istride = batch * v_in_stride_r2hc;
             INTP v_ostride = batch * v_out_stride_r2hc;
@@ -506,16 +507,16 @@ static VOID execute_real_kernel(aoclfftz_solution_t *sol, UINT32 n_threads_real)
         // vector stride prep for R2HCF kernels
         INTP v_in_stride_r2hcf, v_out_stride_r2hcf;
         v_in_stride_r2hcf  = sol->strides_grp->strides_r2hcf->v_in_stride
-                             * dt_bytes;
+                             * dt_bytes * num_sets_r2hcf;
         v_out_stride_r2hcf = sol->strides_grp->strides_r2hcf->v_out_stride
-                             * dt_bytes;
-        INTP num_iters_r2hcf = sol->solver->kernel_r2hcf->count
+                             * dt_bytes * num_sets_r2hcf;
+        UINTP num_iters_r2hcf = sol->solver->kernel_r2hcf->count
                                / num_sets_r2hcf;
-        INTP rem_iters_r2hcf = sol->solver->kernel_r2hcf->count -
+        UINTP rem_iters_r2hcf = sol->solver->kernel_r2hcf->count -
                                (num_iters_r2hcf * num_sets_r2hcf);
 
         #pragma omp parallel for
-        for (INTP batch = 0; batch < num_iters_r2hcf; batch++)
+        for (UINTP batch = 0; batch < num_iters_r2hcf; batch++)
         {
             INTP v_istride = batch * v_in_stride_r2hcf;
             INTP v_ostride = batch * v_out_stride_r2hcf;
@@ -581,6 +582,7 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
     UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
     UINT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
     kfft_ kernel_c2c = sol->solver->kernel_c2c->kfft;
+    UINT8 num_sets_c2c = sol->solver->kernel_c2c->sets;
 
     INTP radix = sol->decomp_scheme->dims[0].n;
     INTP no_of_groups = sol->solver->kernel_r2hcf->count > 0
@@ -615,10 +617,6 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
         r2hc_out_stride = (c2c_out_stride - 1) * 2 + 1;
     }
 
-    // vector stride prep for C2C kernels
-    INTP v_in_stride_c2c, v_out_stride_c2c;
-    v_in_stride_c2c = sol->strides_grp->strides_c2c->v_in_stride * dt_bytes;
-    v_out_stride_c2c = sol->strides_grp->strides_c2c->v_out_stride * dt_bytes;
     INTP batch_real = 0;
     INTP total_batches = 0;
     // Execute C2C Kernels
@@ -645,7 +643,10 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                         sol->solver->kernel_r2hcf->count;
     }
 
-    UINT32 n_threads_real = (n_threads * batch_real) / total_batches;
+    // Calculate the number of threads for real kernels (R2HC/R2HCF)
+    // and for C2C kernels. The formula below ensures at least 1 thread
+    // for real, and distributes the rest proportionally.
+    UINT32 n_threads_real = ((n_threads - 1) * batch_real) / total_batches + 1;
     UINT32 n_threads_c2c = n_threads - n_threads_real;
 
     /*
@@ -681,6 +682,19 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                 }
                 if (sol->solver->kernel_c2c->count != 0)
                 {
+                    // vector stride prep for C2C kernels
+                    INTP v_in_stride_c2c, v_out_stride_c2c;
+                    v_in_stride_c2c =
+                                sol->strides_grp->strides_c2c->v_in_stride *
+                                dt_bytes * num_sets_c2c;
+                    v_out_stride_c2c =
+                                sol->strides_grp->strides_c2c->v_out_stride *
+                                dt_bytes * num_sets_c2c;
+                    // Setting the number of iterations for MT
+                    UINTP num_iters_c2c = no_of_groups / num_sets_c2c;
+                    UINTP rem_iters_c2c = no_of_groups -
+                                          (num_iters_c2c * num_sets_c2c);
+
                     // setting the number of threads for inner C2C kernel
                     // execution
                     UINT32 n_threads_c2c_outer = n_threads_c2c > group_size ?
@@ -752,7 +766,7 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
 
                             #pragma omp parallel for \
                                     num_threads(n_threads_c2c_inner)
-                            for (INTP group_num = 0; group_num < no_of_groups;
+                            for (INTP group_num = 0; group_num < num_iters_c2c;
                                  group_num++)
                             {
                                 INTP v_istride = group_num * v_in_stride_c2c;
@@ -762,8 +776,25 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                                     MOVE_ADDR(in_local, v_istride + dt_bytes),
                                     MOVE_ADDR(out_local, v_ostride),
                                     MOVE_ADDR(out_local, v_ostride + dt_bytes),
-                                    1 /* num_sets_c2c */,
-                                    strides_c2c_per_thread,
+                                    num_sets_c2c, strides_c2c_per_thread,
+                                    sol->twiddle, // FIXME: when adding
+                                                  // a support for
+                                                  // twiddle kernels,
+                                                  // fix this
+                                    FFT_DIR(sol->decomp_scheme->flags));
+                            }
+                            if (rem_iters_c2c)
+                            {
+                                INTP v_istride = num_iters_c2c
+                                                 * v_in_stride_c2c;
+                                INTP v_ostride = num_iters_c2c
+                                                 * v_out_stride_c2c;
+                                kernel_c2c(
+                                    MOVE_ADDR(in_local, v_istride),
+                                    MOVE_ADDR(in_local, v_istride + dt_bytes),
+                                    MOVE_ADDR(out_local, v_ostride),
+                                    MOVE_ADDR(out_local, v_ostride + dt_bytes),
+                                    rem_iters_c2c, strides_c2c_per_thread,
                                     sol->twiddle, // FIXME: when adding
                                                   // a support for
                                                   // twiddle kernels,
@@ -838,7 +869,7 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
 
                             #pragma omp parallel for \
                                     num_threads(n_threads_c2c_inner)
-                            for (INTP group_num = 0; group_num < no_of_groups;
+                            for (INTP group_num = 0; group_num < num_iters_c2c;
                                  group_num++)
                             {
                                 INTP v_istride = group_num * v_in_stride_c2c;
@@ -848,8 +879,25 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                                     MOVE_ADDR(in_local, v_istride + dt_bytes),
                                     MOVE_ADDR(out_local, v_ostride),
                                     MOVE_ADDR(out_local, v_ostride + dt_bytes),
-                                    1 /* num_sets_c2c */,
-                                    strides_c2c_per_thread,
+                                    num_sets_c2c, strides_c2c_per_thread,
+                                    sol->twiddle, // FIXME: when adding
+                                                  // a support for
+                                                  // twiddle kernels,
+                                                  // fix this
+                                    FFT_DIR(sol->decomp_scheme->flags));
+                            }
+                            if (rem_iters_c2c)
+                            {
+                                INTP v_istride = num_iters_c2c
+                                                 * v_in_stride_c2c;
+                                INTP v_ostride = num_iters_c2c
+                                                 * v_out_stride_c2c;
+                                kernel_c2c(
+                                    MOVE_ADDR(in_local, v_istride),
+                                    MOVE_ADDR(in_local, v_istride + dt_bytes),
+                                    MOVE_ADDR(out_local, v_ostride),
+                                    MOVE_ADDR(out_local, v_ostride + dt_bytes),
+                                    rem_iters_c2c, strides_c2c_per_thread,
                                     sol->twiddle, // FIXME: when adding
                                                   // a support for
                                                   // twiddle kernels,
