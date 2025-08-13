@@ -213,7 +213,7 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
             INFO, INFO,
             "Multi Threaded execution is"
             " not supported for Bluestein solver, falling back to single"
-            " threaded Execution");
+            " threaded execution");
         sel->solution->decomp_scheme->thread_info->avl_threads = 1;
         avl_threads = 1;
     }
@@ -417,8 +417,8 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
         AOCLFFTZ_LOG_UNFORMATTED(
             INFO, INFO,
             "Multi Threaded execution is"
-            " not suported for N-D & Bluestein solver, falling back to Single"
-            " Threaded execution");
+            " not supported for Bluestein solver, falling back to single"
+            " threaded execution");
         sel->solution->decomp_scheme->thread_info->avl_threads = 1;
         avl_threads = 1;
     }

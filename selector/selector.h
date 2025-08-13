@@ -108,8 +108,6 @@ typedef struct aoclfftz_selector
         sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads = \
             problem->pthr_fft.num_threads;                                     \
     }                                                                          \
-    /*Enable nested threading in openmp to support multi-level threads*/       \
-    omp_set_nested(1);                                                         \
 }
 #else
 #define INIT_THREADS(sel_obj, problem)                                         \
