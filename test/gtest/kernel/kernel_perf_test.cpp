@@ -139,6 +139,7 @@ class PerformanceTest : public benchmark::Fixture {
         UINT8 is_bwd = false;
         UINT8 is_real = state.range(7);
         INT32 data_stride = is_real ? 1 : 2;
+        aoclfftz_twiddle_t tws;
 
         if (kernel_type < aocl_fftz_kernel_type::STANDARD_C2C_C ||
             kernel_type > aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX512)
@@ -204,12 +205,16 @@ class PerformanceTest : public benchmark::Fixture {
         }
         compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, batches);
 
+        tws.TW = twiddle_buffer;
+        tws.twiddle_buf_ptr = twiddle_buffer;
+        tws.cols = batches;
+
         for (auto _ : state)
         {
             benchmark::DoNotOptimize(out_r);
             benchmark::DoNotOptimize(out_i);
             tw_kernel(in_r, in_i, out_r, out_i, batches, &strides,
-                      twiddle_buffer, is_bwd);
+                      &tws, is_bwd);
             benchmark::ClobberMemory();
         }
 
