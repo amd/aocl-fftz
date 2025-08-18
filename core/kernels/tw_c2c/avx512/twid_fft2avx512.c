@@ -39,9 +39,8 @@
  */
 
 #include "core/kernels/kernel.h"
-#include "core/kernels/simd_includes/simd_common.h"
+#include "core/kernels/simd_includes/simd_common_avx512.h"
 
-// TODO: the opcounts are incorrect (copied over from the regular kernels)
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{1, 2, 2, 34, 12, 12},
                                                      {1, 2, 2, 18, 4, 12}};
 

@@ -1,0 +1,307 @@
+/**
+ * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/** @file simd_common_avx512.h
+ *
+ *  @brief List of common operations and macros used for simd (AVX512) kernels.
+ *
+ *  This file contains the category-wise macros and common functions used
+ *  in the AVX512 kernel variants
+ *
+ *  @author Murugan Vairavel
+ *  @author Srirammaswamy S
+ *  @author Jeya R
+ *  @author Ashwin K. Godbole
+ */
+
+#ifndef AOCLFFTZ_SIMD_COMMON_AVX512_H
+#define AOCLFFTZ_SIMD_COMMON_AVX512_H
+
+#include "core/kernels/simd_includes/simd_common.h"
+
+/**
+ * @brief interchanges the real and imaginary values in a 512 bit register
+ * for single precision floating point using the control value in the last
+ * integer argument(b 10 11 00 01)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define SWAP_RI_512_S(val) _mm512_permute_ps(val, 177)
+
+/**
+ * @brief interchanges the real and imaginary values in a 512 bit register
+ * for double precision floating point using the control value in the last
+ * integer argument(b 01 01 01 01)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define SWAP_RI_512_D(val) _mm512_permute_pd(val, 85)
+
+/**
+ * @brief implies the number of sets that can be processed in parallel.
+ * Computed using Register width /(2* sizeof(floating point)
+ */
+#define NUM_SETS_512_S 8
+#define NUM_SETS_512_D 4
+
+union data_union_512
+{
+    unsigned u[16];
+    __m512 s;
+    __m512d d;
+};
+
+static const union data_union_512
+            _conj_512_f = {{ 0x00000000, 0x80000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x80000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x80000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x80000000, 0x00000000, 0x80000000 }};
+static const union data_union_512
+            _conj_512_d = {{ 0x00000000, 0x00000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x00000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x00000000, 0x00000000, 0x80000000,
+                             0x00000000, 0x00000000, 0x00000000, 0x80000000 }};
+
+static const union data_union_512
+    _neg_512_f[2] = {
+        {.u = { 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                0x00000000, 0x00000000, 0x00000000, 0x00000000 }},
+        {.u = { 0x80000000, 0x80000000, 0x80000000, 0x80000000,
+                0x80000000, 0x80000000, 0x80000000, 0x80000000,
+                0x80000000, 0x80000000, 0x80000000, 0x80000000,
+                0x80000000, 0x80000000, 0x80000000, 0x80000000 }}
+    };
+static const union data_union_512
+    _neg_512_d[2] = {
+        {.u = { 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                0x00000000, 0x00000000, 0x00000000, 0x00000000,
+                0x00000000, 0x00000000, 0x00000000, 0x00000000 }},
+        {.u = { 0x00000000, 0x80000000, 0x00000000, 0x80000000,
+                0x00000000, 0x80000000, 0x00000000, 0x80000000,
+                0x00000000, 0x80000000, 0x00000000, 0x80000000,
+                0x00000000, 0x80000000, 0x00000000, 0x80000000 }}
+    };
+
+/**
+ * @brief take conjugate of the complex number A+Bi => A-Bi
+ * Operation : 1 OTHERS(xor)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 0, other: 1}
+#define CONJ_512_S(x) _mm512_xor_ps(_conj_512_f.s, x)
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 0, other: 1}
+#define CONJ_512_D(x) _mm512_xor_pd(_conj_512_d.d, x)
+
+/**
+ * @brief alternatively performs addition & subtraction in a 512 bit register
+ * for single precision floating point.
+ * Operation : 2 PERM, 1 FMA
+ */
+// Cost: {fma: 1, mul: 0, add: 0, move: 0, perm: 2, other: 0}
+#define SUBADD_SWAPA_512_S(a, b, c)                                            \
+{                                                                              \
+    a = SWAP_RI_512_S(a);                                                      \
+    c = SWAP_RI_512_S(_mm512_fmaddsub_ps(_mm512_set1_ps(1.0f), a, b));         \
+}
+
+/**
+ * @brief alternatively performs addition & subtraction in a 512 bit register
+ * for double precision floating point.
+ * Operation : 2 PERM, 1 FMA
+ */
+// Cost: {fma: 1, mul: 0, add: 0, move: 0, perm: 2, other: 0}
+#define SUBADD_SWAPA_512_D(a, b, c)                                            \
+{                                                                              \
+    a = SWAP_RI_512_D(a);                                                      \
+    c = SWAP_RI_512_D(_mm512_fmaddsub_pd(_mm512_set1_pd(1.0), a, b));          \
+}
+
+/**
+ * @brief load eight complex numbers(real,imaginary) of 32 bit single precision
+ * floating point number from memory addresses specified by base address
+ * and offset, into 512 bit register.
+ * Operations : 8 MOV(load), 3 PERM(shuffle), 3 OTHERS(insert).
+ * Cast is excluded as it will be a compile time operation.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 8, perm: 3, other: 3}
+#define GATHER8_512_S(base, offset, dest)                                      \
+{                                                                              \
+    __m128 _low, _high, _tmp;                                                  \
+    __m256 _256low, _256high;                                                  \
+    _low = _mm_loadu_ps(base);                                                 \
+    _tmp = _mm_loadu_ps((base) + (offset));                                    \
+    _low = _mm_shuffle_ps(_low, _tmp, 68);                                     \
+    _high = _mm_loadu_ps((base) + 2 * (offset));                               \
+    _tmp = _mm_loadu_ps((base) + 3 * (offset));                                \
+    _high = _mm_shuffle_ps(_high, _tmp, 68);                                   \
+    _256low = _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _high, 1);    \
+    _low = _mm_loadu_ps((base) + 4 * (offset));                                \
+    _tmp = _mm_loadu_ps((base) + 5 * (offset));                                \
+    _low = _mm_shuffle_ps(_low, _tmp, 68);                                     \
+    _high = _mm_loadu_ps((base) + 6 * (offset));                               \
+    _high = _mm_loadh_pi(_high, (__m64 *)((base) + 7 * (offset)));             \
+    _256high = _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _high, 1);   \
+    dest = _mm512_insertf32x8(_mm512_castps256_ps512(_256low), _256high, 1);   \
+}
+
+/**
+ * @brief store eight complex numbers(real,imaginary) of 32 bit single precision
+ * floating point number from 512 bit register into memory addresses
+ * specified by base address and offset.
+ * Operations : 8 MOV(store), 3 OTHERS(extract).
+ * Cast is excluded as it will be a compile time operation.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 8, perm: 0, other: 3}
+#define SCATTER8_512_S(base, offset, src)                                      \
+{                                                                              \
+    __m256 _256high = _mm512_extractf32x8_ps(src, 1);                          \
+    __m256 _256low = _mm512_castps512_ps256(src);                              \
+    __m128 _high, _low;                                                        \
+    _high = _mm256_extractf128_ps(_256low, 1);                                 \
+    _low = _mm256_castps256_ps128(_256low);                                    \
+    _mm_storel_pi((__m64 *)(base), _low);                                      \
+    _mm_storeh_pi((__m64 *)((base) + (offset)), _low);                         \
+    _mm_storel_pi((__m64 *)((base) + 2 * (offset)), _high);                    \
+    _mm_storeh_pi((__m64 *)((base) + 3 * (offset)), _high);                    \
+    _high = _mm256_extractf128_ps(_256high, 1);                                \
+    _low = _mm256_castps256_ps128(_256high);                                   \
+    _mm_storel_pi((__m64 *)((base) + 4 * (offset)), _low);                     \
+    _mm_storeh_pi((__m64 *)((base) + 5 * (offset)), _low);                     \
+    _mm_storel_pi((__m64 *)((base) + 6 * (offset)), _high);                    \
+    _mm_storeh_pi((__m64 *)((base) + 7 * (offset)), _high);                    \
+}
+
+/**
+ * @brief load four complex numbers(real,imaginary) of 64 bit double precision
+ * floating point number from memory addresses specified by base address
+ * and offset into 512 bit register.
+ * Operations : 4 MOV(load), 3 OTHERS(insert).
+ * Cast is excluded as it will be a compile time operation
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 0, other: 3}
+#define GATHER4_512_D(base, offset, dest)                                      \
+{                                                                              \
+    __m128d _low, _high;                                                       \
+    __m256d _256low, _256high;                                                 \
+    _low = _mm_loadu_pd(base);                                                 \
+    _high = _mm_loadu_pd((base) + (offset));                                   \
+    _256low = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);    \
+    _low = _mm_loadu_pd((base) + offset * 2);                                  \
+    _high = _mm_loadu_pd((base) + offset * 3);                                 \
+    _256high = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);   \
+    dest = _mm512_insertf64x4(_mm512_castpd256_pd512(_256low), _256high, 1);   \
+}
+
+/**
+ * @brief store four complex numbers(real,imaginary) of 64 bit double precision
+ * floating point number from 512 bit register into memory addresses
+ * specified by base address and offset.
+ * Operations : 4 MOV(store), 3 OTHERS(extract).
+ * Cast is excluded as it will be a compile time operation.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 0, other: 3}
+#define SCATTER4_512_D(base, offset, src)                                      \
+{                                                                              \
+    __m256d _m256high = _mm512_extractf64x4_pd(src, 1);                        \
+    __m256d _m256low = _mm512_castpd512_pd256(src);                            \
+    __m128d _low, _high;                                                       \
+    _high = _mm256_extractf128_pd(_m256low, 1);                                \
+    _low = _mm256_castpd256_pd128(_m256low);                                   \
+    _mm_storeu_pd(base, _low);                                                 \
+    _mm_storeu_pd((base) + offset, _high);                                     \
+    _high = _mm256_extractf128_pd(_m256high, 1);                               \
+    _low = _mm256_castpd256_pd128(_m256high);                                  \
+    _mm_storeu_pd((base) + 2 * offset, _low);                                  \
+    _mm_storeu_pd((base) + 3 * offset, _high);                                 \
+}
+
+// Cost: {fma: 1, mul: 2, add: 0, move: 6, perm: 4, other: 3}
+#define ITW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col)    \
+{                                                                              \
+    __m512d ones = _mm512_set1_pd(1.0);                                        \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m512d twv = _mm512_loadu_pd((twbuf) + addr);                       \
+    __m512d tmp_in;                                                            \
+    GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
+    const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);           \
+    const __m512d lo_1 = _mm512_unpacklo_pd(tmp_1, tmp_0);                     \
+    const __m512d hi_1 = _mm512_unpackhi_pd(tmp_1, tmp_0);                     \
+    gdest = SWAP_RI_512_D(_mm512_fmaddsub_pd(ones, lo_1, hi_1));               \
+}
+
+// Cost: {fma: 1, mul: 2, add: 0, move: 6, perm: 3, other: 3}
+#define TW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col)     \
+{                                                                              \
+    __m512d ones = _mm512_set1_pd(1.0);                                        \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m512d twv = _mm512_loadu_pd((twbuf) + addr);                       \
+    __m512d tmp_in;                                                            \
+    GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
+    const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);           \
+    const __m512d lo_1 = _mm512_unpacklo_pd(tmp_0, tmp_1);                     \
+    const __m512d hi_1 = _mm512_unpackhi_pd(tmp_0, tmp_1);                     \
+    gdest = _mm512_fmaddsub_pd(ones, lo_1, hi_1);                              \
+}
+
+// Cost: {fma: 1, mul: 2, add: 0, move: 10, perm: 9, other: 3}
+#define ITW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col)    \
+{                                                                              \
+    __m512 ones = _mm512_set1_ps(1.0);                                         \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m512 twv = _mm512_loadu_ps((twbuf) + addr);                        \
+    __m512 tmp_in;                                                             \
+    GATHER8_512_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    __m512 tmp_0 = _mm512_mul_ps(tmp_in, twv);                                 \
+    __m512 tmp_1 = _mm512_mul_ps(SWAP_RI_512_S(tmp_in), twv);                  \
+    tmp_0 = _mm512_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                     \
+    tmp_1 = _mm512_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                     \
+    const __m512 lo_1 = _mm512_unpacklo_ps(tmp_1, tmp_0);                      \
+    const __m512 hi_1 = _mm512_unpackhi_ps(tmp_1, tmp_0);                      \
+    gdest = SWAP_RI_512_S(_mm512_fmaddsub_ps(ones, lo_1, hi_1));               \
+}
+
+// Cost: {fma: 1, mul: 2, add: 0, move: 10, perm: 8, other: 3}
+#define TW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col)     \
+{                                                                              \
+    __m512 ones = _mm512_set1_ps(1.0);                                         \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m512 twv = _mm512_loadu_ps((twbuf) + addr);                        \
+    __m512 tmp_in;                                                             \
+    GATHER8_512_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    __m512 tmp_0 = _mm512_mul_ps(tmp_in, twv);                                 \
+    __m512 tmp_1 = _mm512_mul_ps(SWAP_RI_512_S(tmp_in), twv);                  \
+    tmp_0 = _mm512_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                     \
+    tmp_1 = _mm512_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                     \
+    const __m512 lo_1 = _mm512_unpacklo_ps(tmp_0, tmp_1);                      \
+    const __m512 hi_1 = _mm512_unpackhi_ps(tmp_0, tmp_1);                      \
+    gdest = _mm512_fmaddsub_ps(ones, lo_1, hi_1);                              \
+}
+
+#endif // AOCLFFTZ_SIMD_COMMON_AVX512_H

@@ -38,7 +38,7 @@
  */
 
 #include "core/kernels/kernel.h"
-#include "core/kernels/simd_includes/simd_common.h"
+#include "core/kernels/simd_includes/simd_common_avx512.h"
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 28, 78, 240, 52, 97},
                                                      {0, 28, 78, 120,  7, 97}};
