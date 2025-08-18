@@ -1087,44 +1087,44 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
         if (flag)
         {
             ITW_GATHER_128_D(curr_in, in_strides, 1, /* unused */ 0, v_in1, tw,
-                             n, cnt_128);
+                             cols, cnt_128);
             ITW_GATHER_128_D(curr_in, in_strides, 2, /* unused */ 0, v_in2, tw,
-                             n, cnt_128);
+                             cols, cnt_128);
             ITW_GATHER_128_D(curr_in, in_strides, 3, /* unused */ 0, v_in3, tw,
-                             n, cnt_128);
+                             cols, cnt_128);
             ITW_GATHER_128_D(curr_in, in_strides, 4, /* unused */ 0, v_in4, tw,
-                             n, cnt_128);
+                             cols, cnt_128);
             ITW_GATHER_128_D(curr_in, in_strides, 5, /* unused */ 0, v_in5, tw,
-                             n, cnt_128);
+                             cols, cnt_128);
             ITW_GATHER_128_D(curr_in, in_strides, 6, /* unused */ 0, v_in6, tw,
-                             n, cnt_128);
+                             cols, cnt_128);
             ITW_GATHER_128_D(curr_in, in_strides, 7, /* unused */ 0, v_in7, tw,
-                             n, cnt_128);
+                             cols, cnt_128);
             ITW_GATHER_128_D(curr_in, in_strides, 8, /* unused */ 0, v_in8, tw,
-                             n, cnt_128);
+                             cols, cnt_128);
             ITW_GATHER_128_D(curr_in, in_strides, 9, /* unused */ 0, v_in9, tw,
-                             n, cnt_128);
+                             cols, cnt_128);
         }
         else
         {
             TW_GATHER_128_D(curr_in, in_strides, 1, /* unused */ 0, v_in1, tw,
-                            n, cnt_128);
+                            cols, cnt_128);
             TW_GATHER_128_D(curr_in, in_strides, 2, /* unused */ 0, v_in2, tw,
-                            n, cnt_128);
+                            cols, cnt_128);
             TW_GATHER_128_D(curr_in, in_strides, 3, /* unused */ 0, v_in3, tw,
-                            n, cnt_128);
+                            cols, cnt_128);
             TW_GATHER_128_D(curr_in, in_strides, 4, /* unused */ 0, v_in4, tw,
-                            n, cnt_128);
+                            cols, cnt_128);
             TW_GATHER_128_D(curr_in, in_strides, 5, /* unused */ 0, v_in5, tw,
-                            n, cnt_128);
+                            cols, cnt_128);
             TW_GATHER_128_D(curr_in, in_strides, 6, /* unused */ 0, v_in6, tw,
-                            n, cnt_128);
+                            cols, cnt_128);
             TW_GATHER_128_D(curr_in, in_strides, 7, /* unused */ 0, v_in7, tw,
-                            n, cnt_128);
+                            cols, cnt_128);
             TW_GATHER_128_D(curr_in, in_strides, 8, /* unused */ 0, v_in8, tw,
-                            n, cnt_128);
+                            cols, cnt_128);
             TW_GATHER_128_D(curr_in, in_strides, 9, /* unused */ 0, v_in9, tw,
-                            n, cnt_128);
+                            cols, cnt_128);
         }
 
         LD_128_D(curr_in, v_in0);

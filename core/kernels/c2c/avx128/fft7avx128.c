@@ -200,17 +200,17 @@ static VOID fft7avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_out = out_r;
 
         LD_LOW_128_S(curr_in, v_in0);
-        curr_in = curr_in + in_strides[1];
+        curr_in = in_r + in_strides[1];
         LD_LOW_128_S(curr_in, v_in1);
-        curr_in = curr_in + in_strides[1];
+        curr_in = in_r + in_strides[2];
         LD_LOW_128_S(curr_in, v_in2);
-        curr_in = curr_in + in_strides[1];
+        curr_in = in_r + in_strides[3];
         LD_LOW_128_S(curr_in, v_in3);
-        curr_in = curr_in + in_strides[1];
+        curr_in = in_r + in_strides[4];
         LD_LOW_128_S(curr_in, v_in4);
-        curr_in = curr_in + in_strides[1];
+        curr_in = in_r + in_strides[5];
         LD_LOW_128_S(curr_in, v_in5);
-        curr_in = curr_in + in_strides[1];
+        curr_in = in_r + in_strides[6];
         LD_LOW_128_S(curr_in, v_in6);
 
         // common calculations
