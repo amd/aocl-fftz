@@ -129,7 +129,7 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                     kernel_r2hcf->sets[precision - 2];
 
 #ifdef MULTI_THREADING
-                if (num_threads <= 1 || realhelper->is_CT)
+                if (num_threads <= 1)
                 {
 #endif
                     // call direct solver
