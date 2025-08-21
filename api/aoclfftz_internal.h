@@ -208,6 +208,7 @@ typedef struct aoclfftz_decomp_scheme
     INT32 dim_rank;
     aoclfftz_dim_t_64_ *dims;
     aoclfftz_dim_t_64_ *vecs;
+    aoclfftz_dim_t_64_ *batched_vecs; // used in batched-direct solver, otherwise NULL
     // VOID *in;
     VOID *in_real;
     VOID *in_imag;

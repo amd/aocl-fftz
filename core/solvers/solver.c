@@ -59,7 +59,8 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
         solvers_table[SOLVER_REAL_DIRECT_TWIDDLE] =
             register_execute_real_direct_solver();
         solvers_table[SOLVER_REAL_CT] = register_execute_real_ct_solver();
-        solvers_table[SOLVER_REAL_BATCHED] = register_execute_real_batched_solver();
+        solvers_table[SOLVER_REAL_BATCHED] =
+            register_execute_real_batched_solver();
         solvers_table[SOLVER_REAL_BUFFERED] =
             register_execute_real_buffered_solver();
 #ifdef MULTI_THREADING
@@ -74,6 +75,8 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
     else
     {
         solvers_table[SOLVER_DIRECT] = register_execute_direct_solver();
+        solvers_table[SOLVER_DIRECT_BATCHED] =
+            register_execute_direct_batched_solver();
         solvers_table[SOLVER_CT] = register_execute_ct_solver();
         solvers_table[SOLVER_CT_TWIDDLE] = register_execute_ct_twiddle_solver();
         solvers_table[SOLVER_BATCHED] = register_execute_batched_solver();

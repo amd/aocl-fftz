@@ -129,7 +129,10 @@ foreach(FILE ${GTEST_SRC_FILES})
     if(NOT "${TNAME}" MATCHES "[A-Za-z0-9_]*_gtest")
         continue()
     endif()
-    if("${TNAME}" MATCHES "selector")
+    # FIXME: skipping selector tests for testing since it is not valid after
+    # direct-solver changes in post-selection
+    if("${TNAME}" MATCHES "selector_")
+        message("   skipping ${TNAME}")
         continue()
     endif()
     add_executable(${TNAME} ${FILE})

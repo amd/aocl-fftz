@@ -48,8 +48,9 @@
 //#define AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_PLUS_TRANS_DFT_MODE
 //#define AOCLFFTZ_AUTO_SELECTOR_MODE
 
-/* !! Do not enable this macro for now !! */
+/* !! Do not enable these macros for now !! */
 // #define PERFORM_INTER_STAGE_PERMUTE
+// #define DISABLE_BATCHED_DIRECT_SOLVER
 
 typedef enum {
     AOCLFFTZ_FIXED_SELECTOR = 0,                            // Fixed decision logic
@@ -219,6 +220,15 @@ typedef struct aoclfftz_selector
         to_decomp_scheme->vecs[cnt].out_stride =                               \
             from_decomp_scheme->vecs[cnt].out_stride;                          \
     }                                                                          \
+    if (from_decomp_scheme->batched_vecs != NULL)                              \
+    {                                                                          \
+        FREE_ALIGN_ALLOCATED_MEM(to_decomp_scheme->batched_vecs);              \
+        ALLOC_ALIGN_UNINIT(to_decomp_scheme->batched_vecs,                     \
+                           aoclfftz_dim_t_64_, sizeof(aoclfftz_dim_t_64_));    \
+        memcpy(to_decomp_scheme->batched_vecs,                                 \
+               from_decomp_scheme->batched_vecs,                               \
+               sizeof(aoclfftz_dim_t_64_));                                    \
+    }                                                                          \
     to_decomp_scheme->in_real = from_decomp_scheme->in_real;                   \
     to_decomp_scheme->in_imag = from_decomp_scheme->in_imag;                   \
     to_decomp_scheme->out_real = from_decomp_scheme->out_real;                 \
@@ -355,6 +365,7 @@ typedef struct aoclfftz_selector
     else                                                                       \
     {                                                                          \
         ret = selector_driver_dft_(sel_obj);                                   \
+        apply_batched_direct_solver(sel_obj->solution);                        \
         setup_twiddle_buffer_complex(sel_obj->solution);                       \
     }                                                                          \
 }
@@ -404,6 +415,15 @@ typedef struct aoclfftz_selector
             from_sol_obj->decomp_scheme->vecs[cnt].in_stride;                  \
         to_sol_obj->decomp_scheme->vecs[cnt].out_stride =                      \
             from_sol_obj->decomp_scheme->vecs[cnt].out_stride;                 \
+    }                                                                          \
+    if (from_sol_obj->decomp_scheme->batched_vecs != NULL)                     \
+    {                                                                          \
+        FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->decomp_scheme->batched_vecs);     \
+        ALLOC_ALIGN_UNINIT(to_sol_obj->decomp_scheme->batched_vecs,            \
+                           aoclfftz_dim_t_64_, sizeof(aoclfftz_dim_t_64_));    \
+        memcpy(to_sol_obj->decomp_scheme->batched_vecs,                        \
+               from_sol_obj->decomp_scheme->batched_vecs,                      \
+               sizeof(aoclfftz_dim_t_64_));                                    \
     }                                                                          \
     to_sol_obj->decomp_scheme->in_real = from_sol_obj->decomp_scheme->in_real; \
     to_sol_obj->decomp_scheme->in_imag = from_sol_obj->decomp_scheme->in_imag; \
@@ -516,6 +536,15 @@ typedef struct aoclfftz_selector
             from_sol_obj->decomp_scheme->vecs[cnt].out_stride;                 \
         to_sol_obj->decomp_scheme->vecs[cnt].out_stride =                      \
             from_sol_obj->decomp_scheme->vecs[cnt].out_stride;                 \
+    }                                                                          \
+    if (from_sol_obj->decomp_scheme->batched_vecs != NULL)                     \
+    {                                                                          \
+        FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->decomp_scheme->batched_vecs);     \
+        ALLOC_ALIGN_UNINIT(to_sol_obj->decomp_scheme->batched_vecs,            \
+                           aoclfftz_dim_t_64_, sizeof(aoclfftz_dim_t_64_));    \
+        memcpy(to_sol_obj->decomp_scheme->batched_vecs,                        \
+               from_sol_obj->decomp_scheme->batched_vecs,                      \
+               sizeof(aoclfftz_dim_t_64_));                                    \
     }                                                                          \
     to_sol_obj->decomp_scheme->in_real =                                       \
         from_sol_obj->decomp_scheme->out_real;                                 \
@@ -810,5 +839,6 @@ VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx);
 VOID post_process_buffered_inplace(aoclfftz_solution_t *solution,
                     INTP dim_rank, VOID *out_real, VOID *out_imag);
 VOID setup_inplace_buffers(aoclfftz_solution_t *solution);
+INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);
 
 #endif // AOCLFFTZ_SELECTOR_H

@@ -40,8 +40,9 @@
 #include "selector/selector.h"
 #include "utils/utils.h"
 #include "core/common/memory_manager.h"
-#include "core/kernels/kernel_list.h"
+#include "core/common/batched_direct_utils.h"
 #include "core/common/twiddle.h"
+#include "core/kernels/kernel_list.h"
 
 // Function pointers to communicate the exact selector model for executing the
 // problem.

@@ -35,8 +35,10 @@
  *  the solver.
  *
  *  @author Murugan Vairavel
+ *  @author Srirammaswamy Srinivasan
  */
 
+#include "api/aoclfftz_internal.h"
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
@@ -120,10 +122,10 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         {
             INTP v_istride = batch * v_in_stride;
             INTP v_ostride = batch * v_out_stride;
-            kernel->kfft((VOID *)((CHAR *)decomp_scheme->in_real  + v_istride),
-                         (VOID *)((CHAR *)decomp_scheme->in_imag  + v_istride),
-                         (VOID *)((CHAR *)decomp_scheme->out_real + v_ostride),
-                         (VOID *)((CHAR *)decomp_scheme->out_imag + v_ostride),
+            kernel->kfft(MOVE_ADDR(decomp_scheme->in_real, v_istride),
+                         MOVE_ADDR(decomp_scheme->in_imag, v_istride),
+                         MOVE_ADDR(decomp_scheme->out_real, v_ostride),
+                         MOVE_ADDR(decomp_scheme->out_imag, v_ostride),
                          num_sets, strides, sol->twiddle->TW, FFT_DIR(decomp_scheme->flags));
         }
 
@@ -132,10 +134,10 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         {
             INTP v_istride = num_iters * v_in_stride;
             INTP v_ostride = num_iters * v_out_stride;
-            kernel->kfft((VOID *)((CHAR *)decomp_scheme->in_real  + v_istride),
-                         (VOID *)((CHAR *)decomp_scheme->in_imag  + v_istride),
-                         (VOID *)((CHAR *)decomp_scheme->out_real + v_ostride),
-                         (VOID *)((CHAR *)decomp_scheme->out_imag + v_ostride),
+            kernel->kfft(MOVE_ADDR(decomp_scheme->in_real, v_istride),
+                         MOVE_ADDR(decomp_scheme->in_imag, v_istride),
+                         MOVE_ADDR(decomp_scheme->out_real, v_ostride),
+                         MOVE_ADDR(decomp_scheme->out_imag, v_ostride),
                          rem_iters, strides, sol->twiddle->TW, FFT_DIR(decomp_scheme->flags));
         }
 
@@ -199,10 +201,10 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
 
         INTP v_istride = batch * v_in_stride;
         INTP v_ostride = batch * v_out_stride;
-        kernel((VOID *)((CHAR *)decomp_scheme->in_real  + v_istride),
-               (VOID *)((CHAR *)decomp_scheme->in_imag  + v_istride),
-               (VOID *)((CHAR *)decomp_scheme->out_real + v_ostride),
-               (VOID *)((CHAR *)decomp_scheme->out_imag + v_ostride),
+        kernel(MOVE_ADDR(decomp_scheme->in_real, v_istride),
+               MOVE_ADDR(decomp_scheme->in_imag, v_istride),
+               MOVE_ADDR(decomp_scheme->out_real, v_ostride),
+               MOVE_ADDR(decomp_scheme->out_imag, v_ostride),
                num_sets, strides, &tw_local, FFT_DIR(decomp_scheme->flags));
     }
 
@@ -218,11 +220,205 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
     {
         INTP v_istride = num_iters * v_in_stride;
         INTP v_ostride = num_iters * v_out_stride;
-        kernel((VOID *)((CHAR *)decomp_scheme->in_real  + v_istride),
-               (VOID *)((CHAR *)decomp_scheme->in_imag  + v_istride),
-               (VOID *)((CHAR *)decomp_scheme->out_real + v_ostride),
-               (VOID *)((CHAR *)decomp_scheme->out_imag + v_ostride),
+        kernel(MOVE_ADDR(decomp_scheme->in_real, v_istride),
+               MOVE_ADDR(decomp_scheme->in_imag, v_istride),
+               MOVE_ADDR(decomp_scheme->out_real, v_ostride),
+               MOVE_ADDR(decomp_scheme->out_imag, v_ostride),
                rem_iters, strides, &tw_local, FFT_DIR(decomp_scheme->flags));
+    }
+
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
+    return SOLVER_SUCCESS;
+}
+
+/**
+ * Parallelizes over DFT butterflies within a CT stage.
+ *
+ * Example:
+ *   problem size: 100:1:1v48:100:100 (column-major CT problem)
+ *   num_threads: 48
+ *   batches: 100
+ *   problem size: 48 (4 x 12) -> [12v4 (12 butterflies of radix-4), 4v12 (4 butterflies of radix-12)]
+ *
+ *   for radix-4 kernel:
+ *      #omp parallel for
+ *      for (1..12) // butterflies
+ *          for (1..100) // batches
+ *              kernel(radix-4)
+ *
+ *   for radix-12 kernel:
+ *      #omp parallel for
+ *      for (1..4) // butterflies
+ *          for (1..100) // batches
+ *              kernel(radix-12)
+ */
+static INT32 execute_mt_batched_direct_solver(aoclfftz_solution_t *sol)
+{
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+
+    kfft_ kernel = sol->solver->kernel_c2c->kfft;
+    aoclfftz_strides_t *strides = sol->strides_grp->strides;
+    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+
+    VOID *in_real = sol->decomp_scheme->in_real;
+    VOID *in_imag = sol->decomp_scheme->in_imag;
+    VOID *out_real = sol->decomp_scheme->out_real;
+    VOID *out_imag = sol->decomp_scheme->out_imag;
+
+    UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+
+    // vec-strides across DFT butterflies of the same CT problem
+    INTP ct_in_stride =
+        sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE * dt_bytes;
+    INTP ct_out_stride =
+        sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE * dt_bytes;
+
+    // Set threads for parallel execution
+    // FIXME: handle the case where vecs[0].n < n_threads
+    omp_set_num_threads(sol->decomp_scheme->thread_info->n_threads);
+    // **NOTE**:
+    // This `batched_direct` solver is used for column-major CT problems.
+    // Here we are parallelizing over the DFT butterflies within a CT stage.
+    // So it is limited by the problem size and not scalable for large batched
+    // problems with more number of threads.
+    // TODO: Use a better parallelization strategy for large batched problems.
+    #pragma omp parallel for
+    for (INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
+    {
+        aoclfftz_twiddle_t tw_local = {
+            .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
+            .cols = sol->twiddle->cols,
+            .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
+            .load_multi_cols = 0, // use same twiddle values across batches
+        };                        // since different batches solves the same
+                                  // DFT butterfly for different problems
+        kernel(MOVE_ADDR(in_real, i * ct_in_stride),
+               MOVE_ADDR(in_imag, i * ct_in_stride),
+               MOVE_ADDR(out_real, i * ct_out_stride),
+               MOVE_ADDR(out_imag, i * ct_out_stride),
+               sol->decomp_scheme->batched_vecs[0].n, strides, &tw_local,
+               direction);
+    }
+
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
+    return SOLVER_SUCCESS;
+}
+
+/**
+ * Parallelizes over problem batches.
+ *
+ * Example:
+ *   problem size: 100:1:1v48:100:100 (column-major CT problem)
+ *   num_threads: 48
+ *   batches: 100
+ *   problem size: 48 (4 x 12) -> [12v4 (12 butterflies of radix-4), 4v12 (4 butterflies of radix-12)]
+ *
+ *   for radix-4 kernel:
+ *      #omp parallel for
+ *      for (1..100) // batches
+ *          for (1..12) // butterflies
+ *              kernel(radix-4)
+ *
+ *   for radix-12 kernel:
+ *      #omp parallel for
+ *      for (1..100) // batches
+ *          for (1..4) // butterflies
+ *              kernel(radix-12)
+ */
+static INT32 execute_mt_batched_direct_solver_v2(aoclfftz_solution_t *sol)
+{
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+
+    kfft_ kernel = sol->solver->kernel_c2c->kfft;
+    aoclfftz_strides_t *strides = sol->strides_grp->strides;
+    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+
+    VOID *in_real = sol->decomp_scheme->in_real;
+    VOID *in_imag = sol->decomp_scheme->in_imag;
+    VOID *out_real = sol->decomp_scheme->out_real;
+    VOID *out_imag = sol->decomp_scheme->out_imag;
+
+    UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+
+    // vec-strides across DFT butterflies of the same CT problem
+    INTP ct_in_stride =
+        sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE * dt_bytes;
+    INTP ct_out_stride =
+        sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE * dt_bytes;
+
+    UINT8 num_sets = sol->solver->kernel_c2c->sets;
+    INTP num_iters = sol->decomp_scheme->batched_vecs[0].n / num_sets;
+    INTP rem_iters =
+        sol->decomp_scheme->batched_vecs[0].n - (num_iters * num_sets);
+
+    // Set threads for parallel execution
+    omp_set_num_threads(sol->decomp_scheme->thread_info->n_threads);
+    // **NOTE**:
+    // This `batched_direct` solver now parallelizes over batches instead of
+    // DFT butterflies. This provides better scalability for large batched
+    // problems with more number of threads.
+    #pragma omp parallel for
+    for (INTP batch = 0; batch < num_iters; batch++)
+    {
+        // Calculate batch offsets for input/output arrays
+        INTP batch_in_offset =
+            batch * strides->v_in_stride * dt_bytes * num_sets;
+        INTP batch_out_offset =
+            batch * strides->v_out_stride * dt_bytes * num_sets;
+
+        // Sequential loop over DFT butterflies
+        for (INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
+        {
+            aoclfftz_twiddle_t tw_local = {
+                .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
+                .cols = sol->twiddle->cols,
+                .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
+                .load_multi_cols = 0, // use same twiddle values across batches
+            };                        // since different batches solves the same
+                                      // DFT butterfly for different problems
+            kernel(MOVE_ADDR(in_real, batch_in_offset + i * ct_in_stride),
+                   MOVE_ADDR(in_imag, batch_in_offset + i * ct_in_stride),
+                   MOVE_ADDR(out_real, batch_out_offset + i * ct_out_stride),
+                   MOVE_ADDR(out_imag, batch_out_offset + i * ct_out_stride),
+                   num_sets, strides, &tw_local, direction);
+        }
+    }
+
+    if (rem_iters)
+    {
+        INTP batch_in_offset =
+            num_iters * strides->v_in_stride * dt_bytes * num_sets;
+        INTP batch_out_offset =
+            num_iters * strides->v_out_stride * dt_bytes * num_sets;
+
+        // Sequential loop over DFT butterflies
+        for (INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
+        {
+            aoclfftz_twiddle_t tw_local = {
+                .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
+                .cols = sol->twiddle->cols,
+                .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
+                .load_multi_cols = 0, // use same twiddle values across batches
+            };                        // since different batches solves the same
+                                      // DFT butterfly for different problems
+            kernel(MOVE_ADDR(in_real, batch_in_offset + i * ct_in_stride),
+                   MOVE_ADDR(in_imag, batch_in_offset + i * ct_in_stride),
+                   MOVE_ADDR(out_real, batch_out_offset + i * ct_out_stride),
+                   MOVE_ADDR(out_imag, batch_out_offset + i * ct_out_stride),
+                   rem_iters, strides, &tw_local, direction);
+        }
     }
 
 #ifdef AOCL_ENABLE_LOG
@@ -234,4 +430,15 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
 dft_solver_ register_execute_mt_direct_solver(VOID)
 {
     return execute_mt_direct_solver;
+}
+
+dft_solver_ register_execute_mt_direct_batched_solver(VOID)
+{
+    return execute_mt_batched_direct_solver;
+}
+
+// FIXME: remove this once we have an MT solver which works for all the cases
+dft_solver_ register_execute_mt_direct_batched_solver_v2(VOID)
+{
+    return execute_mt_batched_direct_solver_v2;
 }

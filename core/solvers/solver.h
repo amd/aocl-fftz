@@ -54,6 +54,7 @@ typedef enum
 typedef enum
 {
     SOLVER_DIRECT = 1,
+    SOLVER_DIRECT_BATCHED,
     SOLVER_CT,
     SOLVER_CT_TWIDDLE,
     SOLVER_NDIM,
@@ -67,6 +68,7 @@ typedef enum
     SOLVER_TRANSPOSE,
     SOLVER_SIZEONE,
     SOLVER_MT_DIRECT,
+    SOLVER_MT_DIRECT_BATCHED,
     SOLVER_MT_BATCHED,
     SOLVER_REAL_DIRECT,
     SOLVER_REAL_DIRECT_TWIDDLE,
@@ -155,6 +157,7 @@ INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
 #endif
 
 dft_solver_ register_execute_direct_solver(VOID);
+dft_solver_ register_execute_direct_batched_solver(VOID);
 dft_solver_ register_execute_ct_solver(VOID);
 dft_solver_ register_execute_ct_twiddle_solver(VOID);
 dft_solver_ register_execute_batched_solver(VOID);
@@ -164,6 +167,9 @@ dft_solver_ register_execute_sizeone_solver(VOID);
 dft_solver_ register_execute_transpose_solver(VOID);
 #ifdef MULTI_THREADING
 dft_solver_ register_execute_mt_direct_solver(VOID);
+dft_solver_ register_execute_mt_direct_batched_solver(VOID);
+dft_solver_ register_execute_mt_direct_batched_solver_v2(VOID); // FIXME: remove this once we have an MT solver which works for all the cases
+dft_solver_ register_execute_mt_direct_tw_batched_solver(VOID);
 dft_solver_ register_execute_mt_batched_solver(VOID);
 #endif
 

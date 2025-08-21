@@ -153,7 +153,66 @@ static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
+// existing direct solver will handle one level of batches, but this variant
+// will handle 2 levels of batches
+// 1st level -> batches & vec strides i.e. vecs set by the CT based on decomposition
+// 2nd level -> problem batches & vec strides i.e. vec of the CT problem before decomposition
+static INT32 execute_batched_direct_solver(aoclfftz_solution_t *sol)
+{
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+
+    kfft_ kernel = sol->solver->kernel_c2c->kfft;
+    aoclfftz_strides_t *strides = sol->strides_grp->strides;
+    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+
+    VOID *in_real = sol->decomp_scheme->in_real;
+    VOID *in_imag = sol->decomp_scheme->in_imag;
+    VOID *out_real = sol->decomp_scheme->out_real;
+    VOID *out_imag = sol->decomp_scheme->out_imag;
+
+    UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+
+    // vec-strides across DFT butterflies of the same CT problem
+    INTP ct_in_stride =
+        sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE * dt_bytes;
+    INTP ct_out_stride =
+        sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE * dt_bytes;
+
+    // execute the direct kernel
+    for (INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
+    {
+        aoclfftz_twiddle_t tw_local = {
+            .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
+            .cols = sol->twiddle->cols,
+            .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
+            .load_multi_cols = 0, // use same twiddle values across batches
+        };                        // since different batches solve the same
+                                  // DFT butterfly of different problems
+        kernel(in_real, in_imag, out_real, out_imag,
+               sol->decomp_scheme->batched_vecs[0].n, strides, &tw_local,
+               direction);
+        in_real = MOVE_ADDR(in_real, ct_in_stride);
+        in_imag = MOVE_ADDR(in_imag, ct_in_stride);
+        out_real = MOVE_ADDR(out_real, ct_out_stride);
+        out_imag = MOVE_ADDR(out_imag, ct_out_stride);
+    }
+
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
+    return SOLVER_SUCCESS;
+}
+
 dft_solver_ register_execute_direct_solver(VOID)
 {
     return execute_direct_solver;
+}
+
+dft_solver_ register_execute_direct_batched_solver(VOID)
+{
+    return execute_batched_direct_solver;
 }

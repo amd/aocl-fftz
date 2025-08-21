@@ -57,6 +57,7 @@ aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank)
                            sizeof(thread_info_t));
         ALLOC_ALIGN_UNINIT(decomp_scheme->thread_info->pthr_fft,
                            aoclfftz_smp_pfft_t, sizeof(aoclfftz_smp_pfft_t));
+        decomp_scheme->batched_vecs = NULL;
         if (decomp_scheme->dims == NULL || decomp_scheme->vecs == NULL ||
             decomp_scheme->cntrl_params == NULL ||
             decomp_scheme->thread_info == NULL ||
@@ -153,6 +154,7 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         }
 
         sol->next_sol = NULL;
+        sol->decomp_scheme->batched_vecs = NULL;
         sol->dft_bufs->nd_sol = NULL;
         sol->strides_grp->strides->in_strides = NULL;
         sol->strides_grp->strides->out_strides = NULL;
@@ -438,6 +440,7 @@ VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme)
     {
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->dims);
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->vecs);
+        FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->batched_vecs);
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->cntrl_params);
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->thread_info->pthr_fft);
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->thread_info);
@@ -575,6 +578,7 @@ VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t* decomp_scheme)
     {
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->dims);
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->vecs);
+        FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->batched_vecs);
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->cntrl_params);
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->thread_info->pthr_fft);
         FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->thread_info);
