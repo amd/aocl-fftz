@@ -41,6 +41,7 @@
 
 #include <gtest/gtest.h>
 #include <math.h>
+#include <chrono>
 #include "api/aoclfftz.h"
 extern "C"
 {

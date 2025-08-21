@@ -44,6 +44,7 @@
 #include <gtest/gtest.h>
 #include <math.h>
 #include <utility>
+#include <chrono>
 
 extern "C"
 {
