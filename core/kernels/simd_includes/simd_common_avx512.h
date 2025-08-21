@@ -150,24 +150,34 @@ static const union data_union_512
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 8, perm: 3, other: 3}
 #define GATHER8_512_S(base, offset, dest)                                      \
-{                                                                              \
-    __m128 _low, _high, _tmp;                                                  \
-    __m256 _256low, _256high;                                                  \
-    _low = _mm_loadu_ps(base);                                                 \
-    _tmp = _mm_loadu_ps((base) + (offset));                                    \
-    _low = _mm_shuffle_ps(_low, _tmp, 68);                                     \
-    _high = _mm_loadu_ps((base) + 2 * (offset));                               \
-    _tmp = _mm_loadu_ps((base) + 3 * (offset));                                \
-    _high = _mm_shuffle_ps(_high, _tmp, 68);                                   \
-    _256low = _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _high, 1);    \
-    _low = _mm_loadu_ps((base) + 4 * (offset));                                \
-    _tmp = _mm_loadu_ps((base) + 5 * (offset));                                \
-    _low = _mm_shuffle_ps(_low, _tmp, 68);                                     \
-    _high = _mm_loadu_ps((base) + 6 * (offset));                               \
-    _high = _mm_loadh_pi(_high, (__m64 *)((base) + 7 * (offset)));             \
-    _256high = _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _high, 1);   \
-    dest = _mm512_insertf32x8(_mm512_castps256_ps512(_256low), _256high, 1);   \
-}
+    {                                                                          \
+        if (offset == 2)                                                       \
+        {                                                                      \
+            dest = _mm512_loadu_ps(base);                                      \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
+            __m128 _low, _high, _tmp;                                          \
+            __m256 _256low, _256high;                                          \
+            _low = _mm_loadu_ps(base);                                         \
+            _tmp = _mm_loadu_ps((base) + (offset));                            \
+            _low = _mm_shuffle_ps(_low, _tmp, 68);                             \
+            _high = _mm_loadu_ps((base) + 2 * (offset));                       \
+            _tmp = _mm_loadu_ps((base) + 3 * (offset));                        \
+            _high = _mm_shuffle_ps(_high, _tmp, 68);                           \
+            _256low =                                                          \
+                _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _high, 1);  \
+            _low = _mm_loadu_ps((base) + 4 * (offset));                        \
+            _tmp = _mm_loadu_ps((base) + 5 * (offset));                        \
+            _low = _mm_shuffle_ps(_low, _tmp, 68);                             \
+            _high = _mm_loadu_ps((base) + 6 * (offset));                       \
+            _high = _mm_loadh_pi(_high, (__m64 *)((base) + 7 * (offset)));     \
+            _256high = _mm256_insertf128_ps(_mm256_castps128_ps256(_low),      \
+                                             _high, 1);                        \
+            dest = _mm512_insertf32x8(_mm512_castps256_ps512(_256low),         \
+                                      _256high, 1);                            \
+        }                                                                      \
+    }
 
 /**
  * @brief store eight complex numbers(real,imaginary) of 32 bit single precision
@@ -179,21 +189,28 @@ static const union data_union_512
 // Cost: {fma: 0, mul: 0, add: 0, move: 8, perm: 0, other: 3}
 #define SCATTER8_512_S(base, offset, src)                                      \
 {                                                                              \
-    __m256 _256high = _mm512_extractf32x8_ps(src, 1);                          \
-    __m256 _256low = _mm512_castps512_ps256(src);                              \
-    __m128 _high, _low;                                                        \
-    _high = _mm256_extractf128_ps(_256low, 1);                                 \
-    _low = _mm256_castps256_ps128(_256low);                                    \
-    _mm_storel_pi((__m64 *)(base), _low);                                      \
-    _mm_storeh_pi((__m64 *)((base) + (offset)), _low);                         \
-    _mm_storel_pi((__m64 *)((base) + 2 * (offset)), _high);                    \
-    _mm_storeh_pi((__m64 *)((base) + 3 * (offset)), _high);                    \
-    _high = _mm256_extractf128_ps(_256high, 1);                                \
-    _low = _mm256_castps256_ps128(_256high);                                   \
-    _mm_storel_pi((__m64 *)((base) + 4 * (offset)), _low);                     \
-    _mm_storeh_pi((__m64 *)((base) + 5 * (offset)), _low);                     \
-    _mm_storel_pi((__m64 *)((base) + 6 * (offset)), _high);                    \
-    _mm_storeh_pi((__m64 *)((base) + 7 * (offset)), _high);                    \
+    if (offset == 2)                                                           \
+    {                                                                          \
+        _mm512_storeu_ps(base, src);                                           \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        __m256 _256high = _mm512_extractf32x8_ps(src, 1);                      \
+        __m256 _256low = _mm512_castps512_ps256(src);                          \
+        __m128 _high, _low;                                                    \
+        _high = _mm256_extractf128_ps(_256low, 1);                             \
+        _low = _mm256_castps256_ps128(_256low);                                \
+        _mm_storel_pi((__m64 *)(base), _low);                                  \
+        _mm_storeh_pi((__m64 *)((base) + (offset)), _low);                     \
+        _mm_storel_pi((__m64 *)((base) + 2 * (offset)), _high);                \
+        _mm_storeh_pi((__m64 *)((base) + 3 * (offset)), _high);                \
+        _high = _mm256_extractf128_ps(_256high, 1);                            \
+        _low = _mm256_castps256_ps128(_256high);                               \
+        _mm_storel_pi((__m64 *)((base) + 4 * (offset)), _low);                 \
+        _mm_storeh_pi((__m64 *)((base) + 5 * (offset)), _low);                 \
+        _mm_storel_pi((__m64 *)((base) + 6 * (offset)), _high);                \
+        _mm_storeh_pi((__m64 *)((base) + 7 * (offset)), _high);                \
+    }                                                                          \
 }
 
 /**
@@ -206,15 +223,24 @@ static const union data_union_512
 // Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 0, other: 3}
 #define GATHER4_512_D(base, offset, dest)                                      \
 {                                                                              \
-    __m128d _low, _high;                                                       \
-    __m256d _256low, _256high;                                                 \
-    _low = _mm_loadu_pd(base);                                                 \
-    _high = _mm_loadu_pd((base) + (offset));                                   \
-    _256low = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);    \
-    _low = _mm_loadu_pd((base) + offset * 2);                                  \
-    _high = _mm_loadu_pd((base) + offset * 3);                                 \
-    _256high = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);   \
-    dest = _mm512_insertf64x4(_mm512_castpd256_pd512(_256low), _256high, 1);   \
+    if (offset == 2)                                                           \
+    {                                                                          \
+        dest = _mm512_loadu_pd(base);                                          \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        __m128d _low, _high;                                                   \
+        __m256d _256low, _256high;                                             \
+        _low = _mm_loadu_pd(base);                                             \
+        _high = _mm_loadu_pd((base) + (offset));                               \
+        _256low = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);\
+        _low = _mm_loadu_pd((base) + offset * 2);                              \
+        _high = _mm_loadu_pd((base) + offset * 3);                             \
+        _256high =                                                             \
+            _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);      \
+        dest = _mm512_insertf64x4(_mm512_castpd256_pd512(_256low),             \
+                                    _256high, 1);                              \
+    }                                                                          \
 }
 
 /**
@@ -227,17 +253,24 @@ static const union data_union_512
 // Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 0, other: 3}
 #define SCATTER4_512_D(base, offset, src)                                      \
 {                                                                              \
-    __m256d _m256high = _mm512_extractf64x4_pd(src, 1);                        \
-    __m256d _m256low = _mm512_castpd512_pd256(src);                            \
-    __m128d _low, _high;                                                       \
-    _high = _mm256_extractf128_pd(_m256low, 1);                                \
-    _low = _mm256_castpd256_pd128(_m256low);                                   \
-    _mm_storeu_pd(base, _low);                                                 \
-    _mm_storeu_pd((base) + offset, _high);                                     \
-    _high = _mm256_extractf128_pd(_m256high, 1);                               \
-    _low = _mm256_castpd256_pd128(_m256high);                                  \
-    _mm_storeu_pd((base) + 2 * offset, _low);                                  \
-    _mm_storeu_pd((base) + 3 * offset, _high);                                 \
+    if (offset == 2)                                                           \
+    {                                                                          \
+        _mm512_storeu_pd(base, src);                                           \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        __m256d _m256high = _mm512_extractf64x4_pd(src, 1);                    \
+        __m256d _m256low = _mm512_castpd512_pd256(src);                        \
+        __m128d _low, _high;                                                   \
+        _high = _mm256_extractf128_pd(_m256low, 1);                            \
+        _low = _mm256_castpd256_pd128(_m256low);                               \
+        _mm_storeu_pd(base, _low);                                             \
+        _mm_storeu_pd((base) + offset, _high);                                 \
+        _high = _mm256_extractf128_pd(_m256high, 1);                           \
+        _low = _mm256_castpd256_pd128(_m256high);                              \
+        _mm_storeu_pd((base) + 2 * offset, _low);                              \
+        _mm_storeu_pd((base) + 3 * offset, _high);                             \
+    }                                                                          \
 }
 
 // Cost: {fma: 1, mul: 2, add: 0, move: 6, perm: 4, other: 3}

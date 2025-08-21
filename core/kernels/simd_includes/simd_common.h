@@ -54,8 +54,15 @@
 // Cost: {fma: 0, mul: 0, add: 0, move: 2, perm: 0, other: 0}
 #define GATHER2_128_S(base, offset, dest)                                      \
 {                                                                              \
-    dest = _mm_loadu_ps(base);                                                 \
-    dest = _mm_loadh_pi(dest, (__m64 *)((base) + (offset)));                   \
+    if (offset == 2)                                                           \
+    {                                                                          \
+        dest = _mm_loadu_ps(base);                                             \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        dest = _mm_loadu_ps(base);                                             \
+        dest = _mm_loadh_pi(dest, (__m64 *)((base) + (offset)));               \
+    }                                                                          \
 }
 
 /**
@@ -67,8 +74,15 @@
 // Cost: {fma: 0, mul: 0, add: 0, move: 2, perm: 0, other: 0}
 #define SCATTER2_128_S(base, offset, src)                                      \
 {                                                                              \
-    _mm_storel_pi((__m64 *)(base), src);                                       \
-    _mm_storeh_pi((__m64 *)((base) + (offset)), src);                          \
+    if (offset == 2)                                                           \
+    {                                                                          \
+        _mm_storeu_ps(base, src);                                              \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        _mm_storel_pi((__m64 *)(base), src);                                   \
+        _mm_storeh_pi((__m64 *)((base) + (offset)), src);                      \
+    }                                                                          \
 }
 
 /**
@@ -147,13 +161,20 @@
 // Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 1, other: 1}
 #define GATHER4_256_S(base, offset, dest)                                      \
 {                                                                              \
-    __m128 _low, _high, _tmp;                                                  \
-    _low = _mm_loadu_ps(base);                                                 \
-    _tmp = _mm_loadu_ps((base) + (offset));                                    \
-    _low = _mm_shuffle_ps(_low, _tmp, 68);                                     \
-    _high = _mm_loadu_ps((base) + 2 * (offset));                               \
-    _high = _mm_loadh_pi(_high, (__m64 *)((base) + 3 * (offset)));             \
-    dest = _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _high, 1);       \
+    if (offset == 2)                                                           \
+    {                                                                          \
+        dest = _mm256_loadu_ps(base);                                          \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        __m128 _low, _high, _tmp;                                              \
+        _low = _mm_loadu_ps(base);                                             \
+        _tmp = _mm_loadu_ps((base) + (offset));                                \
+        _low = _mm_shuffle_ps(_low, _tmp, 68);                                 \
+        _high = _mm_loadu_ps((base) + 2 * (offset));                           \
+        _high = _mm_loadh_pi(_high, (__m64 *)((base) + 3 * (offset)));         \
+        dest = _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _high, 1);   \
+    }                                                                          \
 }
 
 /**
@@ -166,12 +187,19 @@
 // Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 0, other: 1}
 #define SCATTER4_256_S(base, offset, src)                                      \
 {                                                                              \
-    __m128 _high = _mm256_extractf128_ps(src, 1);                              \
-    __m128 _low = _mm256_castps256_ps128(src);                                 \
-    _mm_storel_pi((__m64 *)(base), _low);                                      \
-    _mm_storeh_pi((__m64 *)((base) + (offset)), _low);                         \
-    _mm_storel_pi((__m64 *)((base) + 2 * (offset)), _high);                    \
-    _mm_storeh_pi((__m64 *)((base) + 3 * (offset)), _high);                    \
+    if (offset == 2)                                                           \
+    {                                                                          \
+        _mm256_storeu_ps(base, src);                                           \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        __m128 _high = _mm256_extractf128_ps(src, 1);                          \
+        __m128 _low = _mm256_castps256_ps128(src);                             \
+        _mm_storel_pi((__m64 *)(base), _low);                                  \
+        _mm_storeh_pi((__m64 *)((base) + (offset)), _low);                     \
+        _mm_storel_pi((__m64 *)((base) + 2 * (offset)), _high);                \
+        _mm_storeh_pi((__m64 *)((base) + 3 * (offset)), _high);                \
+    }                                                                          \
 }
 
 /**
@@ -184,10 +212,17 @@
 // Cost: {fma: 0, mul: 0, add: 0, move: 2, perm: 0, other: 1}
 #define GATHER2_256_D(base, offset, dest)                                      \
 {                                                                              \
-    __m128d _low, _high;                                                       \
-    _low = _mm_loadu_pd(base);                                                 \
-    _high = _mm_loadu_pd((base) + (offset));                                   \
-    dest = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);       \
+    if (offset == 2)                                                           \
+    {                                                                          \
+        dest = _mm256_loadu_pd(base);                                          \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        __m128d _low, _high;                                                   \
+        _low = _mm_loadu_pd(base);                                             \
+        _high = _mm_loadu_pd((base) + (offset));                               \
+        dest = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);   \
+    }                                                                          \
 }
 
 /**
@@ -200,10 +235,17 @@
 // Cost: {fma: 0, mul: 0, add: 0, move: 2, perm: 0, other: 1}
 #define SCATTER2_256_D(base, offset, src)                                      \
 {                                                                              \
-    __m128d _high = _mm256_extractf128_pd(src, 1);                             \
-    __m128d _low = _mm256_castpd256_pd128(src);                                \
-    _mm_storeu_pd(base, _low);                                                 \
-    _mm_storeu_pd((base) + offset, _high);                                     \
+    if (offset == 2)                                                           \
+    {                                                                          \
+        _mm256_storeu_pd(base, src);                                           \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        __m128d _high = _mm256_extractf128_pd(src, 1);                         \
+        __m128d _low = _mm256_castpd256_pd128(src);                            \
+        _mm_storeu_pd(base, _low);                                             \
+        _mm_storeu_pd((base) + offset, _high);                                 \
+    }                                                                          \
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 2, other: 0}
