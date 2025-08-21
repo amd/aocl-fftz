@@ -80,6 +80,7 @@ static VOID twid_fft6c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
     DOUBLE *tw = (DOUBLE *)(tws->TW);
     UINTP cols = tws->cols;
+    UINTP load_multi_cols = tws->load_multi_cols;
     DOUBLE twr, twi;
 
     if (flag) // non-zero flag indicates that the fft is inverse
@@ -110,7 +111,7 @@ static VOID twid_fft6c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Input point 2: x(1)
         DOUBLE v2r_t = in_r[in_strides[1]];
         DOUBLE v2i_t = in_i[in_strides[1]];
-        UINTP twid_addr2 = DATA_STRIDE * (1 * cols + cnt);
+        UINTP twid_addr2 = DATA_STRIDE * (1 * cols + cnt * load_multi_cols);
         twr = tw[twid_addr2];
         twi = tw[1 + twid_addr2];
         v2r = v2r_t * twr - v2i_t * twi;
@@ -119,7 +120,7 @@ static VOID twid_fft6c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Input point 3: x(2)
         DOUBLE v3r_t = in_r[in_strides[2]];
         DOUBLE v3i_t = in_i[in_strides[2]];
-        UINTP twid_addr3 = DATA_STRIDE * (2 * cols + cnt);
+        UINTP twid_addr3 = DATA_STRIDE * (2 * cols + cnt * load_multi_cols);
         twr = tw[twid_addr3];
         twi = tw[1 + twid_addr3];
         v3r = v3r_t * twr - v3i_t * twi;
@@ -128,7 +129,7 @@ static VOID twid_fft6c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Input point 4: x(3)
         DOUBLE v4r_t = in_r[in_strides[3]];
         DOUBLE v4i_t = in_i[in_strides[3]];
-        UINTP twid_addr4 = DATA_STRIDE * (3 * cols + cnt);
+        UINTP twid_addr4 = DATA_STRIDE * (3 * cols + cnt * load_multi_cols);
         twr = tw[twid_addr4];
         twi = tw[1 + twid_addr4];
         v4r = v4r_t * twr - v4i_t * twi;
@@ -137,7 +138,7 @@ static VOID twid_fft6c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Input point 5: x(4)
         DOUBLE v5r_t = in_r[in_strides[4]];
         DOUBLE v5i_t = in_i[in_strides[4]];
-        UINTP twid_addr5 = DATA_STRIDE * (4 * cols + cnt);
+        UINTP twid_addr5 = DATA_STRIDE * (4 * cols + cnt * load_multi_cols);
         twr = tw[twid_addr5];
         twi = tw[1 + twid_addr5];
         v5r = v5r_t * twr - v5i_t * twi;
@@ -146,7 +147,7 @@ static VOID twid_fft6c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Input point 6: x(5)
         DOUBLE v6r_t = in_r[in_strides[5]];
         DOUBLE v6i_t = in_i[in_strides[5]];
-        UINTP twid_addr6 = DATA_STRIDE * (5 * cols + cnt);
+        UINTP twid_addr6 = DATA_STRIDE * (5 * cols + cnt * load_multi_cols);
         twr = tw[twid_addr6];
         twi = tw[1 + twid_addr6];
         v6r = v6r_t * twr - v6i_t * twi;
@@ -240,6 +241,7 @@ static VOID twid_fft6c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
     FLOAT *tw = (FLOAT *)(tws->TW);
     UINTP cols = tws->cols;
+    UINTP load_multi_cols = tws->load_multi_cols;
     FLOAT twr, twi;
 
     if (flag) // non-zero flag indicates that the fft is inverse
@@ -270,7 +272,7 @@ static VOID twid_fft6c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Input point 2: x(1)
         FLOAT v2r_t = in_r[in_strides[1]];
         FLOAT v2i_t = in_i[in_strides[1]];
-        UINTP twid_addr2 = DATA_STRIDE * (1 * cols + cnt);
+        UINTP twid_addr2 = DATA_STRIDE * (1 * cols + cnt * load_multi_cols);
         twr = tw[twid_addr2];
         twi = tw[1 + twid_addr2];
         v2r = v2r_t * twr - v2i_t * twi;
@@ -279,7 +281,7 @@ static VOID twid_fft6c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Input point 3: x(2)
         FLOAT v3r_t = in_r[in_strides[2]];
         FLOAT v3i_t = in_i[in_strides[2]];
-        UINTP twid_addr3 = DATA_STRIDE * (2 * cols + cnt);
+        UINTP twid_addr3 = DATA_STRIDE * (2 * cols + cnt * load_multi_cols);
         twr = tw[twid_addr3];
         twi = tw[1 + twid_addr3];
         v3r = v3r_t * twr - v3i_t * twi;
@@ -288,7 +290,7 @@ static VOID twid_fft6c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Input point 4: x(3)
         FLOAT v4r_t = in_r[in_strides[3]];
         FLOAT v4i_t = in_i[in_strides[3]];
-        UINTP twid_addr4 = DATA_STRIDE * (3 * cols + cnt);
+        UINTP twid_addr4 = DATA_STRIDE * (3 * cols + cnt * load_multi_cols);
         twr = tw[twid_addr4];
         twi = tw[1 + twid_addr4];
         v4r = v4r_t * twr - v4i_t * twi;
@@ -297,7 +299,7 @@ static VOID twid_fft6c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Input point 5: x(4)
         FLOAT v5r_t = in_r[in_strides[4]];
         FLOAT v5i_t = in_i[in_strides[4]];
-        UINTP twid_addr5 = DATA_STRIDE * (4 * cols + cnt);
+        UINTP twid_addr5 = DATA_STRIDE * (4 * cols + cnt * load_multi_cols);
         twr = tw[twid_addr5];
         twi = tw[1 + twid_addr5];
         v5r = v5r_t * twr - v5i_t * twi;
@@ -306,7 +308,7 @@ static VOID twid_fft6c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Input point 6: x(5)
         FLOAT v6r_t = in_r[in_strides[5]];
         FLOAT v6i_t = in_i[in_strides[5]];
-        UINTP twid_addr6 = DATA_STRIDE * (5 * cols + cnt);
+        UINTP twid_addr6 = DATA_STRIDE * (5 * cols + cnt * load_multi_cols);
         twr = tw[twid_addr6];
         twi = tw[1 + twid_addr6];
         v6r = v6r_t * twr - v6i_t * twi;

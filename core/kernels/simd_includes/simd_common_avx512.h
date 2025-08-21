@@ -274,11 +274,18 @@ static const union data_union_512
 }
 
 // Cost: {fma: 1, mul: 2, add: 0, move: 6, perm: 4, other: 3}
-#define ITW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col)    \
+#define ITW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
+                         load_multi_cols)                                      \
 {                                                                              \
     __m512d ones = _mm512_set1_pd(1.0);                                        \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
-    const __m512d twv = _mm512_loadu_pd((twbuf) + addr);                       \
+    __m512d twv;                                                               \
+    if ((load_multi_cols)) {                                                   \
+        twv = _mm512_loadu_pd((twbuf) + addr);                                 \
+    }                                                                          \
+    else {                                                                     \
+        twv = _mm512_broadcast_f64x2(_mm_loadu_pd((twbuf) + addr));            \
+    }                                                                          \
     __m512d tmp_in;                                                            \
     GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
     const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
@@ -289,11 +296,18 @@ static const union data_union_512
 }
 
 // Cost: {fma: 1, mul: 2, add: 0, move: 6, perm: 3, other: 3}
-#define TW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col)     \
+#define TW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
+                        load_multi_cols)                                       \
 {                                                                              \
     __m512d ones = _mm512_set1_pd(1.0);                                        \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
-    const __m512d twv = _mm512_loadu_pd((twbuf) + addr);                       \
+    __m512d twv;                                                               \
+    if ((load_multi_cols)) {                                                   \
+        twv = _mm512_loadu_pd((twbuf) + addr);                                 \
+    }                                                                          \
+    else {                                                                     \
+        twv = _mm512_broadcast_f64x2(_mm_loadu_pd((twbuf) + addr));            \
+    }                                                                          \
     __m512d tmp_in;                                                            \
     GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
     const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
@@ -304,11 +318,19 @@ static const union data_union_512
 }
 
 // Cost: {fma: 1, mul: 2, add: 0, move: 10, perm: 9, other: 3}
-#define ITW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col)    \
+#define ITW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
+                         load_multi_cols)                                      \
 {                                                                              \
     __m512 ones = _mm512_set1_ps(1.0);                                         \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
-    const __m512 twv = _mm512_loadu_ps((twbuf) + addr);                        \
+    __m512 twv;                                                                \
+    if ((load_multi_cols)) {                                                   \
+        twv = _mm512_loadu_ps((twbuf) + addr);                                 \
+    }                                                                          \
+    else {                                                                     \
+        twv = _mm512_broadcast_f32x4(_mm_loadl_pi(_mm_setzero_ps(),            \
+                                                  (__m64 *)((twbuf) + addr))); \
+    }                                                                          \
     __m512 tmp_in;                                                             \
     GATHER8_512_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
     __m512 tmp_0 = _mm512_mul_ps(tmp_in, twv);                                 \
@@ -321,11 +343,19 @@ static const union data_union_512
 }
 
 // Cost: {fma: 1, mul: 2, add: 0, move: 10, perm: 8, other: 3}
-#define TW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col)     \
+#define TW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
+                        load_multi_cols)                                       \
 {                                                                              \
     __m512 ones = _mm512_set1_ps(1.0);                                         \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
-    const __m512 twv = _mm512_loadu_ps((twbuf) + addr);                        \
+    __m512 twv;                                                                \
+    if ((load_multi_cols)) {                                                   \
+        twv = _mm512_loadu_ps((twbuf) + addr);                                 \
+    }                                                                          \
+    else {                                                                     \
+        twv = _mm512_broadcast_f32x4(_mm_loadl_pi(_mm_setzero_ps(),            \
+                                                  (__m64 *)((twbuf) + addr))); \
+    }                                                                          \
     __m512 tmp_in;                                                             \
     GATHER8_512_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
     __m512 tmp_0 = _mm512_mul_ps(tmp_in, twv);                                 \

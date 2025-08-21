@@ -249,7 +249,8 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 2, other: 0}
-#define ITW_GATHER_128_D(gbase, starr, stidx, offset, gdest, twbuf, n, col)    \
+#define ITW_GATHER_128_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
+                         load_multi_cols /* unused */)                         \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     const __m128d cd = _mm_loadu_pd((twbuf) + addr);                           \
@@ -262,7 +263,8 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 1, other: 0}
-#define TW_GATHER_128_D(gbase, starr, stidx, offset, gdest, twbuf, n, col)     \
+#define TW_GATHER_128_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
+                        load_multi_cols /* unused */)                          \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     const __m128d cd = _mm_loadu_pd((twbuf) + addr);                           \
@@ -275,10 +277,19 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 4, other: 1}
-#define ITW_GATHER_256_D(gbase, starr, stidx, offset, gdest, twbuf, n, col)    \
+#define ITW_GATHER_256_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
+                         load_multi_cols)                                      \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
-    const __m256d twv = _mm256_loadu_pd((twbuf) + addr);                       \
+    __m256d twv;                                                               \
+    if ((load_multi_cols))                                                     \
+    {                                                                          \
+        twv = _mm256_loadu_pd((twbuf) + addr);                                 \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = _mm256_broadcast_pd((__m128d *)((twbuf) + addr));                \
+    }                                                                          \
     __m256d tmp_in;                                                            \
     GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
     const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
@@ -289,10 +300,19 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 3, other: 1}
-#define TW_GATHER_256_D(gbase, starr, stidx, offset, gdest, twbuf, n, col)     \
+#define TW_GATHER_256_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
+                        load_multi_cols)                                       \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
-    const __m256d twv = _mm256_loadu_pd((twbuf) + addr);                       \
+    __m256d twv;                                                               \
+    if ((load_multi_cols))                                                     \
+    {                                                                          \
+        twv = _mm256_loadu_pd((twbuf) + addr);                                 \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = _mm256_broadcast_pd((__m128d *)((twbuf) + addr));                \
+    }                                                                          \
     __m256d tmp_in;                                                            \
     GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
     const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
@@ -303,10 +323,19 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 5, perm: 7, other: 1}
-#define ITW_GATHER_256_S(gbase, starr, stidx, offset, gdest, twbuf, n, col)    \
+#define ITW_GATHER_256_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
+                         load_multi_cols)                                      \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
-    const __m256 twv = _mm256_loadu_ps((twbuf) + addr);                        \
+    __m256 twv;                                                                \
+    if ((load_multi_cols))                                                     \
+    {                                                                          \
+        twv = _mm256_loadu_ps((twbuf) + addr);                                 \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = (__m256)(_mm256_broadcast_sd((DOUBLE *)((twbuf) + addr)));       \
+    }                                                                          \
     __m256 tmp_in;                                                             \
     GATHER4_256_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
     __m256 tmp_0 = _mm256_mul_ps(tmp_in, twv);                                 \
@@ -319,10 +348,19 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 5, perm: 6, other: 1}
-#define TW_GATHER_256_S(gbase, starr, stidx, offset, gdest, twbuf, n, col)     \
+#define TW_GATHER_256_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
+                        load_multi_cols)                                       \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
-    const __m256 twv = _mm256_loadu_ps((twbuf) + addr);                        \
+    __m256 twv;                                                                \
+    if ((load_multi_cols))                                                     \
+    {                                                                          \
+        twv = _mm256_loadu_ps((twbuf) + addr);                                 \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = (__m256)(_mm256_broadcast_sd((DOUBLE *)((twbuf) + addr)));       \
+    }                                                                          \
     __m256 tmp_in;                                                             \
     GATHER4_256_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
     __m256 tmp_0 = _mm256_mul_ps(tmp_in, twv);                                 \
@@ -335,10 +373,19 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 6, other: 0}
-#define ITW_GATHER_128_S(gbase, starr, stidx, offset, gdest, twbuf, n, col)    \
+#define ITW_GATHER_128_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
+                         load_multi_cols)                                      \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
-    const __m128 twv = _mm_loadu_ps((twbuf) + addr);                           \
+    __m128 twv;                                                                \
+    if ((load_multi_cols))                                                     \
+    {                                                                          \
+        twv = _mm_loadu_ps((twbuf) + addr);                                    \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = (__m128)(_mm_loaddup_pd((DOUBLE *)((twbuf) + addr)));            \
+    }                                                                          \
     __m128 tmp_in;                                                             \
     GATHER2_128_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
     __m128 tmp_0 = _mm_mul_ps(tmp_in, twv);                                    \
@@ -351,10 +398,19 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 5, other: 0}
-#define TW_GATHER_128_S(gbase, starr, stidx, offset, gdest, twbuf, n, col)     \
+#define TW_GATHER_128_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
+                        load_multi_cols)                                       \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
-    const __m128 twv = _mm_loadu_ps((twbuf) + addr);                           \
+    __m128 twv;                                                                \
+    if ((load_multi_cols))                                                     \
+    {                                                                          \
+        twv = _mm_loadu_ps((twbuf) + addr);                                    \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = (__m128)(_mm_loaddup_pd((DOUBLE *)((twbuf) + addr)));            \
+    }                                                                          \
     __m128 tmp_in;                                                             \
     GATHER2_128_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
     __m128 tmp_0 = _mm_mul_ps(tmp_in, twv);                                    \
@@ -367,7 +423,8 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 6, other: 0}
-#define ITW_GATHER_LOW_128_S(gbase, starr, stidx, gdest, twbuf, n, col)        \
+#define ITW_GATHER_LOW_128_S(gbase, starr, stidx, gdest, twbuf, n, col,        \
+                             load_multi_cols /* unused */)                     \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m128 tmp_in, twv;                                                        \
@@ -383,7 +440,8 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 5, other: 0}
-#define TW_GATHER_LOW_128_S(gbase, starr, stidx, gdest, twbuf, n, col)         \
+#define TW_GATHER_LOW_128_S(gbase, starr, stidx, gdest, twbuf, n, col,         \
+                            load_multi_cols /* unused */)                      \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m128 tmp_in, twv;                                                        \

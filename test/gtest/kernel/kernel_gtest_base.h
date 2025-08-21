@@ -292,6 +292,7 @@ class AoclfftzKernelTestBase
         tws.TW = twiddle_buffer;
         tws.twiddle_buf_ptr = twiddle_buffer;
         tws.cols = offset;
+        tws.load_multi_cols = 1; // true by default
 
         // perform the twiddle multiplication on the kernel's input buffer
         // this is to simulate the condition where the m (offset) fft has been

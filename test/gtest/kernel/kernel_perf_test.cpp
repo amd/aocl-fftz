@@ -208,6 +208,7 @@ class PerformanceTest : public benchmark::Fixture {
         tws.TW = twiddle_buffer;
         tws.twiddle_buf_ptr = twiddle_buffer;
         tws.cols = batches;
+        tws.load_multi_cols = 1; // true by default
 
         for (auto _ : state)
         {

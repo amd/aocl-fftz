@@ -194,6 +194,7 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
                             DATA_STRIDE * dt_bytes * batch * num_sets),
             .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
             .cols = sol->twiddle->cols,
+            .load_multi_cols = 1, // use different twiddle values across batches
         };
 
         INTP v_istride = batch * v_in_stride;
@@ -211,6 +212,7 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
                         DATA_STRIDE * dt_bytes * num_iters * num_sets),
         .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
         .cols = sol->twiddle->cols,
+        .load_multi_cols = 1, // use different twiddle values across batches
     };
     if (rem_iters)
     {

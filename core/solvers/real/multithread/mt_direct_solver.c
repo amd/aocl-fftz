@@ -889,7 +889,8 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                                                        group_num)),
                                     .twiddle_buf_ptr =
                                         sol->twiddle->twiddle_buf_ptr,
-                                    .cols = sol->twiddle->cols
+                                    .cols = sol->twiddle->cols,
+                                    .load_multi_cols = 1, // use different twiddle values across batches
                                 };
 
                                 INTP v_istride = group_num * v_in_stride_c2c;
@@ -914,6 +915,7 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
                                     .twiddle_buf_ptr =
                                         sol->twiddle->twiddle_buf_ptr,
                                     .cols = sol->twiddle->cols,
+                                    .load_multi_cols = 1, // use different twiddle values across batches
                                 };
                                 INTP v_istride = num_iters_c2c
                                                  * v_in_stride_c2c;

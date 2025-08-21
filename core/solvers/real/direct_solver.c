@@ -626,7 +626,9 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
                         MOVE_ADDR(sol->twiddle->TW, group_id * no_of_groups *
                                                         DATA_STRIDE * dt_bytes),
                     .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
-                    .cols = sol->twiddle->cols};
+                    .cols = sol->twiddle->cols,
+                    .load_multi_cols = 1, // use different twiddle values across batches
+                };
 
                 // Kernel execution
                 kernel_c2c(in, MOVE_ADDR(in, dt_bytes), out,

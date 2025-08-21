@@ -66,6 +66,7 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
     aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
     FLOAT *tw = (FLOAT *)(tws->TW);
     UINTP cols = tws->cols;
+    UINTP load_multi_cols = tws->load_multi_cols;
 
     INTP N = n / NUM_SETS_S;
     INTP remaining_sets = n % NUM_SETS_S;
@@ -74,16 +75,19 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP do_256_whole = (INTP)(remaining_sets >= NUM_SETS_256_S);
     INTP do_128_whole =
         (INTP)(remaining_sets % NUM_SETS_256_S >= NUM_SETS_128_S);
-    INTP cnt_256 = N * NUM_SETS_512_S;
-    INTP cnt_128 = N * NUM_SETS_512_S + do_256_whole * NUM_SETS_256_S;
-    INTP cnt_128_low = N * NUM_SETS_512_S + do_256_whole * NUM_SETS_256_S +
-                       do_128_whole * NUM_SETS_128_S;
+    INTP cnt_256 = load_multi_cols * (N * NUM_SETS_512_S);
+    INTP cnt_128 =
+        load_multi_cols * (N * NUM_SETS_512_S + do_256_whole * NUM_SETS_256_S);
+    INTP cnt_128_low =
+        load_multi_cols * (N * NUM_SETS_512_S + do_256_whole * NUM_SETS_256_S +
+                           do_128_whole * NUM_SETS_128_S);
 #elif defined(KERNEL_USE_AVX256)
     INTP do_128_whole = (INTP)(remaining_sets >= NUM_SETS_128_S);
-    INTP cnt_128 = N * NUM_SETS_256_S;
-    INTP cnt_128_low = N * NUM_SETS_256_S + do_128_whole * NUM_SETS_128_S;
+    INTP cnt_128 = load_multi_cols * (N * NUM_SETS_256_S);
+    INTP cnt_128_low =
+        load_multi_cols * (N * NUM_SETS_256_S + do_128_whole * NUM_SETS_128_S);
 #elif defined(KERNEL_USE_AVX128)
-    INTP cnt_128_low = N * NUM_SETS_128_S;
+    INTP cnt_128_low = load_multi_cols * (N * NUM_SETS_128_S);
 #endif
 
     INTP count;
@@ -99,12 +103,14 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
         if (flag)
         {
             ITW_GATHER_S(curr_in, in_strides, 1, v_in_stride, v_in1, tw, cols,
-                         (count * NUM_SETS_S));
+                         (count * load_multi_cols * NUM_SETS_S),
+                         load_multi_cols);
         }
         else
         {
             TW_GATHER_S(curr_in, in_strides, 1, v_in_stride, v_in1, tw, cols,
-                        (count * NUM_SETS_S));
+                        (count * load_multi_cols * NUM_SETS_S),
+                        load_multi_cols);
         }
 
         GATHER_S(curr_in, v_in_stride, v_in0);
@@ -137,12 +143,12 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
         if (flag)
         {
             ITW_GATHER_256_S(curr_in, in_strides, 1, v_in_stride, v_in1, tw,
-                             cols, cnt_256);
+                             cols, cnt_256, load_multi_cols);
         }
         else
         {
             TW_GATHER_256_S(curr_in, in_strides, 1, v_in_stride, v_in1, tw,
-                            cols, cnt_256);
+                            cols, cnt_256, load_multi_cols);
         }
 
         GATHER4_256_S(curr_in, v_in_stride, v_in0);
@@ -173,12 +179,12 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
         if (flag)
         {
             ITW_GATHER_128_S(curr_in, in_strides, 1, v_in_stride, v_in1, tw,
-                             cols, cnt_128);
+                             cols, cnt_128, load_multi_cols);
         }
         else
         {
             TW_GATHER_128_S(curr_in, in_strides, 1, v_in_stride, v_in1, tw,
-                            cols, cnt_128);
+                            cols, cnt_128, load_multi_cols);
         }
 
         GATHER2_128_S(curr_in, v_in_stride, v_in0);
@@ -208,12 +214,12 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
         if (flag)
         {
             ITW_GATHER_LOW_128_S(curr_in, in_strides, 1, v_in1, tw, cols,
-                                 cnt_128_low);
+                                 cnt_128_low, load_multi_cols);
         }
         else
         {
             TW_GATHER_LOW_128_S(curr_in, in_strides, 1, v_in1, tw, cols,
-                                cnt_128_low);
+                                cnt_128_low, load_multi_cols);
         }
 
         LD_LOW_128_S(curr_in, v_in0);
@@ -256,6 +262,7 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
     aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
     DOUBLE *tw = (DOUBLE *)(tws->TW);
     UINTP cols = tws->cols;
+    UINTP load_multi_cols = tws->load_multi_cols;
 
     INTP N = n / NUM_SETS_D;
     INTP count;
@@ -284,12 +291,14 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
         if (flag)
         {
             ITW_GATHER_D(curr_in, in_strides, 1, v_in_stride, v_in1, tw, cols,
-                         (count * NUM_SETS_D));
+                         (count * load_multi_cols * NUM_SETS_D),
+                         load_multi_cols);
         }
         else
         {
             TW_GATHER_D(curr_in, in_strides, 1, v_in_stride, v_in1, tw, cols,
-                        (count * NUM_SETS_D));
+                        (count * load_multi_cols * NUM_SETS_D),
+                        load_multi_cols);
         }
 
         GATHER_D(curr_in, v_in_stride, v_in0);
@@ -322,12 +331,12 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
         if (flag)
         {
             ITW_GATHER_256_D(curr_in, in_strides, 1, v_in_stride, v_in1, tw,
-                             cols, cnt_256);
+                             cols, cnt_256, load_multi_cols);
         }
         else
         {
             TW_GATHER_256_D(curr_in, in_strides, 1, v_in_stride, v_in1, tw,
-                            cols, cnt_256);
+                            cols, cnt_256, load_multi_cols);
         }
 
         GATHER2_256_D(curr_in, v_in_stride, v_in0);
@@ -357,12 +366,12 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
         if (flag)
         {
             ITW_GATHER_128_D(curr_in, in_strides, 1, /* unused */ 0, v_in1, tw,
-                             cols, cnt_128);
+                             cols, cnt_128, load_multi_cols);
         }
         else
         {
             TW_GATHER_128_D(curr_in, in_strides, 1, /* unused */ 0, v_in1, tw,
-                            cols, cnt_128);
+                            cols, cnt_128, load_multi_cols);
         }
 
         LD_128_D(curr_in, v_in0);
