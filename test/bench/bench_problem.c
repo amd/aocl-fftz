@@ -425,6 +425,12 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         printf("ERROR: ND batched real problems are not supported");
         status = MAX(status, UNSUPPORTED_OPTION_ERROR);
     }
+    // TODO: Support ND real problems
+    else if (bench_params->dim_rank > 1 && bench_params->fft_type != C2C)
+    {
+        printf("ERROR: ND real problems are not supported");
+        status = MAX(status, UNSUPPORTED_OPTION_ERROR);
+    }
 
     if (status != PARSER_SUCCESS)
     {

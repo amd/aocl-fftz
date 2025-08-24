@@ -118,6 +118,10 @@ public:
     // Function to clean up the problem descriptor
     VOID cleanup_problem()
     {
+        /* Default value of is_inplace is 0,
+         * If flags are invalid, free the memory buffer based on default flags */
+        bool is_inplace = isValidFlags(problem->flags) ?
+                                    !(((problem->flags) >> (0)) & 0x1) : 0;
         if (problem == NULL)
         {
             return;
@@ -129,11 +133,11 @@ public:
                 delete[] problem->in;
                 problem->in = NULL;
             }
-            if (problem->out)
+            if (problem->out && !is_inplace)
             {
                 delete[] problem->out;
-                problem->out = NULL;
             }
+            problem->out = NULL;
             if (problem->dims)
             {
                 delete[] problem->dims;
@@ -147,6 +151,12 @@ public:
         }
     }
 
+    bool isValidFlags(UINT32 flags)
+    {
+        // Only bits 0, 2, 3 and 8 can be set; bit 1 must be 0
+        return (flags & 0b0010) == 0 && (flags & ~0b100001101) == 0;
+    }
+
     VOID get_inout_size(UINTP *in_size, UINTP *out_size)
     {
         in_size[0] = input_size;
@@ -155,7 +165,7 @@ public:
 
     // Function to create a sample problem for testing
     template<typename DataType, typename DimT>
-    VOID create_pdesc(bool is_forward = true)
+    VOID create_pdesc(bool is_forward = true, bool is_inplace = false)
     {
         if (problem == NULL)
         {
@@ -173,9 +183,17 @@ public:
                                                         "for dims or vecs!");
         }
         // Set flags based on transform direction
-        if (is_forward)
+        if (is_forward && is_inplace)
+        {
+            problem->flags = 0b0000;
+        }
+        else if (is_forward && !is_inplace)
         {
             problem->flags = 0b0001;
+        }
+        else if (!is_forward && is_inplace)
+        {
+            problem->flags = 0b0100;
         }
         else
         {
@@ -185,7 +203,7 @@ public:
         problem->dims[0].n = 10;
         problem->dims[0].in_stride = 1;
         problem->dims[0].out_stride = 1;
-        problem->dims[1].n = 20;
+        problem->dims[1].n = 30;
         problem->dims[1].in_stride = problem->dims[0].n *
                                                 problem->dims[0].in_stride;
         problem->dims[1].out_stride = problem->dims[0].n *
@@ -213,10 +231,20 @@ public:
             out_size += (problem->vecs[i].n) * (problem->vecs[i].out_stride);
         }
 
+        // Allocating input buffer
         input_size  = in_size * sizeof(DataType);
-        output_size = out_size * sizeof(DataType);
         problem->in  = new DataType[in_size];
-        problem->out = new DataType[out_size];
+        // Allocating output buffer
+        if (is_inplace)
+        {
+            output_size = input_size;
+            problem->out = problem->in;
+        }
+        else
+        {
+            output_size = out_size * sizeof(DataType);
+            problem->out = new DataType[out_size];
+        }
 
         if (problem->in == NULL || problem->out == NULL)
         {
@@ -228,9 +256,12 @@ public:
         {
             problem->in[i] = (DataType)i;
         }
-        for (INT32 i = 0; i < out_size; i++)
+        if (!is_inplace)
         {
-            problem->out[i] = (DataType)0.0;
+            for (INT32 i = 0; i < out_size; i++)
+            {
+                problem->out[i] = (DataType)0.0;
+            }
         }
         problem->pthr_fft.dynamic_load_model = DEFAULT_DYNAMIC_LOAD_MODEL;
         problem->pthr_fft.num_threads = DEFAULT_NUM_THREADS;
@@ -241,26 +272,26 @@ public:
     }
 
     // Calls the appropriate sample problem creation based on problem type
-    VOID create_default_pdesc(bool is_forward = true)
+    VOID create_default_pdesc(bool is_forward = true, bool is_inplace = false)
     {
         if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_f>::value)
         {
-            create_pdesc<FLOAT, aoclfftz_dim_t>(is_forward);
+            create_pdesc<FLOAT, aoclfftz_dim_t>(is_forward, is_inplace);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_d>::value)
         {
-            create_pdesc<DOUBLE, aoclfftz_dim_t>(is_forward);
+            create_pdesc<DOUBLE, aoclfftz_dim_t>(is_forward, is_inplace);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_f_64_>::value)
         {
-            create_pdesc<FLOAT, aoclfftz_dim_t_64_>(is_forward);
+            create_pdesc<FLOAT, aoclfftz_dim_t_64_>(is_forward, is_inplace);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_d_64_>::value)
         {
-            create_pdesc<DOUBLE, aoclfftz_dim_t_64_>(is_forward);
+            create_pdesc<DOUBLE, aoclfftz_dim_t_64_>(is_forward, is_inplace);
         }
         else
         {
@@ -354,7 +385,7 @@ public:
     {
         cleanup_problem();
         create_default_pdesc(is_forward);
-        
+
         handle = aoclfftz_setup(problem);
 
         // invoke execute API

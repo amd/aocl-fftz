@@ -50,7 +50,14 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_FLAGS)
 {
     for (auto flags : this->get_supported_flags())
     {
+        this->cleanup_problem();
+        bool is_fwd = (((flags) >> (2)) & 0x1);
+        bool is_inplace = !(((flags) >> (0)) & 0x1);
         this->problem->flags = flags;
+        /* While changing the flag to test, problem descriptor must be changed
+         * as well to make sure that problem descriptor is valid and based on
+         * updated flags. */
+        this->create_default_pdesc(is_fwd, is_inplace);
         this->run_setup_and_validate(VALID);
     }
 }
@@ -81,9 +88,16 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_COMBINE)
                 {
                     for (auto dynamic_load_model : {1})
                     {
+                        bool is_fwd = (((flags) >> (2)) & 0x1);
+                        bool is_inplace = !(((flags) >> (0)) & 0x1);
+                        /* While changing the flag to test, problem descriptor
+                         * must be changed as well to make sure that problem
+                         * descriptor is valid and based on updated flags. */
+                        this->cleanup_problem();
+                        this->problem->flags = flags;
+                        this->create_default_pdesc(is_fwd, is_inplace);
                         this->problem->cntrl_params.opt_off = optOff;
                         this->problem->cntrl_params.opt_level = optLevel;
-                        this->problem->flags = flags;
                         this->problem->pthr_fft.num_threads = num_threads;
                         this->problem->pthr_fft.dynamic_load_model =
                                                             dynamic_load_model;
@@ -144,6 +158,8 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_FLAGS)
 {
     for (auto flags : unsupported_flags)
     {
+        /* No need to call `create_default_pdesc()` for unsupported flags,
+         * problem descriptor has default initialization. */
         this->problem->flags = flags;
         this->run_setup_and_validate(INVALID);
     }
@@ -151,7 +167,14 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_FLAGS)
 
 TYPED_TEST_P(AoclfftzAPITest, NTEST_INPLACE_IO_STRIDES)
 {
+    /* While changing the flag to test, problem descriptor must be changed
+     * as well to make sure that problem descriptor is valid and based on
+     * updated flags. */
+    this->cleanup_problem();
     this->problem->flags = 0b0000; // Set flags to in-place
+    bool is_fwd = (((this->problem->flags) >> (2)) & 0x1);
+    bool is_inplace = !(((this->problem->flags) >> (0)) & 0x1);
+    this->create_default_pdesc(is_fwd, is_inplace);
     // Setting non-identical input and output stride values, expecting
     // setup to fail, as inplace problems require same input & output strides
     this->problem->dims[2].in_stride = 200;

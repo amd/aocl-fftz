@@ -62,11 +62,19 @@
                     "in_stride (%d) != out_stride (%d)",                       \
                     i, (INT32)dims[i].in_stride, (INT32)dims[i].out_stride);   \
                 errno = AOCLFFTZ_INVALID_INPUT;                                \
+                goto validation_exit;                                          \
             }                                                                  \
         }                                                                      \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        if (dim_rank != 1)                                                     \
+        {                                                                      \
+            AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "N-Dimensional real problems "  \
+                                   "are not supported");                       \
+            errno = AOCLFFTZ_INVALID_INPUT;                                    \
+            goto validation_exit;                                              \
+        }                                                                      \
         /* Validate R2C/C2R dims */                                            \
         for (INT32 i = 0; i < dim_rank; i++)                                   \
         {                                                                      \
@@ -76,6 +84,7 @@
                     "in_stride (%d) != out_stride (%d)",                       \
                     i, (INT32)dims[i].in_stride, (INT32)dims[i].out_stride);   \
                 errno = AOCLFFTZ_INVALID_INPUT;                                \
+                goto validation_exit;                                          \
             }                                                                  \
             else if((i > 0) && (dims[i].in_stride * out_scale !=               \
                         dims[i].out_stride * in_scale))                        \
@@ -101,6 +110,7 @@
                         (INT32)(dims[i].in_stride * out_scale));               \
                 }                                                              \
                 errno = AOCLFFTZ_INVALID_INPUT;                                \
+                goto validation_exit;                                          \
             }                                                                  \
         }                                                                      \
     }                                                                          \
@@ -133,12 +143,42 @@
                     (INT32)(vecs[i].in_stride * out_scale));                   \
             }                                                                  \
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
+            goto validation_exit;                                              \
         }                                                                      \
+    }                                                                          \
+}
+
+#define VALIDATE_BUFFERS(in, out, out_of_place, errno)                         \
+{                                                                              \
+    if (!out_of_place &&  (in != out))                                         \
+    {                                                                          \
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "input and output buffer must be "  \
+                                           "the same for in-place problems");  \
+        errno = AOCLFFTZ_INVALID_INPUT;                                        \
+        goto validation_exit;                                                  \
+    }                                                                          \
+    else if (out_of_place && (in == out))                                      \
+    {                                                                          \
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "input and output buffer cannot be "\
+                                      "the same for out-of-place problems");   \
+        errno = AOCLFFTZ_INVALID_INPUT;                                        \
+        goto validation_exit;                                                  \
     }                                                                          \
 }
 
 static inline INT32 validate_flags(UINT32 flags)
 {
+    // Only bits 0, 1, 2, 3 and 8 can be set.
+    // 0b10000111 in decimal form 271
+    UINT32 is_inValidflags = (flags & ~271);
+    if (is_inValidflags)
+    {
+        AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "Invalid flags set (%d), "
+                               "Only Bits 0, 1, 2, 3, 8 can be set", flags);
+        return AOCLFFTZ_INVALID_INPUT;
+    }
+
+    // Check if out-of-order output is requested
     INT32 is_out_of_order = IS_OUT_OF_ORDER(flags);
 
     // TODO: Remove validation once support for out-of-order output is added
@@ -228,14 +268,27 @@ static inline UINT32 get_max_num_threads(VOID)
 #endif
 }
 
-#define VALIDATE_N_THREADS(num_threads)                                        \
+#define VALIDATE_N_THREADS_AND_DYN_LOAD_MODEL(num_threads, dynamic_load_model) \
 {                                                                              \
+    if (dynamic_load_model != 0 || dynamic_load_model != 1)                    \
+    {                                                                          \
+        AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Invalid dynamic_load_model (%d) "  \
+             "running with default value (0)", dynamic_load_model);            \
+        dynamic_load_model = 0;                                                \
+    }                                                                          \
     UINT32 max_threads = get_max_num_threads();                                \
-    if (num_threads > max_threads)                                             \
+    if ((num_threads < 1) && !dynamic_load_model)                              \
+    {                                                                          \
+        AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Requested num_threads value (%d) " \
+             "is less than minimum required value (1), defaulting to single "  \
+             "threaded execution", num_threads);                               \
+        num_threads = 1;                                                       \
+    }                                                                          \
+    else if ((num_threads > max_threads) && !dynamic_load_model)               \
     {                                                                          \
         AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Requested num_threads "            \
-                "(%d) exceeds available logical CPUs (%d), using %d\n as "     \
-                "num_threads", num_threads, max_threads, max_threads);         \
+             "(%d) exceeds available logical CPUs (%d), using %d\n as "        \
+             "num_threads", num_threads, max_threads, max_threads);            \
         num_threads = max_threads;                                             \
     }                                                                          \
 }
@@ -324,17 +377,19 @@ static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
     }                                                                          \
     if (!IS_OUT_OF_PLACE(problem->flags))                                      \
     {                                                                          \
+        VALIDATE_BUFFERS(problem->in, problem->out, 0 /* in-place */, ret)     \
         VALIDATE_INPLACE_STRIDES(problem->dims,problem->vecs,                  \
                                  problem->dim_rank, problem->vec_rank,         \
                                  problem->flags, ret)                          \
-        if (ret)                                                               \
-        {                                                                      \
-            goto validation_exit;                                              \
-        }                                                                      \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        VALIDATE_BUFFERS(problem->in, problem->out, 1 /* out_of_place */, ret) \
     }                                                                          \
     if ((problem->pthr_fft.num_threads != 1))                                  \
     {                                                                          \
-        VALIDATE_N_THREADS(problem->pthr_fft.num_threads)                      \
+        VALIDATE_N_THREADS_AND_DYN_LOAD_MODEL(problem->pthr_fft.num_threads,   \
+                                        problem->pthr_fft.dynamic_load_model)  \
     }                                                                          \
     validation_exit:                                                           \
     if (ret)                                                                   \
