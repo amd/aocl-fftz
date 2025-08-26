@@ -64,10 +64,9 @@ typedef enum
 #define DEFAULT_DYNAMIC_LOAD_MODEL 1
 
 // Unsupported flags and ranks for testing
-const std::vector<UINT32> unsupported_flags = {
-    static_cast<UINT32>(-1),
-    static_cast<UINT32>(0xFFFFFFFF),
-    static_cast<UINT32>(0xFFFFFFFE)
+const std::vector<aoclfftz_flags_t> unsupported_flags = {
+    {1, 0, 1, 0, 0}, // real, forward, out_of_order, inplace, FFT
+    {0, 1, 1, 1, 1}, // complex, backward, in-order, out-of-place, transpose
 };
 const std::vector<INT32> unsupported_rank = { INT32_MIN, -1 };
 
@@ -85,7 +84,7 @@ class AoclfftzAPITest : public ::testing::Test
 public:
     INT32 optOff;
     INT32 optLevel;
-    UINT32 flags;
+    aoclfftz_flags_t flags;
     UINT32 num_threads;
     UINT32 dynamic_load_model;
     ProblemType *problem;
@@ -97,6 +96,10 @@ public:
         problem = NULL;
         handle = NULL;
         problem = new ProblemType();
+        // Set default flags to out-of-place, in-order, forward, complex, FFT
+        problem->flags = {0};
+        problem->flags.fft_placement = 1;
+
         if (problem == NULL)
         {
             throw std::
@@ -121,7 +124,7 @@ public:
         /* Default value of is_inplace is 0,
          * If flags are invalid, free the memory buffer based on default flags */
         bool is_inplace = isValidFlags(problem->flags) ?
-                                    !(((problem->flags) >> (0)) & 0x1) : 0;
+                                    !flags.fft_placement : 0;
         if (problem == NULL)
         {
             return;
@@ -151,10 +154,13 @@ public:
         }
     }
 
-    bool isValidFlags(UINT32 flags)
+    bool isValidFlags(aoclfftz_flags_t flags)
     {
-        // Only bits 0, 2, 3 and 8 can be set; bit 1 must be 0
-        return (flags & 0b0010) == 0 && (flags & ~0b100001101) == 0;
+        if (flags.storage_order || flags.transpose_mode || flags.fft_type)
+        {
+            return 0;
+        }
+        return 1;
     }
 
     VOID get_inout_size(UINTP *in_size, UINTP *out_size)
@@ -183,21 +189,25 @@ public:
                                                         "for dims or vecs!");
         }
         // Set flags based on transform direction
-        if (is_forward && is_inplace)
+        flags.storage_order = 0;
+        flags.fft_type = 0;
+        flags.transpose_mode = 0;
+        if (is_forward)
         {
-            problem->flags = 0b0000;
-        }
-        else if (is_forward && !is_inplace)
-        {
-            problem->flags = 0b0001;
-        }
-        else if (!is_forward && is_inplace)
-        {
-            problem->flags = 0b0100;
+            flags.fft_direction = 0;
         }
         else
         {
-            problem->flags = 0b0101;
+            flags.fft_direction = 1;
+
+        }
+        if (is_inplace)
+        {
+            flags.fft_placement = 0;
+        }
+        else
+        {
+            flags.fft_placement = 1;
         }
         // Set dims values
         problem->dims[0].n = 10;
@@ -334,9 +344,9 @@ public:
         return {-1, 0, 1, 2, 3};
     }
 
-    std::vector<UINT32> get_supported_flags()
+    std::vector<aoclfftz_flags_t> get_supported_flags()
     {
-        std::vector<UINT32> flags;
+        std::vector<aoclfftz_flags_t> flags;
         for (UINT32 in_place : {0,1})
         {
             for (UINT32 in_order : {0})
@@ -345,10 +355,12 @@ public:
                 {
                     for (UINT32 complex : {0})
                     {
-                        UINT32 flag = (in_place << 0) |
-                                    (in_order << 1) |
-                                    (forward << 2)  |
-                                    (complex << 3);
+                        aoclfftz_flags flag;
+                        flag.fft_placement = in_place;
+                        flag.storage_order = in_order;
+                        flag.fft_direction     = forward;
+                        flag.fft_type         = complex;
+                        flag.transpose_mode    = 0;
                         flags.push_back(flag);
                     }
                 }

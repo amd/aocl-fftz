@@ -49,10 +49,10 @@
 #define VALIDATE_INPLACE_STRIDES(dims, vecs, dim_rank, vec_rank, flags, errno) \
 {                                                                              \
     INTP in_scale =                                                            \
-            (IS_REAL(flags) && FFT_DIR(flags) == FORWARD_FFT_DIR) ? 2 : 1;     \
+            (flags.fft_type && flags.fft_direction == FORWARD_FFT_DIR) ? 2 : 1;     \
     INTP out_scale =                                                           \
-            (IS_REAL(flags) && FFT_DIR(flags) == BACKWARD_FFT_DIR) ? 2 : 1;    \
-    if(!IS_REAL(flags))                                                        \
+            (flags.fft_type && flags.fft_direction == BACKWARD_FFT_DIR) ? 2 : 1;    \
+    if(!flags.fft_type)                                                        \
     {   /* Validate C2C dims */                                                \
         for (INT32 i = 0; i < dim_rank; i++)                                   \
         {                                                                      \
@@ -89,7 +89,7 @@
             else if((i > 0) && (dims[i].in_stride * out_scale !=               \
                         dims[i].out_stride * in_scale))                        \
             {                                                                  \
-                if(FFT_DIR(flags) == FORWARD_FFT_DIR)                          \
+                if(flags.fft_direction == FORWARD_FFT_DIR)                          \
                 {                                                              \
                     AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "For dimension[%d]: "     \
                         "in_stride != out_stride * %d\n"                       \
@@ -122,7 +122,7 @@
             (vecs[i].in_stride * out_scale !=                                  \
              vecs[i].out_stride * in_scale))                                   \
         {                                                                      \
-            if(FFT_DIR(flags) == FORWARD_FFT_DIR)                              \
+            if(flags.fft_direction == FORWARD_FFT_DIR)                              \
             {                                                                  \
                 AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "For vecs[%d]: "              \
                     "in_stride != out_stride * %d\n"                           \
@@ -166,27 +166,21 @@
     }                                                                          \
 }
 
-static inline INT32 validate_flags(UINT32 flags)
+static inline INT32 validate_flags(aoclfftz_flags_t *flags)
 {
-    // Only bits 0, 1, 2, 3 and 8 can be set.
-    // 0b10000111 in decimal form 271
-    UINT32 is_inValidflags = (flags & ~271);
-    if (is_inValidflags)
-    {
-        AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "Invalid flags set (%d), "
-                               "Only Bits 0, 1, 2, 3, 8 can be set", flags);
-        return AOCLFFTZ_INVALID_INPUT;
-    }
-
-    // Check if out-of-order output is requested
-    INT32 is_out_of_order = IS_OUT_OF_ORDER(flags);
-
     // TODO: Remove validation once support for out-of-order output is added
-    if (is_out_of_order)
+    if (flags->storage_order)
     {
         AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "Library does not support "
                                             "out-of-order outputs");
         return AOCLFFTZ_INVALID_INPUT;
+    }
+    if (flags->transpose_mode)
+    {
+        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "Library does not support "
+                                            "standalone transpose");
+        return AOCLFFTZ_INVALID_INPUT;
+
     }
     return AOCLFFTZ_SUCCESS;
 }
@@ -370,11 +364,11 @@ static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
     {                                                                          \
         goto validation_exit;                                                  \
     }                                                                          \
-    if ((ret = validate_flags(problem->flags)) != 0)                           \
+    if ((ret = validate_flags(&(problem->flags))) != 0)                        \
     {                                                                          \
         goto validation_exit;                                                  \
     }                                                                          \
-    if (!IS_OUT_OF_PLACE(problem->flags))                                      \
+    if (!problem->flags.fft_placement)                                  \
     {                                                                          \
         VALIDATE_BUFFERS(problem->in, problem->out, 0 /* in-place */, ret)     \
         VALIDATE_INPLACE_STRIDES(problem->dims,problem->vecs,                  \

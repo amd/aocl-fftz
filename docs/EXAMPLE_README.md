@@ -22,7 +22,7 @@ int main()
         (aoclfftz_dim_t *)malloc(sizeof(aoclfftz_dim_t) * problem->dim_rank);
     problem->vecs =
         (aoclfftz_dim_t *)malloc(sizeof(aoclfftz_dim_t) * problem->vec_rank);
-    problem->flags = 0b0000; // complex, forward, in-order, in-place problem
+    problem->flags = {0}; // complex, forward, inplace, inorder, FFT
     problem->dims[0].n = 10;
     problem->dims[0].in_stride = 1;
     problem->dims[0].out_stride = 1;

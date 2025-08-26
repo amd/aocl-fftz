@@ -1321,6 +1321,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     INT32 ret = 0;
     INT32 cpu_flags = 0;
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
+    aoclfftz_flags_t flags = problem->flags;
     aoclfftz_selector_t *sel_obj = NULL;
 
     // shrink dim_rank
@@ -1355,8 +1356,8 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
                                    kernels_rdft_table,
                                    kernels_twid_dft_table,
                                    kernels_twid_rdft_table, DT_FLOAT,
-                                   FFT_DIR(problem->flags),
-                                   IS_REAL(problem->flags),
+                                   flags.fft_direction,
+                                   flags.fft_type,
                                    cpu_flags);
     if (ret != 0)
     {
@@ -1372,7 +1373,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     // operation. Hence the reuse of the same macro is valid. If this no longer
     // holds for whatever reason, change this "GET_STANDALONE_TRANSPOSE" macro
     // accordingly.
-    if (GET_STANDALONE_TRANSPOSE(problem->flags))
+    if (flags.transpose_mode)
     {
         SET_STANDALONE_TRANSPOSE(sel_obj->solution->decomp_scheme->flags, 1);
     }
@@ -1401,6 +1402,7 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     INT32 ret = 0;
     INT32 cpu_flags = 0;
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
+    aoclfftz_flags_t flags = problem->flags;
     aoclfftz_selector_t *sel_obj = NULL;
 
     // shrink dim_rank
@@ -1435,8 +1437,8 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
                                    kernels_rdft_table,
                                    kernels_twid_dft_table,
                                    kernels_twid_rdft_table, DT_DOUBLE,
-                                   FFT_DIR(problem->flags),
-                                   IS_REAL(problem->flags),
+                                   flags.fft_direction,
+                                   flags.fft_type,
                                    cpu_flags);
     if (ret != 0)
     {
@@ -1447,12 +1449,7 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_DOUBLE);
 
-    // Note: Currently the 8th bit of the flags member of both, the problem and
-    // the selector represent the same thing -> a standalone transpose
-    // operation. Hence the reuse of the same macro is valid. If this no longer
-    // holds for whatever reason, change this "GET_STANDALONE_TRANSPOSE" macro
-    // accordingly.
-    if (GET_STANDALONE_TRANSPOSE(problem->flags))
+    if (problem->flags.transpose_mode)
     {
         SET_STANDALONE_TRANSPOSE(sel_obj->solution->decomp_scheme->flags, 1);
     }
@@ -1481,6 +1478,7 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     INT32 ret = 0;
     INT32 cpu_flags = 0;
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
+    aoclfftz_flags_t flags = problem->flags;
     aoclfftz_selector_t *sel_obj = NULL;
 
     // shrink dim_rank
@@ -1515,8 +1513,8 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
                                    kernels_rdft_table,
                                    kernels_twid_dft_table,
                                    kernels_twid_rdft_table, DT_FLOAT,
-                                   FFT_DIR(problem->flags),
-                                   IS_REAL(problem->flags),
+                                   flags.fft_direction,
+                                   flags.fft_type,
                                    cpu_flags);
     if (ret != 0)
     {
@@ -1527,12 +1525,7 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_FLOAT);
 
-    // Note: Currently the 8th bit of the flags member of both, the problem and
-    // the selector represent the same thing -> a standalone transpose
-    // operation. Hence the reuse of the same macro is valid. If this no longer
-    // holds for whatever reason, change this "GET_STANDALONE_TRANSPOSE" macro
-    // accordingly.
-    if (GET_STANDALONE_TRANSPOSE(problem->flags))
+    if (flags.transpose_mode)
     {
         SET_STANDALONE_TRANSPOSE(sel_obj->solution->decomp_scheme->flags, 1);
     }
@@ -1561,6 +1554,7 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     INT32 ret = 0;
     INT32 cpu_flags = 0;
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
+    aoclfftz_flags_t flags = problem->flags;
     aoclfftz_selector_t *sel_obj = NULL;
 
     // shrink dim_rank
@@ -1595,8 +1589,8 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
                                    kernels_rdft_table,
                                    kernels_twid_dft_table,
                                    kernels_twid_rdft_table, DT_DOUBLE,
-                                   FFT_DIR(problem->flags),
-                                   IS_REAL(problem->flags),
+                                   flags.fft_direction,
+                                   flags.fft_type,
                                    cpu_flags);
     if (ret != 0)
     {
@@ -1607,12 +1601,7 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_DOUBLE);
 
-    // Note: Currently the 8th bit of the flags member of both, the problem and
-    // the selector represent the same thing -> a standalone transpose
-    // operation. Hence the reuse of the same macro is valid. If this no longer
-    // holds for whatever reason, change this "GET_STANDALONE_TRANSPOSE" macro
-    // accordingly.
-    if (GET_STANDALONE_TRANSPOSE(problem->flags))
+    if (flags.transpose_mode)
     {
         SET_STANDALONE_TRANSPOSE(sel_obj->solution->decomp_scheme->flags, 1);
     }

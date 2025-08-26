@@ -115,7 +115,7 @@
 
 INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                            aoclfftz_bench_params_t *bench_params);
-UINT32 set_flag(aoclfftz_bench_params_t *params);
+aoclfftz_flags_t set_flag(aoclfftz_bench_params_t *params);
 INT32 get_option(CHAR **argv, INT32 arg_idx);
 VOID *setup_problem_f(aoclfftz_bench_params_t *params);
 VOID *setup_problem_d(aoclfftz_bench_params_t *params);

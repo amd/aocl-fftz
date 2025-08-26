@@ -95,6 +95,19 @@ typedef enum
 } aoclfftz_error_type;
 
 /**  @ingroup group_types
+     * aoclfftz_flags_t
+     * @brief Configuration flags to control critical FFT execution parameters.
+     */
+typedef struct aoclfftz_flags
+{
+    UINT8 fft_type;           /**< Complex(0) or Real(1) >*/
+    UINT8 fft_direction;      /**< Forward(0) or Backward(1) >*/
+    UINT8 storage_order;      /**< In-order(0) or Out-of-order(1)>*/
+    UINT8 fft_placement;      /**< In-place(0) or Out-of-place(1) */
+    UINT8 transpose_mode;     /**< fft(0) or standalone transpose(1) (Not supported, use default value `0`)*/
+} aoclfftz_flags_t;
+
+/**  @ingroup group_types
      * aoclfftz_dim_t
      * Tensor dimension for LP64.
 */
@@ -155,13 +168,8 @@ typedef struct
     INT32 dim_rank;         /**< Dimension rank */
     aoclfftz_dim_t *dims;   /**< Multi-dimensional tensor dimensions for LP64 */
     aoclfftz_dim_t *vecs;   /**< Vector tensor dimensions for LP64 */
-    UINT32 flags;           /**< Set flags
-     where each bit represents the following\n
-     Bit 0 : in-place(0) or out-of-place(1),\n
-     Bit 1 : in-order(0) or out-of-order(1),\n
-     Bit 2 : forward(0) or backward(1),\n
-     Bit 3 : complex(0) or real(1),\n
-     Bit 8 : fft(0) or standalone transpose(1) */
+    aoclfftz_flags_t flags; /**< Struct for configuration flags to control critical FFT execution parameters- \n
+                                 fft_type, fft_direction, storage_order, fft_placement, transpose_mode. */
     aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
     aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_f;
@@ -178,13 +186,8 @@ typedef struct
     INT32 dim_rank;         /**< Dimension rank */
     aoclfftz_dim_t *dims;   /**< Multi-dimensional tensor dimensions for LP64 */
     aoclfftz_dim_t *vecs;   /**< Vector tensor dimensions for LP64 */
-    UINT32 flags;   /**< Set flags
-     where each bit represents the following\n
-     Bit 0 : in-place(0) or out-of-place(1),\n
-     Bit 1 : in-order(0) or out-of-order(1),\n
-     Bit 2 : forward(0) or backward(1),\n
-     Bit 3 : complex(0) or real(1),\n
-     Bit 8 : fft(0) or standalone transpose(1) */
+    aoclfftz_flags_t flags; /**< Struct for configuration flags to control critical FFT execution parameters- \n
+                                 fft_type, fft_direction, storage_order, fft_placement, transpose_mode. */
     aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
     aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_d;
@@ -202,13 +205,8 @@ typedef struct
     INT32 dim_rank;             /**< Dimension rank */
     aoclfftz_dim_t_64_ *dims;   /**< Multi-dimensional tensor dimensions for ILP64 */
     aoclfftz_dim_t_64_ *vecs;   /**< Vector tensor dimensions for ILP64 */
-    UINT32 flags;               /**< Set flags
-     where each bit represents the following\n
-     Bit 0 : in-place(0) or out-of-place(1),\n
-     Bit 1 : in-order(0) or out-of-order(1),\n
-     Bit 2 : forward(0) or backward(1),\n
-     Bit 3 : complex(0) or real(1),\n
-     Bit 8 : fft(0) or standalone transpose(1) */
+    aoclfftz_flags_t flags;     /**< Struct for configuration flags to control critical FFT execution parameters- \n
+                                     fft_type, fft_direction, storage_order, fft_placement, transpose_mode. */
     aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
     aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_f_64_;
@@ -225,13 +223,8 @@ typedef struct
     INT32 dim_rank;             /**< Dimension rank */
     aoclfftz_dim_t_64_ *dims;   /**< Multi-dimensional tensor dimensions for ILP64 */
     aoclfftz_dim_t_64_ *vecs;   /**< Vector tensor dimensions for ILP64 */
-    UINT32 flags;               /**< Set flags
-     where each bit represents the following\n
-     Bit 0 : in-place(0) or out-of-place(1),\n
-     Bit 1 : in-order(0) or out-of-order(1),\n
-     Bit 2 : forward(0) or backward(1),\n
-     Bit 3 : complex(0) or real(1),\n
-     Bit 8 : fft(0) or standalone transpose(1) */
+    aoclfftz_flags_t flags;     /**< Struct for configuration flags to control critical FFT execution parameters- \n
+                                     fft_type, fft_direction, storage_order, fft_placement, transpose_mode. */
     aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
     aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_d_64_;

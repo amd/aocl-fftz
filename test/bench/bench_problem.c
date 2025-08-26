@@ -910,50 +910,50 @@ INT32 get_option(CHAR **argv, INT32 arg_idx)
  * @brief set the flag value based on bench params
  *
  * @param params bench params
- * @return INT32 encoded flag value
+ * @return flag struct aoclfftz_flags_t
  */
-UINT32 set_flag(aoclfftz_bench_params_t *params)
+aoclfftz_flags_t set_flag(aoclfftz_bench_params_t *params)
 {
-    UINT32 flag = 0;
+    aoclfftz_flags_t flags = {0};
     if (params->res_placement == IN_PLACE)
     {
-        flag &= ~(1 << 0); // set 0th bit to 0
+        flags.fft_placement = 0;
     }
     else
     {
-        flag |= (1 << 0);  // set 0th bit to 1
+        flags.fft_placement = 1;
     }
     if (params->order == IN_ORDER)
     {
-        flag &= ~(1 << 1); // set 1st bit to 0
+        flags.storage_order = 0;
     }
     else
     {
-        flag |= (1 << 1);  // set 1st bit to 1
+        flags.storage_order = 1;
     }
     if (params->fft_type == C2C)
     {
-        flag &= ~(1 << 3); // set 3rd bit to 0
+        flags.fft_type = 0;
         if (params->dir == FORWARD)
         {
-            flag &= ~(1 << 2); // set 2nd bit to 0
+            flags.fft_direction = 0;
         }
         else
         {
-            flag |= (1 << 2);  // set 2nd bit to 1
+            flags.fft_direction = 1;
         }
     }
     else if (params->fft_type == R2C)
     {
-        flag &= ~(1 << 2); // set 2nd bit to 0
-        flag |= (1 << 3);  // set 3rd bit to 1
+        flags.fft_direction = 0;
+        flags.fft_type = 1;
     }
     else // C2R
     {
-        flag |= (1 << 2);  // set 2nd bit to 1
-        flag |= (1 << 3);  // set 3rd bit to 1
+        flags.fft_direction = 1;
+        flags.fft_type = 1;
     }
-    return flag;
+    return flags;
 }
 
 /**
