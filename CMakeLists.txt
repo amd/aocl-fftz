@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Advanced Micro Devices. All rights reserved.
+# Copyright (C) 2023-2025 Advanced Micro Devices. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -210,8 +210,8 @@ if(ENABLE_MULTI_THREADING)
                         ${CORE_PATH}/solvers/complex/multithread/*.c
                         ${CORE_PATH}/solvers/real/multithread/*.c)
     if (WIN32)
-	set(OpenMP_libomp_LIBRARY "C:/Program Files/LLVM/lib/libomp.lib" CACHE STRING "openmp library path")
-	message(STATUS "OpenMP custom path to look for openMP: ${OpenMP_libomp_LIBRARY}")
+	set(OpenMP_libomp_LIBRARY "C:/Program Files/LLVM/lib/libomp.lib" CACHE STRING "OpenMP library path")
+	message(STATUS "OpenMP custom path to look for OpenMP: ${OpenMP_libomp_LIBRARY}")
     endif()
     find_package(OpenMP)
     if(OPENMP_FOUND)
@@ -385,7 +385,7 @@ else()
     message(STATUS "Library type being built is: Shared")
 endif()
 
-#add required openmp flags
+#add required OpenMP flags
 if(ENABLE_MULTI_THREADING)
     if(WIN32)
         target_link_libraries(${lib_name} PRIVATE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
@@ -455,17 +455,5 @@ add_custom_command(
     )
 
 if (BUILD_DOC)
-    find_package(Doxygen 1.10.0)
-    set(W_DIR "${CMAKE_CURRENT_SOURCE_DIR}/docs")
-    if(NOT (DOXYGEN_FOUND))
-        message(FATAL_ERROR "Doxygen not found please install doxygen and try again (or) disable docs building -DBUILD_DOC=OFF")
-    else()
-        execute_process(COMMAND ${DOXYGEN_EXECUTABLE} Doxyfile
-                WORKING_DIRECTORY ${W_DIR})
-    endif()
-    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/docs/html/index.html)
-        message(STATUS "Documentation generated successfully, to view documentation open docs/html/index.html")
-    else()
-        message(FATAL_ERROR "Document generation failed.")
-    endif()
+    add_subdirectory(docs)
 endif()

@@ -1,10 +1,15 @@
-@page API_Usage API Usage
+API Usage
+=========
 
-The following sample program shows the usage of the aocl-fftz APIs to setup and execute an fft problem.
+The following sample program shows the usage of the `AOCL-FFTZ` APIs to setup and execute an fft problem.
+This demonstrates single-threaded execution for `DOUBLE` data type on `LP64` systems.
 
 
-@note Please ensure that you utilize the appropriate compatible data type/model for aoclfftz_setup_<datatype>_<integer_size>_ where datatype is either float (f) or double (d) and integer size is either LP64 (no suffix) or ILP64 (64).
-\n ex:- For a problem descriptor of type FLOAT LP64 you need to invoke aoclfftz_setup_f API followed by aoclfftz_execute and aoclfftz_destroy APIs.
+```{note}
+Please ensure that you utilize the appropriate compatible data type/model for `aoclfftz_setup_<datatype>_<integer_size>_` where datatype is either float (f) or double (d) and integer size is either LP64 (no suffix) or ILP64 (64).
+
+ex:- For a problem descriptor of type FLOAT LP64 you need to invoke aoclfftz_setup_f API followed by aoclfftz_execute and aoclfftz_destroy APIs.
+```
 
 ```C
 #include <stdio.h>
@@ -27,14 +32,14 @@ int main()
     problem->dims[0].in_stride = 1;
     problem->dims[0].out_stride = 1;
     problem->vecs[0].n = 1;
-    problem->vecs[0].in_stride = 1;
-    problem->vecs[0].out_stride = 1;
+    problem->vecs[0].in_stride = 10;
+    problem->vecs[0].out_stride = 10;
     problem->pthr_fft.dynamic_load_model = 0;
     problem->pthr_fft.num_threads = 0;
     problem->cntrl_params.logger_mode = 0;
     problem->cntrl_params.measure_stats = 0;
-    problem->cntrl_params.opt_level = -1;
-    problem->cntrl_params.opt_off = 1;
+    problem->cntrl_params.opt_level = 3;
+    problem->cntrl_params.opt_off = 0;
 
     DOUBLE in[20] = {1, 1, 2, 2, 3, 3, 4, 4,  5,  5,
                      6, 6, 7, 7, 8, 8, 9, 9, 10, 10};
@@ -75,4 +80,6 @@ int main()
 
 To build this example test program on a Linux system using GCC or AOCC, you must specify the aoclfftz.h header file and link the libaocl_fftz.so file as follows:
 
-`gcc -I<aoclfftz.h file path> -L<libaocl_fftz.so file path> test.c -laocl_fftz -lm`
+GCC   : `gcc -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> test.c -laocl_fftz -lm`
+
+Clang : `clang -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> test.c -laocl_fftz -lm`
