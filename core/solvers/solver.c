@@ -37,6 +37,7 @@
  */
 
 #include "core/solvers/solver.h"
+#include "solver.h"
 
 // Table of solvers that is populated with applicable solvers at setup time
 // ct, direct, nDim, buf, permKer, batched, bluestein, PFA, rader, permCopy,
@@ -75,8 +76,10 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
     else
     {
         solvers_table[SOLVER_DIRECT] = register_execute_direct_solver();
-        solvers_table[SOLVER_DIRECT_BATCHED] =
-            register_execute_direct_batched_solver();
+        solvers_table[SOLVER_DIRECT_BATCHED_COLMAJOR] =
+            register_execute_direct_batched_colmajor_solver();
+        solvers_table[SOLVER_DIRECT_BATCHED_ROWMAJOR] =
+            register_execute_direct_batched_rowmajor_solver();
         solvers_table[SOLVER_CT] = register_execute_ct_solver();
         solvers_table[SOLVER_CT_TWIDDLE] = register_execute_ct_twiddle_solver();
         solvers_table[SOLVER_BATCHED] = register_execute_batched_solver();

@@ -107,15 +107,22 @@ static INT32 is_eligible_for_batched_direct(aoclfftz_solution_t *sol,
     aoclfftz_dim_t_64_ *dims = sol->decomp_scheme->dims;
     aoclfftz_dim_t_64_ *vecs = sol->decomp_scheme->vecs;
 
-    // batched-direct solver will be used only for column-major batched problems
-    // TODO: support different patterns to enable batched-direct solver
+#ifdef MULTI_THREADING
     if (dim_rank == 1 && /* 1D problem (FIXME: this should be always true, so remove this check) */
         vecs[0].n > 1 && /* batched problem */
         vecs[0].in_stride < dims[0].in_stride && /* column-major order input */
-        vecs[0].out_stride < dims[0].out_stride) /* column-major order output */
+        vecs[0].out_stride < dims[0].out_stride && /* column-major order output */
+        dims[0].in_stride == dims[0].out_stride && /* FIXME: support different in/out strides */
+        vecs[0].in_stride == vecs[0].out_stride)
+#else
+    if (dim_rank == 1 && /* 1D problem (FIXME: this should be always true, so remove this check) */
+        vecs[0].n > 1 && /* batched problem */
+        dims[0].in_stride == dims[0].out_stride && /* FIXME: support different in/out strides */
+        vecs[0].in_stride == vecs[0].out_stride)
+#endif
     {
         AOCLFFTZ_LOG_FORMATTED(
-            INFO, sol->decomp_scheme->cntrl_params->logger_mode,
+            TRACE, sol->decomp_scheme->cntrl_params->logger_mode,
             "using batched-direct for problem: "
             "%td:%td:%td v %td:%td:%td",
             vecs[0].n, vecs[0].in_stride, vecs[0].out_stride, dims[0].n,
@@ -169,7 +176,6 @@ static VOID apply_batched_direct_solver_internal(aoclfftz_solution_t *curr_sol,
         // 1. The previous solver is a NDim solver or NULL
         // 2. The current solver is a batched solver
         // 3. The next solver is a CT solver
-        // 4. The problem has a column-major layout
         if (is_eligible_for_batched_direct(curr_sol, prev_sol))
         {
             // if eligible, then the current solution is a batched solver type
@@ -180,6 +186,15 @@ static VOID apply_batched_direct_solver_internal(aoclfftz_solution_t *curr_sol,
             INTP batched_vec_n = vecs[0].n;
             INTP batched_vec_in_stride = vecs[0].in_stride;
             INTP batched_vec_out_stride = vecs[0].out_stride;
+
+            // check if the problem is col-major or row-major
+            // col-major: vec-strides < elemental-strides
+            // row-major: elemental-strides < vec-strides
+            UINT8 is_col_major =
+                (batched_sol->decomp_scheme->vecs[0].in_stride <
+                 batched_sol->decomp_scheme->dims[0].in_stride) &&
+                (batched_sol->decomp_scheme->vecs[0].out_stride <
+                 batched_sol->decomp_scheme->dims[0].out_stride);
 
             // do the following changes to the batched solver:
             // - reduce the vec_rank by 1 (i.e. remove the vec[0])
@@ -239,23 +254,32 @@ static VOID apply_batched_direct_solver_internal(aoclfftz_solution_t *curr_sol,
 #ifdef MULTI_THREADING
                     if (batched_n_threads > 1)
                     {
-                        curr_sol->solver->solver_type =
-                            SOLVER_MT_DIRECT_BATCHED;
-                        // FIXME: a temporary fix to use different MT solvers
-                        // for 1D and ND problems; it is based on the
-                        // performance study for 1D and 3D problems
-                        // TODO: remove this once we have an MT solver
-                        // which works for all the cases
-                        if (prev_sol &&
-                            prev_sol->solver->solver_type == SOLVER_NDIM)
+                        if (is_col_major)
                         {
-                            curr_sol->solver->execute_solver =
-                                register_execute_mt_direct_batched_solver();
+                            // FIXME: a temporary fix to use different MT solvers
+                            // for 1D and ND problems; it is based on the
+                            // performance study for 1D and 3D problems
+                            // TODO: remove this once we have an MT solver
+                            // which works for all the cases
+                            if (prev_sol &&
+                                prev_sol->solver->solver_type == SOLVER_NDIM)
+                            {
+                                curr_sol->solver->solver_type =
+                                    SOLVER_MT_DIRECT_BATCHED_COLMAJOR;
+                                curr_sol->solver->execute_solver =
+                                    register_execute_mt_direct_batched_colmajor_solver();
+                            }
+                            else
+                            {
+                                curr_sol->solver->solver_type =
+                                    SOLVER_MT_DIRECT_BATCHED_ROWMAJOR;
+                                curr_sol->solver->execute_solver =
+                                    register_execute_mt_direct_batched_rowmajor_solver();
+                            }
                         }
                         else
                         {
-                            curr_sol->solver->execute_solver =
-                                register_execute_mt_direct_batched_solver_v2();
+                            // TODO: use row-major variant for this case
                         }
                         // TODO: Verify whether assigning both n_threads and
                         //       avl_threads are required or not
@@ -267,17 +291,32 @@ static VOID apply_batched_direct_solver_internal(aoclfftz_solution_t *curr_sol,
                     else
                     {
 #endif
-                        curr_sol->solver->solver_type = SOLVER_DIRECT_BATCHED;
-                        curr_sol->solver->execute_solver =
-                            register_execute_direct_batched_solver();
+                        if (is_col_major)
+                        {
+                            curr_sol->solver->solver_type =
+                                SOLVER_DIRECT_BATCHED_COLMAJOR;
+                            curr_sol->solver->execute_solver =
+                                register_execute_direct_batched_colmajor_solver();
+                        }
+                        else
+                        {
+                            curr_sol->solver->solver_type =
+                                SOLVER_DIRECT_BATCHED_ROWMAJOR;
+                            curr_sol->solver->execute_solver =
+                                register_execute_direct_batched_rowmajor_solver();
+                        }
 #ifdef MULTI_THREADING
                     }
 #endif
-                    // update vec strides
-                    curr_sol->strides_grp->strides->v_in_stride =
-                        batched_vec_in_stride * DATA_STRIDE;
-                    curr_sol->strides_grp->strides->v_out_stride =
-                        batched_vec_out_stride * DATA_STRIDE;
+                    // update vec-strides for kernels only for column-major problems
+                    if (is_col_major)
+                    {
+                        // update vec strides
+                        curr_sol->strides_grp->strides->v_in_stride =
+                            batched_vec_in_stride * DATA_STRIDE;
+                        curr_sol->strides_grp->strides->v_out_stride =
+                            batched_vec_out_stride * DATA_STRIDE;
+                    }
                     // allocate a new struct in the direct solver to hold the
                     // vecs[0] from batched solver
                     ALLOC_ALIGN_UNINIT(curr_sol->decomp_scheme->batched_vecs,
@@ -289,7 +328,7 @@ static VOID apply_batched_direct_solver_internal(aoclfftz_solution_t *curr_sol,
                     curr_sol->decomp_scheme->batched_vecs[0].out_stride =
                         batched_vec_out_stride;
                     AOCLFFTZ_LOG_FORMATTED(
-                        INFO,
+                        TRACE,
                         curr_sol->decomp_scheme->cntrl_params->logger_mode,
                         " -> sub-problem: "
                         "[%td:%td:%td] %td:%td:%td v %td:%td:%td",
