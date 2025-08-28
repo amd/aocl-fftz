@@ -183,8 +183,8 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->scratch_space = NULL;
         sol->dft_bufs->inplace_buffer = NULL;
         sol->dft_bufs->inplace_ndim_buffer = NULL;
-        sol->dft_bufs->interim_buf_ptr = NULL;
-        sol->dft_bufs->ndim_ip_buf_ptr = NULL;
+        sol->dft_bufs->nd_sol_out_real = NULL;
+        sol->dft_bufs->nd_sol_out_imag = NULL;
         sol->solver->kernel_c2c->count = 0;
         sol->solver->kernel_r2hc->count = 0;
         sol->solver->kernel_r2hcf->count = 0;

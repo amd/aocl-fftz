@@ -160,9 +160,11 @@ dft_solver_ register_execute_direct_solver(VOID);
 dft_solver_ register_execute_direct_batched_solver(VOID);
 dft_solver_ register_execute_ct_solver(VOID);
 dft_solver_ register_execute_ct_twiddle_solver(VOID);
+dft_solver_ register_execute_last_stage_ip_ct_solver(VOID);
 dft_solver_ register_execute_batched_solver(VOID);
 dft_solver_ register_execute_bluestein_solver(VOID);
 dft_solver_ register_execute_ndim_solver(VOID);
+dft_solver_ register_execute_last_stage_ip_ndim_solver(VOID);
 dft_solver_ register_execute_sizeone_solver(VOID);
 dft_solver_ register_execute_transpose_solver(VOID);
 #ifdef MULTI_THREADING

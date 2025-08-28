@@ -991,12 +991,6 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
         sel_models[AOCLFFTZ_FIXED_SELECTOR]
             ->solution->dft_bufs->inplace_ndim_buffer =
             sel->solution->dft_bufs->inplace_ndim_buffer;
-        sel_models[AOCLFFTZ_FIXED_SELECTOR]
-            ->solution->dft_bufs->interim_buf_ptr =
-            sel->solution->dft_bufs->interim_buf_ptr;
-        sel_models[AOCLFFTZ_FIXED_SELECTOR]
-            ->solution->dft_bufs->ndim_ip_buf_ptr =
-            sel->solution->dft_bufs->ndim_ip_buf_ptr;
 
         // Fixed decision logic and CPI based selector mode
         // ret = selector_fixed_mode_dft_(sel_models[AOCLFFTZ_FIXED_SELECTOR]);
@@ -1035,12 +1029,6 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
         sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
             ->solution->dft_bufs->inplace_ndim_buffer =
             sel->solution->dft_bufs->inplace_ndim_buffer;
-        sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
-            ->solution->dft_bufs->interim_buf_ptr =
-            sel->solution->dft_bufs->interim_buf_ptr;
-        sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
-            ->solution->dft_bufs->ndim_ip_buf_ptr =
-            sel->solution->dft_bufs->ndim_ip_buf_ptr;
 
         // Fixed decision logic and CPI based selector mode
         // ret = selector_fixed_mode_fused_twid_dft_(
@@ -1078,12 +1066,6 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
         sel_models[AOCLFFTZ_AUTO_SELECTOR]
             ->solution->dft_bufs->inplace_ndim_buffer =
             sel->solution->dft_bufs->inplace_ndim_buffer;
-        sel_models[AOCLFFTZ_AUTO_SELECTOR]
-            ->solution->dft_bufs->interim_buf_ptr =
-            sel->solution->dft_bufs->interim_buf_ptr;
-        sel_models[AOCLFFTZ_AUTO_SELECTOR]
-            ->solution->dft_bufs->ndim_ip_buf_ptr =
-            sel->solution->dft_bufs->ndim_ip_buf_ptr;
 
         // Fixed decision logic and CPI based selector mode
         // ret = selector_autotuner_mode_dft_(
@@ -1960,6 +1942,186 @@ VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx)
     }
 }
 
+// TODO  : Remove this func by enabling the required on the fly during setup
+//
+// post process the final solution to
+//      1. modify the execute fp of the first CT/NDim, so that the results are
+//         written to user buffer.
+//      2. make out pointers point to in pointer incase of Direct, SizeOne &
+//         bluestein problems.
+VOID post_process_inplace_solution(aoclfftz_solution_t *solution)
+{
+    aoclfftz_solution_t *curr = solution;
+
+    // almost every batched direct cases will invoke direct solver directly
+    // except multi-dimensional batched cases where vec ranks cant be fused.
+    // In such cases, the output pointers of the first solution (batched)
+    // should be set to the user buffers since during execution, the
+    // next solution (direct) output pointers will be modified.
+
+    if ((solution->solver->solver_type == SOLVER_BATCHED &&
+        (solution->next_sol[0]->solver->solver_type == SOLVER_DIRECT ||
+         solution->next_sol[0]->solver->solver_type == SOLVER_BLUESTEIN)) ||
+       ((solution->solver->solver_type == SOLVER_MT_BATCHED &&
+        (solution->next_sol[0]->solver->solver_type == SOLVER_MT_DIRECT ||
+         solution->next_sol[0]->solver->solver_type == SOLVER_BLUESTEIN))))
+    {
+        solution->decomp_scheme->out_real = solution->decomp_scheme->in_real;
+        solution->decomp_scheme->out_imag = solution->decomp_scheme->in_imag;
+    }
+
+    // inplace complex problems
+    while (curr != NULL)
+    {
+        aoclfftz_generic_solver_t *solver = curr->solver;
+
+        if (solver->solver_type == SOLVER_NDIM)
+        {
+            solver->execute_solver =
+                register_execute_last_stage_ip_ndim_solver();
+            break;
+        }
+        else if (solver->solver_type == SOLVER_CT ||
+                 solver->solver_type == SOLVER_CT_TWIDDLE)
+        {
+            solver->execute_solver = register_execute_last_stage_ip_ct_solver();
+            break;
+        }
+        else if (solver->solver_type == SOLVER_DIRECT ||
+                 solver->solver_type == SOLVER_BLUESTEIN ||
+                 solver->solver_type == SOLVER_SIZEONE ||
+                 solver->solver_type == SOLVER_MT_DIRECT)
+        {
+            // For direct, bluestein and sizeone problems, there is no need
+            // of extra buffer for inplace execution.
+            // Just reset the out pointers to in pointers.
+            curr->decomp_scheme->out_real = curr->decomp_scheme->in_real;
+            curr->decomp_scheme->out_imag = curr->decomp_scheme->in_imag;
+            FREE_ALIGN_ALLOCATED_MEM(solution->dft_bufs->inplace_buffer);
+            FREE_ALIGN_ALLOCATED_MEM(solution->dft_bufs->inplace_ndim_buffer);
+            break;
+        }
+        curr = curr->next_sol ? curr->next_sol[0] : NULL;
+    }
+}
+
+// TODO : We can avoid full traversal through the node because
+//        It may be enough that we set the first NDim node alone, since it
+//        should propagate all the pointers to solutions after it.
+VOID set_pointers(aoclfftz_solution_t *solution, VOID *out_real, VOID *out_imag,
+                VOID *extra_buffer_real, VOID *extra_buffer_imag)
+{
+    aoclfftz_solution_t *curr = solution;
+    int ndim_count = 0;
+
+    while (curr != NULL)
+    {
+        if (curr->solver->solver_type == SOLVER_NDIM)
+        {
+            if (ndim_count % 2 == 0)
+            {
+                // Even NDIM: nd_sol -> extra buffer, next_sol -> user buffer
+                //
+                // memory location to which nd_sol should write the output
+                // which will be taken for further processing by next_sol
+                curr->dft_bufs->nd_sol_out_real = extra_buffer_real;
+                curr->dft_bufs->nd_sol_out_imag = extra_buffer_imag;
+
+                // update output pointers
+                curr->decomp_scheme->out_real = out_real;
+                curr->decomp_scheme->out_imag = out_imag;
+            }
+            else
+            {
+                // Odd NDIM:
+                // nd_sol output -> user buffer
+                // next_sol output -> extra buffer
+                curr->dft_bufs->nd_sol_out_real = out_real;
+                curr->dft_bufs->nd_sol_out_imag = out_imag;
+                curr->decomp_scheme->out_real = extra_buffer_real;
+                curr->decomp_scheme->out_imag = extra_buffer_imag;
+            }
+            ndim_count++;
+            curr = curr->dft_bufs->nd_sol;
+        }
+        else
+        {
+            // traverse until we find an NDim solver
+            curr = curr->next_sol ? curr->next_sol[0] : NULL;
+        }
+    }
+}
+
+// TODO : Remove this func by enabling the required on the fly during setup
+VOID post_process_ndim(aoclfftz_solution_t *solution, VOID *out_real,
+                       VOID *out_imag)
+{
+    VOID *extra_buffer_real = solution->decomp_scheme->out_real;
+    VOID *extra_buffer_imag = solution->decomp_scheme->out_imag;
+
+    // Necessary in cases of Batched problems, without which the output pointers
+    // would be pointing to extra buffers, which is not expected.
+    // If this is successful, then setting of output pointers in NDim solution
+    // is not really necessary as batched solver will propagate the out pointers
+    // to the next solution.
+    if (solution->solver->solver_type == SOLVER_BATCHED ||
+        solution->solver->solver_type == SOLVER_MT_BATCHED)
+    {
+        if (IS_OUT_OF_PLACE(solution->decomp_scheme->flags))
+        {
+            solution->decomp_scheme->out_real = out_real;
+            solution->decomp_scheme->out_imag = out_imag;
+        }
+        else
+        {
+            // TODO : this can be avoided by swapping pointers before invoking
+            extra_buffer_real = out_real;
+            extra_buffer_imag = out_imag;
+            out_real = solution->decomp_scheme->out_real;
+            out_imag = solution->decomp_scheme->out_imag;
+        }
+    }
+
+    // set the pointers to which NDim solution's nd_sol & next_sol should write
+    // the output to. Buffer setting is handled smartly by backtracking
+    // to avoid explicit memcpy at the end.
+    set_pointers(solution, out_real, out_imag,
+                 extra_buffer_real, extra_buffer_imag);
+
+}
+
+VOID post_process_buffered_inplace(aoclfftz_solution_t *solution,
+                                INTP dim_rank, VOID *out_real, VOID *out_imag)
+{
+#if !defined (PERFORM_INTER_STAGE_PERMUTE)
+    if (!IS_REAL(solution->decomp_scheme->flags) && dim_rank > 1)
+    {
+        VOID *out_real_ptr, *out_imag_ptr;
+        if (IS_OUT_OF_PLACE(solution->decomp_scheme->flags))
+        {
+            out_real_ptr = out_real;
+            out_imag_ptr = out_imag;
+        }
+        else
+        {
+            UINT32 dt_bytes = DT_PRECISION_BYTES(
+                DT_PRECISION_FLAG(solution->decomp_scheme->flags));
+            VOID *base = solution->dft_bufs->inplace_ndim_buffer;
+            out_real_ptr = base;
+            out_imag_ptr = MOVE_ADDR(base, dt_bytes);
+        }
+        post_process_ndim(solution, out_real_ptr, out_imag_ptr);
+    }
+    if (!IS_OUT_OF_PLACE(solution->decomp_scheme->flags) &&
+        !IS_REAL(solution->decomp_scheme->flags))
+    {
+        post_process_inplace_solution(solution);
+    }
+#else
+    return;
+#endif
+}
+
 VOID setup_inplace_buffers(aoclfftz_solution_t *solution)
 {
 #if !defined (PERFORM_INTER_STAGE_PERMUTE)
@@ -1968,8 +2130,11 @@ VOID setup_inplace_buffers(aoclfftz_solution_t *solution)
         (solution->decomp_scheme->dim_rank > 1)))
     {
         alloc_inplace_buffer(solution, &solution->dft_bufs->inplace_buffer);
-        solution->dft_bufs->interim_buf_ptr =
-            solution->dft_bufs->inplace_buffer;
+        UINT32 dt_bytes = DT_PRECISION_BYTES(
+                DT_PRECISION_FLAG(solution->decomp_scheme->flags));
+        solution->decomp_scheme->out_real = solution->dft_bufs->inplace_buffer;
+        solution->decomp_scheme->out_imag = 
+                    MOVE_ADDR(solution->dft_bufs->inplace_buffer, dt_bytes);
 
         /* complex inplace NDim cases*/
         if ((!IS_OUT_OF_PLACE(solution->decomp_scheme->flags)) &&
@@ -1977,20 +2142,7 @@ VOID setup_inplace_buffers(aoclfftz_solution_t *solution)
         {
             alloc_inplace_buffer(solution,
                                 &solution->dft_bufs->inplace_ndim_buffer);
-            solution->dft_bufs->ndim_ip_buf_ptr =
-                solution->dft_bufs->inplace_ndim_buffer;
         }
-        else if (IS_OUT_OF_PLACE(solution->decomp_scheme->flags))
-        {
-            solution->dft_bufs->ndim_ip_buf_ptr =
-                solution->decomp_scheme->out_real;
-        }
-    }
-
-    else if (!IS_REAL(solution->decomp_scheme->flags) &&
-        IS_OUT_OF_PLACE(solution->decomp_scheme->flags))
-    {
-        solution->dft_bufs->interim_buf_ptr = solution->decomp_scheme->out_real;
     }
 #else
     return;

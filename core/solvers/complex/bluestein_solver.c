@@ -69,7 +69,6 @@ INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
     next_sol->decomp_scheme->out_real = sol->dft_bufs->bluestein->out;
     next_sol->decomp_scheme->out_imag =
         MOVE_ADDR(sol->dft_bufs->bluestein->out, dt_bytes);
-    next_sol->dft_bufs->interim_buf_ptr = sol->dft_bufs->bluestein->out;
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
@@ -120,14 +119,13 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     sol->strides_grp->strides->v_in_stride = 1;
     sol->strides_grp->strides->v_out_stride = 1;
 
-    // Store the default in, out buffer addresses in separate pointers
+    // Store the default in, out buffer addresses in seperate pointers
     // next_sol->bluestein->in
     VOID *in_real = next_sol->decomp_scheme->in_real;
     VOID *in_imag = next_sol->decomp_scheme->in_imag;
     // next_sol->bluestein->out
     VOID *out_real = next_sol->decomp_scheme->out_real;
     VOID *out_imag = next_sol->decomp_scheme->out_imag;
-    VOID *interim_buf_ptr = next_sol->dft_bufs->interim_buf_ptr;
 
     // Copy input from current sol to next sol
     VOID *cur_in  = sol->decomp_scheme->in_real;
@@ -196,7 +194,6 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
         next_sol->decomp_scheme->out_real = sol->dft_bufs->bluestein->B_out;
         next_sol->decomp_scheme->out_imag =
             MOVE_ADDR(sol->dft_bufs->bluestein->B_out, dt_bytes);
-        next_sol->dft_bufs->interim_buf_ptr = sol->dft_bufs->bluestein->B_out;
 
         // input  : sol->dft_bufs->bluestein->B
         // output : sol->dft_bufs->bluestein->B_out
@@ -222,8 +219,6 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     next_sol->decomp_scheme->in_imag = out_imag;
     next_sol->decomp_scheme->out_real = in_real;
     next_sol->decomp_scheme->out_imag = in_imag;
-    next_sol->dft_bufs->interim_buf_ptr = in_real;
-
     next_sol->decomp_scheme->flags ^= mask;
 
     // input  : out_imag
@@ -277,7 +272,6 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     next_sol->decomp_scheme->in_imag = in_imag;
     next_sol->decomp_scheme->out_real = out_real;
     next_sol->decomp_scheme->out_imag = out_imag;
-    next_sol->dft_bufs->interim_buf_ptr = interim_buf_ptr;
     next_sol->decomp_scheme->flags = initial_flags;
 
 #ifdef AOCL_ENABLE_LOG

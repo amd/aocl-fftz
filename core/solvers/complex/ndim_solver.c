@@ -111,6 +111,47 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
+
+static INT32 execute_last_stage_ip_ndim_solver(aoclfftz_solution_t *sol)
+{
+#ifdef AOCL_ENABLE_LOG
+    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
+#endif
+
+    aoclfftz_solution_t *n_minus1_sol = sol->dft_bufs->nd_sol;
+    aoclfftz_solution_t *outer_dim_sol = sol->next_sol[0];
+
+    // update solution data pointers
+    n_minus1_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
+    n_minus1_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
+    n_minus1_sol->decomp_scheme->out_real = sol->dft_bufs->nd_sol_out_real;
+    n_minus1_sol->decomp_scheme->out_imag = sol->dft_bufs->nd_sol_out_imag;
+
+    // propagate the pointers to next solution for it to set to the solution
+    // after it ie., n_minus1_sol->next_sol->next_sol
+    // only required for n_minus1_sol sub-problem since outer_dim_sol
+    // will not have an NDim sub-problem
+    n_minus1_sol->dft_bufs->nd_sol_out_real = sol->decomp_scheme->out_real;
+    n_minus1_sol->dft_bufs->nd_sol_out_imag = sol->decomp_scheme->out_imag;
+
+    outer_dim_sol->decomp_scheme->in_real  = sol->dft_bufs->nd_sol_out_real;
+    outer_dim_sol->decomp_scheme->in_imag  = sol->dft_bufs->nd_sol_out_imag;
+    outer_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->in_real;
+    outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->in_imag;
+
+    // execute nd sub-problem
+    n_minus1_sol->solver->execute_solver(n_minus1_sol);
+
+    // execute 1d sub-problem
+    outer_dim_sol->solver->execute_solver(outer_dim_sol);
+
+#ifdef AOCL_ENABLE_LOG
+    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
+#endif
+    return SOLVER_SUCCESS;
+}
+
 static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
 {
 #ifdef AOCL_ENABLE_LOG
@@ -136,31 +177,24 @@ static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
 
 #else
 
-    UINT32 dt_bytes =
-        DT_PRECISION_BYTES(DT_PRECISION_FLAG(sol->decomp_scheme->flags));
-
     // update solution data pointers
     n_minus1_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
     n_minus1_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
-    n_minus1_sol->decomp_scheme->out_real = sol->dft_bufs->interim_buf_ptr;
-    n_minus1_sol->decomp_scheme->out_imag =
-        MOVE_ADDR(sol->dft_bufs->interim_buf_ptr, dt_bytes);
+    n_minus1_sol->decomp_scheme->out_real = sol->dft_bufs->nd_sol_out_real;
+    n_minus1_sol->decomp_scheme->out_imag = sol->dft_bufs->nd_sol_out_imag;
 
     // propagate the pointers to next solution for it to set to the solution
     // after it ie., n_minus1_sol->next_sol->next_sol
     // only required for n_minus1_sol sub-problem since outer_dim_sol
     // will not have an NDim sub-problem
-    n_minus1_sol->dft_bufs->interim_buf_ptr = sol->dft_bufs->ndim_ip_buf_ptr;
-    n_minus1_sol->dft_bufs->ndim_ip_buf_ptr = sol->dft_bufs->interim_buf_ptr;
+    n_minus1_sol->dft_bufs->nd_sol_out_real = sol->decomp_scheme->out_real;
+    n_minus1_sol->dft_bufs->nd_sol_out_imag = sol->decomp_scheme->out_imag;
 
     // outer_dim_sol pointer updates
-    outer_dim_sol->decomp_scheme->in_real  =
-        n_minus1_sol->decomp_scheme->out_real;
-    outer_dim_sol->decomp_scheme->in_imag  =
-        n_minus1_sol->decomp_scheme->out_imag;
+    outer_dim_sol->decomp_scheme->in_real  = sol->dft_bufs->nd_sol_out_real;
+    outer_dim_sol->decomp_scheme->in_imag  = sol->dft_bufs->nd_sol_out_imag;
     outer_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
     outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-    outer_dim_sol->dft_bufs->interim_buf_ptr = sol->dft_bufs->ndim_ip_buf_ptr;
 #endif
 
     // execute nd sub-problem
@@ -178,4 +212,9 @@ static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
 dft_solver_ register_execute_ndim_solver(VOID)
 {
     return execute_ndim_solver;
+}
+
+dft_solver_ register_execute_last_stage_ip_ndim_solver(VOID)
+{
+    return execute_last_stage_ip_ndim_solver;
 }

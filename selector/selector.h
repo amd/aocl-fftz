@@ -367,6 +367,8 @@ typedef struct aoclfftz_selector
         ret = selector_driver_dft_(sel_obj);                                   \
         apply_batched_direct_solver(sel_obj->solution);                        \
         setup_twiddle_buffer_complex(sel_obj->solution);                       \
+        post_process_buffered_inplace(sel_obj->solution, problem->dim_rank,    \
+                    (VOID *)problem->out, (VOID *)(problem->out + 1));         \
     }                                                                          \
 }
 
@@ -467,14 +469,10 @@ typedef struct aoclfftz_selector
         from_sol_obj->dft_bufs->buffered->aux_buffer_2;                        \
     to_sol_obj->dft_bufs->buffered->out_ptr =                                  \
         from_sol_obj->dft_bufs->buffered->out_ptr;                             \
-    to_sol_obj->dft_bufs->inplace_buffer =                                     \
-        from_sol_obj->dft_bufs->inplace_buffer;                                \
-    to_sol_obj->dft_bufs->inplace_ndim_buffer =                                \
-        from_sol_obj->dft_bufs->inplace_ndim_buffer;                           \
-    to_sol_obj->dft_bufs->interim_buf_ptr =                                    \
-        from_sol_obj->dft_bufs->interim_buf_ptr;                               \
-    to_sol_obj->dft_bufs->ndim_ip_buf_ptr =                                    \
-        from_sol_obj->dft_bufs->ndim_ip_buf_ptr;                               \
+    to_sol_obj->dft_bufs->nd_sol_out_real =                                    \
+        from_sol_obj->dft_bufs->nd_sol_out_real;                               \
+    to_sol_obj->dft_bufs->nd_sol_out_imag =                                    \
+        from_sol_obj->dft_bufs->nd_sol_out_imag;                               \
     if (from_sol_obj->dft_bufs->transpose &&                                   \
         to_sol_obj->dft_bufs->transpose)                                       \
     {                                                                          \
@@ -629,14 +627,6 @@ typedef struct aoclfftz_selector
         from_sol_obj->dft_bufs->buffered->aux_buffer_2;                        \
     to_sol_obj->dft_bufs->buffered->out_ptr =                                  \
         from_sol_obj->dft_bufs->buffered->out_ptr;                             \
-    to_sol_obj->dft_bufs->inplace_buffer =                                     \
-        from_sol_obj->dft_bufs->inplace_buffer;                                \
-    to_sol_obj->dft_bufs->inplace_ndim_buffer =                                \
-        from_sol_obj->dft_bufs->inplace_ndim_buffer;                           \
-    to_sol_obj->dft_bufs->interim_buf_ptr =                                    \
-        from_sol_obj->dft_bufs->interim_buf_ptr;                               \
-    to_sol_obj->dft_bufs->ndim_ip_buf_ptr =                                    \
-        from_sol_obj->dft_bufs->ndim_ip_buf_ptr;                               \
     to_sol_obj->next_sol = from_sol_obj->next_sol;                             \
 }
 

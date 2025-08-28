@@ -382,8 +382,8 @@ typedef struct aoclfftz_dft_bufs
     VOID* scratch_space;
     VOID *inplace_buffer;
     VOID *inplace_ndim_buffer;
-    VOID *interim_buf_ptr;
-    VOID *ndim_ip_buf_ptr;
+    VOID *nd_sol_out_real; // required to switch between buffers in ND
+    VOID *nd_sol_out_imag;
 } aoclfftz_dft_bufs_t;
 #endif
 /////////////////////////// BUFS RELATED : END ////////////////////////////////
