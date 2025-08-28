@@ -264,7 +264,7 @@ static inline UINT32 get_max_num_threads(VOID)
 
 #define VALIDATE_N_THREADS_AND_DYN_LOAD_MODEL(num_threads, dynamic_load_model) \
 {                                                                              \
-    if (dynamic_load_model != 0 || dynamic_load_model != 1)                    \
+    if (dynamic_load_model != 0 && dynamic_load_model != 1)                    \
     {                                                                          \
         AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Invalid dynamic_load_model (%d) "  \
              "running with default value (0)", dynamic_load_model);            \
