@@ -84,16 +84,14 @@ Type definitions of Standard Datatypes for AOCL-FFTZ Library.
 
    std_types
 
-
-API Usage
-`````````
-The following test program shows the sample usage and calling sequence of
-aocl - fftz APIs to compute FFT of a test input problem.
+Examples
+````````
+Example programs illustrating how to use AOCL-FFTZ APIs are presented here.
 
 .. toctree::
    :maxdepth: 2
 
-   EXAMPLE_README
+   example
 
 **Contacts**
 
