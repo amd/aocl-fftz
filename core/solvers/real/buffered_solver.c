@@ -57,9 +57,9 @@ INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
     // Copy input to temp buffer
     FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
     FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
-    ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_1, VOID,
+    ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_1, VOID,
                      num_aux_buf * n * dt_bytes);
-    ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_2, VOID,
+    ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_2, VOID,
                      num_aux_buf * n * dt_bytes);
 
 #ifdef AOCL_ENABLE_LOG

@@ -372,7 +372,7 @@ INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein, INTP size)
     {
         return AOCLFFTZ_MEMORY_FAILURE;
     }
-    ALLOC_ALIGN_INIT(bluestein->B_out, VOID, size);
+    ALLOC_ALIGN_UNINIT(bluestein->B_out, VOID, size);
     if (bluestein->B_out == NULL)
     {
         return AOCLFFTZ_MEMORY_FAILURE;
@@ -430,7 +430,7 @@ VOID alloc_inplace_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
     UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
 
     buffer_size = buffer_length * DATA_STRIDE * dt_bytes;
-    ALLOC_ALIGN_INIT(*buffer_ptr, VOID, buffer_size);
+    ALLOC_ALIGN_UNINIT(*buffer_ptr, VOID, buffer_size);
 }
 
 #ifdef AOCL_SINGLE_MEM_REGION
