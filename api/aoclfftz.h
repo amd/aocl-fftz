@@ -76,7 +76,7 @@ extern "C" {
 #define EXPORT_SYM_DYN
 #endif
 
-#define AOCLFFTZ_LIBRARY_VERSION "AOCL-FFTZ 0.2.1"
+#define AOCLFFTZ_LIBRARY_VERSION "AOCL-FFTZ 5.1.1"
 /// @endcond /* DOXYGEN_SHOULD_SKIP_THIS */
 
 /**
