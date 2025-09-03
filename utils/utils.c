@@ -176,7 +176,7 @@ EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
 #endif
 #ifdef ENABLE_AVX256
     if (opt_level > 1 && is_AVX_supported(logger_mode) &&
-        is_FMA_supported(logger_mode) == 0) // opt_level == 2
+        is_FMA_supported(logger_mode)) // opt_level == 2
     {
         return AVX256_SUPPORTED;
     }
