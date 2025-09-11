@@ -41,8 +41,8 @@
 include(GoogleTest)
 include(ExternalProject)
 
-# to avoid DOWNLOAD_EXTRACT_TIMESTAMP warning from CMake 3.24 onwards
-if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+# to avoid DOWNLOAD_EXTRACT_TIMESTAMP warning from CMake 3.26 onwards
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.26.0")
     cmake_policy(SET CMP0135 NEW)
 endif()
 
