@@ -37,17 +37,20 @@ project(aoclfftz_examples C)
 set(FFTZ_LIB aocl_fftz)
 set(AOCL_FFTZ_INSTALL_PATH "" CACHE PATH "Path to the AOCL-FFTZ installation directory")
 
+# set the expected path variables
+set(DEST_BIN_PATH examples/bin)
+
+# Create a list to collect all example targets
+set(EXAMPLE_TARGETS "" CACHE INTERNAL "List of all example targets")
+
 # Default paths if not provided
 if(NOT AOCL_FFTZ_INSTALL_PATH)
-    message(STATUS "AOCL_FFTZ_INSTALL_PATH not provided, using default paths")
-    # Default paths within the workspace
-    set(AOCL_FFTZ_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../lib")
-    set(AOCL_FFTZ_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../api")
+    message(FATAL_ERROR "Please provide AOCL_FFTZ_INSTALL_PATH to point to the AOCL-FFTZ installation directory.")
 else()
     message(STATUS "Using AOCL_FFTZ_INSTALL_PATH: ${AOCL_FFTZ_INSTALL_PATH}")
     # Set paths based on the installed structure
-    set(AOCL_FFTZ_LIB_DIR "${AOCL_FFTZ_INSTALL_PATH}/aocl_fftz/lib")
-    set(AOCL_FFTZ_INCLUDE_DIR "${AOCL_FFTZ_INSTALL_PATH}/aocl_fftz/include")
+    set(AOCL_FFTZ_LIB_DIR "${AOCL_FFTZ_INSTALL_PATH}/lib")
+    set(AOCL_FFTZ_INCLUDE_DIR "${AOCL_FFTZ_INSTALL_PATH}/include")
 endif()
 
 # Check if the header exists
@@ -70,7 +73,10 @@ FUNCTION(add_example_outofsource example_name example_source)
         target_link_libraries(${example_name} ${FFTZ_LIB} m)
     endif()
     target_link_libraries(${example_name} ${CMAKE_DL_LIBS})
-    message(STATUS "Example added out-of-src-tree : ${example_name}")
+
+    # Add this target to our list of example targets
+    set(EXAMPLE_TARGETS ${EXAMPLE_TARGETS} ${example_name} CACHE INTERNAL "")
+    message(STATUS "Example added : ${example_name}")
 ENDFUNCTION()
 
 # Build all example programs starting with example_*
@@ -79,3 +85,16 @@ foreach(example_path ${EXAMPLE_FILES})
     get_filename_component(example_name ${example_path} NAME_WE)
     add_example_outofsource(${example_name} ${example_path})
 endforeach()
+
+message(STATUS "AOCL-FFTZ Library examples will be installed at ${CMAKE_INSTALL_PREFIX}")
+install(TARGETS ${EXAMPLE_TARGETS} DESTINATION ${DEST_BIN_PATH} COMPONENT examples)
+
+# Uninstall the binary files using custom command
+add_custom_target("uninstall" COMMENT "Uninstalling the installed files")
+add_custom_command(
+    TARGET "uninstall"
+    POST_BUILD
+    COMMENT "Uninstall the installed files as per install_manifest.txt"
+    COMMAND ${CMAKE_COMMAND} -E echo "Checking for install_manifest.txt..."
+    COMMAND [ -f install_manifest.txt ] && xargs rm -vf < install_manifest.txt || echo 'install_manifest.txt is not present, nothing to uninstall!'
+)

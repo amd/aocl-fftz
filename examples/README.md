@@ -16,13 +16,26 @@ Building on Linux
    ```
    cmake -B <build directory> <CMakeList.txt filepath>
       -DAOCL_FFTZ_INSTALL_PATH=<Installed path of AOCL-FFTZ Library>
+      -DCMAKE_INSTALL_PREFIX=<install path for examples binaries>
    ```
 
 2. Compile using the following command:
    ```
-   cmake --build <build directory>
+   cmake --build <build directory> --target install -j
    ```
    The example executables are generated in "build". <br>
+
+3. To uninstall the installed files, run the following custom command:
+   ```
+   cmake --build <build directory> --target uninstall
+   ```
+
+   To uninstall and then install the build package, run the following command:
+   ```
+   cmake --build <build directory> --target uninstall --target install -j -v
+   ```
+
+4. To clear or delete the build folder or files, manually remove the build directory or its files.
 
 Building on Windows
 -------------------
