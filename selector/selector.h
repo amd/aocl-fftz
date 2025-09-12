@@ -49,7 +49,7 @@
 //#define AOCLFFTZ_AUTO_SELECTOR_MODE
 
 /* !! Do not enable these macros for now !! */
-// #define PERFORM_INTER_STAGE_PERMUTE
+// #define PERFORM_INTER_STAGE_PERMUTE // Broken codepath, functional failure
 // #define DISABLE_BATCHED_DIRECT_SOLVER
 
 typedef enum {
@@ -469,10 +469,10 @@ typedef struct aoclfftz_selector
         from_sol_obj->dft_bufs->buffered->aux_buffer_2;                        \
     to_sol_obj->dft_bufs->buffered->out_ptr =                                  \
         from_sol_obj->dft_bufs->buffered->out_ptr;                             \
-    to_sol_obj->dft_bufs->nd_sol_out_real =                                    \
-        from_sol_obj->dft_bufs->nd_sol_out_real;                               \
-    to_sol_obj->dft_bufs->nd_sol_out_imag =                                    \
-        from_sol_obj->dft_bufs->nd_sol_out_imag;                               \
+    to_sol_obj->dft_bufs->ct_buf_real =                                    \
+        from_sol_obj->dft_bufs->ct_buf_real;                               \
+    to_sol_obj->dft_bufs->ct_buf_imag =                                    \
+        from_sol_obj->dft_bufs->ct_buf_imag;                               \
     if (from_sol_obj->dft_bufs->transpose &&                                   \
         to_sol_obj->dft_bufs->transpose)                                       \
     {                                                                          \
@@ -608,7 +608,8 @@ typedef struct aoclfftz_selector
         from_sol_obj->decomp_scheme->thread_info->n_threads;                   \
     to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;     \
     to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;                       \
-    to_sol_obj->twiddle->load_multi_cols = from_sol_obj->twiddle->load_multi_cols;     \
+    to_sol_obj->twiddle->load_multi_cols =                                     \
+        from_sol_obj->twiddle->load_multi_cols;                                \
     to_sol_obj->twiddle->cols = from_sol_obj->twiddle->cols;                   \
     to_sol_obj->twiddle->twiddle_buf_ptr =                                     \
         from_sol_obj->twiddle->twiddle_buf_ptr;                                \
@@ -625,6 +626,10 @@ typedef struct aoclfftz_selector
         from_sol_obj->dft_bufs->buffered->aux_buffer_1;                        \
     to_sol_obj->dft_bufs->buffered->aux_buffer_2 =                             \
         from_sol_obj->dft_bufs->buffered->aux_buffer_2;                        \
+    to_sol_obj->dft_bufs->ct_buf_real =                                        \
+        from_sol_obj->dft_bufs->ct_buf_real;                                   \
+    to_sol_obj->dft_bufs->ct_buf_imag =                                        \
+        from_sol_obj->dft_bufs->ct_buf_imag;                                   \
     to_sol_obj->dft_bufs->buffered->out_ptr =                                  \
         from_sol_obj->dft_bufs->buffered->out_ptr;                             \
     to_sol_obj->next_sol = from_sol_obj->next_sol;                             \

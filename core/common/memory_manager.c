@@ -182,10 +182,9 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->transpose->aux_mem->size = 0;
         sol->dft_bufs->transpose->aux_mem->data = NULL;
         sol->dft_bufs->scratch_space = NULL;
-        sol->dft_bufs->inplace_buffer = NULL;
-        sol->dft_bufs->inplace_ndim_buffer = NULL;
-        sol->dft_bufs->nd_sol_out_real = NULL;
-        sol->dft_bufs->nd_sol_out_imag = NULL;
+        sol->dft_bufs->ct_buffer = NULL;
+        sol->dft_bufs->ct_buf_real = NULL;
+        sol->dft_bufs->ct_buf_imag = NULL;
         sol->solver->kernel_c2c->count = 0;
         sol->solver->kernel_r2hc->count = 0;
         sol->solver->kernel_r2hcf->count = 0;
@@ -288,10 +287,9 @@ aoclfftz_solution_t* alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->transpose->aux_mem->size = 0;
         sol->dft_bufs->transpose->aux_mem->data = NULL;
         sol->dft_bufs->scratch_space = NULL;
-        sol->dft_bufs->inplace_buffer = NULL;
-        sol->dft_bufs->inplace_ndim_buffer = NULL;
-        sol->dft_bufs->nd_sol_out_real = NULL;
-        sol->dft_bufs->nd_sol_out_imag = NULL;
+        sol->dft_bufs->ct_buffer = NULL;
+        sol->dft_bufs->ct_buf_real = NULL;
+        sol->dft_bufs->ct_buf_imag = NULL;
         sol->solver->kernel_c2c->count = 0;
         sol->solver->kernel_r2hc->count = 0;
         sol->solver->kernel_r2hcf->count = 0;
@@ -503,8 +501,7 @@ VOID destroy_solution(aoclfftz_solution_t* sol, UINT8 destroy_buffers)
         // only destroyed once from the final destroy_handle
         if (destroy_buffers)
         {
-            FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->inplace_buffer);
-            FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->inplace_ndim_buffer);
+            FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->ct_buffer);
         }
 
         // Buffered solver will create aux_buffers and the same address will be
@@ -652,8 +649,7 @@ VOID destroy_solution(aoclfftz_solution_t *sol, UINT8 destroy_buffers)
         // only destroyed once from the final destroy_handle
         if (destroy_buffers)
         {
-            FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->inplace_buffer);
-            FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->inplace_ndim_buffer);
+            FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->ct_buffer);
         }
         destroy_solution(sol->dft_bufs->nd_sol);
         destroy_strides(sol);

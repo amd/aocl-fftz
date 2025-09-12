@@ -101,17 +101,9 @@ INT32 aoclfftz_execute_io(VOID *handle, VOID *in, VOID *out)
     UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
     sol->decomp_scheme->in_real = in;
     sol->decomp_scheme->in_imag = MOVE_ADDR(in, dt_bytes);
-    #if defined (PERFORM_INTER_STAGE_PERMUTE)
-        sol->decomp_scheme->out_real = out;
-        sol->decomp_scheme->out_imag = MOVE_ADDR(out, dt_bytes);
-    #else
-        if (IS_REAL(sol->decomp_scheme->flags) ||
-            IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
-        {
-            sol->decomp_scheme->out_real = out;
-            sol->decomp_scheme->out_imag = MOVE_ADDR(out, dt_bytes);
-        }
-    #endif
+    sol->decomp_scheme->out_real = out;
+    sol->decomp_scheme->out_imag = MOVE_ADDR(out, dt_bytes);
+
     return aoclfftz_execute(handle);
 }
 

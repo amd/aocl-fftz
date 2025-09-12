@@ -91,8 +91,10 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
         VOID *in_imag = next_sol[0]->decomp_scheme->in_imag;
         VOID *out_real = next_sol[0]->decomp_scheme->out_real;
         VOID *out_imag = next_sol[0]->decomp_scheme->out_imag;
-        VOID *nd_sol_out_real = next_sol[0]->dft_bufs->nd_sol_out_real;
-        VOID *nd_sol_out_imag = next_sol[0]->dft_bufs->nd_sol_out_imag;
+#if !defined (PERFORM_INTER_STAGE_PERMUTE)
+        VOID *ct_buf_real = next_sol[0]->dft_bufs->ct_buf_real;
+        VOID *ct_buf_imag = next_sol[0]->dft_bufs->ct_buf_imag;
+#endif
 
         omp_set_num_threads(sol->decomp_scheme->thread_info->n_threads);
 
@@ -109,17 +111,12 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
                                 (VOID *)((CHAR *)out_real + b * v_out_stride);
             next_sol[tid]->decomp_scheme->out_imag =
                                 (VOID *)((CHAR *)out_imag + b * v_out_stride);
-
-        #if !defined (PERFORM_INTER_STAGE_PERMUTE)
-            if (next_sol[0]->dft_bufs->nd_sol_out_real != NULL)
-            {
-                // If the next solution has nd_sol_out buffers, move them too
-                next_sol[tid]->dft_bufs->nd_sol_out_real =
-                (VOID *)((CHAR *)nd_sol_out_real + b * v_out_stride);
-                next_sol[tid]->dft_bufs->nd_sol_out_imag =
-                (VOID *)((CHAR *)nd_sol_out_imag + b * v_out_stride);
-            }
-        #endif
+#if !defined (PERFORM_INTER_STAGE_PERMUTE)
+            next_sol[tid]->dft_bufs->ct_buf_real =
+                            (VOID *)((CHAR *)ct_buf_real + b * v_out_stride);
+            next_sol[tid]->dft_bufs->ct_buf_imag =
+                            (VOID *)((CHAR *)ct_buf_imag + b * v_out_stride);
+#endif
 
             status = next_sol[tid]->solver->execute_solver(next_sol[tid]);
         }
@@ -129,8 +126,10 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
         next_sol[0]->decomp_scheme->in_imag = in_imag;
         next_sol[0]->decomp_scheme->out_real = out_real;
         next_sol[0]->decomp_scheme->out_imag = out_imag;
-        next_sol[0]->dft_bufs->nd_sol_out_real = nd_sol_out_real;
-        next_sol[0]->dft_bufs->nd_sol_out_imag = nd_sol_out_imag;
+#if !defined (PERFORM_INTER_STAGE_PERMUTE)
+        next_sol[0]->dft_bufs->ct_buf_real = ct_buf_real;
+        next_sol[0]->dft_bufs->ct_buf_imag = ct_buf_imag;
+#endif
     }
     else
     {
@@ -139,8 +138,10 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
         VOID *in_imag = next_sol[0]->decomp_scheme->in_imag;
         VOID *out_real = next_sol[0]->decomp_scheme->out_real;
         VOID *out_imag = next_sol[0]->decomp_scheme->out_imag;
-        VOID *nd_sol_out_real = next_sol[0]->dft_bufs->nd_sol_out_real;
-        VOID *nd_sol_out_imag = next_sol[0]->dft_bufs->nd_sol_out_imag;
+#if !defined (PERFORM_INTER_STAGE_PERMUTE)
+        VOID *ct_buf_real = next_sol[0]->dft_bufs->ct_buf_real;
+        VOID *ct_buf_imag = next_sol[0]->dft_bufs->ct_buf_imag;
+#endif
 
         for (rnk_offset = 0;
              rnk_offset < sol->decomp_scheme->vecs[vec_rank - 1].n; rnk_offset++)
@@ -151,10 +152,10 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
             VOID *in_imag = next_sol[0]->decomp_scheme->in_imag;
             VOID *out_real = next_sol[0]->decomp_scheme->out_real;
             VOID *out_imag = next_sol[0]->decomp_scheme->out_imag;
-        #if !defined (PERFORM_INTER_STAGE_PERMUTE)
-            VOID *nd_sol_out_real = next_sol[0]->dft_bufs->nd_sol_out_real;
-            VOID *nd_sol_out_imag = next_sol[0]->dft_bufs->nd_sol_out_imag;
-        #endif
+#if !defined (PERFORM_INTER_STAGE_PERMUTE)
+            VOID *ct_buf_real = next_sol[0]->dft_bufs->ct_buf_real;
+            VOID *ct_buf_imag = next_sol[0]->dft_bufs->ct_buf_imag;
+#endif
 
             //recursive call to solve the inner batches
             status = execute_mt_batched_solver_internal(sol, next_sol,
@@ -176,16 +177,12 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
                     (VOID *)((CHAR *)out_real + v_out_stride);
                 next_sol[i]->decomp_scheme->out_imag =
                     (VOID *)((CHAR *)out_imag + v_out_stride);
-             #if !defined (PERFORM_INTER_STAGE_PERMUTE)
-                if (next_sol[0]->dft_bufs->nd_sol_out_real != NULL)
-                {
-                    // If the next solution has nd_sol_out buffers, move them too
-                    next_sol[i]->dft_bufs->nd_sol_out_real =
-                    (VOID *)((CHAR *)nd_sol_out_real + v_out_stride);
-                    next_sol[i]->dft_bufs->nd_sol_out_imag =
-                    (VOID *)((CHAR *)nd_sol_out_imag + v_out_stride);
-                }
-            #endif
+#if !defined (PERFORM_INTER_STAGE_PERMUTE)
+                next_sol[i]->dft_bufs->ct_buf_real =
+                            (VOID *)((CHAR *)ct_buf_real + v_out_stride);
+                next_sol[i]->dft_bufs->ct_buf_imag =
+                            (VOID *)((CHAR *)ct_buf_imag + v_out_stride);
+#endif
             }
         }
 
@@ -194,8 +191,10 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
         next_sol[0]->decomp_scheme->in_imag = in_imag;
         next_sol[0]->decomp_scheme->out_real = out_real;
         next_sol[0]->decomp_scheme->out_imag = out_imag;
-        next_sol[0]->dft_bufs->nd_sol_out_real = nd_sol_out_real;
-        next_sol[0]->dft_bufs->nd_sol_out_imag = nd_sol_out_imag;
+#if !defined (PERFORM_INTER_STAGE_PERMUTE)
+        next_sol[0]->dft_bufs->ct_buf_real = ct_buf_real;
+        next_sol[0]->dft_bufs->ct_buf_imag = ct_buf_imag;
+#endif
     }
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
@@ -229,13 +228,9 @@ static INT32 execute_mt_batched_solver(aoclfftz_solution_t *sol)
         next_sol[i]->decomp_scheme->out_real = sol->decomp_scheme->out_real;
         next_sol[i]->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
         next_sol[i]->decomp_scheme->flags = sol->decomp_scheme->flags;
-
     #if !defined (PERFORM_INTER_STAGE_PERMUTE)
-        if (sol->dft_bufs->nd_sol_out_real != NULL)
-        {
-            next_sol[i]->dft_bufs->nd_sol_out_real = sol->dft_bufs->nd_sol_out_real;
-            next_sol[i]->dft_bufs->nd_sol_out_imag = sol->dft_bufs->nd_sol_out_imag;
-        }
+        next_sol[i]->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buf_real;
+        next_sol[i]->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
     #endif
     }
     status = execute_mt_batched_solver_internal(sol, next_sol,
