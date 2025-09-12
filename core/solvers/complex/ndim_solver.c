@@ -125,20 +125,22 @@ static INT32 execute_last_stage_ip_ndim_solver(aoclfftz_solution_t *sol)
     // update solution data pointers
     n_minus1_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
     n_minus1_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
-    n_minus1_sol->decomp_scheme->out_real = sol->dft_bufs->nd_sol_out_real;
-    n_minus1_sol->decomp_scheme->out_imag = sol->dft_bufs->nd_sol_out_imag;
+    n_minus1_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+    n_minus1_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
 
     // propagate the pointers to next solution for it to set to the solution
     // after it ie., n_minus1_sol->next_sol->next_sol
     // only required for n_minus1_sol sub-problem since outer_dim_sol
     // will not have an NDim sub-problem
-    n_minus1_sol->dft_bufs->nd_sol_out_real = sol->decomp_scheme->out_real;
-    n_minus1_sol->dft_bufs->nd_sol_out_imag = sol->decomp_scheme->out_imag;
+    n_minus1_sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buf_real;
+    n_minus1_sol->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
 
-    outer_dim_sol->decomp_scheme->in_real  = sol->dft_bufs->nd_sol_out_real;
-    outer_dim_sol->decomp_scheme->in_imag  = sol->dft_bufs->nd_sol_out_imag;
+    outer_dim_sol->decomp_scheme->in_real  = n_minus1_sol->decomp_scheme->out_real;
+    outer_dim_sol->decomp_scheme->in_imag  = n_minus1_sol->decomp_scheme->out_imag;
     outer_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->in_real;
     outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->in_imag;
+    outer_dim_sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buf_real;
+    outer_dim_sol->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
 
     // execute nd sub-problem
     n_minus1_sol->solver->execute_solver(n_minus1_sol);
@@ -180,21 +182,23 @@ static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
     // update solution data pointers
     n_minus1_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
     n_minus1_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
-    n_minus1_sol->decomp_scheme->out_real = sol->dft_bufs->nd_sol_out_real;
-    n_minus1_sol->decomp_scheme->out_imag = sol->dft_bufs->nd_sol_out_imag;
+    n_minus1_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+    n_minus1_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
 
     // propagate the pointers to next solution for it to set to the solution
     // after it ie., n_minus1_sol->next_sol->next_sol
     // only required for n_minus1_sol sub-problem since outer_dim_sol
     // will not have an NDim sub-problem
-    n_minus1_sol->dft_bufs->nd_sol_out_real = sol->decomp_scheme->out_real;
-    n_minus1_sol->dft_bufs->nd_sol_out_imag = sol->decomp_scheme->out_imag;
+    n_minus1_sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buf_real;
+    n_minus1_sol->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
 
     // outer_dim_sol pointer updates
-    outer_dim_sol->decomp_scheme->in_real  = sol->dft_bufs->nd_sol_out_real;
-    outer_dim_sol->decomp_scheme->in_imag  = sol->dft_bufs->nd_sol_out_imag;
+    outer_dim_sol->decomp_scheme->in_real  = n_minus1_sol->decomp_scheme->out_real;
+    outer_dim_sol->decomp_scheme->in_imag  = n_minus1_sol->decomp_scheme->out_imag;
     outer_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
     outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    outer_dim_sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buf_real;
+    outer_dim_sol->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
 #endif
 
     // execute nd sub-problem

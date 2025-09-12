@@ -353,13 +353,15 @@ static INT32 execute_last_stage_ip_ct_solver(aoclfftz_solution_t *sol)
     // update radix-m & radix-r solution data pointers
     radix_m_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
     radix_m_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
-    radix_m_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    radix_m_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    radix_m_sol->decomp_scheme->out_real = sol->dft_bufs->ct_buf_real;
+    radix_m_sol->decomp_scheme->out_imag = sol->dft_bufs->ct_buf_imag;
+    radix_m_sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buf_real;
+    radix_m_sol->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
     radix_m_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
 
     // point out pointers to user buffer thats being pointed by in pointers
-    radix_r_sol->decomp_scheme->in_real  = sol->decomp_scheme->out_real;
-    radix_r_sol->decomp_scheme->in_imag  = sol->decomp_scheme->out_imag;
+    radix_r_sol->decomp_scheme->in_real  = radix_m_sol->decomp_scheme->out_real;
+    radix_r_sol->decomp_scheme->in_imag  = radix_m_sol->decomp_scheme->out_imag;
     radix_r_sol->decomp_scheme->out_real = sol->decomp_scheme->in_real;
     radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->in_imag;
     radix_r_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
@@ -438,15 +440,18 @@ static INT32 execute_ct_twiddle_solver(aoclfftz_solution_t *sol)
     INT32 status = SOLVER_SUCCESS;
     aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
     aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
+
     // update radix-m & radix-r solution data pointers
     radix_m_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
     radix_m_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
-    radix_m_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    radix_m_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    radix_m_sol->decomp_scheme->out_real = sol->dft_bufs->ct_buf_real;
+    radix_m_sol->decomp_scheme->out_imag = sol->dft_bufs->ct_buf_imag;
+    radix_m_sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buf_real;
+    radix_m_sol->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
     radix_m_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
 
-    radix_r_sol->decomp_scheme->in_real  = sol->decomp_scheme->out_real;
-    radix_r_sol->decomp_scheme->in_imag  = sol->decomp_scheme->out_imag;
+    radix_r_sol->decomp_scheme->in_real  = radix_m_sol->decomp_scheme->out_real;
+    radix_r_sol->decomp_scheme->in_imag  = radix_m_sol->decomp_scheme->out_imag;
     radix_r_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
     radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
     radix_r_sol->decomp_scheme->flags = sol->decomp_scheme->flags;

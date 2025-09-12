@@ -126,6 +126,8 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     // next_sol->bluestein->out
     VOID *out_real = next_sol->decomp_scheme->out_real;
     VOID *out_imag = next_sol->decomp_scheme->out_imag;
+    VOID *ct_buf_real = next_sol->dft_bufs->ct_buf_real;
+    VOID *ct_buf_imag = next_sol->dft_bufs->ct_buf_imag;
 
     // Copy input from current sol to next sol
     VOID *cur_in  = sol->decomp_scheme->in_real;
@@ -176,6 +178,8 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
 
     // input  : in_real
     // output : out_real
+    next_sol->dft_bufs->ct_buf_real = next_sol->decomp_scheme->out_real;
+    next_sol->dft_bufs->ct_buf_imag = next_sol->decomp_scheme->out_imag;
     status = next_sol->solver->execute_solver(next_sol);
     if (status != SOLVER_SUCCESS)
     {
@@ -194,6 +198,8 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
         next_sol->decomp_scheme->out_real = sol->dft_bufs->bluestein->B_out;
         next_sol->decomp_scheme->out_imag =
             MOVE_ADDR(sol->dft_bufs->bluestein->B_out, dt_bytes);
+        next_sol->dft_bufs->ct_buf_real = next_sol->decomp_scheme->out_real;
+        next_sol->dft_bufs->ct_buf_imag = next_sol->decomp_scheme->out_imag;
 
         // input  : sol->dft_bufs->bluestein->B
         // output : sol->dft_bufs->bluestein->B_out
@@ -219,6 +225,8 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     next_sol->decomp_scheme->in_imag = out_imag;
     next_sol->decomp_scheme->out_real = in_real;
     next_sol->decomp_scheme->out_imag = in_imag;
+    next_sol->dft_bufs->ct_buf_real = next_sol->decomp_scheme->out_real;
+    next_sol->dft_bufs->ct_buf_imag = next_sol->decomp_scheme->out_imag;
     next_sol->decomp_scheme->flags ^= mask;
 
     // input  : out_imag
@@ -272,6 +280,8 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     next_sol->decomp_scheme->in_imag = in_imag;
     next_sol->decomp_scheme->out_real = out_real;
     next_sol->decomp_scheme->out_imag = out_imag;
+    next_sol->dft_bufs->ct_buf_real = ct_buf_real;
+    next_sol->dft_bufs->ct_buf_imag = ct_buf_imag;
     next_sol->decomp_scheme->flags = initial_flags;
 
 #ifdef AOCL_ENABLE_LOG
