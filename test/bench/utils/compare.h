@@ -73,24 +73,13 @@
  */
 #define INCREMENT_ND_COUNTER(cur_dims, max_dims, rank)                         \
     {                                                                          \
-        UINT8 incremented = 0;                                                 \
-        INTP cur_rank = 0;                                                     \
-        do                                                                     \
+        for (INT32 i = 0; i < rank; i++)                                       \
         {                                                                      \
-            if (cur_dims[cur_rank] < max_dims[cur_rank].n - 1)                 \
-            {                                                                  \
-                cur_dims[cur_rank]++;                                          \
-                incremented = 1;                                               \
+            if (++cur_dims[i] < max_dims[i].n) {                               \
+                break;                                                         \
             }                                                                  \
-            else                                                               \
-            {                                                                  \
-                for (INTP i = 0; i <= cur_rank; i++)                           \
-                {                                                              \
-                    cur_dims[i] = 0;                                           \
-                }                                                              \
-                cur_rank++;                                                    \
-            }                                                                  \
-        } while (!incremented && cur_rank < rank);                             \
+            cur_dims[i] = 0;                                                   \
+        }                                                                      \
     }
 
 /**

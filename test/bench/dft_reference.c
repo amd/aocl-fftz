@@ -489,6 +489,14 @@ VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
     INTP *out_counter = NULL;
     ALLOC_INIT(out_counter, INTP, rank * sizeof(INTP), is_align);
 
+    DOUBLE *inv_dims = NULL;
+    ALLOC_INIT(inv_dims, DOUBLE, rank * sizeof(DOUBLE), is_align);
+    // Precompute angle inv_dims
+    for (INTP i = 0; i < rank; i++)
+    {
+        inv_dims[i] = 1.0 / dims[i].n;
+    }
+
     // Iterate over all batches
     for (INTP b = 0; b < batches; b++)
     {
@@ -512,7 +520,7 @@ VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
                 DOUBLE angle = sign * BENCH_2_PI;
                 // The macro UPDATE_ANGLE updates 'angle' in-place based on the
                 // current multi-dimensional indices and dimensions
-                UPDATE_ANGLE(angle, in_counter, out_counter, dims, rank);
+                UPDATE_ANGLE(angle, in_counter, out_counter, inv_dims, rank);
 
                 // Compute the complex exponential e^{-j*angle}
                 e[0] = cos(angle); // real part
@@ -572,7 +580,16 @@ VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
     INTP *out_counter = NULL;
     ALLOC_INIT(out_counter, INTP, rank * sizeof(INTP), is_align);
 
+    DOUBLE *inv_dims = NULL;
+    ALLOC_INIT(inv_dims, DOUBLE, rank * sizeof(DOUBLE), is_align);
+    // Precompute angle inv_dims
+    for (INTP i = 0; i < rank; i++)
+    {
+        inv_dims[i] = 1.0 / dims[i].n;
+    }
+
     // Iterate over all batches
+    // TODO: add parallelization over batches to speed up, cache twiddles
     for (INTP b = 0; b < batches; b++)
     {
         RESET_ND_COUNTER(out_counter, rank);
@@ -595,7 +612,7 @@ VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
                 DOUBLE angle = sign * BENCH_2_PI;
                 // The macro UPDATE_ANGLE updates 'angle' in-place based on the
                 // current multi-dimensional indices and dimensions
-                UPDATE_ANGLE(angle, in_counter, out_counter, dims, rank);
+                UPDATE_ANGLE(angle, in_counter, out_counter, inv_dims, rank);
 
                 // Compute the complex exponential e^{-j*angle}
                 e[0] = cos(angle); // real part
