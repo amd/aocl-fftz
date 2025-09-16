@@ -38,12 +38,25 @@ set(FFTZ_LIB aocl_fftz)
 set(AOCL_FFTZ_INSTALL_PATH "" CACHE PATH "Path to the AOCL-FFTZ installation directory")
 
 # set the expected path variables
-set(DEST_BIN_PATH examples/bin)
+include_directories(.)
+set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(DEST_BIN_PATH bin)
 
 # Create a list to collect all example targets
 set(EXAMPLE_TARGETS "" CACHE INTERNAL "List of all example targets")
 
-# Default paths if not provided
+# Find OpenMP package, Assuming Library is built with ENABLE_MULTI_THREADING=ON
+if (WIN32)
+    set(OpenMP_libomp_LIBRARY "C:/Program Files/LLVM/lib/libomp.lib" CACHE FILEPATH "OpenMP library path")
+    message(STATUS "OpenMP custom path to look for OpenMP: ${OpenMP_libomp_LIBRARY}")
+endif()
+find_package(OpenMP)
+if(OpenMP_FOUND)
+    message(STATUS "OpenMP found - will enable parallel execution")
+else()
+    message(FATAL_ERROR "OpenMP Missing! Please install OpenMP and ensure that the AOCL-FFTZ library was built with ENABLE_MULTI_THREADING=ON.")
+endif()
+
 if(NOT AOCL_FFTZ_INSTALL_PATH)
     message(FATAL_ERROR "Please provide AOCL_FFTZ_INSTALL_PATH to point to the AOCL-FFTZ installation directory.")
 else()
@@ -62,15 +75,30 @@ endif()
 message(STATUS "Using library directory: ${AOCL_FFTZ_LIB_DIR}")
 message(STATUS "Using include directory: ${AOCL_FFTZ_INCLUDE_DIR}")
 
+# Set default install location if CMAKE_INSTALL_PREFIX is not defined
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX "${ROOT_DIR}" CACHE PATH "Install path prefix" FORCE)
+endif()
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${DEST_BIN_PATH}")
+
 # Create example_name executable
 FUNCTION(add_example_outofsource example_name example_source)
     add_executable(${example_name} ${example_source})
     target_include_directories(${example_name} PRIVATE ${AOCL_FFTZ_INCLUDE_DIR})
     target_link_directories(${example_name} PRIVATE ${AOCL_FFTZ_LIB_DIR})
     if (WIN32)
-        target_link_libraries(${example_name} ${FFTZ_LIB})
+        message(STATUS "Adding OpenMP support for Windows")
+        target_link_libraries(${example_name} ${FFTZ_LIB} OpenMP::OpenMP_C)
     else()
-        target_link_libraries(${example_name} ${FFTZ_LIB} m)
+        # Check if we're linking against a static library
+        if(EXISTS "${AOCL_FFTZ_LIB_DIR}/libaocl_fftz.a")
+            message(STATUS "Linking against static library")
+            target_link_libraries(${example_name} ${FFTZ_LIB} m OpenMP::OpenMP_C)
+        else()
+            message(STATUS "Linking against shared library")
+            target_link_libraries(${example_name} ${FFTZ_LIB} m)
+        endif()
     endif()
     target_link_libraries(${example_name} ${CMAKE_DL_LIBS})
 

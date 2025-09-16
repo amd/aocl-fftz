@@ -5,6 +5,9 @@ This directory contains sample source files showing usage of AOCL-FFTZ Library
 functions. Use the provided cmake script "CMakeLists.txt" to compile and
 run the programs. Same script may be used on Linux and Windows platforms.
 
+Note: The examples in this directory assume that AOCL-FFTZ has been built
+       with multi-threading enabled (`ENABLE_MULTI_THREADING=ON`).
+
 Building on Linux
 -----------------
 
@@ -24,6 +27,10 @@ Building on Linux
    cmake --build <build directory> --target install -j
    ```
    The example executables are generated in "build". <br>
+   The additional option `--target install` will install the test binaries <br>
+   to the installation path as specified with the `-DCMAKE_INSTALL_PREFIX` <br>
+   option or in "examples/bin". <br>
+   The option `-j` will run the compilation process using multiple cores.
 
 3. To uninstall the installed files, run the following custom command:
    ```
