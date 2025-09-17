@@ -64,6 +64,7 @@ aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank)
             decomp_scheme->thread_info->pthr_fft == NULL)
         {
             destroy_decomp_scheme(decomp_scheme);
+            FREE_ALIGN_ALLOCATED_MEM(decomp_scheme);
             return NULL;
         }
         return decomp_scheme;

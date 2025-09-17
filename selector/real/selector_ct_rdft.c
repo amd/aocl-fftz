@@ -239,20 +239,6 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 RESET_COST(cur_sel_m);
             }
         }
-        else
-        {
-            // FIXME: Update this logic
-            if ((cur_sel->cost_analysis->time +
-                 cur_sel_m->cost_analysis->time) < sel->cost_analysis->time)
-            {
-                sel->cost_analysis->ops =
-                    cur_sel->cost_analysis->ops + cur_sel_m->cost_analysis->ops;
-                sel->cost_analysis->time = cur_sel->cost_analysis->time +
-                                           cur_sel_m->cost_analysis->time;
-                next_sol = cur_sel->solution;
-                next_sol->next_sol[0] = cur_sel_m->solution;
-            }
-        }
         if (stats_mode)
         {
             // capture stats

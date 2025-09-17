@@ -79,7 +79,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     // prepare random seed value
     if (params->use_random_seed)
     {
-        params->seed = time(0);
+        params->seed = (INT32)time(0);
     }
 
 #ifdef AOCL_ENABLE_LOG

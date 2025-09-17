@@ -73,13 +73,6 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     aoclfftz_dim_t_64_ *vecs = params->vecs;
     INTP *dim_counter = NULL;
     INTP *vec_counter = NULL;
-    UINT32 is_aligned = params->aligned_alloc;
-    ALLOC_INIT(dim_counter, INTP, dim_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(vec_counter, INTP, vec_rank * sizeof(INTP), is_aligned);
-    if (dim_counter == NULL || vec_counter == NULL)
-    {
-        return MEMORY_FAILURE;
-    }
     FLOAT max_abs_err = 0.0;
     FLOAT max_mag = 0.0;
     INTP max_err_idx = -1;
@@ -89,15 +82,23 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     INTP *d_err_coords = NULL;
     INTP *b_maxerr_coords = NULL;
     INTP *b_err_coords = NULL;
+    UINT32 is_aligned = params->aligned_alloc;
+
+    ALLOC_INIT(dim_counter, INTP, dim_rank * sizeof(INTP), is_aligned);
+    ALLOC_INIT(vec_counter, INTP, vec_rank * sizeof(INTP), is_aligned);
     ALLOC_INIT(d_maxerr_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
     ALLOC_INIT(d_err_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
     ALLOC_INIT(b_maxerr_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
     ALLOC_INIT(b_err_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
-    if (d_maxerr_coords == NULL || d_err_coords == NULL ||
+
+    if (dim_counter == NULL || vec_counter == NULL ||
+        d_maxerr_coords == NULL || d_err_coords == NULL ||
         b_maxerr_coords == NULL || b_err_coords == NULL)
     {
-        return MEMORY_FAILURE;
+        status = MEMORY_FAILURE;
+        goto cleanup;
     }
+
     INTP N = batches * n;
     for (INTP i = 0; i < N * data_stride; i++)
     {
@@ -272,6 +273,7 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
         status = VERIFICATION_FAILURE;
     }
 
+cleanup:
     FREE_ALLOCATED_MEM(dim_counter, is_aligned);
     FREE_ALLOCATED_MEM(vec_counter, is_aligned);
     FREE_ALLOCATED_MEM(d_maxerr_coords, is_aligned);
@@ -314,9 +316,6 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     INTP *dim_counter = NULL;
     INTP *vec_counter = NULL;
     UINT32 is_aligned = params->aligned_alloc;
-    ALLOC_INIT(dim_counter, INTP, dim_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(vec_counter, INTP, vec_rank * sizeof(INTP), is_aligned);
-
     DOUBLE max_abs_err = 0.0;
     DOUBLE max_mag = 0.0;
     INTP max_err_idx = -1;
@@ -326,10 +325,20 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     INTP *d_err_coords = NULL;
     INTP *b_maxerr_coords = NULL;
     INTP *b_err_coords = NULL;
+    ALLOC_INIT(dim_counter, INTP, dim_rank * sizeof(INTP), is_aligned);
+    ALLOC_INIT(vec_counter, INTP, vec_rank * sizeof(INTP), is_aligned);
     ALLOC_INIT(d_maxerr_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
     ALLOC_INIT(d_err_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
     ALLOC_INIT(b_maxerr_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
     ALLOC_INIT(b_err_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
+
+    if (dim_counter == NULL || vec_counter == NULL ||
+        d_maxerr_coords == NULL || d_err_coords == NULL ||
+        b_maxerr_coords == NULL || b_err_coords == NULL)
+    {
+        status = MEMORY_FAILURE;
+        goto cleanup;
+    }
 
     INTP N = batches * n;
     for (INTP i = 0; i < N * data_stride; i++)
@@ -508,6 +517,7 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
         status = VERIFICATION_FAILURE;
     }
 
+cleanup:
     FREE_ALLOCATED_MEM(dim_counter, is_aligned);
     FREE_ALLOCATED_MEM(vec_counter, is_aligned);
     FREE_ALLOCATED_MEM(d_maxerr_coords, is_aligned);
