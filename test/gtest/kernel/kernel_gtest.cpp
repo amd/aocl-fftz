@@ -1905,7 +1905,7 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(io_params)),
     name_generator);
 
-#ifdef ENABLE_AVX128
+#if defined(AVX128_SUPPORTED) && defined(ENABLE_AVX128)
 INSTANTIATE_TEST_SUITE_P(
     C2C_AVX128_KernelTest, AoclfftzKernelTestFloat,
     ::testing::Combine(::testing::ValuesIn(param_float_c2c_avx128_kernels),
@@ -1919,7 +1919,7 @@ INSTANTIATE_TEST_SUITE_P(
     name_generator);
 #endif
 
-#ifdef ENABLE_AVX256
+#if defined(AVX256_SUPPORTED) && defined(ENABLE_AVX256)
 INSTANTIATE_TEST_SUITE_P(
     C2C_AVX256_KernelTest, AoclfftzKernelTestFloat,
     ::testing::Combine(::testing::ValuesIn(param_float_c2c_avx256_kernels),
@@ -1946,7 +1946,7 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(io_params)),
     name_generator);
 
-#ifdef ENABLE_AVX128
+#if defined(AVX128_SUPPORTED) && defined(ENABLE_AVX128)
 INSTANTIATE_TEST_SUITE_P(
     C2C_TWID_AVX128_KernelTest, AoclfftzTwiddleKernelTestFloat,
     ::testing::Combine(::testing::ValuesIn(param_float_c2c_twid_avx128_kernels),
@@ -1960,7 +1960,7 @@ INSTANTIATE_TEST_SUITE_P(
     name_generator);
 #endif
 
-#ifdef ENABLE_AVX256
+#if defined(AVX256_SUPPORTED) && defined(ENABLE_AVX256)
 INSTANTIATE_TEST_SUITE_P(
     C2C_TWID_AVX256_KernelTest, AoclfftzTwiddleKernelTestFloat,
     ::testing::Combine(::testing::ValuesIn(param_float_c2c_twid_avx256_kernels),
@@ -2075,7 +2075,7 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(io_params)),
     name_generator);
 
-#ifdef ENABLE_AVX128
+#if defined(AVX128_SUPPORTED) && defined(ENABLE_AVX128)
 // R2HC AVX128 Kernels
 INSTANTIATE_TEST_SUITE_P(
     R2HC_AVX128_KernelTest, AoclfftzKernelTestFloatReal,
@@ -2103,7 +2103,7 @@ INSTANTIATE_TEST_SUITE_P(
     name_generator);
 #endif
 
-#ifdef ENABLE_AVX256
+#if defined(AVX256_SUPPORTED) && defined(ENABLE_AVX256)
 // R2HC AVX256 Kernels
 INSTANTIATE_TEST_SUITE_P(
     R2HC_AVX256_KernelTest, AoclfftzKernelTestFloatReal,
