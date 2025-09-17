@@ -118,7 +118,7 @@
         ret |= (result < min_val);                                             \
     }
 
-#define VALIDATE_AND_GET_DOUBLE(str, buff, result, ret, min_val, max_val)      \
+#define VALIDATE_AND_GET_DOUBLE(str, result, ret, min_val, max_val)            \
     {                                                                          \
         INT32 length;                                                          \
         DOUBLE temp;                                                           \

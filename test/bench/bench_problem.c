@@ -111,6 +111,9 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     while (arg_idx < argc)
     {
         c = get_option(argv, arg_idx);
+        // Set (*optarg) to NULL_CHAR, this prevents optarg from
+        // retaining stale values from previous iterations.
+        optarg = &NULL_CHAR;
         // Check if there is at least one more command-line argument available
         // before accessing it.
         if (arg_idx + 1 < argc)
@@ -256,7 +259,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             break;
         case 't':
-            VALIDATE_AND_GET_DOUBLE(optarg, str_buff, bench_params->tolerance,
+            VALIDATE_AND_GET_DOUBLE(optarg, bench_params->tolerance,
                                     ret, 0.0, 1.0);
             if (ret != 0)
             {
