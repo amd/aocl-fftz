@@ -149,44 +149,118 @@ if(ENABLE_MULTI_THREADING)
     endif()
 endif()
 
-if(ENABLE_AVX512)
+if(ENABLE_AVX512 OR ENABLE_AVX256 OR ENABLE_AVX128)
     include(CheckCXXSourceRuns)
-
-    set(CHECK_AVX512_CODE "
+    
+    # Common header code for all AVX detection
+    set(AVX_CHECK_HEADER "
     #include <immintrin.h>
     #ifdef _WIN32
         #include <intrin.h>
     #else
         #include <cpuid.h>
     #endif
-    int main() {
-        unsigned int eax, ebx, ecx, edx;
-    #ifdef _WIN32
-        int cpuInfo[4];
-        __cpuidex(cpuInfo, 7, 0);
-        eax = cpuInfo[0];
-        ebx = cpuInfo[1];
-        ecx = cpuInfo[2];
-        edx = cpuInfo[3];
-    #else
-        __cpuid_count(7, 0, eax, ebx, ecx, edx);
-    #endif
-        return (ebx & (1 << 16)) ? 0 : 1;  // 0 if supported, 1 if not
-    }
     ")
+    
+    # Check for AVX512 support
+    if(ENABLE_AVX512)
+        set(CHECK_AVX512_CODE "${AVX_CHECK_HEADER}
+        int main() {
+            unsigned int eax, ebx, ecx, edx;
+        #ifdef _WIN32
+            int cpuInfo[4];
+            __cpuidex(cpuInfo, 7, 0);
+            eax = cpuInfo[0];
+            ebx = cpuInfo[1];
+            ecx = cpuInfo[2];
+            edx = cpuInfo[3];
+        #else
+            __cpuid_count(7, 0, eax, ebx, ecx, edx);
+        #endif
+            return (ebx & (1 << 16)) ? 0 : 1;  // AVX512F - bit 16 in EBX
+        }
+        ")
 
-    file(WRITE "${CMAKE_BINARY_DIR}/check_avx512.cpp" "${CHECK_AVX512_CODE}")
+        file(WRITE "${CMAKE_BINARY_DIR}/check_avx512.cpp" "${CHECK_AVX512_CODE}")
         try_run(RUN_RESULT COMPILE_RESULT
-        "${CMAKE_BINARY_DIR}"
-        "${CMAKE_BINARY_DIR}/check_avx512.cpp"
-    )
+            "${CMAKE_BINARY_DIR}"
+            "${CMAKE_BINARY_DIR}/check_avx512.cpp"
+        )
 
-    if(RUN_RESULT EQUAL 0)
-        target_compile_definitions(kernel_gtest PRIVATE -DAVX512_SUPPORTED)
-    else()
-        message(WARNING "AVX512 not supported by hardware. Skipping 512 tests.")
+        if(RUN_RESULT EQUAL 0)
+            target_compile_definitions(kernel_gtest PRIVATE -DAVX512_SUPPORTED)
+        else()
+            message(WARNING "AVX512 not supported by hardware. Skipping AVX512 tests.")
+        endif()
+        file(REMOVE "${CMAKE_BINARY_DIR}/check_avx512.cpp")
     endif()
-    file(REMOVE "${CMAKE_BINARY_DIR}/check_avx512.cpp")
+
+    # Check for AVX256 support (AVX2)
+    if(ENABLE_AVX256)
+        set(CHECK_AVX256_CODE "${AVX_CHECK_HEADER}
+        int main() {
+            unsigned int eax, ebx, ecx, edx;
+        #ifdef _WIN32
+            int cpuInfo[4];
+            __cpuidex(cpuInfo, 1, 0);
+            eax = cpuInfo[0];
+            ebx = cpuInfo[1];
+            ecx = cpuInfo[2];
+            edx = cpuInfo[3];
+        #else
+            __cpuid(1, eax, ebx, ecx, edx);
+        #endif
+            // check for AVX and FMA as library runs AVX256 kernel with fma instructions
+            return ((ecx & 0x18001000) == 0x18001000) ? 0 : 1;  // AVX - bits 27-28 in ECX & FMA - 12th bit in ECX
+        }
+        ")
+
+        file(WRITE "${CMAKE_BINARY_DIR}/check_avx256.cpp" "${CHECK_AVX256_CODE}")
+        try_run(RUN_RESULT COMPILE_RESULT
+            "${CMAKE_BINARY_DIR}"
+            "${CMAKE_BINARY_DIR}/check_avx256.cpp"
+        )
+
+        if(RUN_RESULT EQUAL 0)
+            target_compile_definitions(kernel_gtest PRIVATE -DAVX256_SUPPORTED)
+        else()
+            message(WARNING "AVX256 (with FMA) not supported by hardware. Skipping AVX256 tests.")
+        endif()
+        file(REMOVE "${CMAKE_BINARY_DIR}/check_avx256.cpp")
+    endif()
+
+    # Check for AVX support (AVX)
+    if(ENABLE_AVX128)
+        set(CHECK_AVX_CODE "${AVX_CHECK_HEADER}
+        int main() {
+            unsigned int eax, ebx, ecx, edx;
+        #ifdef _WIN32
+            int cpuInfo[4];
+            __cpuidex(cpuInfo, 1, 0);
+            eax = cpuInfo[0];
+            ebx = cpuInfo[1];
+            ecx = cpuInfo[2];
+            edx = cpuInfo[3];
+        #else
+            __cpuid(1, eax, ebx, ecx, edx);
+        #endif
+            return ((ecx & 0x18000000) == 0x18000000) ? 0 : 1;  // AVX - bits 27-28 in ECX
+        }
+        ")
+
+        file(WRITE "${CMAKE_BINARY_DIR}/check_avx128.cpp" "${CHECK_AVX_CODE}")
+        try_run(RUN_RESULT COMPILE_RESULT
+            "${CMAKE_BINARY_DIR}"
+            "${CMAKE_BINARY_DIR}/check_avx128.cpp"
+        )
+
+        if(RUN_RESULT EQUAL 0)
+            target_compile_definitions(kernel_gtest PRIVATE -DAVX128_SUPPORTED)
+        else()
+            message(WARNING "AVX128 (AVX) not supported by hardware. Skipping AVX128 tests.")
+        endif()
+        file(REMOVE "${CMAKE_BINARY_DIR}/check_avx128.cpp")
+    endif()
 endif()
 
 
