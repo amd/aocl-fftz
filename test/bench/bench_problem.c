@@ -164,6 +164,10 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             {
                 bench_params->bench_type = PERFORMANCE;
             }
+            else if (!strcmp(optarg, "s"))
+            {
+                bench_params->bench_type = SANITY;
+            }
             else
             {
                 printf("ERROR: Unknown benchmark type\n");
@@ -442,23 +446,23 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
 
     if (valid_iters_arg_found == 0)
     {
-        if (bench_params->bench_type == ACCURACY)
-        {
-            bench_params->num_iterations = 1;
-        }
-        else // bench_type == PERFORMANCE
+        if (bench_params->bench_type == PERFORMANCE)
         {
             bench_params->num_iterations = 10;
         }
+        else // bench_type == ACCURACY, SANITY
+        {
+            bench_params->num_iterations = 1;
+        }
     }
     if (bench_params->selector_time != 0 &&
-        bench_params->bench_type == ACCURACY)
+        bench_params->bench_type != PERFORMANCE)
     {
-        printf("WARNING: selector-time won't be used in ACCURACY mode\n");
+        printf("WARNING: selector-time is applicable only in PERFORMANCE mode\n");
         bench_params->selector_time = 0;
     }
     if (!bench_params->use_random_seed && bench_params->num_iterations != 1 &&
-        bench_params->bench_type == ACCURACY)
+        bench_params->bench_type != PERFORMANCE)
     {
         printf("WARNING: iterations will set to 1 since manual seed value is "
                "provided\n");
@@ -986,8 +990,9 @@ VOID show_help_menu(VOID)
         "-p, --precision          'd' for double (fp64), 'f' for float (fp32) "
         "[default: d]\n"
         "-m, --data-model         'l' for LP64, 'i' for ILP64 [default: l]\n"
-        "-b, --bench-type         'a' for accuracy, 'p' for performance "
-        "[default: p]\n"
+        "-b, --bench-type         'a' for accuracy, 'p' for performance, 's' "
+        "for sanity. `sanity` mode only runs the FFT problem `-i` times "
+        "without checking accuracy. [default: p]\n"
         "-r, --result-placement   'i' for in-place, 'o' for out-of-place "
         "[default: o]\n"
         "--order                  'i' for in-order, 'o' for out-of-order "
@@ -1000,8 +1005,8 @@ VOID show_help_menu(VOID)
         "backward' and 'c2r backward' is same as 'r2c forward'\n"
         "                               Hence c2r mode will be mapped to its "
         "r2c mode\n"
-        "-i, --iters              number of iterations [default: 50 for "
-        "`performance` mode and 1 for `accuracy` mode]\n"
+        "-i, --iters              number of iterations [default: 10 for "
+        "`performance` mode and 1 for `accuracy`, `sanity` modes]\n"
         "-s, --seed               specify manual seed value, random seed will "
         "be used if this option is not specified\n"
         "                           NOTE: iters will set to 1 if seed is "

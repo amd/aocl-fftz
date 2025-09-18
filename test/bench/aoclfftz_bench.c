@@ -43,6 +43,7 @@
 #include "aoclfftz_bench.h"
 #include "test/bench/accuracy.h"
 #include "test/bench/performance.h"
+#include "test/bench/sanity.h"
 
 /**
  * @brief Entry function to test bench
@@ -83,6 +84,11 @@ INT32 main(INT32 argc, CHAR **argv)
     {
         printf("\nRunning bench on performance mode\n");
         status = run_bench_on_performance_mode(params);
+    }
+    else if (params->bench_type == SANITY)
+    {
+        printf("\nRunning bench on sanity mode\n");
+        status = run_bench_on_sanity_mode(params);
     }
     else // params->bench_type == ACCURACY
     {
