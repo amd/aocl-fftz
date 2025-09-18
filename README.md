@@ -45,7 +45,7 @@ Building on Linux
    Additional options that can be specified for build configuration are:
    ```
    cmake -B <build directory> <CMakeLists.txt filepath>
-   -DAOCL_TEST_COVERAGE=<OFF/STANDARD/STANDARD+DFT_REF/EXHAUSTIVE>
+   -DAOCL_TEST_COVERAGE=<OFF/STANDARD/EXHAUSTIVE>
    -DCMAKE_INSTALL_PREFIX=<install path>
    -DCMAKE_BUILD_TYPE=<Debug or Release>
    -DENABLE_STRICT_WARNINGS=<ON or OFF>
@@ -110,7 +110,8 @@ Use the following additional options to configure your build:
 Option                              |  Description
 ------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------
 AOCL_ENABLE_LOG                     |  Enable logging support within the library (Disabled by default)
-AOCL_TEST_COVERAGE                  |  Enables GTest and AOCL test bench based CTest suite (OFF / STANDARD / STANDARD+DFT_REF / EXHAUSTIVE, default: OFF)
+AOCL_TEST_COVERAGE                  |  Enables GTest and AOCL test bench based CTest suite (OFF / STANDARD / EXHAUSTIVE, default: OFF)
+ACCURACY_WITH_DFT                   |  Enables accuracy mode to run with DFT (Disabled by default)
 ASAN                                |  Enables address sanitizer checks. Supported only on Linux Debug build (Disabled by default)
 BUILD_DOC                           |  Build documentation for library (Disabled by default)
 BUILD_STATIC_LIBS                   |  Build static library (Default build type is shared library)
@@ -175,9 +176,10 @@ Running tests with CTest
 Use the AOCL_TEST_COVERAGE option to enable testing with CTest:
 - `OFF`: Disables all tests (default)
 - `STANDARD`: Enables standard test suite
-- `STANDARD+DFT_REF`: Enables standard test suite along with DFT reference verification
 - `EXHAUSTIVE`: Enables both standard and exhaustive test suite (exhaustive suite contains a much larger set of test cases for comprehensive coverage)
-*NOTE*: The EXHAUSTIVE+DFT_REF combination is not supported, as running DFT reference checks with the exhaustive suite would significantly increase test duration.
+
+Note: `ACCURACY_WITH_DFT` enables running tests with DFT as an additional validation method.
+      This adds another verification mechanism to the set of accuracy tests that the test bench uses for verification.
 
 Here are a few sample commands that can be executed within the build directory to run test cases with CTest.
 

@@ -49,9 +49,6 @@
 #include "api/aoclfftz.h"
 #include "api/types.h"
 
-/* enable this to compare against DFT reference in accuracy mode */
-// #define ENABLE_DFT_REFERENCE
-
 // Forward declarations
 typedef struct aoclfftz_bench_params aoclfftz_bench_params_t;
 typedef struct aoclfftz_bench_error aoclfftz_bench_error_t;
