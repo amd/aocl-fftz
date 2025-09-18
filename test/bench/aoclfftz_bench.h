@@ -99,7 +99,8 @@ typedef enum
 typedef enum
 {
     PERFORMANCE = 0,
-    ACCURACY
+    ACCURACY,
+    SANITY
 } aoclfftz_bench_type_t;
 
 typedef enum
