@@ -62,8 +62,9 @@ endif()
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
 
 option(AOCL_ENABLE_LOG "Enable logging support within the library (Disabled by default)" OFF)
-set(AOCL_TEST_COVERAGE "OFF" CACHE STRING "Enable GTest and AOCL test bench based CTest suite (OFF / STANDARD / STANDARD+DFT_REF / EXHAUSTIVE, default: OFF)")
-set_property(CACHE AOCL_TEST_COVERAGE PROPERTY STRINGS "OFF" "STANDARD" "STANDARD+DFT_REF" "EXHAUSTIVE")
+set(AOCL_TEST_COVERAGE "OFF" CACHE STRING "Enable GTest and AOCL test bench based CTest suite (OFF / STANDARD / EXHAUSTIVE, default: OFF)")
+set_property(CACHE AOCL_TEST_COVERAGE PROPERTY STRINGS "OFF" "STANDARD" "EXHAUSTIVE")
+option(ACCURACY_WITH_DFT "Enables accuracy mode to run with DFT (Disabled by default)" OFF)
 option(ASAN "Enables address sanitizer checks. Supported only on Linux Debug build (Disabled by default)" OFF)
 option(BUILD_DOC "Build documentation for library (Disabled by default)" OFF)
 option(BUILD_STATIC_LIBS "Build static library (Default build type is shared library)" OFF)
@@ -273,9 +274,8 @@ endif()
 # validate AOCL_TEST_COVERAGE values
 if(NOT AOCL_TEST_COVERAGE STREQUAL "OFF"
    AND NOT AOCL_TEST_COVERAGE STREQUAL "STANDARD"
-   AND NOT AOCL_TEST_COVERAGE STREQUAL "STANDARD+DFT_REF"
    AND NOT AOCL_TEST_COVERAGE STREQUAL "EXHAUSTIVE")
-    message(FATAL_ERROR "Invalid value for AOCL_TEST_COVERAGE: '${AOCL_TEST_COVERAGE}'\nAllowed values are: OFF, STANDARD, STANDARD+DFT_REF, EXHAUSTIVE.")
+    message(FATAL_ERROR "Invalid value for AOCL_TEST_COVERAGE: '${AOCL_TEST_COVERAGE}'\nAllowed values are: OFF, STANDARD, EXHAUSTIVE.")
 endif()
 
 # setup to get source code coverage(GCOV)
@@ -325,6 +325,11 @@ message(STATUS AOCL_ENABLE_LOG : ${AOCL_ENABLE_LOG})
 message(STATUS FUZZTEST : ${FUZZTEST})
 message(STATUS MULTI-THREADING : ${ENABLE_MULTI_THREADING})
 
+if(ACCURACY_WITH_DFT)
+    add_compile_definitions(ENABLE_DFT_REFERENCE)
+    message(STATUS "DFT Reference property tests enabled")
+endif()
+
 #setup CTest for GoogleTest and test bench
 if(NOT AOCL_TEST_COVERAGE STREQUAL "OFF")
     # enabling ctest
@@ -336,9 +341,6 @@ if(NOT AOCL_TEST_COVERAGE STREQUAL "OFF")
     # Set test mode for bench directory
     if(AOCL_TEST_COVERAGE STREQUAL "EXHAUSTIVE")
         message(STATUS "AOCL_TEST_COVERAGE: EXHAUSTIVE - Runs both TEST_SUITE and TEST_SUITE_EXHAUSTIVE")
-    elseif(AOCL_TEST_COVERAGE STREQUAL "STANDARD+DFT_REF")
-        add_compile_definitions(ENABLE_DFT_REFERENCE)
-        message(STATUS "AOCL_TEST_COVERAGE: STANDARD+DFT_REF - Runs TEST_SUITE with DFT REFERENCE test (ENABLE_DFT_REFERENCE macro defined)")
     elseif(AOCL_TEST_COVERAGE STREQUAL "STANDARD")
         message(STATUS "AOCL_TEST_COVERAGE: STANDARD - Using TEST_SUITE only")
     endif()
