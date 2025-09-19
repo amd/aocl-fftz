@@ -55,6 +55,7 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
     // out-of-order -> in-order for out-of-place problems
     // out-of-order -> out-of-order for inplace problems
     COPY_SOLUTION_OBJ(sol_m, sol);
+    sol_m->decomp_scheme->decomp_level = sol->decomp_scheme->decomp_level + 1;
     sol_m->decomp_scheme->dims[0].n = radix_m;
     sol_m->decomp_scheme->dims[0].in_stride =
         radix_r * sol->decomp_scheme->dims[0].in_stride;

@@ -217,6 +217,7 @@ typedef struct aoclfftz_decomp_scheme
     VOID *out_imag;
     aoclfftz_cntrl_params_t *cntrl_params;
     thread_info_t *thread_info;
+    UINT32 decomp_level;
     // Application side flag bits
     //   bit 0: (0) in-place / (1) out-of-place
     //   bit 1: (0) in-order / (1) out-of-order
@@ -379,10 +380,13 @@ typedef struct aoclfftz_dft_bufs
     aoclfftz_buffered_t* buffered;
     aoclfftz_transpose_t* transpose;
     aoclfftz_solution_t* nd_sol; // may hold one of the solutions of ND
-    VOID* scratch_space;
-    VOID *ct_buffer;
-    VOID *ct_buf_real;
-    VOID *ct_buf_imag;
+    VOID* scratch_space; // scratch space for transpose operation
+    VOID *ct_buffer; // auxiliary buffer for CT problems
+    VOID *ct_buf_real; // real part of ct_buffer
+    VOID *ct_buf_imag; // imaginary part of ct_buffer
+    INTP ct_buf_size; // size of ct_buffer per thread
+    UINT8 reset_ct_buf_offset; // when enabled (1), do not move the buffer offset across batches
+    UINT8 use_2D_buffering; // 1 when compact buffer optimized approach is used
 } aoclfftz_dft_bufs_t;
 #endif
 /////////////////////////// BUFS RELATED : END ////////////////////////////////
