@@ -40,7 +40,7 @@
 #include "selector/selector.h"
 #include "utils/utils.h"
 #include "core/common/memory_manager.h"
-#include "core/common/batched_direct_utils.h"
+#include "core/common/post_process_utils.h"
 #include "core/common/twiddle.h"
 #include "core/kernels/kernel_list.h"
 
@@ -1029,6 +1029,15 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
         sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
             ->solution->dft_bufs->ct_buf_imag =
             sel->solution->dft_bufs->ct_buf_imag;
+        sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
+            ->solution->decomp_scheme->decomp_level =
+            sel->solution->decomp_scheme->decomp_level;
+        sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
+            ->solution->dft_bufs->use_2D_buffering =
+            sel->solution->dft_bufs->use_2D_buffering;
+        sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
+            ->solution->dft_bufs->ct_buf_size =
+            sel->solution->dft_bufs->ct_buf_size;
 
         // Fixed decision logic and CPI based selector mode
         // ret = selector_fixed_mode_fused_twid_dft_(
@@ -1069,6 +1078,12 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
         sel_models[AOCLFFTZ_AUTO_SELECTOR]
             ->solution->dft_bufs->ct_buf_imag =
             sel->solution->dft_bufs->ct_buf_imag;
+        sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme->decomp_level =
+            sel->solution->decomp_scheme->decomp_level;
+        sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->dft_bufs->use_2D_buffering =
+            sel->solution->dft_bufs->use_2D_buffering;
+        sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->dft_bufs->ct_buf_size =
+            sel->solution->dft_bufs->ct_buf_size;
 
         // Fixed decision logic and CPI based selector mode
         // ret = selector_autotuner_mode_dft_(
@@ -1818,6 +1833,10 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src,
     // Assign relevant scratch space to each thread
     dst->dft_bufs->scratch_space = MOVE_ADDR(src->dft_bufs->scratch_space,
                                    (*scratch_buf_idx) * scratch_space_capacity);
+    dst->dft_bufs->ct_buf_real = MOVE_ADDR(src->dft_bufs->ct_buf_real,
+                                   (*scratch_buf_idx) * src->dft_bufs->ct_buf_size);
+    dst->dft_bufs->ct_buf_imag = MOVE_ADDR(src->dft_bufs->ct_buf_imag,
+                                   (*scratch_buf_idx) * src->dft_bufs->ct_buf_size);
 
     // Hold the current scratch buffer index and restore after copy of each ND-subtree
     // as both nd_sol and next_sol of ND node share the same scratch space

@@ -26,14 +26,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file batched_direct_utils.h
+/** @file post_process_utils.h
  *
- *  @brief Declarations for Post-selection utilities that enable the
- *         Batched-Direct solver path.
+ *  @brief Declarations for Post-selection utilities that enables
+ *         additional optimizations.
  *
  *  @author Srirammaswamy Srinivasan
  */
 
+#ifndef POST_PROCESS_UTILS_H
+#define POST_PROCESS_UTILS_H
+
 #include "api/aoclfftz_internal.h"
 
-VOID apply_batched_direct_solver(aoclfftz_solution_t *sol);
+VOID post_process_for_optimal_buffering_batching(aoclfftz_solution_t *sol);
+
+#endif // POST_PROCESS_UTILS_H

@@ -50,7 +50,8 @@
 
 /* !! Do not enable these macros for now !! */
 // #define PERFORM_INTER_STAGE_PERMUTE // Broken codepath, functional failure
-// #define DISABLE_BATCHED_DIRECT_SOLVER
+// #define DISABLE_OPTIMAL_BUFFERING_BATCHING
+// #define DISABLE_OPTIMAL_BUFFERING
 
 typedef enum {
     AOCLFFTZ_FIXED_SELECTOR = 0,                            // Fixed decision logic
@@ -365,7 +366,7 @@ typedef struct aoclfftz_selector
     else                                                                       \
     {                                                                          \
         ret = selector_driver_dft_(sel_obj);                                   \
-        apply_batched_direct_solver(sel_obj->solution);                        \
+        post_process_for_optimal_buffering_batching(sel_obj->solution);        \
         setup_twiddle_buffer_complex(sel_obj->solution);                       \
         post_process_buffered_inplace(sel_obj->solution, problem->dim_rank,    \
                     (VOID *)problem->out, (VOID *)(problem->out + 1));         \
@@ -395,6 +396,8 @@ typedef struct aoclfftz_selector
         from_sol_obj->solver->kernel_r2hcf->sets;                              \
     to_sol_obj->solver->kernel_r2hcf->count =                                  \
         from_sol_obj->solver->kernel_r2hcf->count;                             \
+    to_sol_obj->decomp_scheme->decomp_level =                                  \
+        from_sol_obj->decomp_scheme->decomp_level;                             \
     to_sol_obj->decomp_scheme->vec_rank =                                      \
         from_sol_obj->decomp_scheme->vec_rank;                                 \
     to_sol_obj->decomp_scheme->dim_rank =                                      \
@@ -451,7 +454,8 @@ typedef struct aoclfftz_selector
         from_sol_obj->decomp_scheme->thread_info->n_threads;                   \
     to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;     \
     to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;                       \
-    to_sol_obj->twiddle->load_multi_cols = from_sol_obj->twiddle->load_multi_cols;     \
+    to_sol_obj->twiddle->load_multi_cols =                                     \
+        from_sol_obj->twiddle->load_multi_cols;                                \
     to_sol_obj->twiddle->cols = from_sol_obj->twiddle->cols;                   \
     to_sol_obj->dft_bufs->bluestein->B =                                       \
         from_sol_obj->dft_bufs->bluestein->B;                                  \
@@ -469,10 +473,15 @@ typedef struct aoclfftz_selector
         from_sol_obj->dft_bufs->buffered->aux_buffer_2;                        \
     to_sol_obj->dft_bufs->buffered->out_ptr =                                  \
         from_sol_obj->dft_bufs->buffered->out_ptr;                             \
-    to_sol_obj->dft_bufs->ct_buf_real =                                    \
-        from_sol_obj->dft_bufs->ct_buf_real;                               \
-    to_sol_obj->dft_bufs->ct_buf_imag =                                    \
-        from_sol_obj->dft_bufs->ct_buf_imag;                               \
+    to_sol_obj->dft_bufs->ct_buf_real =                                        \
+        from_sol_obj->dft_bufs->ct_buf_real;                                   \
+    to_sol_obj->dft_bufs->ct_buf_imag =                                        \
+        from_sol_obj->dft_bufs->ct_buf_imag;                                   \
+    to_sol_obj->dft_bufs->ct_buf_size = from_sol_obj->dft_bufs->ct_buf_size;   \
+    to_sol_obj->dft_bufs->use_2D_buffering =                                   \
+        from_sol_obj->dft_bufs->use_2D_buffering;                              \
+    to_sol_obj->dft_bufs->reset_ct_buf_offset =                                \
+        from_sol_obj->dft_bufs->reset_ct_buf_offset;                           \
     if (from_sol_obj->dft_bufs->transpose &&                                   \
         to_sol_obj->dft_bufs->transpose)                                       \
     {                                                                          \
@@ -582,6 +591,8 @@ typedef struct aoclfftz_selector
         from_sol_obj->solver->kernel_r2hcf->sets;                              \
     to_sol_obj->solver->kernel_r2hcf->count =                                  \
         from_sol_obj->solver->kernel_r2hcf->count;                             \
+    to_sol_obj->decomp_scheme->decomp_level =                                  \
+        from_sol_obj->decomp_scheme->decomp_level;                             \
     to_sol_obj->decomp_scheme->in_real =                                       \
         from_sol_obj->decomp_scheme->in_real;                                  \
     to_sol_obj->decomp_scheme->in_imag =                                       \
@@ -630,6 +641,11 @@ typedef struct aoclfftz_selector
         from_sol_obj->dft_bufs->ct_buf_real;                                   \
     to_sol_obj->dft_bufs->ct_buf_imag =                                        \
         from_sol_obj->dft_bufs->ct_buf_imag;                                   \
+    to_sol_obj->dft_bufs->ct_buf_size = from_sol_obj->dft_bufs->ct_buf_size;   \
+    to_sol_obj->dft_bufs->use_2D_buffering =                                   \
+        from_sol_obj->dft_bufs->use_2D_buffering;                              \
+    to_sol_obj->dft_bufs->reset_ct_buf_offset =                                \
+        from_sol_obj->dft_bufs->reset_ct_buf_offset;                           \
     to_sol_obj->dft_bufs->buffered->out_ptr =                                  \
         from_sol_obj->dft_bufs->buffered->out_ptr;                             \
     to_sol_obj->next_sol = from_sol_obj->next_sol;                             \

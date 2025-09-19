@@ -185,9 +185,13 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->ct_buffer = NULL;
         sol->dft_bufs->ct_buf_real = NULL;
         sol->dft_bufs->ct_buf_imag = NULL;
+        sol->dft_bufs->ct_buf_size = 0;
+        sol->dft_bufs->use_2D_buffering = 0;
+        sol->dft_bufs->reset_ct_buf_offset = 0;
         sol->solver->kernel_c2c->count = 0;
         sol->solver->kernel_r2hc->count = 0;
         sol->solver->kernel_r2hcf->count = 0;
+        sol->decomp_scheme->decomp_level = 0;
         return sol;
     }
     else
@@ -290,9 +294,13 @@ aoclfftz_solution_t* alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->ct_buffer = NULL;
         sol->dft_bufs->ct_buf_real = NULL;
         sol->dft_bufs->ct_buf_imag = NULL;
+        sol->dft_bufs->ct_buf_size = 0;
+        sol->dft_bufs->use_2D_buffering = 0;
+        sol->dft_bufs->reset_ct_buf_offset = 0;
         sol->solver->kernel_c2c->count = 0;
         sol->solver->kernel_r2hc->count = 0;
         sol->solver->kernel_r2hcf->count = 0;
+        sol->decomp_scheme->decomp_level = 0;
         return sol;
     }
     else
@@ -416,20 +424,48 @@ VOID alloc_inplace_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
     INTP buffer_length = 1;
     INTP buffer_size = 0;
 
+    UINT32 dt_prec = DT_PRECISION_FLAG(solution->decomp_scheme->flags);
+    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+
+    // FIXME: Currently compact buffer is used only for 3D unit-strided non-batched C2C problems
+    // TODO: Handle all cases effectively
+    // Approach: if the problem is a 3D, then create ct_buffer of 2D by removing the smallest dim
+    // for. e.g. problem size of 30x40x50 -> ct_buffer of 40x50
+    INTP min_dim_size = dims[0].n;
     for (INT32 i = 0; i < dim_rank; i++)
     {
         buffer_length += ((dims[i].n - 1) * (dims[i].out_stride));
+        if (dims[i].n < min_dim_size)
+        {
+            min_dim_size = dims[i].n;
+        }
     }
     for (INT32 i = 0; i < vec_rank; i++)
     {
         buffer_length += ((vecs[i].n - 1) * (vecs[i].out_stride));
     }
-
-    UINT32 dt_prec = DT_PRECISION_FLAG(solution->decomp_scheme->flags);
-    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
-
-    buffer_size = buffer_length * DATA_STRIDE * dt_bytes;
-    ALLOC_ALIGN_UNINIT(*buffer_ptr, VOID, buffer_size);
+#ifndef DISABLE_OPTIMAL_BUFFERING
+    INT32 n_threads = solution->decomp_scheme->thread_info->avl_threads;
+    if ((solution->decomp_scheme->dim_rank == 3) &&
+        (solution->decomp_scheme->dims[0].in_stride == 1) &&
+        (solution->decomp_scheme->vecs[0].n == 1) &&
+        !check_bluestein_problem(solution->decomp_scheme))
+    {
+        buffer_length = buffer_length / min_dim_size;
+        buffer_size = buffer_length * DATA_STRIDE * dt_bytes;
+        ALLOC_ALIGN_UNINIT(*buffer_ptr, VOID, buffer_size * n_threads);
+        solution->dft_bufs->use_2D_buffering = 1;
+    }
+    else
+    {
+#endif
+        buffer_size = buffer_length * DATA_STRIDE * dt_bytes;
+        ALLOC_ALIGN_UNINIT(*buffer_ptr, VOID, buffer_size);
+        solution->dft_bufs->use_2D_buffering = 0;
+#ifndef DISABLE_OPTIMAL_BUFFERING
+    }
+#endif
+    solution->dft_bufs->ct_buf_size = buffer_size;
 }
 
 #ifdef AOCL_SINGLE_MEM_REGION

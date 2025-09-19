@@ -91,6 +91,12 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
         VOID *ct_buf_imag = next_sol->dft_bufs->ct_buf_imag;
     #endif
 
+        INTP ct_buf_offset = 0;
+        if (!sol->dft_bufs->reset_ct_buf_offset)
+        {
+            ct_buf_offset = v_out_stride;
+        }
+
         // For innermost vector rank, execute the solver
         INTP batches = sol->decomp_scheme->vecs[0].n;
         for (INTP b = 0; b < batches; b++)
@@ -111,9 +117,9 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
                     MOVE_ADDR(next_sol->decomp_scheme->out_imag, v_out_stride);
     #if !defined (PERFORM_INTER_STAGE_PERMUTE)
             next_sol->dft_bufs->ct_buf_real =
-                   MOVE_ADDR(next_sol->dft_bufs->ct_buf_real, v_out_stride);
+                MOVE_ADDR(next_sol->dft_bufs->ct_buf_real, ct_buf_offset);
             next_sol->dft_bufs->ct_buf_imag =
-                   MOVE_ADDR(next_sol->dft_bufs->ct_buf_imag, v_out_stride);
+                MOVE_ADDR(next_sol->dft_bufs->ct_buf_imag, ct_buf_offset);
     #endif
         }
 
@@ -138,6 +144,12 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
         VOID *ct_buf_real = next_sol->dft_bufs->ct_buf_real;
         VOID *ct_buf_imag = next_sol->dft_bufs->ct_buf_imag;
     #endif
+
+        INTP ct_buf_offset = 0;
+        if (!sol->dft_bufs->reset_ct_buf_offset)
+        {
+            ct_buf_offset = v_out_stride;
+        }
 
         for (rnk_offset = 0;
              rnk_offset < sol->decomp_scheme->vecs[vec_rank - 1].n;
@@ -172,9 +184,9 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
                 (VOID *)((CHAR *)out_imag + v_out_stride);
     #if !defined (PERFORM_INTER_STAGE_PERMUTE)
             next_sol->dft_bufs->ct_buf_real =
-                (VOID *)((CHAR *)ct_buf_real + v_out_stride);
+                (VOID *)((CHAR *)ct_buf_real + ct_buf_offset);
             next_sol->dft_bufs->ct_buf_imag =
-                (VOID *)((CHAR *)ct_buf_imag + v_out_stride);
+                (VOID *)((CHAR *)ct_buf_imag + ct_buf_offset);
     #endif
         }
 
