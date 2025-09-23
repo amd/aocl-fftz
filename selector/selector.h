@@ -369,8 +369,6 @@ typedef struct aoclfftz_selector
         ret = selector_driver_dft_(sel_obj);                                   \
         post_process_for_optimal_buffering_batching(sel_obj->solution);        \
         setup_twiddle_buffer_complex(sel_obj->solution);                       \
-        post_process_buffered_inplace(sel_obj->solution, problem->dim_rank,    \
-                    (VOID *)problem->out, (VOID *)(problem->out + 1));         \
     }                                                                          \
 }
 
@@ -848,10 +846,8 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                        aoclfftz_realhelper_t *realhelper);
 VOID destroy_handle(VOID *handle);
 VOID fuse_vecs(aoclfftz_solution_t *sol);
-VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx);
-VOID post_process_buffered_inplace(aoclfftz_solution_t *solution,
-                    INTP dim_rank, VOID *out_real, VOID *out_imag);
 VOID setup_inplace_buffers(aoclfftz_solution_t *solution);
+VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx);
 INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);
 
 #endif // AOCLFFTZ_SELECTOR_H
