@@ -2039,88 +2039,21 @@ VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx)
     }
 }
 
-// TODO  : Remove this func by enabling the required on the fly during setup
-//
-// post process the final solution to
-//      1. modify the execute fp of the first CT/NDim, so that the results are
-//         written to user buffer.
-//      2. make out pointers point to in pointer incase of Direct, SizeOne &
-//         bluestein problems.
-VOID post_process_inplace_solution(aoclfftz_solution_t *solution)
-{
-    aoclfftz_solution_t *curr = solution;
-
-    // almost every batched direct cases will invoke direct solver directly
-    // except multi-dimensional batched cases where vec ranks cant be fused.
-    // In such cases, the output pointers of the first solution (batched)
-    // should be set to the user buffers since during execution, the
-    // next solution (direct) output pointers will be modified.
-
-    if ((solution->solver->solver_type == SOLVER_BATCHED &&
-        (solution->next_sol[0]->solver->solver_type == SOLVER_DIRECT ||
-         solution->next_sol[0]->solver->solver_type == SOLVER_BLUESTEIN)) ||
-       ((solution->solver->solver_type == SOLVER_MT_BATCHED &&
-        (solution->next_sol[0]->solver->solver_type == SOLVER_MT_DIRECT ||
-         solution->next_sol[0]->solver->solver_type == SOLVER_BLUESTEIN))))
-    {
-        solution->decomp_scheme->out_real = solution->decomp_scheme->in_real;
-        solution->decomp_scheme->out_imag = solution->decomp_scheme->in_imag;
-    }
-
-    // inplace complex problems
-    while (curr != NULL)
-    {
-        aoclfftz_generic_solver_t *solver = curr->solver;
-
-        if (solver->solver_type == SOLVER_NDIM)
-        {
-            solver->execute_solver =
-                register_execute_last_stage_ip_ndim_solver();
-            break;
-        }
-        else if (solver->solver_type == SOLVER_CT ||
-                 solver->solver_type == SOLVER_CT_TWIDDLE)
-        {
-            solver->execute_solver = register_execute_last_stage_ip_ct_solver();
-            break;
-        }
-        else if (solver->solver_type == SOLVER_DIRECT ||
-                 solver->solver_type == SOLVER_BLUESTEIN ||
-                 solver->solver_type == SOLVER_SIZEONE ||
-                 solver->solver_type == SOLVER_MT_DIRECT)
-        {
-            // For direct, bluestein and sizeone problems, there is no need
-            // of extra buffer for inplace execution.
-            // Just reset the out pointers to in pointers.
-            curr->decomp_scheme->out_real = curr->decomp_scheme->in_real;
-            curr->decomp_scheme->out_imag = curr->decomp_scheme->in_imag;
-            FREE_ALIGN_ALLOCATED_MEM(solution->dft_bufs->ct_buffer);
-            break;
-        }
-        curr = curr->next_sol ? curr->next_sol[0] : NULL;
-    }
-}
-
-VOID post_process_buffered_inplace(aoclfftz_solution_t *solution,
-                                INTP dim_rank, VOID *out_real, VOID *out_imag)
-{
-#if !defined (PERFORM_INTER_STAGE_PERMUTE)
-    if (!IS_OUT_OF_PLACE(solution->decomp_scheme->flags) &&
-        !IS_REAL(solution->decomp_scheme->flags))
-    {
-        post_process_inplace_solution(solution);
-    }
-#else
-    return;
-#endif
-}
-
 VOID setup_inplace_buffers(aoclfftz_solution_t *solution)
 {
 #if !defined (PERFORM_INTER_STAGE_PERMUTE)
+
+    #if defined AOCLFFTZ_FIXED_SELECTOR_MODE
+    kernel_t *kertab = kernels_dft_table;
+    #elif defined AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_MODE
+    kernel_t *kertab = kernels_twid_dft_table;
+    #endif
+
+    // Create buffer for Complex N-Dim (or) Complex in-place CT cases
     if (!IS_REAL(solution->decomp_scheme->flags) &&
-        ((!IS_OUT_OF_PLACE(solution->decomp_scheme->flags)) ||
-        (solution->decomp_scheme->dim_rank > 1)))
+        ((solution->decomp_scheme->dim_rank > 1) ||
+         (!IS_OUT_OF_PLACE(solution->decomp_scheme->flags) &&
+          check_CT_solvability(solution->decomp_scheme->dims[0].n, kertab))))
     {
         alloc_inplace_buffer(solution, &solution->dft_bufs->ct_buffer);
 
@@ -2136,6 +2069,7 @@ VOID setup_inplace_buffers(aoclfftz_solution_t *solution)
         solution->dft_bufs->ct_buf_imag = solution->decomp_scheme->out_imag;
     }
 #else
-    return;
+    solution->dft_bufs->ct_buf_real = solution->decomp_scheme->out_real;
+    solution->dft_bufs->ct_buf_imag = solution->decomp_scheme->out_imag;
 #endif
 }
