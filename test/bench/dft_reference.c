@@ -544,6 +544,7 @@ VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
     // Free temporary counters
     FREE_ALLOCATED_MEM(in_counter, is_align);
     FREE_ALLOCATED_MEM(out_counter, is_align);
+    FREE_ALLOCATED_MEM(inv_dims, is_align);
 }
 
 /**
@@ -636,5 +637,6 @@ VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
     // Free temporary counters
     FREE_ALLOCATED_MEM(in_counter, is_align);
     FREE_ALLOCATED_MEM(out_counter, is_align);
+    FREE_ALLOCATED_MEM(inv_dims, is_align);
 }
 #endif
