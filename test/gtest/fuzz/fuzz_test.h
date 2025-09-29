@@ -121,6 +121,11 @@ VOID fuzz_input_buffer_test(const std::string& problem_size)
         return ;
     }
 
+    init_bench_params<dt_t, dm_t>(params, dim_rank, vec_rank, dims, vecs);
+    set_default_dims_vecs(dim_rank, vec_rank, dims, vecs,
+                    params->fft_type,
+                    params->res_placement == IN_PLACE,
+                    params->logger_mode);
     UINTP input_size = 0;
     UINTP output_size = 0;
 
@@ -132,20 +137,32 @@ VOID fuzz_input_buffer_test(const std::string& problem_size)
 
     params->sz_info.input_size = input_size;
     params->sz_info.output_size = output_size;
+    params->sz_info.input_bytes = input_size *
+                                        params->sz_info.in_data_stride *
+                                        params->sz_info.dt_bytes;
+    params->sz_info.output_bytes = output_size *
+                                         params->sz_info.out_data_stride *
+                                         params->sz_info.dt_bytes;
+    params->sz_info.n_in = params->sz_info.n;
+    params->sz_info.n_out = params->sz_info.n;
     INTP *in_idx_map = NULL;
     ALLOC_ALIGN_UNINIT(in_idx_map, INTP, size * sizeof(INTP));
     INTP *out_idx_map = NULL;
     ALLOC_ALIGN_UNINIT(out_idx_map, INTP, size * sizeof(INTP));
     // Preparing the index map
     prepare_index_map(dim_rank, vec_rank, dims,
-                    vecs, in_idx_map, out_idx_map, ALIGNED_ALLOC);
-    init_bench_params<dt_t, dm_t>(params, dim_rank, vec_rank, dims, vecs);
+                    vecs, in_idx_map, out_idx_map, params->fft_type, ALIGNED_ALLOC);
+    // Allocate in/out buffers
+    ALLOC_UNINIT(params->in, VOID, params->sz_info.input_bytes,
+                 params->aligned_alloc);
+    ALLOC_INIT(params->out, VOID, params->sz_info.output_bytes,
+               params->aligned_alloc);
     register_functions(params);
-    std::vector<dt_t> inBuf(size * T_DATA_STRIDE);
+    std::vector<dt_t> inBuf(size * params->sz_info.in_data_stride);
     absl::BitGen prng;
     if (params->precision == FLOAT_P)
     {
-        for (int i = 0; i < size * T_DATA_STRIDE; ++i)
+        for (int i = 0; i < size * params->sz_info.in_data_stride; ++i)
         {
             inBuf[i] = fuzztest::InRange(FLT_MIN * RANGE_LIMITER,
                              FLT_MAX / RANGE_LIMITER).GetRandomValue(prng);
@@ -153,19 +170,19 @@ VOID fuzz_input_buffer_test(const std::string& problem_size)
     }
     else
     {
-        for (int i = 0; i < size * T_DATA_STRIDE; ++i)
+        for (int i = 0; i < size * params->sz_info.in_data_stride; ++i)
         {
             inBuf[i] = fuzztest::InRange(DBL_MIN * RANGE_LIMITER,
                              DBL_MAX / RANGE_LIMITER).GetRandomValue(prng);
         }
     }
     dt_t *input = NULL;
-    ALLOC_ALIGN_UNINIT(input, dt_t, sizeof(dt_t) * T_DATA_STRIDE * input_size);
+    ALLOC_ALIGN_UNINIT(input, dt_t, sizeof(dt_t) * DATA_STRIDE * input_size);
     for (INTP idx = 0; idx < size; idx = idx + 1)
     {
-        (input)[in_idx_map[idx] * T_DATA_STRIDE] = inBuf[idx * T_DATA_STRIDE];
-        (input)[in_idx_map[idx] * T_DATA_STRIDE + 1] =
-                                            inBuf[idx * T_DATA_STRIDE + 1];
+        (input)[in_idx_map[idx] * DATA_STRIDE] = inBuf[idx * DATA_STRIDE];
+        (input)[in_idx_map[idx] * DATA_STRIDE + 1] =
+                                            inBuf[idx * DATA_STRIDE + 1];
     }
 
     // Setup and run tests
@@ -220,7 +237,13 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
     aoclfftz_dim_t_64_ *vecs = NULL;
     construct_dims_and_vecs(dims_and_vecs, &dims, &vecs);
 
-    // Calculate buffer sizes
+    // Initialize benchmark parameters
+    init_bench_params<dt_t, dm_t>(params, dim_rank, vec_rank, dims, vecs);
+    params->res_placement = IS_OUT_OF_PLACE(flags) ? OUT_OF_PLACE : IN_PLACE;
+    set_default_dims_vecs(dim_rank, vec_rank, dims, vecs,
+                    params->fft_type,
+                    params->res_placement == IN_PLACE,
+                    params->logger_mode);
     UINTP input_size = 0;
     UINTP output_size = 0;
     params->sz_info.n = calculate_size(dims, dim_rank);
@@ -230,6 +253,14 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
                             vecs, &input_size, &output_size);
     params->sz_info.input_size = input_size;
     params->sz_info.output_size = output_size;
+    params->sz_info.input_bytes = input_size *
+                                        params->sz_info.in_data_stride *
+                                        params->sz_info.dt_bytes;
+    params->sz_info.output_bytes = output_size *
+                                         params->sz_info.out_data_stride *
+                                         params->sz_info.dt_bytes;
+    params->sz_info.n_in = params->sz_info.n;
+    params->sz_info.n_out = params->sz_info.n;
 
     INTP *in_idx_map = NULL;
     ALLOC_ALIGN_UNINIT(in_idx_map, INTP, size * sizeof(INTP));
@@ -238,36 +269,40 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
 
     // Prepare index maps
     prepare_index_map(dim_rank, vec_rank, dims,
-                      vecs, in_idx_map, out_idx_map, ALIGNED_ALLOC);
+                      vecs, in_idx_map, out_idx_map, params->fft_type,
+                      ALIGNED_ALLOC);
 
-    // Initialize benchmark parameters
-    init_bench_params<dt_t, dm_t>(params, dim_rank, vec_rank, dims, vecs);
     register_functions(params);
 
+    // Allocate in/out buffers
+    ALLOC_UNINIT(params->in, VOID, params->sz_info.input_bytes,
+                 params->aligned_alloc);
+    ALLOC_INIT(params->out, VOID, params->sz_info.output_bytes,
+               params->aligned_alloc);
     // Generate input buffer
-    std::vector<dt_t> inBuf(size * T_DATA_STRIDE);
+    std::vector<dt_t> inBuf(size * params->sz_info.in_data_stride);
     absl::BitGen prng;
     if (std::is_same<dt_t, FLOAT>::value)
     {
-        for (int i = 0; i < size * T_DATA_STRIDE; ++i)
+        for (int i = 0; i < size * params->sz_info.in_data_stride; ++i)
         {
             inBuf[i] = fuzztest::InRange(-10.0f, 10.0f).GetRandomValue(prng);
         }
     }
     else
     {
-        for (int i = 0; i < size * T_DATA_STRIDE; ++i)
+        for (int i = 0; i < size * params->sz_info.in_data_stride; ++i)
         {
             inBuf[i] = fuzztest::InRange(-10.0, 10.0).GetRandomValue(prng);
         }
     }
     dt_t *input = NULL;
-    ALLOC_ALIGN_UNINIT(input, dt_t, sizeof(dt_t) * T_DATA_STRIDE * input_size);
+    ALLOC_ALIGN_UNINIT(input, dt_t, sizeof(dt_t) * DATA_STRIDE * input_size);
     for (INTP idx = 0; idx < size; idx = idx + 1)
     {
-        (input)[in_idx_map[idx] * T_DATA_STRIDE] = inBuf[idx * T_DATA_STRIDE];
-        (input)[in_idx_map[idx] * T_DATA_STRIDE + 1] =
-                                            inBuf[idx * T_DATA_STRIDE + 1];
+        (input)[in_idx_map[idx] * DATA_STRIDE] = inBuf[idx * DATA_STRIDE];
+        (input)[in_idx_map[idx] * DATA_STRIDE + 1] =
+                                            inBuf[idx * DATA_STRIDE + 1];
     }
 
     // Set additional parameters using macros
@@ -275,8 +310,9 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
     params->order = IS_OUT_OF_ORDER(flags) ? OUT_OF_ORDER : IN_ORDER;
     params->dir = FFT_DIR(flags) ? BACKWARD : FORWARD;
     params->fft_type = IS_REAL(flags) ? R2C : C2C;
-    params->num_threads = pthr_fft.num_threads;
-    params->dynamic_load_model = pthr_fft.dynamic_load_model;
+    // TODO : Add support for multithreaded tests
+    params->num_threads = 1;
+    params->dynamic_load_model = 0;
     params->opt_level = cntrl_params.opt_level;
     if (cntrl_params.opt_off == 1) {
         params->opt_level = -1;

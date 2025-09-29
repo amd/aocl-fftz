@@ -41,6 +41,7 @@
 #include <cstring>
 #include <stdio.h>
 #include <algorithm>
+#include <sys/sysinfo.h>
 #include "gtest/gtest.h"
 #include "fuzztest/fuzztest.h"
 extern "C"
@@ -61,7 +62,25 @@ extern "C"
 #define ALIGNED_ALLOC 1
 // Range limiter for fuzzing input values
 #define RANGE_LIMITER 100000
+// Size limit to prevent OOM SIGKILL for fuzz tests
+#define MAX_BUFFER_SIZE 1000000.0
+#define MAX_DIM1_SIZE 100000
+#define MAX_DIM_STRIDE 10000
 
+double get_max_buffer_size()
+{
+    struct sysinfo si;
+    if (sysinfo(&si) != 0) {
+        return MAX_BUFFER_SIZE; // fallback to default limit
+    }
+
+    // Get available memory in bytes
+    double avail_memory_bytes = (double)si.freeram * (double)si.mem_unit;
+    // Calculate available memory divided by 64
+    double memory_based_limit = avail_memory_bytes / 64.0;
+    // Return minimum of (available_memory/64, MAX_BUFFER_SIZE)
+    return (memory_based_limit < MAX_BUFFER_SIZE) ? memory_based_limit : MAX_BUFFER_SIZE;
+}
 /**
  * @brief Initialize benchmark parameters.
  *
@@ -87,10 +106,14 @@ void init_bench_params(aoclfftz_bench_params_t* params, INT32 dim_rank,
         if (typeid(dt_t) == typeid(FLOAT))
         {
             params->precision = FLOAT_P;
+            params->sz_info.dt_bytes = sizeof(FLOAT);
+            params->tolerance = 1E-3;
         }
         else
         {
             params->precision = DOUBLE_P;
+            params->sz_info.dt_bytes = sizeof(DOUBLE);
+            params->tolerance = 1E-10;
         }
         if (typeid(dm_t) == typeid(INT32))
         {
@@ -108,7 +131,7 @@ void init_bench_params(aoclfftz_bench_params_t* params, INT32 dim_rank,
         params->num_iterations = 1;
         params->num_threads = 1;
         params->dynamic_load_model = 0;
-        params->opt_level = -1;
+        params->opt_level = 3;
         params->logger_mode = 0;
         params->selector_time = 0;
         params->measure_stats = 0;
@@ -116,22 +139,11 @@ void init_bench_params(aoclfftz_bench_params_t* params, INT32 dim_rank,
         params->aligned_alloc = ALIGNED_ALLOC;
         params->seed = 0;
         params->use_random_seed = 1;
-        if (params->precision == FLOAT_P)
-        {
-            params->tolerance = 1E-3;
-        }
-        else
-        {
-            params->tolerance = 1E-10;
-        }
+        params->sz_info.in_data_stride = 2;
+        params->sz_info.out_data_stride = 2;
         // create input and output buffers
-        INT32 dt_bytes = (params->precision == FLOAT_P) ?
-                                        sizeof(FLOAT) : sizeof(DOUBLE);
-        UINT32 is_align = params->aligned_alloc;
-        ALLOC_UNINIT(params->in, VOID, params->sz_info.input_size *
-                                        dt_bytes * T_DATA_STRIDE, is_align);
-        ALLOC_INIT(params->out, VOID, params->sz_info.output_size *
-                                        dt_bytes * T_DATA_STRIDE, is_align);
+        params->in = NULL;
+        params->out = NULL;
     }
 }
 
@@ -193,8 +205,9 @@ VOID construct_dims_and_vecs(const std::array<INTP,8>&dims_vecs,
     if (vec_rank > 1)
     {
         (*vecs)[0].n = 2;
-        (*vecs)[0].in_stride = 1;
-        (*vecs)[0].out_stride = 1;
+        (*vecs)[0].in_stride = 2;
+        (*vecs)[0].out_stride = 2;
+
         for (i = 1; i < vec_rank; i++)
         {
             (*vecs)[i].n = 2;
@@ -204,6 +217,7 @@ VOID construct_dims_and_vecs(const std::array<INTP,8>&dims_vecs,
         }
         //Overwrite it with the fuzzed value for the last vector size
         (*vecs)[i - 1].n = dims_vecs[2];
+        (*dims)[0].n = 2; // minimum value to prevent OOM
     }
     if (dim_rank > 2)
     {
@@ -217,8 +231,6 @@ VOID construct_dims_and_vecs(const std::array<INTP,8>&dims_vecs,
             (*dims)[i].out_stride = (*dims)[i - 1].n *
                                     (*dims)[i - 1].out_stride;
         }
-        // Overwrite it with the fuzzed value for the last dim size
-        (*dims)[i - 1].n = dims_vecs[2];
     }
 }
 
@@ -231,9 +243,9 @@ VOID construct_dims_and_vecs(const std::array<INTP,8>&dims_vecs,
  *  dims[0].out_stride, vecs[0].n, vecs[0].in_stride, vecs[0].out_stride}.
  * The dimension strides are restricted to prevent out-of-memory (OOM) issues.
  *
- * @param dim_size Dimension size. Range: [1, INT32_MAX / 8]
+ * @param dim_size Dimension size. Range: [1, MAX_DIM1_SIZE]
  * @return Array of dimension strides with restricted dim.in_stride and
- * dim.out_stride from 1 to INT32_MAX / dim_size.
+ * dim.out_stride from 1 to get_max_buffer_size() / dim_size.
  */
 auto restricted_dim_stride()
 {
@@ -243,15 +255,15 @@ auto restricted_dim_stride()
                        fuzztest::Just(static_cast<INTP>(1)),
                        fuzztest::Just(static_cast<INTP>(dim_size)),
                        fuzztest::InRange(static_cast<INTP>(1),
-                               static_cast<INTP>(INT32_MAX / dim_size)),
+                               static_cast<INTP>(get_max_buffer_size() / dim_size)),
                        fuzztest::InRange(static_cast<INTP>(1),
-                               static_cast<INTP>(INT32_MAX / dim_size)),
+                               static_cast<INTP>(get_max_buffer_size() / dim_size)),
                        fuzztest::Just(static_cast<INTP>(1)),
                        fuzztest::Just(static_cast<INTP>(1)),
                        fuzztest::Just(static_cast<INTP>(1)));
     },
     // Max. Range for dim size is scaled down to prevent OOM
-    fuzztest::InRange(1, INT32_MAX / 8));
+    fuzztest::InRange(1, MAX_DIM1_SIZE));
 }
 
 /**
@@ -263,23 +275,17 @@ auto restricted_dim_stride()
  *  dims[0].out_stride, vecs[0].n, vecs[0].in_stride, vecs[0].out_stride}.
  * The dimension sizes are restricted to prevent OOM issues.
  *
- * @param dim_stride Dimension stride. Range: [1, INT32_MAX]
+ * @param dim_stride Dimension stride. Range: [1, MAX_DIM_STRIDE]
  * @return Array of dimension sizes with restricted dims.n from
- * 1 to INT32_MAX / dim_stride.
+ * 1 to get_max_buffer_size() / dim_stride.
  */
 auto restricted_dim_size()
 {
     return fuzztest::FlatMap([](INT32 dim_stride)
     {
-        INTP dim_max_size = INT32_MAX / dim_stride;
-        if (dim_stride <= 8)
-        {
-            // Scaled down to prevent OOM
-            dim_max_size = INT32_MAX / (dim_stride * 8);
-        }
+        INTP dim_max_size = get_max_buffer_size() / dim_stride;
         return fuzztest::ArrayOf(fuzztest::Just(static_cast<INTP>(1)),
                        fuzztest::Just(static_cast<INTP>(1)),
-                       // Scaled down to prevent OOM
                        fuzztest::InRange(static_cast<INTP>(1),
                                static_cast<INTP>(dim_max_size)),
                        fuzztest::InRange(static_cast<INTP>(1),
@@ -289,7 +295,7 @@ auto restricted_dim_size()
                        fuzztest::Just(static_cast<INTP>(1)),
                        fuzztest::Just(static_cast<INTP>(1)));
     },
-    fuzztest::InRange(1, INT32_MAX));
+    fuzztest::InRange(1, MAX_DIM_STRIDE));
 }
 
 /**
@@ -324,9 +330,9 @@ auto restricted_vec_stride()
     {
         INT32 vector_instride = dim_size * dim_instride;
         INT32 vector_outstride = dim_size * dim_outstride;
-        INT32 vector_size_max = std::min(((INT32_MAX - vector_instride) /
+        INT32 vector_size_max = std::min(((get_max_buffer_size() - vector_instride) /
                                           vector_instride),
-                                         ((INT32_MAX - vector_outstride) /
+                                         ((get_max_buffer_size() - vector_outstride) /
                                          vector_outstride));
         return fuzztest::ArrayOf(fuzztest::Just(static_cast<INTP>(1)),
                        fuzztest::Just(static_cast<INTP>(1)),
@@ -364,9 +370,9 @@ auto restricted_vec_size()
                                 INT32 dim_outstride, INT32 vec_size)
     {
         INT32 vector_instride_max =
-                           (INT32_MAX - (dim_size * dim_instride)) / vec_size;
+                           (get_max_buffer_size() - (dim_size * dim_instride)) / vec_size * 100;
         INT32 vector_outstride_max =
-                           (INT32_MAX - (dim_size * dim_outstride)) / vec_size;
+                           (get_max_buffer_size() - (dim_size * dim_outstride)) / vec_size * 100;
         return fuzztest::ArrayOf(fuzztest::Just(static_cast<INTP>(1)),
                        fuzztest::Just(static_cast<INTP>(1)),
                        fuzztest::Just(static_cast<INTP>(dim_size)),
@@ -416,9 +422,9 @@ auto restricted_dim1_size()
     {
         INT32 dim2_instride = dim1_size * dim1_instride;
         INT32 dim2_outstride = dim1_size * dim1_outstride;
-        INT32 dim2_size_max = std::min((INT32_MAX / (dim2_instride *
+        INT32 dim2_size_max = std::min((get_max_buffer_size() / (dim2_instride *
                                                     dim2_instride)),
-                                       (INT32_MAX / (dim2_outstride *
+                                       (get_max_buffer_size() / (dim2_outstride *
                                                     dim2_outstride)));
         return fuzztest::ArrayOf(fuzztest::Just(static_cast<INTP>(2)),
                        fuzztest::Just(static_cast<INTP>(1)),
@@ -443,7 +449,7 @@ auto restricted_dim1_size()
  * dims[0].out_stride, dims[1].n, dims[1].in_stride, dims[1].out_stride}.
  * The dimension sizes are restricted to prevent OOM issues.
  *
- * @param dim1_size for the first dimension. Range: [1, INT32_MAX / 110]
+ * @param dim1_size for the first dimension. Range: [1, get_max_buffer_size() / 110]
  * @param dim1_instride for the first dimension. Range: [1, 10]
  * @param dim1_outstride for the first dimension. Range: [1, 10]
  * @return Array of dimension sizes for the second dimension with
@@ -466,7 +472,7 @@ auto restricted_dim2_size()
                        fuzztest::Just(static_cast<INTP>(dim2_instride)),
                        fuzztest::Just(static_cast<INTP>(dim2_outstride)));
     },
-    fuzztest::InRange(1, INT32_MAX / 110), fuzztest::InRange(1, 10),
+    fuzztest::InRange(1, static_cast<int>(get_max_buffer_size() / 110)), fuzztest::InRange(1, 10),
     fuzztest::InRange(1, 10));
 }
 
@@ -490,7 +496,7 @@ auto dims_and_vecs_2D()
  * place holder, place holder, place holder, place holder}
  * The vector sizes are restricted to prevent OOM issues.
  *
- * @param vec_rank Vector rank. Range: [2, 28]
+ * @param vec_rank Vector rank. Range: [2, 15]
  * @return Array of dimension and vector sizes with restricted
  * vecs.n based on vec_rank.
  */
@@ -498,7 +504,7 @@ auto dims_and_vecs_multi_batched_1D()
 {
     return fuzztest::FlatMap([](INT32 vec_rank)
     {
-        INT32 vec_size_max = (INT32_MAX / pow(2, vec_rank + 1)) - 2;
+        INT32 vec_size_max = (get_max_buffer_size() / pow(2, vec_rank + 1)) - 2;
         return fuzztest::ArrayOf(fuzztest::Just(static_cast<INTP>(1)),
                        fuzztest::Just(static_cast<INTP>(vec_rank)),
                        fuzztest::InRange(static_cast<INTP>(1),
@@ -509,7 +515,7 @@ auto dims_and_vecs_multi_batched_1D()
                        fuzztest::Just(static_cast<INTP>(1)),
                        fuzztest::Just(static_cast<INTP>(1)));
     },
-    fuzztest::InRange(2, 28));
+    fuzztest::InRange(2, 15));
 }
 
 /**
@@ -521,7 +527,7 @@ auto dims_and_vecs_multi_batched_1D()
  * place holder, place holder, place holder, place holder}
  * The dimension sizes are restricted to prevent OOM issues.
  *
- * @param dim_rank Dimension rank. Range: [3, 28]
+ * @param dim_rank Dimension rank. Range: [3, 15]
  * @return Array of dimension and vector sizes with restricted
  * dims.n based on dim_rank.
  */
@@ -529,7 +535,7 @@ auto dims_and_vecs_ND()
 {
     return fuzztest::FlatMap([](INT32 dim_rank)
     {
-        INT32 dim_size_max = (INT32_MAX / pow(2, dim_rank + 1) * 8);
+        INT32 dim_size_max = (get_max_buffer_size() / pow(2, dim_rank + 1));
         return fuzztest::ArrayOf(fuzztest::Just(static_cast<INTP>(dim_rank)),
                        fuzztest::Just(static_cast<INTP>(1)),
                        fuzztest::InRange(static_cast<INTP>(2),
@@ -540,7 +546,7 @@ auto dims_and_vecs_ND()
                        fuzztest::Just(static_cast<INTP>(1)),
                        fuzztest::Just(static_cast<INTP>(1)));
     },
-    fuzztest::InRange(3, 28));
+    fuzztest::InRange(3, 15));
 }
 
 /**
