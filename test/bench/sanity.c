@@ -38,6 +38,9 @@
 
 #include "sanity.h"
 #include "test/bench/utils/bench_utils.h"
+#ifdef AOCL_ENABLE_LOG
+#include "utils/utils.h"
+#endif
 
 INT32 run_bench_on_sanity_mode(aoclfftz_bench_params_t *params)
 {
