@@ -785,10 +785,7 @@ INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
     aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
 
     //All the CT sub-problems will use fused twiddle dft kernels
-    // kernel_t *kertab = kernels_twid_dft_table;
-    // kernel_t *kertab = kernels_rdft_table;
     kernel_t *kertab = kernels_twid_rdft_table;
-
     INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
     INT32 ret = SELECTOR_FAILURE;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
