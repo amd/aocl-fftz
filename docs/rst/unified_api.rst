@@ -26,7 +26,7 @@
 
 .. _ref-unified-api:
 
-AOCL-FFTZ APIs
+Interface APIs
 --------------
 
 .. doxygengroup:: APIs

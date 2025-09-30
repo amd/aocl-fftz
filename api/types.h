@@ -36,7 +36,7 @@
 
 /**
 * @defgroup std_types Types AOCL-FFTZ - Types
-* @brief Type definitions of standard datatypes.
+* @brief Type Definitions of standard datatypes.
 */
 
 #ifndef TYPES_H

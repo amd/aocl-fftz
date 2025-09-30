@@ -7,10 +7,12 @@ The library computes FFTs of (i) complex data of any size and dimension in
 both forward and backward directions, and (ii) real one-dimensional data of any
 size, excluding prime sizes greater than 7 and their multiples, in both forward
 and backward directions with support for in-place and out-of-place result
-placements. The important kernels in this library are vectorized to speed-up the
-single-threaded core performance. The library supports the computations of
-parallel FFTs by taking advantage of shared-memory parallelism using
-OpenMP threads.
+placements.
+
+The kernels in this library are vectorized to speed-up the single-threaded core
+performance. The library supports the computations of parallel FFTs by taking
+advantage of shared-memory parallelism using OpenMP threads.
+
 AOCL-FFTZ introduces a generic and unified API set for supporting
 precision types (single-precision and double-precision), and both the
 single-threaded and multi-threaded execution modes.
@@ -35,7 +37,7 @@ Building on Linux
 -----------------
 1. Clone the repo using the following command :
    ```
-   git clone "ssh://gerritgit/cpulibraries/er/aocl-fftz" && cd aocl-fftz/
+   git clone "https://github.com/AMD-AOCL/aocl-fftz.git" && cd aocl-fftz/
    ```
 
 2. Run the following command in order to generate and configure build system.

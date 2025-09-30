@@ -65,7 +65,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/xml/index.xml)
     if(NOT ${EXIT_CODE} EQUAL 0)
       message(
         FATAL_ERROR
-          "Python3 package sphinx is required to build the documentation\n   Use: ${Python3_EXECUTABLE} -m pip3 install sphinx"
+          "Python3 package sphinx is required to build the documentation\n   Use: ${Python3_EXECUTABLE} -m pip install sphinx"
       )
     endif()
     execute_process(
@@ -75,7 +75,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/xml/index.xml)
     if(NOT ${EXIT_CODE} EQUAL 0)
       message(
         FATAL_ERROR
-          "Python3 package rocm_docs is required to build the documentation\n   Use: ${Python3_EXECUTABLE} -m pip3 install rocm-docs-core"
+          "Python3 package rocm_docs is required to build the documentation\n   Use: ${Python3_EXECUTABLE} -m pip install rocm-docs-core"
       )
     endif()
 
@@ -87,7 +87,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/xml/index.xml)
     if(NOT ${EXIT_CODE} EQUAL 0)
       message(
         FATAL_ERROR
-          "Python3 package breathe is required to build the documentation\n   Use: ${Python3_EXECUTABLE} -m pip3 install breathe"
+          "Python3 package breathe is required to build the documentation\n   Use: ${Python3_EXECUTABLE} -m pip install breathe"
       )
     endif()
     execute_process(
@@ -97,7 +97,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/xml/index.xml)
     if(NOT ${EXIT_CODE} EQUAL 0)
       message(
         FATAL_ERROR
-          "Python3 package myst_parser is required to build the documentation\n   Use: ${Python3_EXECUTABLE} -m pip3 install myst_parser"
+          "Python3 package myst_parser is required to build the documentation\n   Use: ${Python3_EXECUTABLE} -m pip install myst_parser"
       )
     endif()
 

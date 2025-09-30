@@ -26,8 +26,8 @@
 
 .. _ref-typedefs:
 
-AOCL-FFTZ Data Structures
--------------------------
+Data Structures
+---------------
 
 .. doxygengroup:: Data_Structures
    :project: fftz
