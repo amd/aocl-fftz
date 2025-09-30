@@ -26,8 +26,8 @@
 
 .. _ref-std_types:
 
-AOCL-FFTZ Types
----------------
+Types
+-----
 
 .. doxygengroup:: std_types
    :project: fftz

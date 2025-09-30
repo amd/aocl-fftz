@@ -37,10 +37,11 @@ The library computes FFTs of (i) complex data of any size and dimension in
 both forward and backward directions, and (ii) real one-dimensional data of any
 size, excluding prime sizes greater than 7 and their multiples, in both forward
 and backward directions with support for in-place and out-of-place result
-placements. The important kernels in this library are vectorized to speed-up the
-single-threaded core performance. The library supports the computations of
-parallel FFTs by taking advantage of shared-memory parallelism using
-OpenMP threads.
+placements.
+
+The kernels in this library are vectorized to speed-up the single-threaded core
+performance. The library supports the computations of parallel FFTs by taking
+advantage of shared-memory parallelism using OpenMP threads.
 
 AOCL-FFTZ introduces a generic and unified API set for supporting any precision
 types (single-precision and double-precision), and both the single-threaded and
@@ -54,33 +55,34 @@ library.
 APIs
 ````
 AOCL-FFTZ provides a comprehensive set of interface APIs for computing
-both forward (FFT) and backward (IFFT) transforms. The library offers flexible
-interfaces that support both single-threaded and multi-threaded execution modes
-to optimize performance across various workloads.
+both forward (FFT) and backward (IFFT) transforms for real and complex
+data in the supported data models. The library offers flexible interfaces
+that support both single-threaded and multi-threaded execution modes
+to optimize for performance across various workloads.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    unified_api
 
-Data Structures and Type definitions
+Data Structures and Type Definitions
 ````````````````````````````````````
 AOCL-FFTZ defines various data structures and type definitions to support
 both single-precision (`FLOAT`) and double-precision (`DOUBLE`) computations.
 These structures encapsulate configuration parameters, execution contexts,
-and other essential components required for efficient FFT operations.
+and other essential parameters and flags required for efficient FFT operations.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    typedefs
 
-Datatype definitions
+Datatype Definitions
 ````````````````````
-Type definitions of Standard Datatypes for AOCL-FFTZ Library.
+Type Definitions of Standard Datatypes for AOCL-FFTZ Library.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    std_types
 

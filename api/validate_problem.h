@@ -89,7 +89,7 @@
             else if((i > 0) && (dims[i].in_stride * out_scale !=               \
                         dims[i].out_stride * in_scale))                        \
             {                                                                  \
-                if(flags.fft_direction == FORWARD_FFT_DIR)                          \
+                if(flags.fft_direction == FORWARD_FFT_DIR)                     \
                 {                                                              \
                     AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "For dimension[%d]: "     \
                         "in_stride != out_stride * %d\n"                       \
@@ -122,7 +122,7 @@
             (vecs[i].in_stride * out_scale !=                                  \
              vecs[i].out_stride * in_scale))                                   \
         {                                                                      \
-            if(flags.fft_direction == FORWARD_FFT_DIR)                              \
+            if(flags.fft_direction == FORWARD_FFT_DIR)                         \
             {                                                                  \
                 AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "For vecs[%d]: "              \
                     "in_stride != out_stride * %d\n"                           \

@@ -152,7 +152,7 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_CNTRL_PARAMS)
     {
         this->problem->cntrl_params.opt_level = dist_invalid(prng);
         this->problem->cntrl_params.opt_off = dist_invalid(prng);
-        this->problem->cntrl_params.logger_mode = dist_invalid(prng);
+        this->problem->cntrl_params.logger_mode = (aoclfftz_logger_mode)(dist_invalid(prng));
         this->problem->cntrl_params.measure_stats = dist_invalid(prng);
         this->run_setup_and_validate(VALID);
     }

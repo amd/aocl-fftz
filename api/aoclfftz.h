@@ -43,13 +43,13 @@
  *  This section contains APIs for setting up, executing and destroying the
  *  single-threaded, and multi-threaded FFT operations.
  *
- *  @note Different variants of APIs are exposed to support float and double
- *  precision types in LP64 and ILP64 data models.
+ *  @note Different variants of setup APIs are exposed to support float and
+ *  double precision types in LP64 and ILP64 data models.
  *
  */
 
 /**
- * @defgroup Data_Structures AOCL-FFTZ - Data Structures and Type definitions
+ * @defgroup Data_Structures AOCL-FFTZ - Data Structures and Type Definitions
  * @brief Data structures and typedef definitions associated with APIs of AOCL-FFTZ library.
  *
  * This section contains typedef definitions used by the AOCL-FFTZ
@@ -86,8 +86,7 @@ extern "C" {
 // Add new error codes at the code to retain the existing error code values
 typedef enum
 {
-    AOCLFFTZ_TIME_OUT = -6,     /**< Operation took long time than expected */
-    AOCLFFTZ_MPI_COMM_FAILURE,  /**< Error encountered in MPI communication */
+    AOCLFFTZ_TIME_OUT = -5,     /**< Operation took long time than expected */
     AOCLFFTZ_MEMORY_FAILURE,    /**< Error related to Memory access or operation */
     AOCLFFTZ_INVALID_INPUT,     /**< Invalid size, format, type or precision of input */
     AOCLFFTZ_SETUP_FAILURE,     /**< Error in setup of the library */
@@ -95,17 +94,30 @@ typedef enum
     AOCLFFTZ_SUCCESS            /**< Successful operation */
 } aoclfftz_error_type;
 
-/** 
+/**
+ * @ingroup Data_Structures
+ * @brief Logging modes to control verbosity of `AOCL-FFTZ` library output.
+ */
+typedef enum
+{
+    None = 0,     /**< `0` : Disable all logging */
+    Error = 1,    /**< `1` : Only error logs indicating failures */
+    Info = 2,     /**< `2` : Detailed debugging logs */
+    Debug = 3,    /**< `3` : General informational logs about execution */
+    Trace = 4     /**< `4` : Most detailed level of logging with complete execution trace */
+} aoclfftz_logger_mode;
+
+/**
  * @ingroup Data_Structures
  * @brief Configuration flags to control critical FFT execution parameters.
 */
 typedef struct aoclfftz_flags
 {
-    UINT8 fft_type;           /**< Complex(0) or Real(1) >*/
-    UINT8 fft_direction;      /**< Forward(0) or Backward(1) >*/
-    UINT8 storage_order;      /**< In-order(0) or Out-of-order(1)>*/
+    UINT8 fft_type;           /**< Complex(0) or Real(1) */
+    UINT8 fft_direction;      /**< Forward(0) or Backward(1) */
+    UINT8 storage_order;      /**< In-order(0) or Out-of-order(1) */
     UINT8 fft_placement;      /**< In-place(0) or Out-of-place(1) */
-    UINT8 transpose_mode;     /**< fft(0) or standalone transpose(1) (Not supported, must be default value `0`)*/
+    UINT8 transpose_mode;     /**< fft(0) or standalone transpose(1) (Not supported, must be default value `0`) */
 } aoclfftz_flags_t;
 
 /**
@@ -132,7 +144,7 @@ typedef struct aoclfftz_dim_64_
 
 /**
  * @ingroup Data_Structures
- * @brief Params for parallel SMP fft computation.
+ * @brief Params for parallel SMP FFT computation.
  */
 typedef struct aoclfftz_smp_pfft
 {
@@ -140,7 +152,7 @@ typedef struct aoclfftz_smp_pfft
     * `num_threads` must be greater than 0. */
     UINT32 dynamic_load_model; /**< Specifies the model for determining the number of threads.
      * - 0: Use `num_threads` as the maximum number of threads.
-     * - 1: Dynamically determine the number of threads (currently configured to 
+     * - 1: Dynamically determine the number of threads (currently configured to
      *      take upto the max system threads)
      */
 } aoclfftz_smp_pfft_t;
@@ -157,13 +169,13 @@ typedef struct aoclfftz_cntrl_params
     * - 1 - AVX128 optimizations
     * - 2 - AVX256 optimizations
     * - 3 - AVX512 optimizations */
-    INT32 opt_off;          /**< Turn off all optimizations */
-    INT32 logger_mode;      /**< Set Logger mode with following values\n
-    * - 0 - no logging 
-    * - 1 - error 
-    * - 2 - info 
-    * - 3 - debug 
-    * - 4 - trace */
+    INT32 opt_off;                         /**< Turn off all optimizations */
+    aoclfftz_logger_mode logger_mode;      /**< Set Logger mode with following values.\n
+    * - 0 - `None`,
+    * - 1 - `Error`,
+    * - 2 - `Debug`,
+    * - 3 - `Info`,
+    * - 4 - `Trace` */
     INT32 measure_stats;    /**< Enable/Disable measure stats (Not supported, must be default value `0`) */
 } aoclfftz_cntrl_params_t;
 
@@ -175,17 +187,17 @@ typedef struct
 {
     FLOAT *in;              /**< input buffer: Points to signal points for forward FFT and frequency points for backward FFT */
     FLOAT *out;             /**< output buffer: Points frequency points for forward FFT and signal points for backward FFT */
-    INT32 vec_rank;         /**< `vec_rank` is the number of batch dimensions. length of `vecs` array(must be >= 1). */
+    INT32 vec_rank;         /**< `vec_rank` is the number of batch/vector dimensions. length of `vecs` array(must be >= 1). */
     INT32 dim_rank;         /**< `dim_rank` is the number of signal/frequency dimensions. length of `dims` array(must be >= 1). */
     aoclfftz_dim_t *dims;   /**< Multi-dimensional tensor dimensions for LP64 */
     aoclfftz_dim_t *vecs;   /**< Vector tensor dimensions for LP64 */
-    aoclfftz_flags_t flags; /**< Struct for configuration flags to control critical FFT execution parameters- \n
-                                 fft_type, fft_direction, storage_order, fft_placement, transpose_mode. */
-    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
+    aoclfftz_flags_t flags; /**< Struct for configuration flags to control critical FFT execution parameters like -\n
+                                 `fft_type`, `fft_direction`, `storage_order`, `fft_placement`, `transpose_mode`. */
+    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP FFT computation */
     aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_f;
 
-/** 
+/**
  * @ingroup Data_Structures
  * @brief Defines problem descriptor for double data on LP64 machines.
  */
@@ -193,13 +205,13 @@ typedef struct
 {
     DOUBLE *in;             /**< input buffer: Points to signal points for forward FFT and frequency points for backward FFT */
     DOUBLE *out;            /**< output buffer: Points frequency points for forward FFT and signal points for backward FFT */
-    INT32 vec_rank;         /**< `vec_rank` is the number of batch dimensions. length of `vecs` array(must be >= 1). */
+    INT32 vec_rank;         /**< `vec_rank` is the number of batch/vector dimensions. length of `vecs` array(must be >= 1). */
     INT32 dim_rank;         /**< `dim_rank` is the number of signal/frequency dimensions. length of `dims` array(must be >= 1). */
     aoclfftz_dim_t *dims;   /**< Multi-dimensional tensor dimensions for LP64 */
     aoclfftz_dim_t *vecs;   /**< Vector tensor dimensions for LP64 */
-    aoclfftz_flags_t flags; /**< Struct for configuration flags to control critical FFT execution parameters- \n
-                                 fft_type, fft_direction, storage_order, fft_placement, transpose_mode. */
-    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
+    aoclfftz_flags_t flags; /**< Struct for configuration flags to control critical FFT execution parameters like -\n
+                                 `fft_type`, `fft_direction`, `storage_order`, `fft_placement`, `transpose_mode`. */
+    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP FFT computation */
     aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_d;
 
@@ -211,13 +223,13 @@ typedef struct
 {
     FLOAT *in;                  /**< input buffer: Points to signal points for forward FFT and frequency points for backward FFT */
     FLOAT *out;                 /**< output buffer: Points to frequency points for forward FFT and signal points for backward FFT */
-    INT32 vec_rank;             /**< `vec_rank` is the number of batch dimensions. length of `vecs` array(must be >= 1). */
+    INT32 vec_rank;             /**< `vec_rank` is the number of batch/vector dimensions. length of `vecs` array(must be >= 1). */
     INT32 dim_rank;             /**< `dim_rank` is the number of signal/frequency dimensions. length of `dims` array(must be >= 1). */
     aoclfftz_dim_t_64_ *dims;   /**< Multi-dimensional tensor dimensions for ILP64 */
     aoclfftz_dim_t_64_ *vecs;   /**< Vector tensor dimensions for ILP64 */
-    aoclfftz_flags_t flags;     /**< Struct for configuration flags to control critical FFT execution parameters- \n
-                                     fft_type, fft_direction, storage_order, fft_placement, transpose_mode. */
-    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
+    aoclfftz_flags_t flags;     /**< Struct for configuration flags to control critical FFT execution parameters like -\n
+                                    * `fft_type`, `fft_direction`, `storage_order`, `fft_placement`, `transpose_mode`. */
+    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP FFT computation */
     aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_f_64_;
 
@@ -229,13 +241,13 @@ typedef struct
 {
     DOUBLE *in;                 /**< input buffer: Points to signal points for forward FFT and frequency points for backward FFT */
     DOUBLE *out;                /**< output buffer: Points to frequency points for forward FFT and signal points for backward FFT */
-    INT32 vec_rank;             /**< `vec_rank` is the number of batch dimensions. length of `vecs` array(must be >= 1). */
+    INT32 vec_rank;             /**< `vec_rank` is the number of batch/vector dimensions. length of `vecs` array(must be >= 1). */
     INT32 dim_rank;             /**< `dim_rank` is the number of signal/frequency dimensions. length of `dims` array(must be >= 1). */
     aoclfftz_dim_t_64_ *dims;   /**< Multi-dimensional tensor dimensions for ILP64 */
     aoclfftz_dim_t_64_ *vecs;   /**< Vector tensor dimensions for ILP64 */
-    aoclfftz_flags_t flags;     /**< Struct for configuration flags to control critical FFT execution parameters- \n
-                                     fft_type, fft_direction, storage_order, fft_placement, transpose_mode. */
-    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP fft computation */
+    aoclfftz_flags_t flags;     /**< Struct for configuration flags to control critical FFT execution parameters like - \n
+                                    * `fft_type`, `fft_direction`, `storage_order`, `fft_placement`, `transpose_mode`. */
+    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP FFT computation */
     aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
 } aoclfftz_prob_desc_d_64_;
 
@@ -258,10 +270,10 @@ typedef struct
  *
  * @param problem FLOAT LP64 problem descriptor object.
  * @return
- * | Result              | Description |
- * |:--------------------|:---------------------------------------|
- * | solution handle     |  Generate an opaque pointer (SUCCESS)  |
- * | NULL                |  setup failed (Fail)                   |
+ * | Result                                 | Description |
+ * |:---------------------------------------|:-------------------------------------------------------------------------------------|
+ * | Opaque pointer to FFT solution handle  |  Setup succeeded with a valid solution for execution of the given problem (SUCCESS)  |
+ * | NULL                                   |  Setup failed (FAIL)                                                                 |
  */
 EXPORT_SYM_DYN VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem);
 
@@ -283,10 +295,10 @@ EXPORT_SYM_DYN VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem);
  *
  * @param problem DOUBLE LP64 problem descriptor object
  * @return
- * | Result              | Description |
- * |:--------------------|:---------------------------------------|
- * | solution handle     |  Generate an opaque pointer (SUCCESS)  |
- * | NULL                |  setup failed (Fail)                   |
+ * | Result                                 | Description |
+ * |:---------------------------------------|:-------------------------------------------------------------------------------------|
+ * | Opaque pointer to FFT solution handle  |  Setup succeeded with a valid solution for execution of the given problem (SUCCESS)  |
+ * | NULL                                   |  Setup failed (FAIL)                                                                 |
  */
 EXPORT_SYM_DYN VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem);
 
@@ -308,10 +320,10 @@ EXPORT_SYM_DYN VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem);
  *
  * @param problem FLOAT ILP64 problem descriptor object
  * @return
- * | Result              | Description |
- * |:--------------------|:---------------------------------------|
- * | solution handle     |  Generate an opaque pointer (SUCCESS)  |
- * | NULL                |  setup failed (Fail)                   |
+ * | Result                                 | Description |
+ * |:---------------------------------------|:-------------------------------------------------------------------------------------|
+ * | Opaque pointer to FFT solution handle  |  Setup succeeded with a valid solution for execution of the given problem (SUCCESS)  |
+ * | NULL                                   |  Setup failed (FAIL)                                                                 |
  */
 EXPORT_SYM_DYN VOID *aoclfftz_setup_f_64_(aoclfftz_prob_desc_f_64_ *problem);
 
@@ -333,17 +345,17 @@ EXPORT_SYM_DYN VOID *aoclfftz_setup_f_64_(aoclfftz_prob_desc_f_64_ *problem);
  *
  * @param problem DOUBLE ILP64 problem descriptor object
  * @return
- * | Result              | Description |
- * |:--------------------|:---------------------------------------|
- * | solution handle     |  Generate an opaque pointer (SUCCESS)  |
- * | NULL                |  setup failed (Fail)                   |
+ * | Result                                 | Description |
+ * |:---------------------------------------|:-------------------------------------------------------------------------------------|
+ * | Opaque pointer to FFT solution handle  |  Setup succeeded with a valid solution for execution of the given problem (SUCCESS)  |
+ * | NULL                                   |  Setup failed (FAIL)                                                                 |
  */
 EXPORT_SYM_DYN VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem);
 
 /**
  * @ingroup APIs
  * @brief Performs FFT computation based on the solution handle and returns
- * the status of execution as an INT32 value.
+ * the status of execution as one of the aoclfftz_error_type values.
  *
  * The input and output buffers defined in the setup stage will be used for
  * computation without requiring additional buffer specification.
@@ -354,21 +366,24 @@ EXPORT_SYM_DYN VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem);
  * | Result                             | Description |
  * |:-----------------------------------|:------------|
  * | @ref AOCLFFTZ_SUCCESS              |  SUCCESS    |
- * | @ref AOCLFFTZ_EXECUTION_FAILURE    |  Fail       |
+ * | @ref AOCLFFTZ_EXECUTION_FAILURE    |  FAIL       |
  */
-EXPORT_SYM_DYN INT32 aoclfftz_execute(VOID *handle);
+EXPORT_SYM_DYN aoclfftz_error_type aoclfftz_execute(VOID *handle);
 
 /**
  * @ingroup APIs
  * @brief Performs FFT computation on the given buffers based on the
- * solution handle and returns the status of execution as an INT32 value.
+ * solution handle and returns the status of execution as one of the
+ * aoclfftz_error_type values.
  *
- * This API uses the plan from the solution handle but applies it to the newly
+ * This API uses an already computed solution handle but applies it to the newly
  * provided input and output buffers instead of those defined during setup.
  * To avoid memory access issues, the `in` and `out` buffers must have
  * sufficient memory allocated based on the problem size defined in the
  * solution handle.
- * Setup API `aoclfftz_setup_*` must be invoked before calling this execute API.
+ * Setup API `aoclfftz_setup_*` must have been invoked in the past to acquire
+ * a valid solution handle before calling this execute API with any new set
+ * of input and output buffers.
  *
  * @param handle solution handle
  * @param in pointer to input buffer
@@ -377,9 +392,9 @@ EXPORT_SYM_DYN INT32 aoclfftz_execute(VOID *handle);
  * | Result                             | Description |
  * |:-----------------------------------|:------------|
  * | @ref AOCLFFTZ_SUCCESS              |  SUCCESS    |
- * | @ref AOCLFFTZ_EXECUTION_FAILURE    |  Fail       |
+ * | @ref AOCLFFTZ_EXECUTION_FAILURE    |  FAIL       |
  */
-EXPORT_SYM_DYN INT32 aoclfftz_execute_io(VOID *handle, VOID *in, VOID *out);
+EXPORT_SYM_DYN aoclfftz_error_type aoclfftz_execute_io(VOID *handle, VOID *in, VOID *out);
 
 /**
  * @ingroup APIs

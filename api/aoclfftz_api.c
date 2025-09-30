@@ -76,7 +76,7 @@ VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem)
 }
 
 // Execute function for Single-threaded and multi-threaded FFT
-INT32 aoclfftz_execute(VOID *handle)
+aoclfftz_error_type aoclfftz_execute(VOID *handle)
 {
     if (handle == NULL)
     {
@@ -88,7 +88,7 @@ INT32 aoclfftz_execute(VOID *handle)
 
 // Execute function for Single-threaded and multi-threaded FFT on different
 // input, output buffers using the same solution from the handle
-INT32 aoclfftz_execute_io(VOID *handle, VOID *in, VOID *out)
+aoclfftz_error_type aoclfftz_execute_io(VOID *handle, VOID *in, VOID *out)
 {
     if ((handle == NULL) | (in == NULL) | (out == NULL))
     {
