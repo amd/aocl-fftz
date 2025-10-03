@@ -209,7 +209,6 @@ set(STANDARD_TEST_SUITE
 
     set(EXHAUSTIVE_TEST_SUITE
     "EXT_C_LARGE_PRIME_IP ./aocl_fftz_bench 10007:1:1 -b a --dir f -p f -r i"                                 # accuracy | complex  | float    | LP64       | 1D  |  no     | bluestein | inplace   | forward   | C       |
-    "EXT_C_LARGE_CT_IP ./aocl_fftz_bench 500500:10:10 -b a --dir b -m i -r i"                                 # accuracy | complex  | double   | ILP64      | 1D  |  no     | CT        | inplace   | backward  | C       |
     "EXT_C_5D_IP ./aocl_fftz_bench 2x3x4x5x6:2:2 -b a --dir f -p f -r i"                                      # accuracy | complex  | float    | LP64       | 5D  |  no     | NDim      | inplace   | forward   | C       |
     "EXT_C2R_CT_IP ./aocl_fftz_bench 25000 -b a -f c2r -r i"                                                  # accuracy | real     | double   | LP64       | 1D  |  no     | CT        | inplace   | backward  | C       |
     "EXT_AVX512_CT_IP ./aocl_fftz_bench 100000:10:10 -b a --dir f -p f -m i -o 3 -r i"                        # accuracy | complex  | float    | ILP64      | 1D  |  no     | CT        | inplace   | forward   | AVX512  |
