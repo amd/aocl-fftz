@@ -78,6 +78,7 @@ option(ENABLE_MULTI_THREADING "Compiles library with multi-threading support usi
 option(ENABLE_STRICT_WARNINGS "Enable compiler flags to treat all warnings as errors (Enabled by default)" ON)
 option(FUZZTEST "Enable Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)" OFF)
 option(VALGRIND "Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)" OFF)
+option(BUILD_THIRD_PARTY_WRAPPERS "Build fftz third party wrapper libraries along aocl_fftz library" OFF)
 
 #list source files to be compiled for the library
 set(CORE_PATH core)
@@ -467,4 +468,8 @@ add_custom_command(
 
 if (BUILD_DOC)
     add_subdirectory(docs)
+endif()
+
+if(BUILD_THIRD_PARTY_WRAPPERS)
+    add_subdirectory(wrappers/fftw)
 endif()
