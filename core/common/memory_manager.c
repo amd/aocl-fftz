@@ -109,6 +109,7 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->solver->kernel_r2hc = (kernel_info_t*)((UINT8*)sol->solver->kernel_c2c + sizeof(kernel_info_t));
         sol->solver->kernel_r2hcf = (kernel_info_t*)((UINT8*)sol->solver->kernel_r2hc + sizeof(kernel_info_t));
 
+        sol->solver->solver_type = SOLVER_NULL;
         sol->solver->execute_solver = NULL;
         sol->solver->kernel_c2c->kfft = NULL;
         sol->solver->kernel_r2hc->kfft = NULL;
@@ -215,6 +216,7 @@ aoclfftz_solution_t* alloc_solution(INT32 vec_rank, INT32 dim_rank)
             sizeof(kernel_info_t));
         ALLOC_ALIGN_UNINIT(sol->solver->kernel_r2hcf, kernel_info_t,
             sizeof(kernel_info_t));
+        sol->solver->solver_type = SOLVER_NULL;
         sol->solver->execute_solver = NULL;
         sol->solver->kernel_c2c->kfft = NULL;
         sol->solver->kernel_r2hc->kfft = NULL;

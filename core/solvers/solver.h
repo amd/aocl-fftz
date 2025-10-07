@@ -53,6 +53,7 @@ typedef enum
 // Solver types implemented in the library for executing a given DFT problem
 typedef enum
 {
+    SOLVER_NULL = 0,
     SOLVER_DIRECT = 1,
     SOLVER_DIRECT_BATCHED_COLMAJOR,
     SOLVER_DIRECT_BATCHED_ROWMAJOR,
