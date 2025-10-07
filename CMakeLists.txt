@@ -234,8 +234,6 @@ if(AOCL_ENABLE_LOG)
 endif()
 
 #set library and sources
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ROOT_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ROOT_DIR}/lib)
 set(lib_name aocl_fftz)
 set(SRC_FILES
         ${UTILS_SRC_FILES}
@@ -362,7 +360,7 @@ if(ENABLE_AVX256)
 endif()
 if(ENABLE_AVX128)
     set_source_files_properties(${CORE_AVX128_FILES} DIRECTORY "${ROOT_DIR}" "${GTEST_DIR}"
-                                PROPERTIES COMPILE_FLAGS "${AVX128_FLAG}") 
+                                PROPERTIES COMPILE_FLAGS "${AVX128_FLAG}")
 endif()
 
 #Enabling strict warnings
@@ -454,6 +452,17 @@ add_custom_command(
     COMMENT "Uninstall the installed files as per install_manifest.txt and from ${ROOT_DIR}/lib/"
     COMMAND ${CMAKE_COMMAND} -E echo "Checking for install_manifest.txt..."
     COMMAND [ -f install_manifest.txt ] && xargs rm -vf < install_manifest.txt || echo 'install_manifest.txt is not present, nothing to uninstall, install the library!'
+    )
+
+# copy library from build directory to lib directory
+add_custom_command(
+    TARGET ${lib_name}
+    POST_BUILD
+    COMMENT "Copy library to ${ROOT_DIR}/lib"
+    COMMAND ${CMAKE_COMMAND} -E rm -rf ${ROOT_DIR}/lib
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${ROOT_DIR}/lib
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${lib_name}> ${ROOT_DIR}/lib
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_LINKER_FILE:${lib_name}> ${ROOT_DIR}/lib
     )
 
 if (BUILD_DOC)
