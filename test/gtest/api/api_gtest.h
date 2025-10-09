@@ -95,11 +95,12 @@ public:
     {
         problem = NULL;
         handle = NULL;
+
         problem = new ProblemType();
         if (problem == NULL)
         {
-            throw std::
-            runtime_error("Memory allocation failed for the problem.");
+            throw std::runtime_error(
+                "Memory allocation failed for the problem.");
         }
         // Set default flags to out-of-place, in-order, forward, complex, FFT
         problem->flags = {0};
@@ -338,7 +339,7 @@ public:
     // Functions to retrieve supported option levels and flags
     std::vector<INT32> get_supported_optlevels()
     {
-        return {-1, 0, 1, 2, 3};
+        return {0, 1, 2, 3};
     }
 
     std::vector<aoclfftz_flags_t> get_supported_flags()
@@ -353,11 +354,12 @@ public:
                     for (UINT32 complex : {0})
                     {
                         aoclfftz_flags flag;
-                        flag.fft_placement = in_place;
-                        flag.storage_order = in_order;
-                        flag.fft_direction     = forward;
-                        flag.fft_type         = complex;
-                        flag.transpose_mode    = 0;
+                        flag.fft_placement       = in_place;
+                        flag.storage_order       = in_order;
+                        flag.fft_direction       = forward;
+                        flag.fft_type            = complex;
+                        flag.transpose_mode      = 0;
+                        flag.bit_reproducibility = 0;
                         flags.push_back(flag);
                     }
                 }

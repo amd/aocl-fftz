@@ -89,6 +89,9 @@
 #define SET_PRECISION(flags, val) (flags = (flags & 0x3FFFFFFF) | (val << 30))
 #define SET_INPLACE(flags) SET_BIT_FLAG32(flags, 0, 0)
 
+#define SET_BIT_REPRODUCIBLE(flags, val) SET_BIT_FLAG32(flags, 4, val)
+#define GET_BIT_REPRODUCIBLE(flags) GET_BIT_FLAG32(flags, 4)
+
 // Get size of datatype based on the precision
 #define DT_PRECISION_BYTES(dt_prec) (1 << dt_prec)
 
@@ -223,6 +226,7 @@ typedef struct aoclfftz_decomp_scheme
     //   bit 1: (0) in-order / (1) out-of-order
     //   bit 2: (0) forward  / (1) backward
     //   bit 3: (0) complex  / (1) real
+    //   bit 4: (bit reproducibility) (0) disabled / (1) enabled
     // Library side internal flag bits
     //  transpose (standalone) (no DFT): 8th-bit
     //  transpose (alongside DFT): 9th-bit
