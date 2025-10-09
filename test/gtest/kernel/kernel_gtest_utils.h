@@ -34,6 +34,7 @@
  * for FFT kernels.
  *
  * @author Srirammaswamy Srinivasan
+ * @author Jeevanantham N
  *
  */
 
@@ -97,7 +98,7 @@ kfft_ get_kernel(const wrapper_kernel_fp_list *kernel_table, const INT32 dir,
  * @tparam T data type (float or double)
  * @param radix radix of the FFT kernel
  * @param dir direction (forward / backward)
- * @param kernel_type kernel type - [STANDARD|PERMUTED] _C2C_TWID_ [C|AVX128|AVX256|AVX512]
+ * @param kernel_type kernel type - C2C_TWID_ [C|AVX128|AVX256|AVX512]
  * @return kffft_ a kernel pointer; returns nullptr if kernel not found
  */
 template <class T>
@@ -117,8 +118,7 @@ kfft_ get_twiddle_kernel(const UINT32 radix, const INT32 dir,
 
     switch (kernel_type)
     {
-    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_C:
-    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_C:
+    case aocl_fftz_kernel_type::C2C_TWID_C:
         switch (radix)
         {
         case 2:
@@ -155,8 +155,7 @@ kfft_ get_twiddle_kernel(const UINT32 radix, const INT32 dir,
         break;
 
 #ifdef ENABLE_AVX128
-    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX128:
-    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX128:
+    case aocl_fftz_kernel_type::C2C_TWID_AVX128:
         switch (radix)
         {
         case 2:
@@ -193,8 +192,7 @@ kfft_ get_twiddle_kernel(const UINT32 radix, const INT32 dir,
         break;
 #endif
 #ifdef ENABLE_AVX256
-    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX256:
-    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX256:
+    case aocl_fftz_kernel_type::C2C_TWID_AVX256:
         switch (radix)
         {
         case 2:
@@ -231,8 +229,7 @@ kfft_ get_twiddle_kernel(const UINT32 radix, const INT32 dir,
         break;
 #endif
 #ifdef ENABLE_AVX512
-    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX512:
-    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX512:
+    case aocl_fftz_kernel_type::C2C_TWID_AVX512:
         switch (radix)
         {
         case 2:
@@ -347,52 +344,40 @@ wrapper_kernel_fp_list *get_kernel_table(UINT8 kernel_type)
 {
     switch (kernel_type)
     {
-    case aocl_fftz_kernel_type::STANDARD_C2C_C:
-    case aocl_fftz_kernel_type::PERMUTED_C2C_C:
+    case aocl_fftz_kernel_type::C2C_C:
         return wrapper_kernels_c2c_c;
 #ifdef ENABLE_AVX128
-    case aocl_fftz_kernel_type::STANDARD_C2C_AVX128:
-    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX128:
+    case aocl_fftz_kernel_type::C2C_AVX128:
         return wrapper_kernels_c2c_avx128;
 #endif
 #ifdef ENABLE_AVX256
-    case aocl_fftz_kernel_type::STANDARD_C2C_AVX256:
-    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX256:
+    case aocl_fftz_kernel_type::C2C_AVX256:
         return wrapper_kernels_c2c_avx256;
 #endif
 #ifdef ENABLE_AVX512
-    case aocl_fftz_kernel_type::STANDARD_C2C_AVX512:
-    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX512:
+    case aocl_fftz_kernel_type::C2C_AVX512:
         return wrapper_kernels_c2c_avx512;
 #endif
-    case aocl_fftz_kernel_type::STANDARD_R2HC_C:
-    case aocl_fftz_kernel_type::PERMUTED_R2HC_C:
+    case aocl_fftz_kernel_type::R2HC_C:
         return wrapper_kernels_r2hc_c;
-    case aocl_fftz_kernel_type::STANDARD_R2HCF_C:
-    case aocl_fftz_kernel_type::PERMUTED_R2HCF_C:
+    case aocl_fftz_kernel_type::R2HCF_C:
         return wrapper_kernels_r2hcf_c;
 #ifdef ENABLE_AVX128
-    case aocl_fftz_kernel_type::STANDARD_R2HC_AVX128:
-    case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX128:
+    case aocl_fftz_kernel_type::R2HC_AVX128:
         return wrapper_kernels_r2hc_avx128;
-    case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX128:
-    case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX128:
+    case aocl_fftz_kernel_type::R2HCF_AVX128:
         return wrapper_kernels_r2hcf_avx128;
 #endif
 #ifdef ENABLE_AVX256
-    case aocl_fftz_kernel_type::STANDARD_R2HC_AVX256:
-    case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX256:
+    case aocl_fftz_kernel_type::R2HC_AVX256:
         return wrapper_kernels_r2hc_avx256;
-    case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX256:
-    case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX256:
+    case aocl_fftz_kernel_type::R2HCF_AVX256:
         return wrapper_kernels_r2hcf_avx256;
 #endif
 #ifdef ENABLE_AVX512
-    case aocl_fftz_kernel_type::STANDARD_R2HC_AVX512:
-    case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX512:
+    case aocl_fftz_kernel_type::R2HC_AVX512:
         return wrapper_kernels_r2hc_avx512;
-    case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX512:
-    case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX512:
+    case aocl_fftz_kernel_type::R2HCF_AVX512:
         return wrapper_kernels_r2hcf_avx512;
 #endif
     default:
@@ -410,75 +395,43 @@ std::string get_kernel_type_as_string(UINT8 kernel_type)
 {
     switch (kernel_type)
     {
-    case aocl_fftz_kernel_type::STANDARD_C2C_C:
-        return "_STANDARD_C2C_C";
-    case aocl_fftz_kernel_type::PERMUTED_C2C_C:
-        return "_PERMUTED_C2C_C";
-    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_C:
-        return "_STANDARD_C2C_TWID_C";
-    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_C:
-        return "_PERMUTED_C2C_TWID_C";
-    case aocl_fftz_kernel_type::STANDARD_R2HC_C:
-        return "_STANDARD_R2HC_C";
-    case aocl_fftz_kernel_type::PERMUTED_R2HC_C:
-        return "_PERMUTED_R2HC_C";
-    case aocl_fftz_kernel_type::STANDARD_R2HCF_C:
-        return "_STANDARD_R2HCF_C";
-    case aocl_fftz_kernel_type::PERMUTED_R2HCF_C:
-        return "_PERMUTED_R2HCF_C";
+    case aocl_fftz_kernel_type::C2C_C:
+        return "_C2C_C";
+    case aocl_fftz_kernel_type::C2C_TWID_C:
+        return "_C2C_TWID_C";
+    case aocl_fftz_kernel_type::R2HC_C:
+        return "_R2HC_C";
+    case aocl_fftz_kernel_type::R2HCF_C:
+        return "_R2HCF_C";
 #ifdef ENABLE_AVX128
-    case aocl_fftz_kernel_type::STANDARD_C2C_AVX128:
-        return "_STANDARD_C2C_AVX128";
-    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX128:
-        return "_PERMUTED_C2C_AVX128";
-    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX128:
-        return "_STANDARD_C2C_TWID_AVX128";
-    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX128:
-        return "_PERMUTED_C2C_TWID_AVX128";
-    case aocl_fftz_kernel_type::STANDARD_R2HC_AVX128:
-        return "_STANDARD_R2HC_AVX128";
-    case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX128:
-        return "_PERMUTED_R2HC_AVX128";
-    case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX128:
-        return "_STANDARD_R2HCF_AVX128";
-    case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX128:
-        return "_PERMUTED_R2HCF_AVX128";
+    case aocl_fftz_kernel_type::C2C_AVX128:
+        return "_C2C_AVX128";
+    case aocl_fftz_kernel_type::C2C_TWID_AVX128:
+        return "_C2C_TWID_AVX128";
+    case aocl_fftz_kernel_type::R2HC_AVX128:
+        return "_R2HC_AVX128";
+    case aocl_fftz_kernel_type::R2HCF_AVX128:
+        return "_R2HCF_AVX128";
 #endif
 #ifdef ENABLE_AVX256
-    case aocl_fftz_kernel_type::STANDARD_C2C_AVX256:
-        return "_STANDARD_C2C_AVX256";
-    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX256:
-        return "_PERMUTED_C2C_AVX256";
-    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX256:
-        return "_STANDARD_C2C_TWID_AVX256";
-    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX256:
-        return "_PERMUTED_C2C_TWID_AVX256";
-    case aocl_fftz_kernel_type::STANDARD_R2HC_AVX256:
-        return "_STANDARD_R2HC_AVX256";
-    case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX256:
-        return "_PERMUTED_R2HC_AVX256";
-    case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX256:
-        return "_STANDARD_R2HCF_AVX256";
-    case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX256:
-        return "_PERMUTED_R2HCF_AVX256";
+    case aocl_fftz_kernel_type::C2C_AVX256:
+        return "_C2C_AVX256";
+    case aocl_fftz_kernel_type::C2C_TWID_AVX256:
+        return "_C2C_TWID_AVX256";
+    case aocl_fftz_kernel_type::R2HC_AVX256:
+        return "_R2HC_AVX256";
+    case aocl_fftz_kernel_type::R2HCF_AVX256:
+        return "_R2HCF_AVX256";
 #endif
 #ifdef ENABLE_AVX512
-    case aocl_fftz_kernel_type::STANDARD_C2C_AVX512:
-        return "_STANDARD_C2C_AVX512";
-    case aocl_fftz_kernel_type::PERMUTED_C2C_AVX512:
-        return "_PERMUTED_C2C_AVX512";
-    case aocl_fftz_kernel_type::STANDARD_R2HC_AVX512:
-        return "_STANDARD_R2HC_AVX512";
-    case aocl_fftz_kernel_type::PERMUTED_R2HC_AVX512:
-        return "_PERMUTED_R2HC_AVX512";
-    case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX512:
-        return "_STANDARD_R2HCF_AVX512";
-    case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX512:
-        return "_PERMUTED_R2HCF_AVX512";
-    case aocl_fftz_kernel_type::STANDARD_C2C_TWID_AVX512:
-        return "_STANDARD_C2C_TWID_AVX512";
-    case aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX512:
-        return "_PERMUTED_C2C_TWID_AVX512";
+    case aocl_fftz_kernel_type::C2C_AVX512:
+        return "_C2C_AVX512";
+    case aocl_fftz_kernel_type::R2HC_AVX512:
+        return "_R2HC_AVX512";
+    case aocl_fftz_kernel_type::R2HCF_AVX512:
+        return "_R2HCF_AVX512";
+    case aocl_fftz_kernel_type::C2C_TWID_AVX512:
+        return "_C2C_TWID_AVX512";
 #endif
     default:
         return "_UNKNOWN";
@@ -494,14 +447,10 @@ bool is_fused_kernel(UINT8 kernel_type)
 {
     switch (kernel_type)
     {
-    case aocl_fftz_kernel_type::STANDARD_R2HCF_C:
-    case aocl_fftz_kernel_type::PERMUTED_R2HCF_C:
-    case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX256:
-    case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX256:
-    case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX128:
-    case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX128:
-    case aocl_fftz_kernel_type::STANDARD_R2HCF_AVX512:
-    case aocl_fftz_kernel_type::PERMUTED_R2HCF_AVX512:
+    case aocl_fftz_kernel_type::R2HCF_C:
+    case aocl_fftz_kernel_type::R2HCF_AVX256:
+    case aocl_fftz_kernel_type::R2HCF_AVX128:
+    case aocl_fftz_kernel_type::R2HCF_AVX512:
         return true;
     default:
         return false;
