@@ -35,6 +35,7 @@
  *
  * @author Srirammaswamy Srinivasan
  * @author Ashwin K. Godbole
+ * @author Jeevanantham N
  *
  */
 
@@ -122,7 +123,6 @@ class AoclfftzKernelTestBase
         is_out_of_place = std::get<4>(io_param);
         radix           = std::get<0>(param);
         kernel_type     = std::get<1>(param);
-        UINT8 test_type = std::get<2>(param);
 
         // to prevent the "goto jumps over variable initialization" issue
         kfft_ tw_kernel = nullptr;
@@ -156,44 +156,38 @@ class AoclfftzKernelTestBase
         INTP twk = 0;
         aocl_fftz_test_input input_type = aocl_fftz_test_input::RANDOM;
 
-        if (test_type != aoclfftz_kernel_test_type::ALL)
+        if (kernel_type < aocl_fftz_kernel_type::C2C_TWID_C ||
+            kernel_type > aocl_fftz_kernel_type::C2C_TWID_AVX512)
         {
-            GTEST_LOG_(WARNING) << "Twiddle kernels have only one test type, "
-                                   "using test_type = ALL by default.";
-        }
-
-        if (kernel_type < aocl_fftz_kernel_type::STANDARD_C2C_TWID_C ||
-            kernel_type > aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX512)
-        {
-            GTEST_NONFATAL_FAILURE_("Given kernel is not a twiddle kernel.");
+            GTEST_FATAL_FAILURE_("Given kernel is not a twiddle kernel.");
             return;
         }
 
         tw_kernel = get_twiddle_kernel<T>(radix, is_bwd, kernel_type);
         if (tw_kernel == nullptr)
         {
-            GTEST_NONFATAL_FAILURE_(std::string("Twiddle kernel for radix " +
-                                                std::to_string(radix) +
-                                                " not found.")
-                                        .c_str());
+            GTEST_FATAL_FAILURE_(std::string("Twiddle kernel for radix " +
+                                             std::to_string(radix) +
+                                             " not found.")
+                                    .c_str());
             goto cleanup;
         }
 
-        table = get_kernel_table(aocl_fftz_kernel_type::STANDARD_C2C_C);
+        table = get_kernel_table(aocl_fftz_kernel_type::C2C_C);
 
         if (table == nullptr)
         {
-            GTEST_NONFATAL_FAILURE_("Kernel table of C2C kernels is empty.");
+            GTEST_FATAL_FAILURE_("Kernel table of C2C kernels is empty.");
             goto cleanup;
         }
 
         fft_kernel = get_kernel<T>(table, is_bwd, radix);
         if (fft_kernel == nullptr)
         {
-            GTEST_NONFATAL_FAILURE_(std::string("C2C kernel for radix " +
-                                                std::to_string(radix) +
-                                                " not found.")
-                                        .c_str());
+            GTEST_FATAL_FAILURE_(std::string("C2C kernel for radix " +
+                                             std::to_string(radix) +
+                                             " not found.")
+                                    .c_str());
             goto cleanup;
         }
 
@@ -206,6 +200,7 @@ class AoclfftzKernelTestBase
         k_in = prepare_input(input_type); // the input to the regular kernel
         if (k_in == nullptr)
         {
+            GTEST_FATAL_FAILURE_("Input preparation failed");
             goto cleanup;
         }
 
@@ -213,6 +208,8 @@ class AoclfftzKernelTestBase
         ALLOC_ALIGN_UNINIT(twk_in, T, sizeof(T) * input_length * data_stride);
         if (twk_in == nullptr)
         {
+            GTEST_FATAL_FAILURE_("Twiddle kernel input memory "
+                                 "allocation failed");
             goto cleanup;
         }
 
@@ -231,6 +228,7 @@ class AoclfftzKernelTestBase
 
             if (k_out == nullptr || twk_out == nullptr)
             {
+                GTEST_FATAL_FAILURE_("Output memory allocation failed");
                 goto cleanup;
             }
         }
@@ -244,6 +242,7 @@ class AoclfftzKernelTestBase
         ALLOC_ALIGN_UNINIT(k_stride.in_strides, INTP, radix * sizeof(INTP));
         if (k_stride.in_strides == nullptr)
         {
+            GTEST_FATAL_FAILURE_("Input stride memory allocation failed");
             goto cleanup;
         }
         populate_stride_array_wrapper(k_stride.in_strides, in_stride_w_ds,
@@ -255,6 +254,8 @@ class AoclfftzKernelTestBase
                                radix * sizeof(INTP));
             if (k_stride.out_strides == nullptr)
             {
+                GTEST_FATAL_FAILURE_("Output stride memory "
+                                     "allocation failed");
                 goto cleanup;
             }
             populate_stride_array_wrapper(k_stride.out_strides, out_stride_w_ds,
@@ -284,6 +285,7 @@ class AoclfftzKernelTestBase
 
         if (twiddle_buffer == nullptr)
         {
+            GTEST_FATAL_FAILURE_("Twiddle buffer memory allocation failed");
             goto cleanup;
         }
 
@@ -313,7 +315,7 @@ class AoclfftzKernelTestBase
 
         if (error == 0)
         {
-            GTEST_NONFATAL_FAILURE_(
+            GTEST_FATAL_FAILURE_(
                 "Twiddle multiplication (after regular kernel) failed");
             goto cleanup;
         }
@@ -364,7 +366,6 @@ cleanup:
         is_out_of_place = std::get<4>(io_param);
         radix           = std::get<0>(param);
         kernel_type     = std::get<1>(param);
-        UINT8 test_type = std::get<2>(param);
 
         // Each set represents a data of size `radix`
         // hence, data length = radix * offset
@@ -372,7 +373,7 @@ cleanup:
         wrapper_kernel_fp_list *table = get_kernel_table(kernel_type);
         if (table == nullptr)
         {
-            GTEST_NONFATAL_FAILURE_(
+            GTEST_FATAL_FAILURE_(
                 "Kernel table is empty or invalid kernel type");
             return;
         }
@@ -388,7 +389,7 @@ cleanup:
         }
         if (fft_kernel == nullptr)
         {
-            GTEST_NONFATAL_FAILURE_(
+            GTEST_FATAL_FAILURE_(
                 std::string("Radix" + std::to_string(radix) +
                             " kernel not found in the kernel table")
                     .c_str());
@@ -401,32 +402,9 @@ cleanup:
         in_stride_w_ds  = in_stride * data_stride;
         out_stride_w_ds = out_stride * data_stride;
 
-        if (test_type & aoclfftz_kernel_test_type::LINEARITY)
-        {
-            run_linearity_test(use_special ?
-                               aocl_fftz_test_input::RANDOM_SPECIAL :
-                               aocl_fftz_test_input::RANDOM);
-        }
-        if (test_type & aoclfftz_kernel_test_type::TRANSFORMATION)
-        {
-            run_unit_impulse_transform_test(use_special ?
-                                        aocl_fftz_test_input::RANDOM_SPECIAL :
-                                        aocl_fftz_test_input::IMPULSE);
-        }
-        if (test_type & aoclfftz_kernel_test_type::TIMESHIFT)
-        {
-            run_timeshift_test(use_special ?
-                               aocl_fftz_test_input::RANDOM_SPECIAL :
-                               aocl_fftz_test_input::RANDOM);
-            // Need to fix signal input generation,
-            // so changed signal input to random
-        }
-        if (test_type & aoclfftz_kernel_test_type::DFT_REFERENCE)
-        {
-            run_dft_reference_test(use_special ?
-                                   aocl_fftz_test_input::RANDOM_SPECIAL :
-                                   aocl_fftz_test_input::RANDOM);
-        }
+        run_dft_reference_test(use_special ?
+                                aocl_fftz_test_input::RANDOM_SPECIAL :
+                                aocl_fftz_test_input::RANDOM);
     } // run_test
 
     /**
@@ -441,10 +419,6 @@ cleanup:
         {
         case aocl_fftz_test_input::RANDOM:
             return prepare_random_input();
-        case aocl_fftz_test_input::IMPULSE:
-            return prepare_impulse_input();
-        case aocl_fftz_test_input::SIGNAL:
-            return prepare_signal_input();
         case aocl_fftz_test_input::RANDOM_SPECIAL:
             return prepare_random_input_with_special();
         default:
@@ -478,69 +452,6 @@ cleanup:
         }
         return input;
     } // prepare_random_input
-
-    /**
-     * @brief A function to generate impulse input with random peak value
-     *
-     * @return input data of size `length`
-     */
-    T *prepare_impulse_input()
-    {
-        T *input;
-        ALLOC_ALIGN_INIT(input, T, input_length * data_stride * sizeof(T));
-        if(input == nullptr)
-        {
-            GTEST_NONFATAL_FAILURE_(
-                "Memory allocation failed for impulse input preparation");
-            return input;
-        }
-        INTP idx = (INTP)(rand() % length) * in_stride;
-        // range: [-10.0, 10.0) with 3 decimal precision
-        input[idx * data_stride] = (T)((rand() % 2000) / 200.0 - 10.0);
-        if (is_complex)
-        {
-            input[idx * data_stride + 1] = (T)((rand() % 2000) / 200.0 - 10.0);
-        }
-        return input;
-    } // prepare_impulse_input
-
-    /**
-     * @brief A function to a cosine signal input with random shift and
-     * amplitude values
-     *
-     * @return input data of size `length`
-     */
-    T *prepare_signal_input()
-    {
-        /* Need to check on how do we generate the input for hybrid case */
-        T *input = NULL;
-        ALLOC_ALIGN_UNINIT(input, T, sizeof(T) * input_length * data_stride);
-        if(input == nullptr)
-        {
-            GTEST_NONFATAL_FAILURE_(
-                "Memory allocation failed for signal input preparation");
-            return input;
-        }
-        // Sine wave cycles
-        INTP cycles = (rand() % (input_length / 2)) + 2;
-        T size      = AOCLFFTZ_2_PI * cycles;
-        // Shift the origin of the wave from 0 to a positive integer `shift`,
-        // shift range: [0, length)
-        INTP shift = rand() % input_length;
-        // scale the amplitude of the wave by `scale` times, scale range:
-        // [0.0 5.0)
-        T scale = ((T)rand() / (T)RAND_MAX) * 5.0;
-        for (INTP i = 0; i < input_length; i++)
-        {
-            input[((i + shift) % input_length) * data_stride] =
-                sin((T)(i * size) / input_length) * scale;
-            if (is_complex)
-            {
-                input[((i + shift) % input_length) * data_stride + 1] = 0.0;
-            }
-        }
-        return input;
-    } // prepare_signal_input
 
     /**
      * @brief A function to generate random complex inputs with special and
@@ -1075,70 +986,6 @@ cleanup:
         }
 
         FREE_ALIGN_ALLOCATED_MEM(out_ref);
-    }
-
-    /**
-     * @brief A function to check the linearity property of the FFT kernel for
-     *        for complex and real type defined in complex_kernel_gtest.h
-     *        and real_kernel_gtest.h respectively
-     *
-     * @param input_type test input type
-     */
-    VOID run_linearity_test_complex(aocl_fftz_test_input input_type);
-    VOID run_linearity_test_real(aocl_fftz_test_input input_type);
-    VOID run_linearity_test(aocl_fftz_test_input input_type)
-    {
-        if (is_complex)
-        {
-            run_linearity_test_complex(input_type);
-        }
-        else
-        {
-            run_linearity_test_real(input_type);
-        }
-    }
-
-    /**
-     * @brief A functions to check the transformation property of the FFT kernel
-     * using unit impulse signal for complex and real type defined in
-     * complex_kernel_gtest.h and real_kernel_gtest.h respectively
-     *
-     * @param input_type test input type
-     */
-    VOID run_unit_impulse_transform_test_complex(
-            aocl_fftz_test_input input_type);
-    VOID run_unit_impulse_transform_test_real(aocl_fftz_test_input input_type);
-    VOID run_unit_impulse_transform_test(aocl_fftz_test_input input_type)
-    {
-        if (is_complex)
-        {
-            run_unit_impulse_transform_test_complex(input_type);
-        }
-        else
-        {
-            run_unit_impulse_transform_test_real(input_type);
-        }
-    }
-
-    /**
-     * @brief A functions to check the timeshift property of the FFT kernel for
-     * for complex and real type defined in complex_kernel_gtest.h and
-     * real_kernel_gtest.h respectively
-     *
-     * @param input_type test input type
-     */
-    VOID run_timeshift_test_complex(aocl_fftz_test_input input_type);
-    VOID run_timeshift_test_real(aocl_fftz_test_input input_type);
-    VOID run_timeshift_test(aocl_fftz_test_input input_type)
-    {
-        if (is_complex)
-        {
-            run_timeshift_test_complex(input_type);
-        }
-        else
-        {
-            run_timeshift_test_real(input_type);
-        }
     }
 
     /**

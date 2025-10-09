@@ -141,8 +141,8 @@ class PerformanceTest : public benchmark::Fixture {
         INT32 data_stride = is_real ? 1 : 2;
         aoclfftz_twiddle_t tws;
 
-        if (kernel_type < aocl_fftz_kernel_type::STANDARD_C2C_C ||
-            kernel_type > aocl_fftz_kernel_type::PERMUTED_C2C_TWID_AVX512)
+        if (kernel_type < aocl_fftz_kernel_type::C2C_TWID_C ||
+            kernel_type > aocl_fftz_kernel_type::C2C_TWID_AVX512)
         {
             state.SkipWithError(
                 std::string("Given kernel is not a twiddle kernel.").c_str());
@@ -276,8 +276,10 @@ BENCHMARK_REGISTER_F(PerformanceTest, Kernel_d)
                 benchmark::CreateDenseRange(2, 16, 1),
                 // Batch sizes to cover all possible cases in C & AVX kernels
                 benchmark::CreateDenseRange(1, 15, 1),
-                // aocl_fftz_kernel_type -> STANDARD/PERMUTED C/AVX
-                benchmark::CreateDenseRange(0, 7, 1),
+                // aocl_fftz_kernel_type -> C/AVX
+                benchmark::CreateDenseRange(
+                    aocl_fftz_kernel_type::C2C_C,
+                    aocl_fftz_kernel_type::C2C_AVX512, 1),
                 {IN_STRIDE}, {OUT_STRIDE},
                 {VEC_IN_STRIDE}, {VEC_OUT_STRIDE}, {COMPLEX},
     })
@@ -293,8 +295,10 @@ BENCHMARK_REGISTER_F(PerformanceTest, Kernel_f)
                 benchmark::CreateDenseRange(2, 16, 1),
                 // Batch sizes to cover all possible cases in C & AVX kernels
                 benchmark::CreateDenseRange(1, 15, 1),
-                // aocl_fftz_kernel_type -> STANDARD/PERMUTED C/AVX
-                benchmark::CreateDenseRange(0, 7, 1),
+                // aocl_fftz_kernel_type -> C/AVX
+                benchmark::CreateDenseRange(
+                    aocl_fftz_kernel_type::C2C_C,
+                    aocl_fftz_kernel_type::C2C_AVX512, 1),
                 {IN_STRIDE}, {OUT_STRIDE},
                 {VEC_IN_STRIDE}, {VEC_OUT_STRIDE}, {COMPLEX},
     })
@@ -310,13 +314,13 @@ BENCHMARK_REGISTER_F(PerformanceTest, Kernel_twiddle_d)
     ->ArgsProduct({
         // Covers all direct kernels from 2-16
         benchmark::CreateDenseRange(2, 16, 1),
-        {50},
+        {31},
         // Batch sizes to cover all possible cases in C & AVX kernels
         // benchmark::CreateDenseRange(1, 15, 1),
-        // aocl_fftz_kernel_type -> STANDARD/PERMUTED C/AVX
+        // aocl_fftz_kernel_type -> C/AVX
         benchmark::CreateDenseRange(
-            aocl_fftz_kernel_type::STANDARD_C2C_TWID_C,
-            aocl_fftz_kernel_type::PERMUTED_C2C_TWID_C, 1),
+            aocl_fftz_kernel_type::C2C_TWID_C,
+            aocl_fftz_kernel_type::C2C_TWID_AVX512, 1),
         {IN_STRIDE},
         {OUT_STRIDE},
         {VEC_IN_STRIDE},
@@ -336,13 +340,13 @@ BENCHMARK_REGISTER_F(PerformanceTest, Kernel_twiddle_f)
     ->ArgsProduct({
         // Covers all direct kernels from 2-16
         benchmark::CreateDenseRange(2, 16, 1),
-        {50},
+        {31},
         // Batch sizes to cover all possible cases in C & AVX kernels
         // benchmark::CreateDenseRange(1, 15, 1),
-        // aocl_fftz_kernel_type -> STANDARD/PERMUTED C/AVX
+        // aocl_fftz_kernel_type -> C/AVX
         benchmark::CreateDenseRange(
-            aocl_fftz_kernel_type::STANDARD_C2C_TWID_C,
-            aocl_fftz_kernel_type::PERMUTED_C2C_TWID_C, 1),
+            aocl_fftz_kernel_type::C2C_TWID_C,
+            aocl_fftz_kernel_type::C2C_TWID_AVX512, 1),
         {IN_STRIDE},
         {OUT_STRIDE},
         {VEC_IN_STRIDE},
@@ -361,8 +365,8 @@ BENCHMARK_REGISTER_F(PerformanceTest, Kernel_real_d)
                 // Batch sizes to cover all possible cases in C & AVX
                 benchmark::CreateDenseRange(1, 31, 1),
                 benchmark::CreateDenseRange(
-                    aocl_fftz_kernel_type::STANDARD_R2HC_C,
-                    aocl_fftz_kernel_type::PERMUTED_R2HCF_C, 1),
+                    aocl_fftz_kernel_type::R2HC_C,
+                    aocl_fftz_kernel_type::R2HCF_AVX512, 1),
                 {IN_STRIDE}, {OUT_STRIDE},
                 {VEC_IN_STRIDE}, {VEC_OUT_STRIDE}, {REAL},
     })
@@ -378,8 +382,8 @@ BENCHMARK_REGISTER_F(PerformanceTest, Kernel_real_f)
                 // Batch sizes to cover all possible cases in C & AVX
                 benchmark::CreateDenseRange(1, 31, 1),
                 benchmark::CreateDenseRange(
-                    aocl_fftz_kernel_type::STANDARD_R2HC_C,
-                    aocl_fftz_kernel_type::PERMUTED_R2HCF_C, 1),
+                    aocl_fftz_kernel_type::R2HC_C,
+                    aocl_fftz_kernel_type::R2HCF_AVX512, 1),
                 {IN_STRIDE}, {OUT_STRIDE},
                 {VEC_IN_STRIDE}, {VEC_OUT_STRIDE}, {REAL},
     })

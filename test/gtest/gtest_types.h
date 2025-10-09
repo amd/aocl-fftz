@@ -48,10 +48,6 @@ extern "C"
 /**
  * @brief An enum for the supported input types for tests
  * RANDOM: generates random input for all points
- * IMPULSE: generates random impulse input for a random index, all other points
- *          will be 0
- * SIGNAL: generates a sine wave signal with random amplitude and
- *          shift
  * RANDOM_SPECIAL: generates random input with special values like NaN,
  * infinity, sub-normals and with floating-point min/max values
  *
@@ -59,32 +55,7 @@ extern "C"
 enum aocl_fftz_test_input
 {
     RANDOM,
-    REAL_RANDOM,
-    IMPULSE,
-    SIGNAL,
-    REAL_RANDOM_SPECIAL,
     RANDOM_SPECIAL
-};
-
-/**
- * @brief An enum for the supported test types
- *
- * LINEARITY: checks the linearity property, i.e. DFT(a1*x1(n)
- *              +a2*x2(n))=a1*X1(n)+a2*X2(n)
- * TRANSFORMATION: checks the forward backward DFT
- *                  property, i.e. x(n) = IDFT(DFT(x(n)))
- * TIMESHIFT: checks the timeshift
- *                  proerty, i.e. DFT(x(n-m)) = X(k)*exp(-2πmk/N)
- * ALL: runs all the above tests
- *
- */
-enum aoclfftz_kernel_test_type
-{
-    LINEARITY = 1,
-    TRANSFORMATION = 2,
-    TIMESHIFT = 4,
-    DFT_REFERENCE = 8,
-    ALL = 15
 };
 
 /**
@@ -93,48 +64,32 @@ enum aoclfftz_kernel_test_type
  */
 enum aocl_fftz_kernel_type
 {
-    STANDARD_C2C_C = 0,
-    PERMUTED_C2C_C,
-    STANDARD_C2C_AVX128,
-    PERMUTED_C2C_AVX128,
-    STANDARD_C2C_AVX256,
-    PERMUTED_C2C_AVX256,
-    STANDARD_C2C_AVX512,
-    PERMUTED_C2C_AVX512,
-    STANDARD_C2C_TWID_C,
-    PERMUTED_C2C_TWID_C,
-    STANDARD_C2C_TWID_AVX128,
-    PERMUTED_C2C_TWID_AVX128,
-    STANDARD_C2C_TWID_AVX256,
-    PERMUTED_C2C_TWID_AVX256,
-    STANDARD_C2C_TWID_AVX512,
-    PERMUTED_C2C_TWID_AVX512,
-    STANDARD_R2HC_C,
-    PERMUTED_R2HC_C,
-    STANDARD_R2HCF_C,
-    PERMUTED_R2HCF_C,
-    STANDARD_R2HC_AVX128,
-    PERMUTED_R2HC_AVX128,
-    STANDARD_R2HCF_AVX128,
-    PERMUTED_R2HCF_AVX128,
-    STANDARD_R2HC_AVX256,
-    PERMUTED_R2HC_AVX256,
-    STANDARD_R2HCF_AVX256,
-    PERMUTED_R2HCF_AVX256,
-    STANDARD_R2HC_AVX512,
-    PERMUTED_R2HC_AVX512,
-    STANDARD_R2HCF_AVX512,
-    PERMUTED_R2HCF_AVX512,
+    C2C_C = 0,
+    C2C_AVX128,
+    C2C_AVX256,
+    C2C_AVX512,
+    C2C_TWID_C,
+    C2C_TWID_AVX128,
+    C2C_TWID_AVX256,
+    C2C_TWID_AVX512,
+    R2HC_C,
+    R2HCF_C,
+    R2HC_AVX128,
+    R2HCF_AVX128,
+    R2HC_AVX256,
+    R2HCF_AVX256,
+    R2HC_AVX512,
+    R2HCF_AVX512,
 };
 
 /**
  * @brief A type used as the parameter for the parameterized tests (TEST_P)
  *
- * std::tuple<radix, aocl_fftz_kernel_type, aoclfftz_kernel_test_type>
- * used UINT8 instead of aocl_fftz_kernel_type and aoclfftz_kernel_test_type to
- * perform bitwise operations to make decisions.
+ * std::tuple<radix, aocl_fftz_kernel_type>
+ * used UINT8 instead of aocl_fftz_kernel_type to perform bitwise operations
+ * to make decisions.
  */
-typedef std::tuple<UINT32, UINT8, UINT8> aoclfftz_kernel_test_params_t;
+typedef std::tuple<UINT32, UINT8> aoclfftz_kernel_test_params_t;
 
 /**
  * @brief A type used as the parameter for the paraterized selector tests
