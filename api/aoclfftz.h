@@ -113,11 +113,12 @@ typedef enum
 */
 typedef struct aoclfftz_flags
 {
-    UINT8 fft_type;           /**< Complex(0) or Real(1) */
-    UINT8 fft_direction;      /**< Forward(0) or Backward(1) */
-    UINT8 storage_order;      /**< In-order(0) or Out-of-order(1) */
-    UINT8 fft_placement;      /**< In-place(0) or Out-of-place(1) */
-    UINT8 transpose_mode;     /**< fft(0) or standalone transpose(1) (Not supported, must be default value `0`) */
+    UINT8 fft_type;             /**< Complex(0) or Real(1) >*/
+    UINT8 fft_direction;        /**< Forward(0) or Backward(1) >*/
+    UINT8 storage_order;        /**< In-order(0) or Out-of-order(1)>*/
+    UINT8 fft_placement;        /**< In-place(0) or Out-of-place(1) */
+    UINT8 transpose_mode;       /**< fft(0) or standalone transpose(1) (Not supported, must be default value `0`)*/
+    UINT8 bit_reproducibility;  /**< Disable(0) or Enable(1) the bit reproducibility mode*/
 } aoclfftz_flags_t;
 
 /**

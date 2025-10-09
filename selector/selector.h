@@ -176,11 +176,12 @@ typedef struct aoclfftz_selector
     sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads;      \
     sel_obj->solution->decomp_scheme->thread_info->n_threads = 1;              \
     sel_obj->solution->decomp_scheme->flags =                                  \
-        (problem->flags.fft_placement   << 0) |                                \
-        (problem->flags.storage_order   << 1) |                                \
-        (problem->flags.fft_direction   << 2) |                                \
-        (problem->flags.fft_type        << 3) |                                \
-        (problem->flags.transpose_mode  << 8);                                 \
+        (problem->flags.fft_placement       << 0) |                            \
+        (problem->flags.storage_order       << 1) |                            \
+        (problem->flags.fft_direction       << 2) |                            \
+        (problem->flags.fft_type            << 3) |                            \
+        (problem->flags.bit_reproducibility << 4) |                            \
+        (problem->flags.transpose_mode      << 8);                             \
 }
 
 #define COPY_DECOMP_SCHEME(to_decomp_scheme, from_decomp_scheme)               \
@@ -372,6 +373,7 @@ typedef struct aoclfftz_selector
                     (VOID *)problem->out, (VOID *)(problem->out + 1));         \
     }                                                                          \
 }
+
 
 #define COPY_SOLUTION_OBJ(to_sol_obj, from_sol_obj)                            \
 {                                                                              \
