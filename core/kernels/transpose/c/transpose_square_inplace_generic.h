@@ -123,9 +123,7 @@ VOID FUNC(tiq_recursive_buf, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
 
 VOID FUNC(tiq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
     TRANSPOSE_DT *in = (TRANSPOSE_DT *)in_ptr;
 
@@ -143,16 +141,12 @@ VOID FUNC(tiq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
         }
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 VOID FUNC(tisq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
     TRANSPOSE_DT *in = (TRANSPOSE_DT *)in_ptr;
 
@@ -173,9 +167,7 @@ VOID FUNC(tisq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
         }
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 VOID FUNC(copy_transpose_swap_store, TRANSPOSE_DT, c)
@@ -358,9 +350,7 @@ VOID FUNC(tiq_block_helper, TRANSPOSE_DT, c)(TRANSPOSE_DT *matrix,
 
 VOID FUNC(tiq_recursive_buf, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
     TRANSPOSE_DT *in = (TRANSPOSE_DT *)in_ptr;
 
@@ -393,9 +383,7 @@ VOID FUNC(tiq_recursive_buf, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
     FREE_UNALIGN_ALLOCATED_MEM(buffer1);
     FREE_UNALIGN_ALLOCATED_MEM(buffer2);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 #endif // TYPE_GENERIC_IMPLEMENTATION

@@ -49,6 +49,7 @@
 // Setup function for float LP64 based Single-threaded and multi-threaded FFT
 VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem)
 {
+    SET_PROBLEM_LOGGER_MODE(problem);
     VALIDATE_PROBLEM_DESCRIPTOR(problem);
     return setup_dft_f(problem);
 }
@@ -56,6 +57,7 @@ VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem)
 // Setup function for double LP64 based Single-threaded and multi-threaded FFT
 VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem)
 {
+    SET_PROBLEM_LOGGER_MODE(problem);
     VALIDATE_PROBLEM_DESCRIPTOR(problem);
     return setup_dft_d(problem);
 }
@@ -63,6 +65,7 @@ VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem)
 // Setup function for float ILP64 based Single-threaded and multi-threaded FFT
 VOID *aoclfftz_setup_f_64_(aoclfftz_prob_desc_f_64_ *problem)
 {
+    SET_PROBLEM_LOGGER_MODE(problem);
     VALIDATE_PROBLEM_DESCRIPTOR(problem);
     return setup_dft_f_64_(problem);
 }
@@ -71,6 +74,7 @@ VOID *aoclfftz_setup_f_64_(aoclfftz_prob_desc_f_64_ *problem)
 // multi-threaded FFT
 VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem)
 {
+    SET_PROBLEM_LOGGER_MODE(problem);
     VALIDATE_PROBLEM_DESCRIPTOR(problem);
     return setup_dft_d_64_(problem);
 }

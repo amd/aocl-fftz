@@ -105,9 +105,7 @@ VOID FUNC(tos_blocked, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
 
 VOID FUNC(tos_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
     TRANSPOSE_DT *in = (TRANSPOSE_DT *)in_ptr;
     TRANSPOSE_DT *out = (TRANSPOSE_DT *)out_ptr;
@@ -123,16 +121,12 @@ VOID FUNC(tos_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
         }
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 VOID FUNC(tos_blocked, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
     TRANSPOSE_DT *in = (TRANSPOSE_DT *)in_ptr;
     TRANSPOSE_DT *out = (TRANSPOSE_DT *)out_ptr;
@@ -162,9 +156,7 @@ VOID FUNC(tos_blocked, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
         }
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 #endif // TYPE_GENERIC_IMPLEMENTATION

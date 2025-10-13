@@ -101,8 +101,8 @@ typedef enum
 {
     AOCLFFTZ_LOG_NONE = 0,     /**< `0` : Disable all logging */
     AOCLFFTZ_LOG_INFO = 1,     /**< `1` : Detailed debugging logs */
-    AOCLFFTZ_LOG_DEBUG = 2,    /**< `2` : General informational logs about execution */
-    AOCLFFTZ_LOG_TRACE = 3     /**< `3` : Most detailed level of logging with complete execution trace */
+    AOCLFFTZ_LOG_TRACE = 2,    /**< `2` : Logging with complete execution trace */
+    AOCLFFTZ_LOG_DEBUG = 3,    /**< `3` : Most detailed logging, with debug logs */
 } aoclfftz_logger_mode;
 
 /**

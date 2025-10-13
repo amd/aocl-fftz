@@ -67,10 +67,7 @@ INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
                                   const kernel_t *kernel_r2hcf,
                                   aoclfftz_realhelper_t *realhelper)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
     INT32 status = SOLVER_SUCCESS;
 
     INT32 avl_threads = sol->decomp_scheme->thread_info->avl_threads;
@@ -95,9 +92,7 @@ INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
 
     compute_cost(sol, cost, kernel_c2c, kernel_r2hc, kernel_r2hcf);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return status;
 }
 
@@ -395,10 +390,8 @@ static inline VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol, UINT32 
  */
 static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     INT32 ret = SOLVER_SUCCESS;
 
@@ -457,9 +450,7 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
         set_zero_for_dc_and_nyquist(sol);
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return ret;
 }
 

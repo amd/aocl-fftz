@@ -79,9 +79,7 @@ static VOID r2hcf_rfft12avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
                                         aoclfftz_strides_t *strides, VOID *twd,
                                         UINT8 flag)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
     const FLOAT CRTM_12_1 = 0.612372435695794524549321018676472847991486870f;
     const FLOAT CRTM_12_2 = 0.353553390593273762200422181052424519642417969f;
     const FLOAT CRTM_12_3 = 0.866025403784438646763723170752936183471402627f;
@@ -1323,9 +1321,7 @@ static VOID r2hcf_rfft12avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
         out[out_strides[21]] = b_s28 + b_s24;      // Output pt 22: X(21)
         out[out_strides[22]] = b_s26 - b_s30;      // Output pt 23: X(22)
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 static VOID r2hcf_rfft12avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
@@ -1333,9 +1329,7 @@ static VOID r2hcf_rfft12avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
                                         aoclfftz_strides_t *strides, VOID *twd,
                                         UINT8 flag)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
     const FLOAT CRTM_12_1 = 1.931851652578136573499486399457794735267809678f;
     const FLOAT CRTM_12_2 = 0.517638090205041524697797675248096656698137802f;
     const FLOAT CRTM_12_3 = 1.732050807568877293527446341505872366942805254f;
@@ -2689,9 +2683,7 @@ static VOID r2hcf_rfft12avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
         out[out_strides[21]] = b_s18 - b_t3;           // Output pt 22: x(21)
         out[out_strides[23]] = b_s32 - b_t17;          // Output pt 24: x(23)
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 static VOID r2hcf_rfft12avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
@@ -2699,9 +2691,7 @@ static VOID r2hcf_rfft12avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
                                         aoclfftz_strides_t *strides, VOID *twd,
                                         UINT8 flag)
  {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
     const DOUBLE CRTM_12_1 = 0.612372435695794524549321018676472847991486870;
     const DOUBLE CRTM_12_2 = 0.353553390593273762200422181052424519642417969;
     const DOUBLE CRTM_12_3 = 0.866025403784438646763723170752936183471402627;
@@ -3678,9 +3668,7 @@ static VOID r2hcf_rfft12avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
         out[out_strides[21]] = b_s28 + b_s24;      // Output pt 22: X(21)
         out[out_strides[22]] = b_s26 - b_s30;      // Output pt 23: X(22)
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 static VOID r2hcf_rfft12avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
@@ -3688,9 +3676,7 @@ static VOID r2hcf_rfft12avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
                                         aoclfftz_strides_t *strides, VOID *twd,
                                         UINT8 flag)
  {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
     const DOUBLE CRTM_12_1 = 1.931851652578136573499486399457794735267809678;
     const DOUBLE CRTM_12_2 = 0.517638090205041524697797675248096656698137802;
     const DOUBLE CRTM_12_3 = 1.732050807568877293527446341505872366942805254;
@@ -4755,9 +4741,7 @@ static VOID r2hcf_rfft12avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
         out[out_strides[21]] = b_s18 - b_t3;           // Output pt 22: x(21)
         out[out_strides[23]] = b_s32 - b_t17;          // Output pt 24: x(23)
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 kfft_ register_kernel_r2hcf_rfft12avx512(UINT8 precision, UINT8 direction)

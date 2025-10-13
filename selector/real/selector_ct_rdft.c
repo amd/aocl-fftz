@@ -46,10 +46,8 @@
 INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                        aoclfftz_realhelper_t *realhelper)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
     aoclfftz_selector_t *cur_sel = NULL;
     aoclfftz_selector_t *cur_sel_m = NULL;
 
@@ -272,9 +270,7 @@ exit_ct_dft:
     destroy_selector_without_scratch_space(cur_sel);
     destroy_selector_without_scratch_space(cur_sel_m);
     destroy_solution(org_sol, 0);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
     return ret;
 }

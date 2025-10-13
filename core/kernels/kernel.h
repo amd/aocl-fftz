@@ -46,9 +46,8 @@
 #define AOCLFFTZ_KERNEL_H
 
 #include "api/aoclfftz_internal.h"
-#ifdef AOCL_ENABLE_LOG
 #include "utils/utils.h"
-#endif
+
 
 // macro to make in/out stride array volatile
 // hack to prevent compiler optimization to prevent register to stack movements

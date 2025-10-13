@@ -199,11 +199,9 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     if (check_bluestein_problem(sel->solution->decomp_scheme) &&
         (avl_threads > 1))
     {
-        AOCLFFTZ_LOG_UNFORMATTED(
-            INFO, INFO,
-            "Multi Threaded execution is"
-            " not supported for Bluestein solver, falling back to single"
-            " threaded execution");
+        AOCLFFTZ_LOG(INFO, global_logger_mode, "Multi Threaded execution is"
+        " not supported for Bluestein solver, falling back to single"
+        " threaded execution");
         sel->solution->decomp_scheme->thread_info->avl_threads = 1;
         avl_threads = 1;
     }
@@ -404,11 +402,9 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
     if (check_bluestein_problem(sel->solution->decomp_scheme) &&
         avl_threads > 1)
     {
-        AOCLFFTZ_LOG_UNFORMATTED(
-            INFO, INFO,
-            "Multi Threaded execution is"
-            " not supported for Bluestein solver, falling back to single"
-            " threaded execution");
+        AOCLFFTZ_LOG(INFO, global_logger_mode, "Multi Threaded execution is"
+        " not supported for Bluestein solver, falling back to single"
+        " threaded execution");
         sel->solution->decomp_scheme->thread_info->avl_threads = 1;
         avl_threads = 1;
     }
@@ -679,14 +675,14 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     // Multi-dimentional FFT Solver
     if (level1_cond1 & 0x2)
     {
-        AOCLFFTZ_ERROR_UNFORMATTED("SELECTOR_FAILURE : "
+        AOCLFFTZ_ERROR("SELECTOR_FAILURE : "
                                 "Multi-dimentional RealFFT is not supported");
         return SELECTOR_FAILURE;
     }
     // Large Primes - Bluestein FFT Solver
     if (level1_cond1 & 0x4)
     {
-        AOCLFFTZ_ERROR_UNFORMATTED("SELECTOR_FAILURE : "
+        AOCLFFTZ_ERROR("SELECTOR_FAILURE : "
                                    "Large Prime RealFFT is not supported");
         return SELECTOR_FAILURE;
     }
@@ -705,7 +701,7 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     // Permuted (out-of-order output) FFT Solver
     if (level1_cond2 & 0x2)
     {
-        AOCLFFTZ_ERROR_UNFORMATTED("SELECTOR_FAILURE : "
+        AOCLFFTZ_ERROR("SELECTOR_FAILURE : "
                                    "Permuted RealFFT is not supported");
         return SELECTOR_FAILURE;
     }
@@ -838,14 +834,14 @@ INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
     // Multi-dimensional FFT Solver
     if (level1_cond1 & 0x2)
     {
-        AOCLFFTZ_ERROR_UNFORMATTED("SELECTOR_FAILURE : "
+        AOCLFFTZ_ERROR("SELECTOR_FAILURE : "
                                 "Multi-dimensional RealFFT is not supported");
         return SELECTOR_FAILURE;
     }
     // Large Primes - Bluestein FFT Solver
     if (level1_cond1 & 0x4)
     {
-        AOCLFFTZ_ERROR_UNFORMATTED("SELECTOR_FAILURE : "
+        AOCLFFTZ_ERROR("SELECTOR_FAILURE : "
                                    "Large Prime RealFFT is not supported");
         return SELECTOR_FAILURE;
     }
@@ -864,7 +860,7 @@ INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
     // Permuted (out-of-order output) FFT Solver
     if (level1_cond2 & 0x2)
     {
-        AOCLFFTZ_ERROR_UNFORMATTED("SELECTOR_FAILURE : "
+        AOCLFFTZ_ERROR("SELECTOR_FAILURE : "
                                    "Permuted RealFFT is not supported");
         return SELECTOR_FAILURE;
     }
@@ -920,16 +916,14 @@ INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
 
 INT32 selector_autotuner_mode_dft_(aoclfftz_selector_t* sel)
 {
-    AOCLFFTZ_LOG_UNFORMATTED(
-                INFO, sel->solution->decomp_scheme->cntrl_params->logger_mode,
-                "Autotuner selector is not yet available for evaluation");
+    AOCLFFTZ_LOG(INFO, global_logger_mode,
+        "Autotuner selector is not yet available for evaluation");
     return SELECTOR_FAILURE;
 }
 
 INT32 selector_autotuner_mode_rdft_(aoclfftz_selector_t* sel)
 {
-    AOCLFFTZ_LOG_UNFORMATTED(
-        INFO, sel->solution->decomp_scheme->cntrl_params->logger_mode,
+    AOCLFFTZ_LOG(INFO, global_logger_mode,
         "Autotuner selector for RealFFT is not yet available for evaluation");
     return SELECTOR_FAILURE;
 }
@@ -994,7 +988,7 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
     }
     else
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+        AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return ret;
     }
@@ -1052,7 +1046,7 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
     }
     else
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+        AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return ret;
     }
@@ -1104,7 +1098,7 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
     }
     else
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+        AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return ret;
     }
@@ -1178,12 +1172,11 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
         if (FFT_DIR(sel->solution->decomp_scheme->flags) ==
             BACKWARD_FFT_DIR)
         {
-            AOCLFFTZ_LOG_UNFORMATTED(
+            AOCLFFTZ_LOG(
                 INFO,
-                sel->solution->decomp_scheme->cntrl_params->logger_mode,
+                global_logger_mode,
                 "Twiddle kernels are not supported for C2R problems, so "
-                "using "
-                "non-twiddle kernels + twiddle multiplier approach.");
+                "using non-twiddle kernels + twiddle multiplier approach.");
 
             sel_rdft_fp = selector_fixed_mode_rdft_;
         }
@@ -1234,7 +1227,7 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
     }
     else
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+        AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return ret;
     }
@@ -1266,8 +1259,8 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
         // TODO: Enable twiddle kernels for C2R problems
         if (FFT_DIR(sel->solution->decomp_scheme->flags) == BACKWARD_FFT_DIR)
         {
-            AOCLFFTZ_LOG_UNFORMATTED(
-                INFO, sel->solution->decomp_scheme->cntrl_params->logger_mode,
+            AOCLFFTZ_LOG(
+                INFO, global_logger_mode,
                 "Twiddle kernels are not supported for C2R problems, so using "
                 "non-twiddle kernels + twiddle multiplier approach.");
             sel_rdft_fp = selector_fixed_mode_rdft_;
@@ -1286,7 +1279,7 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
     }
     else
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+        AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return ret;
     }
@@ -1312,8 +1305,8 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
             GET_STANDALONE_TRANSPOSE(sel->solution->decomp_scheme->flags));
 
         // TODO: Autotuner mode for RDFT is not implemented yet
-        AOCLFFTZ_LOG_UNFORMATTED(
-            INFO, sel->solution->decomp_scheme->cntrl_params->logger_mode,
+        AOCLFFTZ_LOG(
+            INFO, global_logger_mode,
             "Autotuner selector mode for RDFT is not implemented yet");
         // ret = selector_autotuner_mode_rdft_(
         //     sel_models[AOCLFFTZ_AUTO_SELECTOR]);
@@ -1328,7 +1321,7 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
     }
     else
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+        AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return ret;
     }
@@ -1403,14 +1396,13 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
                              kertab_twid_dft, num_threads);
     if (sel_obj == NULL)
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+        AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return NULL;
     }
 
     cpu_flags = setup_dynamic_dispatcher(cntrl_params.opt_off,
-                                         cntrl_params.opt_level,
-                                         cntrl_params.logger_mode);
+                                         cntrl_params.opt_level);
 
     //Register solvers and kernels for solving the problem based on
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
@@ -1443,7 +1435,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     PREPARE_AND_SETUP_DFT(sel_obj, ret);
     if (ret != SELECTOR_SUCCESS)
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+        AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(ret));
         goto exit_setup_dft_f;
     }
@@ -1482,15 +1474,14 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
                              kertab_twid_dft, num_threads);
     if (sel_obj == NULL)
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+        AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return NULL;
     }
 
     // Find CPU feature flags that will be used by dynamic dispatcher
     cpu_flags = setup_dynamic_dispatcher(cntrl_params.opt_off,
-                                         cntrl_params.opt_level,
-                                         cntrl_params.logger_mode);
+                                         cntrl_params.opt_level);
 
     // Register solvers and kernels for solving the problem based on
     // input problem datatype, CPU flags and dynamic dispatcher FMV selection
@@ -1517,7 +1508,7 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     PREPARE_AND_SETUP_DFT(sel_obj, ret);
     if (ret != SELECTOR_SUCCESS)
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+        AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(ret));
         goto exit_setup_dft_d;
     }
@@ -1556,15 +1547,14 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
                              kertab_twid_dft, num_threads);
     if (sel_obj == NULL)
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+        AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return NULL;
     }
 
     // Find CPU feature flags that will be used by dynamic dispatcher
     cpu_flags = setup_dynamic_dispatcher(cntrl_params.opt_off,
-                                         cntrl_params.opt_level,
-                                         cntrl_params.logger_mode);
+                                         cntrl_params.opt_level);
 
     //Register solvers and kernels for solving the problem based on
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
@@ -1591,7 +1581,7 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     PREPARE_AND_SETUP_DFT(sel_obj, ret);
     if (ret != SELECTOR_SUCCESS)
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+        AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(ret));
         goto exit_setup_dft_f_64_;
     }
@@ -1630,15 +1620,14 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
                              kertab_twid_dft, num_threads);
     if (sel_obj == NULL)
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+        AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return NULL;
     }
 
     // Find CPU feature flags that will be used by dynamic dispatcher
     cpu_flags = setup_dynamic_dispatcher(cntrl_params.opt_off,
-                                         cntrl_params.opt_level,
-                                         cntrl_params.logger_mode);
+                                         cntrl_params.opt_level);
 
     //Register solvers and kernels for solving the problem based on
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
@@ -1665,7 +1654,7 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     PREPARE_AND_SETUP_DFT(sel_obj, ret);
     if (ret != SELECTOR_SUCCESS)
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+        AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(ret));
         goto exit_setup_dft_d_64_;
     }

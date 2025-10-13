@@ -43,10 +43,7 @@ INT32 setup_real_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
                            aoclfftz_solution_t *sol_m, UINT32 radix_r,
                            UINT32 radix_m, aoclfftz_realhelper_t *realhelper)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     // Setup radix-m sub-problem
     COPY_SOLUTION_OBJ(sol_m, sol);
@@ -58,18 +55,13 @@ INT32 setup_real_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
     sol_r->decomp_scheme->dims[0].n = radix_r;
     sol_r->decomp_scheme->vecs[0].n = realhelper->problem_size / radix_r;
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
 }
 
 static INT32 execute_real_ct_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     INT32 ret = SOLVER_SUCCESS;
 
@@ -78,9 +70,7 @@ static INT32 execute_real_ct_solver(aoclfftz_solution_t *sol)
     // along with direct problems
     ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0]);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return ret;
 }
 

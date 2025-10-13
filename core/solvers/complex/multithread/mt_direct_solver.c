@@ -46,10 +46,8 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                           kernel_t *kernel)
 {
     aoclfftz_decomp_scheme_t *decomp_scheme = sol->decomp_scheme;
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
     ops_cycles_t ops_cycles;
@@ -155,19 +153,16 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         cost->ops = cost->ops * n;
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return status;
 }
 
 static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
 {
     aoclfftz_decomp_scheme_t *decomp_scheme = sol->decomp_scheme;
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     kfft_ kernel = sol->solver->kernel_c2c->kfft;
     UINT8 num_sets = sol->solver->kernel_c2c->sets;
@@ -223,9 +218,8 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
                rem_iters, strides, &tw_local, FFT_DIR(decomp_scheme->flags));
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return SOLVER_SUCCESS;
 }
 
@@ -252,10 +246,8 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
  */
 static INT32 execute_mt_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     kfft_ kernel = sol->solver->kernel_c2c->kfft;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
@@ -337,9 +329,8 @@ static INT32 execute_mt_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
         }
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return SOLVER_SUCCESS;
 }
 
@@ -366,10 +357,8 @@ static INT32 execute_mt_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
  */
 static INT32 execute_mt_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     kfft_ kernel = sol->solver->kernel_c2c->kfft;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
@@ -457,9 +446,8 @@ static INT32 execute_mt_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
                    rem_iters, strides, &tw_local, direction);
         }
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return SOLVER_SUCCESS;
 }
 

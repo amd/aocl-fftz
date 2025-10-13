@@ -41,9 +41,7 @@ static VOID execute_float_kernel(VOID *in_real, VOID *in_imag, VOID *out_real,
                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                           VOID *twd, UINT8 flag)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
     UINT32 dt_bytes = sizeof(FLOAT);
     INTP v_in_stride = strides->v_in_stride * dt_bytes * DATA_STRIDE;
     INTP v_out_stride = strides->v_out_stride * dt_bytes * DATA_STRIDE;
@@ -55,18 +53,14 @@ static VOID execute_float_kernel(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_real = (VOID *)((CHAR *)out_real + v_out_stride);
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 }
 
 static VOID execute_double_kernel(VOID *in_real, VOID *in_imag, VOID *out_real,
                            VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                            VOID *twd, UINT8 flag)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
     UINT32 dt_bytes = sizeof(DOUBLE);
     INTP v_in_stride = strides->v_in_stride * dt_bytes * DATA_STRIDE;
     INTP v_out_stride = strides->v_out_stride * dt_bytes * DATA_STRIDE;
@@ -78,17 +72,13 @@ static VOID execute_double_kernel(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_real = (VOID *)((CHAR *)out_real + v_out_stride);
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 }
 
 INT32 setup_sizeone_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
     strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
     strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
@@ -102,18 +92,14 @@ INT32 setup_sizeone_solver(aoclfftz_solution_t *sol)
     sol->solver->kernel_c2c->kfft =
         (dt_prec == DT_FLOAT) ? execute_float_kernel : execute_double_kernel;
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
 }
 
 static INT32 execute_sizeone_solver_internal(aoclfftz_solution_t *sol, INTP vec_rank)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     if (vec_rank == 1)
     {
@@ -158,18 +144,14 @@ static INT32 execute_sizeone_solver_internal(aoclfftz_solution_t *sol, INTP vec_
         sol->decomp_scheme->out_real = MOVE_ADDR(out_real, v_out_stride);
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
 }
 
 static INT32 execute_sizeone_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
     // inplace check
     if (!IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
     {
@@ -186,9 +168,7 @@ static INT32 execute_sizeone_solver(aoclfftz_solution_t *sol)
 
     sol->decomp_scheme->in_real = in_real;
     sol->decomp_scheme->out_real = out_real;
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
 }
 

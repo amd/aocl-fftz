@@ -86,10 +86,8 @@ INT32 get_fusable_dims(aoclfftz_solution_t *sol, INT32 dim_rank)
 
 INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
     aoclfftz_selector_t *n_minus1_sel = NULL;
     aoclfftz_selector_t *outer_dim_sel = NULL;
 
@@ -148,17 +146,15 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     destroy_selector_without_solution(n_minus1_sel);
     destroy_selector_without_solution(outer_dim_sel);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return SELECTOR_SUCCESS;
 
 exit_nd_dft:
     destroy_selector(n_minus1_sel);
     destroy_selector(outer_dim_sel);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return ret;
 }

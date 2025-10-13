@@ -116,10 +116,8 @@ get_transpose_kernel(aoclfftz_transpose_dtype type,
 
 INT32 setup_transpose_solver(aoclfftz_solution_t *sol, INT32 cpu_flags)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     // setup all the info
     aoclfftz_transpose_t *transpose = sol->dft_bufs->transpose;
@@ -136,11 +134,10 @@ INT32 setup_transpose_solver(aoclfftz_solution_t *sol, INT32 cpu_flags)
     if (transpose->row_info.in_stride !=
         (transpose->col_info.in_stride * transpose->col_info.n))
     {
-#ifdef AOCL_ENABLE_LOG
-        AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit (failure) : "
+        AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit (failure) : "
                                                      "row stride != column "
                                                      "stride * n");
-#endif
+
         return SOLVER_FAILURE;
     }
 
@@ -159,18 +156,14 @@ INT32 setup_transpose_solver(aoclfftz_solution_t *sol, INT32 cpu_flags)
         !IS_OUT_OF_PLACE(sol->decomp_scheme->flags),
         is_square, cpu_flags);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
 }
 
 static INT32 execute_transpose_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     aoclfftz_decomp_scheme_t *decomp_scheme = sol->decomp_scheme;
 
@@ -185,9 +178,7 @@ static INT32 execute_transpose_solver(aoclfftz_solution_t *sol)
                            sol->dft_bufs->transpose->row_info, sol->dft_bufs->transpose->col_info,
                            sol->dft_bufs->transpose->aux_mem);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return 0;
 }
 

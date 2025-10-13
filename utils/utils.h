@@ -43,6 +43,8 @@
 #include "api/types.h"
 #include "api/aoclfftz.h"
 
+extern INT32 global_logger_mode;
+
 #define AOCLFFTZ_STATS
 
 #define AOCLFFTZ_CPUID_SIMD_DETECTION
@@ -52,6 +54,18 @@
 #else
 #define FUNC_NAME __FUNCTION__
 #endif
+
+#define INFO     1
+#define TRACE    2
+#define DEBUG    3
+
+#define SET_PROBLEM_LOGGER_MODE(problem)                                       \
+{                                                                              \
+    if (problem != NULL)                                                       \
+    {                                                                          \
+        global_logger_mode = problem->cntrl_params.logger_mode;                \
+    }                                                                          \
+}
 
 #ifdef AOCLFFTZ_STATS
 #ifdef _WINDOWS
@@ -67,14 +81,13 @@ typedef struct timespec timeVal;
 #endif
 #endif
 
-// Logger
 #ifdef AOCL_ENABLE_LOG
 
-#define INFO     1
-#define DEBUG    2
-#define TRACE    3
+#define AOCLFFTZ_LOG__INTERNAL(str, ...)                                       \
+    printf("[%s] : %s : %s : %d : " str "%s", type, __FILE__, FUNC_NAME,       \
+           __LINE__, __VA_ARGS__)
 
-#define AOCLFFTZ_LOG_UNFORMATTED(logType, enableLog, str)                      \
+#define AOCLFFTZ_LOG(logType, enableLog, ...)                                  \
     do                                                                         \
     {                                                                          \
         if (enableLog)                                                         \
@@ -84,58 +97,33 @@ typedef struct timespec timeVal;
             {                                                                  \
                 type = "INFO";                                                 \
             }                                                                  \
-            else if (logType == DEBUG)                                         \
-            {                                                                  \
-                type = "DEBUG";                                                \
-            }                                                                  \
             else if (logType == TRACE)                                         \
             {                                                                  \
                 type = "TRACE";                                                \
-            }                                                                  \
-            if (logType <= enableLog)                                          \
-            {                                                                  \
-                printf("[%s] : %s : %s : %d : " str "\n", type, __FILE__,      \
-                       FUNC_NAME, __LINE__);                                   \
-            }                                                                  \
-        }                                                                      \
-    } while (0)
-#define AOCLFFTZ_LOG_FORMATTED(logType, enableLog, str, ...)                   \
-    do                                                                         \
-    {                                                                          \
-        if (enableLog)                                                         \
-        {                                                                      \
-            const char *type = NULL;                                           \
-            if (logType == INFO)                                               \
-            {                                                                  \
-                type = "INFO";                                                 \
             }                                                                  \
             else if (logType == DEBUG)                                         \
             {                                                                  \
                 type = "DEBUG";                                                \
             }                                                                  \
-            else if (logType == TRACE)                                         \
+            else                                                               \
             {                                                                  \
-                type = "TRACE";                                                \
+                type = "UNKNOWN";                                              \
             }                                                                  \
             if (logType <= enableLog)                                          \
             {                                                                  \
-                printf("[%s] : %s : %s : %d : " str "\n", type, __FILE__,      \
-                       FUNC_NAME, __LINE__, __VA_ARGS__);                      \
+                AOCLFFTZ_LOG__INTERNAL(__VA_ARGS__, "\n");                     \
             }                                                                  \
         }                                                                      \
     } while (0)
 #else
-#define AOCLFFTZ_LOG_UNFORMATTED(logType, enableLog, str)
-#define AOCLFFTZ_LOG_FORMATTED(logType, enableLog, str, ...)
-#endif
+#define AOCLFFTZ_LOG(logType, enableLog, ...) ((VOID)enableLog);
+#endif // AOCL_ENABLE_LOG
 
-#define AOCLFFTZ_ERROR_UNFORMATTED(str)                                        \
-    fprintf(stderr, "[ERROR] : %s : %s : %d : " str "\n", __FILE__,            \
-            FUNC_NAME, __LINE__);                                              \
+#define AOCLFFTZ_ERROR__INTERNAL(str, ...)                                     \
+    fprintf(stderr, "[ERROR] : %s : %s : %d : " str "%s", __FILE__,            \
+            FUNC_NAME, __LINE__, __VA_ARGS__)
 
-#define AOCLFFTZ_ERROR_FORMATTED(str, ...)                                     \
-    fprintf(stderr, "[ERROR] : %s : %s : %d : " str "\n", __FILE__,            \
-            FUNC_NAME, __LINE__, __VA_ARGS__);                                 \
+#define AOCLFFTZ_ERROR(...) AOCLFFTZ_ERROR__INTERNAL(__VA_ARGS__, "\n");
 
 // Timer and stats keeping
 #ifdef AOCLFFTZ_STATS
@@ -144,8 +132,7 @@ typedef struct timespec timeVal;
 {                                                                              \
     if (!QueryPerformanceFrequency(&timerClk))                                 \
     {                                                                          \
-        AOCLFFTZ_ERROR_UNFORMATTED(                                            \
-                        "QueryPerformanceFrequency based Timer failed.");      \
+        AOCLFFTZ_ERROR("QueryPerformanceFrequency based Timer failed.");       \
     }                                                                          \
 }
 #define getTime(timeVal) QueryPerformanceCounter(&timeVal)
@@ -170,7 +157,6 @@ VOID cpu_features_detection(INTP fn, INTP optVal,
 
 const CHAR* get_status_string(aoclfftz_error_type status);
 
-EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
-                               INT32 logger_mode);
+EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level);
 
 #endif // AOCLFFTZ_UTILS_H

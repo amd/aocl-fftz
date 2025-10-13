@@ -44,10 +44,8 @@
 INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     aoclfftz_decomp_scheme_t *decomp_scheme = sel->solution->decomp_scheme;
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
     aoclfftz_selector_t *cur_sel = NULL;
     INTP n = decomp_scheme->dims[0].n;
     INTP batch = decomp_scheme->vecs[0].n;
@@ -170,8 +168,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     destroy_selector_without_scratch_space(cur_sel);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return SELECTOR_SUCCESS;
 }

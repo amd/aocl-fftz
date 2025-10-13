@@ -145,25 +145,25 @@
                 show_help_menu();                                              \
                 break;                                                         \
             case SIZE_REQUIRED_ERROR:                                          \
-                AOCLFFTZ_ERROR_UNFORMATTED("\nProblem size missing\n");        \
+                AOCLFFTZ_ERROR("\nProblem size missing\n");                    \
                 break;                                                         \
             case SIZE_PARSING_ERROR:                                           \
-                AOCLFFTZ_ERROR_UNFORMATTED("\nInvalid problem size\n");        \
+                AOCLFFTZ_ERROR("\nInvalid problem size\n");                    \
                 break;                                                         \
             case UNSUPPORTED_OPTION_ERROR:                                     \
-                AOCLFFTZ_ERROR_UNFORMATTED("\nUnsupported option provided.\n");\
+                AOCLFFTZ_ERROR("\nUnsupported option provided.\n");            \
                 break;                                                         \
             case NON_OPTION_ARGUMENTS_ERROR:                                   \
-                AOCLFFTZ_ERROR_UNFORMATTED("\nMore than one non-option "       \
+                AOCLFFTZ_ERROR("\nMore than one non-option "                   \
                        "arguments provided.\nOnly one non-option argument "    \
                        "must be provided which is problem size.\n");           \
                 break;                                                         \
             case MEMORY_FAILURE:                                               \
-                AOCLFFTZ_ERROR_UNFORMATTED("\nCould not allocate memory for "  \
+                AOCLFFTZ_ERROR("\nCould not allocate memory for "              \
                                            "data buffers.\n");                 \
                 break;                                                         \
             default:                                                           \
-                AOCLFFTZ_ERROR_UNFORMATTED("\nInvalid arguments provided.\n"); \
+                AOCLFFTZ_ERROR("\nInvalid arguments provided.\n");             \
             }                                                                  \
             if (status == HELP_MENU)                                           \
             {                                                                  \
@@ -192,67 +192,67 @@
  */
 #define LOG_BENCH_PARAMS(params)                                               \
     {                                                                          \
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
+        AOCLFFTZ_LOG(INFO, params->logger_mode,                                \
                                "dim_rank      : %d", params->dim_rank);        \
         for (INT32 i = 0; i < params->dim_rank; i++)                           \
         {                                                                      \
-            AOCLFFTZ_LOG_FORMATTED(                                            \
+            AOCLFFTZ_LOG(                                                      \
                 INFO, params->logger_mode, "    dims[%d]   : %td:%td:%td", i,  \
                 params->dims[i].n, params->dims[i].in_stride,                  \
                 params->dims[i].out_stride);                                   \
         }                                                                      \
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
+        AOCLFFTZ_LOG(INFO, params->logger_mode,                                \
                                "vec_rank      : %d", params->vec_rank);        \
         for (INT32 i = 0; i < params->vec_rank; i++)                           \
         {                                                                      \
-            AOCLFFTZ_LOG_FORMATTED(                                            \
+            AOCLFFTZ_LOG(                                                      \
                 INFO, params->logger_mode, "    vecs[%d]   : %td:%td:%td", i,  \
                 params->vecs[i].n, params->vecs[i].in_stride,                  \
                 params->vecs[i].out_stride);                                   \
         }                                                                      \
-        AOCLFFTZ_LOG_FORMATTED(                                                \
+        AOCLFFTZ_LOG(                                                          \
             INFO, params->logger_mode, "precision     : %s",                   \
             params->precision == FLOAT_P ? "FLOAT" : "DOUBLE");                \
-        AOCLFFTZ_LOG_FORMATTED(                                                \
+        AOCLFFTZ_LOG(                                                          \
             INFO, params->logger_mode, "data_model    : %s",                   \
             params->data_model == ILP64 ? "ILP64" : "LP64");                   \
-        AOCLFFTZ_LOG_FORMATTED(                                                \
+        AOCLFFTZ_LOG(                                                          \
             INFO, params->logger_mode, "bench_type    : %s",                   \
             params->bench_type == ACCURACY ? "ACCURACY" : "PERFORMANCE");      \
-        AOCLFFTZ_LOG_FORMATTED(                                                \
+        AOCLFFTZ_LOG(                                                          \
             INFO, params->logger_mode, "res_placement : %s",                   \
             params->res_placement == IN_PLACE ? "IN_PLACE" : "OUT_OF_PLACE");  \
-        AOCLFFTZ_LOG_FORMATTED(                                                \
+        AOCLFFTZ_LOG(                                                          \
             INFO, params->logger_mode, "order         : %s",                   \
             params->order == OUT_OF_ORDER ? "OUT_OF_ORDER" : "IN_ORDER");      \
-        AOCLFFTZ_LOG_FORMATTED(                                                \
+        AOCLFFTZ_LOG(                                                          \
             INFO, params->logger_mode, "direction     : %s",                   \
             params->dir == BACKWARD ? "BACKWARD" : "FORWARD");                 \
-        AOCLFFTZ_LOG_FORMATTED(                                                \
+        AOCLFFTZ_LOG(                                                          \
             INFO, params->logger_mode, "fft_type      : %s",                   \
             params->fft_type == C2C                                            \
                 ? "C2C"                                                        \
                 : (params->fft_type == R2C ? "R2C" : "C2R"));                  \
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
+        AOCLFFTZ_LOG(INFO, params->logger_mode,                                \
                                "iterations    : %d", params->num_iterations);  \
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
+        AOCLFFTZ_LOG(INFO, params->logger_mode,                                \
                                "random_seed   : %s",                           \
                                params->use_random_seed ? "TRUE" : "FALSE");    \
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
+        AOCLFFTZ_LOG(INFO, params->logger_mode,                                \
                                "opt_level     : %d", params->opt_level);       \
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
+        AOCLFFTZ_LOG(INFO, params->logger_mode,                                \
                                "logger_mode   : %d", params->logger_mode);     \
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
+        AOCLFFTZ_LOG(INFO, params->logger_mode,                                \
                                "tolerance     : %.6g", params->tolerance);     \
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
+        AOCLFFTZ_LOG(INFO, params->logger_mode,                                \
                                "num_threads   : %d", params->num_threads);     \
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
+        AOCLFFTZ_LOG(INFO, params->logger_mode,                                \
                                "dynamic_load_model : %s",                      \
                                params->dynamic_load_model ? "TRUE" : "FALSE"); \
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,                      \
+        AOCLFFTZ_LOG(INFO, params->logger_mode,                                \
                                "selector_time : %s",                           \
                                params->selector_time ? "TRUE" : "FALSE");      \
-        AOCLFFTZ_LOG_FORMATTED(                                                \
+        AOCLFFTZ_LOG(                                                          \
             INFO, params->logger_mode, "bit_reproducibility : %s",             \
             params->bit_reproducibility ? "TRUE" : "FALSE");                   \
     }

@@ -59,9 +59,7 @@ static VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                        VOID *twd, UINT8 flag)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
     const DOUBLE CRTM_5_1 =
         +0.55901699437494742410229341718281905886015458990288;
     const DOUBLE CRTM_5_2 =
@@ -179,18 +177,14 @@ static VOID fft5c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_r += v_out_stride;
         out_i += v_out_stride;
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 static VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                        VOID *twd, UINT8 flag)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
     const FLOAT CRTM_5_1 =
         +0.55901699437494742410229341718281905886015458990288;
     const FLOAT CRTM_5_2 =
@@ -306,9 +300,7 @@ static VOID fft5c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_r += v_out_stride;
         out_i += v_out_stride;
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 kfft_ register_kernel_fft5c(UINT8 precision, UINT8 direction /* unused */)

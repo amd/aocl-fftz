@@ -119,8 +119,8 @@ static INT32 is_eligible_for_batched_direct(aoclfftz_solution_t *sol,
         dims[0].in_stride == dims[0].out_stride && /* FIXME: support different in/out strides */
         vecs[0].in_stride == vecs[0].out_stride)
     {
-        AOCLFFTZ_LOG_FORMATTED(
-            TRACE, sol->decomp_scheme->cntrl_params->logger_mode,
+        AOCLFFTZ_LOG(
+            TRACE, global_logger_mode,
             "using batched-direct for problem: "
             "%td:%td:%td v %td:%td:%td",
             vecs[0].n, vecs[0].in_stride, vecs[0].out_stride, dims[0].n,
@@ -410,9 +410,9 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
                         batched_vec_in_stride;
                     curr_sol->decomp_scheme->batched_vecs[0].out_stride =
                         batched_vec_out_stride;
-                    AOCLFFTZ_LOG_FORMATTED(
+                    AOCLFFTZ_LOG(
                         TRACE,
-                        curr_sol->decomp_scheme->cntrl_params->logger_mode,
+                        global_logger_mode,
                         " -> sub-problem: "
                         "[%td:%td:%td] %td:%td:%td v %td:%td:%td",
                         curr_sol->decomp_scheme->vecs[0].n,

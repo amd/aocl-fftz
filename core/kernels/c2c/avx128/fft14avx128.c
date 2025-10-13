@@ -59,9 +59,7 @@ static VOID fft14avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                             VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                             VOID *twd, UINT8 flag)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
     const FLOAT CRTM_14[6] = {
         0.90096886790241912623610231950744505116591916200000,
         0.43388373911755809802961881825301518357930603231829,
@@ -555,18 +553,14 @@ static VOID fft14avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_out = out_r + out_strides[13];
         ST_LOW_128_S(curr_out, v_out13);
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 static VOID fft14avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                             VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                             VOID *twd, UINT8 flag)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
     const DOUBLE CRTM_14[6] = {
         0.90096886790241912623610231950744505116591916200000,
         0.43388373911755809802961881825301518357930603231829,
@@ -836,9 +830,7 @@ static VOID fft14avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         in_r += NUM_SETS_128_D * v_in_stride;
         out_r += NUM_SETS_128_D * v_out_stride;
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 kfft_ register_kernel_fft14avx128(UINT8 precision, UINT8 direction /* unused */)

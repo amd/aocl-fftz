@@ -46,10 +46,8 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
                       aoclfftz_solution_t *sol_m, UINT32 radix_r,
                       UINT32 radix_m)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     // Setup radix-m sub-problem
     // out-of-order -> in-order for out-of-place problems
@@ -94,9 +92,8 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
     sol_r->decomp_scheme->vecs[0].out_stride =
         sol->decomp_scheme->dims[0].out_stride;
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
 	return SOLVER_SUCCESS;
 }
 
@@ -336,10 +333,8 @@ static VOID transpose_buffer(aoclfftz_solution_t *sol,
 
 static INT32 execute_ct_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
     INT32 status = SOLVER_SUCCESS;
     aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
     aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
@@ -376,19 +371,16 @@ static INT32 execute_ct_solver(aoclfftz_solution_t *sol)
     // execute radix-r DFT
     radix_r_sol->solver->execute_solver(radix_r_sol);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return status;
 }
 
 
 static INT32 execute_ct_twiddle_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
     INT32 status = SOLVER_SUCCESS;
     aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
     aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
@@ -418,9 +410,8 @@ static INT32 execute_ct_twiddle_solver(aoclfftz_solution_t *sol)
     // execute radix-r DFT
     radix_r_sol->solver->execute_solver(radix_r_sol);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return status;
 }
 

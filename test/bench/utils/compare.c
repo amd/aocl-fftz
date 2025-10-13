@@ -38,7 +38,7 @@
 
 #include "test/bench/utils/compare.h"
 #include "test/bench/utils/bench_utils.h"
-#include <stdio.h>
+#include "utils/utils.h"
 /**
  * @brief Compare the two data of length n (FLOAT type)
  *        Used to compare output with reference output.
@@ -62,7 +62,6 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
                 INTP n, INTP *a_map, INTP *b_map, INT32 data_stride)
 {
     DOUBLE tol = params->tolerance;
-    INT32 logger_mode = params->logger_mode;
     FLOAT *a_f = (FLOAT *)a;
     FLOAT *b_f = (FLOAT *)b;
     INT32 status = BENCH_SUCCESS;
@@ -83,6 +82,7 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     INTP *b_maxerr_coords = NULL;
     INTP *b_err_coords = NULL;
     UINT32 is_aligned = params->aligned_alloc;
+    INT32 logger_mode = params->logger_mode;
 
     ALLOC_INIT(dim_counter, INTP, dim_rank * sizeof(INTP), is_aligned);
     ALLOC_INIT(vec_counter, INTP, vec_rank * sizeof(INTP), is_aligned);
@@ -152,11 +152,10 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     {
         rel_err = max_abs_err / max_mag;
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode, "Error = %.6g", rel_err);
-#endif
+    AOCLFFTZ_LOG(INFO, logger_mode, "Error = %.6g", rel_err);
     if (rel_err > tol)
     {
+        AOCLFFTZ_ERROR("Accuracy failure");
         printf("Relative error  = %.6g\n", rel_err);
         printf("Tolerance       = %.6g\n", tol);
         if (first_err_idx < INT64_MAX)
@@ -305,7 +304,6 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
                 INTP n, INTP *a_map, INTP *b_map, INT32 data_stride)
 {
     DOUBLE tol = params->tolerance;
-    INT32 logger_mode = params->logger_mode;
     DOUBLE *a_d = (DOUBLE *)a;
     DOUBLE *b_d = (DOUBLE *)b;
     INT32 status = BENCH_SUCCESS;
@@ -325,6 +323,7 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     INTP *d_err_coords = NULL;
     INTP *b_maxerr_coords = NULL;
     INTP *b_err_coords = NULL;
+    INT32 logger_mode = params->logger_mode;
     ALLOC_INIT(dim_counter, INTP, dim_rank * sizeof(INTP), is_aligned);
     ALLOC_INIT(vec_counter, INTP, vec_rank * sizeof(INTP), is_aligned);
     ALLOC_INIT(d_maxerr_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
@@ -391,13 +390,12 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     {
         rel_err = max_abs_err / max_mag;
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode, "Error = %.6g", rel_err);
-#endif
+    AOCLFFTZ_LOG(INFO, logger_mode, "Error = %.6g", rel_err);
     if (rel_err > tol)
     {
-        AOCLFFTZ_ERROR_FORMATTED("Relative error  = %.6g\n", rel_err);
-        AOCLFFTZ_ERROR_FORMATTED("Tolerance       = %.6g\n", tol);
+        AOCLFFTZ_ERROR("Accuracy failure");
+        printf("Relative error  = %.6g\n", rel_err);
+        printf("Tolerance       = %.6g\n", tol);
         if (first_err_idx < INT64_MAX)
         {
             printf("First absolute error at index %td -> ", first_err_idx);
@@ -511,7 +509,7 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
         }
         else
         {
-            AOCLFFTZ_ERROR_UNFORMATTED("\nUse debug logger mode "
+            AOCLFFTZ_ERROR("\nUse debug logger mode "
                                        "[--logger-mode 3 (or) -l 3] to get "
                                        "detailed error log\n");
         }
