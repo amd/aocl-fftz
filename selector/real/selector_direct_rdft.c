@@ -69,7 +69,8 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                              0 /*unused*/);
     if (cur_sel == NULL)
     {
-        return SELECTOR_FAILURE;
+        ret = AOCLFFTZ_MEMORY_FAILURE;
+        goto exit_direct_rdft;
     }
 
     INT32 num_threads = (n_batch < avl_threads) ? n_batch : avl_threads;
@@ -200,5 +201,6 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 #endif
-    return SELECTOR_SUCCESS;
+exit_direct_rdft:
+    return ret;
 }

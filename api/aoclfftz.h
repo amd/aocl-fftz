@@ -86,10 +86,9 @@ extern "C" {
 // Add new error codes at the code to retain the existing error code values
 typedef enum
 {
-    AOCLFFTZ_TIME_OUT = -5,     /**< Operation took long time than expected */
+    AOCLFFTZ_TIME_OUT = -4,     /**< Operation took long time than expected */
     AOCLFFTZ_MEMORY_FAILURE,    /**< Error related to Memory access or operation */
     AOCLFFTZ_INVALID_INPUT,     /**< Invalid size, format, type or precision of input */
-    AOCLFFTZ_SETUP_FAILURE,     /**< Error in setup of the library */
     AOCLFFTZ_EXECUTION_FAILURE, /**< Error in execution of the library */
     AOCLFFTZ_SUCCESS            /**< Successful operation */
 } aoclfftz_error_type;
@@ -101,10 +100,9 @@ typedef enum
 typedef enum
 {
     AOCLFFTZ_LOG_NONE = 0,     /**< `0` : Disable all logging */
-    AOCLFFTZ_LOG_ERROR = 1,    /**< `1` : Only error logs indicating failures */
-    AOCLFFTZ_LOG_INFO = 2,     /**< `2` : Detailed debugging logs */
-    AOCLFFTZ_LOG_DEBUG = 3,    /**< `3` : General informational logs about execution */
-    AOCLFFTZ_LOG_TRACE = 4     /**< `4` : Most detailed level of logging with complete execution trace */
+    AOCLFFTZ_LOG_INFO = 1,     /**< `1` : Detailed debugging logs */
+    AOCLFFTZ_LOG_DEBUG = 2,    /**< `2` : General informational logs about execution */
+    AOCLFFTZ_LOG_TRACE = 3     /**< `3` : Most detailed level of logging with complete execution trace */
 } aoclfftz_logger_mode;
 
 /**
@@ -173,10 +171,9 @@ typedef struct aoclfftz_cntrl_params
     INT32 opt_off;                         /**< Turn off all optimizations */
     aoclfftz_logger_mode logger_mode;      /**< Set Logger mode with following values.\n
     * - 0 - `None`,
-    * - 1 - `Error`,
+    * - 1 - `Debug`,
     * - 2 - `Info`,
-    * - 3 - `Debug`,
-    * - 4 - `Trace` */
+    * - 3 - `Trace` */
     INT32 measure_stats;    /**< Enable/Disable measure stats (Not supported, must be default value `0`) */
 } aoclfftz_cntrl_params_t;
 

@@ -626,7 +626,6 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
 {
     aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
     kernel_t *kertab = kernels_rdft_table;
-    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
     INT32 ret = SELECTOR_FAILURE;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
@@ -696,15 +695,15 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     // Multi-dimentional FFT Solver
     if (level1_cond1 & 0x2)
     {
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, logger_mode,
-            "Multi-dimentional RealFFT is not supported");
+        AOCLFFTZ_ERROR_UNFORMATTED("SELECTOR_FAILURE : "
+                                "Multi-dimentional RealFFT is not supported");
         return SELECTOR_FAILURE;
     }
     // Large Primes - Bluestein FFT Solver
     if (level1_cond1 & 0x4)
     {
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, logger_mode,
-            "Large Prime RealFFT is not supported");
+        AOCLFFTZ_ERROR_UNFORMATTED("SELECTOR_FAILURE : "
+                                   "Large Prime RealFFT is not supported");
         return SELECTOR_FAILURE;
     }
     // Buffered FFT Solver
@@ -722,8 +721,8 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     // Permuted (out-of-order output) FFT Solver
     if (level1_cond2 & 0x2)
     {
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, logger_mode,
-            "Permuted RealFFT is not supported");
+        AOCLFFTZ_ERROR_UNFORMATTED("SELECTOR_FAILURE : "
+                                   "Permuted RealFFT is not supported");
         return SELECTOR_FAILURE;
     }
     /** Level 2 decisions : CT Solver and Kernels **/
@@ -786,7 +785,6 @@ INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
 
     //All the CT sub-problems will use fused twiddle dft kernels
     kernel_t *kertab = kernels_twid_rdft_table;
-    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
     INT32 ret = SELECTOR_FAILURE;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
@@ -856,15 +854,15 @@ INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
     // Multi-dimensional FFT Solver
     if (level1_cond1 & 0x2)
     {
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, logger_mode,
-            "Multi-dimensional RealFFT is not supported");
+        AOCLFFTZ_ERROR_UNFORMATTED("SELECTOR_FAILURE : "
+                                "Multi-dimensional RealFFT is not supported");
         return SELECTOR_FAILURE;
     }
     // Large Primes - Bluestein FFT Solver
     if (level1_cond1 & 0x4)
     {
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, logger_mode,
-            "Large Prime RealFFT is not supported");
+        AOCLFFTZ_ERROR_UNFORMATTED("SELECTOR_FAILURE : "
+                                   "Large Prime RealFFT is not supported");
         return SELECTOR_FAILURE;
     }
     // Buffered FFT Solver
@@ -882,8 +880,8 @@ INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
     // Permuted (out-of-order output) FFT Solver
     if (level1_cond2 & 0x2)
     {
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, logger_mode,
-            "Permuted RealFFT is not supported");
+        AOCLFFTZ_ERROR_UNFORMATTED("SELECTOR_FAILURE : "
+                                   "Permuted RealFFT is not supported");
         return SELECTOR_FAILURE;
     }
     /** Level 2 decisions : CT Solver and Kernels **/
@@ -938,16 +936,16 @@ INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
 
 INT32 selector_autotuner_mode_dft_(aoclfftz_selector_t* sel)
 {
-    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(INFO, logger_mode,
-        "Autotuner selector is not yet available for evaluation");
+    AOCLFFTZ_LOG_UNFORMATTED(
+                INFO, sel->solution->decomp_scheme->cntrl_params->logger_mode,
+                "Autotuner selector is not yet available for evaluation");
     return SELECTOR_FAILURE;
 }
 
 INT32 selector_autotuner_mode_rdft_(aoclfftz_selector_t* sel)
 {
-    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(INFO, logger_mode,
+    AOCLFFTZ_LOG_UNFORMATTED(
+        INFO, sel->solution->decomp_scheme->cntrl_params->logger_mode,
         "Autotuner selector for RealFFT is not yet available for evaluation");
     return SELECTOR_FAILURE;
 }
@@ -1012,7 +1010,12 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
                 *(sel->cost_analysis);
         }
     }
-
+    else
+    {
+        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+                                  get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+        return ret;
+    }
 #endif
     // FIXED SELECTOR BASED MODEL : end
 
@@ -1064,6 +1067,12 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
                   ->cost_analysis) = *(sel->cost_analysis);
         }
     }
+    else
+    {
+        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+                                  get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+        return ret;
+    }
 #endif
     // FIXED SELECTOR + FUSED TWIDDLE DFT BASED MODEL : end
 
@@ -1108,6 +1117,12 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
             *(sel_models[AOCLFFTZ_AUTO_SELECTOR]->cost_analysis) =
                 *(sel->cost_analysis);
         }
+    }
+    else
+    {
+        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+                                  get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+        return ret;
     }
 #endif
     // AUTO TUNED SELECTOR BASED MODEL : end
@@ -1235,6 +1250,12 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
                 *(sel->cost_analysis);
         }
     }
+    else
+    {
+        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+                                  get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+        return ret;
+    }
 #endif
     // FIXED SELECTOR BASED MODEL : end
 
@@ -1280,6 +1301,12 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
                   ->cost_analysis) = *(sel->cost_analysis);
         }
     }
+    else
+    {
+        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+                                  get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+        return ret;
+    }
 #endif
     // FIXED SELECTOR + FUSED TWIDDLE DFT BASED MODEL : end
 
@@ -1314,6 +1341,12 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
             *(sel_models[AOCLFFTZ_AUTO_SELECTOR]->cost_analysis) =
                 *(sel->cost_analysis);
         }
+    }
+    else
+    {
+        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+                                  get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+        return ret;
     }
 #endif
     // AUTO TUNED SELECTOR BASED MODEL : end
@@ -1383,6 +1416,8 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, num_threads);
     if (sel_obj == NULL)
     {
+        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+                                  get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return NULL;
     }
 
@@ -1422,6 +1457,8 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     PREPARE_AND_SETUP_DFT(sel_obj, ret);
     if (ret != SELECTOR_SUCCESS)
     {
+        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+                                  get_status_string(ret));
         goto exit_setup_dft_f;
     }
 #ifdef MULTI_THREADING
@@ -1456,6 +1493,8 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, num_threads);
     if (sel_obj == NULL)
     {
+        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+                                  get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return NULL;
     }
 
@@ -1491,6 +1530,8 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     PREPARE_AND_SETUP_DFT(sel_obj, ret);
     if (ret != SELECTOR_SUCCESS)
     {
+        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+                                  get_status_string(ret));
         goto exit_setup_dft_d;
     }
 #ifdef MULTI_THREADING
@@ -1525,6 +1566,8 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, num_threads);
     if (sel_obj == NULL)
     {
+        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+                                  get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return NULL;
     }
 
@@ -1560,6 +1603,8 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     PREPARE_AND_SETUP_DFT(sel_obj, ret);
     if (ret != SELECTOR_SUCCESS)
     {
+        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+                                  get_status_string(ret));
         goto exit_setup_dft_f_64_;
     }
 #ifdef MULTI_THREADING
@@ -1594,6 +1639,8 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, num_threads);
     if (sel_obj == NULL)
     {
+        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+                                  get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return NULL;
     }
 
@@ -1629,6 +1676,8 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     PREPARE_AND_SETUP_DFT(sel_obj, ret);
     if (ret != SELECTOR_SUCCESS)
     {
+        AOCLFFTZ_ERROR_FORMATTED("Setup failure with %s",
+                                  get_status_string(ret));
         goto exit_setup_dft_d_64_;
     }
 #ifdef MULTI_THREADING

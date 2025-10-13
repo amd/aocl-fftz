@@ -59,6 +59,7 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                              0 /*unused*/);
     if (cur_sel == NULL)
     {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_batched_dft;
     }
 

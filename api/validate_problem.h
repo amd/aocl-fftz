@@ -49,16 +49,16 @@
 #define VALIDATE_INPLACE_STRIDES(dims, vecs, dim_rank, vec_rank, flags, errno) \
 {                                                                              \
     INTP in_scale =                                                            \
-            (flags.fft_type && flags.fft_direction == FORWARD_FFT_DIR) ? 2 : 1;     \
+        (flags.fft_type && flags.fft_direction == FORWARD_FFT_DIR) ? 2 : 1;    \
     INTP out_scale =                                                           \
-            (flags.fft_type && flags.fft_direction == BACKWARD_FFT_DIR) ? 2 : 1;    \
+        (flags.fft_type && flags.fft_direction == BACKWARD_FFT_DIR) ? 2 : 1;   \
     if(!flags.fft_type)                                                        \
     {   /* Validate C2C dims */                                                \
         for (INT32 i = 0; i < dim_rank; i++)                                   \
         {                                                                      \
             if (dims[i].in_stride != dims[i].out_stride)                       \
             {                                                                  \
-                AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "For dimension[%d]: "         \
+                AOCLFFTZ_ERROR_FORMATTED("For dimension[%d]:  "                \
                     "in_stride (%d) != out_stride (%d)",                       \
                     i, (INT32)dims[i].in_stride, (INT32)dims[i].out_stride);   \
                 errno = AOCLFFTZ_INVALID_INPUT;                                \
@@ -70,8 +70,8 @@
     {                                                                          \
         if (dim_rank != 1)                                                     \
         {                                                                      \
-            AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "N-Dimensional real problems "  \
-                                   "are not supported");                       \
+            AOCLFFTZ_ERROR_UNFORMATTED("N-Dimensional real problems are "      \
+                                       "not supported");                       \
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
             goto validation_exit;                                              \
         }                                                                      \
@@ -80,7 +80,7 @@
         {                                                                      \
             if ((i == 0) && (dims[i].in_stride != dims[i].out_stride))         \
             {                                                                  \
-                AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "For dimension[%d]: "         \
+                AOCLFFTZ_ERROR_FORMATTED("For dimension[%d]: "                 \
                     "in_stride (%d) != out_stride (%d)",                       \
                     i, (INT32)dims[i].in_stride, (INT32)dims[i].out_stride);   \
                 errno = AOCLFFTZ_INVALID_INPUT;                                \
@@ -91,7 +91,7 @@
             {                                                                  \
                 if(flags.fft_direction == FORWARD_FFT_DIR)                     \
                 {                                                              \
-                    AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "For dimension[%d]: "     \
+                    AOCLFFTZ_ERROR_FORMATTED("For dimension[%d]: "             \
                         "in_stride != out_stride * %d\n"                       \
                         "        Possible dims in_stride "                     \
                         "and dims out_stride values are %d, %d",               \
@@ -101,7 +101,7 @@
                 }                                                              \
                 else                                                           \
                 {                                                              \
-                    AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "For dimension[%d]: "     \
+                    AOCLFFTZ_ERROR_FORMATTED("For dimension[%d]: "             \
                         "in_stride * %d != out_stride\n"                       \
                         "        Possible dims in_stride "                     \
                         "and dims out_stride values are %d, %d",               \
@@ -124,7 +124,7 @@
         {                                                                      \
             if(flags.fft_direction == FORWARD_FFT_DIR)                         \
             {                                                                  \
-                AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "For vecs[%d]: "              \
+                AOCLFFTZ_ERROR_FORMATTED("For vecs[%d]: "                      \
                     "in_stride != out_stride * %d\n"                           \
                     "        Possible vecs in_stride "                         \
                     "and vecs out_stride values are %d, %d",                   \
@@ -134,7 +134,7 @@
             }                                                                  \
             else                                                               \
             {                                                                  \
-                AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "For vecs[%d]: "              \
+                AOCLFFTZ_ERROR_FORMATTED("For vecs[%d]: "                      \
                     "in_stride * %d != out_stride\n"                           \
                     "        Possible vecs in_stride "                         \
                     "and vecs out_stride values are %d, %d",                   \
@@ -152,15 +152,15 @@
 {                                                                              \
     if (!out_of_place &&  (in != out))                                         \
     {                                                                          \
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "input and output buffer must be "  \
-                                           "the same for in-place problems");  \
+        AOCLFFTZ_ERROR_UNFORMATTED("Input and output buffer must be the "      \
+                                   "same for in-place problems");              \
         errno = AOCLFFTZ_INVALID_INPUT;                                        \
         goto validation_exit;                                                  \
     }                                                                          \
     else if (out_of_place && (in == out))                                      \
     {                                                                          \
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "input and output buffer cannot be "\
-                                      "the same for out-of-place problems");   \
+        AOCLFFTZ_ERROR_UNFORMATTED("Input and output buffer cannot be the "    \
+                                   "same for out-of-place problems");          \
         errno = AOCLFFTZ_INVALID_INPUT;                                        \
         goto validation_exit;                                                  \
     }                                                                          \
@@ -171,14 +171,14 @@ static inline INT32 validate_flags(aoclfftz_flags_t *flags)
     // TODO: Remove validation once support for out-of-order output is added
     if (flags->storage_order)
     {
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "Library does not support "
-                                            "out-of-order outputs");
+        AOCLFFTZ_ERROR_UNFORMATTED("Library does not support "
+                                   "out-of-order outputs");
         return AOCLFFTZ_INVALID_INPUT;
     }
     if (flags->transpose_mode)
     {
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "Library does not support "
-                                            "standalone transpose");
+        AOCLFFTZ_ERROR_UNFORMATTED("Library does not support "
+                                   "standalone transpose");
         return AOCLFFTZ_INVALID_INPUT;
 
     }
@@ -189,7 +189,7 @@ static inline INT32 validate_flags(aoclfftz_flags_t *flags)
 {                                                                              \
     if (dims == NULL)                                                          \
     {                                                                          \
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "dims cannot be NULL\n");           \
+        AOCLFFTZ_ERROR_UNFORMATTED("Dims cannot be NULL\n");                   \
         errno = AOCLFFTZ_INVALID_INPUT;                                        \
         goto validation_exit;                                                  \
     }                                                                          \
@@ -197,22 +197,22 @@ static inline INT32 validate_flags(aoclfftz_flags_t *flags)
     {                                                                          \
         if (dims[i].n <= 0)                                                    \
         {                                                                      \
-            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "dimension[%d]: size "            \
-                                   "must be at least 1", i);                   \
+            AOCLFFTZ_ERROR_FORMATTED("Dimension[%d]: size "                    \
+                                     "must be atleast 1", i);                  \
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
             goto validation_exit;                                              \
         }                                                                      \
         if (dims[i].in_stride <= 0)                                            \
         {                                                                      \
-            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "dimension[%d]: in_stride "       \
-                                   "must be greater than zero\n", i);          \
+            AOCLFFTZ_ERROR_FORMATTED("Dimension[%d]: in_stride must be "       \
+                                     "greater than zero\n", i);                \
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
             goto validation_exit;                                              \
         }                                                                      \
         if (dims[i].out_stride <= 0)                                           \
         {                                                                      \
-            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "dimension[%d]: out_stride "      \
-                                   "must be greater than zero\n", i);          \
+            AOCLFFTZ_ERROR_FORMATTED("Dimension[%d]: out_stride must be "      \
+                                     "greater than zero\n", i);                \
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
             goto validation_exit;                                              \
         }                                                                      \
@@ -223,7 +223,7 @@ static inline INT32 validate_flags(aoclfftz_flags_t *flags)
 {                                                                              \
     if (vecs == NULL)                                                          \
     {                                                                          \
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "vecs cannot be NULL");             \
+        AOCLFFTZ_ERROR_UNFORMATTED("Vecs cannot be NULL");                     \
         errno = AOCLFFTZ_INVALID_INPUT;                                        \
         goto validation_exit;                                                  \
     }                                                                          \
@@ -231,22 +231,21 @@ static inline INT32 validate_flags(aoclfftz_flags_t *flags)
     {                                                                          \
         if (vecs[i].n <= 0)                                                    \
         {                                                                      \
-            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "vector[%d]: size "               \
-                                   "must be at least 1", i);                   \
+            AOCLFFTZ_ERROR_FORMATTED("Vector[%d]: size must be at least 1", i);\
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
             goto validation_exit;                                              \
         }                                                                      \
         if (vecs[i].in_stride <= 0)                                            \
         {                                                                      \
-            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "vector[%d]: in_stride "          \
-                                   "must be greater than zero\n", i);          \
+            AOCLFFTZ_ERROR_FORMATTED("Vector[%d]: in_stride must be greater "  \
+                                     "than zero\n", i);                        \
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
             goto validation_exit;                                              \
         }                                                                      \
         if (vecs[i].out_stride <= 0)                                           \
         {                                                                      \
-            AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "vector[%d]: out_stride "         \
-                                   "must be greater than zero\n", i);          \
+            AOCLFFTZ_ERROR_FORMATTED("Vector[%d]: out_stride must be greater " \
+                                     "than zero\n", i);                        \
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
             goto validation_exit;                                              \
         }                                                                      \
@@ -327,25 +326,25 @@ static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
     }                                                                          \
     if (problem->out == NULL)                                                  \
     {                                                                          \
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "output buffer cannot be NULL");    \
+        AOCLFFTZ_ERROR_UNFORMATTED("Output buffer cannot be NULL");            \
         ret = AOCLFFTZ_INVALID_INPUT;                                          \
         goto validation_exit;                                                  \
     }                                                                          \
     if (problem->in == NULL)                                                   \
     {                                                                          \
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "input buffer cannot be NULL");     \
+        AOCLFFTZ_ERROR_UNFORMATTED("Input buffer cannot be NULL");             \
         ret = AOCLFFTZ_INVALID_INPUT;                                          \
         goto validation_exit;                                                  \
     }                                                                          \
     if (problem->dim_rank <= 0)                                                \
     {                                                                          \
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "dim rank must be atleast 1");      \
+        AOCLFFTZ_ERROR_UNFORMATTED("Dim rank must be atleast 1");              \
         ret = AOCLFFTZ_INVALID_INPUT;                                          \
         goto validation_exit;                                                  \
     }                                                                          \
     if (problem->vec_rank <= 0)                                                \
     {                                                                          \
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, ERR, "vec rank must be atleast 1");      \
+        AOCLFFTZ_ERROR_UNFORMATTED("Vec rank must be atleast 1");              \
         ret = AOCLFFTZ_INVALID_INPUT;                                          \
         goto validation_exit;                                                  \
     }                                                                          \
@@ -387,8 +386,8 @@ static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
     validation_exit:                                                           \
     if (ret)                                                                   \
     {                                                                          \
-        AOCLFFTZ_LOG_FORMATTED(ERR, ERR, "Problem descriptor validation "      \
-                                        "failed with error code : %d", ret);   \
+        AOCLFFTZ_ERROR_FORMATTED("Problem descriptor validation failed "       \
+                                 "with %s", get_status_string(ret));           \
         return NULL;                                                           \
     }                                                                          \
 }

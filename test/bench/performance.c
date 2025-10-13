@@ -290,7 +290,7 @@ INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params)
 
     // Multi-threaded scaling comparisons against single-threaded mode are
     // performed only when logging is set to INFO level or higher.
-    if (params->logger_mode >= INFO && params->num_threads > 1)
+    if (params->logger_mode >= AOCLFFTZ_LOG_INFO && params->num_threads > 1)
     {
         // Running in single threaded mode
         params->num_threads = 1;

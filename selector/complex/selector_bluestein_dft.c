@@ -67,6 +67,7 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                               0 /*unused*/);
     if (next_sel == NULL)
     {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_bluestein_dft;
     }
 

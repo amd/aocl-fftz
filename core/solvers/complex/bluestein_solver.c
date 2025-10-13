@@ -56,11 +56,13 @@ INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
 
     UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+    INT32 ret = SOLVER_SUCCESS;
+    ret = alloc_bluestein_buffers(sol->dft_bufs->bluestein,
+                                  m * DATA_STRIDE * dt_bytes);
 
-    if (alloc_bluestein_buffers(sol->dft_bufs->bluestein, m * DATA_STRIDE * dt_bytes) !=
-        AOCLFFTZ_SUCCESS)
+    if (ret != AOCLFFTZ_SUCCESS)
     {
-        return AOCLFFTZ_MEMORY_FAILURE;
+        return ret;
     }
 
     // Map the internal in, out buffers to the next solution

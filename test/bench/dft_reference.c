@@ -215,8 +215,8 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                                  params->sz_info.out_data_stride);
         if (status != BENCH_SUCCESS)
         {
-            printf("\nResults mismatch on accuracy mode => DFT reference, "
-                "iteration: %d/%d, seed: %d\n",
+            AOCLFFTZ_ERROR_FORMATTED("\nResults mismatch on accuracy "
+                "mode => DFT reference, iteration: %d/%d, seed: %d\n",
                 i, params->num_iterations, params->seed);
             goto cleanup;
         }
@@ -265,8 +265,8 @@ INT32 allocate_dftref_buffers(aoclfftz_bench_params_t *params,
     ALLOC_INIT(buffers->out_ref, VOID, problem_bytes_without_strides, is_align);
     if (buffers->out_ref == NULL)
     {
-        AOCLFFTZ_LOG_UNFORMATTED(ERR, params->logger_mode,
-                                 "Reference output buffer allocation failed");
+        AOCLFFTZ_ERROR_UNFORMATTED("MEMORY_FAILURE : "
+                                   "Reference output buffer allocation failed");
         return MEMORY_FAILURE;
     }
 
@@ -279,8 +279,7 @@ INT32 allocate_dftref_buffers(aoclfftz_bench_params_t *params,
                        is_align);
             if (buffers->in_ref == NULL)
             {
-                AOCLFFTZ_LOG_UNFORMATTED(
-                    ERR, params->logger_mode,
+                AOCLFFTZ_ERROR_UNFORMATTED("MEMORY_FAILURE : "
                     "Reference input buffer allocation failed");
                 return MEMORY_FAILURE;
             }
@@ -298,8 +297,8 @@ INT32 allocate_dftref_buffers(aoclfftz_bench_params_t *params,
                    is_align);
         if (buffers->complex_in == NULL)
         {
-            AOCLFFTZ_LOG_UNFORMATTED(ERR, params->logger_mode,
-                                     "Complex input buffer allocation failed");
+            AOCLFFTZ_ERROR_UNFORMATTED("MEMORY_FAILURE : Complex "
+                                       "input buffer allocation failed");
             return MEMORY_FAILURE;
         }
 
@@ -308,8 +307,8 @@ INT32 allocate_dftref_buffers(aoclfftz_bench_params_t *params,
                    is_align);
         if (buffers->complex_out == NULL)
         {
-            AOCLFFTZ_LOG_UNFORMATTED(ERR, params->logger_mode,
-                                     "Complex output buffer allocation failed");
+            AOCLFFTZ_ERROR_UNFORMATTED("MEMORY_FAILURE : Complex "
+                                       "output buffer allocation failed");
             return MEMORY_FAILURE;
         }
 

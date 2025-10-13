@@ -110,13 +110,14 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         {
             if (i + 1 >= strlen(arg) || !isdigit(arg[i + 1]))
             {
-                printf("Integer value expected after 'x' character.\n");
+                AOCLFFTZ_ERROR_UNFORMATTED("Integer value expected after "
+                                           "'x' character.\n");
                 status = SIZE_PARSING_ERROR;
                 goto exit_func;
             }
             if ((is_stride != 0 && is_stride != 2))
             {
-                printf("Only in_stride is not accepted. "
+                AOCLFFTZ_ERROR_UNFORMATTED("Only in_stride is not accepted. "
                        "Please pass both in & out strides (or) no strides.\n");
                 status = SIZE_PARSING_ERROR;
                 goto exit_func;
@@ -128,7 +129,8 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         {
             if (i + 1 >= strlen(arg) || !isdigit(arg[i + 1]))
             {
-                printf("Integer value expected after 'v' character.\n");
+                AOCLFFTZ_ERROR_UNFORMATTED("Integer value expected "
+                                           "after 'v' character.\n");
                 status = SIZE_PARSING_ERROR;
                 goto exit_func;
             }
@@ -152,7 +154,8 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         {
             if (i + 1 >= strlen(arg) || !isdigit(arg[i + 1]))
             {
-                printf("Integer value expected after ':' character.\n");
+                AOCLFFTZ_ERROR_UNFORMATTED("Integer value expected "
+                                           "after ':' character.\n");
                 status = SIZE_PARSING_ERROR;
                 goto exit_func;
             }
@@ -177,8 +180,8 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
             {
                 if (val == 0)
                 {
-                    printf("Invalid dim/vec size (zero) at rank : %d",
-                           rank_count);
+                    AOCLFFTZ_ERROR_FORMATTED("Invalid dim/vec size (zero) at "
+                                             "rank : %d",rank_count);
                     status = SIZE_PARSING_ERROR;
                     goto exit_func;
                 }
