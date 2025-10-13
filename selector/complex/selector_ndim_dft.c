@@ -99,8 +99,10 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     INT32 ret = SELECTOR_FAILURE;
 
     n_minus1_sel = alloc_selector(1, dim_rank - 1, sel->scratch_space,
+                                  sel->kertab_dft, sel->kertab_twid_dft,
                                   0 /*unused*/);
     outer_dim_sel = alloc_selector(dim_rank - 1, 1, sel->scratch_space,
+                                   sel->kertab_dft, sel->kertab_twid_dft,
                                    0 /*unused*/);
 
     if (n_minus1_sel == NULL || outer_dim_sel == NULL)
