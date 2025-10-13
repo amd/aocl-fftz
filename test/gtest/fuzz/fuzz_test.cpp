@@ -52,30 +52,51 @@ FUZZ_TEST_F(AoclfftzFuzzTestDoubleLP64, fuzz_input_buffer_test)
 FUZZ_TEST_F(AoclfftzFuzzTestDoubleILP64, fuzz_input_buffer_test)
     .WithDomains(problemsize);
 
+auto arbitrary_cntrl_params() {
+    return fuzztest::StructOf<aoclfftz_cntrl_params_t>(
+        // Define generators for each field in aoclfftz_cntrl_params_t
+        fuzztest::Arbitrary<INT32>(),   // opt_level
+        fuzztest::Arbitrary<INT32>(),   // opt_off
+        fuzztest::ElementOf<aoclfftz_logger_mode>({
+            AOCLFFTZ_LOG_NONE, AOCLFFTZ_LOG_ERROR, AOCLFFTZ_LOG_INFO,
+            AOCLFFTZ_LOG_DEBUG, AOCLFFTZ_LOG_TRACE}),   // logger_mode
+        fuzztest::Arbitrary<INT32>());  // measure_stats
+}
+
 // 1D FFT problems
 FUZZ_TEST_F(AoclfftzFuzzTestFloatLP64, fuzz_problem_desc_test)
     .WithDomains(dims_and_vecs_1D(),
-                fuzztest::ElementOf<UINT32>({0, 1, 4, 5}), //->flags
+                //->flags are fuzzed for valid combinations not to waste fuzz cycles.
+                // Flags: 0=C2C+Fwd+InPlace, 1=+OutPlace, 4=+Bwd, 5=+Bwd+OutPlace,
+                // 8=Real+Fwd+InPlace, 9=+OutPlace, 12=+Bwd, 13=+Bwd+OutPlace
+                fuzztest::ElementOf<UINT32>({0, 1, 4, 5, 8, 9, 12, 13}),
                 fuzztest::Arbitrary<aoclfftz_smp_pfft_t>(),
-                fuzztest::Arbitrary<aoclfftz_cntrl_params_t>());
+                arbitrary_cntrl_params());
 
 // Batched 1D problem
 FUZZ_TEST_F(AoclfftzFuzzTestFloatILP64, fuzz_problem_desc_test)
     .WithDomains(dims_and_vecs_batched_1D(),
-                fuzztest::ElementOf<UINT32>({0, 1, 4, 5}), //->flags
+                //->flags are fuzzed for valid combinations not to waste fuzz cycles.
+                // Flags: 0=C2C+Fwd+InPlace, 1=+OutPlace, 4=+Bwd, 5=+Bwd+OutPlace,
+                // 8=Real+Fwd+InPlace, 9=+OutPlace, 12=+Bwd, 13=+Bwd+OutPlace
+                fuzztest::ElementOf<UINT32>({0, 1, 4, 5, 8, 9, 12, 13}),
                 fuzztest::Arbitrary<aoclfftz_smp_pfft_t>(),
-                fuzztest::Arbitrary<aoclfftz_cntrl_params_t>());
+                arbitrary_cntrl_params());
 
 // 2D FFT problem
 FUZZ_TEST_F(AoclfftzFuzzTestDoubleLP64, fuzz_problem_desc_test)
     .WithDomains(dims_and_vecs_2D(),
+                // TODO: Add flag combination of real FFT once ND real FFT is supported
+                // Flags: 0=C2C+Fwd+InPlace, 1=+OutPlace, 4=+Bwd, 5=+Bwd+OutPlace
                 fuzztest::ElementOf<UINT32>({0, 1, 4, 5}), //->flags
                 fuzztest::Arbitrary<aoclfftz_smp_pfft_t>(),
-                fuzztest::Arbitrary<aoclfftz_cntrl_params_t>());
+                arbitrary_cntrl_params());
 
 // Multi batched/N-Dim FFT problem
 FUZZ_TEST_F(AoclfftzFuzzTestDoubleILP64, fuzz_problem_desc_test)
     .WithDomains(dims_and_vecs_multi_batched_ND(),
+                // TODO: Add flag combination of real FFT once ND real FFT is supported
+                // Flags: 0=C2C+Fwd+InPlace, 1=+OutPlace, 4=+Bwd, 5=+Bwd+OutPlace
                 fuzztest::ElementOf<UINT32>({0, 1, 4, 5}), //->flags
                 fuzztest::Arbitrary<aoclfftz_smp_pfft_t>(),
-                fuzztest::Arbitrary<aoclfftz_cntrl_params_t>());
+                arbitrary_cntrl_params());

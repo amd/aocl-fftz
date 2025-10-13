@@ -66,6 +66,8 @@ extern "C"
 #define MAX_BUFFER_SIZE 1000000.0
 #define MAX_DIM1_SIZE 100000
 #define MAX_DIM_STRIDE 10000
+#define COMPLEX_DATA_STRIDE 2
+#define REAL_DATA_STRIDE 1
 
 double get_max_buffer_size()
 {
@@ -139,8 +141,10 @@ void init_bench_params(aoclfftz_bench_params_t* params, INT32 dim_rank,
         params->aligned_alloc = ALIGNED_ALLOC;
         params->seed = 0;
         params->use_random_seed = 1;
-        params->sz_info.in_data_stride = 2;
-        params->sz_info.out_data_stride = 2;
+        // setting the data strides based on complex type and will be modified
+        // later for real problems
+        params->sz_info.in_data_stride = COMPLEX_DATA_STRIDE;
+        params->sz_info.out_data_stride = COMPLEX_DATA_STRIDE;
         // create input and output buffers
         params->in = NULL;
         params->out = NULL;

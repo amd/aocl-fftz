@@ -469,19 +469,18 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         bench_params->num_iterations = 1;
     }
 
-    // NOTE: 'r2c/c2r backward' modes are internally converted to 'c2r/r2c
-    // forward' modes
-    // i.e. r2c backward  -> c2r forward or just 'c2r'
-    //      c2r backward  -> r2c forward or just 'r2c'
+    // NOTE: R2C is real forward and C2R is real backward.
     if (bench_params->fft_type == R2C && bench_params->dir == BACKWARD)
     {
-        bench_params->fft_type = C2R;
+        printf("INFO: R2C FFT is inherently forward, running as forward real "
+               "FFT\n");
         bench_params->dir = FORWARD;
     }
     else if (bench_params->fft_type == C2R && bench_params->dir == BACKWARD)
     {
-        bench_params->fft_type = R2C;
-        bench_params->dir = FORWARD;
+        printf("INFO: C2R FFT is inherently backward, running as backward real "
+               "FFT\n");
+        bench_params->dir = BACKWARD;
     }
 
     // set the data strides for an 'r2c' problem
