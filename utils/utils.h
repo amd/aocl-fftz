@@ -39,10 +39,9 @@
 #ifndef AOCLFFTZ_UTILS_H
 #define AOCLFFTZ_UTILS_H
 
+#include <stdio.h>
 #include "api/types.h"
 #include "api/aoclfftz.h"
-
-#define AOCLFFTZ_DTL
 
 #define AOCLFFTZ_STATS
 
@@ -52,19 +51,6 @@
 #define FUNC_NAME __func__
 #else
 #define FUNC_NAME __FUNCTION__
-#endif
-
-#ifdef AOCLFFTZ_DTL
-#define ERR      1
-#define INFO     2
-#define DEBUG    3
-#define TRACE    4
-#else
-#define ERR      0
-#define INFO     0
-#define DEBUG    0
-#define TRACE    0
-
 #endif
 
 #ifdef AOCLFFTZ_STATS
@@ -81,20 +67,20 @@ typedef struct timespec timeVal;
 #endif
 #endif
 
-// Logger - DTL
-#ifdef AOCLFFTZ_DTL
-#include <stdio.h>
+// Logger
+#ifdef AOCL_ENABLE_LOG
+
+#define INFO     1
+#define DEBUG    2
+#define TRACE    3
+
 #define AOCLFFTZ_LOG_UNFORMATTED(logType, enableLog, str)                      \
     do                                                                         \
     {                                                                          \
         if (enableLog)                                                         \
         {                                                                      \
             const char *type = NULL;                                           \
-            if (logType == ERR)                                                \
-            {                                                                  \
-                type = "ERR";                                                  \
-            }                                                                  \
-            else if (logType == INFO)                                          \
+            if (logType == INFO)                                               \
             {                                                                  \
                 type = "INFO";                                                 \
             }                                                                  \
@@ -119,11 +105,7 @@ typedef struct timespec timeVal;
         if (enableLog)                                                         \
         {                                                                      \
             const char *type = NULL;                                           \
-            if (logType == ERR)                                                \
-            {                                                                  \
-                type = "ERR";                                                  \
-            }                                                                  \
-            else if (logType == INFO)                                          \
+            if (logType == INFO)                                               \
             {                                                                  \
                 type = "INFO";                                                 \
             }                                                                  \
@@ -147,6 +129,14 @@ typedef struct timespec timeVal;
 #define AOCLFFTZ_LOG_FORMATTED(logType, enableLog, str, ...)
 #endif
 
+#define AOCLFFTZ_ERROR_UNFORMATTED(str)                                        \
+    fprintf(stderr, "[ERROR] : %s : %s : %d : " str "\n", __FILE__,            \
+            FUNC_NAME, __LINE__);                                              \
+
+#define AOCLFFTZ_ERROR_FORMATTED(str, ...)                                     \
+    fprintf(stderr, "[ERROR] : %s : %s : %d : " str "\n", __FILE__,            \
+            FUNC_NAME, __LINE__, __VA_ARGS__);                                 \
+
 // Timer and stats keeping
 #ifdef AOCLFFTZ_STATS
 #ifdef _WINDOWS
@@ -154,8 +144,8 @@ typedef struct timespec timeVal;
 {                                                                              \
     if (!QueryPerformanceFrequency(&timerClk))                                 \
     {                                                                          \
-        AOCLFFTZ_LOG_UNFORMATTED(                                              \
-            ERR, 1, "QueryPerformanceFrequency based Timer failed.");          \
+        AOCLFFTZ_ERROR_UNFORMATTED(                                            \
+                        "QueryPerformanceFrequency based Timer failed.");      \
     }                                                                          \
 }
 #define getTime(timeVal) QueryPerformanceCounter(&timeVal)
@@ -177,6 +167,8 @@ typedef struct timespec timeVal;
 VOID cpu_features_detection(INTP fn, INTP optVal,
                             INTP *eax, INTP *ebx,
                             INTP *ecx, INTP *edx);
+
+const CHAR* get_status_string(aoclfftz_error_type status);
 
 EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
                                INT32 logger_mode);

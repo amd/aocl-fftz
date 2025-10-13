@@ -193,3 +193,20 @@ EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
 #endif
 }
+
+const CHAR* get_status_string(aoclfftz_error_type status) {
+    switch (status) {
+        case AOCLFFTZ_TIME_OUT:
+            return "AOCLFFTZ_TIME_OUT";
+        case AOCLFFTZ_MEMORY_FAILURE:
+            return "AOCLFFTZ_MEMORY_FAILURE";
+        case AOCLFFTZ_INVALID_INPUT:
+            return "AOCLFFTZ_INVALID_INPUT";
+        case AOCLFFTZ_EXECUTION_FAILURE:
+            return "AOCLFFTZ_EXECUTION_FAILURE";
+        case AOCLFFTZ_SUCCESS:
+            return "AOCLFFTZ_SUCCESS";
+        default:
+            return "Unrecognized error code";
+    }
+}

@@ -136,7 +136,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             else
             {
-                printf("ERROR: Unknown precision\n");
+                AOCLFFTZ_ERROR_UNFORMATTED("Unknown precision\n");
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
             }
             break;
@@ -151,7 +151,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             else
             {
-                printf("ERROR: Unknown data model\n");
+                AOCLFFTZ_ERROR_UNFORMATTED("Unknown data model\n");
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
             }
             break;
@@ -170,7 +170,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             else
             {
-                printf("ERROR: Unknown benchmark type\n");
+                AOCLFFTZ_ERROR_UNFORMATTED("Unknown benchmark type\n");
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
             }
             break;
@@ -185,7 +185,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             else
             {
-                printf("ERROR: Unknown result placement\n");
+                AOCLFFTZ_ERROR_UNFORMATTED("Unknown result placement\n");
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
             }
             break;
@@ -200,7 +200,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             else
             {
-                printf("ERROR: Unknown output order\n");
+                AOCLFFTZ_ERROR_UNFORMATTED("Unknown output order\n");
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
             }
             break;

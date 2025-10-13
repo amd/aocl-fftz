@@ -70,6 +70,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     org_sol = alloc_solution(vec_rank, dim_rank);
     if (org_sol == NULL)
     {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_ct_dft;
     }
 
@@ -80,6 +81,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     if (cur_sel == NULL || cur_sel_m == NULL)
     {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_ct_dft;
     }
 
@@ -87,22 +89,28 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
     if (sel->solution->next_sol == NULL)
     {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_ct_dft;
     }
     sel->solution->next_sol[0] = alloc_solution(vec_rank, dim_rank);
-    aoclfftz_solution_t *next_sol = sel->solution->next_sol[0];
-    if (next_sol == NULL)
+    if (sel->solution->next_sol[0] == NULL)
     {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_ct_dft;
     }
+
+    aoclfftz_solution_t *next_sol = sel->solution->next_sol[0];
     next_sol->next_sol = alloc_sol_array(1 /*n_threads*/);
+
     if (next_sol->next_sol == NULL)
     {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_ct_dft;
     }
     next_sol->next_sol[0] = alloc_solution(vec_rank, dim_rank);
     if (next_sol->next_sol[0] == NULL)
     {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_ct_dft;
     }
 
@@ -144,6 +152,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                                        0 /*unused*/);
             if (cur_sel == NULL || cur_sel_m == NULL)
             {
+                ret = AOCLFFTZ_MEMORY_FAILURE;
                 goto exit_ct_dft;
             }
             is_previous_solution_selected = 0;

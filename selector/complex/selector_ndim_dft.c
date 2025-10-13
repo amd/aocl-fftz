@@ -105,6 +105,7 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     if (n_minus1_sel == NULL || outer_dim_sel == NULL)
     {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_nd_dft;
     }
 

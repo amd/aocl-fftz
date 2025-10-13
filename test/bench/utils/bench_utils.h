@@ -49,7 +49,7 @@
 #define MAX(a, b) ((a > b) ? a : b)
 
 #define PRINT_SUCCESS(str) printf("\033[1;32m" str "\033[1;0m");
-#define PRINT_FAILURE(str) printf("\033[1;31m" str "\033[1;0m");
+#define PRINT_FAILURE(str) fprintf(stderr, str);
 
 #define PRINT_SUCCESS_FORMATTED(str, ...)                                      \
 {                                                                              \
@@ -58,7 +58,7 @@
 
 #define PRINT_FAILURE_FORMATTED(str, ...)                                      \
 {                                                                              \
-    printf("\033[1;31m" str "\033[1;0m", __VA_ARGS__);                         \
+    fprintf(stderr, str, __VA_ARGS__);                                         \
 }
 
 /**
@@ -145,24 +145,25 @@
                 show_help_menu();                                              \
                 break;                                                         \
             case SIZE_REQUIRED_ERROR:                                          \
-                printf("\nProblem size must be provided.\n");                  \
+                AOCLFFTZ_ERROR_UNFORMATTED("\nProblem size missing\n");        \
                 break;                                                         \
             case SIZE_PARSING_ERROR:                                           \
-                printf("\nInvalid problem size provided.\n");                  \
+                AOCLFFTZ_ERROR_UNFORMATTED("\nInvalid problem size\n");        \
                 break;                                                         \
             case UNSUPPORTED_OPTION_ERROR:                                     \
-                printf("\nUnsupported option provided.\n");                    \
+                AOCLFFTZ_ERROR_UNFORMATTED("\nUnsupported option provided.\n");\
                 break;                                                         \
             case NON_OPTION_ARGUMENTS_ERROR:                                   \
-                printf("\nMore than one non-option arguments provided.\nOnly " \
-                       "one non-option argument must be provided which is "    \
-                       "problem size.\n");                                     \
+                AOCLFFTZ_ERROR_UNFORMATTED("\nMore than one non-option "       \
+                       "arguments provided.\nOnly one non-option argument "    \
+                       "must be provided which is problem size.\n");           \
                 break;                                                         \
             case MEMORY_FAILURE:                                               \
-                printf("\nCould not allocate memory for data buffers.\n");     \
+                AOCLFFTZ_ERROR_UNFORMATTED("\nCould not allocate memory for "  \
+                                           "data buffers.\n");                 \
                 break;                                                         \
             default:                                                           \
-                printf("\nInvalid arguments provided.\n");                     \
+                AOCLFFTZ_ERROR_UNFORMATTED("\nInvalid arguments provided.\n"); \
             }                                                                  \
             if (status == HELP_MENU)                                           \
             {                                                                  \

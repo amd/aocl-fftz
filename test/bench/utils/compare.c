@@ -180,7 +180,7 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
         printf("  got      = %.6g + %.6gj\n", b_f[max_err_idx * data_stride],
                b_f[max_err_idx * data_stride  + 1]);
         printf("  max abs error = %.6g\n", max_abs_err);
-        if (logger_mode >= DEBUG)
+        if (logger_mode >= AOCLFFTZ_LOG_DEBUG)
         {
             RESET_ND_COUNTER(dim_counter, dim_rank);
             RESET_ND_COUNTER(vec_counter, vec_rank);
@@ -396,8 +396,8 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
 #endif
     if (rel_err > tol)
     {
-        printf("Relative error  = %.6g\n", rel_err);
-        printf("Tolerance       = %.6g\n", tol);
+        AOCLFFTZ_ERROR_FORMATTED("Relative error  = %.6g\n", rel_err);
+        AOCLFFTZ_ERROR_FORMATTED("Tolerance       = %.6g\n", tol);
         if (first_err_idx < INT64_MAX)
         {
             printf("First absolute error at index %td -> ", first_err_idx);
@@ -421,7 +421,7 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
                b_d[max_err_idx * data_stride],
                b_d[max_err_idx * data_stride + 1]);
         printf("  max abs error = %.6g\n", max_abs_err);
-        if (logger_mode >= DEBUG)
+        if (logger_mode >= AOCLFFTZ_LOG_DEBUG)
         {
             RESET_ND_COUNTER(dim_counter, dim_rank);
             RESET_ND_COUNTER(vec_counter, vec_rank);
@@ -511,8 +511,9 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
         }
         else
         {
-            printf("\nUse debug logger mode [--logger-mode 3 (or) -l 3] to get "
-                   "detailed error log\n");
+            AOCLFFTZ_ERROR_UNFORMATTED("\nUse debug logger mode "
+                                       "[--logger-mode 3 (or) -l 3] to get "
+                                       "detailed error log\n");
         }
         status = VERIFICATION_FAILURE;
     }
