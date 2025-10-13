@@ -38,35 +38,38 @@
 
 #include "utils/utils.h"
 
+// Note: This is not thread safe, nor is it multiple instance safe.
+//       When called through a multiple instance interface, the logger mode
+//       provided in the last setup call will be used.
+INT32 global_logger_mode = 0;
+
 #define AVX512_SUPPORTED 3
 #define AVX256_SUPPORTED 2
 #define AVX128_SUPPORTED 1
 #define C_SUPPORTED 0
 #define UNSUPPORTED -1
 
-INTP is_AVX_supported(INT32 logger_mode)
+INTP is_AVX_supported(void)
 {
     INTP ret;
     INTP eax, ebx, ecx, edx;
     cpu_features_detection(0x00000001, 0, &eax, &ebx, &ecx, &edx);
     ret = ((ecx & 0x18000000) == 0x18000000);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode, "AVX SIMD %s supported",
+    AOCLFFTZ_LOG(INFO, global_logger_mode, "AVX SIMD %s supported",
                            (ret ? "is" : "is not"));
-#endif
+
     return ret;
 }
 
-INTP is_AVX2_supported(INT32 logger_mode)
+INTP is_AVX2_supported(void)
 {
     INTP ret;
     INTP eax, ebx, ecx, edx;
     cpu_features_detection(0x00000007, 0, &eax, &ebx, &ecx, &edx);
     ret = ((ebx & (1 << 5)) != 0);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode, "AVX2 SIMD %s supported",
+    AOCLFFTZ_LOG(INFO, global_logger_mode, "AVX2 SIMD %s supported",
                            (ret ? "is" : "is not"));
-#endif
+
     return ret;
 }
 
@@ -77,7 +80,7 @@ static inline INTP xgetbv(INTP opt)
     return eax;
 }
 
-INTP is_AVX512_supported(INT32 logger_mode)
+INTP is_AVX512_supported(void)
 {
     INTP ret = 0;
     INTP eax, ebx, ecx, edx;
@@ -99,24 +102,22 @@ INTP is_AVX512_supported(INT32 logger_mode)
             }
         }
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode,
+    AOCLFFTZ_LOG(INFO, global_logger_mode,
                            "AVX512 SIMD %s supported", (ret ? "is" : "is not"));
-#endif
+
     return ret;
 }
 
-INTP is_FMA_supported(INT32 logger_mode)
+INTP is_FMA_supported(void)
 
 {
     INTP ret;
     INTP eax, ebx, ecx, edx;
     cpu_features_detection(0x00000001, 0, &eax, &ebx, &ecx, &edx);
     ret = ((ecx & (1 << 12)) != 0);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode, "FMA %s supported",
+    AOCLFFTZ_LOG(INFO, global_logger_mode, "FMA %s supported",
                            (ret ? "is" : "is not"));
-#endif
+
     return ret;
 }
 
@@ -152,12 +153,10 @@ inline VOID cpu_features_detection(INTP fn, INTP optVal,
 #endif
 #endif
 
-EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
-                               INT32 logger_mode)
+EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     if (opt_off)
     {
@@ -169,29 +168,27 @@ EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
         return C_SUPPORTED;
     }
 #ifdef ENABLE_AVX512
-    if (opt_level > 2 && is_AVX512_supported(logger_mode)) // opt_level == 3
+    if (opt_level > 2 && is_AVX512_supported()) // opt_level == 3
     {
         return AVX512_SUPPORTED;
     }
 #endif
 #ifdef ENABLE_AVX256
-    if (opt_level > 1 && is_AVX_supported(logger_mode) &&
-        is_FMA_supported(logger_mode)) // opt_level == 2
+    if (opt_level > 1 && is_AVX_supported() && is_FMA_supported()) // opt_level == 2
     {
         return AVX256_SUPPORTED;
     }
 #endif
 #ifdef ENABLE_AVX128
-    if (opt_level > 0 && is_AVX_supported(logger_mode)) // opt_level == 1
+    if (opt_level > 0 && is_AVX_supported()) // opt_level == 1
     {
         return AVX128_SUPPORTED;
     }
 #endif
     return C_SUPPORTED;
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
 }
 
 const CHAR* get_status_string(aoclfftz_error_type status)

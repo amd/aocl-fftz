@@ -135,7 +135,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             else
             {
-                AOCLFFTZ_ERROR_UNFORMATTED("Unknown precision\n");
+                AOCLFFTZ_ERROR("Unknown precision\n");
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
             }
             break;
@@ -150,7 +150,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             else
             {
-                AOCLFFTZ_ERROR_UNFORMATTED("Unknown data model\n");
+                AOCLFFTZ_ERROR("Unknown data model\n");
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
             }
             break;
@@ -169,7 +169,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             else
             {
-                AOCLFFTZ_ERROR_UNFORMATTED("Unknown benchmark type\n");
+                AOCLFFTZ_ERROR("Unknown benchmark type\n");
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
             }
             break;
@@ -184,7 +184,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             else
             {
-                AOCLFFTZ_ERROR_UNFORMATTED("Unknown result placement\n");
+                AOCLFFTZ_ERROR("Unknown result placement\n");
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
             }
             break;
@@ -199,7 +199,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
             }
             else
             {
-                AOCLFFTZ_ERROR_UNFORMATTED("Unknown output order\n");
+                AOCLFFTZ_ERROR("Unknown output order\n");
                 status = MAX(status, UNSUPPORTED_OPTION_ERROR);
             }
             break;
@@ -561,10 +561,9 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         ALLOC_INIT(bench_params->out, VOID, output_bytes, is_align);
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, bench_params->logger_mode,
+    AOCLFFTZ_LOG(TRACE, bench_params->logger_mode,
                              "Bench params prepared from parsing arguments");
-#endif
+
 
     ret = register_functions(bench_params);
     status = MAX(status, ret);
@@ -579,9 +578,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
  */
 VOID *setup_problem_f(aoclfftz_bench_params_t *params)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
-#endif
+    AOCLFFTZ_LOG(TRACE, params->logger_mode, "ENTER");
+
 #ifdef WIN32
     timer clk_tick;
 #endif
@@ -620,9 +618,8 @@ VOID *setup_problem_f(aoclfftz_bench_params_t *params)
         handle = aoclfftz_setup_f(p_desc);
     }
     DESTROY_PD(p_desc, is_align);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
-#endif
+    AOCLFFTZ_LOG(TRACE, params->logger_mode, "EXIT");
+
     return handle;
 }
 
@@ -634,9 +631,8 @@ VOID *setup_problem_f(aoclfftz_bench_params_t *params)
  */
 VOID *setup_problem_d(aoclfftz_bench_params_t *params)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
-#endif
+    AOCLFFTZ_LOG(TRACE, params->logger_mode, "ENTER");
+
 #ifdef WIN32
     timer clk_tick;
 #endif
@@ -675,9 +671,8 @@ VOID *setup_problem_d(aoclfftz_bench_params_t *params)
         handle = aoclfftz_setup_d(p_desc);
     }
     DESTROY_PD(p_desc, is_align);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
-#endif
+    AOCLFFTZ_LOG(TRACE, params->logger_mode, "EXIT");
+
     return handle;
 }
 
@@ -689,9 +684,8 @@ VOID *setup_problem_d(aoclfftz_bench_params_t *params)
  */
 VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
-#endif
+    AOCLFFTZ_LOG(TRACE, params->logger_mode, "ENTER");
+
 #ifdef WIN32
     timer clk_tick;
 #endif
@@ -730,9 +724,8 @@ VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
         handle = aoclfftz_setup_f_64_(p_desc);
     }
     DESTROY_PD(p_desc, is_align);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
-#endif
+    AOCLFFTZ_LOG(TRACE, params->logger_mode, "EXIT");
+
     return handle;
 }
 
@@ -744,9 +737,8 @@ VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
  */
 VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
-#endif
+    AOCLFFTZ_LOG(TRACE, params->logger_mode, "ENTER");
+
 #ifdef WIN32
     timer clk_tick;
 #endif
@@ -785,9 +777,8 @@ VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params)
         handle = aoclfftz_setup_d_64_(p_desc);
     }
     DESTROY_PD(p_desc, is_align);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
-#endif
+    AOCLFFTZ_LOG(TRACE, params->logger_mode, "EXIT");
+
     return handle;
 }
 

@@ -61,9 +61,7 @@
 INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
                                       VOID *handle, perf_stats_t *stats)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
-#endif
+    AOCLFFTZ_LOG(TRACE, params->logger_mode, "ENTER");
     INT32 status;
 #ifdef WIN32
     timer clk_tick;
@@ -83,10 +81,9 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
         params->seed = (INT32)((INT64)time(0) % (INT_MAX));
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode, "seed   : %d",
+    AOCLFFTZ_LOG(INFO, params->logger_mode, "seed   : %d",
                           params->seed);
-#endif
+
 
     // prepare random input data
     params->prepare_input_data(params->in, input_size, NULL, RANDOM_INPUT,
@@ -104,9 +101,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
 
     // warmup iterations (skipped from profiling)
     // TODO: improvise this logic
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "WARM-UP START");
-#endif
+    AOCLFFTZ_LOG(TRACE, params->logger_mode, "WARM-UP START");
     for (INT32 i = 0; i < WARMUP_ITERATIONS; ++i)
     {
         INT32 j = iter + 1;
@@ -115,17 +110,14 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
             aoclfftz_execute(handle);
         }
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "WARM-UP END");
-#endif
+    AOCLFFTZ_LOG(TRACE, params->logger_mode, "WARM-UP END");
 
     initTimer(clk_tick);
     for (INT32 i = 0; i < params->num_iterations; i++)
     {
-#ifdef AOCL_ENABLE_LOG
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode, "Iteration: %d",
+        AOCLFFTZ_LOG(INFO, params->logger_mode, "Iteration: %d",
                                i + 1);
-#endif
+
         INT32 j = iter + 1;
         getTime(start_time);
         while (--j)
@@ -160,9 +152,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
                              (stats->avg_time * 1E-3);
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
-#endif
+    AOCLFFTZ_LOG(TRACE, params->logger_mode, "EXIT");
     return BENCH_SUCCESS;
 }
 

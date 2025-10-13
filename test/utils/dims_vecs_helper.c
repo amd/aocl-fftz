@@ -110,14 +110,14 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         {
             if (i + 1 >= strlen(arg) || !isdigit(arg[i + 1]))
             {
-                AOCLFFTZ_ERROR_UNFORMATTED("Integer value expected after "
+                AOCLFFTZ_ERROR("Integer value expected after "
                                            "'x' character.\n");
                 status = SIZE_PARSING_ERROR;
                 goto exit_func;
             }
             if ((is_stride != 0 && is_stride != 2))
             {
-                AOCLFFTZ_ERROR_UNFORMATTED("Only in_stride is not accepted. "
+                AOCLFFTZ_ERROR("Only in_stride is not accepted. "
                        "Please pass both in & out strides (or) no strides.\n");
                 status = SIZE_PARSING_ERROR;
                 goto exit_func;
@@ -129,7 +129,7 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         {
             if (i + 1 >= strlen(arg) || !isdigit(arg[i + 1]))
             {
-                AOCLFFTZ_ERROR_UNFORMATTED("Integer value expected "
+                AOCLFFTZ_ERROR("Integer value expected "
                                            "after 'v' character.\n");
                 status = SIZE_PARSING_ERROR;
                 goto exit_func;
@@ -154,7 +154,7 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
         {
             if (i + 1 >= strlen(arg) || !isdigit(arg[i + 1]))
             {
-                AOCLFFTZ_ERROR_UNFORMATTED("Integer value expected "
+                AOCLFFTZ_ERROR("Integer value expected "
                                            "after ':' character.\n");
                 status = SIZE_PARSING_ERROR;
                 goto exit_func;
@@ -180,7 +180,7 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
             {
                 if (val == 0)
                 {
-                    AOCLFFTZ_ERROR_FORMATTED("Invalid dim/vec size (zero) at "
+                    AOCLFFTZ_ERROR("Invalid dim/vec size (zero) at "
                                              "rank : %d",rank_count);
                     status = SIZE_PARSING_ERROR;
                     goto exit_func;
@@ -315,15 +315,15 @@ VOID set_default_dims_vecs(INT32 dim_rank, INT32 vec_rank,
         if (dims[i].in_stride == 0)
         {
             dims[i].in_stride = def_in_stride;
-            AOCLFFTZ_LOG_FORMATTED(
-                INFO, logger_mode,
+            AOCLFFTZ_LOG(
+                INFO, global_logger_mode,
                 "in stride for dim[%d] is set to default value", i);
         }
         if (dims[i].out_stride == 0)
         {
             dims[i].out_stride = def_out_stride;
-            AOCLFFTZ_LOG_FORMATTED(
-                INFO, logger_mode,
+            AOCLFFTZ_LOG(
+                INFO, global_logger_mode,
                 "out stride for dim[%d] is set to default value", i);
         }
     }
@@ -369,15 +369,15 @@ VOID set_default_dims_vecs(INT32 dim_rank, INT32 vec_rank,
         }
         if (vecs[i].in_stride == 0)
         {
-            AOCLFFTZ_LOG_FORMATTED(
-                INFO, logger_mode,
+            AOCLFFTZ_LOG(
+                INFO, global_logger_mode,
                 "in stride for vec[%d] is set to default value", i);
             vecs[i].in_stride = def_in_stride;
         }
         if (vecs[i].out_stride == 0)
         {
-            AOCLFFTZ_LOG_FORMATTED(
-                INFO, logger_mode,
+            AOCLFFTZ_LOG(
+                INFO, global_logger_mode,
                 "out stride for vec[%d] is set to default value", i);
             vecs[i].out_stride = def_out_stride;
         }

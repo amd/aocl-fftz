@@ -41,19 +41,16 @@
 
 INT32 setup_batched_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     // Turn the vector problem into a single set/unit problem to find its
     // solution
     sol->decomp_scheme->vec_rank = 1;
     sol->decomp_scheme->vecs[0].n = 1;
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return SOLVER_SUCCESS;
 }
 
@@ -61,10 +58,8 @@ INT32 setup_batched_solver(aoclfftz_solution_t *sol)
 INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
                               aoclfftz_solution_t *next_sol, INTP vec_rank)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     INT32 status = SOLVER_SUCCESS;
     INTP rnk_offset;
@@ -199,9 +194,8 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
         next_sol->dft_bufs->ct_buf_imag = ct_buf_imag;
     #endif
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return status;
 }
 
@@ -216,10 +210,8 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
  */
 static INT32 execute_batched_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     INT32 status = SOLVER_SUCCESS;
     aoclfftz_solution_t *next_sol = sol->next_sol[0];
@@ -238,9 +230,8 @@ static INT32 execute_batched_solver(aoclfftz_solution_t *sol)
     status = execute_batched_solver_internal(sol, next_sol,
                                              sol->decomp_scheme->vec_rank);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return status;
 }
 

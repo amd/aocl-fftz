@@ -42,10 +42,8 @@ INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
                                    aoclfftz_solution_t *next_sol,
                                    aoclfftz_realhelper_t *realhelper)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     // Turn the vector problem into a single set/unit problem to find its
     // solution if it is not a direct problem
@@ -70,19 +68,15 @@ INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
         sol->decomp_scheme->vecs[0].in_stride *= 2;
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
 }
 
 INT32 update_pointers_real_buffered_solution(aoclfftz_solution_t *sol, INTP tid)
 {
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
     INTP n = sol->decomp_scheme->dims->n;
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
     INT32 dt_bytes = SOL_DT_SIZE(sol);
 
     // problem_out points to the start addresses of out buffers
@@ -172,9 +166,7 @@ INT32 update_pointers_real_buffered_solution(aoclfftz_solution_t *sol, INTP tid)
     // this will be modified by buffered executor
     buffered_sol->dft_bufs->buffered->out_ptr = &sol->decomp_scheme->out_real;
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
 }
 
@@ -183,10 +175,8 @@ INT32 execute_real_mt_batched_solver_internal(aoclfftz_solution_t *sol,
                                               aoclfftz_solution_t **next_sol,
                                               INTP vec_rank)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     INT32 status = SOLVER_SUCCESS;
     INTP rnk_offset;
@@ -277,9 +267,7 @@ INT32 execute_real_mt_batched_solver_internal(aoclfftz_solution_t *sol,
             }
         }
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return status;
 }
 
@@ -288,10 +276,8 @@ INT32 execute_real_mt_batched_solver_internal(aoclfftz_solution_t *sol,
  */
 static INT32 execute_real_mt_batched_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     INT32 status = SOLVER_SUCCESS;
     aoclfftz_solution_t **next_sol = sol->next_sol;
@@ -307,9 +293,7 @@ static INT32 execute_real_mt_batched_solver(aoclfftz_solution_t *sol)
     status = execute_real_mt_batched_solver_internal(sol, next_sol,
                                                   sol->decomp_scheme->vec_rank);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return status;
 }
 

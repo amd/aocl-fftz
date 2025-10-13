@@ -43,10 +43,8 @@
 INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
                              aoclfftz_solution_t *next_sol, INTP m)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     // Setup next_sol with extended length m
     COPY_SOLUTION_OBJ(next_sol, sol);
@@ -71,18 +69,13 @@ INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
     next_sol->decomp_scheme->out_imag =
         MOVE_ADDR(sol->dft_bufs->bluestein->out, dt_bytes);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
 }
 
 static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     aoclfftz_solution_t *next_sol = sol->next_sol[0];
     UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
@@ -285,9 +278,7 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     next_sol->dft_bufs->ct_buf_imag = ct_buf_imag;
     next_sol->decomp_scheme->flags = initial_flags;
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return status;
 }
 

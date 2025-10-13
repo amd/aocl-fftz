@@ -41,10 +41,8 @@
 INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
                                  aoclfftz_realhelper_t *realhelper)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
     INT32 status = SOLVER_SUCCESS;
     realhelper->is_buffered_invoked = 1;
     INT32 num_aux_buf = realhelper->num_aux_buf;
@@ -60,18 +58,14 @@ INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
     ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_2, VOID,
                      num_aux_buf * n * dt_bytes);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return status;
 }
 
 static INT32 execute_real_buffered_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     INT32 ret = SOLVER_SUCCESS;
 
@@ -82,9 +76,7 @@ static INT32 execute_real_buffered_solver(aoclfftz_solution_t *sol)
 
     ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0]);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return ret;
 }
 

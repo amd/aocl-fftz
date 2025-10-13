@@ -106,7 +106,7 @@ VOID fuzz_input_buffer_test(const std::string& problem_size)
     status = find_dim_vec_ranks((CHAR *)prob.c_str(), &dim_rank, &vec_rank);
     if (status != PARSER_SUCCESS)
     {
-        AOCLFFTZ_ERROR_FORMATTED("Failed on finding dim_rank and vec_rank\n");
+        AOCLFFTZ_ERROR("Failed on finding dim_rank and vec_rank\n");
         return;
     }
 
@@ -393,7 +393,7 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
     }
     else
     {
-        AOCLFFTZ_ERROR_FORMATTED("Setup failed resulting handle as NULL\n");
+        AOCLFFTZ_ERROR("Setup failed resulting handle as NULL\n");
     }
 
     aoclfftz_destroy(handle);

@@ -256,9 +256,7 @@ static VOID twiddle_multiplier_double(aoclfftz_solution_t *sol)
 
 INT32 twiddle_multiplier(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     if (precision == DT_FLOAT)
     {
@@ -268,9 +266,7 @@ INT32 twiddle_multiplier(aoclfftz_solution_t *sol)
     {
         twiddle_multiplier_double(sol);
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return TW_SUCCESS;
 }
 
@@ -486,9 +482,7 @@ static INT32 twiddle_multiplier_inplace_nonbuffered_double(
 static inline INT32 twiddle_multiplier_inplace_buffered_float(
     aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
     INTP sets = sol->decomp_scheme->vecs[0].n;
     INTP radix = sol->decomp_scheme->dims[0].n;
     INTP N = sets * radix;
@@ -610,18 +604,14 @@ static inline INT32 twiddle_multiplier_inplace_buffered_float(
         }
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return TW_SUCCESS;
 }
 
 static inline INT32 twiddle_multiplier_inplace_buffered_double(
     aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
     INTP sets = sol->decomp_scheme->vecs[0].n;
     INTP radix = sol->decomp_scheme->dims[0].n;
     INTP N = sets * radix;
@@ -740,9 +730,7 @@ static inline INT32 twiddle_multiplier_inplace_buffered_double(
         }
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return TW_SUCCESS;
 }
 
@@ -750,9 +738,7 @@ static inline INT32 twiddle_multiplier_inplace_buffered_double(
 // store intermediate results
 INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     INTP sets = sol->decomp_scheme->vecs[0].n;
     INTP radix = sol->decomp_scheme->dims[0].n;
@@ -768,9 +754,7 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol)
         {
             status = twiddle_multiplier_inplace_nonbuffered_double(sol);
         }
-#ifdef AOCL_ENABLE_LOG
-        AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+        AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
         return status;
     }
 
@@ -799,9 +783,7 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol)
             status = twiddle_multiplier_inplace_buffered_double(sol);
         }
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return status;
 }
 

@@ -38,15 +38,12 @@
 
 #include "sanity.h"
 #include "test/bench/utils/bench_utils.h"
-#ifdef AOCL_ENABLE_LOG
 #include "utils/utils.h"
-#endif
+
 
 INT32 run_bench_on_sanity_mode(aoclfftz_bench_params_t *params)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
-#endif
+    AOCLFFTZ_LOG(TRACE, params->logger_mode, "ENTER");
     aoclfftz_bench_status_t bench_status = BENCH_SUCCESS;
     // Initialize FFT plan for testing
     VOID *handle = params->setup_problem(params);

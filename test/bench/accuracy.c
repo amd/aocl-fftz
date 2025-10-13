@@ -66,9 +66,8 @@
 INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                          INTP *out_idx_map, VOID *handle, VOID *input_buffer)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
-#endif
+    INT32 logger_mode = params->logger_mode;
+    AOCLFFTZ_LOG(TRACE, logger_mode, "ENTER");
     INT32 status = BENCH_SUCCESS;
     INT32 ret = AOCLFFTZ_SUCCESS;
     UINT32 is_align = params->aligned_alloc;
@@ -97,7 +96,7 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     ALLOC_INIT(in2, VOID, input_bytes, is_align);
     if (constants == NULL || in1 == NULL || in2 == NULL)
     {
-        AOCLFFTZ_ERROR_UNFORMATTED("MEMORY_FAILURE : "
+        AOCLFFTZ_ERROR("MEMORY_FAILURE : "
                                    "input buffer creation failed");
         status = MEMORY_FAILURE;
         goto exit_linearity_test;
@@ -107,7 +106,7 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     ALLOC_INIT(out_combined, VOID, output_bytes, is_align);
     if (out1 == NULL || out2 == NULL || out_combined == NULL)
     {
-       AOCLFFTZ_ERROR_UNFORMATTED("MEMORY_FAILURE : "
+       AOCLFFTZ_ERROR("MEMORY_FAILURE : "
                                   "output buffer creation failed");
         status = MEMORY_FAILURE;
         goto exit_linearity_test;
@@ -126,10 +125,8 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             params->seed = rand();
         }
         srand(params->seed);
-#ifdef AOCL_ENABLE_LOG
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,
-                               "Iteration: %d, Seed: %d", i, params->seed);
-#endif
+        AOCLFFTZ_LOG(INFO, logger_mode, "Iteration: %d, Seed: %d", i,
+                     params->seed);
 
         // Generate random input signals x[n] and y[n]
         params->prepare_input_data(
@@ -196,7 +193,7 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
         if (status != BENCH_SUCCESS)
         {
-            AOCLFFTZ_ERROR_FORMATTED("\nResults mismatch on accuracy mode => "
+            AOCLFFTZ_ERROR("\nResults mismatch on accuracy mode => "
                    "property: linearity, iteration: %d/%d, seed: %d\n",
                    i, params->num_iterations, params->seed);
             goto exit_linearity_test;
@@ -211,9 +208,7 @@ exit_linearity_test:
     FREE_ALLOCATED_MEM(out2, is_align);
     FREE_ALLOCATED_MEM(out_combined, is_align);
     FREE_ALLOCATED_MEM(constants, is_align);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
-#endif
+    AOCLFFTZ_LOG(TRACE, logger_mode, "EXIT");
     return status;
 }
 
@@ -241,6 +236,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
     UINT32 is_align = params->aligned_alloc;
     INTP input_bytes = params->sz_info.input_bytes;
     INTP output_bytes = params->sz_info.output_bytes;
+    INT32 logger_mode = params->logger_mode;
 
     // Buffer size adjustment for R2C/C2R in-place operations
     // TODO: Check and remove this MAX logic if possible
@@ -258,7 +254,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
     ALLOC_AND_COPY_PARAMS(params_reverse, params);
     if (params_reverse == NULL)
     {
-        AOCLFFTZ_ERROR_UNFORMATTED("MEMORY_FAILURE : "
+        AOCLFFTZ_ERROR("MEMORY_FAILURE : "
                                    "params_reverse creation failed");
         status = MEMORY_FAILURE;
         goto exit_impulse_transform_test;
@@ -268,7 +264,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
     ALLOC_INIT(in, VOID, input_bytes, is_align);
     if (in == NULL)
     {
-        AOCLFFTZ_ERROR_UNFORMATTED("MEMORY_FAILURE : "
+        AOCLFFTZ_ERROR("MEMORY_FAILURE : "
                                    "input buffer creation failed");
         status = MEMORY_FAILURE;
         goto exit_impulse_transform_test;
@@ -299,7 +295,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
     ALLOC_INIT(params_reverse->in, VOID, output_bytes, is_align);
     if (params_reverse->in == NULL)
     {
-        AOCLFFTZ_ERROR_UNFORMATTED("MEMORY_FAILURE : "
+        AOCLFFTZ_ERROR("MEMORY_FAILURE : "
                                    "input buffer creation failed");
         status = MEMORY_FAILURE;
         goto exit_impulse_transform_test;
@@ -314,7 +310,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
         ALLOC_INIT(params_reverse->out, VOID, input_bytes, is_align);
         if (params_reverse->out == NULL)
         {
-            AOCLFFTZ_ERROR_UNFORMATTED("MEMORY_FAILURE : "
+            AOCLFFTZ_ERROR("MEMORY_FAILURE : "
                                        "output buffer creation failed");
             status = MEMORY_FAILURE;
             goto exit_impulse_transform_test;
@@ -355,10 +351,9 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
             params->seed = rand();
         }
         srand(params->seed);
-#ifdef AOCL_ENABLE_LOG
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,
+        AOCLFFTZ_LOG(INFO, logger_mode,
                                "Iteration: %d, Seed: %d", i, params->seed);
-#endif
+
 
         // Generate impulse signal δ(n) at random position
         if (input_buffer == NULL)
@@ -410,7 +405,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
                                  params->sz_info.in_data_stride);
         if (status != BENCH_SUCCESS)
         {
-            AOCLFFTZ_ERROR_FORMATTED("\nResults mismatch on accuracy mode => "
+            AOCLFFTZ_ERROR("\nResults mismatch on accuracy mode => "
                    "property: transformation, iteration: %d/%d, seed: %d\n",
                    i, params->num_iterations, params->seed);
             goto exit_impulse_transform_test;
@@ -422,9 +417,7 @@ exit_impulse_transform_test:
     FREE_ALLOCATED_MEM(in, is_align);
     aoclfftz_destroy(handle_reverse);
     destroy_bench_param(params_reverse);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
-#endif
+    AOCLFFTZ_LOG(TRACE, logger_mode, "EXIT");
     return status;
 }
 
@@ -524,9 +517,8 @@ exit_impulse_transform_test:
 INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                          INTP *out_idx_map, VOID *handle, VOID *input_buffer)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
-#endif
+    INT32 logger_mode = params->logger_mode;
+    AOCLFFTZ_LOG(TRACE, logger_mode, "ENTER");
     INT32 status = BENCH_SUCCESS;
     INT32 ret = AOCLFFTZ_SUCCESS;
     INTP n = params->sz_info.n;
@@ -556,7 +548,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     ALLOC_UNINIT(in2, VOID, input_bytes, is_align);
     if (in1 == NULL || in2 == NULL)
     {
-        AOCLFFTZ_ERROR_UNFORMATTED("MEMORY_FAILURE : "
+        AOCLFFTZ_ERROR("MEMORY_FAILURE : "
                                    "input buffer creation failed");
         status = MEMORY_FAILURE;
         goto exit_timeshift_test;
@@ -567,7 +559,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     ALLOC_INIT(out2_fc, VOID, full_complex_bytes, is_align);
     if (out1 == NULL || out2 == NULL || out1_fc == NULL || out2_fc == NULL)
     {
-        AOCLFFTZ_ERROR_UNFORMATTED("MEMORY_FAILURE : "
+        AOCLFFTZ_ERROR("MEMORY_FAILURE : "
                                    "output buffer creation failed");
         status = MEMORY_FAILURE;
         goto exit_timeshift_test;
@@ -586,10 +578,8 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             params->seed = rand();
         }
         srand(params->seed);
-#ifdef AOCL_ENABLE_LOG
-        AOCLFFTZ_LOG_FORMATTED(INFO, params->logger_mode,
-                               "Iteration: %d, Seed: %d", i, params->seed);
-#endif
+        AOCLFFTZ_LOG(INFO, logger_mode, "Iteration: %d, Seed: %d", i,
+                     params->seed);
 
         // Generate random input signal
         if (input_buffer == NULL)
@@ -683,7 +673,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                 ALLOC_INIT(out_temp, VOID, full_complex_bytes, is_align);
                 if (out_temp == NULL)
                 {
-                    AOCLFFTZ_ERROR_UNFORMATTED("MEMORY_FAILURE : "
+                    AOCLFFTZ_ERROR("MEMORY_FAILURE : "
                                                "output buffer creation failed");
                     status = MEMORY_FAILURE;
                     goto exit_timeshift_test;
@@ -705,7 +695,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                                      params->sz_info.out_data_stride);
             if (status != BENCH_SUCCESS)
             {
-                AOCLFFTZ_ERROR_FORMATTED("\nResults mismatch on "
+                AOCLFFTZ_ERROR("\nResults mismatch on "
                        "accuracy mode => property: timeshift (dim = %td),"
                        "iteration: %d/%d, seed: %d\n",
                        d, i, params->num_iterations, params->seed);
@@ -722,9 +712,7 @@ exit_timeshift_test:
     FREE_ALLOCATED_MEM(out2, is_align);
     FREE_ALLOCATED_MEM(out1_fc, is_align);
     FREE_ALLOCATED_MEM(out2_fc, is_align);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "EXIT");
-#endif
+    AOCLFFTZ_LOG(TRACE, logger_mode, "EXIT");
     return status;
 }
 
@@ -744,9 +732,8 @@ exit_timeshift_test:
  */
 INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, params->logger_mode, "ENTER");
-#endif
+    INT32 logger_mode = params->logger_mode;
+    AOCLFFTZ_LOG(TRACE, logger_mode, "ENTER");
     INT32 status = BENCH_SUCCESS;
     VOID *handle = NULL;
 
@@ -785,7 +772,7 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
                  is_align);
     if (in_idx_map == NULL || out_idx_map == NULL)
     {
-        AOCLFFTZ_ERROR_UNFORMATTED("MEMORY_FAILURE : "
+        AOCLFFTZ_ERROR("MEMORY_FAILURE : "
                                    "idx_map creation failed");
         status = MEMORY_FAILURE;
         goto exit_accuracy_mode;

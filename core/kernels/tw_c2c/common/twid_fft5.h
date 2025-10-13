@@ -47,9 +47,7 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                     VOID *twd, UINT8 flag)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
     const FLOAT CRTM_5[4] = {0.559016994374947424102293417182819058860154590,
                              0.250000000000000000000000000000000000000000000,
                              0.951056516295153572116439333379382143405698634,
@@ -480,18 +478,14 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
     }
 #endif
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                     VOID *twd, UINT8 flag)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
     const DOUBLE CRTM_5[4] = {0.559016994374947424102293417182819058860154590,
                               0.250000000000000000000000000000000000000000000,
                               0.951056516295153572116439333379382143405698634,
@@ -811,9 +805,7 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
         ST_128_D(curr_out + out_strides[4], v_out4);
     }
 #endif
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 kfft_ REGISTER_KERNEL(UINT8 precision, UINT8 direction)

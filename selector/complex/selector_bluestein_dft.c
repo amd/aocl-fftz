@@ -44,10 +44,8 @@
 
 INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sel->solution->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INTP n = sel->solution->decomp_scheme->dims[0].n;
@@ -55,11 +53,10 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     // Get the extended length
     INTP m = get_extended_length(n);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_FORMATTED(INFO, logger_mode,
+    AOCLFFTZ_LOG(INFO, global_logger_mode,
                            "Problem length %td, extended Bluestein length %td",
                            n, m);
-#endif
+
 
     // To hold the selector to perform FFT with extended length m
     aoclfftz_selector_t *next_sel = NULL;
@@ -99,15 +96,13 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     // destroy only the selector not the solution within it
     destroy_selector_without_solution(next_sel);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return SELECTOR_SUCCESS;
 
 exit_bluestein_dft:
     destroy_selector_without_scratch_space(next_sel);
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit with failure");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit with failure");
+
     return ret;
 }

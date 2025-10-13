@@ -46,10 +46,8 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                            aoclfftz_realhelper_t *realhelper)
 {
     aoclfftz_decomp_scheme_t *decomp_scheme = sel->solution->decomp_scheme;
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
     aoclfftz_selector_t *cur_sel = NULL;
     INTP n = decomp_scheme->dims[0].n;
     INTP n_batch = decomp_scheme->vecs[0].n;
@@ -93,10 +91,9 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 
         if ((INTP)radix == n)
         {
-#ifdef AOCL_ENABLE_LOG
-            AOCLFFTZ_LOG_FORMATTED(TRACE, logger_mode,
+            AOCLFFTZ_LOG(TRACE, global_logger_mode,
                                    "Evaluating Radix-%td kernel", n);
-#endif
+
             for (INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
             {
                 INTP kloc = (kcat * NUM_KERNELS_IN_EACH_CATEGORY) + i;
@@ -199,9 +196,7 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 
     destroy_selector_without_scratch_space(cur_sel);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
 exit_direct_rdft:
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return ret;
 }

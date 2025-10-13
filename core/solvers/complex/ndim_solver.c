@@ -43,10 +43,8 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
                         aoclfftz_solution_t *n_minus1_sol,
                         aoclfftz_solution_t *outer_dim_sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     COPY_SOLUTION_OBJ_WO_DIMS(n_minus1_sol, sol);
     INT32 dim_rank = sol->decomp_scheme->dim_rank;
@@ -105,18 +103,14 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
                 sol->decomp_scheme->dims[i].out_stride;
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return SOLVER_SUCCESS;
 }
 
 static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     aoclfftz_solution_t *n_minus1_sol = sol->dft_bufs->nd_sol;
     aoclfftz_solution_t *outer_dim_sol = sol->next_sol[0];
@@ -166,9 +160,8 @@ static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
     // execute 1d sub-problem
     outer_dim_sol->solver->execute_solver(outer_dim_sol);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return SOLVER_SUCCESS;
 }
 

@@ -59,9 +59,7 @@ static VOID fft7c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                        VOID *twd, UINT8 flag)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
     const DOUBLE CRTM_7_1 = +0.222520933956314404288902564496794759466355569;
     const DOUBLE CRTM_7_2 = +0.900968867902419126236102319507445051165919162;
     const DOUBLE CRTM_7_3 = +0.623489801858733530525004884004239810632274731;
@@ -216,18 +214,14 @@ static VOID fft7c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_r = out_r + v_out_stride;
         out_i = out_i + v_out_stride;
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 static VOID fft7c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
                        VOID *twd, UINT8 flag)
 {
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Enter");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
     const FLOAT CRTM_7_1 = +0.222520933956314404288902564496794759466355569;
     const FLOAT CRTM_7_2 = +0.900968867902419126236102319507445051165919162;
     const FLOAT CRTM_7_3 = +0.623489801858733530525004884004239810632274731;
@@ -382,9 +376,7 @@ static VOID fft7c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_r = out_r + v_out_stride;
         out_i = out_i + v_out_stride;
     }
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, TRACE, "Exit");
-#endif
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
 kfft_ register_kernel_fft7c(UINT8 precision, UINT8 direction /* unused */)

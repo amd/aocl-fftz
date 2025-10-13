@@ -45,10 +45,8 @@
 INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                           kernel_t *kernel)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
     INTP batch = sol->decomp_scheme->vecs[0].n;
@@ -125,18 +123,15 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         cost->ops = cost->ops * batch;
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return status;
 }
 
 static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     kfft_ kernel = sol->solver->kernel_c2c->kfft;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
@@ -147,9 +142,8 @@ static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
            sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
            sol->decomp_scheme->vecs[0].n, strides, sol->twiddle, direction);
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return SOLVER_SUCCESS;
 }
 
@@ -159,10 +153,8 @@ static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
 // 2nd level -> problem batches & vec strides i.e. vec of the CT problem before decomposition
 static INT32 execute_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     kfft_ kernel = sol->solver->kernel_c2c->kfft;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
@@ -193,9 +185,8 @@ static INT32 execute_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
         out_imag = MOVE_ADDR(out_imag, pb_out_stride);
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return SOLVER_SUCCESS;
 }
 
@@ -205,10 +196,8 @@ static INT32 execute_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
 // 2nd level -> problem batches & vec strides i.e. vec of the CT problem before decomposition
 static INT32 execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
 {
-#ifdef AOCL_ENABLE_LOG
-    INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     kfft_ kernel = sol->solver->kernel_c2c->kfft;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
@@ -246,9 +235,8 @@ static INT32 execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
         out_imag = MOVE_ADDR(out_imag, ct_out_stride);
     }
 
-#ifdef AOCL_ENABLE_LOG
-    AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
-#endif
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
     return SOLVER_SUCCESS;
 }
 
