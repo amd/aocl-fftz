@@ -1998,9 +1998,12 @@ aoclfftz_solution_t *alloc_solution_wrapper(INT32 vec_rank, INT32 dim_rank)
     return alloc_solution(vec_rank, dim_rank);
 }
 aoclfftz_selector_t *alloc_selector_wrapper(INT32 vec_rank, INT32 dim_rank,
-                                            VOID *scratch_space)
+                                            VOID *scratch_space,
+                                            kernel_t *kertab_dft,
+                                            kernel_t * kertab_twid_dft)
 {
-    return alloc_selector(vec_rank, dim_rank, scratch_space, 0 /*unused*/);
+    return alloc_selector(vec_rank, dim_rank, scratch_space, kertab_dft,
+                          kertab_twid_dft, 0 /*unused*/);
 }
 VOID *alloc_twiddle_buffer_wrapper(INTP size, UINT32 dt_prec)
 {

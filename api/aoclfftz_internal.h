@@ -139,6 +139,8 @@
 #define NUM_KERNELS_IN_TABLE_REAL                                              \
     (NUM_KERNELS_IN_EACH_DFT_VARIANT * NUM_REAL_KERNELS_VARIANTS)
 
+#define MAX_NUM_KERNELS_IN_TABLE NUM_KERNELS_IN_TABLE_REAL // max of real and complex
+
 // AMD ZEN CPU Instruction approximated latency cycles
 #define AMD_ZEN_FP_FMA_CYCLES 4
 #define AMD_ZEN_FP_MUL_CYCLES 3

@@ -194,8 +194,10 @@ EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level,
 #endif
 }
 
-const CHAR* get_status_string(aoclfftz_error_type status) {
-    switch (status) {
+const CHAR* get_status_string(aoclfftz_error_type status)
+{
+    switch (status)
+    {
         case AOCLFFTZ_TIME_OUT:
             return "AOCLFFTZ_TIME_OUT";
         case AOCLFFTZ_MEMORY_FAILURE:

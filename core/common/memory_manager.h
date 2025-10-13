@@ -52,7 +52,8 @@ aoclfftz_solution_t **alloc_sol_array(UINT32 n);
 VOID alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix);
 
 aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
-                                    VOID *scratch_space, UINT32 nthreads);
+                                    VOID *scratch_space, kernel_t *kertab_dft,
+                                    kernel_t *kertab_twid_dft, UINT32 nthreads);
 
 VOID *alloc_twiddle_buffer(UINTP size, UINT32 dt_prec);
 VOID alloc_inplace_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr);

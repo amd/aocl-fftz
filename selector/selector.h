@@ -84,6 +84,8 @@ typedef struct aoclfftz_selector
 
     // A global buffer to help with transposition of twiddle multiplied elements
     void* scratch_space;
+    kernel_t* kertab_dft;
+    kernel_t* kertab_twid_dft;
 } aoclfftz_selector_t;
 
 /*
@@ -342,7 +344,7 @@ typedef struct aoclfftz_selector
 #define PREPARE_AND_SETUP_DFT(sel_obj, ret)                                    \
 {                                                                              \
     sel_obj->execute = register_execute_dft();                                 \
-    setup_inplace_buffers(sel_obj->solution);                                  \
+    setup_inplace_buffers(sel_obj);                                            \
     if (IS_REAL(sel_obj->solution->decomp_scheme->flags))                      \
     {                                                                          \
         aoclfftz_realhelper_t *realhelper;                                     \
@@ -809,12 +811,9 @@ typedef struct aoclfftz_selector
 }
 
 // Function declarations
-INT32 register_solvers_kernels(
-    kernel_t kertab_dft[NUM_KERNELS_IN_TABLE_COMPLEX],
-    kernel_t kertab_rdft[NUM_KERNELS_IN_TABLE_REAL],
-    kernel_t kertab_twid_dft[NUM_KERNELS_IN_TABLE_COMPLEX],
-    kernel_t kertab_twid_rdft[NUM_KERNELS_IN_TABLE_REAL], INT32 dt, INT32 dir,
-    INT32 is_real, INT32 cpu_flags);
+INT32 register_solvers_kernels(kernel_t *kertab_dft, kernel_t *kertab_twid_dft,
+                               INT32 dt, INT32 dir, INT32 is_real,
+                               INT32 cpu_flags);
 INT32 selector_driver_dft_(aoclfftz_selector_t *sel);
 INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
                             aoclfftz_realhelper_t *realhelper);
@@ -849,7 +848,7 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                        aoclfftz_realhelper_t *realhelper);
 VOID destroy_handle(VOID *handle);
 VOID fuse_vecs(aoclfftz_solution_t *sol);
-VOID setup_inplace_buffers(aoclfftz_solution_t *solution);
+VOID setup_inplace_buffers(aoclfftz_selector_t *sel);
 VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx);
 INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);
 
