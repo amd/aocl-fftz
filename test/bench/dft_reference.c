@@ -475,7 +475,7 @@ VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
     // Use DOUBLE for intermediate variables to improve accuracy of accumulation
     DOUBLE e[DATA_STRIDE], mul_buf[DATA_STRIDE];
     FLOAT sign =
-        (params->dir == BACKWARD || params->fft_type == C2R) ? 1.0f : -1.0f;
+        (params->dir == BACKWARD) ? 1.0f : -1.0f;
     FLOAT *in_f = (FLOAT *)in;
     FLOAT *out_f = (FLOAT *)out;
     INT32 rank = params->dim_rank;
@@ -567,7 +567,7 @@ VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
 {
     DOUBLE e[DATA_STRIDE], mul_buf[DATA_STRIDE];
     DOUBLE sign =
-        (params->dir == BACKWARD || params->fft_type == C2R) ? 1.0f : -1.0f;
+        (params->dir == BACKWARD) ? 1.0f : -1.0f;
     DOUBLE *in_d = (DOUBLE *)in;
     DOUBLE *out_d = (DOUBLE *)out;
     INT32 rank = params->dim_rank;

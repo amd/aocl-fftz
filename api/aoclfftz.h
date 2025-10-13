@@ -100,11 +100,11 @@ typedef enum
  */
 typedef enum
 {
-    None = 0,     /**< `0` : Disable all logging */
-    Error = 1,    /**< `1` : Only error logs indicating failures */
-    Info = 2,     /**< `2` : Detailed debugging logs */
-    Debug = 3,    /**< `3` : General informational logs about execution */
-    Trace = 4     /**< `4` : Most detailed level of logging with complete execution trace */
+    AOCLFFTZ_LOG_NONE = 0,     /**< `0` : Disable all logging */
+    AOCLFFTZ_LOG_ERROR = 1,    /**< `1` : Only error logs indicating failures */
+    AOCLFFTZ_LOG_INFO = 2,     /**< `2` : Detailed debugging logs */
+    AOCLFFTZ_LOG_DEBUG = 3,    /**< `3` : General informational logs about execution */
+    AOCLFFTZ_LOG_TRACE = 4     /**< `4` : Most detailed level of logging with complete execution trace */
 } aoclfftz_logger_mode;
 
 /**

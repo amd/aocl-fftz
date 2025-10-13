@@ -275,7 +275,7 @@ public:
         }
         problem->pthr_fft.dynamic_load_model = DEFAULT_DYNAMIC_LOAD_MODEL;
         problem->pthr_fft.num_threads = DEFAULT_NUM_THREADS;
-        problem->cntrl_params.logger_mode = None;
+        problem->cntrl_params.logger_mode = AOCLFFTZ_LOG_NONE;
         problem->cntrl_params.measure_stats = 0;
         problem->cntrl_params.opt_level = -1;
         problem->cntrl_params.opt_off = 1;

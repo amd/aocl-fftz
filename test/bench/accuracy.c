@@ -278,12 +278,10 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
     if (params->fft_type == R2C)
     {
         params_reverse->fft_type = C2R;
-        params_reverse->dir = params->dir;
     }
     else if (params->fft_type == C2R)
     {
         params_reverse->fft_type = R2C;
-        params_reverse->dir = params->dir;
     }
     else if (params->fft_type == C2C && params->dir == FORWARD)
     {
