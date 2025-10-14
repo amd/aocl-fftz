@@ -129,12 +129,6 @@ foreach(FILE ${GTEST_SRC_FILES})
     if(NOT "${TNAME}" MATCHES "[A-Za-z0-9_]*_gtest")
         continue()
     endif()
-    # FIXME: skipping selector tests for testing since it is not valid after
-    # direct-solver changes in post-selection
-    if("${TNAME}" MATCHES "selector_")
-        message("   skipping ${TNAME}")
-        continue()
-    endif()
     add_executable(${TNAME} ${FILE})
     add_dependencies(${TNAME} ${deps_googletest})
     target_link_libraries(${TNAME} ${gtest_lib_name} gtest gtest_main Threads::Threads)
