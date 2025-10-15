@@ -177,6 +177,16 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
     // iterate through the solution list on ndim branches first
     while (curr_sol)
     {
+        // TODO: Refine this condition
+        // check if the current solution is a batched solver with its dim_rank
+        // is 2 or the current dim_rank is 3
+        // this is required to handle the outermost dim's batched solver
+        UINT8 is_3rd_dim_batched =
+            curr_sol &&
+            (curr_sol->solver->solver_type == SOLVER_BATCHED ||
+             curr_sol->solver->solver_type == SOLVER_MT_BATCHED) &&
+            (curr_sol->decomp_scheme->dim_rank == 2 || dim_rank == 3);
+
         // traverse nd_sol first so inner batched nodes after NDim are handled
         if (curr_sol->solver->solver_type == SOLVER_NDIM &&
             curr_sol->dft_bufs->nd_sol)
@@ -210,7 +220,7 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
             INTP batched_vec_out_stride;
 
             // TODO: Handle strided dim_rank == 3 and dim_rank > 3 cases
-            if (dim_rank == 3 && curr_sol->dft_bufs->use_2D_buffering)
+            if (is_3rd_dim_batched && curr_sol->dft_bufs->use_2D_buffering)
             {
                 // For 3D unit-strided C2C problems, when compact buffer approach is used
                 // preserve few batches in batched solver and move the rest to direct solver
@@ -297,7 +307,7 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
             // make the multi-threaded batched_solver as single threaded
             // FIXME: Handle non-3d cases properly
             if (batched_sol->solver->solver_type == SOLVER_MT_BATCHED &&
-                dim_rank != 3)
+                !is_3rd_dim_batched)
             {
                 batched_sol->decomp_scheme->thread_info->n_threads = 1;
                 batched_sol->decomp_scheme->thread_info->avl_threads = 1;
@@ -310,7 +320,7 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
             // For 3D unit-strided C2C problems, when compact buffer approach is used
             // reduce the strides of ct_buffer to match the smaller ct_buffer size
             INTP ct_buffer_stride_factor = 1;
-            if (dim_rank == 3 && curr_sol->dft_bufs->use_2D_buffering)
+            if (is_3rd_dim_batched && curr_sol->dft_bufs->use_2D_buffering)
             {
                 ct_buffer_stride_factor =
                     batched_sol->decomp_scheme->dims[0].out_stride /
@@ -335,7 +345,7 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
                     // Multi-threaded batched solver won't be used for 3D
                     // problems when compact buffer approach is used
                     if (batched_n_threads > 1 &&
-                        (dim_rank != 3 ||
+                        (!is_3rd_dim_batched ||
                          !curr_sol->dft_bufs->use_2D_buffering))
                     {
                         if (is_col_major)
@@ -471,15 +481,8 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
                         if (((curr_sol->solver->solver_type == SOLVER_BATCHED ||
                               curr_sol->solver->solver_type ==
                                   SOLVER_MT_BATCHED)) &&
-                            (curr_sol->decomp_scheme->decomp_level > 0))
-                        {
-                            // ct_buffer offset should be moved across batches
-                            // so setting reset_ct_buf_offset to 0
-                            curr_sol->dft_bufs->reset_ct_buf_offset = 0;
-                            curr_sol->decomp_scheme->dims[0].out_stride /= ct_buffer_stride_factor;
-                            curr_sol->decomp_scheme->vecs[0].out_stride /= ct_buffer_stride_factor;
-                        }
-                        else
+                            (curr_sol->decomp_scheme->decomp_level == 0) &&
+                            is_3rd_dim_batched)
                         {
                             // in a 3D problem (when 2D_buffering is used), the
                             // outermost dim will reuse the smaller 2D size
@@ -489,6 +492,14 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
                             // so setting reset_ct_buf_offset to 1 to prevent
                             // ct_buffer movement
                             curr_sol->dft_bufs->reset_ct_buf_offset = 1;
+                        }
+                        else
+                        {
+                            // ct_buffer offset should be moved across batches
+                            // so setting reset_ct_buf_offset to 0
+                            curr_sol->dft_bufs->reset_ct_buf_offset = 0;
+                            curr_sol->decomp_scheme->dims[0].out_stride /= ct_buffer_stride_factor;
+                            curr_sol->decomp_scheme->vecs[0].out_stride /= ct_buffer_stride_factor;
                         }
                     }
                 }
@@ -502,14 +513,8 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
             {
                 if (((curr_sol->solver->solver_type == SOLVER_BATCHED ||
                       curr_sol->solver->solver_type == SOLVER_MT_BATCHED)) &&
-                    (curr_sol->decomp_scheme->decomp_level > 0))
-                {
-                    // ct_buffer offset should be moved across batches
-                    // so setting reset_ct_buf_offset to 0
-                    curr_sol->dft_bufs->reset_ct_buf_offset = 0;
-                    curr_sol->dft_bufs->use_2D_buffering = 0;
-                }
-                else
+                    (curr_sol->decomp_scheme->decomp_level == 0) &&
+                    is_3rd_dim_batched)
                 {
                     // in a 3D problem (when 2D_buffering is used), the
                     // outermost dim will reuse the smaller 2D size ct_buffer
@@ -519,6 +524,13 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
                     // so setting reset_ct_buf_offset to 1 to prevent
                     // ct_buffer movement
                     curr_sol->dft_bufs->reset_ct_buf_offset = 1;
+                }
+                else
+                {
+                    // ct_buffer offset should be moved across batches
+                    // so setting reset_ct_buf_offset to 0
+                    curr_sol->dft_bufs->reset_ct_buf_offset = 0;
+                    curr_sol->dft_bufs->use_2D_buffering = 0;
                 }
             }
         }

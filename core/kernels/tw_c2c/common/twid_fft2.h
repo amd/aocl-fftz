@@ -270,7 +270,7 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
 #if defined(KERNEL_USE_AVX512)
     INTP remaining_sets = n % NUM_SETS_D;
     INTP do_256_whole = (INTP)(remaining_sets >= NUM_SETS_256_D);
-        INTP cnt_256 = load_multi_cols * (N * NUM_SETS_512_D);
+    INTP cnt_256 = load_multi_cols * (N * NUM_SETS_512_D);
     INTP cnt_128 =
         load_multi_cols * (N * NUM_SETS_512_D + do_256_whole * NUM_SETS_256_D);
 #elif defined(KERNEL_USE_AVX256)
