@@ -99,6 +99,7 @@
         UINT32 is_align = src->aligned_alloc;                                  \
         ALLOC_UNINIT(dst, aoclfftz_bench_params_t,                             \
                         sizeof(aoclfftz_bench_params_t), is_align);            \
+        if (dst != NULL) {                                                     \
         memcpy(dst, src, sizeof(aoclfftz_bench_params_t));                     \
         ALLOC_UNINIT(dst->dims, aoclfftz_dim_t_64_,                            \
                         sizeof(aoclfftz_dim_t_64_) * src->dim_rank, is_align); \
@@ -108,6 +109,7 @@
                sizeof(aoclfftz_dim_t_64_) * src->dim_rank);                    \
         memcpy(dst->vecs, src->vecs,                                           \
                sizeof(aoclfftz_dim_t_64_) * src->vec_rank);                    \
+        }                                                                      \
     }
 
 #define VALIDATE_AND_GET_INT(str, buff, result, ret, min_val)                  \
@@ -120,8 +122,8 @@
 
 #define VALIDATE_AND_GET_DOUBLE(str, result, ret, min_val, max_val)            \
     {                                                                          \
-        INT32 length;                                                          \
-        DOUBLE temp;                                                           \
+        INT32 length = 0;                                                      \
+        DOUBLE temp = 0.0;                                                     \
         result = atof(str);                                                    \
         ret = SSCANF(str, "%lf %n", &temp, &length) != 1;                      \
         ret |= strlen(str) != length;                                          \

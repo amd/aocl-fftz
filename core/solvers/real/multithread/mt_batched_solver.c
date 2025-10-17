@@ -115,6 +115,11 @@ INT32 update_pointers_real_buffered_solution(aoclfftz_solution_t *sol, INTP tid)
         sol = sol->next_sol[0];
     }
 
+    if (sol == NULL)
+    {
+        return SOLVER_FAILURE;
+    }
+
     // storing aux buffers in a temp variable
     aoclfftz_solution_t *buffered_sol = sol;
     VOID *aux_in = MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_2,
@@ -149,6 +154,10 @@ INT32 update_pointers_real_buffered_solution(aoclfftz_solution_t *sol, INTP tid)
             SWAP_BUFFERS(aux_in, aux_out);
         }
         sol = sol->next_sol[0];
+    }
+    if (sol == NULL)
+    {
+        return SOLVER_FAILURE;
     }
     // update last CT solution's in/out
     sol->decomp_scheme->in_real = aux_in;

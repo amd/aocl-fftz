@@ -38,6 +38,7 @@
  *  @author Jeya R
  */
 
+#include <limits.h>
 #include <time.h>
 #include "test/bench/performance.h"
 #include "test/bench/utils/register_functions.h"
@@ -79,7 +80,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     // prepare random seed value
     if (params->use_random_seed)
     {
-        params->seed = (INT32)time(0);
+        params->seed = (INT32)((INT64)time(0) % (INT_MAX));
     }
 
 #ifdef AOCL_ENABLE_LOG
