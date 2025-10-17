@@ -91,7 +91,7 @@ typedef struct aoclfftz_selector
  */
 #define FOR_EACH_SOLUTION(var, start_solution)                                 \
     for (aoclfftz_solution_t *var = start_solution; var != NULL;               \
-         var = var->next_sol ? *(var->next_sol) : NULL)
+         var = (var != NULL && var->next_sol) ? *(var->next_sol) : NULL)
 
 // macro functions
 #ifdef MULTI_THREADING

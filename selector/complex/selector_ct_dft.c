@@ -85,10 +85,26 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     // Create empty solutions to copy cur_sel & cur_sel_m
     sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
+    if (sel->solution->next_sol == NULL)
+    {
+        goto exit_ct_dft;
+    }
     sel->solution->next_sol[0] = alloc_solution(vec_rank, dim_rank);
     aoclfftz_solution_t *next_sol = sel->solution->next_sol[0];
+    if (next_sol == NULL)
+    {
+        goto exit_ct_dft;
+    }
     next_sol->next_sol = alloc_sol_array(1 /*n_threads*/);
+    if (next_sol->next_sol == NULL)
+    {
+        goto exit_ct_dft;
+    }
     next_sol->next_sol[0] = alloc_solution(vec_rank, dim_rank);
+    if (next_sol->next_sol[0] == NULL)
+    {
+        goto exit_ct_dft;
+    }
 
     COPY_SOLUTION_OBJ(org_sol, sel->solution);
     org_sol->dft_bufs->scratch_space = sel->scratch_space;
@@ -147,11 +163,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
             goto exit_ct_dft;
         }
 
-        if (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
-            AOCLFFTZ_AUTO_SELECTOR)
-        {
-            // Call twiddle multiplier
-        }
+        // TODO: if selector mode is AOCLFFTZ_AUTO_SELECTOR call twiddle multiplier
 
         // Call selector for the radix-r sub-problem
 #if 0
@@ -191,10 +203,15 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 sel->cost_analysis->time = cur_sel->cost_analysis->time +
                                            cur_sel_m->cost_analysis->time;
 
+                // Verify all pointers are valid before proceeding
+                if (next_sol->next_sol == NULL)
+                {
+                    goto exit_ct_dft;
+                }
+
                 // Destroy the solutions except the first 3 objects
                 // since it points to current CT, CT-R, CT-M respectively
-                if (sel->solution != NULL && next_sol != NULL &&
-                                             next_sol->next_sol[0] != NULL)
+                if (sel->solution != NULL && next_sol->next_sol[0] != NULL)
                 {
                     destroy_solutions(next_sol->next_sol[0]->next_sol, 1);
                 }

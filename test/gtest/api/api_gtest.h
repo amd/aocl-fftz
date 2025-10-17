@@ -96,15 +96,15 @@ public:
         problem = NULL;
         handle = NULL;
         problem = new ProblemType();
-        // Set default flags to out-of-place, in-order, forward, complex, FFT
-        problem->flags = {0};
-        problem->flags.fft_placement = 1;
-
         if (problem == NULL)
         {
             throw std::
             runtime_error("Memory allocation failed for the problem.");
         }
+        // Set default flags to out-of-place, in-order, forward, complex, FFT
+        problem->flags = {0};
+        problem->flags.fft_placement = 1;
+
         create_default_pdesc(); // Create a sample problem for testing
     }
 
@@ -121,36 +121,33 @@ public:
     // Function to clean up the problem descriptor
     VOID cleanup_problem()
     {
-        /* Default value of is_inplace is 0,
-         * If flags are invalid, free the memory buffer based on default flags */
-        bool is_inplace = isValidFlags(problem->flags) ?
-                                    !flags.fft_placement : 0;
         if (problem == NULL)
         {
             return;
         }
-        else
+        /* Default value of is_inplace is 0,
+         * If flags are invalid, free the memory buffer based on default flags */
+        bool is_inplace = isValidFlags(problem->flags) ?
+                                    !flags.fft_placement : 0;
+        if (problem->in)
         {
-            if (problem->in)
-            {
-                delete[] problem->in;
-                problem->in = NULL;
-            }
-            if (problem->out && !is_inplace)
-            {
-                delete[] problem->out;
-            }
-            problem->out = NULL;
-            if (problem->dims)
-            {
-                delete[] problem->dims;
-                problem->dims = NULL;
-            }
-            if (problem->vecs)
-            {
-                delete[] problem->vecs;
-                problem->vecs = NULL;
-            }
+            delete[] problem->in;
+            problem->in = NULL;
+        }
+        if (problem->out && !is_inplace)
+        {
+            delete[] problem->out;
+        }
+        problem->out = NULL;
+        if (problem->dims)
+        {
+            delete[] problem->dims;
+            problem->dims = NULL;
+        }
+        if (problem->vecs)
+        {
+            delete[] problem->vecs;
+            problem->vecs = NULL;
         }
     }
 

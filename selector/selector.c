@@ -1720,6 +1720,10 @@ VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
 
 VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
 {
+    if (solution == NULL)
+    {
+        return;
+    }
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
     UINT32 dt_prec = DT_PRECISION_FLAG(solution->decomp_scheme->flags);
     if (FFT_DIR(solution->decomp_scheme->flags) == FORWARD_FFT_DIR)
@@ -1742,6 +1746,10 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                 {
                     curr->twiddle->TW = prev->twiddle->TW;
                     curr = curr->next_sol[0];
+                }
+                if (curr == NULL)
+                {
+                    return;
                 }
                 INTP radix = curr->decomp_scheme->dims[0].n;
                 INTP no_of_groups = curr->solver->kernel_r2hcf->count > 0

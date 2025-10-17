@@ -89,7 +89,7 @@ class PerformanceTest : public benchmark::Fixture {
         for (INTP idx = 0; idx < input_length * DATA_STRIDE; ++idx)
         {
             // range: [-10.0, 10.0) with 3 decimal precision
-            in[idx] = (T)((rand() % 20000) / 100.0) - 10.0;
+            in[idx] = (T)((rand() % 20000) / 1000.0) - 10.0;
         }
         T *out;
         ALLOC_ALIGN_INIT(out, T, output_length * DATA_STRIDE * sizeof(T));
@@ -169,7 +169,7 @@ class PerformanceTest : public benchmark::Fixture {
         for (INTP idx = 0; idx < input_length * DATA_STRIDE; ++idx)
         {
             // range: [-10.0, 10.0) with 3 decimal precision
-            in[idx] = (T)((rand() % 2000) / 200.0) - 10.0;
+            in[idx] = (T)((rand() % 20000) / 1000.0) - 10.0;
         }
         T *out;
         ALLOC_ALIGN_INIT(out, T, output_length * DATA_STRIDE * sizeof(T));

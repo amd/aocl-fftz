@@ -821,17 +821,9 @@ cleanup:
                 {
                     if (!j)
                     {
-                        // first element within one offest
-                        if (is_shifted_data)
-                        {
-                            shifted_dft_data[strides[j]] = data[strides[j]];
-                            is_shifted_data = 0;
-                        }
-                        else
-                        {
-                            standard_dft_data[strides[j]] = data[strides[j]];
-                            is_shifted_data = 1;
-                        }
+                        // first element within one offset (is_shifted_data is always 0 here)
+                        standard_dft_data[strides[j]] = data[strides[j]];
+                        is_shifted_data = 1;
                         j++;
                     }
                     else if (j == radix * buf_size_multiplier - 1)
@@ -911,17 +903,9 @@ cleanup:
                 {
                     if (!j)
                     {
-                        // first element within one offest
-                        if (is_shifted_data)
-                        {
-                            data[strides[j]] = shifted_dft_data[strides[j]];
-                            is_shifted_data = false;
-                        }
-                        else
-                        {
-                            data[strides[j]] = standard_dft_data[strides[j]];
-                            is_shifted_data = true;
-                        }
+                        // first element within one offset (is_shifted_data is always false here)
+                        data[strides[j]] = standard_dft_data[strides[j]];
+                        is_shifted_data = true;
                         j++;
                     }
                     else if (j == radix * buf_size_multiplier - 1)
