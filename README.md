@@ -117,6 +117,7 @@ ACCURACY_WITH_DFT                   |  Enables accuracy mode to run with DFT (Di
 ASAN                                |  Enables address sanitizer checks. Supported only on Linux Debug build (Disabled by default)
 BUILD_DOC                           |  Build documentation for library (Disabled by default)
 BUILD_STATIC_LIBS                   |  Build static library (Default build type is shared library)
+BUILD_THIRD_PARTY_WRAPPERS          |  Build all the supported FFTZ third party wrappers (Disabled by default)
 CODE_COVERAGE                       |  Enables source code coverage and generates coverage report. Supported only on Linux with GCC compiler (Disabled by default)
 ENABLE_AVX128                       |  Compiles library with AVX 128-bit kernels support (Enabled by default)
 ENABLE_AVX256                       |  Compiles library with AVX 256-bit kernels support (Enabled by default)
