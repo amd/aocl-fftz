@@ -1331,14 +1331,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     UINT32 num_threads = problem->pthr_fft.num_threads;
-#ifdef MULTI_THREADING
-    if (problem->pthr_fft.dynamic_load_model)
-    {
-        num_threads = omp_get_num_procs();
-        AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Dynamic load model is set, taking "
-                    "available logical CPUs (%d), as num_threads", num_threads);
-    }
-#endif
+
     // allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, num_threads);
     if (sel_obj == NULL)
@@ -1412,14 +1405,7 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     UINT32 num_threads = problem->pthr_fft.num_threads;
-#ifdef MULTI_THREADING
-    if (problem->pthr_fft.dynamic_load_model)
-    {
-        num_threads = omp_get_num_procs();
-        AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Dynamic load model is set, taking "
-                    "available logical CPUs (%d), as num_threads", num_threads);
-    }
-#endif
+
     // allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, num_threads);
     if (sel_obj == NULL)
@@ -1488,14 +1474,7 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     UINT32 num_threads = problem->pthr_fft.num_threads;
-#ifdef MULTI_THREADING
-    if (problem->pthr_fft.dynamic_load_model)
-    {
-        num_threads = omp_get_num_procs();
-        AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Dynamic load model is set, taking "
-                    "available logical CPUs (%d), as num_threads", num_threads);
-    }
-#endif
+
     // allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, num_threads);
     if (sel_obj == NULL)
@@ -1564,14 +1543,7 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     UINT32 num_threads = problem->pthr_fft.num_threads;
-#ifdef MULTI_THREADING
-    if (problem->pthr_fft.dynamic_load_model)
-    {
-        num_threads = omp_get_num_procs();
-        AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Dynamic load model is set, taking "
-                    "available logical CPUs (%d), as num_threads", num_threads);
-    }
-#endif
+
     // allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, num_threads);
     if (sel_obj == NULL)
