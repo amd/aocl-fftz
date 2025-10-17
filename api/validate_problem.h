@@ -264,24 +264,24 @@ static inline UINT32 get_max_num_threads(VOID)
 
 #define VALIDATE_N_THREADS_AND_DYN_LOAD_MODEL(num_threads, dynamic_load_model) \
 {                                                                              \
-    if (dynamic_load_model != 0 && dynamic_load_model != 1)                    \
+    if (dynamic_load_model != 0)                                               \
     {                                                                          \
-        AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Invalid dynamic_load_model (%d) "  \
-             "running with default value (0)", dynamic_load_model);            \
+        AOCLFFTZ_LOG_UNFORMATTED(INFO, INFO, "dynamic_load_model is not "      \
+             "supported, running with default value (0)");                     \
         dynamic_load_model = 0;                                                \
     }                                                                          \
     UINT32 max_threads = get_max_num_threads();                                \
-    if ((num_threads < 1) && !dynamic_load_model)                              \
+    if (num_threads < 1)                                                       \
     {                                                                          \
-        AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Requested num_threads value (%d) " \
+        AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Requested num_threads value (%u) " \
              "is less than minimum required value (1), defaulting to single "  \
              "threaded execution", num_threads);                               \
         num_threads = 1;                                                       \
     }                                                                          \
-    else if ((num_threads > max_threads) && !dynamic_load_model)               \
+    else if (num_threads > max_threads)                                        \
     {                                                                          \
         AOCLFFTZ_LOG_FORMATTED(INFO, INFO, "Requested num_threads "            \
-             "(%d) exceeds available logical CPUs (%d), using %d\n as "        \
+             "(%u) exceeds available logical CPUs (%u), using %u\n as "        \
              "num_threads", num_threads, max_threads, max_threads);            \
         num_threads = max_threads;                                             \
     }                                                                          \

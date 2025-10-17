@@ -157,6 +157,7 @@ VOID fuzz_input_buffer_test(const std::string& problem_size)
                  params->aligned_alloc);
     ALLOC_INIT(params->out, VOID, params->sz_info.output_bytes,
                params->aligned_alloc);
+
     register_functions(params);
     std::vector<dt_t> inBuf(size * params->sz_info.in_data_stride);
     absl::BitGen prng;
@@ -164,16 +165,16 @@ VOID fuzz_input_buffer_test(const std::string& problem_size)
     {
         for (int i = 0; i < size * params->sz_info.in_data_stride; ++i)
         {
-            inBuf[i] = fuzztest::InRange(FLT_MIN * RANGE_LIMITER,
-                             FLT_MAX / RANGE_LIMITER).GetRandomValue(prng);
+            inBuf[i] = fuzztest::InRange(-10000.0f,
+                                         10000.0f).GetRandomValue(prng);
         }
     }
     else
     {
         for (int i = 0; i < size * params->sz_info.in_data_stride; ++i)
         {
-            inBuf[i] = fuzztest::InRange(DBL_MIN * RANGE_LIMITER,
-                             DBL_MAX / RANGE_LIMITER).GetRandomValue(prng);
+            inBuf[i] = fuzztest::InRange(-10000.0,
+                                         10000.0).GetRandomValue(prng);
         }
     }
     dt_t *input = NULL;
@@ -379,7 +380,6 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
     params->order = IS_OUT_OF_ORDER(flags) ? OUT_OF_ORDER : IN_ORDER;
     params->num_threads = pthr_fft.num_threads;
     params->dynamic_load_model = pthr_fft.dynamic_load_model;
-    params->opt_level = cntrl_params.opt_level;
     params->logger_mode = cntrl_params.logger_mode;
     params->measure_stats = cntrl_params.measure_stats;
 
