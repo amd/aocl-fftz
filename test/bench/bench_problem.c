@@ -476,7 +476,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                "FFT\n");
         bench_params->dir = FORWARD;
     }
-    else if (bench_params->fft_type == C2R && bench_params->dir == BACKWARD)
+    else if (bench_params->fft_type == C2R && bench_params->dir == FORWARD)
     {
         printf("INFO: C2R FFT is inherently backward, running as backward real "
                "FFT\n");
@@ -1000,10 +1000,8 @@ VOID show_help_menu(VOID)
         "backward [default: f]\n"
         "-f, --fft-type           'c2c' for complex to complex, 'r2c' for real "
         "to complex, 'c2r' for complex to real [default: c2c]\n"
-        "                         NOTE: 'c2r forward' is same as 'r2c "
-        "backward' and 'c2r backward' is same as 'r2c forward'\n"
-        "                               Hence c2r mode will be mapped to its "
-        "r2c mode\n"
+        "                         NOTE: 'c2r' is inherently backward FFT and "
+        "'r2c' is inherently forward FFT\n"
         "-i, --iters              number of iterations [default: 10 for "
         "`performance` mode and 1 for `accuracy`, `sanity` modes]\n"
         "-s, --seed               specify manual seed value, random seed will "
