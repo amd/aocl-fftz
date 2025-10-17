@@ -74,7 +74,6 @@ option(ENABLE_AVX256 "Compiles library with AVX 256-bit kernels support (Enabled
 option(ENABLE_AVX512 "Compiles library with AVX 512-bit kernels support (Enabled by default)" ON)
 option(ENABLE_FMA "Enable -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)" ON)
 option(ENABLE_MULTI_THREADING "Compiles library with multi-threading support using OpenMP (Disabled by default)" OFF)
-#option(ENABLE_MPI "Compiles library with MPI support (Disabled by default)" OFF)
 option(ENABLE_STRICT_WARNINGS "Enable compiler flags to treat all warnings as errors (Enabled by default)" ON)
 option(FUZZTEST "Enable Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)" OFF)
 option(VALGRIND "Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)" OFF)
@@ -134,7 +133,6 @@ endif()
 file(GLOB SELECTOR_SRC_FILES selector/*.c selector/*.h
                              selector/complex/*.c selector/complex/*.h
                              selector/real/*.c selector/real/*.h)
-file(GLOB THREADS_SRC_FILES threads/*.c threads/*.h)
 file(GLOB UTILS_SRC_FILES utils/*.c utils/*.cpp utils/*.h)
 
 #set the expected path variables
