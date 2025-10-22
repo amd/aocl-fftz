@@ -38,7 +38,6 @@
  */
 
 #include "core/executor.h"
-#include "core/common/realfft_utils.h"
 
 static INT32 execute_dft(aoclfftz_executor_t *executor_obj)
 {

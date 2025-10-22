@@ -54,8 +54,7 @@ INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
     next_sol->decomp_scheme->dims[0].in_stride = 1;
     next_sol->decomp_scheme->dims[0].out_stride = 1;
 
-    UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+    UINT32 dt_bytes = SOL_DT_SIZE(sol);
     INT32 ret = SOLVER_SUCCESS;
     ret = alloc_bluestein_buffers(sol->dft_bufs->bluestein,
                                   m * DATA_STRIDE * dt_bytes);

@@ -40,26 +40,25 @@
 #include "core/solvers/real/direct_solver.h"
 #include "api/aoclfftz_internal.h"
 #include "core/common/memory_manager.h"
-#include "core/common/realfft_utils.h"
 #include "core/common/strides.h"
 #include "core/common/twiddle.h"
 #include "selector/selector.h"
+#include "core/solvers/real/direct_solver_utils.h"
 
-/* This function will setup the direct solution with the required information
-   to execute both direct and CT problems.
-
-   Even for a CT problem, most of the kernel execution information is required
-   by a direct solution.
-
-   Setup includes the following steps:
-     1. Set the strides for different kernel variants (C2C, R2HC, R2HCF)
-     2. Setting up the no. of batch for each kernel variant
-     3. Updating the input & output buffers for CT problem/sub-problem
-     4. Cost computation
-
-   NOTE: This direct solver will handle both direct and CT problems.
-   TODO: Introduce two different solvers one to setup and execute real direct
-         problems and another one for CT problems.
+/** This function will setup the direct solution with the required information
+ *  to execute both direct and CT problems.
+ *  Even for a CT problem, most of the kernel execution information is required
+ *  by a direct solution.
+ *  Setup includes the following steps:
+ *    1. Set the strides for different kernel variants (C2C, R2HC, R2HCF)
+ *    2. Setting up the no. of batch for each kernel variant
+ *    3. Updating the input & output buffers for CT problem/sub-problem
+ *    4. Cost computation
+ *  NOTE: This direct solver will handle both direct and CT problems.
+ *  TODO: Separate solver responsibilities for better maintainability:
+ *        - Direct solver should handle only direct FFT problems (R2HC kernels)
+ *        - CT solver should handle only Cooley-Tukey decomposition problems
+ *         (C2C + R2HC/R2HCF kernels)
  */
 INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                                const kernel_t *kernel_c2c,
@@ -71,359 +70,15 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     INT32 logger_mode = sol->decomp_scheme->cntrl_params->logger_mode;
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Enter");
 #endif
-
-    INTP batch = sol->decomp_scheme->vecs[0].n;
-    INTP radix = sol->decomp_scheme->dims[0].n;
-    UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
     INT32 status = SOLVER_SUCCESS;
-    UINT8 sets_c2c = kernel_c2c->sets[precision - 2];
-    UINT8 sets_r2hc = kernel_r2hc->sets[precision - 2];
-    UINT8 sets_r2hcf = kernel_r2hcf->sets[precision - 2];
-    INTP p = 0;
-    INTP p_last = 0;
-    INTP q = 0;
-    if (is_backward)
-    {
-        q = realhelper->q;
-        p = realhelper->p;
-        p_last = realhelper->p / radix;
-    }
-    else
-    {
-        p_last = realhelper->p;
-        q = realhelper->q / radix;
-        p = realhelper->p * radix;
-    }
-    UINT32 is_even = p_last % 2 == 0;
-    UINT32 is_first_stage = realhelper->stage == 0;
-    UINT32 is_last_stage = realhelper->is_last_stage;
 
-    // Compute batches and strides for different kernel types
-    // Original strides for the given problem
-    INTP org_in_stride = sol->decomp_scheme->dims[0].in_stride;
-    INTP org_out_stride = sol->decomp_scheme->dims[0].out_stride;
-    INTP org_v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
-    INTP org_v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
-    // Newly computed strides
-    INTP in_stride = 1;
-    INTP out_stride = 1;
-    INTP v_in_stride = 1;
-    INTP v_out_stride = 1;
-    INTP c2c_in_stride = 1;
-    INTP c2c_out_stride = 1;
+    set_kernel_count_in_each_group(sol, realhelper);
 
-    if (realhelper->is_CT)
-    {
-        sol->solver->kernel_c2c->count = (p_last / 2 - is_even) * q;
-        sol->solver->kernel_r2hc->count = is_even ? 0 : q;
-        sol->solver->kernel_r2hcf->count = is_even ? q : 0;
-        // TODO: Reduce redundant assignments
-        if (is_backward)
-        {
-            if (is_first_stage)
-            {
-                in_stride = p_last * org_in_stride;
-                out_stride = batch;
-                v_in_stride = p * org_in_stride;
-                v_out_stride = p_last;
-                c2c_in_stride = org_in_stride;
-            }
-            else if (is_last_stage)
-            {
-                in_stride = p_last;
-                out_stride = batch * org_out_stride;
-                v_in_stride = p;
-                v_out_stride = p_last * org_out_stride;
-            }
-            else
-            {
-                in_stride = p_last;
-                out_stride = batch;
-                v_in_stride = p;
-                v_out_stride = p_last;
-            }
-        }
-        else
-        {
-            if (is_first_stage)
-            {
-                in_stride = batch * org_in_stride;
-                out_stride = p_last;
-                v_in_stride = p_last * org_in_stride;
-                v_out_stride = p;
-            }
-            else if (is_last_stage)
-            {
-                in_stride = batch;
-                out_stride = p_last * org_out_stride;
-                v_in_stride = p_last;
-                v_out_stride = p * org_out_stride;
-                c2c_out_stride = org_out_stride;
-            }
-            else
-            {
-                in_stride = batch;
-                out_stride = p_last;
-                v_in_stride = p_last;
-                v_out_stride = p;
-            }
-        }
-    }
-    else // direct problem
-    {
-        sol->solver->kernel_c2c->count = 0;
-        sol->solver->kernel_r2hc->count = batch;
-        sol->solver->kernel_r2hcf->count = 0;
-        in_stride = org_in_stride;
-        out_stride = org_out_stride;
-        v_in_stride = is_backward ? org_v_in_stride * 2 : org_v_in_stride;
-        v_out_stride = is_backward ? org_v_out_stride : org_v_out_stride * 2;
-    }
+    allocate_and_setup_stride(sol, *realhelper);
 
-    INTP no_of_groups = sol->solver->kernel_r2hcf->count > 0
-                            ? sol->solver->kernel_r2hcf->count
-                            : sol->solver->kernel_r2hc->count;
-    INTP group_size = sol->solver->kernel_c2c->count / no_of_groups;
+    update_ct_buffers(sol, realhelper);
 
-    // Compute strides for different kernels from the base stride values
-    UINT32 input_in_full_complex = 0;
-    UINT32 output_in_full_complex = 0;
-    if (realhelper->is_CT)
-    {
-        if (is_backward) // CT backward
-        {
-            input_in_full_complex = is_first_stage;
-            output_in_full_complex = 0;
-        }
-        else // CT forward
-        {
-            input_in_full_complex = 0;
-            output_in_full_complex = is_last_stage;
-        }
-    }
-    else
-    {
-        input_in_full_complex = is_backward;
-        output_in_full_complex = !is_backward;
-    }
-
-    // forward  : r2hc : real input -> half-complex output
-    // backward : hc2r : half-complex input -> real output
-    UINT32 is_half_complex_input = is_backward ? 1 : 0;
-    UINT32 is_half_complex_output = is_backward ? 0 : 1;
-
-    // FIXME: Moving this inside the if condition below causes issue with
-    // the C2R CT problem
-    if (sol->strides_grp->strides->in_strides == NULL)
-    {
-        ALLOC_ALIGN_UNINIT(sol->strides_grp->strides->in_strides, INTP,
-                           radix * sizeof(INTP));
-        ALLOC_ALIGN_UNINIT(sol->strides_grp->strides->out_strides, INTP,
-                           radix * sizeof(INTP));
-    }
-    if (sol->solver->kernel_c2c->count != 0)
-    {
-        if (sol->strides_grp->strides->in_strides == NULL)
-        {
-            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides->in_strides, INTP,
-                               radix * sizeof(INTP));
-            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides->out_strides, INTP,
-                               radix * sizeof(INTP));
-        }
-        populate_stride_array(sol->strides_grp->strides->in_strides,
-                              is_backward ? in_stride * 2 : in_stride, radix,
-                              0, 0); /* half-complex flags are false */
-        populate_stride_array(sol->strides_grp->strides->out_strides,
-                              is_backward ? out_stride : out_stride * 2, radix,
-                              0, 0); /* half-complex flags are false */
-        if (sol->strides_grp->strides_c2c->in_strides == NULL)
-        {
-            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_c2c->in_strides, INTP,
-                               radix * sizeof(INTP));
-            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_c2c->out_strides, INTP,
-                               radix * sizeof(INTP));
-        }
-        memcpy(sol->strides_grp->strides_c2c->in_strides,
-               sol->strides_grp->strides->in_strides, radix * sizeof(INTP));
-        memcpy(sol->strides_grp->strides_c2c->out_strides,
-               sol->strides_grp->strides->out_strides, radix * sizeof(INTP));
-
-        if (is_backward)
-        {
-            prepare_real_c2c_kernel_strides(
-                sol->strides_grp->strides->in_strides,
-                sol->strides_grp->strides->in_strides, radix, p, c2c_in_stride);
-        }
-        else
-        {
-            prepare_real_c2c_kernel_strides(
-                sol->strides_grp->strides->out_strides,
-                sol->strides_grp->strides->out_strides, radix, p,
-                c2c_out_stride);
-        }
-    }
-    if (sol->solver->kernel_r2hc->count != 0)
-    {
-        if (sol->strides_grp->strides_r2hc->in_strides == NULL)
-        {
-            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hc->in_strides,
-                               INTP, radix * sizeof(INTP));
-            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hc->out_strides,
-                               INTP, radix * sizeof(INTP));
-        }
-        populate_stride_array(sol->strides_grp->strides_r2hc->in_strides,
-                              in_stride, radix, is_half_complex_input,
-                              input_in_full_complex);
-        populate_stride_array(sol->strides_grp->strides_r2hc->out_strides,
-                              out_stride, radix, is_half_complex_output,
-                              output_in_full_complex);
-    }
-    if (sol->solver->kernel_r2hcf->count != 0)
-    {
-        if (sol->strides_grp->strides_r2hcf->in_strides == NULL)
-        {
-            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hcf->in_strides,
-                               INTP, radix * 2 * sizeof(INTP));
-            ALLOC_ALIGN_UNINIT(sol->strides_grp->strides_r2hcf->out_strides,
-                               INTP, radix * 2 * sizeof(INTP));
-        }
-        populate_stride_array(sol->strides_grp->strides_r2hcf->in_strides,
-                              is_backward ? in_stride / 2 : in_stride,
-                              is_backward ? radix * 2 : radix,
-                              is_half_complex_input, input_in_full_complex);
-        populate_stride_array(sol->strides_grp->strides_r2hcf->out_strides,
-                              is_backward ? out_stride : out_stride / 2,
-                              is_backward ? radix : radix * 2,
-                              is_half_complex_output, output_in_full_complex);
-        prepare_fused_kernel_strides(
-            is_backward ? sol->strides_grp->strides_r2hcf->out_strides
-                        : sol->strides_grp->strides_r2hcf->in_strides,
-            radix, group_size * 2 + 1);
-    }
-
-    sol->strides_grp->strides->v_in_stride = v_in_stride;
-    sol->strides_grp->strides->v_out_stride = v_out_stride;
-    sol->strides_grp->strides_c2c->v_in_stride = v_in_stride;
-    sol->strides_grp->strides_c2c->v_out_stride = v_out_stride;
-    sol->strides_grp->strides_r2hc->v_in_stride = v_in_stride;
-    sol->strides_grp->strides_r2hc->v_out_stride = v_out_stride;
-    sol->strides_grp->strides_r2hcf->v_in_stride = v_in_stride;
-    sol->strides_grp->strides_r2hcf->v_out_stride = v_out_stride;
-
-    UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
-
-    // Update the in/out buffers of direct solution for CT problem
-    //
-    // solution from of CT problem after buffered sol
-    // ... -> buffered -> direct -> CT -> direct -> ... -> CT -> direct
-    //
-    // Here, the buffered will have in & out of the current batch
-    //
-    // Buffered solver will change the input/output buffers of direct solution
-    // in the following way:
-    //
-    // buffered    [in -> out]
-    // |--> direct   [in -> aux1]
-    // |----> CT
-    // |----> direct   [aux1 -> aux2]
-    // |------> CT
-    // |------> direct   [aux2 -> aux1]
-    // |--------> CT
-    // |--------> direct   [aux1 -> out]
-    // this example is for a 3 level CT problem
-
-    if (realhelper->is_CT)
-    {
-        VOID *in_real = NULL;
-        VOID *out_real = NULL;
-        if (realhelper->stage & 0x1) // odd stage
-        {
-            in_real = sol->dft_bufs->buffered->aux_buffer_2;
-            out_real = sol->dft_bufs->buffered->aux_buffer_1;
-        }
-        else // even stage
-        {
-            in_real = sol->dft_bufs->buffered->aux_buffer_1;
-            out_real = sol->dft_bufs->buffered->aux_buffer_2;
-        }
-        if (realhelper->stage == 0)
-        {
-            sol->decomp_scheme->out_real = out_real;
-            sol->decomp_scheme->out_imag = MOVE_ADDR(out_real, dt_bytes);
-        }
-        else if (realhelper->is_last_stage)
-        {
-            sol->decomp_scheme->in_real = in_real;
-            sol->decomp_scheme->in_imag = MOVE_ADDR(in_real, dt_bytes);
-        }
-        else
-        {
-            sol->decomp_scheme->in_real = in_real;
-            sol->decomp_scheme->in_imag = MOVE_ADDR(in_real, dt_bytes);
-            sol->decomp_scheme->out_real = out_real;
-            sol->decomp_scheme->out_imag = MOVE_ADDR(out_real, dt_bytes);
-        }
-    }
-
-    // Compute cost
-    if (GET_SELECTOR_MODE(sol->decomp_scheme->flags) ==
-        AOCLFFTZ_FIXED_SELECTOR)
-    {
-        /** Fixed mode **/
-        ops_cycles_t ops_cycles_c2c, ops_cycles_r2hc, ops_cycles_r2hcf;
-        cost->time = 0;
-        INT64 c2c_cost = 0;
-        INT64 r2hc_cost = 0;
-        INT64 r2hcf_cost = 0;
-        if (sol->solver->kernel_c2c->count != 0)
-        {
-            ops_cycles_c2c = kernel_c2c->k_ops_cnt(precision, is_backward);
-            c2c_cost = ((ops_cycles_c2c.fma * AMD_ZEN_FP_FMA_CYCLES) +
-                        (ops_cycles_c2c.mul * AMD_ZEN_FP_MUL_CYCLES) +
-                        (ops_cycles_c2c.add * AMD_ZEN_FP_ADD_CYCLES) +
-                        (ops_cycles_c2c.move * AMD_ZEN_FP_MOVE_CYCLES) +
-                        (ops_cycles_c2c.perm * AMD_ZEN_FP_PERM_CYCLES) +
-                        (ops_cycles_c2c.other * AMD_ZEN_FP_OTHER_CYCLES));
-            if (sol->solver->kernel_c2c->count >= sets_c2c)
-            {
-                c2c_cost = (c2c_cost + sets_c2c - 1) / sets_c2c;
-            }
-            c2c_cost = c2c_cost * sol->solver->kernel_c2c->count;
-        }
-        if (sol->solver->kernel_r2hc->count != 0)
-        {
-            ops_cycles_r2hc = kernel_r2hc->k_ops_cnt(precision, is_backward);
-            r2hc_cost = ((ops_cycles_r2hc.fma * AMD_ZEN_FP_FMA_CYCLES) +
-                         (ops_cycles_r2hc.mul * AMD_ZEN_FP_MUL_CYCLES) +
-                         (ops_cycles_r2hc.add * AMD_ZEN_FP_ADD_CYCLES) +
-                         (ops_cycles_r2hc.move * AMD_ZEN_FP_MOVE_CYCLES) +
-                         (ops_cycles_r2hc.perm * AMD_ZEN_FP_PERM_CYCLES) +
-                         (ops_cycles_r2hc.other * AMD_ZEN_FP_OTHER_CYCLES));
-            if (sol->solver->kernel_r2hc->count >= sets_r2hc)
-            {
-                r2hc_cost = (r2hc_cost + sets_r2hc - 1) / sets_r2hc;
-            }
-            r2hc_cost = r2hc_cost * sol->solver->kernel_r2hc->count;
-        }
-        if (sol->solver->kernel_r2hcf->count != 0)
-        {
-            ops_cycles_r2hcf = kernel_r2hcf->k_ops_cnt(precision, is_backward);
-            r2hcf_cost = ((ops_cycles_r2hcf.fma * AMD_ZEN_FP_FMA_CYCLES) +
-                          (ops_cycles_r2hcf.mul * AMD_ZEN_FP_MUL_CYCLES) +
-                          (ops_cycles_r2hcf.add * AMD_ZEN_FP_ADD_CYCLES) +
-                          (ops_cycles_r2hcf.move * AMD_ZEN_FP_MOVE_CYCLES) +
-                          (ops_cycles_r2hcf.perm * AMD_ZEN_FP_PERM_CYCLES) +
-                          (ops_cycles_r2hcf.other * AMD_ZEN_FP_OTHER_CYCLES));
-            if (sol->solver->kernel_r2hcf->count >= sets_r2hcf)
-            {
-                r2hcf_cost = (r2hcf_cost + sets_r2hcf - 1) / sets_r2hcf;
-            }
-            r2hcf_cost = r2hcf_cost * sol->solver->kernel_r2hcf->count;
-        }
-        cost->ops = c2c_cost + r2hc_cost + r2hcf_cost;
-    }
+    compute_cost(sol, cost, kernel_c2c, kernel_r2hc, kernel_r2hcf);
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG_UNFORMATTED(TRACE, logger_mode, "Exit");
@@ -431,17 +86,146 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     return status;
 }
 
-/* This function will execute the kernels for both real direct and CT problems.
+/**
+ * Executes R2HC (Real to Half-Complex) kernels and processes direct-only
+ * FFT problems.
+ */
+static inline VOID execute_r2hc_kernels(aoclfftz_solution_t *sol, VOID *in, VOID *out)
+{
+    if (sol->solver->kernel_r2hc->count == 0)
+    {
+        return;
+    }
 
-   For real direct problem, it will execute R2HC kernels.
-   For real CT problems, following steps will be performed:
-     1. Call R2HC/R2HCF kernels
-     2. Perform twiddle multiplication for the C2C kernel points
-     3. Get the no. of groups and group size for C2C kernels
-     4. Update C2C kernel strides for each kernel within a group
-     5. Execute C2C kernels
-     6. Get conjugates for the required C2C points
-        TODO: Move conjugates functionality into C2C kernels
+    kfft_ kernel_r2hc = sol->solver->kernel_r2hc->kfft;
+    kernel_r2hc(in, in, out, out, sol->solver->kernel_r2hc->count,
+                sol->strides_grp->strides_r2hc, sol->twiddle,
+                FFT_DIR(sol->decomp_scheme->flags));
+}
+
+/**
+ * Executes Real-to-Half-Complex Fused (R2HCF) kernels
+ */
+static inline VOID execute_r2hcf_kernels(aoclfftz_solution_t *sol, VOID *in, VOID *out)
+{
+    // Execute R2HCF kernels (for CT problems)
+    if (sol->solver->kernel_r2hcf->count == 0)
+    {
+        return;
+    }
+
+    kfft_ kernel_r2hcf = sol->solver->kernel_r2hcf->kfft;
+    kernel_r2hcf(in, in, out, out, sol->solver->kernel_r2hcf->count,
+                 sol->strides_grp->strides_r2hcf, sol->twiddle,
+                 FFT_DIR(sol->decomp_scheme->flags));
+}
+
+
+static inline VOID execute_c2c_kernels(aoclfftz_solution_t *sol, VOID *in, VOID *out)
+{
+    if (sol->solver->kernel_c2c->count == 0)
+    {
+        return;
+    }
+
+    UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    INTP radix = sol->decomp_scheme->dims[0].n;
+    kfft_ kernel_c2c = sol->solver->kernel_c2c->kfft;
+    UINT32 is_fwd = FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR;
+
+    INTP num_groups = NUM_RFFT_GROUPS(sol->solver);
+    INTP num_c2c_per_group = sol->solver->kernel_c2c->count / num_groups;
+    INTP freq_factor =
+        (sol->decomp_scheme->vecs[0].n * radix) / (num_groups);
+
+    INTP half_stride_start = (radix + 1) >> 1;
+    INTP half_stride_n = radix - half_stride_start;
+
+    INTP batch_in_stride =
+        is_input_prob_buffer(sol)
+            ? sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE
+            : DATA_STRIDE;
+    INTP batch_out_stride =
+        is_output_prob_buffer(sol)
+            ? sol->decomp_scheme->dims[0].out_stride * DATA_STRIDE
+            : DATA_STRIDE;
+    if (is_fwd)
+    {
+        if (sol->solver->solver_type != SOLVER_REAL_DIRECT_TWIDDLE)
+        {
+            twiddle_multiplier_for_real(sol, freq_factor);
+        }
+        memcpy(sol->strides_grp->strides_c2c->out_strides + half_stride_start,
+               sol->strides_grp->strides->out_strides + half_stride_start,
+               half_stride_n * sizeof(INTP));
+
+        aoclfftz_twiddle_t tw_local = *(sol->twiddle);
+        for (INTP group_id = 0; group_id < num_c2c_per_group; group_id++)
+        {
+            // This for loop computes C2C batches within the groups,
+            // while the kernel does across multiple groups
+
+            kernel_c2c(in, MOVE_ADDR(in, dt_bytes), out,
+                       MOVE_ADDR(out, dt_bytes), num_groups,
+                       sol->strides_grp->strides_c2c, &tw_local,
+                       FFT_DIR(sol->decomp_scheme->flags));
+
+            compute_conjugates(out, radix, num_groups,
+                               sol->strides_grp->strides_c2c->out_strides,
+                               sol->strides_grp->strides_c2c->v_out_stride,
+                               DT_PRECISION_FLAG(sol->decomp_scheme->flags));
+
+            update_asymmetric_strides(sol->strides_grp->strides_c2c->out_strides,
+                                     radix, batch_out_stride);
+
+            // move twiddle buffer to next batch, i.e. `num_groups` points ahead
+            tw_local.TW =
+                MOVE_ADDR(tw_local.TW, num_groups * DATA_STRIDE * dt_bytes);
+            // Move the in & out buffers to point the next batch
+            in = MOVE_ADDR(in, batch_in_stride * dt_bytes);
+            out = MOVE_ADDR(out, batch_out_stride * dt_bytes);
+        }
+    }
+    else
+    {
+        assert(sol->solver->solver_type != SOLVER_REAL_DIRECT_TWIDDLE);
+
+        memcpy(sol->strides_grp->strides_c2c->in_strides + half_stride_start,
+               sol->strides_grp->strides->in_strides + half_stride_start,
+               half_stride_n * sizeof(INTP));
+        for (INTP group_id = 0; group_id < num_c2c_per_group; group_id++)
+        {
+            compute_conjugates(in, radix, num_groups,
+                               sol->strides_grp->strides_c2c->in_strides,
+                               sol->strides_grp->strides_c2c->v_in_stride,
+                               DT_PRECISION_FLAG(sol->decomp_scheme->flags));
+
+            kernel_c2c(in, MOVE_ADDR(in, dt_bytes), out,
+                       MOVE_ADDR(out, dt_bytes), num_groups,
+                       sol->strides_grp->strides_c2c, NULL,
+                       FFT_DIR(sol->decomp_scheme->flags));
+
+            update_asymmetric_strides(sol->strides_grp->strides_c2c->in_strides,
+                                     radix, batch_in_stride);
+
+            in = MOVE_ADDR(in, batch_in_stride * dt_bytes);
+            out = MOVE_ADDR(out, batch_out_stride * dt_bytes);
+        }
+        twiddle_multiplier_for_real(sol, freq_factor);
+    }
+}
+
+/**
+ * @brief Executes the real direct solver on the given solution
+ *
+ * A RFFT stage may have:
+ * - 0 or 1 R2HC kernels
+ * - 0 or more C2C kernels
+ * - 0 or 1 R2HCF kernels for CT stages
+ * This function computes all the kernels and calls the next solution if available.
+ *
+ * @param sol Pointer to the solution structure containing solver configuration
+ * @return SOLVER_SUCCESS on successful execution, error code otherwise
  */
 static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
 {
@@ -451,222 +235,44 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
 #endif
 
     INT32 ret = SOLVER_SUCCESS;
-
-    kfft_ kernel_r2hc = sol->solver->kernel_r2hc->kfft;
-
     VOID *in = sol->decomp_scheme->in_real;
     VOID *out = sol->decomp_scheme->out_real;
+    UINT32 is_forward = FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR;
 
-    // Kernel execution order : R2HC / R2HCF -> C2C
-    // R2HC and R2HCF will not come together
-
-    // Execute R2HC Kernels
-    if (sol->solver->kernel_r2hc->count != 0)
+    execute_r2hc_kernels(sol, in, out);
+    if (IS_DIRECT_ONLY_PROBLEM(sol))
     {
-        kernel_r2hc(in, in, out, out, sol->solver->kernel_r2hc->count,
-                    sol->strides_grp->strides_r2hc, sol->twiddle,
-                    FFT_DIR(sol->decomp_scheme->flags));
-        UINT8 is_direct_only_problem = IS_DIRECT_ONLY_PROBLEM(sol);
-        if (is_direct_only_problem)
-        {
-            if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
-            {
-                set_zero_for_dc_and_nyquist_batched(sol);
-            }
-            return ret;
-        }
+        assert(sol->solver->kernel_r2hc->count > 0 &&
+               sol->solver->kernel_c2c->count == 0 &&
+               sol->solver->kernel_r2hcf->count == 0);
+
+        //NOTE: DIRECT problems don't have C2C, R2HCF kernels
+        if (is_forward)
+            set_zero_for_dc_and_nyquist_batched(sol);
+
+        return ret;
     }
 
-    UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
-    UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
+    execute_r2hcf_kernels(sol, in, out);
 
-    kfft_ kernel_c2c = sol->solver->kernel_c2c->kfft;
-    kfft_ kernel_r2hcf = sol->solver->kernel_r2hcf->kfft;
+    UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    INTP in_offset = is_input_prob_buffer(sol)
+                         ? sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE
+                         : 1;
+    INTP out_offset = is_output_prob_buffer(sol)
+                          ? sol->decomp_scheme->dims[0].out_stride * DATA_STRIDE
+                          : 1;
+    // move in,out pointers to the start of C2C points, by skipping R2HC points
+    in = MOVE_ADDR(in, in_offset * dt_bytes);
+    out = MOVE_ADDR(out, out_offset * dt_bytes);
 
-    INTP radix = sol->decomp_scheme->dims[0].n;
-    INTP no_of_groups = sol->solver->kernel_r2hcf->count > 0
-                            ? sol->solver->kernel_r2hcf->count
-                            : sol->solver->kernel_r2hc->count;
-    INTP group_size = sol->solver->kernel_c2c->count / no_of_groups;
-    INTP p = (sol->decomp_scheme->vecs[0].n * radix) / no_of_groups;
+    execute_c2c_kernels(sol, in, out);
 
-    // strides between C2C kernels
-    INTP c2c_in_stride = 1;
-    INTP c2c_out_stride = 1;
-    // strides between R2HC/R2HCF and C2C kernel
-    INTP r2hc_in_stride = 1;
-    INTP r2hc_out_stride = 1;
-    // Set strides based on the CT stages
-    // TODO: Fix the design
-    // Current version of CT uses strides only in first and last CT stages
-    // i.e. strided input points will be read and the intermediate outputs
-    // will be stored without strides and the final output will be written to
-    // output buffer with strides
-    UINT32 is_last_stage = sol->next_sol == NULL;
-    UINT32 is_last_forward_stage = !is_backward && is_last_stage;
-    UINT32 is_first_backward_stage = is_backward && no_of_groups == 1;
-    if (is_first_backward_stage)
-    {
-        c2c_in_stride = sol->decomp_scheme->dims[0].in_stride;
-        r2hc_in_stride = (c2c_in_stride - 1) * 2 + 1;
-    }
-    else if (is_last_forward_stage)
-    {
-        c2c_out_stride = sol->decomp_scheme->dims[0].out_stride;
-        r2hc_out_stride = (c2c_out_stride - 1) * 2 + 1;
-    }
-
-    // Execute R2HCF Kernels
-    if (sol->solver->kernel_r2hcf->count != 0)
-    {
-        kernel_r2hcf(in, in, out, out, sol->solver->kernel_r2hcf->count,
-                     sol->strides_grp->strides_r2hcf, sol->twiddle,
-                     FFT_DIR(sol->decomp_scheme->flags));
-    }
-
-    in = MOVE_ADDR(in, r2hc_in_stride * dt_bytes);
-    out = MOVE_ADDR(out, r2hc_out_stride * dt_bytes);
-    if (is_last_stage)
-    {
-        out = MOVE_ADDR(out, dt_bytes);
-    }
-
-    // Execute C2C Kernels
-    if (sol->solver->kernel_c2c->count != 0)
-    {
-        INTP half_stride_start = (radix + 1) >> 1;
-        INTP half_stride_n = radix - half_stride_start;
-
-        if (is_backward)
-        {
-            // Move in buffer by one element only for the first CT stage
-            // where the no. of group of C2C kernel is 1
-            if (no_of_groups == 1)
-            {
-                in = MOVE_ADDR(in, dt_bytes);
-            }
-
-            // Copy unmodified in-stride values from strides to strides_c2c
-            // and then modify strides_c2c values within loop iterations
-            memcpy(sol->strides_grp->strides_c2c->in_strides + half_stride_start,
-                   sol->strides_grp->strides->in_strides + half_stride_start,
-                   half_stride_n * sizeof(INTP));
-
-            INTP stride_offset = c2c_in_stride * 4;
-            for (INTP group_id = 0; group_id < group_size; group_id++)
-            {
-                // Take complex conjucate for the required points
-                // TODO: this should be moved into C2C kernel
-                compute_conjugates(
-                    in, radix, no_of_groups,
-                    sol->strides_grp->strides_c2c->in_strides,
-                    sol->strides_grp->strides_c2c->v_in_stride,
-                    DT_PRECISION_FLAG(sol->decomp_scheme->flags));
-
-                // Kernel execution
-                // TODO: Support twiddle kernels for C2R problems
-                kernel_c2c(in, MOVE_ADDR(in, dt_bytes),
-                           out, MOVE_ADDR(out, dt_bytes), no_of_groups,
-                           sol->strides_grp->strides_c2c,
-                           NULL, // TODO: Pass twiddle buffer
-                           FFT_DIR(sol->decomp_scheme->flags));
-
-                // Update the C2C in-strides for next iteration by subtracting
-                // it by stride_offset
-                INTP *strides = sol->strides_grp->strides_c2c->in_strides +
-                                half_stride_start;
-                for (INTP i = 0; i < half_stride_n; i++)
-                {
-                    strides[i] -= stride_offset;
-                }
-
-                // Move the in & out buffers to point the next valid data
-                in = MOVE_ADDR(in, c2c_in_stride * 2 * dt_bytes);
-                out = MOVE_ADDR(out, c2c_out_stride * 2 * dt_bytes);
-            }
-
-            // TODO: twiddle kernels are not supported for C2R problems,
-            // so falling back to non-twiddle kernels + twiddle multiplication
-            // approach.
-            assert(sol->solver->solver_type != SOLVER_REAL_DIRECT_TWIDDLE);
-
-            // TODO:
-            // Real CT executor uses Direct-R -> CT -> Direct-M flow, so in this
-            // approach it is not possible to get the Direct-R info for the next
-            // CT executor to perform twiddle multiplication.
-            // Hence the twiddle multiplication is performed here itself.
-
-            // Selective twiddle multiplication on C2C kernel output points only
-            twiddle_multiplier_for_real(sol, p);
-        }
-        else
-        {
-            // do twiddle multiplication when twiddle kernels are not used
-            if (sol->solver->solver_type != SOLVER_REAL_DIRECT_TWIDDLE)
-            {
-                // Selective twiddle multiplication on C2C kernel input points only
-                twiddle_multiplier_for_real(sol, p);
-            }
-
-            // Copy unmodified out-stride values from strides to strides_c2c
-            // and then modify strides_c2c values within loop iterations
-            memcpy(sol->strides_grp->strides_c2c->out_strides +
-                       half_stride_start,
-                   sol->strides_grp->strides->out_strides + half_stride_start,
-                   half_stride_n * sizeof(INTP));
-
-            INTP stride_offset = c2c_out_stride * 4;
-            for (INTP group_id = 0; group_id < group_size; group_id++)
-            {
-                // move twiddle buffer to `no_of_groups` times for every iteration
-                // this is point to the `group_id`-th column of the twiddle matrix
-                aoclfftz_twiddle_t tw_local = {
-                    .TW =
-                        MOVE_ADDR(sol->twiddle->TW, group_id * no_of_groups *
-                                                        DATA_STRIDE * dt_bytes),
-                    .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
-                    .cols = sol->twiddle->cols,
-                    .load_multi_cols = 1, // use different twiddle values across batches
-                };
-
-                // Kernel execution
-                kernel_c2c(in, MOVE_ADDR(in, dt_bytes), out,
-                           MOVE_ADDR(out, dt_bytes), no_of_groups,
-                           sol->strides_grp->strides_c2c,
-                           &tw_local,
-                           FFT_DIR(sol->decomp_scheme->flags));
-
-                // Take complex conjucate for the required points
-                // TODO: this should be moved into C2C kernel
-                compute_conjugates(
-                    out, radix, no_of_groups,
-                    sol->strides_grp->strides_c2c->out_strides,
-                    sol->strides_grp->strides_c2c->v_out_stride,
-                    DT_PRECISION_FLAG(sol->decomp_scheme->flags));
-
-                // Update the C2C out-strides for next iteration by subtracting
-                // it by stride_offset
-                INTP *strides = sol->strides_grp->strides_c2c->out_strides +
-                                half_stride_start;
-                for (INTP i = 0; i < half_stride_n; i++)
-                {
-                    strides[i] -= stride_offset;
-                }
-
-                // Move the in & out buffers to point the next valid data
-                in = MOVE_ADDR(in, c2c_in_stride * 2 * dt_bytes);
-                out = MOVE_ADDR(out, c2c_out_stride * 2 * dt_bytes);
-            }
-        }
-    }
-
-    // Iteratively execute the next solution
-    if (sol->next_sol != NULL && sol->next_sol[0] != NULL)
+    if (HAS_NEXT(sol))
     {
         ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0]);
     }
-    else if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
+    else if (is_forward)
     {
         set_zero_for_dc_and_nyquist(sol);
     }

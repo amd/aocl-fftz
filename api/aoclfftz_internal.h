@@ -95,6 +95,12 @@
 // Get size of datatype based on the precision
 #define DT_PRECISION_BYTES(dt_prec) (1 << dt_prec)
 
+/*
+ * @brief Get size of datatype from solution, in bytes
+ * */
+#define SOL_DT_SIZE(sol)                                                       \
+    DT_PRECISION_BYTES(DT_PRECISION_FLAG(sol->decomp_scheme->flags))
+
 #define SET_SELECTOR_MODE(flags, value) SET_BIT_FLAG32(flags, 16, value)
 #define GET_SELECTOR_MODE(flags) GET_BIT_FLAG32(flags, 16)
 
@@ -140,6 +146,25 @@
 #define AMD_ZEN_FP_MOVE_CYCLES 1 // Need to fix this after more experiments
 #define AMD_ZEN_FP_PERM_CYCLES 1
 #define AMD_ZEN_FP_OTHER_CYCLES 1
+
+/**
+ * A "group" is a repeating pattern of DFT kernels at any RealFFT stage.
+ * Each group
+ *   starts with one R2HC kernel,
+ *   followed by a set of C2C kernels(optional) and
+ *   finally another R2HC kernel(optional).
+ * If an R2HC kernel is present at end, we merge it with first to form one R2HCF
+ * kernel. Hence, a RDFT group will either have one R2HC or one R2HCF.
+ *
+ * Therefore,
+ *     Number of groups = Num_R2HCF > 0 ? Num_R2HCF : Num_R2HC. \
+ * OR: Number of groups = max(Num_R2HCF, Num_R2HC) \
+ * OR: Number of groups = Num_R2HCF + Num_R2HC \
+ * OR: Number of groups = (Total points in problem) / (product of radices till
+ *       current stage) = product of radices after current stage
+ */
+#define NUM_RFFT_GROUPS(solver)                                                 \
+    (solver)->kernel_r2hcf->count + (solver)->kernel_r2hc->count
 
 // Forward declarations
 typedef struct aoclfftz_solution aoclfftz_solution_t;
@@ -438,8 +463,7 @@ typedef struct aoclfftz_solution
 typedef struct aoclfftz_realhelper
 {
     INTP problem_size;
-    INTP p;
-    INTP q;
+    INTP freq_factor; /*< frequency factor: For FWD (time->frequency conversion), it starts from 1 to problem_size. Reverse for BWD. */
     UINT32 stage;
     UINT8 is_last_stage;
     UINT8 is_CT;

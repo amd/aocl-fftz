@@ -160,12 +160,20 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->nd_sol = NULL;
         sol->strides_grp->strides->in_strides = NULL;
         sol->strides_grp->strides->out_strides = NULL;
+        sol->strides_grp->strides->v_in_stride = 0;
+        sol->strides_grp->strides->v_out_stride = 0;
         sol->strides_grp->strides_c2c->in_strides = NULL;
         sol->strides_grp->strides_c2c->out_strides = NULL;
+        sol->strides_grp->strides_c2c->v_in_stride = 0;
+        sol->strides_grp->strides_c2c->v_out_stride = 0;
         sol->strides_grp->strides_r2hc->in_strides = NULL;
         sol->strides_grp->strides_r2hc->out_strides = NULL;
+        sol->strides_grp->strides_r2hc->v_in_stride = 0;
+        sol->strides_grp->strides_r2hc->v_out_stride = 0;
         sol->strides_grp->strides_r2hcf->in_strides = NULL;
         sol->strides_grp->strides_r2hcf->out_strides = NULL;
+        sol->strides_grp->strides_r2hcf->v_in_stride = 0;
+        sol->strides_grp->strides_r2hcf->v_out_stride = 0;
         sol->twiddle->load_multi_cols = 1; // true by default
         sol->twiddle->cols = 0;
         sol->twiddle->TW = NULL;
@@ -312,6 +320,17 @@ aoclfftz_solution_t* alloc_solution(INT32 vec_rank, INT32 dim_rank)
 }
 #endif
 
+// Allocates memory for the input and output stride arrays within the
+// provided strides structure if they are not already allocated.
+VOID alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix)
+{
+    if (strides->in_strides == NULL)
+    {
+        ALLOC_ALIGN_UNINIT(strides->in_strides, INTP, radix * sizeof(INTP));
+        ALLOC_ALIGN_UNINIT(strides->out_strides, INTP, radix * sizeof(INTP));
+    }
+}
+
 // Allocate n placeholders for next solution
 aoclfftz_solution_t **alloc_sol_array(UINT32 n)
 {
@@ -426,8 +445,7 @@ VOID alloc_inplace_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
     INTP buffer_length = 1;
     INTP buffer_size = 0;
 
-    UINT32 dt_prec = DT_PRECISION_FLAG(solution->decomp_scheme->flags);
-    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+    UINT32 dt_bytes = SOL_DT_SIZE(solution);
 
     // FIXME: Currently compact buffer is used only for 3D unit-strided non-batched C2C problems
     // TODO: Handle all cases effectively
@@ -507,7 +525,7 @@ VOID destroy_bluestein(aoclfftz_bluestein_t* bluestein)
     }
 }
 
-VOID destroy_strides(aoclfftz_solution_t *cur_sol)
+VOID destroy_strides_grp(aoclfftz_solution_t *cur_sol)
 {
     FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides->in_strides);
     FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides->out_strides);
@@ -528,7 +546,7 @@ VOID destroy_solution(aoclfftz_solution_t* sol, UINT8 destroy_buffers)
         n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
                   (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
         destroy_decomp_scheme(sol->decomp_scheme);
-        destroy_strides(sol);
+        destroy_strides_grp(sol);
 
         FREE_ALIGN_ALLOCATED_MEM(sol->twiddle->twiddle_buf_ptr);
         sol->twiddle->TW = NULL;
@@ -577,7 +595,7 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, UINT32 n)
                           (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
                 destroy_solutions(cur_sol->next_sol, n_sols);
                 destroy_decomp_scheme(cur_sol->decomp_scheme);
-                destroy_strides(cur_sol);
+                destroy_strides_grp(cur_sol);
 
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol->twiddle->twiddle_buf_ptr);
                 cur_sol->twiddle->TW = NULL;
@@ -648,7 +666,7 @@ VOID destroy_bluestein(aoclfftz_bluestein_t* bluestein)
     }
 }
 
-VOID destroy_strides(aoclfftz_solution_t *cur_sol)
+VOID destroy_strides_grp(aoclfftz_solution_t *cur_sol)
 {
     FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides->in_strides);
     FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides->out_strides);
@@ -690,7 +708,7 @@ VOID destroy_solution(aoclfftz_solution_t *sol, UINT8 destroy_buffers)
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->ct_buffer);
         }
         destroy_solution(sol->dft_bufs->nd_sol);
-        destroy_strides(sol);
+        destroy_strides_grp(sol);
         destroy_solutions(sol->next_sol, n_sols);
         // Buffered solver will create aux_buffers and the same address will be
         // used in other solvers.
@@ -737,7 +755,7 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, UINT32 n)
                 destroy_bluestein(cur_sol->bluestein);
                 destroy_transpose(cur_sol->transpose);
                 destroy_solution(cur_sol->nd_sol);
-                destroy_strides(cur_sol);
+                destroy_strides_grp(cur_sol);
 
                 // Buffered solver will create aux_buffers and the same address
                 // will be used in other solvers.

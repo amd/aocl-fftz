@@ -175,13 +175,11 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         realhelper->stage++;
         if (is_backward)
         {
-            realhelper->p /= radix_r;
-            realhelper->q *= radix_r;
+            realhelper->freq_factor /= radix_r;
         }
         else
         {
-            realhelper->p *= radix_r;
-            realhelper->q /= radix_r;
+            realhelper->freq_factor *= radix_r;
         }
 
         // Call selector for applying CT on the m set of sub-problems (radix-m)
@@ -193,13 +191,11 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 
         if (is_backward)
         {
-            realhelper->p *= radix_r;
-            realhelper->q /= radix_r;
+            realhelper->freq_factor *= radix_r;
         }
         else
         {
-            realhelper->p /= radix_r;
-            realhelper->q *= radix_r;
+            realhelper->freq_factor /= radix_r;
         }
         realhelper->stage--;
         realhelper->is_last_stage = 0;

@@ -104,10 +104,8 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         getTime(startTime);
 
         // execute the direct kernel
-        UINT32 dt_prec, dt_bytes;
         INTP v_in_stride, v_out_stride, data_offset;
-        dt_prec = DT_PRECISION_FLAG(decomp_scheme->flags);
-        dt_bytes = DT_PRECISION_BYTES(dt_prec);
+        UINT32 dt_bytes = SOL_DT_SIZE(sol);
         data_offset = DATA_STRIDE * dt_bytes * num_sets;
         v_in_stride = decomp_scheme->vecs[0].in_stride * data_offset;
         v_out_stride = decomp_scheme->vecs[0].out_stride * data_offset;
@@ -175,10 +173,8 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
     UINT8 num_sets = sol->solver->kernel_c2c->sets;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
 
-    UINT32 dt_prec, dt_bytes;
     INTP v_in_stride, v_out_stride, data_offset;
-    dt_prec = DT_PRECISION_FLAG(decomp_scheme->flags);
-    dt_bytes = DT_PRECISION_BYTES(dt_prec);
+    UINT32 dt_bytes = SOL_DT_SIZE(sol);
     data_offset = DATA_STRIDE * dt_bytes * num_sets;
     v_in_stride = decomp_scheme->vecs[0].in_stride * data_offset;
     v_out_stride = decomp_scheme->vecs[0].out_stride * data_offset;
@@ -270,8 +266,7 @@ static INT32 execute_mt_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
     VOID *out_real = sol->decomp_scheme->out_real;
     VOID *out_imag = sol->decomp_scheme->out_imag;
 
-    UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+    UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
     // vec-strides across DFT butterflies of the same CT problem
     INTP ct_in_stride =
@@ -385,8 +380,7 @@ static INT32 execute_mt_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
     VOID *out_real = sol->decomp_scheme->out_real;
     VOID *out_imag = sol->decomp_scheme->out_imag;
 
-    UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+    UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
     // vec-strides across DFT butterflies of the same CT problem
     INTP ct_in_stride =

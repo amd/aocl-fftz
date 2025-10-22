@@ -97,8 +97,7 @@ aoclfftz_error_type aoclfftz_execute_io(VOID *handle, VOID *in, VOID *out)
     // manipulate the in/out ptr in the structure based on direction
     aoclfftz_executor_t *executor_obj = (aoclfftz_executor_t *)handle;
     aoclfftz_solution_t *sol = executor_obj->solution;
-    UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+    UINT32 dt_bytes = SOL_DT_SIZE(sol);
     sol->decomp_scheme->in_real = in;
     sol->decomp_scheme->in_imag = MOVE_ADDR(in, dt_bytes);
     sol->decomp_scheme->out_real = out;

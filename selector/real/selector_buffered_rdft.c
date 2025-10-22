@@ -89,7 +89,7 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 
     // Set the out_ptr to last direct solution's output
     aoclfftz_solution_t *temp_sol = sel->solution->next_sol[0];
-    while (temp_sol->next_sol != NULL && temp_sol->next_sol[0] != NULL)
+    while (HAS_NEXT(temp_sol))
     {
         temp_sol = temp_sol->next_sol[0];
     }
