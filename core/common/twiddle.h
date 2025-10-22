@@ -53,17 +53,18 @@ typedef enum
 } twiddle_status;
 
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
-VOID compute_twiddle_buffer(VOID* twiddle_buffer, INTP r, INTP m, UINT32 dt_prec);
-VOID compute_twiddle_buffer_real(VOID *twiddle_buffer, INTP r, INTP group_sz,
-                                 INTP no_of_groups, INTP p, UINT8 dir,
-                                 UINT32 dt_prec);
+VOID compute_twiddle_buffer(VOID *twiddle_buffer, INTP radix, INTP n_tw_batches,
+                            UINT32 dt_prec);
+VOID compute_twiddle_buffer_real(VOID *twiddle_buffer, INTP radix,
+                                 INTP num_c2c_per_group, INTP num_groups,
+                                 INTP freq_factor, UINT8 dir, UINT32 dt_prec);
 #endif
 
 INT32 twiddle_multiplier(aoclfftz_solution_t *sol);
 INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol);
-INT32 twiddle_multiplier_for_real(aoclfftz_solution_t *sol, INTP p);
+INT32 twiddle_multiplier_for_real(aoclfftz_solution_t *sol, INTP freq_factor);
 #ifdef MULTI_THREADING
-INT32 twiddle_multiplier_mt_for_real(aoclfftz_solution_t *sol, INTP p,
+INT32 twiddle_multiplier_mt_for_real(aoclfftz_solution_t *sol, INTP freq_factor,
                                      INTP n_threads_c2c_outer,
                                      INTP n_threads_c2c_inner);
 #endif

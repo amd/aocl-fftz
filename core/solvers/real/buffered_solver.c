@@ -49,9 +49,7 @@ INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
     realhelper->is_buffered_invoked = 1;
     INT32 num_aux_buf = realhelper->num_aux_buf;
 
-    INT32 dt_prec, dt_bytes;
-    dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    dt_bytes = DT_PRECISION_BYTES(dt_prec);
+    INT32 dt_bytes = SOL_DT_SIZE(sol);
     INTP n = sol->decomp_scheme->dims[0].n;
 
     // Copy input to temp buffer

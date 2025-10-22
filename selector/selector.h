@@ -93,6 +93,11 @@ typedef struct aoclfftz_selector
     for (aoclfftz_solution_t *var = start_solution; var != NULL;               \
          var = (var != NULL && var->next_sol) ? *(var->next_sol) : NULL)
 
+/*
+ * @brief Macro to check if there is a next solution
+ */
+#define HAS_NEXT(sol) (sol->next_sol != NULL && sol->next_sol[0] != NULL)
+
 // macro functions
 #ifdef MULTI_THREADING
 // if dynamic_load_model is set we are allowing the library to take all the
@@ -351,13 +356,11 @@ typedef struct aoclfftz_selector
         if (FFT_DIR(sel_obj->solution->decomp_scheme->flags) ==                \
             FORWARD_FFT_DIR)                                                   \
         {                                                                      \
-            realhelper->p = 1;                                                 \
-            realhelper->q = realhelper->problem_size;                          \
+            realhelper->freq_factor = 1;                                   \
         }                                                                      \
         else                                                                   \
         {                                                                      \
-            realhelper->p = realhelper->problem_size;                          \
-            realhelper->q = 1;                                                 \
+            realhelper->freq_factor = realhelper->problem_size;            \
         }                                                                      \
         ret = selector_driver_rdft_(sel_obj, realhelper);                      \
         SWAP_REAL_CT_SOLUTIONS(sel_obj);                                       \

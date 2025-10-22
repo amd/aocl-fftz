@@ -1819,11 +1819,8 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                     return;
                 }
                 INTP radix = curr->decomp_scheme->dims[0].n;
-                INTP no_of_groups = curr->solver->kernel_r2hcf->count > 0
-                                        ? curr->solver->kernel_r2hcf->count
-                                        : curr->solver->kernel_r2hc->count;
-                // No. of c2c kernels per group that require twiddle computation
-                INTP group_size = curr->solver->kernel_c2c->count / no_of_groups;
+                INTP num_groups = NUM_RFFT_GROUPS(curr->solver);
+                INTP num_c2c_per_group = curr->solver->kernel_c2c->count / num_groups;
                 INTP tw_buf_size =
                     radix * curr->solver->kernel_c2c->count * DATA_STRIDE;
                 // Allocate Twiddle buffer to store twiddle values for every
@@ -1833,9 +1830,9 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                 {
                     INTP p = (curr->decomp_scheme->vecs[0].n *
                               curr->decomp_scheme->dims[0].n) /
-                             no_of_groups;
-                    compute_twiddle_buffer_real(TW, radix, group_size,
-                                                no_of_groups, p,
+                             num_groups;
+                    compute_twiddle_buffer_real(TW, radix, num_c2c_per_group,
+                                                num_groups, p,
                                                 FORWARD_FFT_DIR, dt_prec);
                     curr->twiddle->cols = curr->solver->kernel_c2c->count;
                     curr->twiddle->TW = TW;
@@ -1858,11 +1855,9 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                  prev->solver->solver_type == SOLVER_REAL_MT_DIRECT_TWIDDLE))
             {
                 INTP radix = prev->decomp_scheme->dims[0].n;
-                INTP no_of_groups = prev->solver->kernel_r2hcf->count > 0
-                                        ? prev->solver->kernel_r2hcf->count
-                                        : prev->solver->kernel_r2hc->count;
+                INTP num_groups = NUM_RFFT_GROUPS(prev->solver);
                 // No. of c2c kernels per group that require twiddle computation
-                INTP group_sz = prev->solver->kernel_c2c->count / no_of_groups;
+                INTP group_sz = prev->solver->kernel_c2c->count / num_groups;
                 INTP tw_buf_sz =
                     radix * prev->solver->kernel_c2c->count * DATA_STRIDE;
                 // Allocate Twiddle buffer to store twiddle factors for every
@@ -1872,9 +1867,9 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                 {
                     INTP p = (prev->decomp_scheme->vecs[0].n *
                               prev->decomp_scheme->dims[0].n) /
-                             no_of_groups;
+                             num_groups;
                     compute_twiddle_buffer_real(TW, radix, group_sz,
-                                                no_of_groups, p,
+                                                num_groups, p,
                                                 BACKWARD_FFT_DIR, dt_prec);
                     prev->twiddle->cols = prev->solver->kernel_c2c->count;
                     prev->twiddle->TW = TW;
@@ -2057,8 +2052,7 @@ VOID setup_inplace_buffers(aoclfftz_solution_t *solution)
     {
         alloc_inplace_buffer(solution, &solution->dft_bufs->ct_buffer);
 
-        UINT32 dt_bytes = DT_PRECISION_BYTES(
-                    DT_PRECISION_FLAG(solution->decomp_scheme->flags));
+        UINT32 dt_bytes = SOL_DT_SIZE(solution);
         solution->dft_bufs->ct_buf_real = solution->dft_bufs->ct_buffer;
         solution->dft_bufs->ct_buf_imag =
                     MOVE_ADDR(solution->dft_bufs->ct_buffer, dt_bytes);

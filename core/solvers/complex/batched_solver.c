@@ -71,8 +71,7 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
     INTP v_in_stride;
     INTP v_out_stride;
 
-    UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+    UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
     v_in_stride = sol->decomp_scheme->vecs[vec_rank - 1].in_stride *
                   DATA_STRIDE * dt_bytes;

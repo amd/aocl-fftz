@@ -173,8 +173,7 @@ static INT32 execute_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
     VOID *out_real = sol->decomp_scheme->out_real;
     VOID *out_imag = sol->decomp_scheme->out_imag;
 
-    UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+    UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
     // vec-strides across DFT butterflies of the same CT problem
     INTP pb_in_stride =
@@ -220,8 +219,7 @@ static INT32 execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
     VOID *out_real = sol->decomp_scheme->out_real;
     VOID *out_imag = sol->decomp_scheme->out_imag;
 
-    UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+    UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
     // vec-strides across DFT butterflies of the same CT problem
     INTP ct_in_stride =
