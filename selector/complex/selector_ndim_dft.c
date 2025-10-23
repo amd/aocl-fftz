@@ -38,9 +38,7 @@
  */
 
 #include "selector/selector.h"
-// TODO: move these to common header
 #include "core/common/memory_manager.h"
-#include "utils/utils.h"
 
 // In a single-threaded scenario, for the outer_dim_sol,
 // if the dims are regular strided (where strides are proportional to the prev

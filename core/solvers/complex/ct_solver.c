@@ -188,7 +188,8 @@ static VOID transpose_buffer_double(INTP rows, INTP cols, INTP cstride,
     FREE_ALIGN_ALLOCATED_MEM(visited);
 }
 
-// TODO: make this a new transpose kernel?
+// TODO: This code is implemented specifically for use in the ct solver, but it
+// can be generalized as a dedicated out-of-place-in-place transpose kernel.
 static VOID transpose_using_scratch_buffer_double(INTP rows, INTP cols,
                                                   INTP cstride, VOID *in,
                                                   VOID *scratch_space)

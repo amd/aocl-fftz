@@ -427,7 +427,6 @@ INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein, INTP size)
 
 VOID *alloc_twiddle_buffer(UINTP size, UINT32 dt_prec)
 {
-    // TODO: We don't need to allocate the space for the first row and column
     UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
     VOID *buffer = NULL;
     ALLOC_ALIGN_UNINIT(buffer, VOID, DATA_STRIDE * size * dt_bytes);
@@ -831,4 +830,3 @@ VOID destroy_selector_without_scratch_space(aoclfftz_selector_t *sel)
     }
     return;
 }
-
