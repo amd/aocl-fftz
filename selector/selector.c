@@ -963,11 +963,8 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
     // code path and return
     if (GET_BIT_REPRODUCIBLE(sel->solution->decomp_scheme->flags))
     {
-        if (sel != NULL)
-        {
-            sel_fp = selector_fixed_mode_fused_twid_dft_;
-            ret = selector_model_dft_(sel);
-        }
+        sel_fp = selector_fixed_mode_fused_twid_dft_;
+        ret = selector_model_dft_(sel);
         return ret;
     }
 
@@ -1187,31 +1184,28 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
     // code path and return
     if (GET_BIT_REPRODUCIBLE(sel->solution->decomp_scheme->flags))
     {
-        if (sel != NULL)
+        // Fixed decision logic and CPI based selector mode
+        // ret = selector_fixed_mode_fused_twid_rdft_(
+        //         sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]);
+        // TODO: Enable twiddle kernels for C2R problems
+        if (FFT_DIR(sel->solution->decomp_scheme->flags) ==
+            BACKWARD_FFT_DIR)
         {
-            // Fixed decision logic and CPI based selector mode
-            // ret = selector_fixed_mode_fused_twid_rdft_(
-            //         sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]);
-            // TODO: Enable twiddle kernels for C2R problems
-            if (FFT_DIR(sel->solution->decomp_scheme->flags) ==
-                BACKWARD_FFT_DIR)
-            {
-                AOCLFFTZ_LOG_UNFORMATTED(
-                    INFO,
-                    sel->solution->decomp_scheme->cntrl_params->logger_mode,
-                    "Twiddle kernels are not supported for C2R problems, so "
-                    "using "
-                    "non-twiddle kernels + twiddle multiplier approach.");
+            AOCLFFTZ_LOG_UNFORMATTED(
+                INFO,
+                sel->solution->decomp_scheme->cntrl_params->logger_mode,
+                "Twiddle kernels are not supported for C2R problems, so "
+                "using "
+                "non-twiddle kernels + twiddle multiplier approach.");
 
-                sel_rdft_fp = selector_fixed_mode_rdft_;
-            }
-            else
-            {
-                sel_rdft_fp = selector_fixed_mode_fused_twid_rdft_;
-            }
-
-            ret = selector_model_rdft_(sel, realhelper);
+            sel_rdft_fp = selector_fixed_mode_rdft_;
         }
+        else
+        {
+            sel_rdft_fp = selector_fixed_mode_fused_twid_rdft_;
+        }
+
+        ret = selector_model_rdft_(sel, realhelper);
 
         return ret;
     }

@@ -104,16 +104,15 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
 
     CHAR *str_buff = NULL;
     ALLOC_ALIGN_UNINIT(str_buff, CHAR, sizeof(CHAR) * 50);
-    CHAR NULL_CHAR = '\0', *optarg = &NULL_CHAR;
+    CHAR *optarg = NULL;
 
     INT32 arg_idx = 1;
     INT32 non_opt_arg_cnt = 0;
     while (arg_idx < argc)
     {
         c = get_option(argv, arg_idx);
-        // Set (*optarg) to NULL_CHAR, this prevents optarg from
-        // retaining stale values from previous iterations.
-        optarg = &NULL_CHAR;
+        // this prevents optarg from retaining stale values from previous iterations.
+        optarg = "";
         // Check if there is at least one more command-line argument available
         // before accessing it.
         if (arg_idx + 1 < argc)

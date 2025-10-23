@@ -220,7 +220,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
                 // Destroy the solutions except the first 3 objects
                 // since it points to current CT, CT-R, CT-M respectively
-                if (sel->solution != NULL && next_sol->next_sol[0] != NULL)
+                if (next_sol->next_sol[0] != NULL)
                 {
                     destroy_solutions(next_sol->next_sol[0]->next_sol, 1);
                 }

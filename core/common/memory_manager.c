@@ -365,13 +365,9 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
             // Note: this allocation could fail, but that is ok. All functions
             //       that use the scratch buffer are expected to check if the
             //       buffer is valid (not-null)
-            ALLOC_ALIGN_UNINIT(selector->scratch_space, UINT8,
+            ALLOC_ALIGN_UNINIT(scratch_space, UINT8,
                                scratch_space_capacity * nthreads);
 
-        }
-        else
-        {
-            selector->scratch_space = scratch_space;
         }
         selector->solution = alloc_solution(vec_rank, dim_rank);
         ALLOC_ALIGN_UNINIT(selector->cost_analysis, cost_analysis_t,
@@ -381,6 +377,7 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
             destroy_selector(selector);
             return NULL;
         }
+        selector->scratch_space = scratch_space;
         selector->solution->dft_bufs->scratch_space = selector->scratch_space;
         selector->cost_analysis->ops = 0;
         selector->cost_analysis->time = 0;
