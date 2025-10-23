@@ -55,6 +55,20 @@ extern "C"
 #include "test/gtest/gtest_types.h"
 #include "utils/allocator.h"
 
+#define CLEANUP_CODE                                    \
+    do {                                                \
+        FREE_ALIGN_ALLOCATED_MEM(k_in);                 \
+        FREE_ALIGN_ALLOCATED_MEM(twk_in);               \
+        FREE_ALIGN_ALLOCATED_MEM(k_stride.in_strides);  \
+        if (is_out_of_place)                            \
+        {                                               \
+            FREE_ALIGN_ALLOCATED_MEM(k_out);            \
+            FREE_ALIGN_ALLOCATED_MEM(twk_out);          \
+            FREE_ALIGN_ALLOCATED_MEM(k_stride.out_strides); \
+        }                                               \
+        FREE_ALIGN_ALLOCATED_MEM(twiddle_buffer);       \
+    } while(0)
+
 /**
  * @brief Base class for the AOCLFFTZ Kernel Tests
  *
@@ -159,6 +173,7 @@ class AoclfftzKernelTestBase
         if (kernel_type < aocl_fftz_kernel_type::C2C_TWID_C ||
             kernel_type > aocl_fftz_kernel_type::C2C_TWID_AVX512)
         {
+            CLEANUP_CODE;
             GTEST_FATAL_FAILURE_("Given kernel is not a twiddle kernel.");
             return;
         }
@@ -166,29 +181,29 @@ class AoclfftzKernelTestBase
         tw_kernel = get_twiddle_kernel<T>(radix, is_bwd, kernel_type);
         if (tw_kernel == nullptr)
         {
+            CLEANUP_CODE;
             GTEST_FATAL_FAILURE_(std::string("Twiddle kernel for radix " +
                                              std::to_string(radix) +
                                              " not found.")
                                     .c_str());
-            goto cleanup;
         }
 
         table = get_kernel_table(aocl_fftz_kernel_type::C2C_C);
 
         if (table == nullptr)
         {
+            CLEANUP_CODE;
             GTEST_FATAL_FAILURE_("Kernel table of C2C kernels is empty.");
-            goto cleanup;
         }
 
         fft_kernel = get_kernel<T>(table, is_bwd, radix);
         if (fft_kernel == nullptr)
         {
+            CLEANUP_CODE;
             GTEST_FATAL_FAILURE_(std::string("C2C kernel for radix " +
                                              std::to_string(radix) +
                                              " not found.")
                                     .c_str());
-            goto cleanup;
         }
 
         length = radix * offset; // offset is actually the number of sets
@@ -200,17 +215,17 @@ class AoclfftzKernelTestBase
         k_in = prepare_input(input_type); // the input to the regular kernel
         if (k_in == nullptr)
         {
+            CLEANUP_CODE;
             GTEST_FATAL_FAILURE_("Input preparation failed");
-            goto cleanup;
         }
 
         twk_in = nullptr; // the input to the twiddle kernel
         ALLOC_ALIGN_UNINIT(twk_in, T, sizeof(T) * input_length * data_stride);
         if (twk_in == nullptr)
         {
+            CLEANUP_CODE;
             GTEST_FATAL_FAILURE_("Twiddle kernel input memory "
                                  "allocation failed");
-            goto cleanup;
         }
 
         // copy the regular kernel's input to the twiddle kernel's input
@@ -228,8 +243,8 @@ class AoclfftzKernelTestBase
 
             if (k_out == nullptr || twk_out == nullptr)
             {
+                CLEANUP_CODE;
                 GTEST_FATAL_FAILURE_("Output memory allocation failed");
-                goto cleanup;
             }
         }
         else
@@ -242,8 +257,8 @@ class AoclfftzKernelTestBase
         ALLOC_ALIGN_UNINIT(k_stride.in_strides, INTP, radix * sizeof(INTP));
         if (k_stride.in_strides == nullptr)
         {
+            CLEANUP_CODE;
             GTEST_FATAL_FAILURE_("Input stride memory allocation failed");
-            goto cleanup;
         }
         populate_stride_array_wrapper(k_stride.in_strides, in_stride_w_ds,
                                       radix, 0, 0);
@@ -254,9 +269,9 @@ class AoclfftzKernelTestBase
                                radix * sizeof(INTP));
             if (k_stride.out_strides == nullptr)
             {
+                CLEANUP_CODE;
                 GTEST_FATAL_FAILURE_("Output stride memory "
                                      "allocation failed");
-                goto cleanup;
             }
             populate_stride_array_wrapper(k_stride.out_strides, out_stride_w_ds,
                                           radix, 0, 0);
@@ -285,8 +300,8 @@ class AoclfftzKernelTestBase
 
         if (twiddle_buffer == nullptr)
         {
+            CLEANUP_CODE;
             GTEST_FATAL_FAILURE_("Twiddle buffer memory allocation failed");
-            goto cleanup;
         }
 
         compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, offset);
@@ -315,9 +330,9 @@ class AoclfftzKernelTestBase
 
         if (error == 0)
         {
+            CLEANUP_CODE;
             GTEST_FATAL_FAILURE_(
                 "Twiddle multiplication (after regular kernel) failed");
-            goto cleanup;
         }
 
         // execute the regular kernel
@@ -332,18 +347,8 @@ class AoclfftzKernelTestBase
                                   tolerance, use_input_params))
             << "Twiddle kernel failed, seed: " << random_seed << "\n";
 
-cleanup:
         // Free allocated memory
-        FREE_ALIGN_ALLOCATED_MEM(k_in);
-        FREE_ALIGN_ALLOCATED_MEM(twk_in);
-        FREE_ALIGN_ALLOCATED_MEM(k_stride.in_strides);
-        if (is_out_of_place)
-        {
-            FREE_ALIGN_ALLOCATED_MEM(k_out);
-            FREE_ALIGN_ALLOCATED_MEM(twk_out);
-            FREE_ALIGN_ALLOCATED_MEM(k_stride.out_strides);
-        }
-        FREE_ALIGN_ALLOCATED_MEM(twiddle_buffer);
+        CLEANUP_CODE;
     }
 
     /**

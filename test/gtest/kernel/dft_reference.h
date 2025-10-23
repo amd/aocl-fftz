@@ -44,6 +44,32 @@
 
 #include "test/gtest/kernel/kernel_gtest_base.h"
 
+#define CLEANUP_COMPLEX                                 \
+    do {                                                \
+        FREE_ALIGN_ALLOCATED_MEM(in);                   \
+        FREE_ALIGN_ALLOCATED_MEM(out);                  \
+        FREE_ALIGN_ALLOCATED_MEM(kernel_stride.in_strides); \
+        FREE_ALIGN_ALLOCATED_MEM(kernel_stride.out_strides); \
+    } while(0)
+
+
+#define CLEANUP_REAL                                    \
+    do {                                                \
+        FREE_ALIGN_ALLOCATED_MEM(in);                   \
+        FREE_ALIGN_ALLOCATED_MEM(in_full);              \
+        FREE_ALIGN_ALLOCATED_MEM(in_full_standard_dft); \
+        FREE_ALIGN_ALLOCATED_MEM(in_full_shifted_dft);  \
+        FREE_ALIGN_ALLOCATED_MEM(out);                  \
+        FREE_ALIGN_ALLOCATED_MEM(out_full);             \
+        FREE_ALIGN_ALLOCATED_MEM(out_full_standard_dft); \
+        FREE_ALIGN_ALLOCATED_MEM(out_full_shifted_dft); \
+        FREE_ALIGN_ALLOCATED_MEM(in_standard_dft);      \
+        FREE_ALIGN_ALLOCATED_MEM(in_shifted_dft);       \
+        FREE_ALIGN_ALLOCATED_MEM(out_standard_dft);     \
+        FREE_ALIGN_ALLOCATED_MEM(out_shifted_dft);      \
+        FREE_ALIGN_ALLOCATED_MEM(kernel_stride.in_strides); \
+        FREE_ALIGN_ALLOCATED_MEM(kernel_stride.out_strides); \
+    } while(0)
 /**
  * @brief A function to check the accuracy of Complex FFT kernel
  * against DFT reference
@@ -85,18 +111,18 @@ VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_complex(
     T *in = prepare_input(input_type);
     if (in == nullptr)
     {
+        CLEANUP_COMPLEX;
         GTEST_FATAL_FAILURE_("Input preparation failed in complex "
                              "dft reference test");
-        goto cleanup_complex;
     }
 
     ALLOC_ALIGN_INIT(out, T, k_out_size * sizeof(T));
 
     if (out == nullptr)
     {
+        CLEANUP_COMPLEX;
         GTEST_FATAL_FAILURE_("Memory allocation failed in complex "
                              "dft reference test");
-        goto cleanup_complex;
     }
 
     // prepare local strides for FFT kernel
@@ -106,9 +132,9 @@ VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_complex(
     if (kernel_stride.in_strides == nullptr ||
         kernel_stride.out_strides == nullptr)
     {
+        CLEANUP_COMPLEX;
         GTEST_FATAL_FAILURE_("Memory allocation failed in complex "
                              "dft reference test");
-        goto cleanup_complex;
     }
 
     kernel_stride.v_in_stride  = in_stride_w_ds * radix;
@@ -129,11 +155,7 @@ VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_complex(
     calculate_dft(input_type, kernel_stride, in,
             out, fc_out_size, true /* is_standard_dft */);
 
-cleanup_complex:
-    FREE_ALIGN_ALLOCATED_MEM(in);
-    FREE_ALIGN_ALLOCATED_MEM(out);
-    FREE_ALIGN_ALLOCATED_MEM(kernel_stride.in_strides);
-    FREE_ALIGN_ALLOCATED_MEM(kernel_stride.out_strides);
+    CLEANUP_COMPLEX;
 } // run_dft_reference_test
 
 
@@ -188,9 +210,9 @@ VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_real(
     in = prepare_input(input_type);
     if (in == nullptr)
     {
+        CLEANUP_REAL;
         GTEST_FATAL_FAILURE_("Input preparation failed in real "
                              "dft reference test");
-        goto cleanup_real;
     }
 
     ALLOC_ALIGN_INIT(in_full, T, fc_in_size * sizeof(T));
@@ -214,9 +236,9 @@ VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_real(
         in_shifted_dft == nullptr || out_standard_dft == nullptr ||
         out_shifted_dft == nullptr)
     {
+        CLEANUP_REAL;
         GTEST_FATAL_FAILURE_("Memory allocation failed in real "
                              "dft reference test");
-        goto cleanup_real;
     }
 
     // prepare local strides for FFT kernel
@@ -228,9 +250,9 @@ VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_real(
     if (kernel_stride.in_strides == nullptr ||
         kernel_stride.out_strides == nullptr)
     {
+        CLEANUP_REAL;
         GTEST_FATAL_FAILURE_("Memory allocation failed in real "
                              "dft reference test");
-        goto cleanup_real;
     }
 
     kernel_stride.v_in_stride  = in_stride_w_ds * buf_size_multiplier * radix;
@@ -306,21 +328,8 @@ VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_real(
             out_full, fc_out_size, true /* is_standard_dft */);
     }
 
-cleanup_real:
-    FREE_ALIGN_ALLOCATED_MEM(in);
-    FREE_ALIGN_ALLOCATED_MEM(in_full);
-    FREE_ALIGN_ALLOCATED_MEM(in_full_standard_dft);
-    FREE_ALIGN_ALLOCATED_MEM(in_full_shifted_dft);
-    FREE_ALIGN_ALLOCATED_MEM(out);
-    FREE_ALIGN_ALLOCATED_MEM(out_full);
-    FREE_ALIGN_ALLOCATED_MEM(out_full_standard_dft);
-    FREE_ALIGN_ALLOCATED_MEM(out_full_shifted_dft);
-    FREE_ALIGN_ALLOCATED_MEM(in_standard_dft);
-    FREE_ALIGN_ALLOCATED_MEM(in_shifted_dft);
-    FREE_ALIGN_ALLOCATED_MEM(out_standard_dft);
-    FREE_ALIGN_ALLOCATED_MEM(out_shifted_dft);
-    FREE_ALIGN_ALLOCATED_MEM(kernel_stride.in_strides);
-    FREE_ALIGN_ALLOCATED_MEM(kernel_stride.out_strides);
+    CLEANUP_REAL;
+
 } // run_dft_reference_test
 
 #endif // AOCLFFTZ_DFT_REFERENCE_H
