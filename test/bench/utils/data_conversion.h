@@ -100,7 +100,6 @@
     } while (0)
 
 // Converts complex data to half-complex data in a same buffer
-// TODO: Make it to out-of-place if needed
 #define convert_complex_to_half_complex_impl(buffer, n, batches, map, dt_t)    \
     do                                                                         \
     {                                                                          \

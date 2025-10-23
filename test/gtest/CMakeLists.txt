@@ -149,7 +149,7 @@ endif()
 
 if(ENABLE_AVX512 OR ENABLE_AVX256 OR ENABLE_AVX128)
     include(CheckCXXSourceRuns)
-    
+
     # Common header code for all AVX detection
     set(AVX_CHECK_HEADER "
     #include <immintrin.h>
@@ -159,7 +159,7 @@ if(ENABLE_AVX512 OR ENABLE_AVX256 OR ENABLE_AVX128)
         #include <cpuid.h>
     #endif
     ")
-    
+
     # Check for AVX512 support
     if(ENABLE_AVX512)
         set(CHECK_AVX512_CODE "${AVX_CHECK_HEADER}
@@ -272,7 +272,6 @@ if(WIN32)
     target_compile_definitions(kernel_perf_test PRIVATE -DBENCHMARK_STATIC_DEFINE)
     # Benchmark internally uses shlwapi to get CPUInfo in windows, making shlwapi an indirect dependency
     # https://github.com/google/benchmark/blob/main/docs/platform_specific_build_instructions.md
-    # TODO : Avoid linking shlwapi if possible
     target_link_libraries(kernel_perf_test shlwapi)
 endif()
 
