@@ -24,7 +24,7 @@
 ..  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ..  POSSIBILITY OF SUCH DAMAGE.
 
-.. _ref-unified-api:
+.. _ref-interface-api:
 
 Interface APIs
 --------------

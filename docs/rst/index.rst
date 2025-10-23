@@ -63,7 +63,7 @@ to optimize for performance across various workloads.
 .. toctree::
    :maxdepth: 1
 
-   unified_api
+   interface_api
 
 Data Structures and Type Definitions
 ````````````````````````````````````
@@ -93,7 +93,7 @@ Example programs illustrating how to use AOCL-FFTZ APIs are presented here.
 .. toctree::
    :maxdepth: 2
 
-   example
+   test_programs
 
 **Contacts**
 
