@@ -58,8 +58,8 @@ auto arbitrary_cntrl_params() {
         fuzztest::Arbitrary<INT32>(),   // opt_level
         fuzztest::Arbitrary<INT32>(),   // opt_off
         fuzztest::ElementOf<aoclfftz_logger_mode>({
-            AOCLFFTZ_LOG_NONE, AOCLFFTZ_LOG_ERROR, AOCLFFTZ_LOG_INFO,
-            AOCLFFTZ_LOG_DEBUG, AOCLFFTZ_LOG_TRACE}),   // logger_mode
+            AOCLFFTZ_LOG_NONE,  AOCLFFTZ_LOG_INFO,
+            AOCLFFTZ_LOG_TRACE, AOCLFFTZ_LOG_DEBUG}),   // logger_mode
         fuzztest::Arbitrary<INT32>());  // measure_stats
 }
 
