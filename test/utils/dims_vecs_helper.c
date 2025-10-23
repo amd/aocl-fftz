@@ -316,14 +316,14 @@ VOID set_default_dims_vecs(INT32 dim_rank, INT32 vec_rank,
         {
             dims[i].in_stride = def_in_stride;
             AOCLFFTZ_LOG(
-                INFO, global_logger_mode,
+                INFO, logger_mode,
                 "in stride for dim[%d] is set to default value", i);
         }
         if (dims[i].out_stride == 0)
         {
             dims[i].out_stride = def_out_stride;
             AOCLFFTZ_LOG(
-                INFO, global_logger_mode,
+                INFO, logger_mode,
                 "out stride for dim[%d] is set to default value", i);
         }
     }
@@ -370,14 +370,14 @@ VOID set_default_dims_vecs(INT32 dim_rank, INT32 vec_rank,
         if (vecs[i].in_stride == 0)
         {
             AOCLFFTZ_LOG(
-                INFO, global_logger_mode,
+                INFO, logger_mode,
                 "in stride for vec[%d] is set to default value", i);
             vecs[i].in_stride = def_in_stride;
         }
         if (vecs[i].out_stride == 0)
         {
             AOCLFFTZ_LOG(
-                INFO, global_logger_mode,
+                INFO, logger_mode,
                 "out stride for vec[%d] is set to default value", i);
             vecs[i].out_stride = def_out_stride;
         }
