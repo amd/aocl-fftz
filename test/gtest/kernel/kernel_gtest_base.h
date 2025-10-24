@@ -159,15 +159,9 @@ class AoclfftzKernelTestBase
         T *twk_in_i = nullptr;
         T *twk_out_r = nullptr;
         T *twk_out_i = nullptr;
-        T* twiddle_ptr = nullptr;
         aoclfftz_twiddle_t tws;
 
         bool use_input_params = !is_out_of_place;
-        INT32 _stride = use_input_params ? in_stride : out_stride;
-        _stride *= data_stride;
-        INTP _length = output_length * data_stride;
-        INTP reg = 0;
-        INTP twk = 0;
         aocl_fftz_test_input input_type = aocl_fftz_test_input::RANDOM;
 
         if (kernel_type < aocl_fftz_kernel_type::C2C_TWID_C ||

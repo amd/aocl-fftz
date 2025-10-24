@@ -41,6 +41,10 @@
 include(GoogleTest)
 include(ExternalProject)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # to avoid DOWNLOAD_EXTRACT_TIMESTAMP warning from CMake 3.26 onwards
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.26.0")
     cmake_policy(SET CMP0135 NEW)
