@@ -837,8 +837,8 @@ INT32 twiddle_multiplier_for_real_float(aoclfftz_solution_t *sol,
                 // every `num_groups` columns are duplicates
                 // so skip those columns to avoid redundant loads
                 INTP tw_in_index =
-                    LINEAR_IDX_2D(i, j, num_groups * DATA_STRIDE,
-                                  sol->solver->kernel_c2c->count * DATA_STRIDE);
+                    LINEAR_IDX_2D(i, j, DATA_STRIDE,
+                                  num_c2c_per_group * DATA_STRIDE);
                 FLOAT TW_real = twiddle_buffer_real[tw_in_index];
                 FLOAT TW_imag = twiddle_buffer_imag[tw_in_index];
 
@@ -935,8 +935,8 @@ INT32 twiddle_multiplier_for_real_double(aoclfftz_solution_t *sol,
                 // every `num_groups` columns are duplicates
                 // so skip those columns to avoid redundant loads
                 INTP tw_in_index =
-                    LINEAR_IDX_2D(i, j, num_groups * DATA_STRIDE,
-                                  sol->solver->kernel_c2c->count * DATA_STRIDE);
+                    LINEAR_IDX_2D(i, j, DATA_STRIDE,
+                                  num_c2c_per_group * DATA_STRIDE);
                 DOUBLE TW_real = twiddle_buffer_real[tw_in_index];
                 DOUBLE TW_imag = twiddle_buffer_imag[tw_in_index];
 
@@ -1055,8 +1055,7 @@ INT32 twiddle_multiplier_mt_for_real_float(aoclfftz_solution_t *sol,
                     // every `num_groups` columns are duplicates
                     // so skip those columns to avoid redundant loads
                     INTP tw_in_index = LINEAR_IDX_2D(
-                        k, i, num_groups * DATA_STRIDE,
-                        sol->solver->kernel_c2c->count * DATA_STRIDE);
+                        k, i, DATA_STRIDE, num_c2c_per_group * DATA_STRIDE);
                     FLOAT TW_real = twiddle_buffer_real[tw_in_index];
                     FLOAT TW_imag = twiddle_buffer_imag[tw_in_index];
 
@@ -1158,8 +1157,7 @@ INT32 twiddle_multiplier_mt_for_real_double(aoclfftz_solution_t *sol,
                     // every `num_groups` columns are duplicates
                     // so skip those columns to avoid redundant loads
                     INTP tw_in_index = LINEAR_IDX_2D(
-                        k, i, num_groups * DATA_STRIDE,
-                        sol->solver->kernel_c2c->count * DATA_STRIDE);
+                        k, i, DATA_STRIDE, num_c2c_per_group * DATA_STRIDE);
                     DOUBLE TW_real = twiddle_buffer_real[tw_in_index];
                     DOUBLE TW_imag = twiddle_buffer_imag[tw_in_index];
 
@@ -1323,41 +1321,30 @@ VOID compute_twiddle_buffer_real_float(VOID *twiddle_buffer, INTP radix,
 
     FLOAT sign = (dir == BACKWARD_FFT_DIR) ? 1.0 : -1.0;
     FLOAT angle_base = (sign * AOCLFFTZ_2_PI) / (FLOAT)freq_factor;
-    INTP c_stride = 1 * DATA_STRIDE;
-    INTP r_stride = num_c2c_per_group * num_groups * DATA_STRIDE;
+    INTP c_stride = DATA_STRIDE;
+    INTP r_stride = num_c2c_per_group * DATA_STRIDE;
 
     // set the first column of the twiddle matrix to (1 + 0i)
     for (INTP j = 0; j < num_c2c_per_group; ++j)
     {
-        for (INTP k = 0; k < num_groups; ++k)
-        {
-            INTP buffer_index =
-                LINEAR_IDX_2D(0, j * num_groups + k, c_stride, r_stride);
-            twiddle_buffer_real[buffer_index] = 1.0;
-            twiddle_buffer_imag[buffer_index] = 0.0;
-        }
+        INTP buffer_index =
+            LINEAR_IDX_2D(0, j, c_stride, r_stride);
+        twiddle_buffer_real[buffer_index] = 1.0;
+        twiddle_buffer_imag[buffer_index] = 0.0;
     }
 
     for (INTP i = 1; i < radix; ++i)
     {
         for (INTP j = 0; j < num_c2c_per_group; ++j)
         {
-            // duplicate every column to `num_groups` times
-            // this makes the twiddle matrix size from `radix x
-            // num_c2c_per_group` to `radix x (num_c2c_per_group * num_groups)`
-            // this is required to support existing twiddle C2C kernels
-            // TODO: avoid this column duplication by modifying (or adding new)
-            // twiddle C2C kernels
+           // twiddle matrix size `r x num_c2c_per_group`
             FLOAT angle = angle_base * i * (j + 1);
             FLOAT sin_val = sinf(angle);
             FLOAT cos_val = cosf(angle);
-            for (INTP k = 0; k < num_groups; ++k)
-            {
-                INTP buffer_index =
-                    LINEAR_IDX_2D(i, j * num_groups + k, c_stride, r_stride);
-                twiddle_buffer_real[buffer_index] = cos_val;
-                twiddle_buffer_imag[buffer_index] = sin_val;
-            }
+            INTP buffer_index =
+                LINEAR_IDX_2D(i, j, c_stride, r_stride);
+            twiddle_buffer_real[buffer_index] = cos_val;
+            twiddle_buffer_imag[buffer_index] = sin_val;
         }
     }
 }
@@ -1371,19 +1358,16 @@ VOID compute_twiddle_buffer_real_double(VOID *twiddle_buffer, INTP radix,
 
     DOUBLE sign = (dir == BACKWARD_FFT_DIR) ? 1.0 : -1.0;
     DOUBLE angle_base = (sign * AOCLFFTZ_2_PI) / (DOUBLE)freq_factor;
-    INTP c_stride = 1 * DATA_STRIDE;
-    INTP r_stride = num_c2c_per_group * num_groups * DATA_STRIDE;
+    INTP c_stride = DATA_STRIDE;
+    INTP r_stride = num_c2c_per_group * DATA_STRIDE;
 
     // set the first column of the twiddle matrix to (1 + 0i)
     for (INTP j = 0; j < num_c2c_per_group; ++j)
     {
-        for (INTP k = 0; k < num_groups; ++k)
-        {
-            INTP buffer_index =
-                LINEAR_IDX_2D(0, j * num_groups + k, c_stride, r_stride);
-            twiddle_buffer_real[buffer_index] = 1.0;
-            twiddle_buffer_imag[buffer_index] = 0.0;
-        }
+        INTP buffer_index =
+            LINEAR_IDX_2D(0, j, c_stride, r_stride);
+        twiddle_buffer_real[buffer_index] = 1.0;
+        twiddle_buffer_imag[buffer_index] = 0.0;
     }
 
     for (INTP i = 1; i < radix; ++i)
@@ -1393,19 +1377,11 @@ VOID compute_twiddle_buffer_real_double(VOID *twiddle_buffer, INTP radix,
             DOUBLE angle = angle_base * i * (j + 1);
             DOUBLE sin_val = sin(angle);
             DOUBLE cos_val = cos(angle);
-            // duplicate every column to `num_groups` times
-            // this makes the twiddle matrix size from `radix x
-            // num_c2c_per_group` to `radix x (num_c2c_per_group * num_groups)`
-            // this is required to support existing twiddle C2C kernels
-            // TODO: avoid this column duplication by modifying (or adding new)
-            // twiddle C2C kernels
-            for (INTP k = 0; k < num_groups; ++k)
-            {
-                INTP buffer_index =
-                    LINEAR_IDX_2D(i, j * num_groups + k, c_stride, r_stride);
-                twiddle_buffer_real[buffer_index] = cos_val;
-                twiddle_buffer_imag[buffer_index] = sin_val;
-            }
+            // twiddle matrix size `r x num_c2c_per_group`
+            INTP buffer_index =
+                LINEAR_IDX_2D(i, j, c_stride, r_stride);
+            twiddle_buffer_real[buffer_index] = cos_val;
+            twiddle_buffer_imag[buffer_index] = sin_val;
         }
     }
 }
