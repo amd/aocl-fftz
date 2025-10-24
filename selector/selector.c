@@ -237,7 +237,6 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     // SOLVER_BUFFERED
     level1_cond2 = !(IS_OUT_OF_PLACE(sel->solution->decomp_scheme->flags));
     // SOLVER_BUFFERED
-    // TODO: Conditions to work with AOCLFFTZ_FIXED_SELECTOR
     level1_cond2 &= ((sel->solution->decomp_scheme->dims[0].n >
                       MAX_GUARANTEED_CACHEABLE_SIZE) &&
                      (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
@@ -440,7 +439,6 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
     // SOLVER_BUFFERED
     level1_cond2 = !(IS_OUT_OF_PLACE(sel->solution->decomp_scheme->flags));
     // SOLVER_BUFFERED
-    // TODO: Conditions to work with AOCLFFTZ_FIXED_SELECTOR
     level1_cond2 &= ((sel->solution->decomp_scheme->dims[0].n >
                       MAX_GUARANTEED_CACHEABLE_SIZE) &&
                      (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
