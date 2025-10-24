@@ -332,15 +332,14 @@ static inline VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol, UINT32 
             strides_c2c_per_thread->out_strides = local_out_strides;
             update_asymmetric_strides(local_out_strides, radix, group_id * batch_stride);
 
+            UINTP tw_offset = DATA_STRIDE * dt_bytes * group_id;
+            aoclfftz_twiddle_t tw_local = *(sol->twiddle);
+            tw_local.TW = MOVE_ADDR(tw_local.TW, tw_offset);
+            // use same twiddle values across batches
+            tw_local.load_multi_cols = 0;
             #pragma omp parallel for num_threads(n_threads_c2c_inner)
             for (INTP group_num = 0; group_num < num_iters_c2c; group_num++)
             {
-
-                UINTP tw_offset = DATA_STRIDE * dt_bytes *
-                                  (group_id * num_groups + group_num);
-                aoclfftz_twiddle_t tw_local = *(sol->twiddle);
-                tw_local.TW = MOVE_ADDR(tw_local.TW, tw_offset);
-
                 VOID *in_real_c2c =
                     MOVE_ADDR(in_local, group_num * v_in_stride_c2c);
                 VOID *out_real_c2c =
@@ -352,11 +351,6 @@ static inline VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol, UINT32 
             }
             if (rem_iters_c2c)
             {
-                UINTP tw_offset = DATA_STRIDE * dt_bytes *
-                                  (group_id * num_groups + num_iters_c2c);
-                aoclfftz_twiddle_t tw_local = *(sol->twiddle);
-                tw_local.TW = MOVE_ADDR(tw_local.TW, tw_offset);
-
                 VOID *in_real_c2c =
                     MOVE_ADDR(in_local, num_iters_c2c * v_in_stride_c2c);
                 VOID *out_real_c2c =

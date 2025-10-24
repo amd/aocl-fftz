@@ -155,6 +155,7 @@ static inline VOID execute_c2c_kernels(aoclfftz_solution_t *sol, VOID *in, VOID 
                half_stride_n * sizeof(INTP));
 
         aoclfftz_twiddle_t tw_local = *(sol->twiddle);
+        tw_local.load_multi_cols = 0; // use same twiddle values across batches
         for (INTP group_id = 0; group_id < num_c2c_per_group; group_id++)
         {
             // This for loop computes C2C batches within the groups,
@@ -173,9 +174,9 @@ static inline VOID execute_c2c_kernels(aoclfftz_solution_t *sol, VOID *in, VOID 
             update_asymmetric_strides(sol->strides_grp->strides_c2c->out_strides,
                                      radix, batch_out_stride);
 
-            // move twiddle buffer to next batch, i.e. `num_groups` points ahead
+            // move twiddle buffer to next batch
             tw_local.TW =
-                MOVE_ADDR(tw_local.TW, num_groups * DATA_STRIDE * dt_bytes);
+                MOVE_ADDR(tw_local.TW, DATA_STRIDE * dt_bytes);
             // Move the in & out buffers to point the next batch
             in = MOVE_ADDR(in, batch_in_stride * dt_bytes);
             out = MOVE_ADDR(out, batch_out_stride * dt_bytes);
