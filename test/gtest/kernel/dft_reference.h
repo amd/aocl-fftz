@@ -80,16 +80,8 @@ template <class T>
 VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_complex(
     aocl_fftz_test_input input_type)
 {
-    // k_in_size : size of input buffer for kernel(half/full complex form)
-    INTP k_in_size = radix * in_stride * data_stride * offset;
-
     // k_out_size : size of output buffer for kernel(half/full complex form)
     INTP k_out_size = radix * out_stride * data_stride * offset;
-
-    /* fc_in_size : size of input buffer for full complex form
-     * For complex -> fc_in_size == k_in_size
-     */
-    INTP fc_in_size = radix * in_stride * offset * 2;
 
     /* fc_out_size : size of output buffer for full complex form
      * For complex -> fc_out_size == k_out_size

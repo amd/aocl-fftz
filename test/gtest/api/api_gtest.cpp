@@ -295,6 +295,7 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_DESTROY_VALIDHANDLE_SOLUTION)
 {
     this->handle = this->aoclfftz_setup(this->problem);
     INT32 exe = aoclfftz_execute(this->handle);
+    (void)exe;
     aoclfftz_destroy(this->handle);
     ASSERT_FALSE(this->is_handle_null(this->handle));
 }
