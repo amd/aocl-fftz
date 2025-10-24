@@ -64,7 +64,7 @@
             }                                                                  \
             mirror_idx = in_idx - 1;                                           \
             /* Nyquist point */                                                \
-            if (n % 2 == 0 && n > 2)                                           \
+            if (n % 2 == 0)                                                    \
             {                                                                  \
                 INTP idx = map[in_idx] * 2;                                    \
                 out_t[out_idx] = in_t[idx];                                    \

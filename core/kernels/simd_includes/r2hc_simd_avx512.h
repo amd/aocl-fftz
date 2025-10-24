@@ -223,7 +223,7 @@
  */
 #define LDRI_2x512_S(base, offset, dest1, dest2)                               \
     {                                                                          \
-        __m128 _tmp, _tmp1, _tmp2, _tmp3, _tmp4, _tmp5, _tmp6, _tmp7, _tmp8;   \
+        __m128 _tmp, _tmp1, _tmp2, _tmp3, _tmp4, _tmp5, _tmp6, _tmp7;          \
         __m256 _r1, _r2, _r3, _r4;                                             \
         __m512 _c1, _c2;                                                       \
         _tmp = _mm_loadu_ps(base);                                             \
@@ -265,9 +265,7 @@
          base += offset;                                                       \
          _tmp7 = _mm_loadu_ps(base);                                           \
          base += offset;                                                       \
-         _tmp8 = _mm_loadu_ps(base);                                           \
-         _tmp7 = _mm_shuffle_ps(_tmp7, _tmp8, 0x44);                           \
-         base += offset;                                                       \
+         _tmp7 = _mm_loadh_pi(_tmp7, (__m64 *)base);                           \
          _r3 = _mm256_insertf128_ps(_mm256_castps128_ps256(_tmp4), _tmp6, 1);  \
          _r4 = _mm256_insertf128_ps(_mm256_castps128_ps256(_tmp5), _tmp7, 1);  \
          _c1 = _mm512_insertf32x8(_mm512_castps256_ps512(_r1), _r3, 1);        \
