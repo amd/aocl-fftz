@@ -262,31 +262,53 @@ static inline VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol, UINT32 
             strides_c2c_per_thread->in_strides = local_in_strides;
             update_asymmetric_strides(local_in_strides, radix, group_id * batch_stride);
 
-            compute_conjugates(in_local, radix, num_groups,
-                               strides_c2c_per_thread->in_strides,
-                               strides_c2c_per_thread->v_in_stride,
-                               DT_PRECISION_FLAG(sol->decomp_scheme->flags));
+            VOID *kernel_in = NULL;
+            VOID *kernel_strides = NULL;
+            if (IS_OUT_OF_PLACE(sol->decomp_scheme->flags) &&
+                is_input_prob_buffer(sol))
+            {
+                kernel_in = MOVE_ADDR(sol->dft_bufs->ct_buf_real_in,
+                                      group_id * radix *
+                                          (num_iters_c2c + rem_iters_c2c) *
+                                          DATA_STRIDE * dt_bytes);
+                kernel_strides = sol->strides_grp->strides_c2r_ct_op;
+                compute_conjugates_outplace(
+                    kernel_in, in_local, radix, num_groups,
+                    strides_c2c_per_thread->in_strides,
+                    strides_c2c_per_thread->v_in_stride,
+                    DT_PRECISION_FLAG(sol->decomp_scheme->flags));
+            }
+            else
+            {
+                kernel_in = in_local;
+                kernel_strides = strides_c2c_per_thread;
+                compute_conjugates(
+                    in_local, radix, num_groups,
+                    strides_c2c_per_thread->in_strides,
+                    strides_c2c_per_thread->v_in_stride,
+                    DT_PRECISION_FLAG(sol->decomp_scheme->flags));
+            }
 
             #pragma omp parallel for num_threads(n_threads_c2c_inner)
             for (INTP group_num = 0; group_num < num_iters_c2c; group_num++)
             {
                 VOID *in_real_c2c =
-                    MOVE_ADDR(in_local, group_num * v_in_stride_c2c);
+                    MOVE_ADDR(kernel_in, group_num * v_in_stride_c2c);
                 VOID *out_real_c2c =
                     MOVE_ADDR(out_local, group_num * v_out_stride_c2c);
                 kernel_c2c(in_real_c2c, MOVE_ADDR(in_real_c2c, dt_bytes),
                            out_real_c2c, MOVE_ADDR(out_real_c2c, dt_bytes),
-                           num_sets_c2c, strides_c2c_per_thread, NULL, fft_dir);
+                           num_sets_c2c, kernel_strides, NULL, fft_dir);
             }
             if (rem_iters_c2c)
             {
                 VOID *in_real_c2c =
-                    MOVE_ADDR(in_local, num_iters_c2c * v_in_stride_c2c);
+                    MOVE_ADDR(kernel_in, num_iters_c2c * v_in_stride_c2c);
                 VOID *out_real_c2c =
                     MOVE_ADDR(out_local, num_iters_c2c * v_out_stride_c2c);
                 kernel_c2c(in_real_c2c, MOVE_ADDR(in_real_c2c, dt_bytes),
                            out_real_c2c, MOVE_ADDR(out_real_c2c, dt_bytes),
-                           rem_iters_c2c, strides_c2c_per_thread, NULL,
+                           rem_iters_c2c, kernel_strides, NULL,
                            fft_dir);
             }
             FREE_ALIGN_ALLOCATED_MEM(local_in_strides);

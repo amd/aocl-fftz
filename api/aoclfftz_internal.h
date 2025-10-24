@@ -376,6 +376,7 @@ typedef struct aoclfftz_strides_grp
             aoclfftz_strides_t* strides_c2c;
             aoclfftz_strides_t* strides_r2hc;
             aoclfftz_strides_t* strides_r2hcf;
+            aoclfftz_strides_t* strides_c2r_ct_op; // for real C2R out-of-place CT problems
             uint8_t active_mask;
         } strides_real;
     } strides_data;
@@ -387,6 +388,12 @@ typedef struct aoclfftz_strides_grp
     aoclfftz_strides_t* strides_c2c;    // for real C2C Kernels
     aoclfftz_strides_t* strides_r2hc;   // for real R2HC Kernels
     aoclfftz_strides_t* strides_r2hcf;  // for real R2HC-Fused Kernels
+    aoclfftz_strides_t* strides_c2r_ct_op; /* used for real C2R out-of-place CT problems;
+                                              to avoid modifying the input buffer of the first CT stage,
+                                              conjugated values are stored in the auxiliary buffer,
+                                              `strides_c2r_ct_op` will hold input strides as same as strides_c2c
+                                              and output strides as unit-strides to align with auxiliary buffer.
+                                            */
 } aoclfftz_strides_grp_t;
 #endif //New variants
 
@@ -415,6 +422,11 @@ typedef struct aoclfftz_dft_bufs
     VOID *ct_buffer; // auxiliary buffer for CT problems
     VOID *ct_buf_real; // real part of ct_buffer
     VOID *ct_buf_imag; // imaginary part of ct_buffer
+    VOID *ct_buf_real_in; /* update `ct_buf_real_in` pointers used to store the modified input in the
+                             first CT stage for C2R out-of-place CT problems.
+                             use the auxiliary buffer which is not used for computation in that stage
+                             to store the modified input.
+                           */
     INTP ct_buf_size; // size of ct_buffer per thread
     UINT8 reset_ct_buf_offset; // when enabled (1), do not move the buffer offset across batches
     UINT8 use_2D_buffering; // 1 when compact buffer optimized approach is used
@@ -450,6 +462,7 @@ typedef struct aoclfftz_solution
     aoclfftz_strides_t* strides_c2c;    // for real C2C Kernels
     aoclfftz_strides_t* strides_r2hc;   // for real R2HC Kernels
     aoclfftz_strides_t* strides_r2hcf;  // for real R2HC-Fused Kernels
+    aoclfftz_strides_t* strides_c2r_ct_op; // for real C2R out-of-place CT problems
     aoclfftz_twiddle_t* twiddle;
     aoclfftz_bluestein_t* bluestein;
     aoclfftz_buffered_t* buffered;

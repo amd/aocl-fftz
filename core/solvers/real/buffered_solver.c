@@ -58,7 +58,11 @@ INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
     ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_2, VOID,
                      num_aux_buf * n * dt_bytes);
 
+    sol->dft_bufs->ct_buf_real_in = sol->dft_bufs->buffered->aux_buffer_1;
+
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+#endif
     return status;
 }
 
@@ -73,6 +77,8 @@ static INT32 execute_real_buffered_solver(aoclfftz_solution_t *sol)
     sol->next_sol[0]->decomp_scheme->in_real = sol->decomp_scheme->in_real;
     // composite problem output
     *sol->dft_bufs->buffered->out_ptr = sol->decomp_scheme->out_real;
+
+    sol->next_sol[0]->dft_bufs->ct_buf_real_in = sol->dft_bufs->ct_buf_real_in;
 
     ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0]);
 
