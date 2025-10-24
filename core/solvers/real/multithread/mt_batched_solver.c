@@ -269,7 +269,7 @@ INT32 execute_real_mt_batched_solver_internal(aoclfftz_solution_t *sol,
 }
 
 /*
- * TODO: Check and fix ND batches for real problems
+ * TODO: Support ND batches for real problems
  */
 static INT32 execute_real_mt_batched_solver(aoclfftz_solution_t *sol)
 {

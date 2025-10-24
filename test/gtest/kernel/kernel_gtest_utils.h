@@ -486,65 +486,6 @@ void permuted_copy(T *in, T *out, INTP n, INTP size,
 }
 
 /**
- * @brief This function similar to permuted_copy kernel with additional
- *        paramter `buf_size_multiplier` which is necessary to permute the
- *        fused part-2 data in case of fused kernels.
- *        TODO: Remove this function, modify the permuted_copy kernel
- *        and use that instead
- *
- * @tparam T data type (float32 or float64)
- * @param in input data array
- * @param out output array to store the permuted output
- * @param n no. of sets (or) offset
- * @param size size of each offset (or) n
- * @param strides data stride values (in-stride for dir 0, out-stride for dir 1)
- * @param data_stride data_stride -> 1 for real-fft and 2 for complex-fft
- * @param buf_size_multiplier buf_size_multiplier used here to permute fused
- *                            part-2 data.
- */
-template <class T>
-VOID permuted_copy_fused(T *in, T *out, INTP n, INTP size,
-                          aoclfftz_strides_t *strides, INT32 data_stride,
-                          INT8 buf_size_multiplier)
-{
-    INTP in_stride = strides->in_strides[0] ?
-             strides->in_strides[0] * data_stride : strides->in_strides[1];
-
-    INTP in_stride_fused_part1 = strides->in_strides[0] ?
-                                strides->in_strides[0] * data_stride :
-                                strides->in_strides[buf_size_multiplier];
-    INTP out_stride_fused_part1 = strides->out_strides[0] ?
-                                strides->out_strides[0] * data_stride :
-                                strides->out_strides[buf_size_multiplier];
-
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
-
-    // iterates over the number of offsets (n)
-    for (INTP i = 0; i < n; i++)
-    {
-        // iterates over the size of each offset (size)
-        for (INTP j = 0; j < size; j++)
-        {
-            for (INTP k = 0; k < data_stride; k++)
-            {
-                out[j * out_stride_fused_part1 + k] = in[j *
-                                        in_stride_fused_part1 + k];
-
-                if (buf_size_multiplier == 2) // for fused kernel
-                {
-                    out[j * out_stride_fused_part1 + k + in_stride] = in[j *
-                                        in_stride_fused_part1 + k + in_stride];
-                }
-            }
-        }
-
-        in += v_in_stride;
-        out += v_out_stride;
-    }
-}
-
-/**
  * @brief An utility function to print the complex array
  *
  * @tparam T array type (float32 or float64)
