@@ -115,7 +115,6 @@ static inline VOID execute_r2hcf_kernels(aoclfftz_solution_t *sol, VOID *in, VOI
                  FFT_DIR(sol->decomp_scheme->flags));
 }
 
-
 static inline VOID execute_c2c_kernels(aoclfftz_solution_t *sol, VOID *in, VOID *out)
 {
     if (sol->solver->kernel_c2c->count == 0)
@@ -191,15 +190,33 @@ static inline VOID execute_c2c_kernels(aoclfftz_solution_t *sol, VOID *in, VOID 
                half_stride_n * sizeof(INTP));
         for (INTP group_id = 0; group_id < num_c2c_per_group; group_id++)
         {
-            compute_conjugates(in, radix, num_groups,
-                               sol->strides_grp->strides_c2c->in_strides,
-                               sol->strides_grp->strides_c2c->v_in_stride,
-                               DT_PRECISION_FLAG(sol->decomp_scheme->flags));
+            VOID *kernel_in = NULL;
+            VOID *kernel_strides = NULL;
+            if (IS_OUT_OF_PLACE(sol->decomp_scheme->flags) &&
+                is_input_prob_buffer(sol))
+            {
+                kernel_in = sol->dft_bufs->ct_buf_real_in;
+                kernel_strides = sol->strides_grp->strides_c2r_ct_op;
+                compute_conjugates_outplace(
+                    kernel_in, in, radix, num_groups,
+                    sol->strides_grp->strides_c2c->in_strides,
+                    sol->strides_grp->strides_c2c->v_in_stride,
+                    DT_PRECISION_FLAG(sol->decomp_scheme->flags));
+            }
+            else
+            {
+                kernel_in = in;
+                kernel_strides = sol->strides_grp->strides_c2c;
+                compute_conjugates(
+                    in, radix, num_groups,
+                    sol->strides_grp->strides_c2c->in_strides,
+                    sol->strides_grp->strides_c2c->v_in_stride,
+                    DT_PRECISION_FLAG(sol->decomp_scheme->flags));
+            }
 
-            kernel_c2c(in, MOVE_ADDR(in, dt_bytes), out,
-                       MOVE_ADDR(out, dt_bytes), num_groups,
-                       sol->strides_grp->strides_c2c, NULL,
-                       FFT_DIR(sol->decomp_scheme->flags));
+            kernel_c2c(kernel_in, MOVE_ADDR(kernel_in, dt_bytes), out,
+                       MOVE_ADDR(out, dt_bytes), num_groups, kernel_strides,
+                       NULL, FFT_DIR(sol->decomp_scheme->flags));
 
             update_asymmetric_strides(sol->strides_grp->strides_c2c->in_strides,
                                      radix, batch_in_stride);

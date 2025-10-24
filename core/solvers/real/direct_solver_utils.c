@@ -52,12 +52,12 @@
  * @param radix radix of the C2C kernel
  * @param n batch of the C2C kernels
  * @param strides strides array for the buffer
- * @param v_out_stride vector stride for the buffer
+ * @param vec_stride vector stride for the buffer
  * @param prec precision flag (DT_FLOAT or DT_DOUBLE)
  * @return VOID
  */
 VOID compute_conjugates(VOID *data, INTP radix, INTP n, INTP *strides,
-                        INTP v_out_stride, UINT32 prec)
+                        INTP vec_stride, UINT32 prec)
 {
     INTP points = (radix + 1) >> 1; // ceil div
     if (prec == DT_FLOAT)
@@ -69,7 +69,7 @@ VOID compute_conjugates(VOID *data, INTP radix, INTP n, INTP *strides,
             {
                 data_i[strides[j]] = -data_i[strides[j]];
             }
-            data_i += v_out_stride;
+            data_i += vec_stride;
         }
     }
     else
@@ -81,7 +81,73 @@ VOID compute_conjugates(VOID *data, INTP radix, INTP n, INTP *strides,
             {
                 data_i[strides[j]] = -data_i[strides[j]];
             }
-            data_i += v_out_stride;
+            data_i += vec_stride;
+        }
+    }
+}
+
+/**
+ * @brief Compute complex conjugates for a set of selective points.
+ *        Conjugate the second half of the complex numbers in the input buffer.
+ *
+ * Example:
+ * Given an input for radix 4 (4 complex numbers in interleaved format)
+ * input  -> (1,  2), (3,  4), (5,  6), (7,  8)
+ * output -> (1,  2), (3,  4), (5, -6), (7, -8)
+ *
+ * This is the out-of-place version of the compute_conjugates function.
+ *
+ * @param out out data buffer
+ * @param in in data buffer
+ * @param radix radix of the C2C kernel
+ * @param n batch of the C2C kernels
+ * @param strides strides array for the buffer
+ * @param vec_stride vector stride for the buffer
+ * @param prec precision flag (DT_FLOAT or DT_DOUBLE)
+ * @return VOID
+ */
+VOID compute_conjugates_outplace(VOID *out, VOID *in, INTP radix, INTP n,
+                                 INTP *strides, INTP vec_stride, UINT32 prec)
+{
+    INTP points = (radix + 1) >> 1; // ceil div
+    if (prec == DT_FLOAT)
+    {
+        FLOAT *in_f = (FLOAT *)in;
+        FLOAT *out_f = (FLOAT *)out;
+        for (INTP i = 0; i < n; i++)
+        {
+            for (INTP j = 0; j < points; j++)
+            {
+                out_f[j * DATA_STRIDE] = in_f[strides[j]];
+                out_f[j * DATA_STRIDE + 1] = in_f[strides[j] + 1];
+            }
+            for (INTP j = points; j < radix; j++)
+            {
+                out_f[j * DATA_STRIDE] = in_f[strides[j]];
+                out_f[j * DATA_STRIDE + 1] = -in_f[strides[j] + 1];
+            }
+            in_f += vec_stride;
+            out_f += (radix * DATA_STRIDE);
+        }
+    }
+    else
+    {
+        DOUBLE *in_d = (DOUBLE *)in;
+        DOUBLE *out_d = (DOUBLE *)out;
+        for (INTP i = 0; i < n; i++)
+        {
+            for (INTP j = 0; j < points; j++)
+            {
+                out_d[j * DATA_STRIDE] = in_d[strides[j]];
+                out_d[j * DATA_STRIDE + 1] = in_d[strides[j] + 1];
+            }
+            for (INTP j = points; j < radix; j++)
+            {
+                out_d[j * DATA_STRIDE] = in_d[strides[j]];
+                out_d[j * DATA_STRIDE + 1] = -in_d[strides[j] + 1];
+            }
+            in_d += vec_stride;
+            out_d += (radix * DATA_STRIDE);
         }
     }
 }
@@ -446,6 +512,36 @@ VOID allocate_and_setup_stride(aoclfftz_solution_t *sol,
     }
 
     set_vector_strides_for_kernels(sol, vector_strides);
+
+    // for C2R out-of-place CT problems, allocate and prepare
+    // `strides_c2r_ct_op` for the CT stage that accesses the input buffer
+    if (IS_OUT_OF_PLACE(sol->decomp_scheme->flags) && realhelper.is_CT &&
+        is_input_prob_buffer(sol))
+    {
+        if (sol->strides_grp->strides_c2r_ct_op == NULL)
+        {
+            ALLOC_ALIGN_INIT(sol->strides_grp->strides_c2r_ct_op,
+                             aoclfftz_strides_t, sizeof(aoclfftz_strides_t));
+            FREE_ALIGN_ALLOCATED_MEM(
+                sol->strides_grp->strides_c2r_ct_op->in_strides);
+            FREE_ALIGN_ALLOCATED_MEM(
+                sol->strides_grp->strides_c2r_ct_op->out_strides);
+            ALLOC_ALIGN_INIT(sol->strides_grp->strides_c2r_ct_op->in_strides,
+                             INTP, radix * sizeof(INTP));
+            ALLOC_ALIGN_INIT(sol->strides_grp->strides_c2r_ct_op->out_strides,
+                             INTP, radix * sizeof(INTP));
+        }
+        memcpy(sol->strides_grp->strides_c2r_ct_op->out_strides,
+               sol->strides_grp->strides->out_strides, radix * sizeof(INTP));
+        sol->strides_grp->strides_c2r_ct_op->v_in_stride = radix * DATA_STRIDE;
+        sol->strides_grp->strides_c2r_ct_op->v_out_stride =
+            sol->strides_grp->strides_c2c->v_out_stride;
+        for (INT32 r = 0; r < radix; r++)
+        {
+            sol->strides_grp->strides_c2r_ct_op->in_strides[r] =
+                r * DATA_STRIDE;
+        }
+    }
 }
 
 /** Update the in/out buffers of direct solution for CT problem

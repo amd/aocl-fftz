@@ -115,10 +115,13 @@ INT32 update_pointers_real_buffered_solution(aoclfftz_solution_t *sol, INTP tid)
 
     // storing aux buffers in a temp variable
     aoclfftz_solution_t *buffered_sol = sol;
-    VOID *aux_in = MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_2,
+    VOID *aux_in = MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_1,
                              n * tid * dt_bytes);
-    VOID *aux_out = MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_1,
+    VOID *aux_out = MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_2,
                              n * tid * dt_bytes);
+
+    // update `ct_buf_real_in` pointers used for C2R out-of-place problems
+    sol->dft_bufs->ct_buf_real_in = aux_in;
 
     // move to the first direct solution of CT problem
     sol = sol->next_sol[0];
