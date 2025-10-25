@@ -289,22 +289,20 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_VALIDHANDLE_BACKWARD)
     this->validate_execute_io(false);
 }
 
-// FIXME : Revisit the logic
 // Destroy API test cases
 TYPED_TEST_P(AoclfftzAPITest, PTEST_DESTROY_VALIDHANDLE_SOLUTION)
 {
     this->handle = this->aoclfftz_setup(this->problem);
-    INT32 exe = aoclfftz_execute(this->handle);
-    (void)exe;
+    aoclfftz_execute(this->handle);
     aoclfftz_destroy(this->handle);
-    ASSERT_FALSE(this->is_handle_null(this->handle));
+    ASSERT_FALSE(is_handle_null(this->handle));
 }
 
 TYPED_TEST_P(AoclfftzAPITest, PTEST_DESTROY_WITHOUT_EXECUTE)
 {
     this->handle = this->aoclfftz_setup(this->problem);
     aoclfftz_destroy(this->handle);
-    ASSERT_FALSE(this->is_handle_null(this->handle));
+    ASSERT_FALSE(is_handle_null(this->handle));
 }
 
 // Register all test cases together
@@ -360,5 +358,5 @@ TEST(AoclfftzAPITest, NTEST_DESTROY_NULL_HANDLE)
 {
     VOID *handle = NULL;
     aoclfftz_destroy(handle);
-    EXPECT_TRUE(AoclfftzAPITest<void>::is_handle_null(handle));
+    EXPECT_TRUE(is_handle_null(handle));
 }

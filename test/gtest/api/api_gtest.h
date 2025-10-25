@@ -77,6 +77,13 @@ const std::vector<INT32> unsupported_rank = { INT32_MIN, -1 };
     std::uniform_int_distribution<> dist_invalid(INT32_MIN, 0); \
     prng.seed(42);
 
+
+// Function to check if the handle is destroyed
+static bool is_handle_null(VOID *handle)
+{
+    return (handle == NULL);
+}
+
 // Template class for testing the AOCL-FFTZ API
 template<typename ProblemType>
 class AoclfftzAPITest : public ::testing::Test
@@ -384,12 +391,7 @@ public:
         }
     }
 
-    // FIXME : remove this
-    // Function to check if the handle is destroyed
-    static bool is_handle_null(VOID *handle)
-    {
-        return (handle == NULL);
-    }
+
 
     // Validates execute_io correctness using execute output as reference
     VOID validate_execute_io(bool is_forward)
