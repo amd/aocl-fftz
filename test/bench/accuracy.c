@@ -74,9 +74,8 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     INTP input_bytes = params->sz_info.input_bytes;
     INTP output_bytes = params->sz_info.output_bytes;
 
-    // Buffer size adjustment for R2C/C2R in-place transforms
-    // In-place requires max(input_size, output_size) buffer allocation
-    // TODO: Check and remove this MAX logic if possible
+    // Buffer size adjustment for R2C/C2R in-place operations to accommodate
+    // complex type output/input in R2C/C2R transforms respectively.
     if (params->fft_type != C2C && params->res_placement == IN_PLACE)
     {
         input_bytes = MAX(input_bytes, output_bytes);
@@ -238,8 +237,8 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
     INTP output_bytes = params->sz_info.output_bytes;
     INT32 logger_mode = params->logger_mode;
 
-    // Buffer size adjustment for R2C/C2R in-place operations
-    // TODO: Check and remove this MAX logic if possible
+    // Buffer size adjustment for R2C/C2R in-place operations to accommodate
+    // complex type output/input in R2C/C2R transforms respectively.
     if (params->fft_type != C2C && params->res_placement == IN_PLACE)
     {
         input_bytes = MAX(input_bytes, output_bytes);
@@ -532,8 +531,8 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     INTP full_complex_bytes =
         n * batches * DATA_STRIDE * params->sz_info.dt_bytes;
 
-    // Buffer size adjustment for R2C/C2R in-place operations
-    // TODO: Check and remove this MAX logic if possible
+    // Buffer size adjustment for R2C/C2R in-place operations to accommodate
+    // complex type output/input in R2C/C2R transforms respectively.
     if (params->fft_type != C2C && params->res_placement == IN_PLACE)
     {
         input_bytes = MAX(input_bytes, output_bytes);

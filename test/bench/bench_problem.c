@@ -538,11 +538,10 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     UINT32 is_align = bench_params->aligned_alloc;
     INTP input_bytes = bench_params->sz_info.input_bytes;
     INTP output_bytes = bench_params->sz_info.output_bytes;
-    // TODO: Check and remove this MAX logic if possible
-    // In an R2C problem, input will have N real points and output will have N
-    // complex points.
-    // For in-place R2C problem, since the same buffer will be used for input
-    // and output, it should be large enough to hold the N complex points.
+    // For real FFT transforms, input and output have different data formats:
+    // R2C: N real values → N complex values and
+    // C2R: N complex values → N real values
+    // In-place operations require buffer size to accommodate the larger format.
     if (bench_params->fft_type != C2C &&
         bench_params->res_placement == IN_PLACE)
     {
