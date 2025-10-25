@@ -52,7 +52,6 @@ INT32 get_fusable_dims(aoclfftz_solution_t *sol, INT32 dim_rank)
 {
     INT32 fusable_dims = 1;
 
-    // FIXME : this needs to be revisited for optimization
     // do not club cases where in_stride != out_stride
     if (sol->decomp_scheme->dims[0].in_stride !=
         sol->decomp_scheme->dims[0].out_stride)

@@ -52,7 +52,6 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     // setup ND - 1 solution
     n_minus1_sol->decomp_scheme->dim_rank = dim_rank - 1;
 
-    // FIXME : memcpy instead ?
     for (INT32 i = 0; i < dim_rank - 1; i++)
     {
         n_minus1_sol->decomp_scheme->dims[i].n = sol->decomp_scheme->dims[i].n;

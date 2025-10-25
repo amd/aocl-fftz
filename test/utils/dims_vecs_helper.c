@@ -50,7 +50,6 @@
  * @return INT32 status code
  */
 
-// FIXME : this needs to be modified, club with allocate or exploit this result
 INT32 find_dim_vec_ranks(CHAR *arg, INT32 *dim_rank, INT32 *vec_rank)
 {
     INT32 dr = 1;
@@ -136,7 +135,6 @@ INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
             }
             // by default the data is stored in desc always
             // once "v" is encountered, its moved to vecs and then desc is reset
-            // FIXME : this needs to be fixed properly
             for (INT32 i = vec_rank - 1, j = 0; i >= 0; i--, j++)
             {
                 (*vecs)[i].n = desc[j].n;
