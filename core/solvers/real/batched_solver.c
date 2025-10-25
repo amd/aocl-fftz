@@ -110,12 +110,6 @@ INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
     }
     else
     {
-        // FIXIT: ND batched and ND sized in-place real forward problems
-        //        might fail.
-        //
-        // TODO: Perform input data re-ordering of in-place forward problems for
-        //       ND batched problems and ND sized problems
-
         for (rnk_offset = 0;
              rnk_offset < sol->decomp_scheme->vecs[vec_rank - 1].n;
              rnk_offset++)

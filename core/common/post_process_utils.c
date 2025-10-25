@@ -69,6 +69,8 @@
  * include bluestein detection, solver ordering (prev/curr/next), and whether
  * the problem has a column-major layout.
  *
+ * TODO: support bluestein and r2c/c2r problems
+ *
  * @param sol      Current solution node (expected to be a Batched solver node).
  * @param prev_sol Previous solution node, or NULL if at the root.
  * @return INT32   1 if eligible, 0 otherwise.
@@ -76,8 +78,7 @@
 static INT32 is_eligible_for_batched_direct(aoclfftz_solution_t *sol,
                                             aoclfftz_solution_t *prev_sol)
 {
-    // TODO: support for bluestein solver
-    // currently, we are not supporting batched-direct when bluestein problem is detected
+    // batched-direct approach is not supported for bluestein problems
     if (check_bluestein_problem(sol->decomp_scheme))
     {
         return 0; // return false
@@ -90,7 +91,6 @@ static INT32 is_eligible_for_batched_direct(aoclfftz_solution_t *sol,
     aoclfftz_solver_type next_solver =
         sol->next_sol ? sol->next_sol[0]->solver->solver_type : 0; // 0 means no solver (i.e. sol is the leaf node)
 
-    // TODO: Add MT & REAL variants
     // previous solver should be NULL or an NDim variant
     INT32 valid_prev_sol = (prev_solver == 0) ||
                            (prev_solver == SOLVER_NDIM);
@@ -108,15 +108,13 @@ static INT32 is_eligible_for_batched_direct(aoclfftz_solution_t *sol,
     }
 
     // Step 2: Check for eligible vec-strided batched problems
-    INT32 dim_rank = sol->decomp_scheme->dim_rank;
     aoclfftz_dim_t_64_ *dims = sol->decomp_scheme->dims;
     aoclfftz_dim_t_64_ *vecs = sol->decomp_scheme->vecs;
 
-    if (dim_rank == 1 && /* 1D problem (FIXME: this should be always true, so remove this check) */
-        vecs[0].n > 1 && /* batched problem */
+    if (vecs[0].n > 1 && /* batched problem */
         vecs[0].in_stride < dims[0].in_stride && /* column-major order input */
         vecs[0].out_stride < dims[0].out_stride && /* column-major order output */
-        dims[0].in_stride == dims[0].out_stride && /* FIXME: support different in/out strides */
+        dims[0].in_stride == dims[0].out_stride && /* TODO: support different in/out strides */
         vecs[0].in_stride == vecs[0].out_stride)
     {
         AOCLFFTZ_LOG(
@@ -177,7 +175,6 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
     // iterate through the solution list on ndim branches first
     while (curr_sol)
     {
-        // TODO: Refine this condition
         // check if the current solution is a batched solver with its dim_rank
         // is 2 or the current dim_rank is 3
         // this is required to handle the outermost dim's batched solver
@@ -219,7 +216,6 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
             INTP batched_vec_in_stride;
             INTP batched_vec_out_stride;
 
-            // TODO: Handle strided dim_rank == 3 and dim_rank > 3 cases
             if (is_3rd_dim_batched && curr_sol->dft_bufs->use_2D_buffering)
             {
                 // For 3D unit-strided C2C problems, when compact buffer approach is used
@@ -302,10 +298,7 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
             // it single threaded
             UINT32 batched_n_threads =
                 batched_sol->decomp_scheme->thread_info->n_threads;
-            UINT32 batched_avl_threads =
-                batched_sol->decomp_scheme->thread_info->avl_threads;
             // make the multi-threaded batched_solver as single threaded
-            // FIXME: Handle non-3d cases properly
             if (batched_sol->solver->solver_type == SOLVER_MT_BATCHED &&
                 !is_3rd_dim_batched)
             {
@@ -341,7 +334,6 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
                 {
                     // update solver type
 #ifdef MULTI_THREADING
-                    // TODO: Handle non-3d cases properly
                     // Multi-threaded batched solver won't be used for 3D
                     // problems when compact buffer approach is used
                     if (batched_n_threads > 1 &&
@@ -352,9 +344,9 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
                         {
                             // FIXME: a temporary fix to use different MT solvers
                             // for 1D and ND problems; it is based on the
-                            // performance study for 1D and 3D problems
-                            // TODO: remove this once we have an MT solver
-                            // which works for all the cases
+                            // performance study for 1D and 3D problems,
+                            // remove this once we have an MT solver which works
+                            // for all the cases
                             if (prev_sol &&
                                 prev_sol->solver->solver_type == SOLVER_NDIM)
                             {
@@ -373,12 +365,8 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
                         }
                         // TODO: use row-major variant in else case
 
-                        // TODO: Verify whether assigning both n_threads and
-                        //       avl_threads are required or not
                         curr_sol->decomp_scheme->thread_info->n_threads =
                             batched_n_threads;
-                        curr_sol->decomp_scheme->thread_info->avl_threads =
-                            batched_avl_threads;
                     }
                     else
                     {
@@ -425,7 +413,6 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
                         curr_sol->decomp_scheme->dims[0].in_stride,
                         curr_sol->decomp_scheme->dims[0].out_stride);
 
-                    // FIXME: Handle this properly
                     // For 3D unit-strided C2C problems, when compact buffer approach is used
                     // reduce the strides of ct_buffer to match the smaller ct_buffer size
                     INTP radix = curr_sol->decomp_scheme->dims[0].n;

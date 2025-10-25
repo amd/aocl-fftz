@@ -451,10 +451,9 @@ VOID alloc_inplace_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
 
     UINT32 dt_bytes = SOL_DT_SIZE(solution);
 
-    // FIXME: Currently compact buffer is used only for 3D unit-strided non-batched C2C problems
-    // TODO: Handle all cases effectively
-    // Approach: if the problem is a 3D, then create ct_buffer of 2D by removing the smallest dim
-    // for. e.g. problem size of 30x40x50 -> ct_buffer of 40x50
+    // Approach: if the problem is 3D, then create ct_buffer of 2D by removing
+    // the smallest dim for. e.g. problem size of 30x40x50 -> ct_buffer of 40x50
+    // for multi-threaded problems, this 2D buffer will be created per thread.
     INTP min_dim_size = dims[0].n;
     for (INT32 i = 0; i < dim_rank; i++)
     {
@@ -470,6 +469,8 @@ VOID alloc_inplace_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
     }
 #ifndef DISABLE_OPTIMAL_BUFFERING
     INT32 n_threads = solution->decomp_scheme->thread_info->avl_threads;
+    // compact buffer is used only for 3D unit-strided non-batched C2C problems.
+    // TODO: support for strided problems with 3D and above (i.e. dim_rank >= 3)
     if ((solution->decomp_scheme->dim_rank == 3) &&
         (solution->decomp_scheme->dims[0].in_stride == 1) &&
         (solution->decomp_scheme->vecs[0].n == 1) &&
