@@ -95,7 +95,7 @@ typedef enum
 {
     C2C_KERNEL = 0,
     R2HC_KERNEL,
-    R2HCF_KERNEL // TODO: Fix naming R2HCF or R2HC_FUSED
+    R2HCF_KERNEL
 } aoclfftz_kernel_type;
 
 // Holds the kernel level operational complexity in terms approximate cycles

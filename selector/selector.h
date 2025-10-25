@@ -340,7 +340,6 @@ typedef struct aoclfftz_selector
 
 // Few additional steps are required for RealFFT problems before and after
 // the setup stages.
-// FIXIT: These additional initialization steps will only work for 1D problems.
 #define PREPARE_AND_SETUP_DFT(sel_obj, ret)                                    \
 {                                                                              \
     sel_obj->execute = register_execute_dft();                                 \
@@ -358,11 +357,11 @@ typedef struct aoclfftz_selector
         if (FFT_DIR(sel_obj->solution->decomp_scheme->flags) ==                \
             FORWARD_FFT_DIR)                                                   \
         {                                                                      \
-            realhelper->freq_factor = 1;                                   \
+            realhelper->freq_factor = 1;                                       \
         }                                                                      \
         else                                                                   \
         {                                                                      \
-            realhelper->freq_factor = realhelper->problem_size;            \
+            realhelper->freq_factor = realhelper->problem_size;                \
         }                                                                      \
         ret = selector_driver_rdft_(sel_obj, realhelper);                      \
         SWAP_REAL_CT_SOLUTIONS(sel_obj);                                       \
