@@ -69,9 +69,8 @@ option(ASAN "Enables address sanitizer checks. Supported only on Linux Debug bui
 option(BUILD_DOC "Build documentation for library (Disabled by default)" OFF)
 option(BUILD_STATIC_LIBS "Build static library (Default build type is shared library)" OFF)
 option(CODE_COVERAGE "Enables source code coverage and generates coverage report. Supported only on Linux with GCC compiler (Disabled by default)" OFF)
-option(ENABLE_AVX128 "Compiles library with AVX 128-bit kernels support (Enabled by default)" ON)
-option(ENABLE_AVX256 "Compiles library with AVX 256-bit kernels support (Enabled by default)" ON)
-option(ENABLE_AVX512 "Compiles library with AVX 512-bit kernels support (Enabled by default)" ON)
+set(ENABLE_INSTRUCTIONS_UPTO "AVX512" CACHE STRING "Specify maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)")
+set_property(CACHE ENABLE_INSTRUCTIONS_UPTO PROPERTY STRINGS "None" "AVX128" "AVX256" "AVX512")
 option(ENABLE_FMA "Enable -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)" ON)
 option(ENABLE_MULTI_THREADING "Compiles library with multi-threading support using OpenMP (Disabled by default)" OFF)
 option(ENABLE_STRICT_WARNINGS "Enable compiler flags to treat all warnings as errors (Enabled by default)" ON)
@@ -99,8 +98,8 @@ file(GLOB CORE_C_FILES CONFIGURE_DEPENDS
 list(APPEND CORE_SRC_FILES ${CORE_C_FILES})
 
 #Add AVX Kernels based on the flags ENABLE_AVX128, ENABLE_AVX256 & ENABLE_AVX512
-if(ENABLE_AVX512)
-    set(ENABLE_AVX256 ON)
+if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX512")
+    set(ENABLE_AVX512 ON)
     add_compile_definitions(ENABLE_AVX512)
     file(GLOB CORE_AVX512_FILES CONFIGURE_DEPENDS
                             ${CORE_PATH}/kernels/c2c/avx512/*.c
@@ -110,8 +109,8 @@ if(ENABLE_AVX512)
                             ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx512.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX512_FILES})
 endif()
-if(ENABLE_AVX256)
-    set(ENABLE_AVX128 ON)
+if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX256|AVX512")
+    set(ENABLE_AVX256 ON)
     add_compile_definitions(ENABLE_AVX256)
     file(GLOB CORE_AVX256_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/c2c/avx256/*.c
                                                   ${CORE_PATH}/kernels/r2hc/avx256/*.c
@@ -120,7 +119,8 @@ if(ENABLE_AVX256)
                                                   ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx256.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX256_FILES})
 endif()
-if(ENABLE_AVX128)
+if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX128|AVX256|AVX512")
+    set(ENABLE_AVX128 ON)
     add_compile_definitions(ENABLE_AVX128)
     file(GLOB CORE_AVX128_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/c2c/avx128/*.c
                                                   ${CORE_PATH}/kernels/r2hc/avx128/*.c
@@ -158,12 +158,31 @@ else()
     add_compile_definitions(CFLAGS_SET1="${CMAKE_C_FLAGS_DEBUG}")
 endif()
 
+if (ENABLE_FMA AND (ENABLE_INSTRUCTIONS_UPTO MATCHES "None|AVX128"))
+    set(ENABLE_FMA OFF)
+endif()
+
 #set(USER_DEBUG_ON "-g")
 message(STATUS "C Compiler used: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ Compiler used: ${CMAKE_CXX_COMPILER}")
-message(STATUS ENABLE_AVX128 : ${ENABLE_AVX128})
-message(STATUS ENABLE_AVX256 : ${ENABLE_AVX256})
-message(STATUS ENABLE_AVX512 : ${ENABLE_AVX512})
+if (ENABLE_AVX128)
+    message(STATUS "AVX128 Instructions: Enabled")
+else()
+    message(STATUS "AVX128 Instructions: Disabled")
+endif()
+if (ENABLE_AVX256)
+    message(STATUS "AVX256 Instructions: Enabled")
+else()
+    message(STATUS "AVX256 Instructions: Disabled")
+endif()
+if (ENABLE_AVX512)
+    message(STATUS "AVX512 Instructions: Enabled")
+else()
+    message(STATUS "AVX512 Instructions: Disabled")
+endif()
+if (ENABLE_FMA)
+    message(STATUS "FMA instructions: Enabled")
+endif()
 
 if(WIN32)
     if(ENABLE_AVX512)
@@ -273,6 +292,14 @@ if(NOT AOCL_TEST_COVERAGE STREQUAL "OFF"
    AND NOT AOCL_TEST_COVERAGE STREQUAL "STANDARD"
    AND NOT AOCL_TEST_COVERAGE STREQUAL "EXHAUSTIVE")
     message(FATAL_ERROR "Invalid value for AOCL_TEST_COVERAGE: '${AOCL_TEST_COVERAGE}'\nAllowed values are: OFF, STANDARD, EXHAUSTIVE.")
+endif()
+
+# validate ENABLE_INSTRUCTIONS_UPTO values
+if(NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "None"
+   AND NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "AVX128"
+   AND NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "AVX256"
+   AND NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "AVX512")
+    message(FATAL_ERROR "Invalid value for ENABLE_INSTRUCTIONS_UPTO: '${ENABLE_INSTRUCTIONS_UPTO}'\nAllowed values are: None, AVX128, AVX256, AVX512.")
 endif()
 
 # setup to get source code coverage(GCOV)

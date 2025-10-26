@@ -147,7 +147,7 @@ if(ENABLE_MULTI_THREADING)
     endif()
 endif()
 
-if(ENABLE_AVX512 OR ENABLE_AVX256 OR ENABLE_AVX128)
+if(NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "None")
     include(CheckCXXSourceRuns)
 
     # Common header code for all AVX detection
