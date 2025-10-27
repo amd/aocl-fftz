@@ -16,8 +16,6 @@ advantage of shared-memory parallelism using OpenMP threads.
 AOCL-FFTZ introduces a generic and unified API set for supporting
 precision types (single-precision and double-precision), and both the
 single-threaded and multi-threaded execution modes.
-AOCL-FFTZ supports distributed FFTs with a separate API set that makes use of
-an underlying MPI framework for communication.
 The library uses a dynamic dispatcher feature to run efficiently and portably
 across different x86 based systems.
 A test bench is supported for performance and functional tests including the
@@ -28,7 +26,7 @@ Prerequisites
 -------------
 1. CMake - Version 3.26 or above
 2. Linux :
-        GCC compiler - Version 7.1 or above (or)
+        GCC compiler - Version 8.0 or above (or)
         AOCC compiler - Version 2.0 or above
 3. Windows :
         Visual Studio with Clang 12 or above
