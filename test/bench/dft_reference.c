@@ -53,8 +53,6 @@
 
 #ifdef ENABLE_DFT_REFERENCE
 
-#include "utils/complex_utils.h"
-
 /**
  * @brief Execute FFT library and compare output with DFT reference
  * implementation
