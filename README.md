@@ -35,7 +35,7 @@ Building on Linux
 -----------------
 1. Clone the repo using the following command :
    ```
-   git clone "https://github.com/AMD-AOCL/aocl-fftz.git" && cd aocl-fftz/
+   git clone "https://github.com/amd/aocl-fftz" && cd aocl-fftz/
    ```
 
 2. Run the following command in order to generate and configure build system.
@@ -236,11 +236,6 @@ Run :
 ```
 ctest
 ```
-
-
-Running Performance Benchmark test
-----------------------------------
---TBD--
 
 Generating Documentation
 ------------------------
