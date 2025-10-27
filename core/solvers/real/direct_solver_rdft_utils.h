@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file direct_solver_utils.h
+/** @file direct_solver_rdft_utils.h
  *
  *  @brief Direct Solver helper function's declarations required for
  *         the setup of direct solver

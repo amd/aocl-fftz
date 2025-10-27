@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file mt_batched_solver.c
+/** @file mt_batched_solver_dft.c
  *
  *  @brief Multi threaded batched solver that sets up and solves a vector
  *  problem by parallelizing across multiple threads
@@ -37,7 +37,7 @@
  *  @author Murugan Vairavel
  */
 
-#include "core/common/memory_manager.h"
+#include "core/solvers/solver.h"
 
 INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol, UINT32 num_threads_used)
 {

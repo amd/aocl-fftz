@@ -26,18 +26,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file direct_solver_utils.c
+/** @file direct_solver_rdft_utils.c
  *
  *  @brief Direct Solver helper functions required for the setup of direct solver
  *
  *  @author Partiksha
  */
 
-#include "core/solvers/real/direct_solver.h"
-#include "api/aoclfftz_internal.h"
 #include "core/common/memory_manager.h"
 #include "core/common/strides.h"
-#include "core/solvers/real/direct_solver_utils.h"
+#include "core/solvers/real/direct_solver_rdft_utils.h"
 
 /**
  * @brief Compute complex conjugates for a set of selective points.
