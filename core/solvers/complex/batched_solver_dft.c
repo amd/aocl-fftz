@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file batched_solver.c
+/** @file batched_solver_dft.c
  *
  *  @brief Batched Solver that sets up and solves a vector problem
  *
@@ -37,7 +37,7 @@
  *  @author Jeya R
  */
 
-#include "core/common/memory_manager.h"
+#include "core/solvers/solver.h"
 
 INT32 setup_batched_solver(aoclfftz_solution_t *sol)
 {

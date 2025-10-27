@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file direct_solver.c
+/** @file direct_solver_rdft.c
  *
  *  @brief Direct Solver that applies an available kernel to the input problem
  *
@@ -37,13 +37,9 @@
  */
 
 #include <assert.h>
-#include "core/solvers/real/direct_solver.h"
-#include "api/aoclfftz_internal.h"
 #include "core/common/memory_manager.h"
-#include "core/common/strides.h"
 #include "core/common/twiddle.h"
-#include "selector/selector.h"
-#include "core/solvers/real/direct_solver_utils.h"
+#include "core/solvers/real/direct_solver_rdft_utils.h"
 
 /** This function will setup the direct solution with the required information
  *  to execute both direct and CT problems.

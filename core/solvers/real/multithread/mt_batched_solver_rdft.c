@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file mt_batched_solver.c
+/** @file mt_batched_solver_rdft.c
  *
  *  @brief Multithreaded batched solver that sets up and solves a vector
  *  problem by parallelizing across multiple threads

@@ -26,9 +26,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file ct_solver.c
+/** @file buffered_solver_rdft.c
  *
- *  @brief Cooley Tukey Solver that decomposes and solves an input problem
+ *  @brief Buffered Solver that sets up auxiliary buffers for real CT problems
  *
  *  This file contains the functions that setup, execute and destroy
  *  the solver.
@@ -36,45 +36,57 @@
  *  @author Srirammaswamy Srinivasan
  */
 
-#include "core/solvers/real/ct_solver.h"
 #include "core/common/memory_manager.h"
 
-INT32 setup_real_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
-                           aoclfftz_solution_t *sol_m, UINT32 radix_r,
-                           UINT32 radix_m, aoclfftz_realhelper_t *realhelper)
+INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
+                                 aoclfftz_realhelper_t *realhelper)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    // Setup radix-m sub-problem
-    COPY_SOLUTION_OBJ(sol_m, sol);
-    sol_m->decomp_scheme->dims[0].n = radix_m;
-    sol_m->decomp_scheme->vecs[0].n = realhelper->problem_size / radix_m;
+    INT32 status = SOLVER_SUCCESS;
+    realhelper->is_buffered_invoked = 1;
+    INT32 num_aux_buf = realhelper->num_aux_buf;
 
-    // Setup radix-r sub-problem
-    COPY_SOLUTION_OBJ(sol_r, sol);
-    sol_r->decomp_scheme->dims[0].n = radix_r;
-    sol_r->decomp_scheme->vecs[0].n = realhelper->problem_size / radix_r;
+    INT32 dt_bytes = SOL_DT_SIZE(sol);
+    INTP n = sol->decomp_scheme->dims[0].n;
 
+    // Copy input to temp buffer
+    FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
+    FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
+    ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_1, VOID,
+                     num_aux_buf * n * dt_bytes);
+    ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_2, VOID,
+                     num_aux_buf * n * dt_bytes);
+
+    sol->dft_bufs->ct_buf_real_in = sol->dft_bufs->buffered->aux_buffer_1;
+
+#ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
-    return SOLVER_SUCCESS;
+#endif
+    return status;
 }
 
-static INT32 execute_real_ct_solver(aoclfftz_solution_t *sol)
+static INT32 execute_real_buffered_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
 
     INT32 ret = SOLVER_SUCCESS;
 
-    // Execute the next direct solution
-    // NOTE: The CT problem is executed in the execute_real_direct_solver,
-    // along with direct problems
+    // composite problem input
+    sol->next_sol[0]->decomp_scheme->in_real = sol->decomp_scheme->in_real;
+    // composite problem output
+    *sol->dft_bufs->buffered->out_ptr = sol->decomp_scheme->out_real;
+
+    sol->next_sol[0]->dft_bufs->ct_buf_real_in = sol->dft_bufs->ct_buf_real_in;
+
     ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0]);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return ret;
 }
 
-dft_solver_ register_execute_real_ct_solver(VOID)
+dft_solver_ register_execute_real_buffered_solver(VOID)
 {
-    return execute_real_ct_solver;
+    return execute_real_buffered_solver;
 }

@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file ndim_solver.c
+/** @file ndim_solver_dft.c
  *
  *  @brief N-Dimensional solver that solves an ND problem
  *
@@ -36,7 +36,6 @@
  *  @author Prasandh Sankarankutty
  */
 
-#include "core/solvers/complex/ndim_solver.h"
 #include "selector/selector.h"
 
 INT32 setup_ndim_solver(aoclfftz_solution_t *sol,

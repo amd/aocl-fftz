@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file sizeone_solver.c
+/** @file sizeone_solver_dft.c
  *
  *  @brief Size One solver that solves input problems with size as 1.
  *
@@ -35,7 +35,8 @@
  *  @author Varun Sanjay
  */
 
-#include "core/solvers/complex/sizeone_solver.h"
+#include <string.h> // for memcpy
+#include "core/solvers/solver.h"
 
 static VOID execute_float_kernel(VOID *in_real, VOID *in_imag, VOID *out_real,
                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,

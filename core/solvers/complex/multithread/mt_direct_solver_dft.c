@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file mt_direct_solver.c
+/** @file mt_direct_solver_dft.c
  *
  *  @brief Multi threaded direct solver that enables multi threading for the
  *  available direct kernels
@@ -38,9 +38,7 @@
  *  @author Srirammaswamy Srinivasan
  */
 
-#include "api/aoclfftz_internal.h"
 #include "core/common/memory_manager.h"
-#include "utils/utils.h"
 
 INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                           kernel_t *kernel)

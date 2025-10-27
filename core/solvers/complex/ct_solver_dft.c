@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file ct_solver.c
+/** @file ct_solver_dft.c
  *
  *  @brief Cooley Tukey Solver that decomposes and solves an input problem
  *
@@ -36,11 +36,12 @@
  *  @author S. Biplab Raut
  */
 
-#include "core/solvers/complex/ct_solver.h"
-#include "api/aoclfftz_internal.h"
 #include "core/common/twiddle.h"
 #include "core/common/memory_manager.h"
+
+#if defined PERFORM_INTER_STAGE_PERMUTE
 #include "core/kernels/transpose/transpose_utils.h"
+#endif
 
 INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
                       aoclfftz_solution_t *sol_m, UINT32 radix_r,

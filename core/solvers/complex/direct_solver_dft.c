@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file direct_solver.c
+/** @file direct_solver_dft.c
  *
  *  @brief Direct Solver that applies an available kernel to the input problem
  *
@@ -38,9 +38,7 @@
  *  @author Prasandh Sankarankutty
  */
 
-#include "core/solvers/complex/direct_solver.h"
 #include "core/common/memory_manager.h"
-#include "utils/utils.h"
 
 INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                           kernel_t *kernel)

@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file bluestein_solver.c
+/** @file bluestein_solver_dft.c
  *
  *  @brief Bluestein Solver that solves an input problem
  *
@@ -36,7 +36,6 @@
  *  @author Srirammaswamy Srininvasan
  */
 
-#include <string.h> /* for memset, memcpy */
 #include "core/common/bluestein_utils.h"
 #include "core/common/memory_manager.h"
 
