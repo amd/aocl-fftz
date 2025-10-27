@@ -472,7 +472,7 @@ class AoclfftzKernelTestBase
         }
         for (INTP idx = 0; idx < input_length * data_stride; idx += in_stride)
         {
-            input[idx] = get_maybe_special_value<T>(rand());
+            input[idx] = get_fp_special_value<T>(rand());
         }
         return input;
     } // prepare_random_noise_input

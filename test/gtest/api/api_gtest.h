@@ -35,11 +35,11 @@
 #include <stdlib.h>
 #include <cstdlib>
 #include <ctime>
-#include <vector>
 #include <random>
 #include <climits>
 #include <iostream> // Add this include for debug printing
 #include "gtest/gtest.h"
+#include "test/gtest/common_gtest_utils.h"
 
 extern "C"
 {
@@ -91,7 +91,6 @@ class AoclfftzAPITest : public ::testing::Test
 public:
     INT32 optOff;
     INT32 optLevel;
-    aoclfftz_flags_t flags;
     UINT32 num_threads;
     UINT32 dynamic_load_model;
     ProblemType *problem;
@@ -134,9 +133,9 @@ public:
             return;
         }
         /* Default value of is_inplace is 0,
-         * If flags are invalid, free the memory buffer based on default flags */
+         * If problem->flags are invalid, free the memory buffer based on default flags */
         bool is_inplace = isValidFlags(problem->flags) ?
-                                    !flags.fft_placement : 0;
+                                    !problem->flags.fft_placement : 0;
         if (problem->in)
         {
             delete[] problem->in;
@@ -174,9 +173,11 @@ public:
         out_size[0] = output_size;
     }
 
+
     // Function to create a sample problem for testing
     template<typename DataType, typename DimT>
-    VOID create_pdesc(bool is_forward = true, bool is_inplace = false)
+    VOID create_pdesc(bool is_forward = true, bool is_inplace = false, 
+                      InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
     {
         if (problem == NULL)
         {
@@ -193,26 +194,23 @@ public:
             throw std::runtime_error("Memory allocation failed "
                                                         "for dims or vecs!");
         }
-        // Set flags based on transform direction
-        flags.storage_order = 0;
-        flags.fft_type = 0;
-        flags.transpose_mode = 0;
+        // Update flags based on transform direction and placement
+        // Only update fft_direction and fft_placement, preserve other flag fields
         if (is_forward)
         {
-            flags.fft_direction = 0;
+            problem->flags.fft_direction = 0;
         }
         else
         {
-            flags.fft_direction = 1;
-
+            problem->flags.fft_direction = 1;
         }
         if (is_inplace)
         {
-            flags.fft_placement = 0;
+            problem->flags.fft_placement = 0;
         }
         else
         {
-            flags.fft_placement = 1;
+            problem->flags.fft_placement = 1;
         }
         // Set dims values
         problem->dims[0].n = 10;
@@ -240,7 +238,7 @@ public:
             out_size += (problem->dims[i].n) * (problem->dims[i].out_stride)
                                                                         * 2;
         }
-        for (INT32 i = 0; i < problem->vec_rank; i++)
+        for (INT32 i = 1; i < problem->vec_rank; i++)
         {
             in_size += (problem->vecs[i].n) * (problem->vecs[i].in_stride);
             out_size += (problem->vecs[i].n) * (problem->vecs[i].out_stride);
@@ -269,7 +267,7 @@ public:
         }
         for (INT32 i = 0; i < in_size; i++)
         {
-            problem->in[i] = (DataType)i;
+            problem->in[i] = get_value_based_on_strategy<DataType>(value_strategy, in_size);
         }
         if (!is_inplace)
         {
@@ -286,32 +284,168 @@ public:
         problem->cntrl_params.opt_off = 1;
     }
 
+    /**
+     * @brief Create a 1D problem descriptor with large size
+     * 
+     */
+    template<typename DataType, typename DimT>
+    VOID create_1d_pdesc(bool is_forward = true, bool is_inplace = false, 
+                         InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
+    {
+        if (problem == NULL)
+        {
+            return;
+        }
+        INT32 in_size = 0, out_size = 0;
+        problem->dim_rank = 1;
+        problem->vec_rank = 1;
+        problem->dims = new DimT[problem->dim_rank];
+        problem->vecs = new DimT[problem->vec_rank];
+        if (problem->dims == NULL || problem->vecs == NULL)
+        {
+            cleanup_problem();
+            throw std::runtime_error("Memory allocation failed for dims or vecs!");
+        }
+        
+        // Update flags based on transform direction and placement
+        if (is_forward)
+        {
+            problem->flags.fft_direction = 0;
+        }
+        else
+        {
+            problem->flags.fft_direction = 1;
+        }
+        if (is_inplace)
+        {
+            problem->flags.fft_placement = 0;
+        }
+        else
+        {
+            problem->flags.fft_placement = 1;
+        }
+        
+        // Set dims values - 1D with large size (16384 = 2^14, common FFT size)
+        problem->dims[0].n = 16384;
+        problem->dims[0].in_stride = 1;
+        problem->dims[0].out_stride = 1;
+        
+        // Set vecs values
+        problem->vecs[0].n = 1;
+        problem->vecs[0].in_stride = problem->dims[0].n * problem->dims[0].in_stride;
+        problem->vecs[0].out_stride = problem->dims[0].n * problem->dims[0].out_stride;
+        
+        // Calculate buffer sizes (complex data has 2 elements per value)
+        for (INT32 i = 0; i < problem->dim_rank; i++)
+        {
+            in_size += (problem->dims[i].n) * (problem->dims[i].in_stride) * 2;
+            out_size += (problem->dims[i].n) * (problem->dims[i].out_stride) * 2;
+        }
+
+        // Allocating input buffer
+        input_size = in_size * sizeof(DataType);
+        problem->in = new DataType[in_size];
+        
+        // Allocating output buffer
+        if (is_inplace)
+        {
+            output_size = input_size;
+            problem->out = problem->in;
+        }
+        else
+        {
+            output_size = out_size * sizeof(DataType);
+            problem->out = new DataType[out_size];
+        }
+
+        if (problem->in == NULL || problem->out == NULL)
+        {
+            cleanup_problem();
+            throw std::runtime_error("Memory allocation failed for input or output arrays");
+        }
+        
+        // Initialize input buffer with values based on strategy
+        for (INT32 i = 0; i < in_size; i++)
+        {
+            problem->in[i] = get_value_based_on_strategy<DataType>(value_strategy, in_size);
+        }
+        
+        // Initialize output buffer (for out-of-place only)
+        if (!is_inplace)
+        {
+            for (INT32 i = 0; i < out_size; i++)
+            {
+                problem->out[i] = static_cast<DataType>(0.0);
+            }
+        }
+        
+        // Set threading and control parameters
+        problem->pthr_fft.dynamic_load_model = DEFAULT_DYNAMIC_LOAD_MODEL;
+        problem->pthr_fft.num_threads = DEFAULT_NUM_THREADS;
+        problem->cntrl_params.logger_mode = AOCLFFTZ_LOG_NONE;
+        problem->cntrl_params.measure_stats = 0;
+        problem->cntrl_params.opt_level = -1;
+        problem->cntrl_params.opt_off = 1;
+    }
+
     // Calls the appropriate sample problem creation based on problem type
-    VOID create_default_pdesc(bool is_forward = true, bool is_inplace = false)
+    VOID create_default_pdesc(bool is_forward = true, bool is_inplace = false, 
+                              InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
     {
         if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_f>::value)
         {
-            create_pdesc<FLOAT, aoclfftz_dim_t>(is_forward, is_inplace);
+            create_pdesc<FLOAT, aoclfftz_dim_t>(is_forward, is_inplace, value_strategy);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_d>::value)
         {
-            create_pdesc<DOUBLE, aoclfftz_dim_t>(is_forward, is_inplace);
+            create_pdesc<DOUBLE, aoclfftz_dim_t>(is_forward, is_inplace, value_strategy);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_f_64_>::value)
         {
-            create_pdesc<FLOAT, aoclfftz_dim_t_64_>(is_forward, is_inplace);
+            create_pdesc<FLOAT, aoclfftz_dim_t_64_>(is_forward, is_inplace, value_strategy);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_d_64_>::value)
         {
-            create_pdesc<DOUBLE, aoclfftz_dim_t_64_>(is_forward, is_inplace);
+            create_pdesc<DOUBLE, aoclfftz_dim_t_64_>(is_forward, is_inplace, value_strategy);
         }
         else
         {
             throw std::runtime_error("Unsupported problem type "
                                                 "for create_pdesc.");
+        }
+    }
+
+    /**
+     * @brief Wrapper to create 1D problem descriptor based on problem type
+     * 
+     * This function dispatches to the appropriate create_1d_pdesc template instantiation
+     * based on the problem type (float/double and 32-bit/64-bit indices).
+     */
+    VOID create_default_1d_pdesc(bool is_forward = true, bool is_inplace = false, 
+                                 InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
+    {
+        if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_f>::value)
+        {
+            create_1d_pdesc<FLOAT, aoclfftz_dim_t>(is_forward, is_inplace, value_strategy);
+        }
+        else if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_d>::value)
+        {
+            create_1d_pdesc<DOUBLE, aoclfftz_dim_t>(is_forward, is_inplace, value_strategy);
+        }
+        else if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_f_64_>::value)
+        {
+            create_1d_pdesc<FLOAT, aoclfftz_dim_t_64_>(is_forward, is_inplace, value_strategy);
+        }
+        else if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_d_64_>::value)
+        {
+            create_1d_pdesc<DOUBLE, aoclfftz_dim_t_64_>(is_forward, is_inplace, value_strategy);
+        }
+        else
+        {
+            throw std::runtime_error("Unsupported problem type for create_1d_pdesc.");
         }
     }
 
@@ -376,7 +510,7 @@ public:
     }
 
     // Function to run the setup and validate the handle
-    void run_setup_and_validate(int err_no)
+    void run_setup_and_validate(INT32 err_no)
     {
         if (err_no == INVALID)
         {
