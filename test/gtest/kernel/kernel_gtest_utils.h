@@ -48,7 +48,7 @@ extern "C"
 #include "test/gtest/aoclfftz_core_wrapper.h"
 }
 #include "test/gtest/gtest_types.h"
-#include "utils/complex_utils.h"
+#include "test/utils/complex_utils.h"
 
 #define TOLERANCE_F 1E-3
 #define TOLERANCE_D 1E-10

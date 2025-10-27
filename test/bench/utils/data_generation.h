@@ -42,7 +42,7 @@
 #define DATA_GENERATION_H
 
 #include "api/types.h"
-#include "utils/complex_utils.h"
+#include "test/utils/complex_utils.h"
 
 #define PREPARE_LINEAR_TEST_INPUTS(in1, in2, in_combined, size, factors,       \
                                    precision, data_stride)                     \
