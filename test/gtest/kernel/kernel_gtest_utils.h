@@ -49,16 +49,10 @@ extern "C"
 }
 #include "test/gtest/gtest_types.h"
 #include "test/utils/complex_utils.h"
+#include "test/gtest/common_gtest_utils.h"
 
 #define TOLERANCE_F 1E-3
 #define TOLERANCE_D 1E-10
-
-#ifndef DBL_TRUE_MIN
-#define DBL_TRUE_MIN 4.9406564584124654e-324
-#endif
-#ifndef FLT_TRUE_MIN
-#define FLT_TRUE_MIN 1.40129846e-45F
-#endif
 
 /**
  * @brief Get the kernel object from the kernel table based on the given radix
@@ -520,79 +514,6 @@ template <class T> inline void print_complex(T *val)
     {
         PRINT_COMPLEX_FP64((FLOAT64 *)val);
     }
-}
-
-/**
- * @brief Get the special values like NaN, infinity, negative infinity
- * floating point min/max/subnormal-min values in positive and negative range.
- * This function may generate the above special values based on the given
- * `value` parameter. value mod 20 is used instead of 10 to limit these
- * special values to 50% propability. Normal random numbers will be in range
- * [-10.0, 10.0) with 3 decimal precision.
- *
- * @tparam T data type (float32 or float64)
- * @param value input value to pick the type of value
- * @return T return the normal or special value
- */
-template <class T> T get_maybe_special_value(INT32 value)
-{
-    if (typeid(T) == typeid(FLOAT64))
-    {
-        switch (value % 20)
-        {
-        case 0:
-            return 0.0L;
-        case 1:
-            return DBL_TRUE_MIN;
-        case 2:
-            return -DBL_TRUE_MIN;
-        case 3:
-            return DBL_MIN;
-        case 4:
-            return -DBL_MIN;
-        case 5:
-            return DBL_MAX;
-        case 6:
-            return -DBL_MAX;
-        case 7:
-            return INFINITY;
-        case 8:
-            return -INFINITY;
-        case 9:
-            return NAN;
-        default:
-            return ((rand() % 2000) / 200.0) - 10.0;
-        }
-    }
-    else if (typeid(T) == typeid(FLOAT32))
-    {
-        switch (value % 20)
-        {
-        case 0:
-            return 0.0F;
-        case 1:
-            return FLT_TRUE_MIN;
-        case 2:
-            return -FLT_TRUE_MIN;
-        case 3:
-            return FLT_MIN;
-        case 4:
-            return -FLT_MIN;
-        case 5:
-            return FLT_MAX;
-        case 6:
-            return -FLT_MAX;
-        case 7:
-            return INFINITY;
-        case 8:
-            return -INFINITY;
-        case 9:
-            return NAN;
-        default:
-            return ((rand() % 2000) / 200.0) - 10.0;
-        }
-    }
-    return 0.0;
 }
 
 #endif // AOCLFFTZ_KERNEL_GTEST_UTILS_H

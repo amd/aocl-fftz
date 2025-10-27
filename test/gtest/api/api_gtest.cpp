@@ -289,6 +289,273 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_VALIDHANDLE_BACKWARD)
     this->validate_execute_io(false);
 }
 
+// Execute API test with near-edge values and output validation
+TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_NEAR_EDGE_VALUES)
+{
+    for (auto is_forward : {true, false})
+    {
+        for (auto is_inplace : {true, false})
+        {
+            this->cleanup_problem();
+            this->create_default_pdesc(is_forward, is_inplace, 
+                                      InputValueStrategy::NEAR_EDGE);
+            
+            this->handle = this->aoclfftz_setup(this->problem);
+            EXPECT_NE(this->handle, nullptr);
+            
+            // Execute the FFT
+            INT32 exe = aoclfftz_execute(this->handle);
+            
+            EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
+
+            // Validate that output values are reasonable (not NaN, Infinity, etc.)
+            UINTP output_size_bytes = 0;
+            UINTP input_size_bytes = 0;
+            this->get_inout_size(&input_size_bytes, &output_size_bytes);
+            
+            using DataType = std::remove_pointer_t<decltype(this->problem->out)>;
+            UINTP num_elements = output_size_bytes / sizeof(DataType);
+            output_validation_stats stats = validate_output_array<DataType>(this->problem->out, num_elements);
+            
+            UINTP invalid_count = stats.nan_count + stats.inf_count;
+            EXPECT_EQ(invalid_count, 0U) 
+                << "Found " << invalid_count << " invalid values (" 
+                << stats.nan_count << " NaN, " << stats.inf_count << " Inf) in output array"
+                << " out of " << num_elements << " total elements"
+                << " [is_forward=" << is_forward << ", is_inplace=" << is_inplace << "]";
+            
+            aoclfftz_destroy(this->handle);
+        }
+    }
+}
+
+// Robustness test with special values (NaN, Inf, MAX, MIN) - validates NaN propagation
+TYPED_TEST_P(AoclfftzAPITest, PTEST_ROBUSTNESS_WITH_NAN_VALUES)
+{
+    // This test ensures the API doesn't crash with extreme inputs
+    // and validates that if input has NaN, output should be entirely filled with NaN
+    for (auto is_forward : {true, false})
+    {
+        for (auto is_inplace : {true, false})
+        {
+            this->cleanup_problem();
+            this->create_default_1d_pdesc(is_forward, is_inplace, InputValueStrategy::SPECIAL_VALUES);
+            
+            UINTP input_size_bytes = 0;
+            UINTP output_size_bytes = 0;
+            this->get_inout_size(&input_size_bytes, &output_size_bytes);
+            
+            // Use decltype to automatically get the data type from problem->in
+            using DataType = std::remove_pointer_t<decltype(this->problem->in)>;
+            UINTP num_input_elements = input_size_bytes / sizeof(DataType);
+            UINTP num_output_elements = output_size_bytes / sizeof(DataType);
+            
+            // Analyze input array before execution
+            output_validation_stats input_stats = validate_output_array<DataType>(this->problem->in, num_input_elements);
+            
+            this->handle = this->aoclfftz_setup(this->problem);
+            EXPECT_NE(this->handle, nullptr) 
+                << "Setup should not return null handle even with special values"
+                << " [is_forward=" << is_forward << ", is_inplace=" << is_inplace << "]";
+            
+            // Execute the FFT - it may succeed or fail, but should not crash
+            INT32 exe = aoclfftz_execute(this->handle);
+            
+            EXPECT_EQ(exe, AOCLFFTZ_SUCCESS) << "Execute should return AOCLFFTZ_SUCCESS"
+                << " [is_forward=" << is_forward << ", is_inplace=" << is_inplace << "]";
+            
+            // Analyze output array after execution
+            output_validation_stats output_stats = validate_output_array<DataType>(this->problem->out, num_output_elements);
+            
+            // Validate NaN propagation: if input has NaN, output MUST also have NaN
+            if (input_stats.nan_count > 0)
+            {
+                EXPECT_EQ(output_stats.nan_count, num_output_elements)
+                    << "NaN propagation failed: Input had " << input_stats.nan_count << " NaN values, "
+                    << "but only " << output_stats.nan_count << " out of " << num_output_elements 
+                    << " output elements are NaN (expected ALL to be NaN)"
+                    << " [is_forward=" << is_forward << ", is_inplace=" << is_inplace << "]";
+            }
+            
+            aoclfftz_destroy(this->handle);
+        }
+    }
+}
+
+// Execute API test with special non-NaN values - output should only contain NaN or Inf
+TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_SPECIAL_EXCEPT_NAN_VALUES)
+{
+    // Test FFT execution with special values excluding NaN (Inf, MAX, MIN)
+    // Output should only contain NaN or Infinity (no finite values including zeros)
+    for (auto is_forward : {true, false})
+    {
+        for (auto is_inplace : {true, false})
+        {
+            this->cleanup_problem();
+            this->create_default_1d_pdesc(is_forward, is_inplace, InputValueStrategy::SPECIAL_EXCEPT_NAN);
+            
+            this->handle = this->aoclfftz_setup(this->problem);
+            EXPECT_NE(this->handle, nullptr);
+            
+            // Execute the FFT
+            INT32 exe = aoclfftz_execute(this->handle);
+            
+            EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
+
+            // Validate that output contains only NaN or Inf (no finite values)
+            UINTP output_size_bytes = 0;
+            UINTP input_size_bytes = 0;
+            this->get_inout_size(&input_size_bytes, &output_size_bytes);
+            
+            using DataType = std::remove_pointer_t<decltype(this->problem->out)>;
+            UINTP num_elements = output_size_bytes / sizeof(DataType);
+            output_validation_stats stats = validate_output_array<DataType>(this->problem->out, num_elements);
+            
+            UINTP special_count = stats.nan_count + stats.inf_count;
+            EXPECT_EQ(special_count, num_elements) 
+                << "Output validation failed for special non-NaN inputs: Expected all " << num_elements 
+                << " elements to be NaN or Inf, but found " << special_count << " special values ("
+                << stats.nan_count << " NaN, " << stats.inf_count << " Inf), "
+                << stats.zero_count << " zeros, " << stats.nonzero_count << " finite non-zeros"
+                << " [is_forward=" << is_forward << ", is_inplace=" << is_inplace << "]";
+            
+            // Additional validation: no finite values should exist
+            EXPECT_EQ(stats.zero_count, 0U) 
+                << "Found " << stats.zero_count << " zero values (expected 0)"
+                << " [is_forward=" << is_forward << ", is_inplace=" << is_inplace << "]";
+            
+            EXPECT_EQ(stats.nonzero_count, 0U) 
+                << "Found " << stats.nonzero_count << " finite non-zero values (expected 0)"
+                << " [is_forward=" << is_forward << ", is_inplace=" << is_inplace << "]";
+            
+            aoclfftz_destroy(this->handle);
+        }
+    }
+}
+
+// Execute API test with only tiny values - output should not be entirely zero
+// It should not contain NaN or Inf
+TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_ONLY_TINY_VALUES)
+{
+    for (auto is_forward : {true, false})
+    {
+        for (auto is_inplace : {true, false})
+        {
+            this->cleanup_problem();
+            this->create_default_pdesc(is_forward, is_inplace, 
+                                      InputValueStrategy::TINY_VALUES_ONLY);
+            
+            this->handle = this->aoclfftz_setup(this->problem);
+            EXPECT_NE(this->handle, nullptr);
+            
+            // Execute the FFT
+            INT32 exe = aoclfftz_execute(this->handle);
+            
+            // Validate that output values are not entirely zero and not NaN/Inf
+            UINTP output_size_bytes = 0;
+            UINTP input_size_bytes = 0;
+            this->get_inout_size(&input_size_bytes, &output_size_bytes);
+
+            using DataType = std::remove_pointer_t<decltype(this->problem->out)>;
+            UINTP num_elements = output_size_bytes / sizeof(DataType);
+            output_validation_stats stats = validate_output_array<DataType>(this->problem->out, num_elements);
+            
+            UINTP invalid_count = stats.nan_count + stats.inf_count;
+            EXPECT_EQ(invalid_count, 0U)
+                << "Output validation failed for tiny inputs: Found " << invalid_count 
+                << " invalid values (" << stats.nan_count << " NaN, " << stats.inf_count << " Inf)"
+                << " out of " << num_elements << " total elements"
+                << " [is_forward=" << is_forward << ", is_inplace=" << is_inplace << "]";
+            
+            EXPECT_GT(stats.nonzero_count, 0U)
+                << "Output validation failed for tiny inputs: All outputs are zero"
+                << " [is_forward=" << is_forward << ", is_inplace=" << is_inplace << "]";
+            
+            aoclfftz_destroy(this->handle);
+        }
+    }
+}
+
+// Execute API test with only large values - output should not be infinity or NaN
+TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_ONLY_LARGE_VALUES)
+{
+    // Test FFT execution with only large values (close to but not exceeding MAX)
+    for (auto is_forward : {true, false})
+    {
+        for (auto is_inplace : {true, false})
+        {
+            this->cleanup_problem();
+            this->create_default_pdesc(is_forward, is_inplace, 
+                                      InputValueStrategy::LARGE_VALUES_ONLY);
+            
+            this->handle = this->aoclfftz_setup(this->problem);
+            EXPECT_NE(this->handle, nullptr);
+            
+            // Execute the FFT
+            INT32 exe = aoclfftz_execute(this->handle);
+            
+            EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
+
+            // Validate that output values are not infinity or NaN
+            UINTP output_size_bytes = 0;
+            UINTP input_size_bytes = 0;
+            this->get_inout_size(&input_size_bytes, &output_size_bytes);
+            
+            using DataType = std::remove_pointer_t<decltype(this->problem->out)>;
+            UINTP num_elements = output_size_bytes / sizeof(DataType);
+            output_validation_stats stats = validate_output_array<DataType>(this->problem->out, num_elements);
+            
+            UINTP invalid_count = stats.nan_count + stats.inf_count;
+            EXPECT_EQ(invalid_count, 0U) 
+                << "Output validation failed for large inputs: Found " << invalid_count 
+                << " invalid values (" << stats.nan_count << " NaN, " << stats.inf_count << " Inf)"
+                << " out of " << num_elements << " total elements"
+                << " [is_forward=" << is_forward << ", is_inplace=" << is_inplace << "]";
+
+            aoclfftz_destroy(this->handle);
+        }
+    }
+}
+
+// Execute API test with full zero input - output should be all zeros
+TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_ONLY_ZERO_VALUES)
+{
+    for (auto is_forward : {true, false})
+    {
+        for (auto is_inplace : {true, false})
+        {
+            this->cleanup_problem();
+            this->create_default_pdesc(is_forward, is_inplace, InputValueStrategy::FULL_ZERO);
+            
+            this->handle = this->aoclfftz_setup(this->problem);
+            EXPECT_NE(this->handle, nullptr);
+            
+            // Execute the FFT
+            INT32 exe = aoclfftz_execute(this->handle);
+            
+            EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
+
+            // Validate that all output values are zero
+            UINTP output_size_bytes = 0;
+            UINTP input_size_bytes = 0;
+            this->get_inout_size(&input_size_bytes, &output_size_bytes);
+            
+            using DataType = std::remove_pointer_t<decltype(this->problem->out)>;
+            UINTP num_elements = output_size_bytes / sizeof(DataType);
+            output_validation_stats stats = validate_output_array<DataType>(this->problem->out, num_elements);
+            
+            EXPECT_EQ(stats.zero_count, num_elements) 
+                << "Output validation failed for zero inputs: Expected all " << num_elements 
+                << " elements to be zero, but found " << stats.zero_count << " zeros, "
+                << stats.nonzero_count << " non-zeros, " << stats.nan_count << " NaN, "
+                << stats.inf_count << " Inf"
+                << " [is_forward=" << is_forward << ", is_inplace=" << is_inplace << "]";
+            
+            aoclfftz_destroy(this->handle);
+        }
+    }
+}
+
 // Destroy API test cases
 TYPED_TEST_P(AoclfftzAPITest, PTEST_DESTROY_VALIDHANDLE_SOLUTION)
 {
@@ -327,6 +594,12 @@ REGISTER_TYPED_TEST_SUITE_P(
     PTEST_EXECUTE_VALIDHANDLE,
     PTEST_EXECUTE_IO_VALIDHANDLE_FORWARD,
     PTEST_EXECUTE_IO_VALIDHANDLE_BACKWARD,
+    PTEST_EXECUTE_WITH_NEAR_EDGE_VALUES,
+    PTEST_ROBUSTNESS_WITH_NAN_VALUES,
+    PTEST_EXECUTE_WITH_SPECIAL_EXCEPT_NAN_VALUES,
+    PTEST_EXECUTE_WITH_ONLY_TINY_VALUES,
+    PTEST_EXECUTE_WITH_ONLY_LARGE_VALUES,
+    PTEST_EXECUTE_WITH_ONLY_ZERO_VALUES,
     PTEST_DESTROY_VALIDHANDLE_SOLUTION,
     PTEST_DESTROY_WITHOUT_EXECUTE
 );
