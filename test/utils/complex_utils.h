@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2023-2024, Advanced Micro Devices. All rights reserved.
+ * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -45,24 +45,6 @@
 
 /*************** MACRO FUNCTIONS ***************/
 /**
- * @brief load a single complex number from `res` to `input`
- */
-#define LOAD_INPUT(in_r, in_i, res)                                            \
-{                                                                              \
-    (res)[0] = (in_r)[0];                                                      \
-    (res)[1] = (in_i)[0];                                                      \
-}
-
-/**
- * @brief load a single complex number from `res` to `output`
- */
-#define STORE_OUTPUT(res, out_r, out_i)                                        \
-{                                                                              \
-    (out_r)[0] = (res)[0];                                                     \
-    (out_i)[0] = (res)[1];                                                     \
-}
-
-/**
  * @brief complex addition: res = c1 + c2
  *
  */
@@ -70,16 +52,6 @@
 {                                                                              \
     (res)[0] = (c1)[0] + (c2)[0];                                              \
     (res)[1] = (c1)[1] + (c2)[1];                                              \
-}
-
-/**
- * @brief complex subtraction: res = c1 - c2
- *
- */
-#define CSUB(c1, c2, res)                                                      \
-{                                                                              \
-    (res)[0] = (c1)[0] - (c2)[0];                                              \
-    (res)[1] = (c1)[1] - (c2)[1];                                              \
 }
 
 /**
@@ -93,46 +65,6 @@
     (mtemp)[1] = (c1)[0] * (c2)[1] + (c1)[1] * (c2)[0];                        \
     (res)[0] = (mtemp)[0];                                                     \
     (res)[1] = (mtemp)[1];                                                     \
-}
-
-/**
- * @brief power of a complex number: res = c^p (NOTE: mtemp and ptemp are used
- * to store the temporary results of multiply and power operations. Here, power
- * is achieved using repeated multiplication)
- *
- */
-#define CPOW(c, p, res, mtemp, ptemp)                                          \
-{                                                                              \
-    int _p = p;                                                                \
-    (ptemp)[0] = 1.0;                                                          \
-    (ptemp)[1] = 0.0;                                                          \
-    while (_p--)                                                               \
-    {                                                                          \
-        CMUL(ptemp, c, ptemp, mtemp);                                          \
-    }                                                                          \
-    (res)[0] = (ptemp)[0];                                                     \
-    (res)[1] = (ptemp)[1];                                                     \
-}
-
-/**
- * @brief A wrapper of CMUL, CADD and CPOW functions
- *
- */
-#define CMUL_CADD_CPOW(in, tf, pow_idx, temp1, temp2, temp_mul, temp_CPOW)     \
-{                                                                              \
-    CMUL(in, temp1, temp1, temp_mul);                                          \
-    CADD(temp2, temp1, temp2);                                                 \
-    CPOW(tf, pow_idx, temp1, temp_mul, temp_CPOW);                             \
-}
-
-/**
- * @brief A wrapper of CMUL, CADD functions
- *
- */
-#define CMUL_CADD(in, pow_tf, temp_CPOW, res, temp_mul)                        \
-{                                                                              \
-    CMUL(in, pow_tf, temp_CPOW, temp_mul);                                     \
-    CADD(res, temp_CPOW, res);                                                 \
 }
 
 /**
