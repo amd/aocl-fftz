@@ -276,8 +276,8 @@ dv_desc *get_many_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
     p_dv_desc->vec_rank = 1;
     ALLOC_ALIGN_UNINIT(p_dv_desc->vecs, aoclfftz_dim_t, sizeof(aoclfftz_dim_t));
     p_dv_desc->vecs[0].n = howmany;
-    // FIXME: FFTZ requires in_stride to be non-zero. Until FFTZ is fixed, the
-    // wrapper handles the zero and makes it 1
+    // Since, FFTZ requires in_stride and out_stride to be non-zero.
+    // Setting in_stride and out_stride to 1 if not provided.
     p_dv_desc->vecs[0].in_stride = idist == 0 ? 1 : idist;
     p_dv_desc->vecs[0].out_stride = odist == 0 ? 1 : odist;
 
@@ -352,7 +352,7 @@ dv_desc *get_many_r2c_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
                     p_dv_desc->dims[0].in_stride *
                     ((p_dv_desc->dims[0].n / 2) + 1) * 2;
             }
-            else // FIXME: move it to final else case?
+            else
             {
                 p_dv_desc->dims[1].in_stride =
                     p_dv_desc->dims[0].in_stride * p_dv_desc->dims[0].n;
@@ -486,7 +486,7 @@ dv_desc *get_many_c2r_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
                    (((p_dv_desc->dims[0].out_stride * p_dv_desc->dims[0].n) / 2)
                       + 1) * 2;
             }
-            else // FIXME: move it to final else case?
+            else
             {
                 p_dv_desc->dims[1].out_stride =
                     p_dv_desc->dims[0].out_stride * p_dv_desc->dims[0].n;
