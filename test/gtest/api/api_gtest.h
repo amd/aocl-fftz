@@ -62,12 +62,14 @@ typedef enum
 #define DEFAULT_FLAGS 0b0001
 #define DEFAULT_NUM_THREADS 1
 #define DEFAULT_DYNAMIC_LOAD_MODEL 1
+#define COMPLEX_DATA_STRIDE 2
 
 // Unsupported flags and ranks for testing
 const std::vector<aoclfftz_flags_t> unsupported_flags = {
     {1, 0, 1, 0, 0}, // real, forward, out_of_order, inplace, FFT
     {0, 1, 1, 1, 1}, // complex, backward, in-order, out-of-place, transpose
 };
+
 const std::vector<INT32> unsupported_rank = { INT32_MIN, -1 };
 
 // Random number generator setup for generating invalid test values
@@ -76,7 +78,6 @@ const std::vector<INT32> unsupported_rank = { INT32_MIN, -1 };
     std::mt19937 prng(rd()); \
     std::uniform_int_distribution<> dist_invalid(INT32_MIN, 0); \
     prng.seed(42);
-
 
 // Function to check if the handle is destroyed
 static bool is_handle_null(VOID *handle)
@@ -173,11 +174,10 @@ public:
         out_size[0] = output_size;
     }
 
-
     // Function to create a sample problem for testing
     template<typename DataType, typename DimT>
-    VOID create_pdesc(bool is_forward = true, bool is_inplace = false, 
-                      InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
+    VOID create_pdesc(bool is_forward = true, bool is_inplace = false,
+            InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
     {
         if (problem == NULL)
         {
@@ -218,31 +218,25 @@ public:
         problem->dims[0].out_stride = 1;
         problem->dims[1].n = 30;
         problem->dims[1].in_stride = problem->dims[0].n *
-                                                problem->dims[0].in_stride;
+                                     problem->dims[0].in_stride;
         problem->dims[1].out_stride = problem->dims[0].n *
-                                                problem->dims[0].out_stride;
+                                      problem->dims[0].out_stride;
         problem->dims[2].n = 30;
         problem->dims[2].in_stride = problem->dims[1].n *
-                                                problem->dims[1].in_stride;
+                                     problem->dims[1].in_stride;
         problem->dims[2].out_stride = problem->dims[1].n *
-                                                problem->dims[1].out_stride;
+                                      problem->dims[1].out_stride;
         // Set vecs values
         problem->vecs[0].n = 1;
         problem->vecs[0].in_stride = problem->dims[problem->dim_rank - 1].n *
                             problem->dims[problem->dim_rank - 1].in_stride;
         problem->vecs[0].out_stride = problem->dims[problem->dim_rank - 1].n *
                             problem->dims[problem->dim_rank - 1].out_stride;
-        for (INT32 i = 0; i < problem->dim_rank; i++)
-        {
-            in_size += (problem->dims[i].n) * (problem->dims[i].in_stride) * 2;
-            out_size += (problem->dims[i].n) * (problem->dims[i].out_stride)
-                                                                        * 2;
-        }
-        for (INT32 i = 1; i < problem->vec_rank; i++)
-        {
-            in_size += (problem->vecs[i].n) * (problem->vecs[i].in_stride);
-            out_size += (problem->vecs[i].n) * (problem->vecs[i].out_stride);
-        }
+
+        in_size = problem->vecs[0].n * problem->vecs[0].in_stride *
+                                       COMPLEX_DATA_STRIDE;
+        out_size = problem->vecs[0].n * problem->vecs[0].out_stride *
+                                        COMPLEX_DATA_STRIDE;
 
         // Allocating input buffer
         input_size  = in_size * sizeof(DataType);
@@ -267,7 +261,8 @@ public:
         }
         for (INT32 i = 0; i < in_size; i++)
         {
-            problem->in[i] = get_value_based_on_strategy<DataType>(value_strategy, in_size);
+            problem->in[i] =
+                get_value_based_on_strategy<DataType>(value_strategy, in_size);
         }
         if (!is_inplace)
         {
@@ -286,11 +281,11 @@ public:
 
     /**
      * @brief Create a 1D problem descriptor with large size
-     * 
+     *
      */
     template<typename DataType, typename DimT>
-    VOID create_1d_pdesc(bool is_forward = true, bool is_inplace = false, 
-                         InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
+    VOID create_1d_pdesc(bool is_forward = true, bool is_inplace = false,
+            InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
     {
         if (problem == NULL)
         {
@@ -306,7 +301,7 @@ public:
             cleanup_problem();
             throw std::runtime_error("Memory allocation failed for dims or vecs!");
         }
-        
+
         // Update flags based on transform direction and placement
         if (is_forward)
         {
@@ -324,28 +319,28 @@ public:
         {
             problem->flags.fft_placement = 1;
         }
-        
+
         // Set dims values - 1D with large size (16384 = 2^14, common FFT size)
         problem->dims[0].n = 16384;
         problem->dims[0].in_stride = 1;
         problem->dims[0].out_stride = 1;
-        
+
         // Set vecs values
         problem->vecs[0].n = 1;
-        problem->vecs[0].in_stride = problem->dims[0].n * problem->dims[0].in_stride;
-        problem->vecs[0].out_stride = problem->dims[0].n * problem->dims[0].out_stride;
-        
-        // Calculate buffer sizes (complex data has 2 elements per value)
-        for (INT32 i = 0; i < problem->dim_rank; i++)
-        {
-            in_size += (problem->dims[i].n) * (problem->dims[i].in_stride) * 2;
-            out_size += (problem->dims[i].n) * (problem->dims[i].out_stride) * 2;
-        }
+        problem->vecs[0].in_stride = problem->dims[0].n *
+                                     problem->dims[0].in_stride;
+        problem->vecs[0].out_stride = problem->dims[0].n *
+                                      problem->dims[0].out_stride;
+
+        in_size = problem->vecs[0].n * problem->vecs[0].in_stride *
+                                       COMPLEX_DATA_STRIDE;
+        out_size = problem->vecs[0].n * problem->vecs[0].out_stride *
+                                        COMPLEX_DATA_STRIDE;
 
         // Allocating input buffer
         input_size = in_size * sizeof(DataType);
         problem->in = new DataType[in_size];
-        
+
         // Allocating output buffer
         if (is_inplace)
         {
@@ -363,13 +358,14 @@ public:
             cleanup_problem();
             throw std::runtime_error("Memory allocation failed for input or output arrays");
         }
-        
+
         // Initialize input buffer with values based on strategy
         for (INT32 i = 0; i < in_size; i++)
         {
-            problem->in[i] = get_value_based_on_strategy<DataType>(value_strategy, in_size);
+            problem->in[i] =
+                get_value_based_on_strategy<DataType>(value_strategy, in_size);
         }
-        
+
         // Initialize output buffer (for out-of-place only)
         if (!is_inplace)
         {
@@ -378,7 +374,7 @@ public:
                 problem->out[i] = static_cast<DataType>(0.0);
             }
         }
-        
+
         // Set threading and control parameters
         problem->pthr_fft.dynamic_load_model = DEFAULT_DYNAMIC_LOAD_MODEL;
         problem->pthr_fft.num_threads = DEFAULT_NUM_THREADS;
@@ -389,27 +385,31 @@ public:
     }
 
     // Calls the appropriate sample problem creation based on problem type
-    VOID create_default_pdesc(bool is_forward = true, bool is_inplace = false, 
-                              InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
+    VOID create_default_pdesc(bool is_forward = true, bool is_inplace = false,
+            InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
     {
         if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_f>::value)
         {
-            create_pdesc<FLOAT, aoclfftz_dim_t>(is_forward, is_inplace, value_strategy);
+            create_pdesc<FLOAT, aoclfftz_dim_t>(is_forward, is_inplace,
+                                                value_strategy);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_d>::value)
         {
-            create_pdesc<DOUBLE, aoclfftz_dim_t>(is_forward, is_inplace, value_strategy);
+            create_pdesc<DOUBLE, aoclfftz_dim_t>(is_forward, is_inplace,
+                                                 value_strategy);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_f_64_>::value)
         {
-            create_pdesc<FLOAT, aoclfftz_dim_t_64_>(is_forward, is_inplace, value_strategy);
+            create_pdesc<FLOAT, aoclfftz_dim_t_64_>(is_forward, is_inplace,
+                                                    value_strategy);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_d_64_>::value)
         {
-            create_pdesc<DOUBLE, aoclfftz_dim_t_64_>(is_forward, is_inplace, value_strategy);
+            create_pdesc<DOUBLE, aoclfftz_dim_t_64_>(is_forward, is_inplace,
+                                                     value_strategy);
         }
         else
         {
@@ -420,28 +420,37 @@ public:
 
     /**
      * @brief Wrapper to create 1D problem descriptor based on problem type
-     * 
-     * This function dispatches to the appropriate create_1d_pdesc template instantiation
-     * based on the problem type (float/double and 32-bit/64-bit indices).
+     *
+     * This function dispatches to the appropriate create_1d_pdesc template
+     * instantiation based on the problem type (float/double and 32-bit/64-bit
+     * indices).
      */
-    VOID create_default_1d_pdesc(bool is_forward = true, bool is_inplace = false, 
-                                 InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
+    VOID create_default_1d_pdesc(bool is_forward = true,
+            bool is_inplace = false,
+            InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
     {
         if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_f>::value)
         {
-            create_1d_pdesc<FLOAT, aoclfftz_dim_t>(is_forward, is_inplace, value_strategy);
+            create_1d_pdesc<FLOAT, aoclfftz_dim_t>(is_forward, is_inplace,
+                                                   value_strategy);
         }
-        else if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_d>::value)
+        else if constexpr (std::is_same<ProblemType,
+                           aoclfftz_prob_desc_d>::value)
         {
-            create_1d_pdesc<DOUBLE, aoclfftz_dim_t>(is_forward, is_inplace, value_strategy);
+            create_1d_pdesc<DOUBLE, aoclfftz_dim_t>(is_forward, is_inplace,
+                                                    value_strategy);
         }
-        else if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_f_64_>::value)
+        else if constexpr (std::is_same<ProblemType,
+                           aoclfftz_prob_desc_f_64_>::value)
         {
-            create_1d_pdesc<FLOAT, aoclfftz_dim_t_64_>(is_forward, is_inplace, value_strategy);
+            create_1d_pdesc<FLOAT, aoclfftz_dim_t_64_>(is_forward, is_inplace,
+                                                       value_strategy);
         }
-        else if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_d_64_>::value)
+        else if constexpr (std::is_same<ProblemType,
+                           aoclfftz_prob_desc_d_64_>::value)
         {
-            create_1d_pdesc<DOUBLE, aoclfftz_dim_t_64_>(is_forward, is_inplace, value_strategy);
+            create_1d_pdesc<DOUBLE, aoclfftz_dim_t_64_>(is_forward, is_inplace,
+                                                        value_strategy);
         }
         else
         {
@@ -524,8 +533,6 @@ public:
             aoclfftz_destroy(handle);
         }
     }
-
-
 
     // Validates execute_io correctness using execute output as reference
     VOID validate_execute_io(bool is_forward)
