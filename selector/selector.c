@@ -1433,6 +1433,10 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     PREPARE_AND_SETUP_DFT(sel_obj, ret);
     if (ret != SELECTOR_SUCCESS)
     {
+        if (ret == SELECTOR_FAILURE)
+        {
+            ret = AOCLFFTZ_SETUP_FAILURE;
+        }
         AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(ret));
         goto exit_setup_dft_f;
@@ -1506,6 +1510,10 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     PREPARE_AND_SETUP_DFT(sel_obj, ret);
     if (ret != SELECTOR_SUCCESS)
     {
+        if (ret == SELECTOR_FAILURE)
+        {
+            ret = AOCLFFTZ_SETUP_FAILURE;
+        }
         AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(ret));
         goto exit_setup_dft_d;
@@ -1579,6 +1587,10 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     PREPARE_AND_SETUP_DFT(sel_obj, ret);
     if (ret != SELECTOR_SUCCESS)
     {
+        if (ret == SELECTOR_FAILURE)
+        {
+            ret = AOCLFFTZ_SETUP_FAILURE;
+        }
         AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(ret));
         goto exit_setup_dft_f_64_;
@@ -1652,6 +1664,10 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     PREPARE_AND_SETUP_DFT(sel_obj, ret);
     if (ret != SELECTOR_SUCCESS)
     {
+        if (ret == SELECTOR_FAILURE)
+        {
+            ret = AOCLFFTZ_SETUP_FAILURE;
+        }
         AOCLFFTZ_ERROR("Setup failure with %s",
                                   get_status_string(ret));
         goto exit_setup_dft_d_64_;
