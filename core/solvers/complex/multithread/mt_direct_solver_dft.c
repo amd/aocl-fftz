@@ -110,8 +110,8 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         INTP rem_iters = decomp_scheme->vecs[0].n - (num_iters * num_sets);
 
         // Set threads for parallel execution
-        omp_set_num_threads(decomp_scheme->thread_info->n_threads);
-        #pragma omp parallel for
+        INT32 n_threads = decomp_scheme->thread_info->n_threads;
+        #pragma omp parallel for num_threads(n_threads)
         for (INTP batch = 0; batch < num_iters; batch++)
         {
             INTP v_istride = batch * v_in_stride;
@@ -176,8 +176,7 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
     INTP rem_iters = decomp_scheme->vecs[0].n - (num_iters * num_sets);
 
     // Set threads for parallel execution
-    omp_set_num_threads(decomp_scheme->thread_info->n_threads);
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(decomp_scheme->thread_info->n_threads)
     for (INTP batch = 0; batch < num_iters; batch++)
     {
         aoclfftz_twiddle_t tw_local = {
@@ -270,12 +269,12 @@ static INT32 execute_mt_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
         sol->decomp_scheme->batched_vecs[0].n - (num_iters * num_sets);
 
     // Set threads for parallel execution
-    omp_set_num_threads(sol->decomp_scheme->thread_info->n_threads);
     // **NOTE**:
     // This `direct_batched` solver now parallelizes over batches instead of
     // DFT butterflies. This provides better scalability for large batched
     // problems with more number of threads.
-    #pragma omp parallel for
+    INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
+    #pragma omp parallel for num_threads(n_threads)
     for (INTP batch = 0; batch < num_iters; batch++)
     {
         // Calculate batch offsets for input/output arrays
@@ -381,21 +380,19 @@ static INT32 execute_mt_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
     INTP rem_iters =
         sol->decomp_scheme->batched_vecs[0].n - (num_iters * num_sets);
 
-    INT32 num_threads = sol->decomp_scheme->thread_info->n_threads;
+    INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
 
-    omp_set_num_threads(sol->decomp_scheme->thread_info->n_threads);
-
-    #pragma omp parallel for collapse(2) schedule(static)
+    #pragma omp parallel for num_threads(n_threads) collapse(2) schedule(static)
     for (INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
     {
-        for (INT32 block = 0; block < num_threads; block++)
+        for (INT32 block = 0; block < n_threads; block++)
         {
             UINT8 num_sets = sol->solver->kernel_c2c->sets;
             // INTP num_iters = sol->decomp_scheme->batched_vecs[0].n / num_sets;
             // INTP rem_iters =
             //     sol->decomp_scheme->batched_vecs[0].n - (num_iters * num_sets);
-            INTP block_sz = num_iters / num_threads;
-            INTP rem_blocks = num_iters % num_threads; // Remaining blocks to distribute
+            INTP block_sz = num_iters / n_threads;
+            INTP rem_blocks = num_iters % n_threads; // Remaining blocks to distribute
 
             // Calculate this thread's work chunk
             INTP start_iter = block * block_sz + (block < rem_blocks ? block : rem_blocks);

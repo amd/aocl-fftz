@@ -100,7 +100,6 @@ static inline VOID execute_real_mt_r2c_kernels(aoclfftz_solution_t *sol, INT32 n
     VOID *in = sol->decomp_scheme->in_real;
     VOID *out = sol->decomp_scheme->out_real;
 
-    omp_set_num_threads(n_threads_real);
     /* Execute R2HC Kernels */
     if (sol->solver->kernel_r2hc->count != 0)
     {
@@ -118,7 +117,7 @@ static inline VOID execute_real_mt_r2c_kernels(aoclfftz_solution_t *sol, INT32 n
         UINTP rem_iters_r2hc = sol->solver->kernel_r2hc->count -
                               (num_iters_r2hc * num_sets_r2hc);
 
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(n_threads_real)
         for (UINTP batch = 0; batch < num_iters_r2hc; batch++)
         {
             INTP v_istride = batch * v_in_stride_r2hc;
@@ -156,7 +155,7 @@ static inline VOID execute_real_mt_r2c_kernels(aoclfftz_solution_t *sol, INT32 n
         UINTP rem_iters_r2hcf = sol->solver->kernel_r2hcf->count -
                                 (num_iters_r2hcf * num_sets_r2hcf);
 
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(n_threads_real)
         for (UINTP batch = 0; batch < num_iters_r2hcf; batch++)
         {
             INTP v_istride = batch * v_in_stride_r2hcf;

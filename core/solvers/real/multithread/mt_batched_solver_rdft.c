@@ -201,15 +201,11 @@ INT32 execute_real_mt_batched_solver_internal(aoclfftz_solution_t *sol,
         VOID *out_real = next_sol[0]->decomp_scheme->out_real;
         VOID *out_imag = next_sol[0]->decomp_scheme->out_imag;
 
-        omp_set_num_threads(sol->decomp_scheme->thread_info->n_threads);
-        #pragma omp parallel for
+        INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
+        #pragma omp parallel for num_threads(n_threads)
         for (INTP b = 0; b < batches; b++)
         {
             INT32 tid = omp_get_thread_num();
-            if (sol->decomp_scheme->thread_info->n_threads <= 1)
-            {
-                tid = 0;
-            }
             // process real buffered solver to change the input/output
             // pointer correctly for each thread
             if (next_sol[tid]->solver->solver_type == SOLVER_REAL_BUFFERED)
