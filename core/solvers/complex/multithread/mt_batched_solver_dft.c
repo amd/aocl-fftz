@@ -89,11 +89,11 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
         VOID *ct_buf_imag = next_sol[0]->dft_bufs->ct_buf_imag;
 #endif
 
-        omp_set_num_threads(sol->decomp_scheme->thread_info->n_threads);
+        INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
 
         if (!sol->dft_bufs->reset_ct_buf_offset)
         {
-            #pragma omp parallel for
+            #pragma omp parallel for num_threads(n_threads)
             for (INTP b = 0; b < batches; b++)
             {
                 INT32 tid = omp_get_thread_num();
@@ -117,7 +117,7 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
         }
         else
         {
-            #pragma omp parallel for
+            #pragma omp parallel for num_threads(n_threads)
             for (INTP b = 0; b < batches; b++)
             {
                 INT32 tid = omp_get_thread_num();

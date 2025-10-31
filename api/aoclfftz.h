@@ -83,7 +83,7 @@ extern "C" {
  * @ingroup Data_Structures
  * @brief Error return codes of `AOCL-FFTZ` library.
  */
-// Add new error codes at the code to retain the existing error code values
+// Add new error codes at the end to retain the existing error code values
 typedef enum
 {
     AOCLFFTZ_TIME_OUT = -5,     /**< Operation took long time than expected */
