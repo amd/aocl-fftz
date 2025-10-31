@@ -83,12 +83,13 @@ extern "C" {
  * @ingroup Data_Structures
  * @brief Error return codes of `AOCL-FFTZ` library.
  */
-// Add new error codes at the code to retain the existing error code values
+// Add new error codes at the end to retain the existing error code values
 typedef enum
 {
-    AOCLFFTZ_TIME_OUT = -4,     /**< Operation took long time than expected */
+    AOCLFFTZ_TIME_OUT = -5,     /**< Operation took long time than expected */
     AOCLFFTZ_MEMORY_FAILURE,    /**< Error related to Memory access or operation */
     AOCLFFTZ_INVALID_INPUT,     /**< Invalid size, format, type or precision of input */
+    AOCLFFTZ_SETUP_FAILURE,     /**< Error in setup of the library */
     AOCLFFTZ_EXECUTION_FAILURE, /**< Error in execution of the library */
     AOCLFFTZ_SUCCESS            /**< Successful operation */
 } aoclfftz_error_type;

@@ -201,6 +201,8 @@ const CHAR* get_status_string(aoclfftz_error_type status)
             return "AOCLFFTZ_MEMORY_FAILURE";
         case AOCLFFTZ_INVALID_INPUT:
             return "AOCLFFTZ_INVALID_INPUT";
+        case AOCLFFTZ_SETUP_FAILURE:
+            return "AOCLFFTZ_SETUP_FAILURE";
         case AOCLFFTZ_EXECUTION_FAILURE:
             return "AOCLFFTZ_EXECUTION_FAILURE";
         case AOCLFFTZ_SUCCESS:
