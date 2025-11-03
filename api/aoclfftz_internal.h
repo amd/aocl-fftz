@@ -209,8 +209,8 @@ typedef struct kernel_info
 typedef struct thread_info
 {
     aoclfftz_smp_pfft_t *pthr_fft; // Thread information from problem descriptor
-    UINT32 avl_threads; // Available number of threads at any point of execution
-    UINT32 n_threads; // Number of threads assigned to a particular solver
+    INT32 avl_threads;  // Available number of threads at any point of execution
+    INT32 n_threads;    // Number of threads assigned to a particular solver
 } thread_info_t;
 
 // Solver execute template function pointer
@@ -483,7 +483,7 @@ typedef struct aoclfftz_realhelper
     UINT8 is_last_stage;
     UINT8 is_CT;
     UINT8 is_buffered_invoked;
-    UINT8 num_aux_buf;
+    INT32 num_aux_buf;
 } aoclfftz_realhelper_t;
 
 // float LP64

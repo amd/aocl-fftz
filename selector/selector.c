@@ -193,7 +193,7 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     kernel_t *kertab = sel->kertab_dft;
     INT32 ret = SELECTOR_FAILURE;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    UINT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
+    INT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
 
     // TODO: Should be removed after supporting MT in bluestein solver
     if (check_bluestein_problem(sel->solution->decomp_scheme) &&
@@ -395,7 +395,7 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
     kernel_t *kertab = sel->kertab_dft;
     INT32 ret = SELECTOR_FAILURE;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    UINT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
+    INT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
 
     // TODO: Should be removed after supporting MT in bluestein solver
     if (check_bluestein_problem(sel->solution->decomp_scheme) &&
@@ -1385,7 +1385,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
-    UINT32 num_threads = problem->pthr_fft.num_threads;
+    INT32 num_threads = problem->pthr_fft.num_threads;
     kernel_t kertab_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
     kernel_t kertab_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
 
@@ -1467,7 +1467,7 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
-    UINT32 num_threads = problem->pthr_fft.num_threads;
+    INT32 num_threads = problem->pthr_fft.num_threads;
     kernel_t kertab_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
     kernel_t kertab_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
 
@@ -1544,7 +1544,7 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
-    UINT32 num_threads = problem->pthr_fft.num_threads;
+    INT32 num_threads = problem->pthr_fft.num_threads;
     kernel_t kertab_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
     kernel_t kertab_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
 
@@ -1621,7 +1621,7 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
-    UINT32 num_threads = problem->pthr_fft.num_threads;
+    INT32 num_threads = problem->pthr_fft.num_threads;
     kernel_t kertab_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
     kernel_t kertab_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
 
@@ -1915,12 +1915,12 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src,
     // Initiate deep copy of next_sol recursively until leaf node
     if (src->next_sol)
     {
-        UINT32 n = (src->solver->solver_type == SOLVER_MT_BATCHED ||
+        INT32 n = (src->solver->solver_type == SOLVER_MT_BATCHED ||
                     src->solver->solver_type == SOLVER_REAL_MT_BATCHED) ?
                     src->decomp_scheme->thread_info->n_threads : 1;
         dst->next_sol = alloc_sol_array(n);
 
-        for (UINT32 i = 0; i < n; i++)
+        for (INT32 i = 0; i < n; i++)
         {
             dst->next_sol[i] = deep_copy_solution_tree(src->next_sol[0],
                                                        scratch_buf_idx);
@@ -2003,10 +2003,10 @@ VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx)
             // solution
             post_process_solution(sol->next_sol[0], scratch_buf_idx);
 
-            UINT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
+            INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
             // replicate the solution in next_sol[0] to array of next_sols in
             // each MT batched solution
-            for (UINT32 i = 1; i < n_threads; i++)
+            for (INT32 i = 1; i < n_threads; i++)
             {
                 // Increment the scratch buffer index for MT batched solutions
                 (*scratch_buf_idx)++;

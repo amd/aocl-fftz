@@ -52,7 +52,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     INT32 vec_rank = decomp_scheme->vec_rank;
     INT32 dim_rank = decomp_scheme->dim_rank;
     INT32 stats_mode = decomp_scheme->cntrl_params->measure_stats;
-    UINT32 avl_threads = decomp_scheme->thread_info->avl_threads;
+    INT32 avl_threads = decomp_scheme->thread_info->avl_threads;
     UINT32 precision = DT_PRECISION_FLAG(decomp_scheme->flags);
     UINT32 selector_mode = GET_SELECTOR_MODE(decomp_scheme->flags);
     INT32 ret = SELECTOR_FAILURE;
@@ -66,7 +66,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     // set number of threads for execution to no. of batches
-    UINT32 n_threads = (batch < avl_threads) ? batch : avl_threads;
+    INT32 n_threads = (batch < avl_threads) ? batch : avl_threads;
     decomp_scheme->thread_info->n_threads = n_threads;
 
     // copy solution object from sel to cur_sel

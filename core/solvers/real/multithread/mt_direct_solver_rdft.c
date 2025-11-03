@@ -92,7 +92,7 @@ INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
     return status;
 }
 
-static inline VOID execute_real_mt_r2c_kernels(aoclfftz_solution_t *sol, UINT32 n_threads_real)
+static inline VOID execute_real_mt_r2c_kernels(aoclfftz_solution_t *sol, INT32 n_threads_real)
 {
 
     UINT32 dt_bytes = SOL_DT_SIZE(sol);
@@ -179,7 +179,7 @@ static inline VOID execute_real_mt_r2c_kernels(aoclfftz_solution_t *sol, UINT32 
     }
 }
 
-static inline VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol, UINT32 n_threads_c2c)
+static inline VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol, INT32 n_threads_c2c)
 {
     VOID *in = sol->decomp_scheme->in_real;
     VOID *out = sol->decomp_scheme->out_real;
@@ -222,9 +222,9 @@ static inline VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol, UINT32 
 
     // setting the number of threads for inner C2C kernel
     // execution
-    UINT32 n_threads_c2c_outer =
+    INT32 n_threads_c2c_outer =
         n_threads_c2c > num_c2c_per_group ? num_c2c_per_group : n_threads_c2c;
-    UINT32 n_threads_c2c_inner = n_threads_c2c / n_threads_c2c_outer;
+    INT32 n_threads_c2c_inner = n_threads_c2c / n_threads_c2c_outer;
 
     INTP half_stride_start = (radix + 1) >> 1;
     INTP half_stride_n = radix - half_stride_start;
@@ -418,15 +418,15 @@ static INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
         return ret;
     }
 
-    UINT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
+    INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
 
     // since r2hc perform computation on half points, their weightage in thread
     // distributions is half
     INTP batch_wt_sum = sol->solver->kernel_c2c->count +
                          (sol->solver->kernel_r2hc->count + 1) / DATA_STRIDE +
                          sol->solver->kernel_r2hcf->count;
-    UINT32 n_threads_c2c = (n_threads * sol->solver->kernel_c2c->count) / batch_wt_sum;
-    UINT32 n_threads_real = n_threads - n_threads_c2c;
+    INT32 n_threads_c2c = (n_threads * sol->solver->kernel_c2c->count) / batch_wt_sum;
+    INT32 n_threads_real = n_threads - n_threads_c2c;
 
     /*
      * Parallelization Strategy:

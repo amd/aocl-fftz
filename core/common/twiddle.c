@@ -1001,8 +1001,8 @@ INT32 twiddle_multiplier_for_real(aoclfftz_solution_t *sol, INTP freq_factor)
 #ifdef MULTI_THREADING
 INT32 twiddle_multiplier_mt_for_real_float(aoclfftz_solution_t *sol,
                                            INTP freq_factor,
-                                           INTP n_threads_c2c_outer,
-                                           INTP n_threads_c2c_inner)
+                                           INT32 n_threads_c2c_outer,
+                                           INT32 n_threads_c2c_inner)
 {
     UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags);
     VOID *in = sol->decomp_scheme->in_real;
@@ -1104,8 +1104,8 @@ INT32 twiddle_multiplier_mt_for_real_float(aoclfftz_solution_t *sol,
 
 INT32 twiddle_multiplier_mt_for_real_double(aoclfftz_solution_t *sol,
                                             INTP freq_factor,
-                                            INTP n_threads_c2c_outer,
-                                            INTP n_threads_c2c_inner)
+                                            INT32 n_threads_c2c_outer,
+                                            INT32 n_threads_c2c_inner)
 {
     UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags);
     VOID *in = sol->decomp_scheme->in_real;
@@ -1204,8 +1204,8 @@ INT32 twiddle_multiplier_mt_for_real_double(aoclfftz_solution_t *sol,
 }
 
 INT32 twiddle_multiplier_mt_for_real(aoclfftz_solution_t *sol, INTP freq_factor,
-                                     INTP n_threads_c2c_outer,
-                                     INTP n_threads_c2c_inner)
+                                     INT32 n_threads_c2c_outer,
+                                     INT32 n_threads_c2c_inner)
 {
     UINT32 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     if (dt_prec == DT_FLOAT)

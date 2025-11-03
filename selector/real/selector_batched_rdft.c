@@ -67,8 +67,8 @@ INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 
     UINT32 n_threads = 1;
 #ifdef MULTI_THREADING
-    UINT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
-    UINT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
+    INT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
+    INT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
     n_threads = (inner_batch < avl_threads) ? inner_batch : avl_threads;
     sel->solution->decomp_scheme->thread_info->n_threads = n_threads;
 #endif

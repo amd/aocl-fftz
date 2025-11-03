@@ -39,7 +39,7 @@
 
 #include "core/solvers/solver.h"
 
-INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol, UINT32 num_threads_used)
+INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol, INT32 num_threads_used)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -96,7 +96,7 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
             #pragma omp parallel for
             for (INTP b = 0; b < batches; b++)
             {
-                UINT32 tid = omp_get_thread_num();
+                INT32 tid = omp_get_thread_num();
 
                 next_sol[tid]->decomp_scheme->in_real =
                                     (VOID *)((CHAR *)in_real + b * v_in_stride);
@@ -120,7 +120,7 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
             #pragma omp parallel for
             for (INTP b = 0; b < batches; b++)
             {
-                UINT32 tid = omp_get_thread_num();
+                INT32 tid = omp_get_thread_num();
 
                 next_sol[tid]->decomp_scheme->in_real =
                                     (VOID *)((CHAR *)in_real + b * v_in_stride);
@@ -179,8 +179,8 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
             }
 
             // Adjust pointers for the next iteration
-            UINT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
-            for (UINT32 i = 0; i < n_threads; i++)
+            INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
+            for (INT32 i = 0; i < n_threads; i++)
             {
                 next_sol[i]->decomp_scheme->in_real =
                     (VOID *)((CHAR *)in_real + v_in_stride);
@@ -233,7 +233,7 @@ static INT32 execute_mt_batched_solver(aoclfftz_solution_t *sol)
     INT32 status = SOLVER_SUCCESS;
     aoclfftz_solution_t **next_sol = sol->next_sol;
 
-    for (UINT32 i = 0; i < sol->decomp_scheme->thread_info->n_threads; i++)
+    for (INT32 i = 0; i < sol->decomp_scheme->thread_info->n_threads; i++)
     {
         next_sol[i]->decomp_scheme->in_real = sol->decomp_scheme->in_real;
         next_sol[i]->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;

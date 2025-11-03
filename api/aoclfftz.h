@@ -148,7 +148,7 @@ typedef struct aoclfftz_dim_64_
  */
 typedef struct aoclfftz_smp_pfft
 {
-    UINT32 num_threads;        /**< Number of max threads granted for use.\n
+    INT32 num_threads;         /**< Number of max threads granted for use.\n
     * `num_threads` must be greater than 0. */
     UINT32 dynamic_load_model; /**< Specifies the model for determining the number of threads.
      * - 0: Use `num_threads` as the maximum number of threads.

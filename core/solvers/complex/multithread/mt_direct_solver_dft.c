@@ -381,14 +381,14 @@ static INT32 execute_mt_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
     INTP rem_iters =
         sol->decomp_scheme->batched_vecs[0].n - (num_iters * num_sets);
 
-    INTP num_threads = sol->decomp_scheme->thread_info->n_threads;
+    INT32 num_threads = sol->decomp_scheme->thread_info->n_threads;
 
     omp_set_num_threads(sol->decomp_scheme->thread_info->n_threads);
 
     #pragma omp parallel for collapse(2) schedule(static)
     for (INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
     {
-        for( INTP block = 0; block < num_threads; block++)
+        for (INT32 block = 0; block < num_threads; block++)
         {
             UINT8 num_sets = sol->solver->kernel_c2c->sets;
             // INTP num_iters = sol->decomp_scheme->batched_vecs[0].n / num_sets;

@@ -65,8 +65,8 @@ INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol);
 INT32 twiddle_multiplier_for_real(aoclfftz_solution_t *sol, INTP freq_factor);
 #ifdef MULTI_THREADING
 INT32 twiddle_multiplier_mt_for_real(aoclfftz_solution_t *sol, INTP freq_factor,
-                                     INTP n_threads_c2c_outer,
-                                     INTP n_threads_c2c_inner);
+                                     INT32 n_threads_c2c_outer,
+                                     INT32 n_threads_c2c_inner);
 #endif
 
 #endif // TWIDDLE_H
