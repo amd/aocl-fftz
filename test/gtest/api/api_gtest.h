@@ -92,7 +92,7 @@ class AoclfftzAPITest : public ::testing::Test
 public:
     INT32 optOff;
     INT32 optLevel;
-    UINT32 num_threads;
+    INT32 num_threads;
     UINT32 dynamic_load_model;
     ProblemType *problem;
     VOID *handle;

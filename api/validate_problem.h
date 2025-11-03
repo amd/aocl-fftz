@@ -284,7 +284,7 @@ static inline INT32 validate_flags(aoclfftz_flags_t *flags)
     }                                                                          \
 }
 
-static inline UINT32 get_max_num_threads(VOID)
+static inline INT32 get_max_num_threads(VOID)
 {
 #ifdef MULTI_THREADING
     return omp_get_num_procs();
@@ -301,7 +301,7 @@ static inline UINT32 get_max_num_threads(VOID)
              "(%d) running with default value (0)", dynamic_load_model);       \
         dynamic_load_model = 0;                                                \
     }                                                                          \
-    UINT32 max_threads = get_max_num_threads();                                \
+    INT32 max_threads = get_max_num_threads();                                \
     if (num_threads < 1)                                                       \
     {                                                                          \
         AOCLFFTZ_LOG(INFO, global_logger_mode, "Requested num_threads value "  \

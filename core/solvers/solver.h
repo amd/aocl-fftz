@@ -122,7 +122,7 @@ INT32 setup_buffered_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                              kernel_t *kernel);
 INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol,
-                              UINT32 num_threads_used);
+                              INT32 num_threads_used);
 #endif
 
 // RealFFT-Solvers

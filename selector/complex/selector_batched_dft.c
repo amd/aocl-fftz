@@ -65,13 +65,13 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     // copy solution object from sel to cur_sel
     COPY_SOLUTION_OBJ(cur_sel->solution, sel->solution);
 
-    UINT32 n_threads = 1;
+    INT32 n_threads = 1;
 #ifdef MULTI_THREADING
     // TODO: Multi-threaded parallelism has been applied only to the inner most
     // dimension of a Multi-Dimensional batched problem, need to support other
     // dimensions later with CPUPL-6843
-    UINT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
-    UINT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
+    INT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
+    INT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
     n_threads = (inner_batch < avl_threads) ? inner_batch : avl_threads;
     sel->solution->decomp_scheme->thread_info->n_threads = n_threads;
 #endif

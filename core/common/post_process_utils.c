@@ -296,7 +296,7 @@ post_process_for_optimal_buffering_batching_(aoclfftz_solution_t *curr_sol,
 #ifdef MULTI_THREADING
             // get the number of threads from the batched solver before making
             // it single threaded
-            UINT32 batched_n_threads =
+            INT32 batched_n_threads =
                 batched_sol->decomp_scheme->thread_info->n_threads;
             // make the multi-threaded batched_solver as single threaded
             if (batched_sol->solver->solver_type == SOLVER_MT_BATCHED &&

@@ -336,14 +336,14 @@ VOID alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix)
 }
 
 // Allocate n placeholders for next solution
-aoclfftz_solution_t **alloc_sol_array(UINT32 n)
+aoclfftz_solution_t **alloc_sol_array(INT32 n)
 {
     aoclfftz_solution_t **sol = NULL;
     if (n > 0)
     {
         ALLOC_ALIGN_UNINIT(sol, aoclfftz_solution_t*,
                         n * sizeof(aoclfftz_solution_t*));
-        for (UINT32 i = 0; i < n; i++)
+        for (INT32 i = 0; i < n; i++)
         {
             sol[i] = NULL;
         }
@@ -355,7 +355,7 @@ aoclfftz_solution_t **alloc_sol_array(UINT32 n)
 // Otherwise sets the selector's scratch_space to the passed argument.
 aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
                                     VOID *scratch_space, kernel_t *kertab_dft,
-                                    kernel_t *kertab_twid_dft, UINT32 nthreads)
+                                    kernel_t *kertab_twid_dft, INT32 nthreads)
 {
     aoclfftz_selector_t *selector = NULL;
 
@@ -552,7 +552,7 @@ VOID destroy_solution(aoclfftz_solution_t* sol, UINT8 destroy_buffers)
     if (sol != NULL)
     {
         INT32 solver_type = sol->solver->solver_type;
-        UINT32 n_sols = sol->decomp_scheme->thread_info->n_threads;
+        INT32 n_sols = sol->decomp_scheme->thread_info->n_threads;
         n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
                   (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
         destroy_decomp_scheme(sol->decomp_scheme);
@@ -590,7 +590,7 @@ VOID destroy_solution(aoclfftz_solution_t* sol, UINT8 destroy_buffers)
     return;
 }
 
-VOID destroy_solutions(aoclfftz_solution_t **sol, UINT32 n)
+VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
 {
     if (sol != NULL)
     {
@@ -600,7 +600,7 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, UINT32 n)
             if (cur_sol != NULL)
             {
                 INT32 solver_type = cur_sol->solver->solver_type;
-                UINT32 n_sols = cur_sol->decomp_scheme->thread_info->n_threads;
+                INT32 n_sols = cur_sol->decomp_scheme->thread_info->n_threads;
                 n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
                           (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
                 destroy_solutions(cur_sol->next_sol, n_sols);
@@ -704,7 +704,7 @@ VOID destroy_solution(aoclfftz_solution_t *sol, UINT8 destroy_buffers)
     if (sol != NULL)
     {
         INT32 solver_type = sol->solver->solver_type;
-        UINT32 n_sols = sol->decomp_scheme->thread_info->n_threads;
+        INT32 n_sols = sol->decomp_scheme->thread_info->n_threads;
         n_sols = (((solver_type == SOLVER_MT_BATCHED)) ||
                   (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
         FREE_ALIGN_ALLOCATED_MEM(sol->solver->kernel_c2c);
@@ -745,7 +745,7 @@ VOID destroy_solution(aoclfftz_solution_t *sol, UINT8 destroy_buffers)
     return;
 }
 
-VOID destroy_solutions(aoclfftz_solution_t **sol, UINT32 n)
+VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
 {
     if (sol != NULL)
     {
@@ -755,7 +755,7 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, UINT32 n)
             if (cur_sol != NULL)
             {
                 INT32 solver_type = cur_sol->solver->solver_type;
-                UINT32 n_sols = cur_sol->decomp_scheme->thread_info->n_threads;
+                INT32 n_sols = cur_sol->decomp_scheme->thread_info->n_threads;
                 n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
                           (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
                 destroy_solutions(cur_sol->next_sol, n_sols);
