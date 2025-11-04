@@ -282,15 +282,6 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                 printf("WARNING: Invalid num threads value given, "
                        "running bench with default threads (1)\n");
             }
-#ifndef MULTI_THREADING
-            if (bench_params->num_threads > 1)
-            {
-                printf(
-                    "WARNING: Multi-threaded FFT is not enabled, "
-                    "running bench with single-threaded FFT\n");
-                bench_params->num_threads = 1;
-            }
-#endif
             break;
         case 'o':
             VALIDATE_AND_GET_INT(optarg, str_buff, bench_params->opt_level, ret,
@@ -303,24 +294,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
         case 302:
             if (atoi(optarg) != 0)
             {
-                if (atoi(optarg) != 1)
-                {
-                    printf("WARNING: The provided value for dynamic_load_model "
-                           "is not 1. Running the bench with dynamic_load_model"
-                           "set to 1.\n");
-                }
-                bench_params->dynamic_load_model = 1;
+                bench_params->dynamic_load_model = atoi(optarg);
             }
-
-#ifndef MULTI_THREADING
-            if (bench_params->dynamic_load_model != 0)
-            {
-                printf(
-                    "WARNING: Multi-threaded FFT is not enabled, "
-                    "running bench with single-threaded FFT\n");
-                bench_params->dynamic_load_model = 0;
-            }
-#endif
             break;
         case 303:
             if (atoi(optarg) != 0)
@@ -340,9 +315,10 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                    "running bench with measure-stats disabled\n");
             break;
         case 305:
-            // TODO: Modify this after adding support for bit-reproducibility
-            printf("WARNING: bit-reproducibility option is currently not "
-                   "supported, running bench without bit-reproducibility\n");
+            if (atoi(optarg) != 0)
+            {
+                bench_params->bit_reproducibility = atoi(optarg);
+            }
             break;
         case 306:
             if (atof(optarg) < 100)
@@ -1012,12 +988,11 @@ VOID show_help_menu(VOID)
         "                            3 = AVX512 optimization\n"
         "                            [default: -1]\n"
         "-l, --logger-mode        logger mode: log level value ranges from 0 "
-        "to 4 [default: 0]\n"
+        "to 3 [default: 0]\n"
         "                            0 = no logging\n"
-        "                            1 = error\n"
-        "                            2 = info\n"
+        "                            1 = info\n"
+        "                            2 = trace\n"
         "                            3 = debug\n"
-        "                            4 = trace\n"
         "--selector-time          '1' to print the time taken for preparing "
         "the solution, '0' to disable it [default: 0]\n"
         "--min-bench-time         set minimum time to calculate performance "
