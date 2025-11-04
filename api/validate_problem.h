@@ -200,6 +200,16 @@
 
 static inline INT32 validate_flags(aoclfftz_flags_t *flags)
 {
+    if (flags->fft_type > 1)
+    {
+        AOCLFFTZ_ERROR("fft_type can be Complex(0) or Real(1)");
+        return AOCLFFTZ_INVALID_INPUT;
+    }
+    if (flags->fft_direction > 1)
+    {
+        AOCLFFTZ_ERROR("fft_direction can be Forward(0) or Backward(1)");
+        return AOCLFFTZ_INVALID_INPUT;
+    }
     // TODO: Remove validation once support for out-of-order output is added
     if (flags->storage_order)
     {
@@ -207,13 +217,24 @@ static inline INT32 validate_flags(aoclfftz_flags_t *flags)
                                    "out-of-order outputs");
         return AOCLFFTZ_INVALID_INPUT;
     }
+    if (flags->fft_placement > 1)
+    {
+        AOCLFFTZ_ERROR("fft_placement can be In-place(0) or Out-of-place(1)");
+        return AOCLFFTZ_INVALID_INPUT;
+    }
+    // TODO: Remove validation once support for standalone transpose is added
     if (flags->transpose_mode)
     {
         AOCLFFTZ_ERROR("Library does not support "
                                    "standalone transpose");
         return AOCLFFTZ_INVALID_INPUT;
-
     }
+    if (flags->bit_reproducibility > 1)
+    {
+        AOCLFFTZ_ERROR("bit_reproducibility can be Disable(0) or Enable(1)");
+        return AOCLFFTZ_INVALID_INPUT;
+    }
+
     return AOCLFFTZ_SUCCESS;
 }
 
@@ -284,13 +305,34 @@ static inline INT32 validate_flags(aoclfftz_flags_t *flags)
     }                                                                          \
 }
 
-static inline INT32 get_max_num_threads(VOID)
+static inline INT32 get_valid_threads(INT32 num_threads)
 {
 #ifdef MULTI_THREADING
-    return omp_get_num_procs();
+    INT32 max_threads = omp_get_num_procs();
+    if (num_threads < 1)
+    {
+        AOCLFFTZ_LOG(INFO, global_logger_mode, "Requested num_threads value "
+             "(%d) is less than minimum required value (1), defaulting to "
+             "single threaded execution", num_threads);
+        return 1;
+    }
+    else if (num_threads > max_threads)
+    {
+        AOCLFFTZ_LOG(INFO, global_logger_mode, "Requested num_threads "
+             "(%d) exceeds available logical CPUs (%d), using %d\n as "
+             "num_threads", num_threads, max_threads, max_threads);
+        return max_threads;
+    }
 #else
-    return 1;
+    if (num_threads > 1)
+    {
+        AOCLFFTZ_LOG(INFO, global_logger_mode, "Multi-Threading Disabled !! "
+             "Running in single threaded mode, to use multi-threaded FFT "
+             "Please enable Multi-threading at compile time");
+        return 1;
+    }
 #endif
+    return num_threads;
 }
 
 #define VALIDATE_N_THREADS_AND_DYN_LOAD_MODEL(num_threads, dynamic_load_model) \
@@ -301,26 +343,12 @@ static inline INT32 get_max_num_threads(VOID)
              "(%d) running with default value (0)", dynamic_load_model);       \
         dynamic_load_model = 0;                                                \
     }                                                                          \
-    INT32 max_threads = get_max_num_threads();                                \
-    if (num_threads < 1)                                                       \
-    {                                                                          \
-        AOCLFFTZ_LOG(INFO, global_logger_mode, "Requested num_threads value "  \
-             "(%d) is less than minimum required value (1), defaulting to "    \
-             "single threaded execution", num_threads);                        \
-        num_threads = 1;                                                       \
-    }                                                                          \
-    else if (num_threads > max_threads)                                        \
-    {                                                                          \
-        AOCLFFTZ_LOG(INFO, global_logger_mode, "Requested num_threads "        \
-             "(%d) exceeds available logical CPUs (%d), using %d\n as "        \
-             "num_threads", num_threads, max_threads, max_threads);            \
-        num_threads = max_threads;                                             \
-    }                                                                          \
+    num_threads = get_valid_threads(num_threads);                              \
 }
 
 static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
 {
-    if (cntrl_p->logger_mode < 0 || cntrl_p->logger_mode > 4)
+    if (cntrl_p->logger_mode < 0 || cntrl_p->logger_mode > 3)
     {
         AOCLFFTZ_LOG(INFO, global_logger_mode, "Invalid logger mode, "
                                  "running with default logger mode (0)");
@@ -337,7 +365,7 @@ static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
     }
     if (!cntrl_p->opt_off)
     {
-        if (cntrl_p->opt_level < 0 || cntrl_p->opt_level > 4)
+        if (cntrl_p->opt_level < 0 || cntrl_p->opt_level > 3)
         {
             AOCLFFTZ_LOG(INFO, global_logger_mode,
                          "Either the opt-level is not set or out of range "

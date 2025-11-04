@@ -156,29 +156,31 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     if (rel_err > tol)
     {
         AOCLFFTZ_ERROR("Accuracy failure");
-        printf("Relative error  = %.6g\n", rel_err);
-        printf("Tolerance       = %.6g\n", tol);
+        fprintf(stderr, "Relative error  = %.6g\n", rel_err);
+        fprintf(stderr, "Tolerance       = %.6g\n", tol);
         if (first_err_idx < INT64_MAX)
         {
-            printf("First absolute error at index %td -> ", first_err_idx);
+            fprintf(stderr, "First absolute error at index %td -> ",
+                    first_err_idx);
             PRINT_ND_COUNTER(d_err_coords, b_err_coords, dim_rank,
                              vec_rank);
-            printf("\n  expected = %.6g + %.6gj\n",
-                   a_f[first_err_idx * data_stride],
-                   a_f[first_err_idx * data_stride  + 1]);
-            printf("  got      = %.6g + %.6gj\n",
-                   b_f[first_err_idx * data_stride],
-                   b_f[first_err_idx * data_stride  + 1]);
+            fprintf(stderr, "\n  expected = %.6g + %.6gj\n",
+                    a_f[first_err_idx * data_stride],
+                    a_f[first_err_idx * data_stride  + 1]);
+            fprintf(stderr, "  got      = %.6g + %.6gj\n",
+                    b_f[first_err_idx * data_stride],
+                    b_f[first_err_idx * data_stride  + 1]);
         }
-        printf("  max abs error = %.6g\n", first_abs_err);
-        printf("Max absolute error at index %td -> ", max_err_idx);
+        fprintf(stderr, "  max abs error = %.6g\n", first_abs_err);
+        fprintf(stderr, "Max absolute error at index %td -> ", max_err_idx);
         PRINT_ND_COUNTER(d_maxerr_coords, b_maxerr_coords, dim_rank, vec_rank);
-        printf("\n  expected = %.6g + %.6gj\n",
-               a_f[max_err_idx * data_stride],
-               a_f[max_err_idx * data_stride  + 1]);
-        printf("  got      = %.6g + %.6gj\n", b_f[max_err_idx * data_stride],
-               b_f[max_err_idx * data_stride  + 1]);
-        printf("  max abs error = %.6g\n", max_abs_err);
+        fprintf(stderr, "\n  expected = %.6g + %.6gj\n",
+                a_f[max_err_idx * data_stride],
+                a_f[max_err_idx * data_stride  + 1]);
+        fprintf(stderr, "  got      = %.6g + %.6gj\n",
+                b_f[max_err_idx * data_stride],
+                b_f[max_err_idx * data_stride  + 1]);
+        fprintf(stderr, "  max abs error = %.6g\n", max_abs_err);
         if (logger_mode >= AOCLFFTZ_LOG_DEBUG)
         {
             RESET_ND_COUNTER(dim_counter, dim_rank);
@@ -186,27 +188,30 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             // Using printf instead of logger to avoid file and line prefix
             if (data_stride == 1)
             {
-                printf("\n\t%5s%20s%17s\n", "Index", "Expected", "Actual");
+                fprintf(stderr, "\n\t%5s%20s%17s\n",
+                        "Index", "Expected", "Actual");
             }
             else
             {
-                printf("\n\t%5s%26s%32s\n", "Index", "Expected", "Actual");
+                fprintf(stderr, "\n\t%5s%26s%32s\n",
+                        "Index", "Expected", "Actual");
             }
             for (INTP i = 0, c = 100; i < N && c > 0; i++, c--)
             {
                 INTP idx = b_map ? b_map[i] : i;
-                printf("%7td -> ", idx);
+                fprintf(stderr, "%7td -> ", idx);
                 PRINT_ND_COUNTER(dim_counter, vec_counter, dim_rank, vec_rank);
                 if (data_stride == 1)
                 {
-                    printf(" : %12.6f  vs  %12.6f\n",
-                           a_f[idx * data_stride], b_f[idx * data_stride]);
+                    fprintf(stderr, " : %12.6f  vs  %12.6f\n",
+                            a_f[idx * data_stride], b_f[idx * data_stride]);
                 }
                 else
                 {
-                    printf(" : %12.6f + %12.6fj  vs  %12.6f + %12.6fj\n",
-                        a_f[idx * data_stride], a_f[idx * data_stride + 1],
-                        b_f[idx * data_stride], b_f[idx * data_stride + 1]);
+                    fprintf(stderr,
+                            " : %12.6f + %12.6fj  vs  %12.6f + %12.6fj\n",
+                            a_f[idx * data_stride], a_f[idx * data_stride + 1],
+                            b_f[idx * data_stride], b_f[idx * data_stride + 1]);
                 }
                 INCREMENT_ND_COUNTER(dim_counter, dims, dim_rank);
                 if (i % n == n - 1)
@@ -261,13 +266,13 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             {
                 STRCPY(path, PATH_SIZE_MAX, "current_dir");
             }
-            printf("\nFull output log can be found in %s%s%s\n", path,
+            fprintf(stderr, "\nFull output log can be found in %s%s%s\n", path,
                     DIRECTORY_SEPARATOR, OUTPUT_LOG_FILE);
         }
         else
         {
-            printf("\nUse debug logger mode [--logger-mode 3 (or) -l 3] to get "
-                   "detailed error log\n");
+            fprintf(stderr, "\nUse debug logger mode "
+                   "[--logger-mode 3 (or) -l 3] to get detailed error log\n");
         }
         status = VERIFICATION_FAILURE;
     }
@@ -394,31 +399,31 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
     if (rel_err > tol)
     {
         AOCLFFTZ_ERROR("Accuracy failure");
-        printf("Relative error  = %.6g\n", rel_err);
-        printf("Tolerance       = %.6g\n", tol);
+        fprintf(stderr, "Relative error  = %.6g\n", rel_err);
+        fprintf(stderr, "Tolerance       = %.6g\n", tol);
         if (first_err_idx < INT64_MAX)
         {
-            printf("First absolute error at index %td -> ", first_err_idx);
-            PRINT_ND_COUNTER(d_err_coords, b_err_coords, dim_rank,
-                             vec_rank);
-            printf("\n  expected = %.6g + %.6gj\n",
-                   a_d[first_err_idx * data_stride],
-                   a_d[first_err_idx * data_stride + 1]);
-            printf("  got      = %.6g + %.6gj\n",
-                   b_d[first_err_idx * data_stride],
-                   b_d[first_err_idx * data_stride + 1]);
+            fprintf(stderr, "First absolute error at index %td -> ",
+                    first_err_idx);
+            PRINT_ND_COUNTER(d_err_coords, b_err_coords, dim_rank, vec_rank);
+            fprintf(stderr, "\n  expected = %.6g + %.6gj\n",
+                    a_d[first_err_idx * data_stride],
+                    a_d[first_err_idx * data_stride + 1]);
+            fprintf(stderr, "  got      = %.6g + %.6gj\n",
+                    b_d[first_err_idx * data_stride],
+                    b_d[first_err_idx * data_stride + 1]);
         }
-        printf("  max abs error = %.6g\n", first_abs_err);
-        printf("Max absolute error at index %td -> ", max_err_idx);
+        fprintf(stderr, "  max abs error = %.6g\n", first_abs_err);
+        fprintf(stderr, "Max absolute error at index %td -> ", max_err_idx);
         PRINT_ND_COUNTER(d_maxerr_coords, b_maxerr_coords, dim_rank, vec_rank);
         fflush(stdout);
-        printf("\n  expected = %.6g + %.6gj\n",
-               a_d[max_err_idx * data_stride],
-               a_d[max_err_idx * data_stride + 1]);
-        printf("  got      = %.6g + %.6gj\n",
-               b_d[max_err_idx * data_stride],
-               b_d[max_err_idx * data_stride + 1]);
-        printf("  max abs error = %.6g\n", max_abs_err);
+        fprintf(stderr, "\n  expected = %.6g + %.6gj\n",
+                a_d[max_err_idx * data_stride],
+                a_d[max_err_idx * data_stride + 1]);
+        fprintf(stderr, "  got      = %.6g + %.6gj\n",
+                b_d[max_err_idx * data_stride],
+                b_d[max_err_idx * data_stride + 1]);
+        fprintf(stderr, "  max abs error = %.6g\n", max_abs_err);
         if (logger_mode >= AOCLFFTZ_LOG_DEBUG)
         {
             RESET_ND_COUNTER(dim_counter, dim_rank);
@@ -426,26 +431,26 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             // Using printf instead of logger to avoid file and line prefix
             if (data_stride == 1)
             {
-                printf("\n\t%10s%20s%24s\n", "Index", "Expected", "Actual");
+                fprintf(stderr, "\n\t%10s%20s%24s\n", "Index", "Expected", "Actual");
             }
             else
             {
-                printf("\n\t%10s%30s%48s\n", "Index", "Expected", "Actual");
+                fprintf(stderr, "\n\t%10s%30s%48s\n", "Index", "Expected", "Actual");
             }
             for (INTP i = 0, c = 100; i < N && c > 0; i++, c--)
             {
                 INTP idx = b_map ? b_map[i] : i;
                 // vecs
-                printf("%7td -> ", idx);
+                fprintf(stderr, "%7td -> ", idx);
                 PRINT_ND_COUNTER(dim_counter, vec_counter, dim_rank, vec_rank);
                 if (data_stride == 1)
                 {
-                    printf(" : %20.14lf  vs  %20.14lf\n",
+                    fprintf(stderr, " : %20.14lf  vs  %20.14lf\n",
                            a_d[idx * data_stride], b_d[idx * data_stride]);
                 }
                 else
                 {
-                    printf(
+                    fprintf(stderr,
                         " : %20.14lf + %20.14lfj  vs  %20.14lf + %20.14lfj\n",
                         a_d[idx * data_stride], a_d[idx * data_stride + 1],
                         b_d[idx * data_stride], b_d[idx * data_stride + 1]);
@@ -504,14 +509,14 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             {
                 STRCPY(path, PATH_SIZE_MAX, "current_dir");
             }
-            printf("\nFull output log can be found in %s%s%s\n", path,
+            fprintf(stderr, "\nFull output log can be found in %s%s%s\n", path,
                     DIRECTORY_SEPARATOR, OUTPUT_LOG_FILE);
         }
         else
         {
-            AOCLFFTZ_ERROR("\nUse debug logger mode "
-                                       "[--logger-mode 3 (or) -l 3] to get "
-                                       "detailed error log\n");
+            fprintf(stderr, "\nUse debug logger mode "
+                            "[--logger-mode 3 (or) -l 3] to get "
+                            "detailed error log\n");
         }
         status = VERIFICATION_FAILURE;
     }

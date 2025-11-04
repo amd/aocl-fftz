@@ -172,9 +172,9 @@ typedef struct aoclfftz_cntrl_params
     INT32 opt_off;                         /**< Turn off all optimizations */
     aoclfftz_logger_mode logger_mode;      /**< Set Logger mode with following values.\n
     * - 0 - `None`,
-    * - 1 - `Debug`,
-    * - 2 - `Info`,
-    * - 3 - `Trace` */
+    * - 1 - `Info`,
+    * - 2 - `Trace`,
+    * - 3 - `Debug`*/
     INT32 measure_stats;    /**< Enable/Disable measure stats (Not supported, must be default value `0`) */
 } aoclfftz_cntrl_params_t;
 

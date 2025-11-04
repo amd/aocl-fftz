@@ -113,22 +113,22 @@
 #define PRINT_ND_COUNTER(dims, vecs, dim_rank, vec_rank)                       \
     {                                                                          \
         /* vecs */                                                             \
-        printf("[");                                                           \
+        fprintf(stderr, "[");                                                  \
         for (INT32 j = vec_rank - 1; j >= 0; j--)                              \
         {                                                                      \
             if (j < vec_rank - 1)                                              \
-                printf(",");                                                   \
-            printf("%td", vecs[j]);                                            \
+                fprintf(stderr, ",");                                          \
+            fprintf(stderr, "%td", vecs[j]);                                   \
         }                                                                      \
-        printf("]v[");                                                         \
+        fprintf(stderr, "]v[");                                                \
         /* dims */                                                             \
         for (INT32 j = dim_rank - 1; j >= 0; j--)                              \
         {                                                                      \
             if (j < dim_rank - 1)                                              \
-                printf(",");                                                   \
-            printf("%td", dims[j]);                                            \
+                fprintf(stderr, ",");                                          \
+            fprintf(stderr, "%td", dims[j]);                                   \
         }                                                                      \
-        printf("]");                                                           \
+        fprintf(stderr, "]");                                                  \
     }
 
 /**
