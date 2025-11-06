@@ -101,31 +101,6 @@ typedef struct aoclfftz_selector
 #define HAS_NEXT(sol) (sol->next_sol != NULL && sol->next_sol[0] != NULL)
 
 // macro functions
-#ifdef MULTI_THREADING
-// if dynamic_load_model is set we are allowing the library to take all the
-// available threads in the system and use them efficiently
-#define INIT_THREADS(sel_obj, problem)                                         \
-{                                                                              \
-    if (problem->pthr_fft.dynamic_load_model)                                  \
-    {                                                                          \
-        UINT32 procs = omp_get_num_procs();                                    \
-        sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads = \
-            procs;                                                             \
-    }                                                                          \
-    else                                                                       \
-    {                                                                          \
-        sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads = \
-            problem->pthr_fft.num_threads;                                     \
-    }                                                                          \
-}
-#else
-#define INIT_THREADS(sel_obj, problem)                                         \
-{                                                                              \
-    sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads =     \
-        problem->pthr_fft.num_threads;                                         \
-}
-#endif
-
 #define INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank)                         \
 {                                                                              \
     sel_obj->solution->decomp_scheme->vec_rank = problem->vec_rank;            \
@@ -178,7 +153,8 @@ typedef struct aoclfftz_selector
         problem->cntrl_params.measure_stats;                                   \
     sel_obj->solution->decomp_scheme->thread_info->pthr_fft->                  \
         dynamic_load_model = problem->pthr_fft.dynamic_load_model;             \
-    INIT_THREADS(sel_obj, problem)                                             \
+    sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads =     \
+        problem->pthr_fft.num_threads;                                         \
     sel_obj->solution->decomp_scheme->thread_info->avl_threads =               \
     sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads;      \
     sel_obj->solution->decomp_scheme->thread_info->n_threads = 1;              \
