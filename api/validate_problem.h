@@ -305,7 +305,7 @@ static inline INT32 validate_flags(aoclfftz_flags_t *flags)
     }                                                                          \
 }
 
-static inline INT32 get_valid_threads(INT32 num_threads)
+static inline INT32 sanitize_threads(INT32 num_threads)
 {
 #ifdef MULTI_THREADING
     INT32 max_threads = omp_get_num_procs();
@@ -333,17 +333,6 @@ static inline INT32 get_valid_threads(INT32 num_threads)
     }
 #endif
     return num_threads;
-}
-
-#define VALIDATE_N_THREADS_AND_DYN_LOAD_MODEL(num_threads, dynamic_load_model) \
-{                                                                              \
-    if (dynamic_load_model != 0)                                               \
-    {                                                                          \
-        AOCLFFTZ_LOG(INFO, global_logger_mode, "Invalid dynamic_load_model "   \
-             "(%d) running with default value (0)", dynamic_load_model);       \
-        dynamic_load_model = 0;                                                \
-    }                                                                          \
-    num_threads = get_valid_threads(num_threads);                              \
 }
 
 static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
@@ -439,10 +428,17 @@ static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
     {                                                                          \
         VALIDATE_BUFFERS(problem->in, problem->out, 1 /* out_of_place */, ret) \
     }                                                                          \
+    if (problem->pthr_fft.dynamic_load_model != 0)                             \
+    {                                                                          \
+        AOCLFFTZ_LOG(INFO, global_logger_mode,                                 \
+                "dynamic_load_model is currently unsupported, "                \
+                "disabling it");                                               \
+        problem->pthr_fft.dynamic_load_model = 0;                              \
+    }                                                                          \
     if ((problem->pthr_fft.num_threads != 1))                                  \
     {                                                                          \
-        VALIDATE_N_THREADS_AND_DYN_LOAD_MODEL(problem->pthr_fft.num_threads,   \
-                                        problem->pthr_fft.dynamic_load_model)  \
+        problem->pthr_fft.num_threads =                                        \
+            sanitize_threads(problem->pthr_fft.num_threads);                   \
     }                                                                          \
     validation_exit:                                                           \
     if (ret)                                                                   \
