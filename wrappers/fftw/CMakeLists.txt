@@ -91,6 +91,7 @@ endif()
 
 # Build fftw_wrapper library
 set(SRC_PATH src)
+set(INC_FILES ${SRC_PATH}/fftw_wrapper.f ${SRC_PATH}/fftw_wrapper.h)
 
 file(GLOB SRC_FILES ${SRC_PATH}/*.c ${SRC_PATH}/*.h)
 include_directories(.)
@@ -105,9 +106,32 @@ endif()
 
 target_link_libraries(${lib_name} PRIVATE ${FFTZ_LIB} ${lib_deps})
 
-set(DEST_LIB_PATH aocl_fftz/wrappers/fftw)
+set(DEST_LIB_PATH wrappers/fftw/lib)
+set(DEST_INCLUDE_PATH wrappers/fftw/include)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 #Install into destination path by using -DCMAKE_INSTALL_PREFIX=<path> while configuring cmake
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${DEST_LIB_PATH}")
 message(STATUS "FFTW-WRAPPER Library will be installed at ${CMAKE_INSTALL_RPATH}")
 install(TARGETS ${lib_name} DESTINATION ${DEST_LIB_PATH})
+install(FILES ${INC_FILES} DESTINATION ${DEST_INCLUDE_PATH})
+
+# create a symlink fftw3.h, fftw3.f and libfftw3xc_wrapper_fftz.so
+set(SYMLINK_SRC_PATH ${CMAKE_INSTALL_PREFIX}/wrappers/fftw)
+set(SYMLINK_DEST_PATH ${CMAKE_INSTALL_PREFIX})
+if(WIN32)
+    set(LIB_SUFFIX .dll)
+else()
+    set(LIB_SUFFIX .so)
+endif()
+
+function(create_sym_link sym_name target_name)
+    install(CODE "execute_process(COMMAND echo Creating symbolic link ${sym_name} to ${target_name})")
+    install(CODE "execute_process(COMMAND rm -f ${sym_name})")
+    install(CODE "execute_process(COMMAND ln -s ${target_name} ${sym_name})")
+endfunction()
+
+if(NOT BUILD_STATIC_LIBS AND NOT WIN32)
+    create_sym_link(${SYMLINK_DEST_PATH}/include/fftw3.h ${SYMLINK_SRC_PATH}/include/fftw_wrapper.h)
+    create_sym_link(${SYMLINK_DEST_PATH}/include/fftw3.f ${SYMLINK_SRC_PATH}/include/fftw_wrapper.f)
+    create_sym_link(${SYMLINK_DEST_PATH}/lib/libfftw3xc_wrapper_fftz${LIB_SUFFIX} ${SYMLINK_SRC_PATH}/lib/libfftw3xc_wrapper_fftz${LIB_SUFFIX})
+endif()

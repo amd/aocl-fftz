@@ -69,7 +69,7 @@ extern "C" {
                                                                                     \
 COMPLEX_TYPE(Real, Complex);                                                        \
                                                                                     \
-typedef struct VOID* GEN(plan);                                                     \
+typedef VOID* GEN(plan);                                                            \
                                                                                     \
 typedef aoclfftz_dim_t GEN(iodim);                                                  \
 typedef aoclfftz_dim_t_64_ GEN(iodim64);                                            \
