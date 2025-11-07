@@ -50,7 +50,7 @@ extern INT32 thread_num;
     {                                                                          \
         cntrl_params.opt_level = 4;                                            \
         cntrl_params.opt_off = 0;                                              \
-        cntrl_params.logger_mode = 1; /* Logs errors  */                       \
+        cntrl_params.logger_mode = AOCLFFTZ_LOG_NONE;                          \
         cntrl_params.measure_stats = 0;                                        \
     }
 
@@ -125,32 +125,31 @@ dv_desc *get_r2c_dv_desc(INT32 rank, const INT32 *n, INT32 is_inplace);
 dv_desc *get_c2r_dv_desc(INT32 rank, const INT32 *n, INT32 is_inplace);
 
 dv_desc *get_many_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
-                               const INT32 *inembed, INT32 istride,
-                               INT32 idist, const INT32 *onembed,
-                               INT32 ostride, INT32 odist);
+                          const INT32 *inembed, INT32 istride, INT32 idist,
+                          const INT32 *onembed, INT32 ostride, INT32 odist);
 
 dv_desc *get_many_r2c_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
-                                   const INT32 *inembed, INT32 istride,
-                                   INT32 idist, const INT32 *onembed,
-                                   INT32 ostride, INT32 odist, INT32 is_inplace);
+                              const INT32 *inembed, INT32 istride, INT32 idist,
+                              const INT32 *onembed, INT32 ostride, INT32 odist,
+                              INT32 is_inplace);
 
 dv_desc *get_many_c2r_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
-                                   const INT32 *inembed, INT32 istride,
-                                   INT32 idist, const INT32 *onembed,
-                                   INT32 ostride, INT32 odist, INT32 is_inplace);
+                              const INT32 *inembed, INT32 istride, INT32 idist,
+                              const INT32 *onembed, INT32 ostride, INT32 odist,
+                              INT32 is_inplace);
 
 dv_desc *get_guru_dv_desc(INT32 rank, const fftw_iodim *dims,
-                         INT32 howmany_rank, const fftw_iodim *howmany_dims);
+                          INT32 howmany_rank, const fftw_iodim *howmany_dims);
 
 dv_desc_64_ *get_guru_64_dv_desc(INT32 rank, const fftw_iodim64 *dims,
-                                INT32 howmany_rank,
-                                const fftw_iodim64 *howmany_dims);
+                                 INT32 howmany_rank,
+                                 const fftw_iodim64 *howmany_dims);
 
-                                #define MIN_ALIGNMENT 16
+#define MIN_ALIGNMENT 16
 
 #ifdef _WIN32
 
-#define ALLOC_ALIGN_UNINIT(ptr, type, num_bytes)                                    \
+#define ALLOC_ALIGN_UNINIT(ptr, type, num_bytes)                               \
     {                                                                          \
         ptr = (type *)_aligned_malloc(num_bytes, MIN_ALIGNMENT);               \
     }
@@ -166,7 +165,7 @@ dv_desc_64_ *get_guru_64_dv_desc(INT32 rank, const fftw_iodim64 *dims,
 
 #else
 
-#define ALLOC_ALIGN_UNINIT(ptr, type, num_bytes)                                    \
+#define ALLOC_ALIGN_UNINIT(ptr, type, num_bytes)                               \
     {                                                                          \
         if (posix_memalign((VOID **)(&ptr), MIN_ALIGNMENT, num_bytes))         \
         {                                                                      \

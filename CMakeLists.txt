@@ -139,9 +139,9 @@ file(GLOB UTILS_SRC_FILES utils/*.c utils/*.cpp utils/*.h)
 include_directories(.)
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 link_directories(${ROOT_DIR}/build/)
-set(DEST_LIB_PATH aocl_fftz/lib)
-set(DEST_INC_PATH aocl_fftz/include)
-set(DEST_BIN_PATH aocl_fftz/bin)
+set(DEST_LIB_PATH lib)
+set(DEST_INC_PATH include)
+set(DEST_BIN_PATH bin)
 
 set(INC_FILES api/aoclfftz.h api/types.h)
 
