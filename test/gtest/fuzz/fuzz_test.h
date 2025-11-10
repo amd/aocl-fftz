@@ -311,6 +311,20 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
 
     register_functions(params);
 
+    // Log dims and vecs for debugging
+    for (INTP i = 0; i < dim_rank; i++)
+    {
+        printf("Dims[%td]: n=%ld, in_stride=%ld, out_stride=%ld\n",
+               i, params->dims[i].n, params->dims[i].in_stride,
+               params->dims[i].out_stride);
+    }
+    for (INTP i = 0; i < vec_rank; i++)
+    {
+        printf("Vecs[%td]: n=%ld, in_stride=%ld, out_stride=%ld\n",
+               i, params->vecs[i].n, params->vecs[i].in_stride,
+               params->vecs[i].out_stride);
+    }
+
     // create input and output buffers
     UINT32 is_align = params->aligned_alloc;
     INTP input_bytes = params->sz_info.input_bytes;

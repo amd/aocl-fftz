@@ -324,7 +324,7 @@ static inline INT32 sanitize_threads(INT32 num_threads)
         return max_threads;
     }
 #else
-    if (num_threads > 1)
+    if (num_threads != 1)
     {
         AOCLFFTZ_LOG(INFO, global_logger_mode, "Multi-Threading Disabled !! "
              "Running in single threaded mode, to use multi-threaded FFT "
