@@ -81,8 +81,8 @@
         }                                                                      \
         else                                                                   \
         {                                                                      \
-            p_desc->pthr_fft.num_threads = 0;                                  \
-            p_desc->pthr_fft.dynamic_load_model = 1;                           \
+            p_desc->pthr_fft.num_threads = 1;                                  \
+            p_desc->pthr_fft.dynamic_load_model = 0;                           \
         }                                                                      \
         if (params->dynamic_load_model >= 1)                                   \
         {                                                                      \
