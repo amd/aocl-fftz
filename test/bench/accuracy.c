@@ -475,8 +475,8 @@ exit_impulse_transform_test:
                 for (INTP o = 0; o < outer_n; o++)                             \
                 {                                                              \
                     PREPARE_TIMESHIFT_TEST_OUTPUTS(                            \
-                        in + (b * n0_in + o * inner_n) * data_stride,          \
-                        out + (b * n0_in + o * inner_n) * data_stride, cur_n,  \
+                        in + (b * n_in + o * inner_n) * data_stride,           \
+                        out + (b * n_in + o * inner_n) * data_stride, cur_n,   \
                         m, unit_m, idx_map, params->dir, params->precision,    \
                         DATA_STRIDE);                                          \
                 }                                                              \
@@ -487,9 +487,9 @@ exit_impulse_transform_test:
                 for (INTP o = 0; o < outer_n; o++)                             \
                 {                                                              \
                     PREPARE_TIMESHIFT_TEST_OUTPUTS(                            \
-                        in + idx_map_t[b * n0_in + o * inner_n] * data_stride, \
+                        in + idx_map_t[b * n_in + o * inner_n] * data_stride,  \
                         out +                                                  \
-                            idx_map_t[b * n0_in + o * inner_n] * data_stride,  \
+                            idx_map_t[b * n_in + o * inner_n] * data_stride,   \
                         cur_n, m, unit_m, idx_map, params->dir,                \
                         params->precision, DATA_STRIDE);                       \
                 }                                                              \
@@ -599,6 +599,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
         INTP unit_m = n;
         INTP n0 = params->dims[0].n;
         INTP n0_in = params->fft_type == C2R ? n0 / 2 + 1 : n0;
+        INTP n_in = (n * n0_in) / n0;
 
         // Test timeshift property for each dimension (outermost to innermost)
         for (INTP d = params->dim_rank - 1; d >= 0; d--)
