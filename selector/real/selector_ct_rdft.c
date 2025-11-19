@@ -81,11 +81,9 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     }
 
     cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                             sel->kertab_dft, sel->kertab_twid_dft,
-                             0 /*unused*/);
+                             sel->kernel_tables, 0 /*unused*/);
     cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                               sel->kertab_dft, sel->kertab_twid_dft,
-                               0 /*unused*/);
+                               sel->kernel_tables, 0 /*unused*/);
     if (cur_sel == NULL || cur_sel_m == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -152,11 +150,9 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
             destroy_selector_without_scratch_space(cur_sel);
             destroy_selector_without_scratch_space(cur_sel_m);
             cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                     sel->kertab_dft, sel->kertab_twid_dft,
-                                     0 /*unused*/);
+                                     sel->kernel_tables, 0 /*unused*/);
             cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                       sel->kertab_dft, sel->kertab_twid_dft,
-                                       0 /*unused*/);
+                                       sel->kernel_tables, 0 /*unused*/);
             if (cur_sel == NULL || cur_sel_m == NULL)
             {
                 ret = AOCLFFTZ_MEMORY_FAILURE;

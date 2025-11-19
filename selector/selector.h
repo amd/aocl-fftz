@@ -84,8 +84,7 @@ typedef struct aoclfftz_selector
 
     // A global buffer to help with transposition of twiddle multiplied elements
     void* scratch_space;
-    kernel_t* kertab_dft;
-    kernel_t* kertab_twid_dft;
+    kernel_tables_t *kernel_tables;
 } aoclfftz_selector_t;
 
 /*
@@ -831,9 +830,8 @@ typedef struct aoclfftz_selector
 }
 
 // Function declarations
-INT32 register_solvers_kernels(kernel_t *kertab_dft, kernel_t *kertab_twid_dft,
-                               INT32 dt, INT32 dir, INT32 is_real,
-                               INT32 cpu_flags);
+INT32 register_solvers_kernels(kernel_tables_t *kernel_tables, INT32 dt,
+                               INT32 dir, INT32 is_real, INT32 cpu_flags);
 INT32 selector_driver_dft_(aoclfftz_selector_t *sel);
 INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
                             aoclfftz_realhelper_t *realhelper);

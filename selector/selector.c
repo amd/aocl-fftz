@@ -38,11 +38,11 @@
  */
 
 #include "selector/selector.h"
-#include "utils/utils.h"
 #include "core/common/memory_manager.h"
 #include "core/common/post_process_utils.h"
 #include "core/common/twiddle.h"
 #include "core/kernels/kernel_list.h"
+#include "utils/utils.h"
 
 // Function pointers to communicate the exact selector model for executing the
 // problem.
@@ -55,9 +55,8 @@ selector_model_rdft_func_ sel_rdft_fp = NULL;
 
 // Register all applicable solvers and kernels into the respective tables
 // based on the input problem and cpu arch flags
-INT32 register_solvers_kernels(kernel_t *kertab_dft, kernel_t *kertab_twid_dft,
-                               INT32 dt, INT32 dir, INT32 is_real,
-                               INT32 cpu_flags)
+INT32 register_solvers_kernels(kernel_tables_t *kernel_tables, INT32 dt,
+                               INT32 dir, INT32 is_real, INT32 cpu_flags)
 {
     INT32 ret = SELECTOR_FAILURE;
 
@@ -71,18 +70,23 @@ INT32 register_solvers_kernels(kernel_t *kertab_dft, kernel_t *kertab_twid_dft,
     // Register Kernels
     if (is_real)
     {
-        ret = register_kernels_real(kertab_dft, kernels_real, dt, dir,
-                                    cpu_flags);
-        ret |= register_kernels_real(kertab_twid_dft, kernels_twid_real, dt,
-                                     dir, cpu_flags);
+        // Register standard kernels for C2R (real-backward) since the twiddle
+        // kernels are not supported
+        if (dir == BACKWARD_FFT_DIR)
+        {
+            ret |= register_kernels_real(kernel_tables->kt_rdft,
+                                         kernels_real, dt, dir, cpu_flags);
+        }
+        else
+        {
+            ret |= register_kernels_real(kernel_tables->kt_rdft,
+                                         kernels_twid_real, dt, dir, cpu_flags);
+        }
     }
-    else
-    {
-        ret = register_kernels_complex(kertab_dft, kernels_c2c, dt, dir,
-                                       cpu_flags);
-        ret |= register_kernels_complex(kertab_twid_dft, kernels_twid_c2c, dt,
-                                        dir, cpu_flags);
-    }
+    ret |= register_kernels_complex(kernel_tables->kt_dft, kernels_c2c, dt,
+                                    dir, cpu_flags);
+    ret |= register_kernels_complex(kernel_tables->kt_twid_dft,
+                                    kernels_twid_c2c, dt, dir, cpu_flags);
 
     return ret;
 }
@@ -190,7 +194,7 @@ INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme)
 INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
 {
     aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
-    kernel_t *kertab = sel->kertab_dft;
+    kernel_t *kertab = sel->kernel_tables->kt_dft;
     INT32 ret = SELECTOR_FAILURE;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
@@ -392,7 +396,7 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
 INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
 {
     aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
-    kernel_t *kertab = sel->kertab_dft;
+    kernel_t *kertab = sel->kernel_tables->kt_dft;
     INT32 ret = SELECTOR_FAILURE;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
@@ -570,7 +574,7 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
 
         //Direct sub-problems will use normal dft kernels
         //since they are leaf sub-problems always
-        kertab = sel->kertab_dft;
+        kertab = sel->kernel_tables->kt_dft;
 
         // Call Direct Solver master
         ret = selector_direct_dft(sel, kertab);
@@ -586,7 +590,7 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
 
         //All the CT sub-problems will use fused twiddle dft kernels
         //since they are non-leaf sub-problems always
-        kertab = sel->kertab_twid_dft;
+        kertab = sel->kernel_tables->kt_twid_dft;
 
         // Call CT Solver master
         ret = selector_ct_dft(sel, kertab);
@@ -603,7 +607,7 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
                                 aoclfftz_realhelper_t *realhelper)
 {
     aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
-    kernel_t *kertab = sel->kertab_dft;
+    kernel_t *kertab = sel->kernel_tables->kt_rdft;
     INT32 ret = SELECTOR_FAILURE;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
@@ -762,7 +766,7 @@ INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
     aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
 
     //All the CT sub-problems will use fused twiddle dft kernels
-    kernel_t *kertab = sel->kertab_twid_dft;
+    kernel_t *kertab = sel->kernel_tables->kt_rdft;
     INT32 ret = SELECTOR_FAILURE;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
@@ -954,8 +958,8 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
 #ifdef AOCLFFTZ_FIXED_SELECTOR_MODE
     // Allocate selector object
     sel_models[AOCLFFTZ_FIXED_SELECTOR] =
-        alloc_selector(vec_rank, dim_rank, sel->scratch_space, sel->kertab_dft,
-                       sel->kertab_twid_dft, 0 /*unused*/);
+        alloc_selector(vec_rank, dim_rank, sel->scratch_space,
+                       sel->kernel_tables, 0 /*unused*/);
     if (sel_models[AOCLFFTZ_FIXED_SELECTOR] != NULL)
     {
         COPY_DECOMP_SCHEME(
@@ -997,8 +1001,8 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
     // Allocate selector object
 #ifdef AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_MODE
     sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT] =
-        alloc_selector(vec_rank, dim_rank, sel->scratch_space, sel->kertab_dft,
-                       sel->kertab_twid_dft, 0 /*unused*/);
+        alloc_selector(vec_rank, dim_rank, sel->scratch_space,
+                       sel->kernel_tables, 0 /*unused*/);
     if (sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT] != NULL)
     {
         COPY_DECOMP_SCHEME(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
@@ -1055,8 +1059,8 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
     // Allocate selector object
 #ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
     sel_models[AOCLFFTZ_AUTO_SELECTOR] =
-        alloc_selector(vec_rank, dim_rank, sel->scratch_space, sel->kertab_dft,
-                       sel->kertab_twid_dft, 0 /*unused*/);
+        alloc_selector(vec_rank, dim_rank, sel->scratch_space,
+                       sel->kernel_tables, 0 /*unused*/);
     if (sel_models[AOCLFFTZ_AUTO_SELECTOR] != NULL)
     {
         COPY_DECOMP_SCHEME(
@@ -1182,6 +1186,10 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
         {
             sel_rdft_fp = selector_fixed_mode_fused_twid_rdft_;
         }
+        // Registering complex selector for real problems also since the real
+        // selector will invoke complex selector internally for ND and
+        // Bluestein problems
+        sel_fp = selector_fixed_mode_fused_twid_dft_;
 
         ret = selector_model_rdft_(sel, realhelper);
 
@@ -1198,8 +1206,8 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
 #ifdef AOCLFFTZ_FIXED_SELECTOR_MODE
     // Allocate selector object
     sel_models[AOCLFFTZ_FIXED_SELECTOR] =
-        alloc_selector(vec_rank, dim_rank, sel->scratch_space, sel->kertab_dft,
-                       sel->kertab_twid_dft, 0 /*unused*/);
+        alloc_selector(vec_rank, dim_rank, sel->scratch_space,
+                       sel->kernel_tables, 0 /*unused*/);
     if (sel_models[AOCLFFTZ_FIXED_SELECTOR] != NULL)
     {
         COPY_DECOMP_SCHEME(
@@ -1215,6 +1223,10 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
         // Fixed decision logic and CPI based selector mode
         // ret = selector_fixed_mode_rdft_(sel_models[AOCLFFTZ_FIXED_SELECTOR]);
         sel_rdft_fp = selector_fixed_mode_rdft_;
+        // Registering complex selector for real problems also since the real
+        // selector will invoke complex selector internally for ND and
+        // Bluestein problems
+        sel_fp = selector_fixed_mode_dft_;
         ret = selector_model_rdft_(sel_models[AOCLFFTZ_FIXED_SELECTOR],
                                    realhelper);
         if (ret != SELECTOR_FAILURE)
@@ -1236,8 +1248,8 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
     // Allocate selector object
 #ifdef AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_MODE
     sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT] =
-        alloc_selector(vec_rank, dim_rank, sel->scratch_space, sel->kertab_dft,
-                       sel->kertab_twid_dft, 0 /*unused*/);
+        alloc_selector(vec_rank, dim_rank, sel->scratch_space,
+                       sel->kernel_tables, 0 /*unused*/);
     if (sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT] != NULL)
     {
         COPY_DECOMP_SCHEME(sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
@@ -1267,6 +1279,10 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
         {
             sel_rdft_fp = selector_fixed_mode_fused_twid_rdft_;
         }
+        // Registering complex selector for real problems also since the real
+        // selector will invoke complex selector internally for ND and
+        // Bluestein problems
+        sel_fp = selector_fixed_mode_fused_twid_dft_;
         ret = selector_model_rdft_(
             sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT], realhelper);
         if (ret != SELECTOR_FAILURE)
@@ -1288,8 +1304,8 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
     // Allocate selector object
 #ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
     sel_models[AOCLFFTZ_AUTO_SELECTOR] =
-        alloc_selector(vec_rank, dim_rank, sel->scratch_space, sel->kertab_dft,
-                       sel->kertab_twid_dft, 0 /*unused*/);
+        alloc_selector(vec_rank, dim_rank, sel->scratch_space,
+                       sel->kernel_tables, 0 /*unused*/);
     if (sel_models[AOCLFFTZ_AUTO_SELECTOR] != NULL)
     {
         COPY_DECOMP_SCHEME(
@@ -1309,6 +1325,10 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
         // ret = selector_autotuner_mode_rdft_(
         //     sel_models[AOCLFFTZ_AUTO_SELECTOR]);
         sel_rdft_fp = selector_autotuner_mode_rdft_;
+        // Registering complex selector for real problems also since the real
+        // selector will invoke complex selector internally for ND and
+        // Bluestein problems
+        sel_fp = selector_autotuner_mode_dft_;
         ret = selector_model_rdft_(sel_models[AOCLFFTZ_AUTO_SELECTOR],
                                    realhelper);
         if (ret != SELECTOR_FAILURE)
@@ -1386,12 +1406,14 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     INT32 num_threads = problem->pthr_fft.num_threads;
-    kernel_t kertab_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_t kertab_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft};
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, kertab_dft,
-                             kertab_twid_dft, num_threads);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, &kertab_tables,
+                             num_threads);
     if (sel_obj == NULL)
     {
         AOCLFFTZ_ERROR("Setup failure with %s",
@@ -1405,10 +1427,8 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     //Register solvers and kernels for solving the problem based on
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
 
-    ret = register_solvers_kernels(sel_obj->kertab_dft,
-                                   sel_obj->kertab_twid_dft, DT_FLOAT,
-                                   flags.fft_direction,
-                                   flags.fft_type,
+    ret = register_solvers_kernels(sel_obj->kernel_tables, DT_FLOAT,
+                                   flags.fft_direction, flags.fft_type,
                                    cpu_flags);
     if (ret != 0)
     {
@@ -1468,12 +1488,14 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     INT32 num_threads = problem->pthr_fft.num_threads;
-    kernel_t kertab_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_t kertab_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft};
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, kertab_dft,
-                             kertab_twid_dft, num_threads);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, &kertab_tables,
+                             num_threads);
     if (sel_obj == NULL)
     {
         AOCLFFTZ_ERROR("Setup failure with %s",
@@ -1487,10 +1509,8 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
 
     // Register solvers and kernels for solving the problem based on
     // input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(sel_obj->kertab_dft,
-                                   sel_obj->kertab_twid_dft, DT_DOUBLE,
-                                   flags.fft_direction,
-                                   flags.fft_type,
+    ret = register_solvers_kernels(sel_obj->kernel_tables, DT_DOUBLE,
+                                   flags.fft_direction, flags.fft_type,
                                    cpu_flags);
     if (ret != 0)
     {
@@ -1545,12 +1565,14 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     INT32 num_threads = problem->pthr_fft.num_threads;
-    kernel_t kertab_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_t kertab_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft};
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, kertab_dft,
-                             kertab_twid_dft, num_threads);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, &kertab_tables,
+                             num_threads);
     if (sel_obj == NULL)
     {
         AOCLFFTZ_ERROR("Setup failure with %s",
@@ -1564,10 +1586,8 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
 
     //Register solvers and kernels for solving the problem based on
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(sel_obj->kertab_dft,
-                                   sel_obj->kertab_twid_dft, DT_FLOAT,
-                                   flags.fft_direction,
-                                   flags.fft_type,
+    ret = register_solvers_kernels(sel_obj->kernel_tables, DT_FLOAT,
+                                   flags.fft_direction, flags.fft_type,
                                    cpu_flags);
     if (ret != 0)
     {
@@ -1622,12 +1642,14 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     INT32 num_threads = problem->pthr_fft.num_threads;
-    kernel_t kertab_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_t kertab_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft};
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, kertab_dft,
-                             kertab_twid_dft, num_threads);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, NULL, &kertab_tables,
+                             num_threads);
     if (sel_obj == NULL)
     {
         AOCLFFTZ_ERROR("Setup failure with %s",
@@ -1641,10 +1663,8 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
 
     //Register solvers and kernels for solving the problem based on
     //input problem datatype, CPU flags and dynamic dispatcher FMV selection
-    ret = register_solvers_kernels(sel_obj->kertab_dft,
-                                   sel_obj->kertab_twid_dft, DT_DOUBLE,
-                                   flags.fft_direction,
-                                   flags.fft_type,
+    ret = register_solvers_kernels(sel_obj->kernel_tables, DT_DOUBLE,
+                                   flags.fft_direction, flags.fft_type,
                                    cpu_flags);
     if (ret != 0)
     {
@@ -2032,9 +2052,9 @@ VOID setup_inplace_buffers(aoclfftz_selector_t *sel)
 #if !defined (PERFORM_INTER_STAGE_PERMUTE)
 
     #if defined AOCLFFTZ_FIXED_SELECTOR_MODE
-    kernel_t *kertab = sel->kertab_dft;
+    kernel_t *kertab = sel->kernel_tables->kt_dft;
     #elif defined AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_MODE
-    kernel_t *kertab = sel->kertab_twid_dft;
+    kernel_t *kertab = sel->kernel_tables->kt_twid_dft;
     #endif
 
     aoclfftz_solution_t *solution = sel->solution;
