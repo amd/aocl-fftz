@@ -135,15 +135,7 @@ INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
                                 aoclfftz_solution_t *next_sol,
                                 aoclfftz_realhelper_t *realhelper);
 INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
-                                aoclfftz_realhelper_t *realhelper);
-INT32 setup_real_ct_solver(aoclfftz_solution_t *sol,
-                           aoclfftz_solution_t *sol_r,
-                           aoclfftz_solution_t *sol_m,
-                           UINT32 radix_r,
-                           UINT32 radix_m,
-                           aoclfftz_realhelper_t * realhelper);
-INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
-                                aoclfftz_realhelper_t *realhelper);
+                                 aoclfftz_realhelper_t *realhelper);
 INT32 setup_real_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
                            aoclfftz_solution_t *sol_m, UINT32 radix_r,
                            UINT32 radix_m, aoclfftz_realhelper_t * realhelper);
