@@ -289,6 +289,28 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_VALIDHANDLE_BACKWARD)
     this->validate_execute_io(false);
 }
 
+// Test execute_io with new buffers after freeing original - 1D case (ct_buffer == NULL)
+TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_1D_FORWARD)
+{
+    this->validate_execute_io_after_buffer_free_and_alloc(true, true);  // 1D forward
+}
+
+TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_1D_BACKWARD)
+{
+    this->validate_execute_io_after_buffer_free_and_alloc(false, true); // 1D backward
+}
+
+// Test execute_io with new buffers after freeing original - 3D case (ct_buffer != NULL)
+TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_3D_FORWARD)
+{
+    this->validate_execute_io_after_buffer_free_and_alloc(true, false);  // 3D forward
+}
+
+TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_3D_BACKWARD)
+{
+    this->validate_execute_io_after_buffer_free_and_alloc(false, false); // 3D backward
+}
+
 // Execute API test with near-edge values and output validation
 TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_NEAR_EDGE_VALUES)
 {
@@ -631,6 +653,10 @@ REGISTER_TYPED_TEST_SUITE_P(
     PTEST_EXECUTE_VALIDHANDLE,
     PTEST_EXECUTE_IO_VALIDHANDLE_FORWARD,
     PTEST_EXECUTE_IO_VALIDHANDLE_BACKWARD,
+    PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_1D_FORWARD,
+    PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_1D_BACKWARD,
+    PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_3D_FORWARD,
+    PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_3D_BACKWARD,
     PTEST_EXECUTE_WITH_NEAR_EDGE_VALUES,
     PTEST_ROBUSTNESS_WITH_NAN_VALUES,
     PTEST_EXECUTE_WITH_SPECIAL_EXCEPT_NAN_VALUES,
