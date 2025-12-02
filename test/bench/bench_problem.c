@@ -583,7 +583,7 @@ VOID *setup_problem_f(aoclfftz_bench_params_t *params)
         {
             CHAR time_unit[3];
             ADJUST_SELECTOR_TIME_UNIT(time_taken, time_unit);
-            printf("\n=====================================\n");
+            printf("\n\n=====================================\n");
             printf("      Selector time : %6.3lf %s\n", time_taken, time_unit);
             printf("=====================================\n");
         }
@@ -636,7 +636,7 @@ VOID *setup_problem_d(aoclfftz_bench_params_t *params)
         {
             CHAR time_unit[3];
             ADJUST_SELECTOR_TIME_UNIT(time_taken, time_unit);
-            printf("\n=====================================\n");
+            printf("\n\n=====================================\n");
             printf("      Selector time : %6.3lf %s\n", time_taken, time_unit);
             printf("=====================================\n");
         }
@@ -689,7 +689,7 @@ VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
         {
             CHAR time_unit[3];
             ADJUST_SELECTOR_TIME_UNIT(time_taken, time_unit);
-            printf("\n=====================================\n");
+            printf("\n\n=====================================\n");
             printf("      Selector time : %6.3lf %s\n", time_taken, time_unit);
             printf("=====================================\n");
         }
@@ -742,7 +742,7 @@ VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params)
         {
             CHAR time_unit[3];
             ADJUST_SELECTOR_TIME_UNIT(time_taken, time_unit);
-            printf("\n=====================================\n");
+            printf("\n\n=====================================\n");
             printf("      Selector time : %6.3lf %s\n", time_taken, time_unit);
             printf("=====================================\n");
         }

@@ -92,7 +92,7 @@ typedef struct timespec timeVal;
     {                                                                          \
         if (enableLog)                                                         \
         {                                                                      \
-            const char *type = NULL;                                           \
+            const CHAR *type = NULL;                                           \
             if (logType == INFO)                                               \
             {                                                                  \
                 type = "INFO";                                                 \
@@ -158,5 +158,55 @@ VOID cpu_features_detection(INTP fn, INTP optVal,
 const CHAR* get_status_string(aoclfftz_error_type status);
 
 EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level);
+
+#ifdef ENABLE_APP_INFO_LOGS
+#define PRINT_PROBLEM_DESCRIPTOR(problem, dt_type, f_specifier, data_model)    \
+{                                                                              \
+    printf("\n[AOCL-FFTZ] Problem : ");                                        \
+    const CHAR *data_type = (dt_type == DT_FLOAT) ? "Float" :                  \
+                            (dt_type == DT_DOUBLE) ? "Double" : "Unknown";     \
+    const CHAR *fft_type = (problem->flags.fft_type == 0) ? "Complex" : "Real";\
+    const CHAR *direction = (problem->flags.fft_direction == FORWARD_FFT_DIR) ?\
+                            "Forward" : "Backward";                            \
+    const CHAR *placement = (problem->flags.fft_placement == 0) ?              \
+                            "InPlace" : "OutOfPlace";                          \
+    const CHAR *storage_order = (problem->flags.storage_order == 0) ?          \
+                                "InOrder" : "OutOfOrder";                      \
+    INT32 threads = problem->pthr_fft.num_threads;                             \
+    for (INT32 i = problem->vec_rank - 1; i >= 0; i--)                         \
+    {                                                                          \
+        printf(f_specifier ":" f_specifier ":" f_specifier, problem->vecs[i].n,\
+               problem->vecs[i].in_stride, problem->vecs[i].out_stride);       \
+        if (i > 0)                                                             \
+        {                                                                      \
+            printf("x"); /* dims delimiter*/                                   \
+        }                                                                      \
+    }                                                                          \
+    printf("v"); /* vecs delimiter*/                                           \
+    for (INT32 i = problem->dim_rank - 1; i >= 0; i--)                         \
+    {                                                                          \
+        printf(f_specifier ":" f_specifier ":" f_specifier, problem->dims[i].n,\
+               problem->dims[i].in_stride, problem->dims[i].out_stride);       \
+        if (i > 0)                                                             \
+        {                                                                      \
+            printf("x"); /* dims delimiter*/                                   \
+        }                                                                      \
+    }                                                                          \
+    printf(", "); /* delimiter to adapt csv format */                          \
+    printf("%s, %s, %s, %s, %s, %s, Threads: %d\n", data_type, fft_type,       \
+           direction, placement, storage_order, data_model, threads);          \
+}
+
+#define PRINT_LP64_PROBLEM_DESCRIPTOR(problem, data_type)\
+    PRINT_PROBLEM_DESCRIPTOR(problem, data_type, "%d", "LP64")
+#define PRINT_ILP64_PROBLEM_DESCRIPTOR(problem, data_type)\
+    PRINT_PROBLEM_DESCRIPTOR(problem, data_type, "%ld", "ILP64")
+
+#else
+
+#define PRINT_LP64_PROBLEM_DESCRIPTOR(problem, data_type) ((VOID)0);
+#define PRINT_ILP64_PROBLEM_DESCRIPTOR(problem, data_type) ((VOID)0);
+
+#endif
 
 #endif // AOCLFFTZ_UTILS_H

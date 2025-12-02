@@ -61,22 +61,23 @@ endif()
 
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
 
-option(AOCL_ENABLE_LOG "Enable logging support within the library (Disabled by default)" OFF)
-set(AOCL_TEST_COVERAGE "OFF" CACHE STRING "Enable GTest and AOCL test bench based CTest suite (OFF / STANDARD / EXHAUSTIVE, default: OFF)")
+option(AOCL_ENABLE_LOG "Enables logging support within the library (Disabled by default)" OFF)
+set(AOCL_TEST_COVERAGE "OFF" CACHE STRING "Enables GTest and AOCL test bench based CTest suite (OFF / STANDARD / EXHAUSTIVE, default: OFF)")
 set_property(CACHE AOCL_TEST_COVERAGE PROPERTY STRINGS "OFF" "STANDARD" "EXHAUSTIVE")
 option(ACCURACY_WITH_DFT "Enables accuracy mode to run with DFT (Disabled by default)" OFF)
 option(ASAN "Enables address sanitizer checks. Supported only on Linux Debug build (Disabled by default)" OFF)
-option(BUILD_DOC "Build documentation for library (Disabled by default)" OFF)
-option(BUILD_STATIC_LIBS "Build static library (Default build type is shared library)" OFF)
+option(BUILD_DOC "Builds documentation for library (Disabled by default)" OFF)
+option(BUILD_STATIC_LIBS "Builds static library (Default build type is shared library)" OFF)
+option(BUILD_THIRD_PARTY_WRAPPERS "Builds fftz third party wrapper libraries along aocl_fftz library" OFF)
 option(CODE_COVERAGE "Enables source code coverage and generates coverage report. Supported only on Linux with GCC compiler (Disabled by default)" OFF)
-set(ENABLE_INSTRUCTIONS_UPTO "AVX512" CACHE STRING "Specify maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)")
+option(ENABLE_APP_INFO_LOGS "Enables info logging for FFT problems used by the application (Independent of AOCL_ENABLE_LOG, Disabled by default)" OFF)
+set(ENABLE_INSTRUCTIONS_UPTO "AVX512" CACHE STRING "Specifies maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)")
 set_property(CACHE ENABLE_INSTRUCTIONS_UPTO PROPERTY STRINGS "None" "AVX128" "AVX256" "AVX512")
-option(ENABLE_FMA "Enable -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)" ON)
+option(ENABLE_FMA "Enables -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)" ON)
 option(ENABLE_MULTI_THREADING "Compiles library with multi-threading support using OpenMP (Disabled by default)" OFF)
-option(ENABLE_STRICT_WARNINGS "Enable compiler flags to treat all warnings as errors (Enabled by default)" ON)
-option(FUZZTEST "Enable Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)" OFF)
+option(ENABLE_STRICT_WARNINGS "Enables compiler flags to treat all warnings as errors (Enabled by default)" ON)
+option(FUZZTEST "Enables Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)" OFF)
 option(VALGRIND "Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)" OFF)
-option(BUILD_THIRD_PARTY_WRAPPERS "Build fftz third party wrapper libraries along aocl_fftz library" OFF)
 
 #list source files to be compiled for the library
 set(CORE_PATH core)
@@ -249,6 +250,10 @@ endif()
 
 if(AOCL_ENABLE_LOG)
     add_compile_definitions(AOCL_ENABLE_LOG)
+endif()
+
+if(ENABLE_APP_INFO_LOGS)
+    add_compile_definitions(ENABLE_APP_INFO_LOGS)
 endif()
 
 #set library and sources
