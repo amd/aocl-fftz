@@ -30,6 +30,8 @@ teams:
           schedule: 30 11 * * 7
       - type: CoverityHistorical
         enabled: true
+      - type: Coverity
+        enabled: true
       - type: CodePorting
         enabled: true
       - type: CodePortingHistorical
