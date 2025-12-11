@@ -87,6 +87,12 @@ typedef struct aoclfftz_selector
     kernel_tables_t *kernel_tables;
 } aoclfftz_selector_t;
 
+// Define thread workload threshold to choose between batched direct approaches
+// in MT and these parameters are set based on performance experiments.
+#define MIN_OPCNT_PER_THREAD 5000
+#define MIN_DIM_STRIDE_FOR_COLMAJOR 50000
+// Scaling factor for kernel weightage calculation to normalize cycle counts
+#define KERNEL_WEIGHTAGE_SCALE_FACTOR 100.0
 /*
  * @brief Helper function to iterate over the solutions
  */
@@ -871,5 +877,9 @@ VOID fuse_vecs(aoclfftz_solution_t *sol);
 VOID setup_inplace_buffers(aoclfftz_selector_t *sel);
 VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx);
 INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);
+DOUBLE get_kernel_weightage(INTP radix, kernel_t *kertab,
+                            aoclfftz_solution_t *sol);
+UINT8 should_use_colmajor_batched_solver(aoclfftz_solution_t *solution,
+                                         kernel_t *kertab, INT32 avl_threads);
 
 #endif // AOCLFFTZ_SELECTOR_H

@@ -364,11 +364,33 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     {
         if (avl_threads <= 1)
         {
-            solver_obj->solver_type = SOLVER_DIRECT;
+            if (sel->solution->decomp_scheme->batched_vecs == NULL)
+            {
+                solver_obj->solver_type = SOLVER_DIRECT;
+            }
+            else
+            {
+                solver_obj->solver_type = SOLVER_DIRECT_BATCHED_COLMAJOR;
+            }
         }
         else
         {
-            solver_obj->solver_type = SOLVER_MT_DIRECT;
+            if (sel->solution->decomp_scheme->batched_vecs == NULL)
+            {
+                solver_obj->solver_type = SOLVER_MT_DIRECT;
+            }
+            else
+            {
+                if (should_use_colmajor_batched_solver(sel->solution,
+                                                       kertab, avl_threads))
+                {
+                    solver_obj->solver_type = SOLVER_MT_DIRECT_BATCHED_COLMAJOR;
+                }
+                else
+                {
+                    solver_obj->solver_type = SOLVER_MT_DIRECT_BATCHED_ROWMAJOR;
+                }
+            }
         }
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
@@ -559,11 +581,33 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
     {
         if (avl_threads <= 1)
         {
-            solver_obj->solver_type = SOLVER_DIRECT;
+            if (sel->solution->decomp_scheme->batched_vecs == NULL)
+            {
+                solver_obj->solver_type = SOLVER_DIRECT;
+            }
+            else
+            {
+                solver_obj->solver_type = SOLVER_DIRECT_BATCHED_COLMAJOR;
+            }
         }
         else
         {
-            solver_obj->solver_type = SOLVER_MT_DIRECT;
+            if (sel->solution->decomp_scheme->batched_vecs == NULL)
+            {
+                solver_obj->solver_type = SOLVER_MT_DIRECT;
+            }
+            else
+            {
+                if (should_use_colmajor_batched_solver(sel->solution,
+                                                       kertab, avl_threads))
+                {
+                    solver_obj->solver_type = SOLVER_MT_DIRECT_BATCHED_COLMAJOR;
+                }
+                else
+                {
+                    solver_obj->solver_type = SOLVER_MT_DIRECT_BATCHED_ROWMAJOR;
+                }
+            }
         }
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
@@ -2080,4 +2124,69 @@ VOID setup_inplace_buffers(aoclfftz_selector_t *sel)
     solution->dft_bufs->ct_buf_real = solution->decomp_scheme->out_real;
     solution->dft_bufs->ct_buf_imag = solution->decomp_scheme->out_imag;
 #endif
+}
+
+/**
+ * @brief Check if col-major processing MT batched solver should be used based
+ * on workload and stride heuristics
+ *
+ * This function implements a heuristic to choose between row-major and col-major
+ * processing for multi-threaded batched solvers by analyzing workload distribution
+ * and memory access patterns to avoid performance degradation from false sharing.
+ *
+ * @param solution Pointer to the solution object
+ * @param kertab Kernel table
+ * @param avl_threads Available threads count
+ * @return UINT8 1 if col-major should be used, 0 otherwise
+ */
+UINT8 should_use_colmajor_batched_solver(aoclfftz_solution_t *solution,
+                                                kernel_t *kertab,
+                                                INT32 avl_threads)
+{
+    INTP radix = solution->decomp_scheme->dims[0].n;
+    DOUBLE kernel_weightage = get_kernel_weightage(radix, kertab, solution);
+    // Compute workload distribution across available threads
+    // Formula: (batch_count * CT vector_size * computational_intensity of the kernel) / thread_count
+    DOUBLE workload_per_thread =
+        (DOUBLE)(solution->decomp_scheme->batched_vecs[0].n *
+                 solution->decomp_scheme->vecs[0].n * kernel_weightage) /
+        (DOUBLE)(avl_threads);
+
+    return (workload_per_thread > MIN_OPCNT_PER_THREAD &&
+            solution->decomp_scheme->dims[0].in_stride >=
+                MIN_DIM_STRIDE_FOR_COLMAJOR);
+}
+
+/**
+ * @brief Calculate kernel weightage based on compute operation cycles for given
+ * radix kernel
+ *
+ * @param radix The radix value to search for in the kernel table
+ * @param kertab Pointer to the kernel table containing available kernels
+ * @param sol Pointer to the solution object
+ *
+ * @return DOUBLE Computed weightage value based on operation cycles, scaled by
+ * 1/KERNEL_WEIGHTAGE_SCALE_FACTOR. Returns 1.0 if no matching kernel radix is found.
+ *
+ */
+DOUBLE get_kernel_weightage(INTP radix, kernel_t *kertab,
+                            aoclfftz_solution_t *sol)
+{
+    DOUBLE weightage = 1.0;
+    UINT8 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    ops_cycles_t ops_cycles = {0};
+    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
+    {
+        if ((INTP)kertab[i].radix == radix)
+        {
+            ops_cycles = kertab[i].k_ops_cnt(precision, direction);
+            weightage = (DOUBLE)((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
+                                 (ops_cycles.mul * AMD_ZEN_FP_MUL_CYCLES) +
+                                 (ops_cycles.add * AMD_ZEN_FP_ADD_CYCLES)) /
+                        KERNEL_WEIGHTAGE_SCALE_FACTOR;
+            break;
+        }
+    }
+    return weightage;
 }

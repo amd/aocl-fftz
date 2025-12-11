@@ -49,6 +49,11 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     aoclfftz_selector_t *cur_sel = NULL;
     INTP n = decomp_scheme->dims[0].n;
     INTP batch = decomp_scheme->vecs[0].n;
+    if (decomp_scheme->batched_vecs != NULL &&
+        decomp_scheme->batched_vecs[0].n > batch)
+    {
+        batch = decomp_scheme->batched_vecs[0].n;
+    }
     INT32 vec_rank = decomp_scheme->vec_rank;
     INT32 dim_rank = decomp_scheme->dim_rank;
     INT32 stats_mode = decomp_scheme->cntrl_params->measure_stats;

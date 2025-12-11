@@ -68,9 +68,18 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         }
     }
 
-    strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
-    strides->v_out_stride =
-        sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
+    if (sol->decomp_scheme->batched_vecs != NULL)
+    {
+        strides->v_in_stride = sol->decomp_scheme->batched_vecs[0].in_stride * DATA_STRIDE;
+        strides->v_out_stride =
+            sol->decomp_scheme->batched_vecs[0].out_stride * DATA_STRIDE;
+    }
+    else
+    {
+        strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
+        strides->v_out_stride =
+            sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
+    }
 
     if (GET_SELECTOR_MODE(sol->decomp_scheme->flags) ==
         AOCLFFTZ_FIXED_SELECTOR)
@@ -145,53 +154,21 @@ static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
-// existing direct solver will handle one level of batches, but this variant
-// will handle 2 levels of batches
-// 1st level -> batches & vec strides i.e. vecs set by the CT based on decomposition
-// 2nd level -> problem batches & vec strides i.e. vec of the CT problem before decomposition
-static INT32 execute_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
-{
-    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
-
-
-    kfft_ kernel = sol->solver->kernel_c2c->kfft;
-    aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
-
-    VOID *in_real = sol->decomp_scheme->in_real;
-    VOID *in_imag = sol->decomp_scheme->in_imag;
-    VOID *out_real = sol->decomp_scheme->out_real;
-    VOID *out_imag = sol->decomp_scheme->out_imag;
-
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
-
-    // vec-strides across DFT butterflies of the same CT problem
-    INTP pb_in_stride =
-        sol->decomp_scheme->batched_vecs[0].in_stride * DATA_STRIDE * dt_bytes;
-    INTP pb_out_stride =
-        sol->decomp_scheme->batched_vecs[0].out_stride * DATA_STRIDE * dt_bytes;
-
-    // execute the direct kernel
-    for (INTP i = 0; i < sol->decomp_scheme->batched_vecs[0].n; i++)
-    {
-        kernel(in_real, in_imag, out_real, out_imag,
-               sol->decomp_scheme->vecs[0].n, strides, sol->twiddle,
-               direction);
-        in_real = MOVE_ADDR(in_real, pb_in_stride);
-        in_imag = MOVE_ADDR(in_imag, pb_in_stride);
-        out_real = MOVE_ADDR(out_real, pb_out_stride);
-        out_imag = MOVE_ADDR(out_imag, pb_out_stride);
-    }
-
-    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
-
-    return SOLVER_SUCCESS;
-}
-
-// existing direct solver will handle one level of batches, but this variant
-// will handle 2 levels of batches
-// 1st level -> batches & vec strides i.e. vecs set by the CT based on decomposition
-// 2nd level -> problem batches & vec strides i.e. vec of the CT problem before decomposition
+/**
+ * @brief Direct solver variant that handles two levels of batches in
+ * column-major fashion.
+ *
+ * Unlike the standard direct solver which handles a single level of batches,
+ * this variant processes two levels:
+ *   - 1st level (outer loop): CT decomposition batches stored in vecs,
+ *     representing DFT butterflies within a single problem
+ *   - 2nd level (inner loop): Problem batches stored in batched_vecs,
+ *     representing multiple independent FFT problems
+ *
+ * Column-major processing: Iterates over CT batches (vecs) in the outer loop,
+ * executing all problem batches (batched_vecs) for each CT batch. This access
+ * pattern is optimal when problem batch stride < elemental stride.
+ */
 static INT32 execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
@@ -241,11 +218,6 @@ static INT32 execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
 dft_solver_ register_execute_direct_solver(VOID)
 {
     return execute_direct_solver;
-}
-
-dft_solver_ register_execute_direct_batched_rowmajor_solver(VOID)
-{
-    return execute_direct_batched_rowmajor_solver;
 }
 
 dft_solver_ register_execute_direct_batched_colmajor_solver(VOID)

@@ -181,11 +181,33 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
             cur_sel->solution->decomp_scheme->thread_info->avl_threads;
         if (avl_threads <= 1)
         {
-            solver_obj->solver_type = SOLVER_DIRECT;
+            if (sel->solution->decomp_scheme->batched_vecs == NULL)
+            {
+                solver_obj->solver_type = SOLVER_DIRECT;
+            }
+            else
+            {
+                solver_obj->solver_type = SOLVER_DIRECT_BATCHED_COLMAJOR;
+            }
         }
         else
         {
-            solver_obj->solver_type = SOLVER_MT_DIRECT;
+            if (sel->solution->decomp_scheme->batched_vecs == NULL)
+            {
+                solver_obj->solver_type = SOLVER_MT_DIRECT;
+            }
+            else
+            {
+                if (should_use_colmajor_batched_solver(cur_sel->solution,
+                                                       kertab, avl_threads))
+                {
+                    solver_obj->solver_type = SOLVER_MT_DIRECT_BATCHED_COLMAJOR;
+                }
+                else
+                {
+                    solver_obj->solver_type = SOLVER_MT_DIRECT_BATCHED_ROWMAJOR;
+                }
+            }
         }
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
