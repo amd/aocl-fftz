@@ -71,8 +71,8 @@ COMPLEX_TYPE(Real, Complex);                                                    
                                                                                     \
 typedef VOID* GEN(plan);                                                            \
                                                                                     \
-typedef aoclfftz_dim_t GEN(iodim);                                                  \
-typedef aoclfftz_dim_t_64_ GEN(iodim64);                                            \
+typedef struct { INT32 n; INT32 is; INT32 os; } GEN(iodim);                         \
+typedef struct { INTP n; INTP is; INTP os; } GEN(iodim64);                          \
                                                                                     \
 typedef VOID* GEN(write_char_func);                                                 \
 typedef VOID* GEN(read_char_func);                                                  \
@@ -218,6 +218,9 @@ EXPORT_SYM_DYN VOID                                                             
     GEN(plan_with_nthreads)(INT32 nthreads);                                        \
                                                                                     \
 EXPORT_SYM_DYN INT32                                                                \
+    GEN(planner_nthreads)(VOID);                                                    \
+                                                                                    \
+EXPORT_SYM_DYN INT32                                                                \
     GEN(init_threads)(VOID);                                                        \
                                                                                     \
 EXPORT_SYM_DYN VOID                                                                 \
@@ -248,6 +251,9 @@ EXPORT_SYM_DYN INT32                                                            
 
 FFTW_WRAPPER_API(API_NAME_MANGLE_DOUBLE, DOUBLE, fftw_complex)
 FFTW_WRAPPER_API(API_NAME_MANGLE_FLOAT, FLOAT, fftwf_complex)
+
+#define fftw_version  AOCLFFTZ_LIBRARY_VERSION " (FFTW compatible)"
+#define fftwf_version AOCLFFTZ_LIBRARY_VERSION " (FFTW compatible)"
 
 #define FFTW_FORWARD DIR_FORWARD
 #define FFTW_BACKWARD DIR_BACKWARD

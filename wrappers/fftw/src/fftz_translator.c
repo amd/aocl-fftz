@@ -514,8 +514,8 @@ dv_desc *get_guru_dv_desc(INT32 rank, const fftw_iodim *dims,
     for (INT32 i = 0; i < howmany_rank; i++)
     {
         p_dv_desc->vecs[i].n = howmany_dims[howmany_rank - i - 1].n;
-        p_dv_desc->vecs[i].in_stride = howmany_dims[howmany_rank - i - 1].in_stride;
-        p_dv_desc->vecs[i].out_stride = howmany_dims[howmany_rank - i - 1].out_stride;
+        p_dv_desc->vecs[i].in_stride = howmany_dims[howmany_rank - i - 1].is;
+        p_dv_desc->vecs[i].out_stride = howmany_dims[howmany_rank - i - 1].os;
     }
 
     p_dv_desc->dim_rank = rank;
@@ -524,8 +524,8 @@ dv_desc *get_guru_dv_desc(INT32 rank, const fftw_iodim *dims,
     for (INT32 i = 0; i < rank; i++)
     {
         p_dv_desc->dims[i].n = dims[rank - i - 1].n;
-        p_dv_desc->dims[i].in_stride = dims[rank - i - 1].in_stride;
-        p_dv_desc->dims[i].out_stride = dims[rank - i - 1].out_stride;
+        p_dv_desc->dims[i].in_stride = dims[rank - i - 1].is;
+        p_dv_desc->dims[i].out_stride = dims[rank - i - 1].os;
     }
 
     return p_dv_desc;
@@ -544,8 +544,8 @@ dv_desc_64_ *get_guru_64_dv_desc(INT32 rank, const fftw_iodim64 *dims,
     for (INT32 i = 0; i < howmany_rank; i++)
     {
         p_dv_desc->vecs[i].n = howmany_dims[howmany_rank - i - 1].n;
-        p_dv_desc->vecs[i].in_stride = howmany_dims[howmany_rank - i - 1].in_stride;
-        p_dv_desc->vecs[i].out_stride = howmany_dims[howmany_rank - i - 1].out_stride;
+        p_dv_desc->vecs[i].in_stride = howmany_dims[howmany_rank - i - 1].is;
+        p_dv_desc->vecs[i].out_stride = howmany_dims[howmany_rank - i - 1].os;
     }
 
     p_dv_desc->dim_rank = rank;
@@ -554,8 +554,8 @@ dv_desc_64_ *get_guru_64_dv_desc(INT32 rank, const fftw_iodim64 *dims,
     for (INT32 i = 0; i < rank; i++)
     {
         p_dv_desc->dims[i].n = dims[rank - i - 1].n;
-        p_dv_desc->dims[i].in_stride = dims[rank - i - 1].in_stride;
-        p_dv_desc->dims[i].out_stride = dims[rank - i - 1].out_stride;
+        p_dv_desc->dims[i].in_stride = dims[rank - i - 1].is;
+        p_dv_desc->dims[i].out_stride = dims[rank - i - 1].os;
     }
 
     return p_dv_desc;

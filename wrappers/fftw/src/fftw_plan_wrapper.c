@@ -137,12 +137,14 @@ fftw_plan fftw_plan_guru_dft(INT32 rank, const fftw_iodim *dims,
     return get_handle_d(p_dv_desc, sign, in, out, COMPLEX);
 }
 
-fftwf_plan fftwf_plan_guru_dft(INT32 rank, const fftwf_iodim *dims,
+fftwf_plan fftwf_plan_guru_dft(INT32 rank, const fftwf_iodim *dims_f,
                                INT32 howmany_rank,
-                               const fftwf_iodim *howmany_dims,
+                               const fftwf_iodim *howmany_dims_f,
                                fftwf_complex *in, fftwf_complex *out,
                                INT32 sign, unsigned flags)
 {
+    const fftw_iodim *dims = (const fftw_iodim *)dims_f;
+    const fftw_iodim *howmany_dims = (const fftw_iodim *)howmany_dims_f;
     dv_desc *p_dv_desc = get_guru_dv_desc(rank, dims, howmany_rank,
                                          howmany_dims);
     return get_handle_f(p_dv_desc, sign, in, out, COMPLEX);
@@ -159,12 +161,14 @@ fftw_plan fftw_plan_guru64_dft(INT32 rank, const fftw_iodim64 *dims,
     return get_handle_d_64_(p_dv_desc, sign, in, out, COMPLEX);
 }
 
-fftwf_plan fftwf_plan_guru64_dft(INT32 rank, const fftwf_iodim64 *dims,
+fftwf_plan fftwf_plan_guru64_dft(INT32 rank, const fftwf_iodim64 *dims_f,
                                  INT32 howmany_rank,
-                                 const fftwf_iodim64 *howmany_dims,
+                                 const fftwf_iodim64 *howmany_dims_f,
                                  fftwf_complex *in, fftwf_complex *out,
                                  INT32 sign, unsigned flags)
 {
+    const fftw_iodim64 *dims = (const fftw_iodim64 *)dims_f;
+    const fftw_iodim64 *howmany_dims = (const fftw_iodim64 *)howmany_dims_f;
     dv_desc_64_ *p_dv_desc = get_guru_64_dv_desc(rank, dims,
                                                 howmany_rank, howmany_dims);
     return get_handle_f_64_(p_dv_desc, sign, in, out, COMPLEX);
@@ -270,11 +274,13 @@ fftw_plan fftw_plan_guru_dft_r2c(INT32 rank, const fftw_iodim *dims,
     return get_handle_d(p_dv_desc, FFTW_FORWARD, in, out, REAL);
 }
 
-fftwf_plan fftwf_plan_guru_dft_r2c(INT32 rank, const fftwf_iodim *dims,
+fftwf_plan fftwf_plan_guru_dft_r2c(INT32 rank, const fftwf_iodim *dims_f,
                                    INT32 howmany_rank,
-                                   const fftwf_iodim *howmany_dims, FLOAT *in,
+                                   const fftwf_iodim *howmany_dims_f, FLOAT *in,
                                    fftwf_complex *out, unsigned flags)
 {
+    const fftw_iodim *dims = (const fftw_iodim *)dims_f;
+    const fftw_iodim *howmany_dims = (const fftw_iodim *)howmany_dims_f;
     dv_desc *p_dv_desc = get_guru_dv_desc(rank, dims, howmany_rank,
                                          howmany_dims);
     return get_handle_f(p_dv_desc, FFTW_FORWARD, in, out, REAL);
@@ -290,12 +296,14 @@ fftw_plan fftw_plan_guru64_dft_r2c(INT32 rank, const fftw_iodim64 *dims,
     return get_handle_d_64_(p_dv_desc, FFTW_FORWARD, in, out, REAL);
 }
 
-fftwf_plan fftwf_plan_guru64_dft_r2c(INT32 rank, const fftwf_iodim64 *dims,
+fftwf_plan fftwf_plan_guru64_dft_r2c(INT32 rank, const fftwf_iodim64 *dims_f,
                                      INT32 howmany_rank,
-                                     const fftwf_iodim64 *howmany_dims,
+                                     const fftwf_iodim64 *howmany_dims_f,
                                      FLOAT *in, fftwf_complex *out,
                                      unsigned flags)
 {
+    const fftw_iodim64 *dims = (const fftw_iodim64 *)dims_f;
+    const fftw_iodim64 *howmany_dims = (const fftw_iodim64 *)howmany_dims_f;
     dv_desc_64_ *p_dv_desc = get_guru_64_dv_desc(rank, dims, howmany_rank,
                                                 howmany_dims);
     return get_handle_f_64_(p_dv_desc, FFTW_FORWARD, in, out, REAL);
@@ -402,12 +410,14 @@ fftw_plan fftw_plan_guru_dft_c2r(INT32 rank, const fftw_iodim *dims,
     return get_handle_d(p_dv_desc, FFTW_BACKWARD, in, out, REAL);
 }
 
-fftwf_plan fftwf_plan_guru_dft_c2r(INT32 rank, const fftwf_iodim *dims,
+fftwf_plan fftwf_plan_guru_dft_c2r(INT32 rank, const fftwf_iodim *dims_f,
                                    INT32 howmany_rank,
-                                   const fftwf_iodim *howmany_dims,
+                                   const fftwf_iodim *howmany_dims_f,
                                    fftwf_complex *in, FLOAT *out,
                                    unsigned flags)
 {
+    const fftw_iodim *dims = (const fftw_iodim *)dims_f;
+    const fftw_iodim *howmany_dims = (const fftw_iodim *)howmany_dims_f;
     dv_desc *p_dv_desc = get_guru_dv_desc(rank, dims, howmany_rank,
                                          howmany_dims);
     return get_handle_f(p_dv_desc, FFTW_BACKWARD, in, out, REAL);
@@ -424,12 +434,14 @@ fftw_plan fftw_plan_guru64_dft_c2r(INT32 rank, const fftw_iodim64 *dims,
     return get_handle_d_64_(p_dv_desc, FFTW_BACKWARD, in, out, REAL);
 }
 
-fftwf_plan fftwf_plan_guru64_dft_c2r(INT32 rank, const fftwf_iodim64 *dims,
+fftwf_plan fftwf_plan_guru64_dft_c2r(INT32 rank, const fftwf_iodim64 *dims_f,
                                      INT32 howmany_rank,
-                                     const fftwf_iodim64 *howmany_dims,
+                                     const fftwf_iodim64 *howmany_dims_f,
                                      fftwf_complex *in, FLOAT *out,
                                      unsigned flags)
 {
+    const fftw_iodim64 *dims = (const fftw_iodim64 *)dims_f;
+    const fftw_iodim64 *howmany_dims = (const fftw_iodim64 *)howmany_dims_f;
     dv_desc_64_ *p_dv_desc = get_guru_64_dv_desc(rank, dims, howmany_rank,
                                                 howmany_dims);
     return get_handle_f_64_(p_dv_desc, FFTW_BACKWARD, in, out, REAL);
