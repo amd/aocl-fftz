@@ -26,52 +26,82 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file fftw_execute_wrapper.c
+/** @file fftw_misc_wrapper.c
  *
- *  @brief Contains wrapper implementations of FFTW execute APIs
+ *  @brief Contains wrapper implementations of miscellaneous FFTW Fortran APIs.
  *
- *  This file contains implementations for the execute APIs provided by FFTW.
+ *  This file contains implementations for the miscellaneous Fortran APIs
+ *  provided by FFTW.
  */
 
-#include "fftz_translator.h"
+#include "src/translator/fftz_translator.h"
 
-VOID fftw_execute(const fftw_plan p)
+void dfftw_cleanup_(void)
 {
-    aoclfftz_execute((VOID *)p);
+    fftw_cleanup();
 }
 
-VOID fftwf_execute(const fftwf_plan p)
+void dfftwf_cleanup_(void)
 {
-    aoclfftz_execute((VOID *)p);
+    fftwf_cleanup();
 }
 
-VOID fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out)
+VOID dfftw_plan_with_nthreads_(INT32 *nthreads)
 {
-    aoclfftz_execute_io((VOID *)p, (VOID *)in, (VOID *)out);
+    fftw_plan_with_nthreads(*nthreads);
 }
 
-VOID fftwf_execute_dft(const fftwf_plan p, fftwf_complex *in,
-                       fftwf_complex *out)
+VOID dfftwf_plan_with_nthreads_(INT32 *nthreads)
 {
-    aoclfftz_execute_io((VOID *)p, (VOID *)in, (VOID *)out);
+    fftwf_plan_with_nthreads(*nthreads);
 }
 
-VOID fftw_execute_dft_r2c(const fftw_plan p, DOUBLE *in, fftw_complex *out)
+VOID dfftw_init_threads_(INT32 *ret)
 {
-    aoclfftz_execute_io((VOID *)p, (VOID *)in, (VOID *)out);
+    *ret = fftw_init_threads();
 }
 
-VOID fftwf_execute_dft_r2c(const fftwf_plan p, FLOAT *in, fftwf_complex *out)
+VOID dfftwf_init_threads_(INT32 *ret)
 {
-    aoclfftz_execute_io((VOID *)p, (VOID *)in, (VOID *)out);
+    *ret = fftwf_init_threads();
 }
 
-VOID fftw_execute_dft_c2r(const fftw_plan p, fftw_complex *in, DOUBLE *out)
+void dfftw_cleanup_threads_(void)
 {
-    aoclfftz_execute_io((VOID *)p, (VOID *)in, (VOID *)out);
+    fftw_cleanup_threads();
 }
 
-VOID fftwf_execute_dft_c2r(const fftwf_plan p, fftwf_complex *in, FLOAT *out)
+void dfftwf_cleanup_threads_(void)
 {
-    aoclfftz_execute_io((VOID *)p, (VOID *)in, (VOID *)out);
+    fftwf_cleanup_threads();
+}
+
+void dfftw_flops_(fftw_plan *p, double *add, double *mul, double *fma)
+{
+    fftw_flops(*p, add, mul, fma);
+}
+
+void dfftwf_flops_(fftwf_plan *p, double *add, double *mul, double *fma)
+{
+    fftwf_flops(*p, add, mul, fma);
+}
+
+void dfftw_estimate_cost_(double *cost, fftw_plan *const p)
+{
+    *cost = fftw_estimate_cost(*p);
+}
+
+void dfftwf_estimate_cost_(double *cost, fftwf_plan *const p)
+{
+    *cost = fftwf_estimate_cost(*p);
+}
+
+void dfftw_cost_(double *cost, fftw_plan *const p)
+{
+    *cost = fftw_cost(*p);
+}
+
+void dfftwf_cost_(double *cost, fftwf_plan *const p)
+{
+    *cost = fftwf_cost(*p);
 }

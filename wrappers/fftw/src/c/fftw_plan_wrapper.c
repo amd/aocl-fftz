@@ -33,7 +33,7 @@
  *  This file contains implementations for the plan APIs provided by FFTW.
  */
 
-#include "fftz_translator.h"
+#include "src/translator/fftz_translator.h"
 
 fftw_plan fftw_plan_dft(INT32 rank, const INT32 *n, fftw_complex *in,
                         fftw_complex *out, INT32 sign, unsigned flags)

@@ -34,7 +34,7 @@
  *  by FFTW.
  */
 
-#include "fftz_translator.h"
+#include "src/translator/fftz_translator.h"
 
 INT32 thread_num = 1;
 

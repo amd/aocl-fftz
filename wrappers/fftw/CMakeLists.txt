@@ -90,10 +90,16 @@ if(WIN32)
 endif()
 
 # Build fftw_wrapper library
-set(SRC_PATH src)
-set(INC_FILES ${SRC_PATH}/fftw_wrapper.f ${SRC_PATH}/fftw_wrapper.h)
+set(API_SRC_PATH api)
+set(C_WRAPPER_SRC_PATH src/c)
+set(FORTRAN_SRC_PATH src/fortran)
+set(TRANSLATOR_SRC_PATH src/translator)
+set(INC_FILES ${API_SRC_PATH}/fftw_wrapper.f ${API_SRC_PATH}/fftw_wrapper.h)
 
-file(GLOB SRC_FILES ${SRC_PATH}/*.c ${SRC_PATH}/*.h)
+file(GLOB SRC_FILES ${API_SRC_PATH}/*.c ${API_SRC_PATH}/*.h
+                    ${C_WRAPPER_SRC_PATH}/*.c ${C_WRAPPER_SRC_PATH}/*.h
+                    ${FORTRAN_SRC_PATH}/*.c ${FORTRAN_SRC_PATH}/*.h
+                    ${TRANSLATOR_SRC_PATH}/*.c ${TRANSLATOR_SRC_PATH}/*.h)
 include_directories(.)
 
 # Set RPATH to find aocl_fftz library at runtime
