@@ -99,7 +99,8 @@ static VOID r2hc_rfft14avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     FLOAT *curr_in, *curr_out;
-    INTP N = n >> 4;
+    INTP N = n / NUM_SETS_REAL_512_S;
+    INTP remaining_sets = n % NUM_SETS_REAL_512_S;
 
     __m512 v_CRTM_14_1 = _mm512_set1_ps(CRTM_14_1);
     __m512 v_CRTM_14_2 = _mm512_set1_ps(CRTM_14_2);
@@ -318,7 +319,7 @@ static VOID r2hc_rfft14avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 4);
     }
     // tail cases
-    if (n & 8)
+    if (remaining_sets & NUM_SETS_REAL_256_S)
     {
         __m256 v_in0, v_in1, v_in2, v_in3, v_in4, v_in5, v_in6, v_in7, v_in8,
                v_in9, v_in10, v_in11, v_in12, v_in13;
@@ -535,7 +536,7 @@ static VOID r2hc_rfft14avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 3);
     }
     // tail cases
-    if (n & 4)
+    if (remaining_sets & NUM_SETS_REAL_128_S)
     {
         __m128 v_in0, v_in1, v_in2, v_in3, v_in4, v_in5, v_in6, v_in7, v_in8,
                v_in9, v_in10, v_in11, v_in12, v_in13;
@@ -752,7 +753,7 @@ static VOID r2hc_rfft14avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 2);
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & 2)
     {
         __m128 v_in0, v_in1, v_in2, v_in3, v_in4, v_in5, v_in6, v_in7, v_in8,
                v_in9, v_in10, v_in11, v_in12, v_in13;
@@ -969,7 +970,7 @@ static VOID r2hc_rfft14avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         FLOAT in0, in1, in2, in3, in4, in5, in6, in7, in8, in9, in10, in11,
               in12, in13;
@@ -1146,7 +1147,8 @@ static VOID r2hc_rfft14avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     FLOAT *curr_in, *curr_out;
-    INTP N = n >> 4;
+    INTP N = n / NUM_SETS_REAL_512_S;
+    INTP remaining_sets = n % NUM_SETS_REAL_512_S;
 
     __m512 v_CRTM_14_1 = _mm512_set1_ps(CRTM_14_1);
     __m512 v_CRTM_14_2 = _mm512_set1_ps(CRTM_14_2);
@@ -1363,7 +1365,7 @@ static VOID r2hc_rfft14avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 4);
     }
     // tail cases
-    if (n & 8)
+    if (remaining_sets & NUM_SETS_REAL_256_S)
     {
         __m256 v_in0, v_in1, v_in2, v_in3, v_in4, v_in5, v_in6, v_in7, v_in8,
                v_in9, v_in10, v_in11, v_in12, v_in13;
@@ -1578,7 +1580,7 @@ static VOID r2hc_rfft14avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 3);
     }
     // tail cases
-    if (n & 4)
+    if (remaining_sets & NUM_SETS_REAL_128_S)
     {
         __m128 v_in0, v_in1, v_in2, v_in3, v_in4, v_in5, v_in6, v_in7, v_in8,
                v_in9, v_in10, v_in11, v_in12, v_in13;
@@ -1793,7 +1795,7 @@ static VOID r2hc_rfft14avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 2);
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & 2)
     {
         __m128 v_in0, v_in1, v_in2, v_in3, v_in4, v_in5, v_in6, v_in7, v_in8,
                v_in9, v_in10, v_in11, v_in12, v_in13;
@@ -2008,7 +2010,7 @@ static VOID r2hc_rfft14avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         FLOAT in0, in1, in2, in3, in4, in5, in6, in7, in8, in9, in10, in11,
               in12, in13;
@@ -2167,7 +2169,8 @@ static VOID r2hc_rfft14avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     DOUBLE *curr_in, *curr_out;
-    INTP N = n >> 3;
+    INTP N = n / NUM_SETS_REAL_512_D;
+    INTP remaining_sets = n % NUM_SETS_REAL_512_D;
 
     __m512d v_CRTM_14_1 = _mm512_set1_pd(CRTM_14_1);
     __m512d v_CRTM_14_2 = _mm512_set1_pd(CRTM_14_2);
@@ -2386,7 +2389,7 @@ static VOID r2hc_rfft14avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 3);
     }
     // tail cases
-    if (n & 4)
+    if (remaining_sets & NUM_SETS_REAL_256_D)
     {
         __m256d v_in0, v_in1, v_in2, v_in3, v_in4, v_in5, v_in6, v_in7, v_in8,
                v_in9, v_in10, v_in11, v_in12, v_in13;
@@ -2603,7 +2606,7 @@ static VOID r2hc_rfft14avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 2);
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & 2)
     {
         __m128d v_in0, v_in1, v_in2, v_in3, v_in4, v_in5, v_in6, v_in7, v_in8,
                v_in9, v_in10, v_in11, v_in12, v_in13;
@@ -2820,7 +2823,7 @@ static VOID r2hc_rfft14avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         DOUBLE in0, in1, in2, in3, in4, in5, in6, in7, in8, in9, in10, in11,
               in12, in13;
@@ -2997,7 +3000,8 @@ static VOID r2hc_rfft14avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     DOUBLE *curr_in, *curr_out;
-    INTP N = n >> 3;
+    INTP N = n / NUM_SETS_REAL_512_D;
+    INTP remaining_sets = n % NUM_SETS_REAL_512_D;
 
     __m512d v_CRTM_14_1 = _mm512_set1_pd(CRTM_14_1);
     __m512d v_CRTM_14_2 = _mm512_set1_pd(CRTM_14_2);
@@ -3214,7 +3218,7 @@ static VOID r2hc_rfft14avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 3);
     }
     // tail cases
-    if (n & 4)
+    if (remaining_sets & NUM_SETS_REAL_256_D)
     {
         __m256d v_in0, v_in1, v_in2, v_in3, v_in4, v_in5, v_in6, v_in7, v_in8,
                 v_in9, v_in10, v_in11, v_in12, v_in13;
@@ -3429,7 +3433,7 @@ static VOID r2hc_rfft14avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 2);
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & 2)
     {
         __m128d v_in0, v_in1, v_in2, v_in3, v_in4, v_in5, v_in6, v_in7, v_in8,
                 v_in9, v_in10, v_in11, v_in12, v_in13;
@@ -3644,7 +3648,7 @@ static VOID r2hc_rfft14avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         DOUBLE in0, in1, in2, in3, in4, in5, in6, in7, in8, in9, in10, in11,
                in12, in13;

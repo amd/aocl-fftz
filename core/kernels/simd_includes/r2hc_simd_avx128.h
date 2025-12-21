@@ -43,6 +43,8 @@
 #include <immintrin.h>
 #include "api/types.h"
 
+#define NUM_SETS_REAL_128_S 4
+#define NUM_SETS_REAL_128_D 2
 
 /************************ MACRO FUNCTIONS ************************/
 

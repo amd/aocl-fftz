@@ -94,7 +94,8 @@ static VOID r2hc_rfft3avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     FLOAT *curr_in, *curr_out;
-    INTP N = n >> 4;
+    INTP N = n / NUM_SETS_REAL_512_S;
+    INTP remaining_sets = n % NUM_SETS_REAL_512_S;
 
     __m512 v_CRTM_3_1 = _mm512_set1_ps(CRTM_3_1);
     __m512 v_CRTM_3_2 = _mm512_set1_ps(CRTM_3_2);
@@ -140,7 +141,7 @@ static VOID r2hc_rfft3avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 4);
     }
     // tail cases
-    if (n & 8)
+    if (remaining_sets & NUM_SETS_REAL_256_S)
     {
         __m256 v_in0, v_in1, v_in2;
         __m256 v_av0, v_av1, v_tv0, v_tv1;
@@ -184,7 +185,7 @@ static VOID r2hc_rfft3avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 3);
     }
     // tail cases
-    if (n & 4)
+    if (remaining_sets & NUM_SETS_REAL_128_S)
     {
         __m128 v_in0, v_in1, v_in2;
         __m128 v_av0, v_av1, v_tv0, v_tv1;
@@ -228,7 +229,7 @@ static VOID r2hc_rfft3avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 2);
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & 2)
     {
         __m128 v_in0, v_in1, v_in2;
         __m128 v_av0, v_av1, v_tv0, v_tv1;
@@ -272,7 +273,7 @@ static VOID r2hc_rfft3avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         FLOAT v_in0, v_in1, v_in2;
         FLOAT v_av0, v_av1, v_tv0, v_tv1;
@@ -323,7 +324,8 @@ static VOID r2hc_rfft3avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     FLOAT *curr_in, *curr_out;
-    INTP N = n >> 4;
+    INTP N = n / NUM_SETS_REAL_512_S;
+    INTP remaining_sets = n % NUM_SETS_REAL_512_S;
 
     __m512 v_CRTM_3_1 = _mm512_set1_ps(CRTM_3_1);
 
@@ -364,7 +366,7 @@ static VOID r2hc_rfft3avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 4);
     }
     // tail cases
-    if (n & 8)
+    if (remaining_sets & NUM_SETS_REAL_256_S)
     {
         __m256 v_in0, v_in1, v_in2;
         __m256 v_av0, v_tv0;
@@ -403,7 +405,7 @@ static VOID r2hc_rfft3avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 3);
     }
     // tail cases
-    if (n & 4)
+    if (remaining_sets & NUM_SETS_REAL_128_S)
     {
         __m128 v_in0, v_in1, v_in2;
         __m128 v_av0, v_tv0;
@@ -442,7 +444,7 @@ static VOID r2hc_rfft3avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 2);
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & 2)
     {
         __m128 v_in0, v_in1, v_in2;
         __m128 v_av0, v_tv0;
@@ -481,7 +483,7 @@ static VOID r2hc_rfft3avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         FLOAT v_in0, v_in1, v_in2;
         FLOAT v_av0, v_tv0;
@@ -530,7 +532,8 @@ static VOID r2hc_rfft3avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     DOUBLE *curr_in, *curr_out;
-    INTP N = n >> 3;
+    INTP N = n / NUM_SETS_REAL_512_D;
+    INTP remaining_sets = n % NUM_SETS_REAL_512_D;
 
     __m512d v_CRTM_3_1 = _mm512_set1_pd(CRTM_3_1);
     __m512d v_CRTM_3_2 = _mm512_set1_pd(CRTM_3_2);
@@ -576,7 +579,7 @@ static VOID r2hc_rfft3avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 3);
     }
     // tail cases
-    if (n & 4)
+    if (remaining_sets & NUM_SETS_REAL_256_D)
     {
         __m256d v_in0, v_in1, v_in2;
         __m256d v_av0, v_av1, v_tv0, v_tv1;
@@ -620,7 +623,7 @@ static VOID r2hc_rfft3avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 2);
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & 2)
     {
         __m128d v_in0, v_in1, v_in2;
         __m128d v_av0, v_av1, v_tv0, v_tv1;
@@ -664,7 +667,7 @@ static VOID r2hc_rfft3avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         DOUBLE v_in0, v_in1, v_in2;
         DOUBLE v_av0, v_av1, v_tv0, v_tv1;
@@ -715,7 +718,8 @@ static VOID r2hc_rfft3avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     DOUBLE *curr_in, *curr_out;
-    INTP N = n >> 3;
+    INTP N = n / NUM_SETS_REAL_512_D;
+    INTP remaining_sets = n % NUM_SETS_REAL_512_D;
 
     __m512d v_CRTM_3_1 = _mm512_set1_pd(CRTM_3_1);
 
@@ -756,7 +760,7 @@ static VOID r2hc_rfft3avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 3);
     }
     // tail cases
-    if (n & 4)
+    if (remaining_sets & NUM_SETS_REAL_256_D)
     {
         __m256d v_in0, v_in1, v_in2;
         __m256d v_av0, v_tv0;
@@ -795,7 +799,7 @@ static VOID r2hc_rfft3avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 2);
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & 2)
     {
         __m128d v_in0, v_in1, v_in2;
         __m128d v_av0, v_tv0;
@@ -834,7 +838,7 @@ static VOID r2hc_rfft3avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         DOUBLE v_in0, v_in1, v_in2;
         DOUBLE v_av0, v_tv0;

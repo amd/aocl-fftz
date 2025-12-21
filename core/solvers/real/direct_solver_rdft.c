@@ -240,7 +240,6 @@ static INT32 execute_real_direct_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-
     INT32 ret = SOLVER_SUCCESS;
     VOID *in = sol->decomp_scheme->in_real;
     VOID *out = sol->decomp_scheme->out_real;

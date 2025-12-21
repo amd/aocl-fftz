@@ -214,8 +214,24 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 ((cur_sel->cost_analysis->ops + cur_sel_m->cost_analysis->ops) <
                  sel->cost_analysis->ops))
             {
+                INTP twiddle_ops_cnt = 0;
+                // For backward FFT, twiddles are computed separately via
+                // twiddle_multiplier_for_real() and not fused into kernels.
+                // Forward FFT uses fused twiddle kernels, so ops are already counted.
+                if (is_backward && 
+                    (cur_sel_m->solution->solver->solver_type != 
+                        SOLVER_REAL_DIRECT_TWIDDLE &&
+                        cur_sel_m->solution->solver->solver_type !=
+                        SOLVER_REAL_MT_DIRECT_TWIDDLE))
+                {
+                    twiddle_ops_cnt = (radix_r - 1) * (radix_m - 1) * 4 
+                                        * AMD_ZEN_FP_MUL_CYCLES +
+                                      (radix_r - 1) * (radix_m - 1) * 2 
+                                        * AMD_ZEN_FP_ADD_CYCLES;
+                }
                 sel->cost_analysis->ops =
-                    cur_sel->cost_analysis->ops + cur_sel_m->cost_analysis->ops;
+                    cur_sel->cost_analysis->ops + cur_sel_m->cost_analysis->ops
+                                            + twiddle_ops_cnt;
                 sel->cost_analysis->time = cur_sel->cost_analysis->time +
                                            cur_sel_m->cost_analysis->time;
 

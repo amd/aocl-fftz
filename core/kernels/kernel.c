@@ -73,7 +73,7 @@ static INTP limits[NUM_KERNEL_CATEGORIES] =
     4 * NUM_KERNELS_IN_EACH_CATEGORY
 };
 
-static INTP sets_s[NUM_KERNEL_CATEGORIES] =
+static INTP sets_complex_s[NUM_KERNEL_CATEGORIES] =
 {
     NUM_SETS_C_S,
     NUM_SETS_128_S,
@@ -81,12 +81,28 @@ static INTP sets_s[NUM_KERNEL_CATEGORIES] =
     NUM_SETS_512_S
 };
 
-static INTP sets_d[NUM_KERNEL_CATEGORIES] =
+static INTP sets_complex_d[NUM_KERNEL_CATEGORIES] =
 {
     NUM_SETS_C_D,
     NUM_SETS_128_D,
     NUM_SETS_256_D,
     NUM_SETS_512_D
+};
+
+static INTP sets_real_s[NUM_KERNEL_CATEGORIES] =
+{
+    NUM_SETS_REAL_C_S,
+    NUM_SETS_REAL_128_S,
+    NUM_SETS_REAL_256_S,
+    NUM_SETS_REAL_512_S
+};
+
+static INTP sets_real_d[NUM_KERNEL_CATEGORIES] =
+{
+    NUM_SETS_REAL_C_D,
+    NUM_SETS_REAL_128_D,
+    NUM_SETS_REAL_256_D,
+    NUM_SETS_REAL_512_D
 };
 
 INT32 register_kernels_real(
@@ -126,8 +142,20 @@ INT32 register_kernels_real(
                                 .k_register_kernel(dt, dir);
                         kertab[offset].k_ops_cnt =
                             static_kernel_table[rkvar][i][kcat].k_ops_cnt;
-                        kertab[offset].sets[DT_FLOAT - 2] = sets_s[kcat];
-                        kertab[offset].sets[DT_DOUBLE - 2] = sets_d[kcat];
+                        if (rkvar == C2C_KERNEL) // c2c variant
+                        {
+                            kertab[offset].sets[DT_FLOAT - 2] =
+                                sets_complex_s[kcat];
+                            kertab[offset].sets[DT_DOUBLE - 2] =
+                                sets_complex_d[kcat];
+                        }
+                        else // r2hc and r2hcf variants
+                        {
+                            kertab[offset].sets[DT_FLOAT - 2] =
+                                sets_real_s[kcat];
+                            kertab[offset].sets[DT_DOUBLE - 2] =
+                                sets_real_d[kcat];
+                        }
                     }
                 }
                 offset = row_offset + limits[kcat];
@@ -168,8 +196,8 @@ INT32 register_kernels_complex(
                         static_kernel_table[i][kcat].k_register_kernel(dt, dir);
                     kertab[offset].k_ops_cnt =
                         static_kernel_table[i][kcat].k_ops_cnt;
-                    kertab[offset].sets[DT_FLOAT - 2] = sets_s[kcat];
-                    kertab[offset].sets[DT_DOUBLE - 2] = sets_d[kcat];
+                    kertab[offset].sets[DT_FLOAT - 2] = sets_complex_s[kcat];
+                    kertab[offset].sets[DT_DOUBLE - 2] = sets_complex_d[kcat];
                 }
             }
             offset = limits[kcat];

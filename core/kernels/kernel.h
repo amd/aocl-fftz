@@ -81,6 +81,14 @@
 #define NUM_SETS_256_D 2
 #define NUM_SETS_512_S 8
 #define NUM_SETS_512_D 4
+#define NUM_SETS_REAL_C_S 1
+#define NUM_SETS_REAL_C_D 1
+#define NUM_SETS_REAL_128_S 4
+#define NUM_SETS_REAL_128_D 2
+#define NUM_SETS_REAL_256_S 8
+#define NUM_SETS_REAL_256_D 4
+#define NUM_SETS_REAL_512_S 16
+#define NUM_SETS_REAL_512_D 8
 
 // Error return codes related to Kernel
 // Add more codes at the top
@@ -93,9 +101,9 @@ typedef enum
 // Kernel types
 typedef enum
 {
-    C2C_KERNEL = 0,
-    R2HC_KERNEL,
-    R2HCF_KERNEL
+    R2HC_KERNEL = 0,
+    R2HCF_KERNEL,
+    C2C_KERNEL,
 } aoclfftz_kernel_type;
 
 // Holds the kernel level operational complexity in terms approximate cycles
