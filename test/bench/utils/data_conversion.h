@@ -312,42 +312,208 @@
         }                                                                      \
     } while (0)
 
-#define set_zero_for_dc_and_nyquist_nd(out, n, dim0, batches, map, dt_t)       \
+/**
+ * Enforces Hermitian symmetry on N-dimensional half-complex C2R input.
+ * - Sets imaginary part to zero at DC and Nyquist positions
+ * - Applies conjugate symmetry: X[k] = conj(X[N-k])
+ */
+#define make_hc_as_hermitian_symmetric_impl(out, dims, dim_rank, batches,      \
+                                            map, dt_t)                         \
     do                                                                         \
     {                                                                          \
-        INTP num_batches = batches;                                            \
-        INTP outer_dim = n / dim0;                                             \
-        INTP dim0_hc = dim0 / 2 + 1;                                           \
-        INTP n_hc = n / 2 + 1;                                                 \
-        if (dt_t == FLOAT_P)                                                   \
+        dt_t *out_buf = (dt_t *)out;                                           \
+                                                                               \
+        /* Allocate arrays */                                                  \
+        INTP *dim_sizes = NULL;                                                \
+        INTP *hc_strides = NULL;                                               \
+        INTP *cur_pos = NULL;                                                  \
+        INTP *conj_pos = NULL;                                                 \
+        UINT8 *has_nyquist = NULL;                                             \
+        ALLOC_UNALIGN_UNINIT(dim_sizes, INTP, dim_rank * sizeof(INTP))         \
+        ALLOC_UNALIGN_UNINIT(hc_strides, INTP, dim_rank * sizeof(INTP))        \
+        ALLOC_UNALIGN_UNINIT(cur_pos, INTP, dim_rank * sizeof(INTP))           \
+        ALLOC_UNALIGN_UNINIT(conj_pos, INTP, dim_rank * sizeof(INTP))          \
+        ALLOC_UNALIGN_UNINIT(has_nyquist, UINT8, dim_rank)                     \
+                                                                               \
+        if (!dim_sizes || !hc_strides || !cur_pos || !conj_pos || !has_nyquist)\
         {                                                                      \
-            FLOAT *out_f = (FLOAT *)out;                                       \
-            for (INTP b = 0; b < num_batches; b++)                             \
+            printf("ERR: alloc fail in make_hc_as_hermitian_symmetric_impl\n");\
+            FREE_UNALIGN_ALLOCATED_MEM(dim_sizes)                              \
+            FREE_UNALIGN_ALLOCATED_MEM(hc_strides)                             \
+            FREE_UNALIGN_ALLOCATED_MEM(cur_pos)                                \
+            FREE_UNALIGN_ALLOCATED_MEM(conj_pos)                               \
+            FREE_UNALIGN_ALLOCATED_MEM(has_nyquist)                            \
+            break;                                                             \
+        }                                                                      \
+                                                                               \
+        /* Setup: compute sizes, strides, and Nyquist flags */                 \
+        INTP total_hc_elements = 1;                                            \
+        INTP cumulative_stride = 1;                                            \
+        INTP hc_size = 0;                                                      \
+        for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)                 \
+        {                                                                      \
+            dim_sizes[dim_idx] = dims[dim_idx].n;                              \
+            hc_size = (dim_idx == 0) ? (dims[dim_idx].n / 2 + 1)               \
+                                     : dims[dim_idx].n;                        \
+            hc_strides[dim_idx] = cumulative_stride;                           \
+            cumulative_stride *= hc_size;                                      \
+            total_hc_elements *= hc_size;                                      \
+            has_nyquist[dim_idx] = (dims[dim_idx].n % 2 == 0);                 \
+        }                                                                      \
+                                                                               \
+        /* Process each batch */                                               \
+        for (INTP batch_idx = 0; batch_idx < batches; batch_idx++)             \
+        {                                                                      \
+            INTP batch_offset = batch_idx * total_hc_elements;                 \
+                                                                               \
+            /*                                                                 \
+             * PART 1: Set imag=0 at real positions (DC/Nyquist combos)        \
+             * Bitmask enumerates all 2^dim_rank combinations:                 \
+             *   bit=0 -> DC (index 0), bit=1 -> Nyquist (index N/2)           \
+             */                                                                \
+            INTP n_masks = 1 << dim_rank;                                      \
+            for (INTP mask = 0; mask < n_masks; mask++)                        \
             {                                                                  \
-                for (INTP i = 0; i < outer_dim; i++)                           \
+                UINT8 is_valid = 1;                                            \
+                INTP linear_idx = 0;                                           \
+                for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)         \
                 {                                                              \
-                    out_f[map[b * n_hc + i * dim0_hc] * DATA_STRIDE + 1] =     \
-                        0.0f;                                                  \
-                    out_f[map[b * n_hc + (i + 1) * dim0_hc - 1] *              \
-                              DATA_STRIDE +                                    \
-                          1] = 0.0f;                                           \
+                    UINT8 use_nyq = (mask >> dim_idx) & 1;                     \
+                    if (use_nyq && !has_nyquist[dim_idx])                      \
+                    {                                                          \
+                        is_valid = 0;                                          \
+                        break;                                                 \
+                    }                                                          \
+                    INTP pos = use_nyq ? (dim_sizes[dim_idx] / 2) : 0;         \
+                    linear_idx += pos * hc_strides[dim_idx];                   \
+                }                                                              \
+                if (is_valid)                                                  \
+                {                                                              \
+                    INTP idx = map[batch_offset + linear_idx];                 \
+                    out_buf[idx * DATA_STRIDE + 1] = (dt_t)0.0;                \
+                }                                                              \
+            }                                                                  \
+                                                                               \
+            /*                                                                 \
+             * PART 2: Enforce conjugate symmetry on pairs                     \
+             * For each fixed column (DC/Nyquist in dim0), iterate             \
+             * through dims 1..N-1 and apply: conj_pos = conj(cur_pos)         \
+             */                                                                \
+            INT32 n_fixed_cols = 1 + (has_nyquist[0] ? 1 : 0);                 \
+            for (INT32 col_iter = 0; col_iter < n_fixed_cols; col_iter++)      \
+            {                                                                  \
+                INTP col_idx = (col_iter == 0) ? 0 : (dim_sizes[0] / 2);       \
+                cur_pos[0] = col_idx;                                          \
+                conj_pos[0] = col_idx;                                         \
+                                                                               \
+                /* 1D: No conjugate pairs exist */                             \
+                if (dim_rank == 1)                                             \
+                {                                                              \
+                    continue;                                                  \
+                }                                                              \
+                                                                               \
+                /* Reset position for dims 1..N-1 */                           \
+                for (INT32 dim_idx = 1; dim_idx < dim_rank; dim_idx++)         \
+                {                                                              \
+                    cur_pos[dim_idx] = 0;                                      \
+                }                                                              \
+                                                                               \
+                UINT8 is_done = 0;                                             \
+                while (!is_done)                                               \
+                {                                                              \
+                    /* Skip if position is real (all dims at DC/Nyquist) */    \
+                    UINT8 is_real_pos = 1;                                     \
+                    for (INT32 dim_idx = 1; dim_idx < dim_rank; dim_idx++)     \
+                    {                                                          \
+                        INTP p = cur_pos[dim_idx];                             \
+                        UINT8 at_dc = (p == 0);                                \
+                        UINT8 at_nyq = has_nyquist[dim_idx] &&                 \
+                                       (p == dim_sizes[dim_idx] / 2);          \
+                        if (!at_dc && !at_nyq)                                 \
+                        {                                                      \
+                            is_real_pos = 0;                                   \
+                            break;                                             \
+                        }                                                      \
+                    }                                                          \
+                                                                               \
+                    if (!is_real_pos)                                          \
+                    {                                                          \
+                        /* Compute linear index for current position */        \
+                        INTP cur_idx = cur_pos[0] * hc_strides[0];             \
+                        for (INT32 dim_idx = 1; dim_idx < dim_rank; dim_idx++) \
+                        {                                                      \
+                            cur_idx += cur_pos[dim_idx] * hc_strides[dim_idx]; \
+                        }                                                      \
+                                                                               \
+                        /* Compute conjugate position: (N - k) % N */          \
+                        INTP conj_idx = conj_pos[0] * hc_strides[0];           \
+                        for (INT32 dim_idx = 1; dim_idx < dim_rank; dim_idx++) \
+                        {                                                      \
+                            conj_pos[dim_idx] = (dim_sizes[dim_idx] -          \
+                                                 cur_pos[dim_idx]) %           \
+                                                dim_sizes[dim_idx];            \
+                            conj_idx += conj_pos[dim_idx] *                    \
+                                        hc_strides[dim_idx];                   \
+                        }                                                      \
+                        /*                                                     \
+                         * Process only if cur_idx < conj_idx                  \
+                         * (each pair once)                                    \
+                         */                                                    \
+                        if (cur_idx < conj_idx)                                \
+                        {                                                      \
+                            INTP src_idx = map[batch_offset + cur_idx];        \
+                            INTP dst_idx = map[batch_offset + conj_idx];       \
+                            out_buf[dst_idx * DATA_STRIDE] =                   \
+                                out_buf[src_idx * DATA_STRIDE];                \
+                            out_buf[dst_idx * DATA_STRIDE + 1] =               \
+                                -out_buf[src_idx * DATA_STRIDE + 1];           \
+                        }                                                      \
+                    }                                                          \
+                                                                               \
+                    /* Odometer-style increment for dims 1..N-1 */             \
+                    UINT8 carry_flag = 1;                                      \
+                    for (INT32 dim_idx = 1; dim_idx < dim_rank && carry_flag;  \
+                         dim_idx++)                                            \
+                    {                                                          \
+                        cur_pos[dim_idx]++;                                    \
+                        if (cur_pos[dim_idx] >= dim_sizes[dim_idx])            \
+                        {                                                      \
+                            cur_pos[dim_idx] = 0;                              \
+                        }                                                      \
+                        else                                                   \
+                        {                                                      \
+                            carry_flag = 0;                                    \
+                        }                                                      \
+                    }                                                          \
+                    if (carry_flag)                                            \
+                    {                                                          \
+                        is_done = 1;                                           \
+                    }                                                          \
                 }                                                              \
             }                                                                  \
         }                                                                      \
+                                                                               \
+        /* Cleanup: Free allocated memory */                                   \
+        FREE_UNALIGN_ALLOCATED_MEM(dim_sizes)                                  \
+        FREE_UNALIGN_ALLOCATED_MEM(hc_strides)                                 \
+        FREE_UNALIGN_ALLOCATED_MEM(cur_pos)                                    \
+        FREE_UNALIGN_ALLOCATED_MEM(conj_pos)                                   \
+        FREE_UNALIGN_ALLOCATED_MEM(has_nyquist)                                \
+    } while (0)
+
+#define make_hc_as_hermitian_symmetric(out, dims, dim_rank, batches, map,      \
+                                       dt_t)                                   \
+    do                                                                         \
+    {                                                                          \
+        if (dt_t == FLOAT_P)                                                   \
+        {                                                                      \
+            make_hc_as_hermitian_symmetric_impl(out, dims, dim_rank, batches,  \
+                                                map, FLOAT);                   \
+        }                                                                      \
         else                                                                   \
         {                                                                      \
-            DOUBLE *out_d = (DOUBLE *)out;                                     \
-            for (INTP b = 0; b < num_batches; b++)                             \
-            {                                                                  \
-                for (INTP i = 0; i < outer_dim; i++)                           \
-                {                                                              \
-                    out_d[map[b * n_hc + i * dim0_hc] * DATA_STRIDE + 1] =     \
-                        0.0;                                                   \
-                    out_d[map[b * n_hc + (i + 1) * dim0_hc - 1] *              \
-                              DATA_STRIDE +                                    \
-                          1] = 0.0;                                            \
-                }                                                              \
-            }                                                                  \
+            make_hc_as_hermitian_symmetric_impl(out, dims, dim_rank, batches,  \
+                                                map, DOUBLE);                  \
         }                                                                      \
     } while (0)
 

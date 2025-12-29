@@ -132,8 +132,8 @@ VOID fuzz_input_buffer_test(const std::string& problem_size)
     params->sz_info.n = calculate_size(dims, dim_rank);
     params->sz_info.batches = calculate_size(vecs, vec_rank);
     INTP size = params->sz_info.n * params->sz_info.batches ;
-    calculate_buffer_sizes(dim_rank, vec_rank, dims,
-                            vecs, &input_size, &output_size);
+    calculate_buffer_sizes(dim_rank, vec_rank, dims, vecs, &input_size,
+                           &output_size, params->fft_type);
 
     params->sz_info.input_size = input_size;
     params->sz_info.output_size = output_size;
@@ -266,8 +266,8 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
     params->sz_info.n = calculate_size(dims, dim_rank);
     params->sz_info.batches = calculate_size(vecs, vec_rank);
     INTP size = params->sz_info.n * params->sz_info.batches;
-    calculate_buffer_sizes(dim_rank, vec_rank, dims,
-                            vecs, &input_size, &output_size);
+    calculate_buffer_sizes(dim_rank, vec_rank, dims, vecs, &input_size,
+                           &output_size, params->fft_type);
     params->sz_info.input_size = input_size;
     params->sz_info.output_size = output_size;
     params->sz_info.input_bytes = input_size *

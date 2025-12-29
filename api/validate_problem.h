@@ -410,15 +410,6 @@ static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
     {                                                                          \
         goto validation_exit;                                                  \
     }                                                                          \
-    /* ND C2R transforms are not supported */                                  \
-    if (problem->flags.fft_type && problem->dim_rank != 1 &&                   \
-        problem->flags.fft_direction == BACKWARD_FFT_DIR)                      \
-    {                                                                          \
-        AOCLFFTZ_ERROR("N-Dimensional C2R transforms are "                     \
-                       "currently not supported");                             \
-        ret = AOCLFFTZ_INVALID_INPUT;                                          \
-        goto validation_exit;                                                  \
-    }                                                                          \
     if (!problem->flags.fft_placement)                                         \
     {                                                                          \
         VALIDATE_BUFFERS(problem->in, problem->out, 0 /* in-place */, ret)     \

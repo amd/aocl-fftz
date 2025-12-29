@@ -73,7 +73,8 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     UINTP input_size = 0;
     UINTP output_size = 0;
     calculate_buffer_sizes(params->dim_rank, params->vec_rank, params->dims,
-                             params->vecs, &input_size, &output_size);
+                           params->vecs, &input_size, &output_size, 
+                           params->fft_type);
 
     // prepare random seed value
     if (params->use_random_seed)

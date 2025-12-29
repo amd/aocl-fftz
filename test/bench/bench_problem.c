@@ -487,7 +487,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     UINTP out_buffer_size = 0;
     calculate_buffer_sizes(bench_params->dim_rank, bench_params->vec_rank,
                            bench_params->dims, bench_params->vecs,
-                           &in_buffer_size, &out_buffer_size);
+                           &in_buffer_size, &out_buffer_size,
+                           bench_params->fft_type);
     bench_params->sz_info.input_size = in_buffer_size;
     bench_params->sz_info.output_size = out_buffer_size;
 

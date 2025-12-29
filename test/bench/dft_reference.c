@@ -209,7 +209,9 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             params->sz_info.batches,
             (params->fft_type == R2C ? params->sz_info.n_in
                                      : params->sz_info.n_out),
-            cmp_in_map, cmp_out_map, params->sz_info.out_data_stride
+            cmp_in_map, cmp_out_map,
+            (params->fft_type == R2C ? params->sz_info.out_data_stride
+                                     : params->sz_info.in_data_stride)
         );
 
         if (status != BENCH_SUCCESS)
@@ -384,9 +386,9 @@ INT32 execute_fft_and_postprocess(aoclfftz_bench_params_t *params,
     }
     else if (params->fft_type == C2R)
     {
-        // Set DC and Nyquist components to zero for correct input
-        set_zero_for_dc_and_nyquist_nd(
-            params->in, params->sz_info.n, params->dims[0].n,
+        // For C2R transforms, enforce Hermitian symmetry on half-complex input
+        make_hc_as_hermitian_symmetric(
+            params->in, params->dims, params->dim_rank,
             params->sz_info.batches, in_idx_map, params->precision);
 
         // Convert half-complex input to full complex for FFT
