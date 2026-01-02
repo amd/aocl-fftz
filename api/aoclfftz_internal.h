@@ -92,6 +92,9 @@
 #define SET_BIT_REPRODUCIBLE(flags, val) SET_BIT_FLAG32(flags, 4, val)
 #define GET_BIT_REPRODUCIBLE(flags) GET_BIT_FLAG32(flags, 4)
 
+#define SET_NOT_INNERMOST_DIM(flags) SET_BIT_FLAG32(flags, 10, 1)
+#define IS_NOT_INNERMOST_DIM(flags) GET_BIT_FLAG32(flags, 10)
+
 // Get size of datatype based on the precision
 #define DT_PRECISION_BYTES(dt_prec) (1 << dt_prec)
 
@@ -129,7 +132,13 @@
 
 #define NUM_REAL_KERNELS_VARIANTS 3
 #define NUM_KERNEL_CATEGORIES 4
-#define NUM_KERNELS_IN_EACH_CATEGORY 15
+
+// Number of standard kernels (radix 2 to 16)
+#define NUM_STANDARD_KERNELS 15
+// Number of higher radix kernels (radix > 16, e.g., radix 48)
+#define NUMBER_OF_HIGHER_RADIX_KERNELS 1
+// Total number of kernels in each category
+#define NUM_KERNELS_IN_EACH_CATEGORY (NUM_STANDARD_KERNELS + NUMBER_OF_HIGHER_RADIX_KERNELS)
 
 #define NUM_KERNELS_IN_EACH_DFT_VARIANT                                        \
     (NUM_KERNELS_IN_EACH_CATEGORY * NUM_KERNEL_CATEGORIES)
@@ -259,6 +268,7 @@ typedef struct aoclfftz_decomp_scheme
     //  transpose (alongside DFT): 9th-bit
     //   bit 8     : (0) no-transpose / (1) transpose
     //   bit 9     : (0) (transpose+fft) / (1) fft (no transpose)
+    //   bit 10    : (0) innermost dimension / (1) not innermost dimension (of ND-dim problem)
     //   bit 16    : (0) fixed selector mode / (1) auto tuner selector mode
     //   bit 30-31 : floating point datatype precision
     //               (00) 8-bit / (01) 16-bit / (10) 32-bit / (11) 64-bit

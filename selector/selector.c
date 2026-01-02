@@ -91,11 +91,22 @@ INT32 register_solvers_kernels(kernel_tables_t *kernel_tables, INT32 dt,
     return ret;
 }
 
-INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table)
+INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table, INT32 is_innermost_dim)
 {
     INT32 is_supported = 0;
+    INTP num_kernels_to_check = NUM_KERNELS_IN_EACH_CATEGORY;
+
+    // The "special" (large) kernels are not well suited to run for problems
+    // whose strides are large. This is typically the case for non-innermost
+    // dimensions of an ND problem. Hence, we skip checking those kernels in
+    // such cases.
+    if (!is_innermost_dim)
+    {
+        num_kernels_to_check -= NUMBER_OF_HIGHER_RADIX_KERNELS;
+    }
+
     // It is enough to check for the existence of a suitable C kernel
-    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
+    for (INTP i = 0; i < num_kernels_to_check; i++)
     {
         if (kernels_table[i].radix == 0)
         {
@@ -210,7 +221,8 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
         avl_threads = 1;
     }
     INT32 is_FFT_ker_supported = check_FFT_kernel_support(
-        sel->solution->decomp_scheme->dims[0].n, kertab);
+        sel->solution->decomp_scheme->dims[0].n, kertab,
+        !IS_NOT_INNERMOST_DIM(sel->solution->decomp_scheme->flags));
     INT32 is_solvable_by_bluestein = check_prime_solvability_bluestein(
         sel->solution->decomp_scheme, is_FFT_ker_supported, kertab);
     INT32 level1_cond1 = 0;
@@ -403,7 +415,9 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
         avl_threads = 1;
     }
     INT32 is_FFT_ker_supported = check_FFT_kernel_support(
-        sel->solution->decomp_scheme->dims[0].n, kertab);
+        sel->solution->decomp_scheme->dims[0].n, kertab,
+        !IS_NOT_INNERMOST_DIM(sel->solution->decomp_scheme->flags));
+
     INT32 is_solvable_by_bluestein = check_prime_solvability_bluestein(
         sel->solution->decomp_scheme, is_FFT_ker_supported, kertab);
     INT32 level1_cond1 = 0;
@@ -597,9 +611,9 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     INT32 avl_threads =
             sel->solution->decomp_scheme->thread_info->avl_threads;
 
-    INT32 is_FFT_ker_supported =
-            check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n,
-                                     kertab);
+    INT32 is_FFT_ker_supported = check_FFT_kernel_support(
+        sel->solution->decomp_scheme->dims[0].n, kertab,
+        !IS_NOT_INNERMOST_DIM(sel->solution->decomp_scheme->flags));
     INT32 is_solvable_by_bluestein =
             check_prime_solvability_bluestein(sel->solution->decomp_scheme,
                                               is_FFT_ker_supported, kertab);
@@ -760,9 +774,10 @@ INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
     INT32 avl_threads =
             sel->solution->decomp_scheme->thread_info->avl_threads;
 
-    INT32 is_FFT_ker_supported =
-            check_FFT_kernel_support(sel->solution->decomp_scheme->dims[0].n,
-                                     kertab);
+    INT32 is_FFT_ker_supported = check_FFT_kernel_support(
+        sel->solution->decomp_scheme->dims[0].n, kertab,
+        !IS_NOT_INNERMOST_DIM(sel->solution->decomp_scheme->flags));
+        
     INT32 is_solvable_by_bluestein =
             check_prime_solvability_bluestein(sel->solution->decomp_scheme,
                                               is_FFT_ker_supported, kertab);

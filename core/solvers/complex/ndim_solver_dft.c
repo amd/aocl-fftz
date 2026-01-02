@@ -48,6 +48,9 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     COPY_SOLUTION_OBJ_WO_DIMS(n_minus1_sol, sol);
     INT32 dim_rank = sol->decomp_scheme->dim_rank;
 
+    // NOTE: since "innermost" or "not-innermost" apply only to the leaf nodes
+    // of the ND problem, we don't need to set the flags for the n-1 dimension.
+
     // setup ND - 1 solution
     n_minus1_sol->decomp_scheme->dim_rank = dim_rank - 1;
 
@@ -69,6 +72,8 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
                     sol->decomp_scheme->dims[dim_rank - 1].out_stride;
 
     COPY_SOLUTION_OBJ_WO_DIMS(outer_dim_sol, sol);
+
+    SET_NOT_INNERMOST_DIM(outer_dim_sol->decomp_scheme->flags);
 
 #if defined (PERFORM_INTER_STAGE_PERMUTE)
     // In the context of an out-of-place problem, outer_dim_sol has to operate

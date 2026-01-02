@@ -197,7 +197,19 @@ INT32 register_kernels_complex(
                     kertab[offset].k_ops_cnt =
                         static_kernel_table[i][kcat].k_ops_cnt;
                     kertab[offset].sets[DT_FLOAT - 2] = sets_complex_s[kcat];
-                    kertab[offset].sets[DT_DOUBLE - 2] = sets_complex_d[kcat];
+
+                    // Since the radix 48 AVX512 kernel processes only 1 set at
+                    // a time, (unlike other AVX512 kernels which process
+                    // multiple sets), we need to set the sets_d value
+                    // accordingly.
+                    if (kcat == 3 /* AVX512 */ && kertab[offset].radix == 48)
+                    {
+                        kertab[offset].sets[DT_DOUBLE - 2] = 1;
+                    }
+                    else
+                    {
+                        kertab[offset].sets[DT_DOUBLE - 2] = sets_complex_d[kcat];
+                    }
                 }
             }
             offset = limits[kcat];

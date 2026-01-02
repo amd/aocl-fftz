@@ -102,6 +102,10 @@ ops_cycles_t get_ops_cnt_fft16c_wrapper(UINT8 precision, UINT8 direction)
 {
     return get_ops_cnt_fft16c(precision, direction);
 }
+ops_cycles_t get_ops_cnt_fft48c_wrapper(UINT8 precision, UINT8 direction)
+{
+    return get_ops_cnt_fft48c(precision, direction);
+}
 
 #ifdef ENABLE_AVX128
 ops_cycles_t get_ops_cnt_fft2avx128_wrapper(UINT8 precision, UINT8 direction)
@@ -163,6 +167,10 @@ ops_cycles_t get_ops_cnt_fft15avx128_wrapper(UINT8 precision, UINT8 direction)
 ops_cycles_t get_ops_cnt_fft16avx128_wrapper(UINT8 precision, UINT8 direction)
 {
     return get_ops_cnt_fft16avx128(precision, direction);
+}
+ops_cycles_t get_ops_cnt_fft48avx128_wrapper(UINT8 precision, UINT8 direction)
+{
+    return get_ops_cnt_fft48avx128(precision, direction);
 }
 #endif
 
@@ -227,6 +235,10 @@ ops_cycles_t get_ops_cnt_fft16avx256_wrapper(UINT8 precision, UINT8 direction)
 {
     return get_ops_cnt_fft16avx256(precision, direction);
 }
+ops_cycles_t get_ops_cnt_fft48avx256_wrapper(UINT8 precision, UINT8 direction)
+{
+    return get_ops_cnt_fft48avx256(precision, direction);
+}
 #endif
 
 #ifdef ENABLE_AVX512
@@ -289,6 +301,10 @@ ops_cycles_t get_ops_cnt_fft15avx512_wrapper(UINT8 precision, UINT8 direction)
 ops_cycles_t get_ops_cnt_fft16avx512_wrapper(UINT8 precision, UINT8 direction)
 {
     return get_ops_cnt_fft16avx512(precision, direction);
+}
+ops_cycles_t get_ops_cnt_fft48avx512_wrapper(UINT8 precision, UINT8 direction)
+{
+    return get_ops_cnt_fft48avx512(precision, direction);
 }
 #endif
 
@@ -1076,6 +1092,10 @@ kfft_ register_kernel_fft16c_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_fft16c(precision, direction);
 }
+kfft_ register_kernel_fft48c_wrapper(UINT8 precision, UINT8 direction)
+{
+    return register_kernel_fft48c(precision, direction);
+}
 
 #ifdef ENABLE_AVX128
 kfft_ register_kernel_fft2avx128_wrapper(UINT8 precision, UINT8 direction)
@@ -1137,6 +1157,10 @@ kfft_ register_kernel_fft15avx128_wrapper(UINT8 precision, UINT8 direction)
 kfft_ register_kernel_fft16avx128_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_fft16avx128(precision, direction);
+}
+kfft_ register_kernel_fft48avx128_wrapper(UINT8 precision, UINT8 direction)
+{
+    return register_kernel_fft48avx128(precision, direction);
 }
 #endif
 
@@ -1201,6 +1225,10 @@ kfft_ register_kernel_fft16avx256_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_fft16avx256(precision, direction);
 }
+kfft_ register_kernel_fft48avx256_wrapper(UINT8 precision, UINT8 direction)
+{
+    return register_kernel_fft48avx256(precision, direction);
+}
 #endif
 
 #ifdef ENABLE_AVX512
@@ -1263,6 +1291,10 @@ kfft_ register_kernel_fft15avx512_wrapper(UINT8 precision, UINT8 direction)
 kfft_ register_kernel_fft16avx512_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_fft16avx512(precision, direction);
+}
+kfft_ register_kernel_fft48avx512_wrapper(UINT8 precision, UINT8 direction)
+{
+    return register_kernel_fft48avx512(precision, direction);
 }
 #endif
 

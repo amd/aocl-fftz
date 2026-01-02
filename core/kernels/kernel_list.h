@@ -112,6 +112,7 @@ static kernel_fp_list_t kernels_c2c[NUM_KERNELS_IN_EACH_CATEGORY]
     {KREG(fft, 14)}, // radix 14
     {KREG(fft, 15)}, // radix 15
     {KREG(fft, 16)}, // radix 16
+    {KREG(fft, 48)}, // radix 48
 };
 
 // Twiddle C2C kernel table
