@@ -40,6 +40,8 @@
 
 INT32 selector_sizeone_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
-    INT32 ret = setup_sizeone_solver(sel->solution);
+    UINT8 is_real = IS_REAL(sel->solution->decomp_scheme->flags);
+    INT32 ret = is_real ? setup_real_sizeone_solver(sel->solution)
+                        : setup_sizeone_solver(sel->solution);
     return ret;
 }

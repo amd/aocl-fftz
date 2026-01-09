@@ -65,6 +65,8 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
         solvers_table[SOLVER_REAL_BUFFERED] =
             register_execute_real_buffered_solver();
         solvers_table[SOLVER_REAL_NDIM] = register_execute_real_ndim_solver();
+        solvers_table[SOLVER_REAL_SIZEONE] =
+            register_execute_real_sizeone_solver();
 #ifdef MULTI_THREADING
         solvers_table[SOLVER_REAL_MT_DIRECT] =
             register_execute_real_mt_direct_solver();
