@@ -16,7 +16,7 @@
 #include <math.h>
 #include "core/common/twiddle.h"
 #include "api/aoclfftz_internal.h"
-#include "core/kernels/transpose/transpose_utils.h"
+#include "core/kernels/non_dft/transpose/transpose_utils.h"
 
 
 INT32 twiddle_multiplier_for_real_float(aoclfftz_solution_t *sol,

@@ -2088,17 +2088,19 @@ kfft_ register_kernel_r2hcf_rfft16avx512_wrapper(UINT8 precision,
 
 /* ---------------- kernels : permuted_copy_* ---------------- */
 
-VOID permuted_copy_c_fp32_wrapper(VOID *in, VOID *out, INTP n, INTP radix,
-                                  aoclfftz_strides_t *strides,
-                                  UINT8 data_stride)
+VOID permuted_copy_c_fp32_wrapper(VOID *in, VOID *out, INTP n, INTP size,
+                                  INTP in_stride, INTP out_stride,
+                                  INTP v_in_stride, INTP v_out_stride)
 {
-    permuted_copy_c_fp32(in, out, n, radix, strides, data_stride);
+    permuted_copy_c_fp32(in, out, n, size, in_stride, out_stride, v_in_stride,
+                         v_out_stride);
 }
-VOID permuted_copy_c_fp64_wrapper(VOID *in, VOID *out, INTP n, INTP radix,
-                                  aoclfftz_strides_t *strides,
-                                  UINT8 data_stride)
+VOID permuted_copy_c_fp64_wrapper(VOID *in, VOID *out, INTP n, INTP size,
+                                  INTP in_stride, INTP out_stride,
+                                  INTP v_in_stride, INTP v_out_stride)
 {
-    permuted_copy_c_fp64(in, out, n, radix, strides, data_stride);
+    permuted_copy_c_fp64(in, out, n, size, in_stride, out_stride, v_in_stride,
+                         v_out_stride);
 }
 
 /* ---------------- memory allocators/destroys ---------------- */

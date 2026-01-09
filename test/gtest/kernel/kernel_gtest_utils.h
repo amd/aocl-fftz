@@ -439,21 +439,26 @@ bool is_fused_kernel(UINT8 kernel_type)
  * @param out output array to store the permuted output
  * @param n no. of sets (or) offset
  * @param size size of each offset (or) n
- * @param strides data stride values (in-stride for dir 0, out-stride for dir 1)
+ * @param in_stride input data stride
+ * @param out_stride output data stride
+ * @param v_in_stride vectorized input stride
+ * @param v_out_stride vectorized output stride
  */
 template <class T>
-void permuted_copy(T *in, T *out, INTP n, INTP size,
-                   aoclfftz_strides_t *strides, UINT8 data_stride)
+void permuted_copy(T *in, T *out, INTP n, INTP size, INTP in_stride,
+                   INTP out_stride, INTP v_in_stride, INTP v_out_stride)
 {
     if (typeid(T) == typeid(FLOAT32))
     {
         permuted_copy_c_fp32_wrapper((FLOAT32 *)in, (FLOAT32 *)out, n, size,
-                                     strides, data_stride);
+                                     in_stride, out_stride, v_in_stride,
+                                     v_out_stride);
     }
     else if (typeid(T) == typeid(FLOAT64))
     {
         permuted_copy_c_fp64_wrapper((FLOAT64 *)in, (FLOAT64 *)out, n, size,
-                                     strides, data_stride);
+                                     in_stride, out_stride, v_in_stride,
+                                     v_out_stride);
     }
 }
 

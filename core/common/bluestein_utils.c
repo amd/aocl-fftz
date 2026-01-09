@@ -1,194 +1,158 @@
 // Copyright Advanced Micro Devices, Inc.
 // SPDX-License-Identifier: BSD-3-Clause
 
-/** @file bluestein_utils.c
+/**
+ * @file bluestein_utils.c
  *
- *  @brief Contains utility functions related to Bluestein solver.
+ * @brief Utility functions for the Bluestein FFT algorithm.
  *
- *  This file contains the functions for computing extended length, computing
- *  bluestein sequence, elementwise multiplication and normalizing the data.
+ * This file provides core utility functions for the Bluestein (chirp-z)
+ * algorithm including:
+ * - Extended length computation for smooth FFT sizes
+ * - Chirp sequence generation
  *
- *  @author Srirammaswamy Srinivasan
+ * @author Srirammaswamy Srinivasan
  */
 
 #include <math.h>
 #include <string.h> /* for memset */
 #include "core/common/bluestein_utils.h"
 
+/**
+ * Supported prime factors for efficient FFT computation.
+ * These correspond to available prime radix kernels in the library.
+ */
+static const UINT32 AOCLFFTZ_SUPPORTED_PRIMES[] = {2, 3, 5, 7, 11, 13};
+static const UINT32 AOCLFFTZ_NUM_SUPPORTED_PRIMES =
+    sizeof(AOCLFFTZ_SUPPORTED_PRIMES) / sizeof(AOCLFFTZ_SUPPORTED_PRIMES[0]);
+
+/**
+ * @brief Computes the extended length for Bluestein algorithm.
+ *
+ * Finds the smallest value m >= 2n-1 such that m can be completely factored
+ * using only the supported prime factors.
+ *
+ * @param[in] n Original input length
+ * @return INTP Extended length m suitable for FFT convolution
+ */
 INTP get_extended_length(INTP n)
 {
-    INTP m = 2 * n - 1;
-    // check if all the factors of m are within the supported kernels' range
-    // i.e. prime numbers in range 2 to 16
-    // if not, adjust the m to a nearest larger number
-    // which satisfies the above condition
+    INTP min_length;
 
-    // TODO: Move this list to a common file to be used across
-    // library and selector gtest
-    INTP supported_primes[] = {2, 3, 5, 7, 11, 13};
-    UINT32 prime_count = sizeof(supported_primes) / sizeof(supported_primes[0]);
-    for (INTP next_m = m, quo = 0; quo != 1; next_m++)
+    for (min_length = (2 * n) - 1;; min_length++)
     {
-        quo = m = next_m;
-        for (UINT32 i = 0; i < prime_count; i++)
+        INTP quo = min_length;
+
+        for (UINT32 i = 0; i < AOCLFFTZ_NUM_SUPPORTED_PRIMES; i++)
         {
-            while (quo % supported_primes[i] == 0)
+            UINT32 prime = AOCLFFTZ_SUPPORTED_PRIMES[i];
+            while (quo % prime == 0)
             {
-                quo /= supported_primes[i];
+                quo /= prime;
             }
             if (quo == 1)
             {
-                break; // solvable m value
+                break;
             }
         }
+
+        if (quo == 1)
+        {
+            break;
+        }
     }
-    return m;
+
+    return min_length;
 }
 
-INT32 prepare_bluestein_sequence(aoclfftz_solution_t *sol, INTP m)
+/**
+ * @brief Computes the chirp sequence (twiddle factors) for Bluestein algorithm.
+ *
+ * Generates the complex exponential sequence values, pads with zeros (to meet
+ * FFT size requirement for convolution), and mirrors the sequence for
+ * convolution. The sequence is stored in complex interleaved format in
+ * sol->dft_bufs->bluestein->B.
+ *
+ * Output layout:
+ *                  Bluestein sequence B of length m
+ *        <------ (n) -----><-- (m-2n+1) --><----- (n-1) ----->
+ *        |     values      |     zeros     | reversed values |
+ *
+ *   where values are complex exponentials exp(j*pi*k^2/n) for k=0..n-1
+ *
+ * @param[in,out] sol Solution descriptor containing output buffer and metadata
+ * @param[in]     m   Extended length (>= 2n-1) for FFT convolution
+ * @return INT32 BLUESTEIN_SUCCESS on success
+ */
+INT32 compute_chirp_sequence(aoclfftz_solution_t *sol, INTP m)
 {
-    /*            Bluestein sequence B of length m
-        <------ (n) -----><-- (m-2n-1) --><----- (n-1) ----->
-        |     values      |     zeros     | reversed values |
-                                                                */
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     INTP n = sol->decomp_scheme->dims[0].n;
-    INTP n2 = n << 1;
+    INTP n2 = n * 2;
 
     if (precision == DT_FLOAT)
     {
         FLOAT *B = (FLOAT *)sol->dft_bufs->bluestein->B;
+
         for (INTP i = 0; i < n; i++)
         {
-            // Handle overflow to improve accuracy for larger values
-            INTP m = (i * i) % n2;
-            FLOAT angle = (AOCLFFTZ_2_PIf * m) / n2;
-            B[i * DATA_STRIDE] = cosf(angle);
-            B[i * DATA_STRIDE + 1] = sinf(angle);
+            INTP sq_idx_mod = (i * i) % n2;
+            FLOAT angle = (AOCLFFTZ_2_PIf * sq_idx_mod) / n2;
+            FLOAT re = cosf(angle);
+            FLOAT im = sinf(angle);
+
+            INTP idx        = i * DATA_STRIDE;
+            INTP mirror_idx = (m - i) * DATA_STRIDE;
+
+            B[idx]     = re;
+            B[idx + 1] = im;
+
+            if (i > 0)
+            {
+                B[mirror_idx]     = re;
+                B[mirror_idx + 1] = im;
+            }
         }
-        memset(B + n * DATA_STRIDE, 0,
-               (m - n - 1) * DATA_STRIDE * sizeof(FLOAT));
-        for (INTP i = 1; i < n; i++)
+
+        INTP pad_count = m - n2 + 1;
+        if (pad_count > 0)
         {
-            B[(m - i) * DATA_STRIDE] = B[i * DATA_STRIDE];
-            B[(m - i) * DATA_STRIDE + 1] = B[i * DATA_STRIDE + 1];
+            memset(B + n * DATA_STRIDE, 0,
+                   pad_count * DATA_STRIDE * sizeof(FLOAT));
         }
     }
     else
     {
         DOUBLE *B = (DOUBLE *)sol->dft_bufs->bluestein->B;
+
         for (INTP i = 0; i < n; i++)
         {
-            // Handle overflow to improve accuracy for larger values
-            INTP m = (i * i) % n2;
-            DOUBLE angle = (AOCLFFTZ_2_PI * m) / n2;
-            B[i * DATA_STRIDE] = cos(angle);
-            B[i * DATA_STRIDE + 1] = sin(angle);
+            INTP sq_idx_mod = (i * i) % n2;
+            DOUBLE angle = (AOCLFFTZ_2_PI * sq_idx_mod) / n2;
+            DOUBLE re = cos(angle);
+            DOUBLE im = sin(angle);
+
+            INTP idx        = i * DATA_STRIDE;
+            INTP mirror_idx = (m - i) * DATA_STRIDE;
+
+            B[idx]     = re;
+            B[idx + 1] = im;
+
+            if (i > 0)
+            {
+                B[mirror_idx]     = re;
+                B[mirror_idx + 1] = im;
+            }
         }
-        memset(B + n * DATA_STRIDE, 0,
-               (m - n - 1) * DATA_STRIDE * sizeof(DOUBLE));
-        for (INTP i = 1; i < n; i++)
+
+        INTP pad_count = m - n2 + 1;
+        if (pad_count > 0)
         {
-            B[(m - i) * DATA_STRIDE] = B[i * DATA_STRIDE];
-            B[(m - i) * DATA_STRIDE + 1] = B[i * DATA_STRIDE + 1];
+            memset(B + n * DATA_STRIDE, 0,
+                   pad_count * DATA_STRIDE * sizeof(DOUBLE));
         }
     }
 
     return BLUESTEIN_SUCCESS;
 }
 
-INT32 elementwise_multiplication(VOID *out, VOID *a, VOID *b, INTP n,
-                                 UINT8 sign, UINT8 precision)
-{
-    if (precision == DT_FLOAT)
-    {
-        FLOAT *a_f = (FLOAT *)a;
-        FLOAT *b_f = (FLOAT *)b;
-        FLOAT *out_f = (FLOAT *)out;
-        FLOAT temp[DATA_STRIDE];
-        // Complex multiplication of a and b
-        // out.re = (a.re * b.re) - (a.im * b.im)
-        // out.im = (a.re * b.im) + (a.im * b.re)
-        if (!sign)
-        {
-            for (INTP i = 0; i < n * DATA_STRIDE; i += DATA_STRIDE)
-            {
-                temp[0] = (a_f[i] * b_f[i]) - (a_f[i + 1] * b_f[i + 1]);
-                temp[1] = (a_f[i] * b_f[i + 1]) + (a_f[i + 1] * b_f[i]);
-                out_f[i]     = temp[0];
-                out_f[i + 1] = temp[1];
-            }
-        }
-        // Complex multiplication with b.im sign reversed
-        // out.re =  (a.re * b.re) + (a.im * b.im)
-        // out.im = -(a.re * b.im) + (a.im * b.re)
-        else
-        {
-            for (INTP i = 0; i < n * DATA_STRIDE; i += DATA_STRIDE)
-            {
-                temp[0] =  (a_f[i] * b_f[i]) + (a_f[i + 1] * b_f[i + 1]);
-                temp[1] = -(a_f[i] * b_f[i + 1]) + (a_f[i + 1] * b_f[i]);
-                out_f[i]     = temp[0];
-                out_f[i + 1] = temp[1];
-            }
-        }
-    }
-    else
-    {
-        DOUBLE *a_d = (DOUBLE *)a;
-        DOUBLE *b_d = (DOUBLE *)b;
-        DOUBLE *out_d = (DOUBLE *)out;
-        DOUBLE temp[DATA_STRIDE];
-        // Complex multiplication of a and b
-        // out.re = (a.re * b.re) - (a.im * b.im)
-        // out.im = (a.re * b.im) + (a.im * b.re)
-        if (!sign)
-        {
-            for (INTP i = 0; i < n * DATA_STRIDE; i += DATA_STRIDE)
-            {
-                temp[0] = (a_d[i] * b_d[i]) - (a_d[i + 1] * b_d[i + 1]);
-                temp[1] = (a_d[i] * b_d[i + 1]) + (a_d[i + 1] * b_d[i]);
-                out_d[i]     = temp[0];
-                out_d[i + 1] = temp[1];
-            }
-        }
-        // Complex multiplication with b.im sign reversed
-        // out.re =  (a.re * b.re) + (a.im * b.im)
-        // out.im = -(a.re * b.im) + (a.im * b.re)
-        else
-        {
-            for (INTP i = 0; i < n * DATA_STRIDE; i += DATA_STRIDE)
-            {
-                temp[0] =  (a_d[i] * b_d[i]) + (a_d[i + 1] * b_d[i + 1]);
-                temp[1] = -(a_d[i] * b_d[i + 1]) + (a_d[i + 1] * b_d[i]);
-                out_d[i]     = temp[0];
-                out_d[i + 1] = temp[1];
-            }
-        }
-    }
-
-    return BLUESTEIN_SUCCESS;
-}
-
-INT32 normalize_data(VOID *data, INTP n, DOUBLE normalize_factor,
-                     UINT8 precision)
-{
-    if (precision == DT_FLOAT)
-    {
-        FLOAT *data_f = (FLOAT *)data;
-        for (INTP i = 0; i < n * DATA_STRIDE; i++)
-        {
-            data_f[i] *= (FLOAT)normalize_factor;
-        }
-    }
-    else
-    {
-        DOUBLE *data_d = (DOUBLE *)data;
-        for (INTP i = 0; i < n * DATA_STRIDE; i++)
-        {
-            data_d[i] *= normalize_factor;
-        }
-    }
-
-    return BLUESTEIN_SUCCESS;
-}

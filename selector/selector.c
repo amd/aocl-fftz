@@ -62,6 +62,18 @@ INT32 register_solvers_kernels(kernel_tables_t *kernel_tables, INT32 dt,
     ret |= register_kernels_complex(kernel_tables->kt_twid_dft,
                                     kernels_twid_c2c, dt, dir, cpu_flags);
 
+    kernel_tables->ele_mul[FORWARD_FFT_DIR] =
+        register_elementwise_mul_kernel(cpu_flags, dt, FORWARD_FFT_DIR);
+    kernel_tables->ele_mul[BACKWARD_FFT_DIR] =
+        register_elementwise_mul_kernel(cpu_flags, dt, BACKWARD_FFT_DIR);
+    kernel_tables->normalize = register_normalize_kernel(cpu_flags, dt);
+    if (kernel_tables->ele_mul[FORWARD_FFT_DIR] == NULL ||
+        kernel_tables->ele_mul[BACKWARD_FFT_DIR] == NULL ||
+        kernel_tables->normalize == NULL)
+    {
+        return SELECTOR_FAILURE;
+    }
+
     return ret;
 }
 
@@ -1113,7 +1125,8 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
     kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
     kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft};
+    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft, {NULL},
+                                     NULL};
 
     // allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables);
@@ -1196,7 +1209,8 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
     kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
     kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft};
+    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft, {NULL},
+                                     NULL};
 
     // allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables);
@@ -1275,7 +1289,8 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
     kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
     kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft};
+    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft, {NULL},
+                                     NULL};
 
     // allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables);
@@ -1354,7 +1369,8 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
     kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
     kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft};
+    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft, {NULL},
+                                     NULL};
 
     // allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables);

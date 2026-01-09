@@ -20,8 +20,8 @@
 #include "core/kernels/kernel.h"
 #include "core/solvers/solver.h"
 #include "selector/selector.h"
-#include "core/kernels/transpose/transpose_utils.h"
-#include "core/kernels/transpose/transpose_kernels.h"
+#include "core/kernels/non_dft/transpose/transpose_utils.h"
+#include "core/kernels/non_dft/transpose/transpose_kernels.h"
 #include "core/common/twiddle.h"
 
 // Re-delcaring this struct to avoid using core/kernels/kernel_list.h file
@@ -827,13 +827,15 @@ register_kernel_r2hcf_rfft16avx512_wrapper(UINT8 precision, UINT8 direction);
 /* ---------------- kernels : permuted_copy_* ---------------- */
 
 EXPORT_SYM_DYN VOID permuted_copy_c_fp32_wrapper(VOID *in, VOID *out, INTP n,
-                                                 INTP radix,
-                                                 aoclfftz_strides_t *strides,
-                                                 UINT8 data_stride);
+                                                 INTP size, INTP in_stride,
+                                                 INTP out_stride,
+                                                 INTP v_in_stride,
+                                                 INTP v_out_stride);
 EXPORT_SYM_DYN VOID permuted_copy_c_fp64_wrapper(VOID *in, VOID *out, INTP n,
-                                                 INTP radix,
-                                                 aoclfftz_strides_t *strides,
-                                                 UINT8 data_stride);
+                                                 INTP size, INTP in_stride,
+                                                 INTP out_stride,
+                                                 INTP v_in_stride,
+                                                 INTP v_out_stride);
 
 /* ---------------- memory allocators/destroys ---------------- */
 

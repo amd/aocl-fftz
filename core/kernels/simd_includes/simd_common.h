@@ -466,6 +466,74 @@
 #define SWAP_RI_256_D(val) _mm256_permute_pd(val, 5)
 
 /**
+ * @brief Broadcasts real parts of complex numbers in a 128-bit register.
+ * Shuffle pattern 0xA0 (10100000b) selects elements [0,0,2,2].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_RE_128_S(val) _mm_shuffle_ps(val, val, 0xA0) // 10100000b: [0,0,2,2]
+
+/**
+ * @brief Broadcasts imaginary parts of complex numbers in a 128-bit register.
+ * Shuffle pattern 0xF5 (11110101b) selects elements [1,1,3,3].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_IM_128_S(val) _mm_shuffle_ps(val, val, 0xF5) // 11110101b: [1,1,3,3]
+
+/**
+ * @brief Broadcasts the real part of a complex number in a 128-bit register
+ * for double precision floating point.
+ * Shuffle pattern 0x0 (00b) selects the low element of each operand: [0,0].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_RE_128_D(val) _mm_shuffle_pd(val, val, 0x0) // 00b: [0,0]
+
+/**
+ * @brief Broadcasts the imaginary part of a complex number in a 128-bit register
+ * for double precision floating point.
+ * Shuffle pattern 0x3 (11b) selects the high element of each operand: [1,1].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_IM_128_D(val) _mm_shuffle_pd(val, val, 0x3) // 11b: [1,1]
+
+/**
+ * @brief Broadcasts real parts of complex numbers in a 256-bit register.
+ * Shuffle pattern 0xA0 (10100000b) selects elements [0,0,2,2].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_RE_256_S(val) _mm256_shuffle_ps(val, val, 0xA0) // 10100000b: [0,0,2,2]
+
+/**
+ * @brief Broadcasts imaginary parts of complex numbers in a 256-bit register.
+ * Shuffle pattern 0xF5 (11110101b) selects elements [1,1,3,3].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_IM_256_S(val) _mm256_shuffle_ps(val, val, 0xF5) // 11110101b: [1,1,3,3]
+
+/**
+ * @brief Broadcasts real parts of complex numbers in a 256-bit register
+ * for double precision floating point.
+ * Shuffle pattern 0x0 (0000b) selects the low element of each 128-bit lane: [0,0,2,2].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_RE_256_D(val) _mm256_shuffle_pd(val, val, 0x0) // 0000b: [0,0,2,2]
+
+/**
+ * @brief Broadcasts imaginary parts of complex numbers in a 256-bit register
+ * for double precision floating point.
+ * Shuffle pattern 0xF (1111b) selects the high element of each 128-bit lane: [1,1,3,3].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_IM_256_D(val) _mm256_shuffle_pd(val, val, 0xF) // 1111b: [1,1,3,3]
+
+/**
  * @brief implies the number of sets that can be processed in parallel.
  * Computed using Register width /(2* sizeof(floating point)
  */

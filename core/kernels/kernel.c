@@ -14,6 +14,7 @@
  */
 
 #include "core/kernels/kernel.h"
+#include "utils/dispatcher.h"
 
 #ifdef ENABLE_AVX128
 #define ACCESS_AVX128 1
@@ -194,7 +195,93 @@ INT32 register_kernels_complex(
     return KERNEL_SUCCESS;
 }
 
+/**
+ * @brief Registers the appropriate elementwise multiplication kernel.
+ *
+ * Selects the best available SIMD implementation based on the optimization
+ * level and data type:
+ * - optlevel_avx512 (3): AVX512 implementation
+ * - optlevel_avx256 (2): AVX256 implementation
+ * - optlevel_avx128 (1): AVX128 implementation
+ * - optlevel_scalar (0): Scalar C implementation
+ *
+ * @param[in] cpu_flags Optimization level (optimization_level_t) obtained
+ *                      from get_max_build_isa_level()
+ * @param[in] dt        Data type (DT_FLOAT or DT_DOUBLE)
+ * @param[in] direction FORWARD_FFT_DIR  -> forward  (a .* conj(b)),
+ *                      BACKWARD_FFT_DIR -> backward (a .* b)
+ * @return Function pointer to the selected elementwise multiplication kernel
+ */
+elementwise_mul_ register_elementwise_mul_kernel(INT32 cpu_flags, INT32 dt,
+                                                 UINT8 direction)
+{
+#ifdef ENABLE_AVX512
+    if (cpu_flags >= optlevel_avx512)
+    {
+        return register_elementwise_mul_avx512(dt, direction);
+    }
+#endif
+
+#ifdef ENABLE_AVX256
+    if (cpu_flags >= optlevel_avx256)
+    {
+        return register_elementwise_mul_avx256(dt, direction);
+    }
+#endif
+
+#ifdef ENABLE_AVX128
+    if (cpu_flags >= optlevel_avx128)
+    {
+        return register_elementwise_mul_avx128(dt, direction);
+    }
+#endif
+
+    /* Default to C implementation */
+    return register_elementwise_mul_c(dt, direction);
+}
+
+/**
+ * @brief Registers the appropriate normalization kernel.
+ *
+ * Selects the best available SIMD implementation based on the optimization
+ * level and data type:
+ * - optlevel_avx512 (3): AVX512 implementation
+ * - optlevel_avx256 (2): AVX256 implementation
+ * - optlevel_avx128 (1): AVX128 implementation
+ * - optlevel_scalar (0): Scalar C implementation
+ *
+ * @param[in] cpu_flags Optimization level (optimization_level_t) obtained
+ *                      from get_max_build_isa_level()
+ * @param[in] dt        Data type (DT_FLOAT or DT_DOUBLE)
+ * @return Function pointer to the selected normalization kernel
+ */
+normalize_ register_normalize_kernel(INT32 cpu_flags, INT32 dt)
+{
+#ifdef ENABLE_AVX512
+    if (cpu_flags >= optlevel_avx512)
+    {
+        return register_normalize_avx512(dt);
+    }
+#endif
+
+#ifdef ENABLE_AVX256
+    if (cpu_flags >= optlevel_avx256)
+    {
+        return register_normalize_avx256(dt);
+    }
+#endif
+
+#ifdef ENABLE_AVX128
+    if (cpu_flags >= optlevel_avx128)
+    {
+        return register_normalize_avx128(dt);
+    }
+#endif
+
+    /* Default to C implementation */
+    return register_normalize_c(dt);
+}
+
 #undef ACCESS_AVX128
 #undef ACCESS_AVX256
 #undef ACCESS_AVX512
-

@@ -15,7 +15,7 @@
 #include "core/solvers/solver.h"
 #include "core/solvers/transpose_solver.h"
 #include "core/common/memory_manager.h"
-#include "core/kernels/transpose/transpose_kernels.h"
+#include "core/kernels/non_dft/transpose/transpose_kernels.h"
 
 // Returns a pointer to the best suited transpose kernel for this problem
 aoclfftz_transpose_kernel

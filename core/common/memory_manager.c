@@ -170,7 +170,10 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->bluestein->B_out = NULL;
         sol->dft_bufs->bluestein->in = NULL;
         sol->dft_bufs->bluestein->out = NULL;
-        sol->dft_bufs->bluestein->is_B_out_valid = 0;
+        sol->dft_bufs->bluestein->is_chirp_fft_computed = 0;
+        sol->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR]  = NULL;
+        sol->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] = NULL;
+        sol->dft_bufs->bluestein->normalize = NULL;
         sol->dft_bufs->buffered->aux_buffer_1 = NULL;
         sol->dft_bufs->buffered->aux_buffer_2 = NULL;
         sol->dft_bufs->buffered->out_ptr = NULL;
@@ -280,6 +283,11 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
             selector->kernel_tables->kt_dft = kernel_tables->kt_dft;
             selector->kernel_tables->kt_twid_dft = kernel_tables->kt_twid_dft;
             selector->kernel_tables->kt_rdft = kernel_tables->kt_rdft;
+            selector->kernel_tables->ele_mul[FORWARD_FFT_DIR] =
+                kernel_tables->ele_mul[FORWARD_FFT_DIR];
+            selector->kernel_tables->ele_mul[BACKWARD_FFT_DIR] =
+                kernel_tables->ele_mul[BACKWARD_FFT_DIR];
+            selector->kernel_tables->normalize = kernel_tables->normalize;
         }
 
         return selector;

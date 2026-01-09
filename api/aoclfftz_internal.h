@@ -61,6 +61,8 @@
 #define SET_INPLACE(flags) SET_BIT_FLAG32(flags, 0, 0)
 #define SET_OUTOFPLACE(flags) SET_BIT_FLAG32(flags, 0, 1)
 
+#define SET_FFT_DIR(flags, val) SET_BIT_FLAG32(flags, 2, val)
+
 #define SET_BIT_REPRODUCIBLE(flags, val) SET_BIT_FLAG32(flags, 4, val)
 #define GET_BIT_REPRODUCIBLE(flags) GET_BIT_FLAG32(flags, 4)
 
@@ -265,17 +267,31 @@ typedef struct aoclfftz_twiddle
     UINTP load_multi_cols; /*< determines whether multiple columns are to be loaded from the twiddle buffer per iteration in the twiddle kernels */
 } aoclfftz_twiddle_t;
 
+// Function pointer for elementwise multiplication kernels.
+// Two direction-specialized variants are stored in ele_mul[NUM_FFT_DIRS]:
+// ele_mul[FORWARD_FFT_DIR] computes a .* conj(b), ele_mul[BACKWARD_FFT_DIR]
+// computes a .* b. Selection happens at the call site, not inside the kernel.
+typedef VOID (*elementwise_mul_)(VOID *out, VOID *a, VOID *b, INTP n);
+
+// Function pointer for in-place complex buffer normalization kernels.
+// data[i] *= factor for i in [0, n) complex elements (factor is real and is
+// applied uniformly to real and imaginary parts)
+typedef VOID (*normalize_)(VOID *data, INTP n, DOUBLE factor);
+
 // Holds bluestein sequence B used by the bluestein solver
 // When FFT is computed for B, it will be stored in B_out and
-// is_B_out_valid will be set to 1.
-// Also holds the internal input and output buffers.
+// is_chirp_fft_computed will be set to 1.
+// Also holds the internal input and output buffers, and the elementwise
+// multiplication and normalization kernels selected by the selector.
 typedef struct aoclfftz_bluestein
 {
     VOID *B;
     VOID *B_out;
     VOID *in;
     VOID *out;
-    UINT8 is_B_out_valid;
+    UINT8 is_chirp_fft_computed;
+    elementwise_mul_ ele_mul[NUM_FFT_DIRS];
+    normalize_ normalize;
 } aoclfftz_bluestein_t;
 
 typedef struct aoclfftz_buffered

@@ -36,6 +36,42 @@
 #define SWAP_RI_512_D(val) _mm512_permute_pd(val, 85)
 
 /**
+ * @brief Broadcasts real parts of complex numbers in a 512-bit register.
+ * Shuffle pattern 0xA0 (10100000b) selects elements [0,0,2,2].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_RE_512_S(val) _mm512_shuffle_ps(val, val, 0xA0) // 10100000b: [0,0,2,2]
+
+/**
+ * @brief Broadcasts imaginary parts of complex numbers in a 512-bit register.
+ * Shuffle pattern 0xF5 (11110101b) selects elements [1,1,3,3].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_IM_512_S(val) _mm512_shuffle_ps(val, val, 0xF5) // 11110101b: [1,1,3,3]
+
+/**
+ * @brief Broadcasts real parts of complex numbers in a 512-bit register
+ * for double precision floating point.
+ * Shuffle pattern 0x00 (00000000b) selects the low element of each 128-bit lane:
+ * [0,0,2,2,4,4,6,6].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_RE_512_D(val) _mm512_shuffle_pd(val, val, 0x00) // 00000000b: [0,0,2,2,4,4,6,6]
+
+/**
+ * @brief Broadcasts imaginary parts of complex numbers in a 512-bit register
+ * for double precision floating point.
+ * Shuffle pattern 0xFF (11111111b) selects the high element of each 128-bit lane:
+ * [1,1,3,3,5,5,7,7].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_IM_512_D(val) _mm512_shuffle_pd(val, val, 0xFF) // 11111111b: [1,1,3,3,5,5,7,7]
+
+/**
  * @brief implies the number of sets that can be processed in parallel.
  * Computed using Register width /(2* sizeof(floating point)
  */

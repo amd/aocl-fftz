@@ -22,7 +22,10 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     if (sel == NULL || sel->solution == NULL ||
-        sel->solution->decomp_scheme == NULL)
+        sel->solution->decomp_scheme == NULL || sel->kernel_tables == NULL ||
+        sel->kernel_tables->ele_mul[FORWARD_FFT_DIR] == NULL ||
+        sel->kernel_tables->ele_mul[BACKWARD_FFT_DIR] == NULL ||
+        sel->kernel_tables->normalize == NULL)
     {
         AOCLFFTZ_LOG(INFO, global_logger_mode,
                      "Invalid selector or solution passed to "
@@ -59,8 +62,17 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_bluestein_dft;
     }
 
+    // Bind the elementwise multiplication and normalization kernels registered
+    // for the plan onto this Bluestein solution
+    sel->solution->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR] =
+        sel->kernel_tables->ele_mul[FORWARD_FFT_DIR];
+    sel->solution->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] =
+        sel->kernel_tables->ele_mul[BACKWARD_FFT_DIR];
+    sel->solution->dft_bufs->bluestein->normalize =
+        sel->kernel_tables->normalize;
+
     // Initialize Bluestein sequence B
-    ret = prepare_bluestein_sequence(sel->solution, m);
+    ret = compute_chirp_sequence(sel->solution, m);
     if (ret != BLUESTEIN_SUCCESS)
     {
         goto exit_bluestein_dft;

@@ -71,16 +71,18 @@ file(GLOB API_SRC_FILES api/*.c api/*.cpp api/*.h)
 file(GLOB CORE_SRC_FILES CONFIGURE_DEPENDS ${CORE_PATH}/*.c ${CORE_PATH}/*.h
                         ${CORE_PATH}/common/*.c ${CORE_PATH}/common/*.h
                         ${CORE_PATH}/kernels/*.c ${CORE_PATH}/kernels/*.h
-                        ${CORE_PATH}/kernels/transpose/*.c ${CORE_PATH}/kernels/transpose/*.h
-                        ${CORE_PATH}/kernels/transpose/c/*.c ${CORE_PATH}/kernels/transpose/c/*.h
+                        ${CORE_PATH}/kernels/non_dft/transpose/*.c ${CORE_PATH}/kernels/non_dft/transpose/*.h
+                        ${CORE_PATH}/kernels/non_dft/transpose/c/*.c ${CORE_PATH}/kernels/non_dft/transpose/c/*.h
                         ${CORE_PATH}/solvers/*.c ${CORE_PATH}/solvers/*.h
                         ${CORE_PATH}/solvers/complex/*.c ${CORE_PATH}/solvers/complex/*.h
                         ${CORE_PATH}/solvers/real/*.c ${CORE_PATH}/solvers/real/*.h)
 file(GLOB CORE_C_FILES CONFIGURE_DEPENDS
-                        ${CORE_PATH}/kernels/c2c/c/*.c ${CORE_PATH}/kernels/c2c/c/*.h
-                        ${CORE_PATH}/kernels/r2hc/c/*.c ${CORE_PATH}/kernels/r2hc/c/*.h
-                        ${CORE_PATH}/kernels/r2hc_fused/c/*.c ${CORE_PATH}/kernels/r2hc_fused/c/*.h
-                        ${CORE_PATH}/kernels/tw_c2c/c/*.c)
+                        ${CORE_PATH}/kernels/dft/c2c/c/*.c ${CORE_PATH}/kernels/dft/c2c/c/*.h
+                        ${CORE_PATH}/kernels/non_dft/ele_mul/c/*.c
+                        ${CORE_PATH}/kernels/non_dft/perm_copy/c/*.c
+                        ${CORE_PATH}/kernels/dft/r2hc/c/*.c ${CORE_PATH}/kernels/dft/r2hc/c/*.h
+                        ${CORE_PATH}/kernels/dft/r2hc_fused/c/*.c ${CORE_PATH}/kernels/dft/r2hc_fused/c/*.h
+                        ${CORE_PATH}/kernels/dft/tw_c2c/c/*.c)
 list(APPEND CORE_SRC_FILES ${CORE_C_FILES})
 
 #Add AVX Kernels based on the flags ENABLE_AVX128, ENABLE_AVX256 & ENABLE_AVX512
@@ -88,30 +90,33 @@ if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX512")
     set(ENABLE_AVX512 ON)
     add_compile_definitions(ENABLE_AVX512)
     file(GLOB CORE_AVX512_FILES CONFIGURE_DEPENDS
-                            ${CORE_PATH}/kernels/c2c/avx512/*.c
-                            ${CORE_PATH}/kernels/r2hc/avx512/*.c
-                            ${CORE_PATH}/kernels/r2hc_fused/avx512/*.c
-                            ${CORE_PATH}/kernels/tw_c2c/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/c2c/avx512/*.c
+                            ${CORE_PATH}/kernels/non_dft/ele_mul/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/r2hc/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/r2hc_fused/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/tw_c2c/avx512/*.c
                             ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx512.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX512_FILES})
 endif()
 if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX256|AVX512")
     set(ENABLE_AVX256 ON)
     add_compile_definitions(ENABLE_AVX256)
-    file(GLOB CORE_AVX256_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/c2c/avx256/*.c
-                                                  ${CORE_PATH}/kernels/r2hc/avx256/*.c
-                                                  ${CORE_PATH}/kernels/r2hc_fused/avx256/*.c
-                                                  ${CORE_PATH}/kernels/tw_c2c/avx256/*.c
+    file(GLOB CORE_AVX256_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/dft/c2c/avx256/*.c
+                                                  ${CORE_PATH}/kernels/non_dft/ele_mul/avx256/*.c
+                                                  ${CORE_PATH}/kernels/dft/r2hc/avx256/*.c
+                                                  ${CORE_PATH}/kernels/dft/r2hc_fused/avx256/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c/avx256/*.c
                                                   ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx256.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX256_FILES})
 endif()
 if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX128|AVX256|AVX512")
     set(ENABLE_AVX128 ON)
     add_compile_definitions(ENABLE_AVX128)
-    file(GLOB CORE_AVX128_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/c2c/avx128/*.c
-                                                  ${CORE_PATH}/kernels/r2hc/avx128/*.c
-                                                  ${CORE_PATH}/kernels/r2hc_fused/avx128/*.c
-                                                  ${CORE_PATH}/kernels/tw_c2c/avx128/*.c
+    file(GLOB CORE_AVX128_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/dft/c2c/avx128/*.c
+                                                  ${CORE_PATH}/kernels/non_dft/ele_mul/avx128/*.c
+                                                  ${CORE_PATH}/kernels/dft/r2hc/avx128/*.c
+                                                  ${CORE_PATH}/kernels/dft/r2hc_fused/avx128/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c/avx128/*.c
                                                   ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx128.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX128_FILES})
 endif()

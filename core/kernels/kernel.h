@@ -100,11 +100,16 @@ typedef struct kernel_fp_list
 } kernel_fp_list_t;
 
 // Group of kernel tables holding different variants
+// ele_mul and normalize hold the elementwise multiplication and normalization
+// kernels selected for the plan based on cpu_flags, registered once by
+// register_solvers_kernels.
 typedef struct kernel_tables
 {
     kernel_t *kt_dft;
     kernel_t *kt_twid_dft;
     kernel_t *kt_rdft;
+    elementwise_mul_ ele_mul[NUM_FFT_DIRS];
+    normalize_ normalize;
 } kernel_tables_t;
 
 // Function declarations for the common routines
@@ -120,6 +125,18 @@ INT32 register_kernels_complex(
     kernel_fp_list_t static_kernel_table[NUM_KERNELS_IN_EACH_CATEGORY]
                                         [NUM_KERNEL_CATEGORIES],
     INT32 dt, INT32 dir, INT32 cpu_flags);
+
+// Selects the elementwise multiplication kernel variant for the given
+// cpu_flags, data type and direction. direction == FORWARD_FFT_DIR returns
+// the forward (a .* conj(b)) kernel; direction == BACKWARD_FFT_DIR returns
+// the backward (a .* b) kernel. Called twice per plan from
+// register_solvers_kernels (once for fwd, once for bwd).
+elementwise_mul_ register_elementwise_mul_kernel(INT32 cpu_flags, INT32 dt,
+                                                 UINT8 direction);
+
+// Selects the normalization kernel variant for the given cpu_flags and data
+// type. Called once per plan from register_solvers_kernels.
+normalize_ register_normalize_kernel(INT32 cpu_flags, INT32 dt);
 
 // Kernel function declarations for different floating point precision types
 // supported in scalar and vector compute variants
@@ -433,6 +450,9 @@ kfft_ register_kernel_twid_fft14c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_twid_fft15c(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_twid_fft16c(UINT8 precision, UINT8 direction);
 
+elementwise_mul_ register_elementwise_mul_c(UINT8 precision, UINT8 direction);
+normalize_ register_normalize_c(UINT8 precision);
+
 #ifdef ENABLE_AVX128
 kfft_ register_kernel_fft2avx128(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_fft3avx128(UINT8 precision, UINT8 direction);
@@ -467,6 +487,10 @@ kfft_ register_kernel_twid_fft13avx128(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_twid_fft14avx128(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_twid_fft15avx128(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_twid_fft16avx128(UINT8 precision, UINT8 direction);
+
+elementwise_mul_ register_elementwise_mul_avx128(UINT8 precision,
+                                                 UINT8 direction);
+normalize_ register_normalize_avx128(UINT8 precision);
 #endif
 
 #ifdef ENABLE_AVX256
@@ -503,6 +527,10 @@ kfft_ register_kernel_twid_fft13avx256(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_twid_fft14avx256(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_twid_fft15avx256(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_twid_fft16avx256(UINT8 precision, UINT8 direction);
+
+elementwise_mul_ register_elementwise_mul_avx256(UINT8 precision,
+                                                 UINT8 direction);
+normalize_ register_normalize_avx256(UINT8 precision);
 #endif
 
 #ifdef ENABLE_AVX512
@@ -539,6 +567,10 @@ kfft_ register_kernel_twid_fft13avx512(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_twid_fft14avx512(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_twid_fft15avx512(UINT8 precision, UINT8 direction);
 kfft_ register_kernel_twid_fft16avx512(UINT8 precision, UINT8 direction);
+
+elementwise_mul_ register_elementwise_mul_avx512(UINT8 precision,
+                                                 UINT8 direction);
+normalize_ register_normalize_avx512(UINT8 precision);
 #endif
 
 // R2HC Kernels
@@ -670,8 +702,10 @@ kfft_ register_kernel_r2hcf_rfft16avx512(UINT8 precision, UINT8 direction);
 
 // Permuted Copy Kernels
 VOID permuted_copy_c_fp32(VOID *in, VOID *out, INTP n, INTP size,
-                          aoclfftz_strides_t *strides, UINT8 data_stride);
+                          INTP in_stride, INTP out_stride, INTP v_in_stride,
+                          INTP v_out_stride);
 VOID permuted_copy_c_fp64(VOID *in, VOID *out, INTP n, INTP size,
-                          aoclfftz_strides_t *strides, UINT8 data_stride);
+                          INTP in_stride, INTP out_stride, INTP v_in_stride,
+                          INTP v_out_stride);
 
 #endif // AOCLFFTZ_KERNEL_H
