@@ -72,6 +72,7 @@ option(BUILD_DOC "Builds documentation for library (Disabled by default)" OFF)
 option(BUILD_STATIC_LIBS "Builds static library (Default build type is shared library)" OFF)
 option(BUILD_THIRD_PARTY_WRAPPERS "Builds fftz third party wrapper libraries along aocl_fftz library" OFF)
 option(CODE_COVERAGE "Enables source code coverage and generates coverage report. Supported only on Linux with GCC compiler (Disabled by default)" OFF)
+option(CODE_COVERAGE_FOR_ATG "Enables source code coverage instrumentation for running coverage and parsing tools for use by AI Test case Generation (ATG) later. Supported only on Linux with GCC compiler (Disabled by default)" OFF)
 option(ENABLE_APP_INFO_LOGS "Enables info logging for FFT problems used by the application (Independent of AOCL_ENABLE_LOG, Disabled by default)" OFF)
 set(ENABLE_INSTRUCTIONS_UPTO "AVX512" CACHE STRING "Specifies maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)")
 set_property(CACHE ENABLE_INSTRUCTIONS_UPTO PROPERTY STRINGS "None" "AVX128" "AVX256" "AVX512")
@@ -318,10 +319,11 @@ if(NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "None"
 endif()
 
 # setup to get source code coverage(GCOV)
-if(CODE_COVERAGE)
+if(CODE_COVERAGE OR CODE_COVERAGE_FOR_ATG)
     if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND ${CMAKE_C_COMPILER_ID} STREQUAL "GNU"))
         # Switch off GCOV: target not supported
         set(CODE_COVERAGE OFF)
+	set(CODE_COVERAGE_FOR_ATG OFF)
         message(WARNING "Target not supported. Code coverage is only supported on Linux OS with GCC compiler")
     endif()
 endif()
@@ -353,13 +355,14 @@ if(FUZZTEST)
 endif()
 
 # Setting AOCL_TEST_COVERAGE to STANDARD to enable CTests and GTests for VALGRIND / CODE_COVERAGE / FUZZTEST
-if((VALGRIND OR CODE_COVERAGE OR FUZZTEST) AND (AOCL_TEST_COVERAGE STREQUAL "OFF"))
+if((VALGRIND OR CODE_COVERAGE OR CODE_COVERAGE_FOR_ATG OR FUZZTEST) AND (AOCL_TEST_COVERAGE STREQUAL "OFF"))
     set(AOCL_TEST_COVERAGE "STANDARD")
 endif()
 
 message(STATUS ASAN : ${ASAN})
 message(STATUS VALGRIND : ${VALGRIND})
 message(STATUS CODE COVERAGE : ${CODE_COVERAGE})
+message(STATUS CODE COVERAGE ATG : ${CODE_COVERAGE_FOR_ATG})
 message(STATUS AOCL_ENABLE_LOG : ${AOCL_ENABLE_LOG})
 message(STATUS FUZZTEST : ${FUZZTEST})
 message(STATUS MULTI-THREADING : ${ENABLE_MULTI_THREADING})
@@ -467,7 +470,7 @@ if(ENABLE_MULTI_THREADING)
 endif()
 
 # add the compiler and linker flags for code coverage
-if(CODE_COVERAGE)
+if(CODE_COVERAGE OR CODE_COVERAGE_FOR_ATG)
     target_compile_options(${lib_name} PUBLIC --coverage)
     # Check if the compiler supports -fprofile-abs-path
     check_cxx_compiler_flag("-fprofile-abs-path" HAS_FPROFILE_ABS_PATH)
