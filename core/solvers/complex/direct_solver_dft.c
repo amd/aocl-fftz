@@ -195,9 +195,9 @@ static INT32 execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
     for (INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
     {
         aoclfftz_twiddle_t tw_local = {
+            .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
             .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
             .cols = sol->twiddle->cols,
-            .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
             .load_multi_cols = 0, // use same twiddle values across batches
         };                        // since different batches solve the same
                                   // DFT butterfly of different problems
