@@ -189,7 +189,6 @@ static INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol)
     INT32 dt_prec, dt_bytes;
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     dt_bytes = DT_PRECISION_BYTES(dt_prec);
-    UINT8 is_inplace = !IS_OUT_OF_PLACE(sol->decomp_scheme->flags);
     UINT8 is_forward = (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR);
 
     if (is_forward)
@@ -197,27 +196,14 @@ static INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol)
         // R2C (forward) Execution Flow:
         // 1. real_dim_sol (1D R2C):
         //    in: input buffer
-        //    out: aux_buffer_1 (in-place) / output buffer (out-of-place)
+        //    out: output buffer
         // 2. complex_dims_sol ((N-1)D C2C):
-        //    in: aux_buffer_1 (in-place) / output buffer (out-of-place)
+        //    in: output buffer
         //    out: output buffer
         real_dim_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
         real_dim_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
-        if (is_inplace)
-        {
-            real_dim_sol->decomp_scheme->out_real =
-                sol->dft_bufs->buffered->aux_buffer_1;
-            real_dim_sol->decomp_scheme->out_imag =
-                MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_1, dt_bytes);
-        }
-        else
-        {
-            real_dim_sol->decomp_scheme->out_real =
-                sol->decomp_scheme->out_real;
-            real_dim_sol->decomp_scheme->out_imag =
-                sol->decomp_scheme->out_imag;
-        }
-
+        real_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+        real_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
         complex_dims_sol->decomp_scheme->in_real =
             real_dim_sol->decomp_scheme->out_real;
         complex_dims_sol->decomp_scheme->in_imag =
