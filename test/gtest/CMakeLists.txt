@@ -36,7 +36,7 @@
 # Finds Doxygen installation and generates the documentation automatically.
 #
 # @author Srirammaswamy Srinivasan
-# @author Ashwin Godbole
+# @author Ashwin K. Godbole
 
 include(GoogleTest)
 include(ExternalProject)

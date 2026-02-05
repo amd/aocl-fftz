@@ -612,4 +612,97 @@ static const union data_union_256
     a = SWAP_RI_256_D(a);                                                      \
     c = SWAP_RI_256_D(_mm256_addsub_pd(a, b));                                 \
 }
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 4, other: 1}
+#define ITW_PRELOADED_256_D(gbase, starr, stidx, offset, gdest, twv)           \
+{                                                                              \
+    __m256d tmp_in;                                                            \
+    GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
+    const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
+    const __m256d lo_1 = _mm256_unpacklo_pd(tmp_1, tmp_0);                     \
+    const __m256d hi_1 = _mm256_unpackhi_pd(tmp_1, tmp_0);                     \
+    gdest = SWAP_RI_256_D(_mm256_addsub_pd(lo_1, hi_1));                       \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 3, other: 1}
+#define TW_PRELOADED_256_D(gbase, starr, stidx, offset, gdest, twv)            \
+{                                                                              \
+    __m256d tmp_in;                                                            \
+    GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
+    const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
+    const __m256d lo_1 = _mm256_unpacklo_pd(tmp_0, tmp_1);                     \
+    const __m256d hi_1 = _mm256_unpackhi_pd(tmp_0, tmp_1);                     \
+    gdest = _mm256_addsub_pd(lo_1, hi_1);                                      \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 2, other: 0}
+#define ITW_PRELOADED_128_D(gbase, starr, stidx, offset, gdest, twv)           \
+{                                                                              \
+    const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)]);               \
+    const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);           \
+    const __m128d ca_da = _mm_mul_pd(twv, aa);                                 \
+    const __m128d cb_db = _mm_mul_pd(twv, bb);                                 \
+    const __m128d db_cb = SWAP_RI_128_D(cb_db);                                \
+    gdest = SWAP_RI_128_D(_mm_addsub_pd(ca_da, db_cb));                        \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 1, other: 0}
+#define TW_PRELOADED_128_D(gbase, starr, stidx, offset, gdest, twv)            \
+{                                                                              \
+    const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)]);               \
+    const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);           \
+    const __m128d ca_da = _mm_mul_pd(twv, aa);                                 \
+    const __m128d cb_db = _mm_mul_pd(twv, bb);                                 \
+    const __m128d db_cb = SWAP_RI_128_D(cb_db);                                \
+    gdest = _mm_addsub_pd(ca_da, db_cb);                                       \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 4, other: 1}
+#define ITW_PRELOADED_256_D_V(gbase, stride, offset, gdest, twv)               \
+{                                                                              \
+    __m256d tmp_in;                                                            \
+    GATHER2_256_D((gbase) + (stride), (offset), tmp_in);                       \
+    const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
+    const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
+    const __m256d lo_1 = _mm256_unpacklo_pd(tmp_1, tmp_0);                     \
+    const __m256d hi_1 = _mm256_unpackhi_pd(tmp_1, tmp_0);                     \
+    gdest = SWAP_RI_256_D(_mm256_addsub_pd(lo_1, hi_1));                       \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 3, other: 1}
+#define TW_PRELOADED_256_D_V(gbase, stride, offset, gdest, twv)                \
+{                                                                              \
+    __m256d tmp_in;                                                            \
+    GATHER2_256_D((gbase) + (stride), (offset), tmp_in);                       \
+    const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
+    const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
+    const __m256d lo_1 = _mm256_unpacklo_pd(tmp_0, tmp_1);                     \
+    const __m256d hi_1 = _mm256_unpackhi_pd(tmp_0, tmp_1);                     \
+    gdest = _mm256_addsub_pd(lo_1, hi_1);                                      \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 2, other: 0}
+#define ITW_PRELOADED_128_D_V(gbase, stride, offset, gdest, twv)               \
+{                                                                              \
+    const __m128d bb = _mm_loaddup_pd((gbase) + (stride));                     \
+    const __m128d aa = _mm_loaddup_pd((gbase) + (stride) + 1);                 \
+    const __m128d ca_da = _mm_mul_pd(twv, aa);                                 \
+    const __m128d cb_db = _mm_mul_pd(twv, bb);                                 \
+    const __m128d db_cb = SWAP_RI_128_D(cb_db);                                \
+    gdest = SWAP_RI_128_D(_mm_addsub_pd(ca_da, db_cb));                        \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 1, other: 0}
+#define TW_PRELOADED_128_D_V(gbase, stride, offset, gdest, twv)                \
+{                                                                              \
+    const __m128d aa = _mm_loaddup_pd((gbase) + (stride));                     \
+    const __m128d bb = _mm_loaddup_pd((gbase) + (stride) + 1);                 \
+    const __m128d ca_da = _mm_mul_pd(twv, aa);                                 \
+    const __m128d cb_db = _mm_mul_pd(twv, bb);                                 \
+    const __m128d db_cb = SWAP_RI_128_D(cb_db);                                \
+    gdest = _mm_addsub_pd(ca_da, db_cb);                                       \
+}
+
 #endif // AOCLFFTZ_SIMD_COMMON_H

@@ -399,71 +399,144 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
     // nothing, since double doesn't have any tail cases to process for AVX128
 #endif
 
+    // Hoist loop-invariant values
+    const INTP out_stride_1 = out_strides[1];
+    const INTP out_stride_2 = out_strides[2];
+    const INTP out_stride_3 = out_strides[3];
+    const INTP in_stride_1 = in_strides[1];
+    const INTP in_stride_2 = in_strides[2];
+    const INTP in_stride_3 = in_strides[3];
+    const INTP in_stride_inc = NUM_SETS_D * v_in_stride;
+    const INTP out_stride_inc = NUM_SETS_D * v_out_stride;
+    const UINTP tw_col_base_1 = DATA_STRIDE * cols;
+    const UINTP tw_col_base_2 = DATA_STRIDE * 2 * cols;
+    const UINTP tw_col_base_3 = DATA_STRIDE * 3 * cols;
+    const UINTP tw_stride = DATA_STRIDE * NUM_SETS_D;  // only used when load_multi_cols = 1
+
     VREGTYPE_D v_C1 = BCAST_D(CRTM_4_1);
 
     v_C1 = NEG_D(v_C1, flag);
 
-    for (count = 0; count < N; count++)
+    // Pre-compute twiddle base addresses
+    DOUBLE *tw_base_1 = tw + tw_col_base_1;
+    DOUBLE *tw_base_2 = tw + tw_col_base_2;
+    DOUBLE *tw_base_3 = tw + tw_col_base_3;
+
+    // Hoist load_multi_cols branch outside the loop
+    if (load_multi_cols)
     {
-        VREGTYPE_D v_in0, v_in1, v_in2, v_in3;
-        VREGTYPE_D v_av1, v_av2;
-        VREGTYPE_D v_out0, v_out1, v_out2, v_out3;
-
-        curr_in = in_r;
-        curr_out = out_r;
-
-        if (flag)
+        for (count = 0; count < N; count++)
         {
-            ITW_GATHER_D(curr_in, in_strides, 1, v_in_stride, v_in1, tw, cols,
-                         (count * load_multi_cols * NUM_SETS_D),
-                         load_multi_cols);
-            ITW_GATHER_D(curr_in, in_strides, 2, v_in_stride, v_in2, tw, cols,
-                         (count * load_multi_cols * NUM_SETS_D),
-                         load_multi_cols);
-            ITW_GATHER_D(curr_in, in_strides, 3, v_in_stride, v_in3, tw, cols,
-                         (count * load_multi_cols * NUM_SETS_D),
-                         load_multi_cols);
+            VREGTYPE_D v_in0, v_in1, v_in2, v_in3;
+            VREGTYPE_D v_av1, v_av2;
+            VREGTYPE_D v_out0, v_out1, v_out2, v_out3;
+            VREGTYPE_D twv1, twv2, twv3;
+
+            curr_in = in_r;
+            curr_out = out_r;
+
+            // Load twiddle values (LOADU path)
+            DOUBLE *tw_addr_1 = tw_base_1 + count * tw_stride;
+            DOUBLE *tw_addr_2 = tw_base_2 + count * tw_stride;
+            DOUBLE *tw_addr_3 = tw_base_3 + count * tw_stride;
+            twv1 = LOADU_D(tw_addr_1);
+            twv2 = LOADU_D(tw_addr_2);
+            twv3 = LOADU_D(tw_addr_3);
+
+            if (flag)
+            {
+                ITW_PRELOADED_D(curr_in, in_strides, 1, v_in_stride, v_in1, twv1);
+                ITW_PRELOADED_D(curr_in, in_strides, 2, v_in_stride, v_in2, twv2);
+                ITW_PRELOADED_D(curr_in, in_strides, 3, v_in_stride, v_in3, twv3);
+            }
+            else
+            {
+                TW_PRELOADED_D(curr_in, in_strides, 1, v_in_stride, v_in1, twv1);
+                TW_PRELOADED_D(curr_in, in_strides, 2, v_in_stride, v_in2, twv2);
+                TW_PRELOADED_D(curr_in, in_strides, 3, v_in_stride, v_in3, twv3);
+            }
+
+            GATHER_D(curr_in, v_in_stride, v_in0);
+
+            v_av1 = ADD_D(v_in0, v_in2);
+            v_av2 = ADD_D(v_in1, v_in3);
+
+            v_out0 = ADD_D(v_av1, v_av2);
+            v_out2 = SUB_D(v_av1, v_av2);
+
+            v_av1 = SUB_D(v_in3, v_in1);
+            v_av1 = MUL_D(v_C1, v_av1);
+            v_av1 = SWAP_RI_D(CONJ_D(v_av1));
+            v_av2 = SUB_D(v_in0, v_in2);
+
+            v_out1 = ADD_D(v_av2, v_av1);
+            v_out3 = SUB_D(v_av2, v_av1);
+
+            SCATTER_D(curr_out, v_out_stride, v_out0);
+            SCATTER_D(curr_out + out_stride_1, v_out_stride, v_out1);
+            SCATTER_D(curr_out + out_stride_2, v_out_stride, v_out2);
+            SCATTER_D(curr_out + out_stride_3, v_out_stride, v_out3);
+
+            in_r += in_stride_inc;
+            out_r += out_stride_inc;
         }
-        else
+    }
+    else
+    {
+        // Broadcast case: twiddle addresses don't depend on count
+        DOUBLE *tw_addr_1 = tw_base_1;
+        DOUBLE *tw_addr_2 = tw_base_2;
+        DOUBLE *tw_addr_3 = tw_base_3;
+        VREGTYPE_D twv1 = BROADCAST_D(tw_addr_1);
+        VREGTYPE_D twv2 = BROADCAST_D(tw_addr_2);
+        VREGTYPE_D twv3 = BROADCAST_D(tw_addr_3);
+
+        for (count = 0; count < N; count++)
         {
-            TW_GATHER_D(curr_in, in_strides, 1, v_in_stride, v_in1, tw, cols,
-                        (count * load_multi_cols * NUM_SETS_D),
-                        load_multi_cols);
-            TW_GATHER_D(curr_in, in_strides, 2, v_in_stride, v_in2, tw, cols,
-                        (count * load_multi_cols * NUM_SETS_D),
-                        load_multi_cols);
-            TW_GATHER_D(curr_in, in_strides, 3, v_in_stride, v_in3, tw, cols,
-                        (count * load_multi_cols * NUM_SETS_D),
-                        load_multi_cols);
+            VREGTYPE_D v_in0, v_in1, v_in2, v_in3;
+            VREGTYPE_D v_av1, v_av2;
+            VREGTYPE_D v_out0, v_out1, v_out2, v_out3;
+
+            curr_in = in_r;
+            curr_out = out_r;
+
+            if (flag)
+            {
+                ITW_PRELOADED_D_V(curr_in, in_stride_1, v_in_stride, v_in1, twv1);
+                ITW_PRELOADED_D_V(curr_in, in_stride_2, v_in_stride, v_in2, twv2);
+                ITW_PRELOADED_D_V(curr_in, in_stride_3, v_in_stride, v_in3, twv3);
+            }
+            else
+            {
+                TW_PRELOADED_D_V(curr_in, in_stride_1, v_in_stride, v_in1, twv1);
+                TW_PRELOADED_D_V(curr_in, in_stride_2, v_in_stride, v_in2, twv2);
+                TW_PRELOADED_D_V(curr_in, in_stride_3, v_in_stride, v_in3, twv3);
+            }
+
+            GATHER_D(curr_in, v_in_stride, v_in0);
+
+            v_av1 = ADD_D(v_in0, v_in2);
+            v_av2 = ADD_D(v_in1, v_in3);
+
+            v_out0 = ADD_D(v_av1, v_av2);
+            v_out2 = SUB_D(v_av1, v_av2);
+
+            v_av1 = SUB_D(v_in3, v_in1);
+            v_av1 = MUL_D(v_C1, v_av1);
+            v_av1 = SWAP_RI_D(CONJ_D(v_av1));
+            v_av2 = SUB_D(v_in0, v_in2);
+
+            v_out1 = ADD_D(v_av2, v_av1);
+            v_out3 = SUB_D(v_av2, v_av1);
+
+            SCATTER_D(curr_out, v_out_stride, v_out0);
+            SCATTER_D(curr_out + out_stride_1, v_out_stride, v_out1);
+            SCATTER_D(curr_out + out_stride_2, v_out_stride, v_out2);
+            SCATTER_D(curr_out + out_stride_3, v_out_stride, v_out3);
+
+            in_r += in_stride_inc;
+            out_r += out_stride_inc;
         }
-
-        GATHER_D(curr_in, v_in_stride, v_in0);
-
-        v_av1 = ADD_D(v_in0, v_in2);
-        v_av2 = ADD_D(v_in1, v_in3);
-
-        // Output point 1: X[0]
-        v_out0 = ADD_D(v_av1, v_av2);
-        // Output point 3: X[2]
-        v_out2 = SUB_D(v_av1, v_av2);
-
-        v_av1 = SUB_D(v_in3, v_in1);
-        v_av1 = MUL_D(v_C1, v_av1);
-        v_av1 = SWAP_RI_D(CONJ_D(v_av1));
-        v_av2 = SUB_D(v_in0, v_in2);
-
-        // Output point 2: X[1]
-        v_out1 = ADD_D(v_av2, v_av1);
-        // Output point 4: X[3]
-        v_out3 = SUB_D(v_av2, v_av1);
-
-        SCATTER_D(curr_out, v_out_stride, v_out0);
-        SCATTER_D(curr_out + out_strides[1], v_out_stride, v_out1);
-        SCATTER_D(curr_out + out_strides[2], v_out_stride, v_out2);
-        SCATTER_D(curr_out + out_strides[3], v_out_stride, v_out3);
-
-        in_r += NUM_SETS_D * v_in_stride;
-        out_r += NUM_SETS_D * v_out_stride;
     }
 
     // The following contains code that performs the FFT on the tail cases.
@@ -476,29 +549,41 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
         __m256d v_in0, v_in1, v_in2, v_in3;
         __m256d v_av1, v_av2;
         __m256d v_out0, v_out1, v_out2, v_out3;
+        __m256d twv1, twv2, twv3;
 
         __m256d K1 = CAST_512_TO_256_D(v_C1);
 
         curr_in = in_r;
         curr_out = out_r;
 
-        if (flag)
+        // Load twiddle values for indices 1, 2, 3
+        const UINTP addr1 = DATA_STRIDE * (1 * cols + cnt_256);
+        const UINTP addr2 = DATA_STRIDE * (2 * cols + cnt_256);
+        const UINTP addr3 = DATA_STRIDE * (3 * cols + cnt_256);
+        if (load_multi_cols)
         {
-            ITW_GATHER_256_D(curr_in, in_strides, 1, v_in_stride, v_in1, tw,
-                             cols, cnt_256, load_multi_cols);
-            ITW_GATHER_256_D(curr_in, in_strides, 2, v_in_stride, v_in2, tw,
-                             cols, cnt_256, load_multi_cols);
-            ITW_GATHER_256_D(curr_in, in_strides, 3, v_in_stride, v_in3, tw,
-                             cols, cnt_256, load_multi_cols);
+            twv1 = _mm256_loadu_pd(tw + addr1);
+            twv2 = _mm256_loadu_pd(tw + addr2);
+            twv3 = _mm256_loadu_pd(tw + addr3);
         }
         else
         {
-            TW_GATHER_256_D(curr_in, in_strides, 1, v_in_stride, v_in1, tw,
-                            cols, cnt_256, load_multi_cols);
-            TW_GATHER_256_D(curr_in, in_strides, 2, v_in_stride, v_in2, tw,
-                            cols, cnt_256, load_multi_cols);
-            TW_GATHER_256_D(curr_in, in_strides, 3, v_in_stride, v_in3, tw,
-                            cols, cnt_256, load_multi_cols);
+            twv1 = _mm256_broadcast_pd((__m128d *)(tw + addr1));
+            twv2 = _mm256_broadcast_pd((__m128d *)(tw + addr2));
+            twv3 = _mm256_broadcast_pd((__m128d *)(tw + addr3));
+        }
+
+        if (flag)
+        {
+            ITW_PRELOADED_256_D_V(curr_in, in_stride_1, v_in_stride, v_in1, twv1);
+            ITW_PRELOADED_256_D_V(curr_in, in_stride_2, v_in_stride, v_in2, twv2);
+            ITW_PRELOADED_256_D_V(curr_in, in_stride_3, v_in_stride, v_in3, twv3);
+        }
+        else
+        {
+            TW_PRELOADED_256_D_V(curr_in, in_stride_1, v_in_stride, v_in1, twv1);
+            TW_PRELOADED_256_D_V(curr_in, in_stride_2, v_in_stride, v_in2, twv2);
+            TW_PRELOADED_256_D_V(curr_in, in_stride_3, v_in_stride, v_in3, twv3);
         }
 
         GATHER2_256_D(curr_in, v_in_stride, v_in0);
@@ -522,9 +607,9 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out3 = _mm256_sub_pd(v_av2, v_av1);
 
         SCATTER2_256_D(curr_out, v_out_stride, v_out0);
-        SCATTER2_256_D(curr_out + out_strides[1], v_out_stride, v_out1);
-        SCATTER2_256_D(curr_out + out_strides[2], v_out_stride, v_out2);
-        SCATTER2_256_D(curr_out + out_strides[3], v_out_stride, v_out3);
+        SCATTER2_256_D(curr_out + out_stride_1, v_out_stride, v_out1);
+        SCATTER2_256_D(curr_out + out_stride_2, v_out_stride, v_out2);
+        SCATTER2_256_D(curr_out + out_stride_3, v_out_stride, v_out3);
 
         in_r += NUM_SETS_256_D * v_in_stride;
         out_r += NUM_SETS_256_D * v_out_stride;
@@ -537,6 +622,7 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
         __m128d v_in0, v_in1, v_in2, v_in3;
         __m128d v_av1, v_av2;
         __m128d v_out0, v_out1, v_out2, v_out3;
+        __m128d twv1, twv2, twv3;
 
 #if defined(KERNEL_USE_AVX512)
         __m128d K1 = CAST_512_TO_128_D(v_C1);
@@ -547,23 +633,25 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_in = in_r;
         curr_out = out_r;
 
+        // Load twiddle values for indices 1, 2, 3
+        const UINTP addr1 = DATA_STRIDE * (1 * cols + cnt_128);
+        const UINTP addr2 = DATA_STRIDE * (2 * cols + cnt_128);
+        const UINTP addr3 = DATA_STRIDE * (3 * cols + cnt_128);
+        twv1 = _mm_loadu_pd(tw + addr1);
+        twv2 = _mm_loadu_pd(tw + addr2);
+        twv3 = _mm_loadu_pd(tw + addr3);
+
         if (flag)
         {
-            ITW_GATHER_128_D(curr_in, in_strides, 1, /* unused */ 0, v_in1, tw,
-                             cols, cnt_128, load_multi_cols);
-            ITW_GATHER_128_D(curr_in, in_strides, 2, /* unused */ 0, v_in2, tw,
-                             cols, cnt_128, load_multi_cols);
-            ITW_GATHER_128_D(curr_in, in_strides, 3, /* unused */ 0, v_in3, tw,
-                             cols, cnt_128, load_multi_cols);
+            ITW_PRELOADED_128_D_V(curr_in, in_stride_1, /* unused */ 0, v_in1, twv1);
+            ITW_PRELOADED_128_D_V(curr_in, in_stride_2, /* unused */ 0, v_in2, twv2);
+            ITW_PRELOADED_128_D_V(curr_in, in_stride_3, /* unused */ 0, v_in3, twv3);
         }
         else
         {
-            TW_GATHER_128_D(curr_in, in_strides, 1, /* unused */ 0, v_in1, tw,
-                            cols, cnt_128, load_multi_cols);
-            TW_GATHER_128_D(curr_in, in_strides, 2, /* unused */ 0, v_in2, tw,
-                            cols, cnt_128, load_multi_cols);
-            TW_GATHER_128_D(curr_in, in_strides, 3, /* unused */ 0, v_in3, tw,
-                            cols, cnt_128, load_multi_cols);
+            TW_PRELOADED_128_D_V(curr_in, in_stride_1, /* unused */ 0, v_in1, twv1);
+            TW_PRELOADED_128_D_V(curr_in, in_stride_2, /* unused */ 0, v_in2, twv2);
+            TW_PRELOADED_128_D_V(curr_in, in_stride_3, /* unused */ 0, v_in3, twv3);
         }
 
         LD_128_D(curr_in, v_in0);
@@ -587,9 +675,9 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out3 = _mm_sub_pd(v_av2, v_av1);
 
         ST_128_D(curr_out, v_out0);
-        ST_128_D(curr_out + out_strides[1], v_out1);
-        ST_128_D(curr_out + out_strides[2], v_out2);
-        ST_128_D(curr_out + out_strides[3], v_out3);
+        ST_128_D(curr_out + out_stride_1, v_out1);
+        ST_128_D(curr_out + out_stride_2, v_out2);
+        ST_128_D(curr_out + out_stride_3, v_out3);
     }
 #endif
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");

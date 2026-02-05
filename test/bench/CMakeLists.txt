@@ -30,7 +30,7 @@
 #
 # Adds CTest for test bench. Generates code coverage report.
 #
-# @author Ashwin Godbole
+# @author Ashwin K. Godbole
 # @author Jeya R
 # @author Prasandh Sankarankutty
 
