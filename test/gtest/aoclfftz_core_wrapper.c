@@ -581,6 +581,10 @@ ops_cycles_t get_ops_cnt_r2hc_rfft10c_wrapper(UINT8 precision, UINT8 direction)
 {
     return get_ops_cnt_r2hc_rfft10c(precision, direction);
 }
+ops_cycles_t get_ops_cnt_r2hc_rfft11c_wrapper(UINT8 precision, UINT8 direction)
+{
+    return get_ops_cnt_r2hc_rfft11c(precision, direction);
+}
 ops_cycles_t get_ops_cnt_r2hc_rfft12c_wrapper(UINT8 precision, UINT8 direction)
 {
     return get_ops_cnt_r2hc_rfft12c(precision, direction);
@@ -629,6 +633,10 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft8c_wrapper(UINT8 precision, UINT8 direction)
 ops_cycles_t get_ops_cnt_r2hcf_rfft10c_wrapper(UINT8 precision, UINT8 direction)
 {
     return get_ops_cnt_r2hcf_rfft10c(precision, direction);
+}
+ops_cycles_t get_ops_cnt_r2hcf_rfft11c_wrapper(UINT8 precision, UINT8 direction)
+{
+    return get_ops_cnt_r2hcf_rfft11c(precision, direction);
 }
 ops_cycles_t get_ops_cnt_r2hcf_rfft12c_wrapper(UINT8 precision, UINT8 direction)
 {
@@ -688,6 +696,11 @@ ops_cycles_t get_ops_cnt_r2hc_rfft10avx128_wrapper(UINT8 precision,
                                                    UINT8 direction)
 {
     return get_ops_cnt_r2hc_rfft10avx128(precision, direction);
+}
+ops_cycles_t get_ops_cnt_r2hc_rfft11avx128_wrapper(UINT8 precision,
+                                                   UINT8 direction)
+{
+    return get_ops_cnt_r2hc_rfft11avx128(precision, direction);
 }
 ops_cycles_t get_ops_cnt_r2hc_rfft12avx128_wrapper(UINT8 precision,
                                                    UINT8 direction)
@@ -750,6 +763,11 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft10avx128_wrapper(UINT8 precision,
                                                     UINT8 direction)
 {
     return get_ops_cnt_r2hcf_rfft10avx128(precision, direction);
+}
+ops_cycles_t get_ops_cnt_r2hcf_rfft11avx128_wrapper(UINT8 precision,
+                                                    UINT8 direction)
+{
+    return get_ops_cnt_r2hcf_rfft11avx128(precision, direction);
 }
 ops_cycles_t get_ops_cnt_r2hcf_rfft12avx128_wrapper(UINT8 precision,
                                                     UINT8 direction)
@@ -814,6 +832,11 @@ ops_cycles_t get_ops_cnt_r2hc_rfft10avx256_wrapper(UINT8 precision,
 {
     return get_ops_cnt_r2hc_rfft10avx256(precision, direction);
 }
+ops_cycles_t get_ops_cnt_r2hc_rfft11avx256_wrapper(UINT8 precision,
+                                                   UINT8 direction)
+{
+    return get_ops_cnt_r2hc_rfft11avx256(precision, direction);
+}
 ops_cycles_t get_ops_cnt_r2hc_rfft12avx256_wrapper(UINT8 precision,
                                                    UINT8 direction)
 {
@@ -874,6 +897,11 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft10avx256_wrapper(UINT8 precision,
                                                     UINT8 direction)
 {
     return get_ops_cnt_r2hcf_rfft10avx256(precision, direction);
+}
+ops_cycles_t get_ops_cnt_r2hcf_rfft11avx256_wrapper(UINT8 precision,
+                                                    UINT8 direction)
+{
+    return get_ops_cnt_r2hcf_rfft11avx256(precision, direction);
 }
 ops_cycles_t get_ops_cnt_r2hcf_rfft12avx256_wrapper(UINT8 precision,
                                                     UINT8 direction)
@@ -938,6 +966,11 @@ ops_cycles_t get_ops_cnt_r2hc_rfft10avx512_wrapper(UINT8 precision,
 {
     return get_ops_cnt_r2hc_rfft10avx512(precision, direction);
 }
+ops_cycles_t get_ops_cnt_r2hc_rfft11avx512_wrapper(UINT8 precision,
+                                                   UINT8 direction)
+{
+    return get_ops_cnt_r2hc_rfft11avx512(precision, direction);
+}
 ops_cycles_t get_ops_cnt_r2hc_rfft12avx512_wrapper(UINT8 precision,
                                                   UINT8 direction)
 {
@@ -998,6 +1031,11 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft10avx512_wrapper(UINT8 precision,
                                                     UINT8 direction)
 {
     return get_ops_cnt_r2hcf_rfft10avx512(precision, direction);
+}
+ops_cycles_t get_ops_cnt_r2hcf_rfft11avx512_wrapper(UINT8 precision,
+                                                    UINT8 direction)
+{
+    return get_ops_cnt_r2hcf_rfft11avx512(precision, direction);
 }
 ops_cycles_t get_ops_cnt_r2hcf_rfft12avx512_wrapper(UINT8 precision,
                                                     UINT8 direction)
@@ -1587,6 +1625,10 @@ kfft_ register_kernel_r2hc_rfft10c_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_r2hc_rfft10c(precision, direction);
 }
+kfft_ register_kernel_r2hc_rfft11c_wrapper(UINT8 precision, UINT8 direction)
+{
+    return register_kernel_r2hc_rfft11c(precision, direction);
+}
 kfft_ register_kernel_r2hc_rfft12c_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_r2hc_rfft12c(precision, direction);
@@ -1635,6 +1677,10 @@ kfft_ register_kernel_r2hcf_rfft8c_wrapper(UINT8 precision, UINT8 direction)
 kfft_ register_kernel_r2hcf_rfft10c_wrapper(UINT8 precision, UINT8 direction)
 {
     return register_kernel_r2hcf_rfft10c(precision, direction);
+}
+kfft_ register_kernel_r2hcf_rfft11c_wrapper(UINT8 precision, UINT8 direction)
+{
+    return register_kernel_r2hcf_rfft11c(precision, direction);
 }
 kfft_ register_kernel_r2hcf_rfft12c_wrapper(UINT8 precision, UINT8 direction)
 {
@@ -1687,6 +1733,11 @@ kfft_ register_kernel_r2hc_rfft10avx128_wrapper(UINT8 precision,
                                                 UINT8 direction)
 {
     return register_kernel_r2hc_rfft10avx128(precision, direction);
+}
+kfft_ register_kernel_r2hc_rfft11avx128_wrapper(UINT8 precision,
+                                                UINT8 direction)
+{
+    return register_kernel_r2hc_rfft11avx128(precision, direction);
 }
 kfft_ register_kernel_r2hc_rfft12avx128_wrapper(UINT8 precision,
                                                 UINT8 direction)
@@ -1750,6 +1801,11 @@ kfft_ register_kernel_r2hcf_rfft10avx128_wrapper(UINT8 precision,
 {
     return register_kernel_r2hcf_rfft10avx128(precision, direction);
 }
+kfft_ register_kernel_r2hcf_rfft11avx128_wrapper(UINT8 precision,
+                                                 UINT8 direction)
+{
+    return register_kernel_r2hcf_rfft11avx128(precision, direction);
+}
 kfft_ register_kernel_r2hcf_rfft12avx128_wrapper(UINT8 precision,
                                                  UINT8 direction)
 {
@@ -1806,6 +1862,11 @@ kfft_ register_kernel_r2hc_rfft10avx256_wrapper(UINT8 precision,
                                                 UINT8 direction)
 {
     return register_kernel_r2hc_rfft10avx256(precision, direction);
+}
+kfft_ register_kernel_r2hc_rfft11avx256_wrapper(UINT8 precision,
+                                                UINT8 direction)
+{
+    return register_kernel_r2hc_rfft11avx256(precision, direction);
 }
 kfft_ register_kernel_r2hc_rfft12avx256_wrapper(UINT8 precision,
                                                 UINT8 direction)
@@ -1869,6 +1930,11 @@ kfft_ register_kernel_r2hcf_rfft10avx256_wrapper(UINT8 precision,
 {
     return register_kernel_r2hcf_rfft10avx256(precision, direction);
 }
+kfft_ register_kernel_r2hcf_rfft11avx256_wrapper(UINT8 precision,
+                                                 UINT8 direction)
+{
+    return register_kernel_r2hcf_rfft11avx256(precision, direction);
+}
 kfft_ register_kernel_r2hcf_rfft12avx256_wrapper(UINT8 precision,
                                                  UINT8 direction)
 {
@@ -1925,6 +1991,11 @@ kfft_ register_kernel_r2hc_rfft10avx512_wrapper(UINT8 precision,
                                                 UINT8 direction)
 {
     return register_kernel_r2hc_rfft10avx512(precision, direction);
+}
+kfft_ register_kernel_r2hc_rfft11avx512_wrapper(UINT8 precision,
+                                                UINT8 direction)
+{
+    return register_kernel_r2hc_rfft11avx512(precision, direction);
 }
 kfft_ register_kernel_r2hc_rfft12avx512_wrapper(UINT8 precision,
                                                 UINT8 direction)
@@ -1987,6 +2058,11 @@ kfft_ register_kernel_r2hcf_rfft10avx512_wrapper(UINT8 precision,
                                                  UINT8 direction)
 {
     return register_kernel_r2hcf_rfft10avx512(precision, direction);
+}
+kfft_ register_kernel_r2hcf_rfft11avx512_wrapper(UINT8 precision,
+                                                 UINT8 direction)
+{
+    return register_kernel_r2hcf_rfft11avx512(precision, direction);
 }
 kfft_ register_kernel_r2hcf_rfft12avx512_wrapper(UINT8 precision,
                                                  UINT8 direction)
