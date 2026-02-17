@@ -68,6 +68,7 @@ typedef enum
     SOLVER_PERM_COPY,
     SOLVER_TRANSPOSE,
     SOLVER_SIZEONE,
+    SOLVER_SR,
     SOLVER_MT_DIRECT,
     SOLVER_MT_DIRECT_BATCHED_COLMAJOR,
     SOLVER_MT_DIRECT_BATCHED_ROWMAJOR,
@@ -114,6 +115,9 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
                         aoclfftz_solution_t *outer_dim_sol);
 INT32 setup_sizeone_solver(aoclfftz_solution_t *sol);
 INT32 setup_transpose_solver(aoclfftz_solution_t *sol, INT32 cpu_flags);
+INT32 setup_sr_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_even,
+                      aoclfftz_solution_t *sol_odd1, aoclfftz_solution_t *sol_odd3,
+                      INTP n_even, INTP n_odd);
 #if 0
 INT32 setup_permuted_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                             kernel_t *kernel);
@@ -171,6 +175,7 @@ dft_solver_ register_execute_ndim_solver(VOID);
 dft_solver_ register_execute_last_stage_ip_ndim_solver(VOID);
 dft_solver_ register_execute_sizeone_solver(VOID);
 dft_solver_ register_execute_transpose_solver(VOID);
+dft_solver_ register_execute_sr_solver(VOID);
 #ifdef MULTI_THREADING
 dft_solver_ register_execute_mt_direct_solver(VOID);
 dft_solver_ register_execute_mt_direct_batched_rowmajor_solver(VOID);

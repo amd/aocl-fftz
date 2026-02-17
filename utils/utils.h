@@ -45,6 +45,22 @@
 
 extern INT32 global_logger_mode;
 
+/**
+ * @brief Calculate minimum buffer size for strided array access.
+ *
+ * For @p n elements accessed at positions 0, stride, 2*stride, ...,
+ * (n-1)*stride, returns the minimum contiguous buffer size in bytes.
+ *
+ * @param n         Number of elements
+ * @param stride    Stride between consecutive elements
+ * @param elem_size Size of each element in bytes
+ * @return Required buffer size in bytes
+ */
+static inline INTP strided_buffer_size(INTP n, INTP stride, INTP elem_size)
+{
+    return ((n - 1) * stride + 1) * elem_size;
+}
+
 #define AOCLFFTZ_STATS
 
 #define AOCLFFTZ_CPUID_SIMD_DETECTION

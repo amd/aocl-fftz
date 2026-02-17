@@ -121,6 +121,18 @@ INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table, INT32 is_innermo
     return is_supported;
 }
 
+static INT32 is_split_radix_applicable(aoclfftz_decomp_scheme_t *decomp_scheme)
+{
+    INTP n = decomp_scheme->dims[0].n;
+    /*
+     * Split-radix is applicable for complex, 1D, non-batched transforms
+     * where the problem size is divisible by 4 and greater than or equal to 4096.
+     */
+    return (!IS_REAL(decomp_scheme->flags) && (n >= 4096) && ((n % 4) == 0)
+            && (decomp_scheme->vec_rank == 1) && (decomp_scheme->dim_rank == 1)
+            && (decomp_scheme->batched_vecs == NULL));
+}
+
 INTP check_CT_solvability(INTP n, kernel_t *kertab)
 {
     // It is enough to check for the existence of a suitable C kernel
@@ -261,6 +273,9 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     level1_cond2 |= (IS_OUT_OF_ORDER(sel->solution->decomp_scheme->flags) << 1);
     // SOLVER_DIRECT
     level2_cond = is_FFT_ker_supported;
+    // SOLVER_SR
+    level2_cond |=
+        (is_split_radix_applicable(sel->solution->decomp_scheme) << 1);
     // SOLVER_PFA
     // SOLVER_RADER
 
@@ -400,6 +415,17 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
         // Call Direct Solver master
         return selector_direct_dft(sel, kertab);
     }
+    // Split-Radix FFT Solver
+    else if (level2_cond & 0x2)
+    {
+        solver_obj->solver_type = SOLVER_SR;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+        // Call Split-Radix Selector
+        return selector_sr_dft(sel, kertab);
+    }
     else
     {
         solver_obj->solver_type = SOLVER_CT;
@@ -479,6 +505,9 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
     level1_cond2 |= (IS_OUT_OF_ORDER(sel->solution->decomp_scheme->flags) << 1);
     // SOLVER_DIRECT
     level2_cond = is_FFT_ker_supported;
+    // SOLVER_SR
+    level2_cond |=
+        (is_split_radix_applicable(sel->solution->decomp_scheme) << 1);
     // SOLVER_PFA
     // SOLVER_RADER
 
@@ -623,6 +652,17 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
 
         // Call Direct Solver master
         return selector_direct_dft(sel, kertab);
+    }
+    // Split-Radix FFT Solver
+    else if (level2_cond & 0x2)
+    {
+        solver_obj->solver_type = SOLVER_SR;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+        // Call Split-Radix Selector
+        return selector_sr_dft(sel, kertab);
     }
     else
     {
@@ -1839,6 +1879,32 @@ VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
                     curr->next_sol[0]->twiddle->twiddle_buf_ptr = TW;
                 }
             }
+            else if (curr->solver->solver_type == SOLVER_SR)
+            {
+                INTP n = curr->decomp_scheme->dims[0].n;
+                // Number of twiddle pairs(W^k, W^(3k)) for the split-radix twiddle multiplication
+                INTP sr_tw_pairs = n / 4;
+
+                // Allocate twiddle buffer for split-radix: N/4 complex pairs (W^k and W^(3k))
+                VOID *TW = alloc_twiddle_buffer(sr_tw_pairs * 2, dt_prec);
+                if (TW != NULL)
+                {
+                    compute_sr_twiddle_buffer(TW, n, dt_prec);
+                    curr->twiddle->cols = sr_tw_pairs;
+                    curr->twiddle->TW = TW;
+                    curr->twiddle->twiddle_buf_ptr = TW;
+                }
+
+                // Recursively set up twiddles for ALL 3 sub-problems
+                // Note: next_sol[0] (even) will be handled by the loop continuation
+                // So we only need to explicitly recurse for odd1 and odd3 from dft_bufs
+                if (curr->dft_bufs && curr->dft_bufs->sr->odd1_sol
+                    && curr->dft_bufs->sr->odd3_sol)
+                {
+                    setup_twiddle_buffer_complex(curr->dft_bufs->sr->odd1_sol);
+                    setup_twiddle_buffer_complex(curr->dft_bufs->sr->odd3_sol);
+                }
+            }
             // Process N-D solution after the current solution
             if (curr->solver->solver_type == SOLVER_NDIM)
             {
@@ -1988,6 +2054,41 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
                             src->dft_bufs->nd_sol, scratch_buf_idx, ct_buf_idx);
         *scratch_buf_idx = temp;
         *ct_buf_idx = temp_ct_idx;
+    }
+
+    // Recursively copy sr odd1_sol and odd3_sol if present (for SR solvers)
+    if (src->dft_bufs->sr->odd1_sol)
+    {
+           dst->dft_bufs->sr->odd1_sol = deep_copy_solution_tree(
+                               src->dft_bufs->sr->odd1_sol,
+                               scratch_buf_idx, ct_buf_idx);
+           *scratch_buf_idx = temp;
+           *ct_buf_idx = temp_ct_idx;
+    }
+    if (src->dft_bufs->sr->odd3_sol)
+    {
+           dst->dft_bufs->sr->odd3_sol = deep_copy_solution_tree(
+                               src->dft_bufs->sr->odd3_sol,
+                               scratch_buf_idx, ct_buf_idx);
+           *scratch_buf_idx = temp;
+           *ct_buf_idx = temp_ct_idx;
+    }
+
+    // Copy SR input copy buffer for multi-threading safety
+    if (src->dft_bufs->sr->input_copy != NULL)
+    {
+        INTP sr_input_copy_size = src->dft_bufs->sr->input_copy_size;
+
+        ALLOC_ALIGN_UNINIT(dst->dft_bufs->sr->input_copy, VOID, sr_input_copy_size);
+        if (dst->dft_bufs->sr->input_copy == NULL)
+        {
+            /* SR executor will memcpy into sr->input_copy for in-place
+             * transforms; a NULL buffer would cause a crash.
+             * Propagate the failure so the caller can handle it. */
+            destroy_solution(dst, 1);
+            return NULL;
+        }
+        dst->dft_bufs->sr->input_copy_size = sr_input_copy_size;
     }
 
     // Initiate deep copy of next_sol recursively until leaf node
@@ -2178,6 +2279,30 @@ VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx,
         if (sol->solver->solver_type == SOLVER_BUFFERED)
         {
             (*num_ct_buf)++;
+        }
+
+        // Process SR children if present (share scratch space like nd_sol)
+        if (sol->dft_bufs->sr->odd1_sol)
+        {
+            UINT32 sr_odd1_ct_count = 0;
+            post_process_solution(sol->dft_bufs->sr->odd1_sol, scratch_buf_idx, ct_buf_idx, &sr_odd1_ct_count);
+            *scratch_buf_idx = temp;
+            *ct_buf_idx = temp1;
+            if (sr_odd1_ct_count > max_nd_sol_ct_count)
+            {
+                max_nd_sol_ct_count = sr_odd1_ct_count;
+            }
+        }
+        if (sol->dft_bufs->sr->odd3_sol)
+        {
+            UINT32 sr_odd3_ct_count = 0;
+            post_process_solution(sol->dft_bufs->sr->odd3_sol, scratch_buf_idx, ct_buf_idx, &sr_odd3_ct_count);
+            *scratch_buf_idx = temp;
+            *ct_buf_idx = temp1;
+            if (sr_odd3_ct_count > max_nd_sol_ct_count)
+            {
+                max_nd_sol_ct_count = sr_odd3_ct_count;
+            }
         }
 
         sol = sol->next_sol ? sol->next_sol[0] : NULL;

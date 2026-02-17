@@ -88,6 +88,7 @@
 // Set Flags
 #define SET_PRECISION(flags, val) (flags = (flags & 0x3FFFFFFF) | (val << 30))
 #define SET_INPLACE(flags) SET_BIT_FLAG32(flags, 0, 0)
+#define SET_OUTOFPLACE(flags) SET_BIT_FLAG32(flags, 0, 1)
 
 #define SET_BIT_REPRODUCIBLE(flags, val) SET_BIT_FLAG32(flags, 4, val)
 #define GET_BIT_REPRODUCIBLE(flags) GET_BIT_FLAG32(flags, 4)
@@ -188,6 +189,7 @@ typedef struct aoclfftz_strides aoclfftz_strides_t;
 typedef struct aoclfftz_twiddle aoclfftz_twiddle_t;
 typedef struct aoclfftz_bluestein aoclfftz_bluestein_t;
 typedef struct aoclfftz_buffered aoclfftz_buffered_t;
+typedef struct aoclfftz_sr aoclfftz_sr_t;
 typedef struct aoclfftz_executor aoclfftz_executor_t;
 typedef struct aoclfftz_realhelper aoclfftz_realhelper_t;
 
@@ -318,6 +320,21 @@ typedef struct aoclfftz_buffered
     VOID **out_ptr;
 } aoclfftz_buffered_t;
 
+// Holds split-radix solver specific sub-solutions and buffers.
+// The SR algorithm decomposes an N-point FFT into:
+//   - Even: N/2-point sub-problem (stored via next_sol[0])
+//   - Odd1: N/4-point sub-problem (indices 1, 5, 9, ...)
+//   - Odd3: N/4-point sub-problem (indices 3, 7, 11, ...)
+// The input_copy buffer is used for in-place transforms to preserve input data
+// before the sub-problems overwrite the output buffer.
+typedef struct aoclfftz_sr
+{
+    aoclfftz_solution_t *odd1_sol;  // N/4-point sub-solution for odd-1 indices
+    aoclfftz_solution_t *odd3_sol;  // N/4-point sub-solution for odd-3 indices
+    VOID *input_copy;               // Pre-allocated buffer for in-place input safety copy
+    INTP  input_copy_size;          // Size of input_copy buffer in bytes
+} aoclfftz_sr_t;
+
 // Internal types to denote complex numbers in fftz's transpose routines
 typedef struct aoclfftz_complex_f
 {
@@ -433,6 +450,7 @@ typedef struct aoclfftz_dft_bufs
     aoclfftz_buffered_t* buffered;
     aoclfftz_transpose_t* transpose;
     aoclfftz_solution_t* nd_sol; // may hold one of the solutions of ND
+    aoclfftz_sr_t* sr; // split-radix solver specific data (sub-solutions + buffers)
     VOID* scratch_space; // scratch space for transpose operation
     VOID *ct_buffer; // auxiliary buffer for CT problems
     VOID *ct_buf_real; // real part of ct_buffer

@@ -857,6 +857,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_sizeone_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_transpose(aoclfftz_selector_t *sel);
+INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 
 INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                            aoclfftz_realhelper_t *realhelper);

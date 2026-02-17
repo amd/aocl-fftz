@@ -1403,4 +1403,60 @@ VOID compute_twiddle_buffer_real(VOID *twiddle_buffer, INTP radix,
                                            freq_factor, dir);
     }
 }
+
+static VOID compute_sr_twiddle_buffer_float(VOID *twiddle_buffer, INTP n)
+{
+    INTP n4 = n / 4;
+    aoclfftz_complex_f_t *tw = (aoclfftz_complex_f_t *)twiddle_buffer;
+
+    /* Compute twiddle factors for split-radix */
+    /* For each k, we need W_n^k and W_n^(3k) */
+    for (INTP k = 0; k < n4; k++)
+    {
+        FLOAT angle1 = -AOCLFFTZ_2_PIf * k / n;  /* W_n^k */
+        FLOAT angle3 = -3.0f * AOCLFFTZ_2_PIf * k / n;  /* W_n^(3k) */
+
+        /* Store W^k at even indices */
+        tw[k * 2].real = cosf(angle1);
+        tw[k * 2].imag = sinf(angle1);
+
+        /* Store W^(3k) at odd indices */
+        tw[k * 2 + 1].real = cosf(angle3);
+        tw[k * 2 + 1].imag = sinf(angle3);
+    }
+}
+
+static VOID compute_sr_twiddle_buffer_double(VOID *twiddle_buffer, INTP n)
+{
+    INTP n4 = n / 4;
+    aoclfftz_complex_d_t *tw = (aoclfftz_complex_d_t *)twiddle_buffer;
+
+    /* Compute twiddle factors for split-radix */
+    /* For each k, we need W_n^k and W_n^(3k) */
+    for (INTP k = 0; k < n4; k++)
+    {
+        DOUBLE angle1 = -AOCLFFTZ_2_PI * k / n;  /* W_n^k */
+        DOUBLE angle3 = -3.0 * AOCLFFTZ_2_PI * k / n;  /* W_n^(3k) */
+
+        /* Store W^k at even indices */
+        tw[k * 2].real = cos(angle1);
+        tw[k * 2].imag = sin(angle1);
+
+        /* Store W^(3k) at odd indices */
+        tw[k * 2 + 1].real = cos(angle3);
+        tw[k * 2 + 1].imag = sin(angle3);
+    }
+}
+
+VOID compute_sr_twiddle_buffer(VOID *twiddle_buffer, INTP n, UINT32 dt_prec)
+{
+    if (dt_prec == DT_FLOAT)
+    {
+        compute_sr_twiddle_buffer_float(twiddle_buffer, n);
+    }
+    else
+    {
+        compute_sr_twiddle_buffer_double(twiddle_buffer, n);
+    }
+}
 #endif

@@ -86,6 +86,7 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
     solvers_table[SOLVER_BLUESTEIN] = register_execute_bluestein_solver();
     solvers_table[SOLVER_NDIM] = register_execute_ndim_solver();
     solvers_table[SOLVER_SIZEONE] = register_execute_sizeone_solver();
+    solvers_table[SOLVER_SR] = register_execute_sr_solver();
     solvers_table[SOLVER_TRANSPOSE] = register_execute_transpose_solver();
 #ifdef MULTI_THREADING
     solvers_table[SOLVER_MT_DIRECT] = register_execute_mt_direct_solver();
