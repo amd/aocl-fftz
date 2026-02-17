@@ -324,7 +324,6 @@ typedef struct aoclfftz_selector
 #define PREPARE_AND_SETUP_DFT(sel_obj, ret)                                    \
 {                                                                              \
     sel_obj->execute = register_execute_dft();                                 \
-    setup_inplace_buffers(sel_obj);                                            \
     if (IS_REAL(sel_obj->solution->decomp_scheme->flags))                      \
     {                                                                          \
         aoclfftz_realhelper_t *realhelper;                                     \
@@ -352,7 +351,6 @@ typedef struct aoclfftz_selector
     else                                                                       \
     {                                                                          \
         ret = selector_driver_dft_(sel_obj);                                   \
-        post_process_for_optimal_buffering_batching(sel_obj->solution);        \
         setup_twiddle_buffer_complex(sel_obj->solution);                       \
     }                                                                          \
 }
@@ -458,6 +456,10 @@ typedef struct aoclfftz_selector
         from_sol_obj->dft_bufs->buffered->aux_buffer_2;                        \
     to_sol_obj->dft_bufs->buffered->out_ptr =                                  \
         from_sol_obj->dft_bufs->buffered->out_ptr;                             \
+    to_sol_obj->dft_bufs->ct_buffer =                                          \
+        from_sol_obj->dft_bufs->ct_buffer;                                     \
+    to_sol_obj->dft_bufs->num_ct_buf =                                         \
+        from_sol_obj->dft_bufs->num_ct_buf;                                    \
     to_sol_obj->dft_bufs->ct_buf_real =                                        \
         from_sol_obj->dft_bufs->ct_buf_real;                                   \
     to_sol_obj->dft_bufs->ct_buf_imag =                                        \
@@ -465,10 +467,6 @@ typedef struct aoclfftz_selector
     to_sol_obj->dft_bufs->ct_buf_real_in =                                     \
         from_sol_obj->dft_bufs->ct_buf_real_in;                                \
     to_sol_obj->dft_bufs->ct_buf_size = from_sol_obj->dft_bufs->ct_buf_size;   \
-    to_sol_obj->dft_bufs->use_2D_buffering =                                   \
-        from_sol_obj->dft_bufs->use_2D_buffering;                              \
-    to_sol_obj->dft_bufs->reset_ct_buf_offset =                                \
-        from_sol_obj->dft_bufs->reset_ct_buf_offset;                           \
     if (from_sol_obj->dft_bufs->transpose &&                                   \
         to_sol_obj->dft_bufs->transpose)                                       \
     {                                                                          \
@@ -624,6 +622,8 @@ typedef struct aoclfftz_selector
         from_sol_obj->dft_bufs->buffered->aux_buffer_1;                        \
     to_sol_obj->dft_bufs->buffered->aux_buffer_2 =                             \
         from_sol_obj->dft_bufs->buffered->aux_buffer_2;                        \
+    to_sol_obj->dft_bufs->ct_buffer =                                          \
+        from_sol_obj->dft_bufs->ct_buffer;                                     \
     to_sol_obj->dft_bufs->ct_buf_real =                                        \
         from_sol_obj->dft_bufs->ct_buf_real;                                   \
     to_sol_obj->dft_bufs->ct_buf_imag =                                        \
@@ -631,10 +631,6 @@ typedef struct aoclfftz_selector
     to_sol_obj->dft_bufs->ct_buf_real_in =                                     \
         from_sol_obj->dft_bufs->ct_buf_real_in;                                \
     to_sol_obj->dft_bufs->ct_buf_size = from_sol_obj->dft_bufs->ct_buf_size;   \
-    to_sol_obj->dft_bufs->use_2D_buffering =                                   \
-        from_sol_obj->dft_bufs->use_2D_buffering;                              \
-    to_sol_obj->dft_bufs->reset_ct_buf_offset =                                \
-        from_sol_obj->dft_bufs->reset_ct_buf_offset;                           \
     to_sol_obj->dft_bufs->buffered->out_ptr =                                  \
         from_sol_obj->dft_bufs->buffered->out_ptr;                             \
     to_sol_obj->next_sol = from_sol_obj->next_sol;                             \
@@ -874,8 +870,8 @@ INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                          aoclfftz_realhelper_t *realhelper);
 VOID destroy_handle(VOID *handle);
 VOID fuse_vecs(aoclfftz_solution_t *sol);
-VOID setup_inplace_buffers(aoclfftz_selector_t *sel);
-VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx);
+VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx,
+UINT32 *ct_buf_idx, UINT32 *num_ct_buf);
 INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);
 DOUBLE get_kernel_weightage(INTP radix, kernel_t *kertab,
                             aoclfftz_solution_t *sol);

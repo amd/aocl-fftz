@@ -95,6 +95,10 @@
 #define SET_NOT_INNERMOST_DIM(flags) SET_BIT_FLAG32(flags, 10, 1)
 #define IS_NOT_INNERMOST_DIM(flags) GET_BIT_FLAG32(flags, 10)
 
+#define SET_BUFFERED(flags) SET_BIT_FLAG32(flags, 11, 1)
+#define UNSET_BUFFERED(flags) SET_BIT_FLAG32(flags, 11, 0)
+#define IS_BUFFERED(flags) GET_BIT_FLAG32(flags, 11)
+
 // Get size of datatype based on the precision
 #define DT_PRECISION_BYTES(dt_prec) (1 << dt_prec)
 
@@ -269,6 +273,7 @@ typedef struct aoclfftz_decomp_scheme
     //   bit 8     : (0) no-transpose / (1) transpose
     //   bit 9     : (0) (transpose+fft) / (1) fft (no transpose)
     //   bit 10    : (0) innermost dimension / (1) not innermost dimension (of ND-dim problem)
+    //   bit 11    : (0) not buffered / (1) buffered
     //   bit 16    : (0) fixed selector mode / (1) auto tuner selector mode
     //   bit 30-31 : floating point datatype precision
     //               (00) 8-bit / (01) 16-bit / (10) 32-bit / (11) 64-bit
@@ -438,8 +443,12 @@ typedef struct aoclfftz_dft_bufs
                              to store the modified input.
                            */
     INTP ct_buf_size; // size of ct_buffer per thread
-    UINT8 reset_ct_buf_offset; // when enabled (1), do not move the buffer offset across batches
-    UINT8 use_2D_buffering; // 1 when compact buffer optimized approach is used
+    INT32 num_ct_buf; // number of ct_buffer allocated in total. It should be
+                      // equal to the number of threads assigned to the first CT
+                      // stage in the solution.
+    UINT32 ct_buf_allocated; // to know that the solution originally allocated
+                             // the buffer and is responsible for freeing it in
+                             // the end.
 } aoclfftz_dft_bufs_t;
 #endif
 /////////////////////////// BUFS RELATED : END ////////////////////////////////

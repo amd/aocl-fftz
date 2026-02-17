@@ -37,6 +37,7 @@
  */
 
 #include "selector/selector.h"
+#include "core/common/memory_manager.h"
 
 INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
                         aoclfftz_solution_t *n_minus1_sol,
@@ -44,6 +45,12 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    alloc_ndim_buffer(sol, &sol->dft_bufs->ct_buffer);
+    if (sol->dft_bufs->ct_buffer == NULL)
+    {
+        AOCLFFTZ_ERROR("Failed to allocate buffer for ND solver");
+        return SOLVER_FAILURE;
+    }
 
     COPY_SOLUTION_OBJ_WO_DIMS(n_minus1_sol, sol);
     INT32 dim_rank = sol->decomp_scheme->dim_rank;
@@ -105,6 +112,13 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
         outer_dim_sol->decomp_scheme->vecs[i].out_stride =
                 sol->decomp_scheme->dims[i].out_stride;
     }
+
+    outer_dim_sol->decomp_scheme->in_real  =
+        n_minus1_sol->decomp_scheme->out_real;
+    outer_dim_sol->decomp_scheme->in_imag  =
+        n_minus1_sol->decomp_scheme->out_imag;
+    outer_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+    outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 

@@ -128,7 +128,7 @@ static inline VOID execute_real_mt_r2c_kernels(aoclfftz_solution_t *sol, INT32 n
                         sol->twiddle, FFT_DIR(sol->decomp_scheme->flags));
         }
         /* Process the tail cases of the kernel */
-        if(rem_iters_r2hc)
+        if (rem_iters_r2hc)
         {
             INTP v_istride = num_iters_r2hc * v_in_stride_r2hc;
             INTP v_ostride = num_iters_r2hc * v_out_stride_r2hc;
@@ -166,7 +166,7 @@ static inline VOID execute_real_mt_r2c_kernels(aoclfftz_solution_t *sol, INT32 n
                          sol->twiddle, FFT_DIR(sol->decomp_scheme->flags));
         }
         /* Process the tail cases of the kernel */
-        if(rem_iters_r2hcf)
+        if (rem_iters_r2hcf)
         {
             INTP in_offset = num_iters_r2hcf * v_in_stride_r2hcf;
             INTP out_offset = num_iters_r2hcf * v_out_stride_r2hcf;

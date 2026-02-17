@@ -57,7 +57,7 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
                                     INT32 nthreads);
 
 VOID *alloc_twiddle_buffer(UINTP size, UINT32 dt_prec);
-VOID alloc_inplace_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr);
+VOID alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr);
 
 VOID destroy_selector(aoclfftz_selector_t *sel);
 VOID destroy_selector_without_solution(aoclfftz_selector_t *sel);

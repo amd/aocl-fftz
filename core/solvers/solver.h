@@ -104,6 +104,8 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
                       aoclfftz_solution_t *sol_m, UINT32 radix_r,
                       UINT32 radix_m);
+INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
+                            aoclfftz_solution_t *next_sol);
 INT32 setup_batched_solver(aoclfftz_solution_t *sol);
 INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
                              aoclfftz_solution_t *next_sol, INTP m);
@@ -162,6 +164,7 @@ dft_solver_ register_execute_direct_batched_colmajor_solver(VOID);
 dft_solver_ register_execute_ct_solver(VOID);
 dft_solver_ register_execute_ct_twiddle_solver(VOID);
 dft_solver_ register_execute_last_stage_ip_ct_solver(VOID);
+dft_solver_ register_execute_buffered_solver(VOID);
 dft_solver_ register_execute_batched_solver(VOID);
 dft_solver_ register_execute_bluestein_solver(VOID);
 dft_solver_ register_execute_ndim_solver(VOID);

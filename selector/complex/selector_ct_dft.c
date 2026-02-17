@@ -176,6 +176,14 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 #if 0
         ret = selector_model_dft_(cur_sel);//Call direct solver instead
 #else
+        aoclfftz_solution_t *radix_r_sol = cur_sel->solution;
+        aoclfftz_solution_t *radix_m_sol = cur_sel_m->solution;
+
+        radix_r_sol->decomp_scheme->dims[0].in_stride =
+            radix_m_sol->decomp_scheme->vecs[0].out_stride;
+        radix_r_sol->decomp_scheme->vecs[0].in_stride =
+            radix_m_sol->decomp_scheme->dims[0].out_stride;
+
         aoclfftz_generic_solver_t* solver_obj = cur_sel->solution->solver;
         INT32 avl_threads =
             cur_sel->solution->decomp_scheme->thread_info->avl_threads;
@@ -252,8 +260,24 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
                 // Restore the original next_sol after copy
                 next_sol->next_sol = sel_next_sol;
+
+                // Free the ct_buffer if it is allocated in the solution of m
+                if (next_sol->next_sol[0]->dft_bufs->ct_buf_allocated)
+                {
+                    FREE_ALIGN_ALLOCATED_MEM(
+                        next_sol->next_sol[0]->dft_bufs->ct_buffer);
+                    next_sol->next_sol[0]->dft_bufs->ct_buf_allocated = 0;
+                }
+
                 COPY_SOLUTION_OBJ(next_sol->next_sol[0], cur_sel_m->solution);
                 COPY_STRIDES(next_sol->next_sol[0], cur_sel_m->solution);
+
+                if (cur_sel_m->solution->dft_bufs->ct_buf_allocated)
+                {
+                    next_sol->next_sol[0]->dft_bufs->ct_buf_allocated = 1;
+                }
+                cur_sel_m->solution->dft_bufs->ct_buf_allocated = 0;
+
                 next_sol->next_sol[0]->dft_bufs->scratch_space =
                         sel->scratch_space;
 
@@ -274,6 +298,11 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 is_previous_solution_selected = 0;
                 RESET_COST(cur_sel);
                 RESET_COST(cur_sel_m);
+                if (cur_sel_m->solution->dft_bufs->ct_buf_allocated)
+                {
+                    FREE_ALIGN_ALLOCATED_MEM(cur_sel_m->solution->dft_bufs->ct_buffer);
+                    cur_sel_m->solution->dft_bufs->ct_buf_allocated = 0;
+                }
             }
         }
         if (stats_mode)

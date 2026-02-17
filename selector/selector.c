@@ -39,7 +39,6 @@
 
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
-#include "core/common/post_process_utils.h"
 #include "core/common/twiddle.h"
 #include "core/kernels/kernel_list.h"
 #include "utils/utils.h"
@@ -251,12 +250,13 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     // SOLVER_BLUESTEIN
     level1_cond1 |= (is_solvable_by_bluestein << 2);
     // SOLVER_BUFFERED
-    level1_cond2 = !(IS_OUT_OF_PLACE(sel->solution->decomp_scheme->flags));
-    // SOLVER_BUFFERED
-    level1_cond2 &= ((sel->solution->decomp_scheme->dims[0].n >
-                      MAX_GUARANTEED_CACHEABLE_SIZE) &&
-                     (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
-                      AOCLFFTZ_AUTO_SELECTOR));
+    // Future work: GENERALIZE THE SCOPE OF BUFFERED SOLVER
+    // level1_cond2 = !(IS_OUT_OF_PLACE(sel->solution->decomp_scheme->flags));
+    // level1_cond2 &= ((sel->solution->decomp_scheme->dims[0].n >
+    //                   MAX_GUARANTEED_CACHEABLE_SIZE) &&
+    //                  (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
+    //                   AOCLFFTZ_AUTO_SELECTOR));
+    level1_cond2 = IS_BUFFERED(sel->solution->decomp_scheme->flags);
     // SOLVER_PERM_KER
     level1_cond2 |= (IS_OUT_OF_ORDER(sel->solution->decomp_scheme->flags) << 1);
     // SOLVER_DIRECT
@@ -269,6 +269,18 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
         GET_STANDALONE_TRANSPOSE(sel->solution->decomp_scheme->flags);
 
     /** Level 1 decisions : Solvers **/
+    // Buffered FFT Solver
+    if (level1_cond2 & 0x1)
+    {
+        solver_obj->solver_type = SOLVER_BUFFERED;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+
+        // call buffered solver master
+        return selector_buffered_dft(sel, kertab);
+    }
     // Batched/vector FFT Solver
     if (level1_cond1 & 0x1)
     {
@@ -322,18 +334,6 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
 
         // call bluestein solver master
         return selector_bluestein_dft(sel, kertab);
-    }
-    // Buffered FFT Solver
-    if (level1_cond2 & 0x1)
-    {
-        solver_obj->solver_type = SOLVER_BUFFERED;
-        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
-        {
-            return SELECTOR_FAILURE;
-        }
-
-        // call buffered solver master
-        return selector_buffered_dft(sel, kertab);
     }
     // Permuted (out-of-order output) FFT Solver
     if (level1_cond2 & 0x2)
@@ -468,12 +468,13 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
     // SOLVER_BLUESTEIN
     level1_cond1 |= (is_solvable_by_bluestein << 2);
     // SOLVER_BUFFERED
-    level1_cond2 = !(IS_OUT_OF_PLACE(sel->solution->decomp_scheme->flags));
-    // SOLVER_BUFFERED
-    level1_cond2 &= ((sel->solution->decomp_scheme->dims[0].n >
-                      MAX_GUARANTEED_CACHEABLE_SIZE) &&
-                     (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
-                      AOCLFFTZ_AUTO_SELECTOR));
+    // Future work: GENERALIZE THE SCOPE OF BUFFERED SOLVER
+    // level1_cond2 = !(IS_OUT_OF_PLACE(sel->solution->decomp_scheme->flags));
+    // level1_cond2 &= ((sel->solution->decomp_scheme->dims[0].n >
+    //                   MAX_GUARANTEED_CACHEABLE_SIZE) &&
+    //                  (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
+    //                   AOCLFFTZ_AUTO_SELECTOR));
+    level1_cond2 = IS_BUFFERED(sel->solution->decomp_scheme->flags);
     // SOLVER_PERM_KER
     level1_cond2 |= (IS_OUT_OF_ORDER(sel->solution->decomp_scheme->flags) << 1);
     // SOLVER_DIRECT
@@ -486,6 +487,20 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
         GET_STANDALONE_TRANSPOSE(sel->solution->decomp_scheme->flags);
 
     /** Level 1 decisions : Solvers **/
+    // Buffered FFT Solver
+    if (level1_cond2 & 0x1)
+    {
+        solver_obj->solver_type = SOLVER_BUFFERED;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+
+        // call buffered solver master
+        ret = selector_buffered_dft(sel, kertab);
+        return ret;
+    }
+
     // Batched/vector FFT Solver
     if (level1_cond1 & 0x1)
     {
@@ -539,18 +554,6 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
 
         // call bluestein solver master
         return selector_bluestein_dft(sel, kertab);
-    }
-    // Buffered FFT Solver
-    if (level1_cond2 & 0x1)
-    {
-        solver_obj->solver_type = SOLVER_BUFFERED;
-        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
-        {
-            return SELECTOR_FAILURE;
-        }
-
-        // call buffered solver master
-        return selector_buffered_dft(sel, kertab);
     }
     // Permuted (out-of-order output) FFT Solver
     if (level1_cond2 & 0x2)
@@ -1077,9 +1080,6 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
             ->solution->decomp_scheme->decomp_level =
             sel->solution->decomp_scheme->decomp_level;
         sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
-            ->solution->dft_bufs->use_2D_buffering =
-            sel->solution->dft_bufs->use_2D_buffering;
-        sel_models[AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT]
             ->solution->dft_bufs->ct_buf_size =
             sel->solution->dft_bufs->ct_buf_size;
 
@@ -1131,8 +1131,6 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
             sel->solution->dft_bufs->ct_buf_imag;
         sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme->decomp_level =
             sel->solution->decomp_scheme->decomp_level;
-        sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->dft_bufs->use_2D_buffering =
-            sel->solution->dft_bufs->use_2D_buffering;
         sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->dft_bufs->ct_buf_size =
             sel->solution->dft_bufs->ct_buf_size;
 
@@ -1506,7 +1504,10 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     }
 #ifdef MULTI_THREADING
     UINT32 scratch_buf_idx = 0;
-    post_process_solution(sel_obj->solution, &scratch_buf_idx);
+    UINT32 ct_buf_idx = 0;
+    UINT32 num_ct_buf = 0;
+    post_process_solution(sel_obj->solution, &scratch_buf_idx, &ct_buf_idx,
+                          &num_ct_buf);
 #endif
     return sel_obj;
 
@@ -1583,7 +1584,10 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     }
 #ifdef MULTI_THREADING
     UINT32 scratch_buf_idx = 0;
-    post_process_solution(sel_obj->solution, &scratch_buf_idx);
+    UINT32 ct_buf_idx = 0;
+    UINT32 num_ct_buf = 0;
+    post_process_solution(sel_obj->solution, &scratch_buf_idx, &ct_buf_idx,
+                          &num_ct_buf);
 #endif
     return sel_obj;
 
@@ -1660,7 +1664,10 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     }
 #ifdef MULTI_THREADING
     UINT32 scratch_buf_idx = 0;
-    post_process_solution(sel_obj->solution, &scratch_buf_idx);
+    UINT32 ct_buf_idx = 0;
+    UINT32 num_ct_buf = 0;
+    post_process_solution(sel_obj->solution, &scratch_buf_idx, &ct_buf_idx,
+                          &num_ct_buf);
 #endif
     return sel_obj;
 
@@ -1737,7 +1744,10 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     }
 #ifdef MULTI_THREADING
     UINT32 scratch_buf_idx = 0;
-    post_process_solution(sel_obj->solution, &scratch_buf_idx);
+    UINT32 ct_buf_idx = 0;
+    UINT32 num_ct_buf = 0;
+    post_process_solution(sel_obj->solution, &scratch_buf_idx, &ct_buf_idx,
+                          &num_ct_buf);
 #endif
     return sel_obj;
 
@@ -1765,11 +1775,12 @@ VOID fuse_vecs(aoclfftz_solution_t *sol)
         INTP expected_out_stride = vecs[i-1].n * vecs[i-1].out_stride;
         INTP actual_in_stride = vecs[i].in_stride;
         INTP actual_out_stride = vecs[i].out_stride;
-        // mark the vector for fusing and compute the new size for the fused
-        // vector
-        if (expected_in_stride == actual_in_stride &&
-             expected_out_stride == actual_out_stride)
+        // Do not fuse the first vector
+        if ((expected_in_stride == actual_in_stride &&
+             expected_out_stride == actual_out_stride) && i != 1)
         {
+            // mark the vector for fusing and compute the new size for the fused
+            // vector
             is_fusable = 1;
             fused_size = fused_size * vecs[i].n;
         }
@@ -1940,8 +1951,9 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
 #endif
 }
 
-aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src,
-                                             UINT32 *scratch_buf_idx)
+aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
+                                             UINT32 *scratch_buf_idx,
+                                             UINT32 *ct_buf_idx)
 {
     if (!src)
     {
@@ -1951,28 +1963,32 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src,
     // Copy the solution object and its strides
     INT32 vec_rank = src->decomp_scheme->vec_rank;
     INT32 dim_rank = src->decomp_scheme->dim_rank;
-    aoclfftz_solution_t* dst = alloc_solution(vec_rank, dim_rank);
+    aoclfftz_solution_t *dst = alloc_solution(vec_rank, dim_rank);
     COPY_SOLUTION_OBJ(dst, src);
     COPY_STRIDES(dst, src);
     dst->dft_bufs->nd_sol = NULL;
 
     // Assign relevant scratch space to each thread
     dst->dft_bufs->scratch_space = MOVE_ADDR(src->dft_bufs->scratch_space,
-                                   (*scratch_buf_idx) * scratch_space_capacity);
+                                (*scratch_buf_idx) * scratch_space_capacity);
+
+    // Assign ct buffer pointers offset by ct_buf_idx
     dst->dft_bufs->ct_buf_real = MOVE_ADDR(src->dft_bufs->ct_buf_real,
-                                   (*scratch_buf_idx) * src->dft_bufs->ct_buf_size);
+                                   (*ct_buf_idx) * src->dft_bufs->ct_buf_size);
     dst->dft_bufs->ct_buf_imag = MOVE_ADDR(src->dft_bufs->ct_buf_imag,
-                                   (*scratch_buf_idx) * src->dft_bufs->ct_buf_size);
+                                   (*ct_buf_idx) * src->dft_bufs->ct_buf_size);
 
     // Hold the current scratch buffer index and restore after copy of each ND-subtree
     // as both nd_sol and next_sol of ND node share the same scratch space
     UINT32 temp = *scratch_buf_idx;
+    UINT32 temp_ct_idx = *ct_buf_idx;
     // Recursively copy nd_sol if present (for NDIM solvers)
     if (src->dft_bufs->nd_sol)
     {
-        dst->dft_bufs->nd_sol = deep_copy_solution_tree(src->dft_bufs->nd_sol,
-                                                        scratch_buf_idx);
+        dst->dft_bufs->nd_sol = deep_copy_solution_tree(
+                            src->dft_bufs->nd_sol, scratch_buf_idx, ct_buf_idx);
         *scratch_buf_idx = temp;
+        *ct_buf_idx = temp_ct_idx;
     }
 
     // Initiate deep copy of next_sol recursively until leaf node
@@ -1983,12 +1999,40 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src,
                     src->decomp_scheme->thread_info->n_threads : 1;
         dst->next_sol = alloc_sol_array(n);
 
-        for (INT32 i = 0; i < n; i++)
+        // For MT_BATCHED: need to count ct_bufs in subtree to properly offset
+        // First copy gets current ct_buf_idx, subsequent copies need incremented indices
+        if (n > 1)
         {
-            dst->next_sol[i] = deep_copy_solution_tree(src->next_sol[0],
-                                                       scratch_buf_idx);
-            // Increment the scratch buffer index only for MT batched solutions
-            *scratch_buf_idx += (n > 1) ? 1 : 0;
+            // Save base ct_buf_idx for this MT_BATCHED
+            UINT32 base_ct_buf_idx = *ct_buf_idx;
+
+            // First copy - also counts how many ct_bufs are in subtree
+            dst->next_sol[0] = deep_copy_solution_tree(
+                src->next_sol[0], scratch_buf_idx, ct_buf_idx);
+
+            // Calculate ct_bufs_per_thread based on how much ct_buf_idx
+            // advanced. Note: nd_sol's ct_buf usage is not counted here
+            // because ct_buf_idx is reset after nd_sol processing (nd_sol
+            // and next_sol share indices since they run sequentially).
+            // For nested NDIM cases (e.g., 3D problems), this can result
+            // in ct_bufs_used = 0 even when nd_sol used buffers, so we
+            // default to 1 to ensure unique indices for each thread.
+            UINT32 ct_bufs_used = (*ct_buf_idx > base_ct_buf_idx)
+                                    ? (*ct_buf_idx - base_ct_buf_idx + 1) : 1;
+
+            for (INT32 i = 1; i < n; i++)
+            {
+                (*scratch_buf_idx)++;
+                // Each subsequent thread gets next contiguous ct_buf index
+                *ct_buf_idx = base_ct_buf_idx + (i * ct_bufs_used);
+                dst->next_sol[i] = deep_copy_solution_tree(
+                    src->next_sol[0], scratch_buf_idx, ct_buf_idx);
+            }
+        }
+        else
+        {
+            dst->next_sol[0] = deep_copy_solution_tree(
+                src->next_sol[0], scratch_buf_idx, ct_buf_idx);
         }
     }
     else
@@ -2018,6 +2062,12 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src,
  *
  * @param sol             Pointer to the root solution tree to post-process
  * @param scratch_buf_idx Pointer to scratch buffer index counter for unique allocation
+ * @param ct_buf_idx      Pointer to CT (Cooley-Tukey) buffer index counter.
+ *                        Used to assign unique auxiliary buffer indices to each
+ *                        thread's Buffered solver nodes.
+ * @param num_ct_buf      Pointer to counter tracking total number of CT buffers
+ *                        used in the solution subtree. Updated during traversal
+ *                        to account for buffer requirements of MT_BATCHED nodes.
  *
  * @note The scratch_buf_idx is incremented for each thread to ensure unique scratch
  *       space allocation across the entire solution hierarchy.
@@ -2055,75 +2105,91 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t* src,
  *                                   |--------> next_sol[1] -> CT -> Direct -> Direct (scratch_idx: 4)
  */
 
-VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx)
+VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx,
+                           UINT32 *ct_buf_idx, UINT32 *num_ct_buf)
 {
+    // Track max ct_buf count from nd_sol paths (nd_sol and next_sol share indices)
+    UINT32 max_nd_sol_ct_count = 0;
+
     while (sol != NULL)
     {
         if ((sol->solver->solver_type == SOLVER_MT_BATCHED) ||
             (sol->solver->solver_type == SOLVER_REAL_MT_BATCHED))
         {
-            // call post process recursively to find the innermost MT batched
-            // solution
-            post_process_solution(sol->next_sol[0], scratch_buf_idx);
+            // Save base ct_buf_idx before processing subtree
+            UINT32 base_ct_buf_idx = *ct_buf_idx;
+
+            // Save current num_ct_buf and reset to count buffers in subtree
+            UINT32 saved_num_ct_buf = *num_ct_buf;
+            *num_ct_buf = 0;
+
+            // Process first thread's subtree to count ct buffers needed per thread
+            post_process_solution(sol->next_sol[0], scratch_buf_idx, ct_buf_idx, num_ct_buf);
+
+            // num_ct_buf now contains count of ct buffers used by one thread's subtree
+            UINT32 ct_bufs_per_thread = *num_ct_buf;
 
             INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
-            // replicate the solution in next_sol[0] to array of next_sols in
+            // Replicate the solution in next_sol[0] to array of next_sols in
             // each MT batched solution
             for (INT32 i = 1; i < n_threads; i++)
             {
                 // Increment the scratch buffer index for MT batched solutions
                 (*scratch_buf_idx)++;
+                // Each thread gets contiguous ct_buf indices starting from base
+                // Thread 0: base_idx + 0 * ct_bufs_per_thread
+                // Thread 1: base_idx + 1 * ct_bufs_per_thread
+                // Thread i: base_idx + i * ct_bufs_per_thread
+                *ct_buf_idx = base_ct_buf_idx + (i * ct_bufs_per_thread);
                 sol->next_sol[i] = deep_copy_solution_tree(sol->next_sol[0],
-                                                           scratch_buf_idx);
+                                                           scratch_buf_idx, ct_buf_idx);
             }
+
+            // Update ct_buf_idx to point past all used indices
+            *ct_buf_idx = base_ct_buf_idx + (n_threads * ct_bufs_per_thread) - 1;
+
+            // Total ct buffers used by this MT = n_threads * ct_bufs_per_thread
+            // Update num_ct_buf to reflect total for parent's accounting
+            *num_ct_buf = n_threads * ct_bufs_per_thread;
+
+            // Add back any buffers counted before this MT
+            *num_ct_buf += saved_num_ct_buf;
             break;
         }
         // Hold the current scratch buffer index and restore after copy of each ND-subtree
-        // as both nd_sol and next_sol of ND node share the same scratch space
+        // as both nd_sol and next_sol of ND node share the same scratch space and ct buffers
         UINT32 temp = *scratch_buf_idx;
+        UINT32 temp1 = *ct_buf_idx;
         if (sol->dft_bufs->nd_sol)
         {
-            post_process_solution(sol->dft_bufs->nd_sol, scratch_buf_idx);
+            // Process nd_sol separately - it may have MT_BATCHED with its own buffer needs
+            // nd_sol and next_sol share indices (they run sequentially), so track max
+            UINT32 nd_sol_ct_count = 0;
+            post_process_solution(sol->dft_bufs->nd_sol, scratch_buf_idx, ct_buf_idx, &nd_sol_ct_count);
             *scratch_buf_idx = temp;
+            *ct_buf_idx = temp1;
+
+            // Track maximum across all nd_sol paths
+            if (nd_sol_ct_count > max_nd_sol_ct_count)
+            {
+                max_nd_sol_ct_count = nd_sol_ct_count;
+            }
         }
+
+        if (sol->solver->solver_type == SOLVER_BUFFERED)
+        {
+            (*num_ct_buf)++;
+        }
+
         sol = sol->next_sol ? sol->next_sol[0] : NULL;
     }
-}
 
-VOID setup_inplace_buffers(aoclfftz_selector_t *sel)
-{
-#if !defined (PERFORM_INTER_STAGE_PERMUTE)
-
-    #if defined AOCLFFTZ_FIXED_SELECTOR_MODE
-    kernel_t *kertab = sel->kernel_tables->kt_dft;
-    #elif defined AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_MODE
-    kernel_t *kertab = sel->kernel_tables->kt_twid_dft;
-    #endif
-
-    aoclfftz_solution_t *solution = sel->solution;
-
-    // Create buffer for Complex N-Dim (or) Complex in-place CT cases
-    if (!IS_REAL(solution->decomp_scheme->flags) &&
-        ((solution->decomp_scheme->dim_rank > 1) ||
-         (!IS_OUT_OF_PLACE(solution->decomp_scheme->flags) &&
-          check_CT_solvability(solution->decomp_scheme->dims[0].n, kertab))))
+    // After traversing next_sol path, take max with nd_sol paths
+    // since nd_sol and next_sol share buffer indices (sequential execution)
+    if (max_nd_sol_ct_count > *num_ct_buf)
     {
-        alloc_inplace_buffer(solution, &solution->dft_bufs->ct_buffer);
-
-        UINT32 dt_bytes = SOL_DT_SIZE(solution);
-        solution->dft_bufs->ct_buf_real = solution->dft_bufs->ct_buffer;
-        solution->dft_bufs->ct_buf_imag =
-                    MOVE_ADDR(solution->dft_bufs->ct_buffer, dt_bytes);
+        *num_ct_buf = max_nd_sol_ct_count;
     }
-    else if (IS_OUT_OF_PLACE(solution->decomp_scheme->flags))
-    {
-        solution->dft_bufs->ct_buf_real = solution->decomp_scheme->out_real;
-        solution->dft_bufs->ct_buf_imag = solution->decomp_scheme->out_imag;
-    }
-#else
-    solution->dft_bufs->ct_buf_real = solution->decomp_scheme->out_real;
-    solution->dft_bufs->ct_buf_imag = solution->decomp_scheme->out_imag;
-#endif
 }
 
 /**

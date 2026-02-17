@@ -135,7 +135,7 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         }
 
         // Process the tail cases of the kernel
-        if(rem_iters)
+        if (rem_iters)
         {
             INTP v_istride = num_iters * v_in_stride;
             INTP v_ostride = num_iters * v_out_stride;

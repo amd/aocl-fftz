@@ -197,8 +197,8 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->ct_buf_imag = NULL;
         sol->dft_bufs->ct_buf_real_in = NULL;
         sol->dft_bufs->ct_buf_size = 0;
-        sol->dft_bufs->use_2D_buffering = 0;
-        sol->dft_bufs->reset_ct_buf_offset = 0;
+        sol->dft_bufs->num_ct_buf = 0;
+        sol->dft_bufs->ct_buf_allocated = 0;
         sol->solver->kernel_c2c->count = 0;
         sol->solver->kernel_r2hc->count = 0;
         sol->solver->kernel_r2hcf->count = 0;
@@ -309,8 +309,8 @@ aoclfftz_solution_t* alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->ct_buf_imag = NULL;
         sol->dft_bufs->ct_buf_real_in = NULL;
         sol->dft_bufs->ct_buf_size = 0;
-        sol->dft_bufs->use_2D_buffering = 0;
-        sol->dft_bufs->reset_ct_buf_offset = 0;
+        sol->dft_bufs->num_ct_buf = 0;
+        sol->dft_bufs->ct_buf_allocated = 0;
         sol->solver->kernel_c2c->count = 0;
         sol->solver->kernel_r2hc->count = 0;
         sol->solver->kernel_r2hcf->count = 0;
@@ -450,26 +450,28 @@ VOID *alloc_twiddle_buffer(UINTP size, UINT32 dt_prec)
     return buffer;
 }
 
-VOID alloc_inplace_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
+VOID alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
 {
+    if (solution->dft_bufs->ct_buffer)
+    {
+        return;
+    }
     // allocate buffer for the entire problem
     // this can be optimized by :
     //      1. making the buffer unit strided even if input is strided
-    //      2. allocating only for the dims and reusing the same for vecs
 
     INT32 dim_rank = solution->decomp_scheme->dim_rank;
-    INT32 vec_rank = solution->decomp_scheme->vec_rank;
     aoclfftz_dim_t_64_ *dims = solution->decomp_scheme->dims;
-    aoclfftz_dim_t_64_ *vecs = solution->decomp_scheme->vecs;
 
-    INTP buffer_length = 1;
-    INTP buffer_size = 0;
+    UINTP buffer_length = 1;
+    UINTP buffer_size = 0;
 
     UINT32 dt_bytes = SOL_DT_SIZE(solution);
 
-    // Approach: if the problem is 3D, then create ct_buffer of 2D by removing
-    // the smallest dim for. e.g. problem size of 30x40x50 -> ct_buffer of 40x50
-    // for multi-threaded problems, this 2D buffer will be created per thread.
+    // Approach: if the problem is ND where N>2, then create ct_buffer of (N-1)D
+    // by removing the smallest dim for. e.g. problem size of 30x40x50 ->
+    // ct_buffer of 40x50 for multi-threaded problems, this 2D buffer will be
+    // created per thread.
     INTP min_dim_size = dims[0].n;
     for (INT32 i = 0; i < dim_rank; i++)
     {
@@ -479,35 +481,19 @@ VOID alloc_inplace_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
             min_dim_size = dims[i].n;
         }
     }
-    for (INT32 i = 0; i < vec_rank; i++)
-    {
-        buffer_length += ((vecs[i].n - 1) * (vecs[i].out_stride));
-    }
-#ifndef DISABLE_OPTIMAL_BUFFERING
     INT32 n_threads = solution->decomp_scheme->thread_info->avl_threads;
-    // compact buffer is used only for 3D unit-strided non-batched C2C problems.
-    // TODO: support for strided problems with 3D and above (i.e. dim_rank >= 3)
-    if ((solution->decomp_scheme->dim_rank == 3) &&
-        (solution->decomp_scheme->dims[0].in_stride == 1) &&
-        (solution->decomp_scheme->vecs[0].n == 1) &&
-        !check_bluestein_problem(solution->decomp_scheme) &&
-        !IS_REAL(solution->decomp_scheme->flags))
+    INT32 num_buffer =
+        solution->dft_bufs->num_ct_buf > 0 ? solution->dft_bufs->num_ct_buf : 1;
+    if (solution->decomp_scheme->dim_rank > 2)
     {
         buffer_length = buffer_length / min_dim_size;
-        buffer_size = buffer_length * DATA_STRIDE * dt_bytes;
-        ALLOC_ALIGN_UNINIT(*buffer_ptr, VOID, buffer_size * n_threads);
-        solution->dft_bufs->use_2D_buffering = 1;
     }
-    else
-    {
-#endif
-        buffer_size = buffer_length * DATA_STRIDE * dt_bytes;
-        ALLOC_ALIGN_UNINIT(*buffer_ptr, VOID, buffer_size);
-        solution->dft_bufs->use_2D_buffering = 0;
-#ifndef DISABLE_OPTIMAL_BUFFERING
-    }
-#endif
+    buffer_size = buffer_length * DATA_STRIDE * dt_bytes;
+    ALLOC_ALIGN_UNINIT(*buffer_ptr, VOID, buffer_size * num_buffer * n_threads);
     solution->dft_bufs->ct_buf_size = buffer_size;
+    solution->dft_bufs->ct_buf_real = *buffer_ptr;
+    solution->dft_bufs->ct_buf_imag = MOVE_ADDR(*buffer_ptr, dt_bytes);
+    solution->dft_bufs->ct_buf_allocated = 1;
 }
 
 #ifdef AOCL_SINGLE_MEM_REGION
@@ -582,10 +568,10 @@ VOID destroy_solution(aoclfftz_solution_t* sol, UINT8 destroy_buffers)
         destroy_bluestein(sol->dft_bufs->bluestein);
         destroy_transpose(sol->dft_bufs->transpose);
 
-        // only destroyed once from the final destroy_handle
-        if (destroy_buffers)
+        if (sol->dft_bufs->ct_buf_allocated)
         {
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->ct_buffer);
+            sol->dft_bufs->ct_buf_allocated = 0;
         }
 
         // Free auxiliary buffers based on solver type:
@@ -631,6 +617,11 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
 
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol->twiddle->twiddle_buf_ptr);
                 cur_sol->twiddle->TW = NULL;
+                if (cur_sol->dft_bufs->ct_buf_allocated)
+                {
+                    FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->ct_buffer);
+                    cur_sol->dft_bufs->ct_buf_allocated = 0;
+                }
 
                 destroy_bluestein(cur_sol->dft_bufs->bluestein);
                 destroy_transpose(cur_sol->dft_bufs->transpose);
@@ -649,8 +640,6 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
                         cur_sol->dft_bufs->buffered->aux_buffer_1);
                     FREE_ALIGN_ALLOCATED_MEM(
                         cur_sol->dft_bufs->buffered->aux_buffer_2);
-                    FREE_ALIGN_ALLOCATED_MEM(
-                        cur_sol->dft_bufs->ct_buffer);
                 }
                 destroy_solution(cur_sol->dft_bufs->nd_sol, 0);
 

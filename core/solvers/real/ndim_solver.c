@@ -82,22 +82,6 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
     // Compute allocation size in bytes for ct_buffer and aux_buffer_1
     UINTP alloc_size = calculate_max_buffer_size(sol) * DATA_STRIDE * dt_bytes;
 
-    // Allocate ct_buffer used by complex solvers for
-    // Cooley-Tukey intermediate storage in ND transforms.
-    if (sol->dft_bufs->ct_buffer == NULL)
-    {
-        ALLOC_ALIGN_INIT(sol->dft_bufs->ct_buffer, VOID, alloc_size);
-        if (sol->dft_bufs->ct_buffer == NULL)
-        {
-            AOCLFFTZ_LOG(INFO, global_logger_mode,
-                         "Failed to allocate ct_buffer in ndim_solver");
-            return SOLVER_FAILURE;
-        }
-        sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buffer;
-        sol->dft_bufs->ct_buf_imag =
-            MOVE_ADDR(sol->dft_bufs->ct_buffer, dt_bytes);
-    }
-
     COPY_SOLUTION_OBJ_WO_DIMS(complex_dims_sol, sol);
     COPY_SOLUTION_OBJ_WO_DIMS(real_dim_sol, sol);
 
@@ -119,6 +103,37 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
 
     INT32 dim_rank = sol->decomp_scheme->dim_rank;
     UINT8 is_forward = (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR);
+
+    // Assign buffer pointers
+    if (is_forward)
+    {
+        real_dim_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
+        real_dim_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
+        real_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+        real_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+        complex_dims_sol->decomp_scheme->in_real =
+            real_dim_sol->decomp_scheme->out_real;
+        complex_dims_sol->decomp_scheme->in_imag =
+            real_dim_sol->decomp_scheme->out_imag;
+        complex_dims_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+        complex_dims_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    }
+    else
+    {
+        complex_dims_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
+        complex_dims_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
+        complex_dims_sol->decomp_scheme->out_real =
+            sol->dft_bufs->buffered->aux_buffer_1;
+        complex_dims_sol->decomp_scheme->out_imag =
+            MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_1, dt_bytes);
+        real_dim_sol->decomp_scheme->in_real =
+            complex_dims_sol->decomp_scheme->out_real;
+        real_dim_sol->decomp_scheme->in_imag =
+            complex_dims_sol->decomp_scheme->out_imag;
+        real_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+        real_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    }
+
 
     // setup (N-1)D solution
     complex_dims_sol->decomp_scheme->dim_rank = dim_rank - 1;
