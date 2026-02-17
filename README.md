@@ -125,6 +125,7 @@ ENABLE_MULTI_THREADING              |  Compiles library with multi-threading sup
 ENABLE_STRICT_WARNINGS              |  Enables compiler flags to treat all warnings as errors (Enabled by default)
 FUZZTEST                            |  Enables Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)
 VALGRIND                            |  Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)
+OpenMP_libomp_LIBRARY               |  Path to the custom OpenMP library (System OpenMP is used if not provided)
 
 
 CPU Architecture Support and FMA Requirements
