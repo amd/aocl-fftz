@@ -36,6 +36,7 @@
 #ifndef FFTW_WRAPPER_H
 #define FFTW_WRAPPER_H
 
+#include <stdio.h>
 #include "aoclfftz.h"
 
 #ifdef __cplusplus
@@ -251,6 +252,25 @@ EXPORT_SYM_DYN INT32                                                            
 
 FFTW_WRAPPER_API(API_NAME_MANGLE_DOUBLE, DOUBLE, fftw_complex)
 FFTW_WRAPPER_API(API_NAME_MANGLE_FLOAT, FLOAT, fftwf_complex)
+
+/*
+ * FFTW3 "wisdom" API — no-op stubs for compatibility.
+ * FFTW3 can save/load "wisdom" to speed up future plans.
+ * AOCL-FFTZ does not use or store wisdom. The functions below are empty
+ * stubs so that applications written for FFTW3 still compile and run
+ * without code changes.
+ */
+EXPORT_SYM_DYN INT32 fftw_import_system_wisdom(VOID);
+EXPORT_SYM_DYN INT32 fftw_import_wisdom_from_file(FILE *f);
+EXPORT_SYM_DYN INT32 fftw_import_wisdom_from_string(const CHAR *s);
+EXPORT_SYM_DYN CHAR *fftw_export_wisdom_to_string(VOID);
+EXPORT_SYM_DYN VOID fftw_export_wisdom_to_file(FILE *f);
+
+EXPORT_SYM_DYN INT32 fftwf_import_system_wisdom(VOID);
+EXPORT_SYM_DYN INT32 fftwf_import_wisdom_from_file(FILE *f);
+EXPORT_SYM_DYN INT32 fftwf_import_wisdom_from_string(const CHAR *s);
+EXPORT_SYM_DYN CHAR *fftwf_export_wisdom_to_string(VOID);
+EXPORT_SYM_DYN VOID fftwf_export_wisdom_to_file(FILE *f);
 
 #define fftw_version  AOCLFFTZ_LIBRARY_VERSION " (FFTW compatible)"
 #define fftwf_version AOCLFFTZ_LIBRARY_VERSION " (FFTW compatible)"

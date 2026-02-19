@@ -38,6 +38,10 @@
 
 INT32 thread_num = 1;
 
+/* Single empty string returned by export_wisdom_to_string. No allocation, so no leak.
+ * If the caller passes this pointer to fftw_free, we skip the free (safe no-op). */
+static CHAR fftw_export_wisdom_empty_string[] = "";
+
 // Allocate aligned memory for given number of bytes
 VOID *fftw_malloc(size_t n)
 {
@@ -86,16 +90,24 @@ float *fftwf_alloc_real(size_t n)
 
 VOID fftw_free(VOID *mem_ptr)
 {
+    if (mem_ptr == (VOID *)fftw_export_wisdom_empty_string)
+    {
+        return;
+    }
     FREE_ALIGN_ALLOCATED_MEM(mem_ptr);
 }
 
 VOID fftwf_free(VOID *mem_ptr)
 {
+    if (mem_ptr == (VOID *)fftw_export_wisdom_empty_string)
+    {
+        return;
+    }
     FREE_ALIGN_ALLOCATED_MEM(mem_ptr);
 }
 
 // FFTW planner stores some persistant data other than plan, which can be
-// destroyed using cleanup() but this has no requirement in fftz. Hence having
+// destroyed using cleanup() but this has no requirement in AOCL-FFTZ. Hence having
 // it as an empty function.
 VOID fftw_cleanup(VOID)
 {
@@ -195,4 +207,58 @@ INT32 fftw_alignment_of(double *p)
 INT32 fftwf_alignment_of(float *p)
 {
     return (int)(((uintptr_t)p) % 16);
+}
+
+/*
+ * FFTW3 wisdom API stubs. We have no wisdom to save or load, but apps expect
+ * these functions. Import functions do nothing and return 0. export_to_string
+ * returns a fixed empty string (no malloc). If the app calls fftw_free on that
+ * pointer, we do nothing—no crash, no leak. We never return NULL.
+ */
+INT32 fftw_import_system_wisdom(VOID)
+{
+    return 0;
+}
+
+INT32 fftw_import_wisdom_from_file(FILE *f)
+{
+    return 0;
+}
+
+INT32 fftw_import_wisdom_from_string(const CHAR *s)
+{
+    return 0;
+}
+
+CHAR *fftw_export_wisdom_to_string(VOID)
+{
+    return (CHAR *)fftw_export_wisdom_empty_string;
+}
+
+VOID fftw_export_wisdom_to_file(FILE *f)
+{
+}
+
+INT32 fftwf_import_system_wisdom(VOID)
+{
+    return 0;
+}
+
+INT32 fftwf_import_wisdom_from_file(FILE *f)
+{
+    return 0;
+}
+
+INT32 fftwf_import_wisdom_from_string(const CHAR *s)
+{
+    return 0;
+}
+
+CHAR *fftwf_export_wisdom_to_string(VOID)
+{
+    return (CHAR *)fftw_export_wisdom_empty_string;
+}
+
+VOID fftwf_export_wisdom_to_file(FILE *f)
+{
 }
