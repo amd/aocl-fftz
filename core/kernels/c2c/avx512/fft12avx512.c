@@ -41,7 +41,7 @@
 #include "core/kernels/simd_includes/simd_common_avx512.h"
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 10, 48, 192, 41, 78},
-                                                     {0, 10, 48,  96,  5, 78}};
+                                                     {4,  4, 44,  96,  5, 74}};
 
 ops_cycles_t get_ops_cnt_fft12avx512(UINT8 precision, UINT8 direction)
 {
@@ -783,12 +783,12 @@ static VOID fft12avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     __m512d v_C1 = _mm512_set1_pd(CRTM_12[0]);
     __m512d v_C2 = _mm512_set1_pd(CRTM_12[1]);
-    __m512d v_C3 = _mm512_set1_pd(CRTM_12[2]);
-    v_C3 = _mm512_xor_pd(v_C3, _neg_512_d[flag].d);
-    __m512d v_C4 = _mm512_set1_pd(CRTM_12[0]);
-    v_C4 = _mm512_xor_pd(v_C4, _neg_512_d[flag].d);
-    __m512d v_C5 = _mm512_set1_pd(CRTM_12[1]);
-    v_C5 = _mm512_xor_pd(v_C5, _neg_512_d[flag].d);
+    __m512d v_sign_conj = _mm512_xor_pd(_neg_512_d[flag].d, _conj_512_d.d);
+
+    __m512d v_C4_conj = _mm512_xor_pd(_mm512_set1_pd(CRTM_12[0]), _conj_512_d.d);
+    v_C4_conj = _mm512_xor_pd(v_C4_conj, _neg_512_d[flag].d);
+    __m512d v_C5_conj = _mm512_xor_pd(_mm512_set1_pd(CRTM_12[1]), _conj_512_d.d);
+    v_C5_conj = _mm512_xor_pd(v_C5_conj, _neg_512_d[flag].d);
 
     for (count = 0; count < N; count++)
     {
@@ -799,7 +799,7 @@ static VOID fft12avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         __m512d v_out0, v_out1, v_out2, v_out3, v_out4, v_out5, v_out6, v_out7,
                 v_out8, v_out9, v_out10, v_out11;
         __m512d v_cv1, v_cv2, v_cv3, v_cv4, v_cv5, v_cv6, v_cv7, v_cv8;
-        __m512d v_tv1, v_tv2, v_tv3, v_tv4, v_tv5;
+        __m512d v_tv1, v_tv2, v_tv3, v_tv5;
 
         curr_in = in_r;
         curr_out = out_r;
@@ -861,31 +861,25 @@ static VOID fft12avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_cv7 = _mm512_sub_pd(v_cv2, v_av12);
         v_cv8 = _mm512_sub_pd(v_av7, v_cv1);
 
-        v_tv1 = _mm512_mul_pd(v_C3, v_cv7);
-        v_tv1 = SWAP_RI_512_D(CONJ_512_D(v_tv1));
+        v_tv1 = _mm512_xor_pd(v_cv7, v_sign_conj);
+        v_tv1 = SWAP_RI_512_D(v_tv1);
 
         // output point 4 & 10
         v_out3 = _mm512_sub_pd(v_cv8, v_tv1);
         v_out9 = _mm512_add_pd(v_cv8, v_tv1);
 
-        v_tv1 = _mm512_mul_pd(v_C3, v_av12);
-        v_tv1 = CONJ_512_D(v_tv1);
-
-        v_tv2 = _mm512_mul_pd(v_C2, v_cv1);
-        v_cv1 = _mm512_add_pd(v_av7, v_tv2);
+        v_tv1 = _mm512_xor_pd(v_av12, v_sign_conj);
+        v_cv1 = _mm512_fmadd_pd(v_C2, v_cv1, v_av7);
         v_cv7 = _mm512_sub_pd(v_av10, v_av11);
 
         v_tv3 = _mm512_mul_pd(v_C1, v_cv7);
         v_cv8 = _mm512_add_pd(v_cv1, v_tv3);
 
-        v_tv4 = _mm512_mul_pd(v_C5, v_cv2);
-        v_tv4 = CONJ_512_D(v_tv4);
-
+        const __m512d cv2_save = v_cv2;
         v_cv2 = _mm512_sub_pd(v_av2, v_av3);
-        v_tv5 = _mm512_mul_pd(v_C4, v_cv2);
-        v_tv5 = CONJ_512_D(v_tv5);
+        v_tv5 = _mm512_mul_pd(v_cv2, v_C4_conj);
 
-        v_cv2 = _mm512_add_pd(v_tv1, v_tv4);
+        v_cv2 = _mm512_fmadd_pd(cv2_save, v_C5_conj, v_tv1);
         v_cv7 = _mm512_add_pd(v_cv2, v_tv5);
         v_cv7 = SWAP_RI_512_D(v_cv7);
 
@@ -901,23 +895,21 @@ static VOID fft12avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out5 = _mm512_sub_pd(v_cv7, v_cv8);
         v_out7 = _mm512_add_pd(v_cv7, v_cv8);
 
-        v_tv1 = _mm512_mul_pd(v_C2, v_cv6);
-        v_cv1 = _mm512_sub_pd(v_cv4, v_tv1);
+        v_cv1 = _mm512_fnmadd_pd(v_C2, v_cv6, v_cv4);
         v_cv2 = _mm512_add_pd(v_av8, v_av9);
         v_cv4 = _mm512_add_pd(v_av10, v_av11);
         v_cv6 = _mm512_add_pd(v_cv4, v_cv2);
-        v_tv2 = _mm512_mul_pd(v_C4, v_cv6);
-        v_tv2 = SWAP_RI_512_D(CONJ_512_D(v_tv2));
+        v_tv2 = _mm512_mul_pd(v_cv6, v_C4_conj);
+        v_tv2 = SWAP_RI_512_D(v_tv2);
 
         // output point 3 & 11
         v_out2 = _mm512_sub_pd(v_cv1, v_tv2);
         v_out10 = _mm512_add_pd(v_cv1, v_tv2);
 
-        v_tv1 = _mm512_mul_pd(v_C2, v_cv5);
-        v_cv1 = _mm512_sub_pd(v_cv3, v_tv1);
+        v_cv1 = _mm512_fnmadd_pd(v_C2, v_cv5, v_cv3);
         v_cv6 = _mm512_sub_pd(v_cv4, v_cv2);
-        v_tv2 = _mm512_mul_pd(v_C4, v_cv6);
-        v_tv2 = SWAP_RI_512_D(CONJ_512_D(v_tv2));
+        v_tv2 = _mm512_mul_pd(v_cv6, v_C4_conj);
+        v_tv2 = SWAP_RI_512_D(v_tv2);
 
         // output point 5 & 9
         v_out4 = _mm512_sub_pd(v_cv1, v_tv2);
@@ -963,9 +955,15 @@ static VOID fft12avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         __m256d v_tv1, v_tv2, v_tv3, v_tv4, v_tv5;
         __m256d v_K1 = _mm512_castpd512_pd256(v_C1);
         __m256d v_K2 = _mm512_castpd512_pd256(v_C2);
-        __m256d v_K3 = _mm512_castpd512_pd256(v_C3);
-        __m256d v_K4 = _mm512_castpd512_pd256(v_C4);
-        __m256d v_K5 = _mm512_castpd512_pd256(v_C5);
+
+        __m256d v_conj_256 = _mm512_castpd512_pd256(_conj_512_d.d);
+        __m256d v_neg_256 = _mm512_castpd512_pd256(_neg_512_d[flag].d);
+        __m256d v_sign_conj_256 = _mm256_xor_pd(v_neg_256, v_conj_256);
+        
+        __m256d v_K4_conj = _mm256_xor_pd(_mm256_set1_pd(CRTM_12[0]), v_conj_256);
+        v_K4_conj = _mm256_xor_pd(v_K4_conj, v_neg_256);
+        __m256d v_K5_conj = _mm256_xor_pd(_mm256_set1_pd(CRTM_12[1]), v_conj_256);
+        v_K5_conj = _mm256_xor_pd(v_K5_conj, v_neg_256);
 
         curr_in = in_r;
         curr_out = out_r;
@@ -1027,16 +1025,14 @@ static VOID fft12avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_cv7 = _mm256_sub_pd(v_cv2, v_av12);
         v_cv8 = _mm256_sub_pd(v_av7, v_cv1);
 
-        v_tv1 = _mm256_mul_pd(v_K3, v_cv7);
-        v_tv1 = SWAP_RI_256_D(CONJ_256_D(v_tv1));
+        v_tv1 = _mm256_xor_pd(v_cv7, v_sign_conj_256);
+        v_tv1 = SWAP_RI_256_D(v_tv1);
 
         // output point 4 & 10
         v_out3 = _mm256_sub_pd(v_cv8, v_tv1);
         v_out9 = _mm256_add_pd(v_cv8, v_tv1);
 
-        v_tv1 = _mm256_mul_pd(v_K3, v_av12);
-        v_tv1 = CONJ_256_D(v_tv1);
-
+        v_tv1 = _mm256_xor_pd(v_av12, v_sign_conj_256);
         v_tv2 = _mm256_mul_pd(v_K2, v_cv1);
         v_cv1 = _mm256_add_pd(v_av7, v_tv2);
         v_cv7 = _mm256_sub_pd(v_av10, v_av11);
@@ -1044,13 +1040,11 @@ static VOID fft12avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_tv3 = _mm256_mul_pd(v_K1, v_cv7);
         v_cv8 = _mm256_add_pd(v_cv1, v_tv3);
 
-        v_tv4 = _mm256_mul_pd(v_K5, v_cv2);
-        v_tv4 = CONJ_256_D(v_tv4);
-
+        const __m256d cv2_save = v_cv2;
         v_cv2 = _mm256_sub_pd(v_av2, v_av3);
-        v_tv5 = _mm256_mul_pd(v_K4, v_cv2);
-        v_tv5 = CONJ_256_D(v_tv5);
+        v_tv5 = _mm256_mul_pd(v_cv2, v_K4_conj);
 
+        v_tv4 = _mm256_mul_pd(cv2_save, v_K5_conj);
         v_cv2 = _mm256_add_pd(v_tv1, v_tv4);
         v_cv7 = _mm256_add_pd(v_cv2, v_tv5);
         v_cv7 = SWAP_RI_256_D(v_cv7);
@@ -1072,8 +1066,8 @@ static VOID fft12avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_cv2 = _mm256_add_pd(v_av8, v_av9);
         v_cv4 = _mm256_add_pd(v_av10, v_av11);
         v_cv6 = _mm256_add_pd(v_cv4, v_cv2);
-        v_tv2 = _mm256_mul_pd(v_K4, v_cv6);
-        v_tv2 = SWAP_RI_256_D(CONJ_256_D(v_tv2));
+        v_tv2 = _mm256_mul_pd(v_cv6, v_K4_conj);
+        v_tv2 = SWAP_RI_256_D(v_tv2);
 
         // output point 3 & 11
         v_out2 = _mm256_sub_pd(v_cv1, v_tv2);
@@ -1082,8 +1076,8 @@ static VOID fft12avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_tv1 = _mm256_mul_pd(v_K2, v_cv5);
         v_cv1 = _mm256_sub_pd(v_cv3, v_tv1);
         v_cv6 = _mm256_sub_pd(v_cv4, v_cv2);
-        v_tv2 = _mm256_mul_pd(v_K4, v_cv6);
-        v_tv2 = SWAP_RI_256_D(CONJ_256_D(v_tv2));
+        v_tv2 = _mm256_mul_pd(v_cv6, v_K4_conj);
+        v_tv2 = SWAP_RI_256_D(v_tv2);
 
         // output point 5 & 9
         v_out4 = _mm256_sub_pd(v_cv1, v_tv2);
@@ -1130,9 +1124,15 @@ static VOID fft12avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         __m128d v_K1 = _mm512_castpd512_pd128(v_C1);
         __m128d v_K2 = _mm512_castpd512_pd128(v_C2);
-        __m128d v_K3 = _mm512_castpd512_pd128(v_C3);
-        __m128d v_K4 = _mm512_castpd512_pd128(v_C4);
-        __m128d v_K5 = _mm512_castpd512_pd128(v_C5);
+
+        __m128d v_conj_128 = _mm512_castpd512_pd128(_conj_512_d.d);
+        __m128d v_neg_128 = _mm512_castpd512_pd128(_neg_512_d[flag].d);
+        __m128d v_sign_conj_128 = _mm_xor_pd(v_neg_128, v_conj_128);
+        
+        __m128d v_K4_conj = _mm_xor_pd(_mm_set1_pd(CRTM_12[0]), v_conj_128);
+        v_K4_conj = _mm_xor_pd(v_K4_conj, v_neg_128);
+        __m128d v_K5_conj = _mm_xor_pd(_mm_set1_pd(CRTM_12[1]), v_conj_128);
+        v_K5_conj = _mm_xor_pd(v_K5_conj, v_neg_128);
 
         curr_in = in_r;
         curr_out = out_r;
@@ -1194,16 +1194,14 @@ static VOID fft12avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_cv7 = _mm_sub_pd(v_cv2, v_av12);
         v_cv8 = _mm_sub_pd(v_av7, v_cv1);
 
-        v_tv1 = _mm_mul_pd(v_K3, v_cv7);
-        v_tv1 = SWAP_RI_128_D(CONJ_128_D(v_tv1));
+        v_tv1 = _mm_xor_pd(v_cv7, v_sign_conj_128);
+        v_tv1 = SWAP_RI_128_D(v_tv1);
 
         // output point 4 & 10
         v_out3 = _mm_sub_pd(v_cv8, v_tv1);
         v_out9 = _mm_add_pd(v_cv8, v_tv1);
 
-        v_tv1 = _mm_mul_pd(v_K3, v_av12);
-        v_tv1 = CONJ_128_D(v_tv1);
-
+        v_tv1 = _mm_xor_pd(v_av12, v_sign_conj_128);
         v_tv2 = _mm_mul_pd(v_K2, v_cv1);
         v_cv1 = _mm_add_pd(v_av7, v_tv2);
         v_cv7 = _mm_sub_pd(v_av10, v_av11);
@@ -1211,13 +1209,11 @@ static VOID fft12avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_tv3 = _mm_mul_pd(v_K1, v_cv7);
         v_cv8 = _mm_add_pd(v_cv1, v_tv3);
 
-        v_tv4 = _mm_mul_pd(v_K5, v_cv2);
-        v_tv4 = CONJ_128_D(v_tv4);
-
+        const __m128d cv2_save = v_cv2;
         v_cv2 = _mm_sub_pd(v_av2, v_av3);
-        v_tv5 = _mm_mul_pd(v_K4, v_cv2);
-        v_tv5 = CONJ_128_D(v_tv5);
+        v_tv5 = _mm_mul_pd(v_cv2, v_K4_conj);
 
+        v_tv4 = _mm_mul_pd(cv2_save, v_K5_conj);
         v_cv2 = _mm_add_pd(v_tv1, v_tv4);
         v_cv7 = _mm_add_pd(v_cv2, v_tv5);
         v_cv7 = SWAP_RI_128_D(v_cv7);
@@ -1239,8 +1235,8 @@ static VOID fft12avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_cv2 = _mm_add_pd(v_av8, v_av9);
         v_cv4 = _mm_add_pd(v_av10, v_av11);
         v_cv6 = _mm_add_pd(v_cv4, v_cv2);
-        v_tv2 = _mm_mul_pd(v_K4, v_cv6);
-        v_tv2 = SWAP_RI_128_D(CONJ_128_D(v_tv2));
+        v_tv2 = _mm_mul_pd(v_cv6, v_K4_conj);
+        v_tv2 = SWAP_RI_128_D(v_tv2);
 
         // output point 3 & 11
         v_out2 = _mm_sub_pd(v_cv1, v_tv2);
@@ -1249,8 +1245,8 @@ static VOID fft12avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_tv1 = _mm_mul_pd(v_K2, v_cv5);
         v_cv1 = _mm_sub_pd(v_cv3, v_tv1);
         v_cv6 = _mm_sub_pd(v_cv4, v_cv2);
-        v_tv2 = _mm_mul_pd(v_K4, v_cv6);
-        v_tv2 = SWAP_RI_128_D(CONJ_128_D(v_tv2));
+        v_tv2 = _mm_mul_pd(v_cv6, v_K4_conj);
+        v_tv2 = SWAP_RI_128_D(v_tv2);
 
         // output point 5 & 9
         v_out4 = _mm_sub_pd(v_cv1, v_tv2);

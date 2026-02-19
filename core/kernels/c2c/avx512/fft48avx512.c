@@ -43,7 +43,7 @@
 
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {
                                                 {5,  13, 44, 96,  46, 39},
-                                                {11, 35, 72, 107, 65, 92}};
+                                                {11, 24, 72, 107, 65, 92}};
 
 static const FLOAT twiddle_buf_fp32[5][16] __attribute__((aligned(64))) = {
     {
@@ -398,6 +398,19 @@ static VOID fft48avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
+/* Branch-free conjugate for FP64 kernel: [0] = identity, [1] = conjugate (flip sign of imag). */
+static const union data_union_512 _conj_512_d_fp48[2] = {
+    {.u = { 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+            0x00000000, 0x00000000, 0x00000000, 0x00000000,
+            0x00000000, 0x00000000, 0x00000000, 0x00000000,
+            0x00000000, 0x00000000, 0x00000000, 0x00000000 }},
+    {.u = { 0x00000000, 0x00000000, 0x00000000, 0x80000000,
+            0x00000000, 0x00000000, 0x00000000, 0x80000000,
+            0x00000000, 0x00000000, 0x00000000, 0x80000000,
+            0x00000000, 0x00000000, 0x00000000, 0x80000000 }}
+};
+#define CONJ_512_D_48(x, flag) _mm512_xor_pd(_conj_512_d_fp48[flag].d, (x))
+
 static const DOUBLE twiddle_buf_fp64[11][8] __attribute__((aligned(64))) = {
     {
         1.0,
@@ -513,8 +526,9 @@ static const DOUBLE twiddle_buf_fp64[11][8] __attribute__((aligned(64))) = {
 };
 
 // Radix-48 FFT kernel using 12x4 decomposition (AVX-512 double precision)
-static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                            VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag,
+                            VOID *out_real, VOID *out_imag,
+                            INTP n, aoclfftz_strides_t *strides,
                             VOID *twd, UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
@@ -540,19 +554,60 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
     __m512d v_C1 = _mm512_set1_pd(CRTM_12[0]);
     __m512d v_C2 = _mm512_set1_pd(CRTM_12[1]);
-    __m512d v_C3 = _mm512_set1_pd(CRTM_12[2]);
-    v_C3 = _mm512_xor_pd(v_C3, _neg_512_d[flag].d);
-    __m512d v_C4 = _mm512_set1_pd(CRTM_12[0]);
-    v_C4 = _mm512_xor_pd(v_C4, _neg_512_d[flag].d);
-    __m512d v_C5 = _mm512_set1_pd(CRTM_12[1]);
-    v_C5 = _mm512_xor_pd(v_C5, _neg_512_d[flag].d);
 
-    __m512d ones = _mm512_set1_pd(1.0);
-    __m512d v_C_ONE = _mm512_set1_pd(1.0);
-    v_C_ONE = _mm512_xor_pd(v_C_ONE, _neg_512_d[flag].d);
+    __m512d v_sign_conj = _mm512_xor_pd(_neg_512_d[flag].d, _conj_512_d.d);
 
+    __m512d v_C4_conj = _mm512_xor_pd(_mm512_set1_pd(CRTM_12[0]), _conj_512_d.d);
+    v_C4_conj = _mm512_xor_pd(v_C4_conj, _neg_512_d[flag].d);
+    __m512d v_C5_conj = _mm512_xor_pd(_mm512_set1_pd(CRTM_12[1]), _conj_512_d.d);
+    v_C5_conj = _mm512_xor_pd(v_C5_conj, _neg_512_d[flag].d);
+        
     INTP group_stride = in_strides[1];
     INTP out_group_stride = out_strides[1];
+
+    __m512d twd1_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 0]), flag);
+    __m512d twd1_real = _mm512_movedup_pd(twd1_r_);
+    __m512d twd1_imag = _mm512_unpackhi_pd(twd1_r_, twd1_r_);
+
+    __m512d twd2_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 1]), flag);
+    __m512d twd2_real = _mm512_movedup_pd(twd2_r_);
+    __m512d twd2_imag = _mm512_unpackhi_pd(twd2_r_, twd2_r_);
+
+    __m512d twd3_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 2]), flag);
+    __m512d twd3_real = _mm512_movedup_pd(twd3_r_);
+    __m512d twd3_imag = _mm512_unpackhi_pd(twd3_r_, twd3_r_);
+
+    __m512d twd4_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 3]), flag);
+    __m512d twd4_real = _mm512_movedup_pd(twd4_r_);
+    __m512d twd4_imag = _mm512_unpackhi_pd(twd4_r_, twd4_r_);
+
+    __m512d twd5_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 4]), flag);
+    __m512d twd5_real = _mm512_movedup_pd(twd5_r_);
+    __m512d twd5_imag = _mm512_unpackhi_pd(twd5_r_, twd5_r_);
+
+    __m512d twd6_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 5]), flag);
+    __m512d twd6_real = _mm512_movedup_pd(twd6_r_);
+    __m512d twd6_imag = _mm512_unpackhi_pd(twd6_r_, twd6_r_);
+
+    __m512d twd7_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 6]), flag);
+    __m512d twd7_real = _mm512_movedup_pd(twd7_r_);
+    __m512d twd7_imag = _mm512_unpackhi_pd(twd7_r_, twd7_r_);
+
+    __m512d twd8_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 7]), flag);
+    __m512d twd8_real = _mm512_movedup_pd(twd8_r_);
+    __m512d twd8_imag = _mm512_unpackhi_pd(twd8_r_, twd8_r_);
+
+    __m512d twd9_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 8]), flag);
+    __m512d twd9_real = _mm512_movedup_pd(twd9_r_);
+    __m512d twd9_imag = _mm512_unpackhi_pd(twd9_r_, twd9_r_);
+
+    __m512d twd10_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 9]), flag);
+    __m512d twd10_real = _mm512_movedup_pd(twd10_r_);
+    __m512d twd10_imag = _mm512_unpackhi_pd(twd10_r_, twd10_r_);
+
+    __m512d twd11_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[10]), flag);
+    __m512d twd11_real = _mm512_movedup_pd(twd11_r_);
+    __m512d twd11_imag = _mm512_unpackhi_pd(twd11_r_, twd11_r_);
 
     for (INTP i = 0; i < n; i++)
     {
@@ -560,8 +615,8 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         __m512d v_av1, v_av2, v_av3, v_av4, v_av5, v_av6;
         __m512d v_av7, v_av8, v_av9, v_av10, v_av11, v_av12;
         __m512d v_cv1, v_cv2, v_cv3, v_cv4, v_cv5, v_cv6, v_cv7, v_cv8;
-        __m512d v_tv1, v_tv2, v_tv3, v_tv4, v_tv5;
-
+        __m512d v_tv1, v_tv2, v_tv3, v_tv5;
+        
         GATHER4_512_D(in_r                  , group_stride, v_in[0]);
         GATHER4_512_D(in_r + in_strides[4]  , group_stride, v_in[1]);
         GATHER4_512_D(in_r + in_strides[8]  , group_stride, v_in[2]);
@@ -607,30 +662,25 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_cv7 = _mm512_sub_pd(v_cv2, v_av12);
         v_cv8 = _mm512_sub_pd(v_av7, v_cv1);
 
-        v_tv3 = _mm512_mul_pd(v_C3, v_cv7);
-        v_tv3 = SWAP_RI_512_D(CONJ_512_D(v_tv3));
-
+        v_tv3 = _mm512_xor_pd(v_cv7, v_sign_conj);
+        v_tv3 = SWAP_RI_512_D(v_tv3);
+        
         v_in[3] = _mm512_sub_pd(v_cv8, v_tv3);
         v_in[9] = _mm512_add_pd(v_cv8, v_tv3);
-
-        v_tv3 = _mm512_mul_pd(v_C3, v_av12);
-        v_tv3 = CONJ_512_D(v_tv3);
-
-        v_tv4 = _mm512_mul_pd(v_C2, v_cv1);
-        v_cv1 = _mm512_add_pd(v_av7, v_tv4);
+        
+        v_tv3 = _mm512_xor_pd(v_av12, v_sign_conj);
+        
+        v_cv1 = _mm512_fmadd_pd(v_C2, v_cv1, v_av7);
         v_cv7 = _mm512_sub_pd(v_av10, v_av11);
 
         v_tv5 = _mm512_mul_pd(v_C1, v_cv7);
         v_cv8 = _mm512_add_pd(v_cv1, v_tv5);
-
-        v_tv1 = _mm512_mul_pd(v_C5, v_cv2);
-        v_tv1 = CONJ_512_D(v_tv1);
-
+        
+        const __m512d cv2_save = v_cv2;
         v_cv2 = _mm512_sub_pd(v_av2, v_av3);
-        v_tv2 = _mm512_mul_pd(v_C4, v_cv2);
-        v_tv2 = CONJ_512_D(v_tv2);
-
-        v_cv2 = _mm512_add_pd(v_tv3, v_tv1);
+        v_tv2 = _mm512_mul_pd(v_cv2, v_C4_conj);
+        
+        v_cv2 = _mm512_fmadd_pd(cv2_save, v_C5_conj, v_tv3);
         v_cv7 = _mm512_add_pd(v_cv2, v_tv2);
         v_cv7 = SWAP_RI_512_D(v_cv7);
 
@@ -643,63 +693,34 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
 
         v_in[5] = _mm512_sub_pd(v_cv7, v_cv8);
         v_in[7] = _mm512_add_pd(v_cv7, v_cv8);
-
-        v_tv1 = _mm512_mul_pd(v_C2, v_cv6);
-        v_cv1 = _mm512_sub_pd(v_cv4, v_tv1);
+        
+        v_cv1 = _mm512_fnmadd_pd(v_C2, v_cv6, v_cv4);
         v_cv2 = _mm512_add_pd(v_av8, v_av9);
         v_cv4 = _mm512_add_pd(v_av10, v_av11);
         v_cv6 = _mm512_add_pd(v_cv4, v_cv2);
-        v_tv2 = _mm512_mul_pd(v_C4, v_cv6);
-        v_tv2 = SWAP_RI_512_D(CONJ_512_D(v_tv2));
-
+        v_tv2 = _mm512_mul_pd(v_cv6, v_C4_conj);
+        v_tv2 = SWAP_RI_512_D(v_tv2);
+        
         v_in[2] = _mm512_sub_pd(v_cv1, v_tv2);
         v_in[10] = _mm512_add_pd(v_cv1, v_tv2);
-
-        v_tv1 = _mm512_mul_pd(v_C2, v_cv5);
-        v_cv1 = _mm512_sub_pd(v_cv3, v_tv1);
+        
+        v_cv1 = _mm512_fnmadd_pd(v_C2, v_cv5, v_cv3);
         v_cv6 = _mm512_sub_pd(v_cv4, v_cv2);
-        v_tv2 = _mm512_mul_pd(v_C4, v_cv6);
-        v_tv2 = SWAP_RI_512_D(CONJ_512_D(v_tv2));
-
+        v_tv2 = _mm512_mul_pd(v_cv6, v_C4_conj);
+        v_tv2 = SWAP_RI_512_D(v_tv2);
+        
         v_in[4] = _mm512_sub_pd(v_cv1, v_tv2);
         v_in[8] = _mm512_add_pd(v_cv1, v_tv2);
-
-        __m512d lo_1, hi_1;
-        __m512d twd1 = _mm512_load_pd(twiddle_buf_fp64[0]);
-        __m512d twd2 = _mm512_load_pd(twiddle_buf_fp64[1]);
-        __m512d twd3 = _mm512_load_pd(twiddle_buf_fp64[2]);
-
-        if (flag)
-        {
-            twd1 = CONJ_512_D(twd1);
-            twd2 = CONJ_512_D(twd2);
-            twd3 = CONJ_512_D(twd3);
-        }
-
-        __m512d tmp_0_1 = _mm512_mul_pd(v_in[1], twd1);
-        __m512d tmp_1_1 = _mm512_mul_pd(SWAP_RI_512_D(v_in[1]), twd1);
-        __m512d tmp_0_2 = _mm512_mul_pd(v_in[2], twd2);
-        __m512d tmp_1_2 = _mm512_mul_pd(SWAP_RI_512_D(v_in[2]), twd2);
-        __m512d tmp_0_3 = _mm512_mul_pd(v_in[3], twd3);
-        __m512d tmp_1_3 = _mm512_mul_pd(SWAP_RI_512_D(v_in[3]), twd3);
-
-        lo_1 = _mm512_unpacklo_pd(tmp_0_1, tmp_1_1);
-        hi_1 = _mm512_unpackhi_pd(tmp_0_1, tmp_1_1);
-        v_in[1] = _mm512_fmaddsub_pd(ones, lo_1, hi_1);
-
-        lo_1 = _mm512_unpacklo_pd(tmp_0_2, tmp_1_2);
-        hi_1 = _mm512_unpackhi_pd(tmp_0_2, tmp_1_2);
-        v_in[2] = _mm512_fmaddsub_pd(ones, lo_1, hi_1);
-
-        lo_1 = _mm512_unpacklo_pd(tmp_0_3, tmp_1_3);
-        hi_1 = _mm512_unpackhi_pd(tmp_0_3, tmp_1_3);
-        v_in[3] = _mm512_fmaddsub_pd(ones, lo_1, hi_1);
-
-        __m512d twd4 = _mm512_load_pd(twiddle_buf_fp64[3]);
-        __m512d twd5 = _mm512_load_pd(twiddle_buf_fp64[4]);
-        __m512d twd6 = _mm512_load_pd(twiddle_buf_fp64[5]);
-        __m512d twd7 = _mm512_load_pd(twiddle_buf_fp64[6]);
-
+        
+        __m512d sw1 = SWAP_RI_512_D(v_in[1]);
+        v_in[1] = _mm512_fmaddsub_pd(v_in[1], twd1_real, _mm512_mul_pd(sw1, twd1_imag));
+        
+        __m512d sw2 = SWAP_RI_512_D(v_in[2]);
+        v_in[2] = _mm512_fmaddsub_pd(v_in[2], twd2_real, _mm512_mul_pd(sw2, twd2_imag));
+        
+        __m512d sw3 = SWAP_RI_512_D(v_in[3]);
+        v_in[3] = _mm512_fmaddsub_pd(v_in[3], twd3_real, _mm512_mul_pd(sw3, twd3_imag));
+        
         __m512d t_b0, t_b1, t_b2, t_b3;
         __m512d ab_02, ab_13, cd_02, cd_13;
 
@@ -720,8 +741,8 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         r4_out2 = _mm512_sub_pd(r4_av1, r4_av2);
 
         r4_av1 = _mm512_sub_pd(t_b3, t_b1);
-        r4_av1 = _mm512_mul_pd(v_C_ONE, r4_av1);
-        r4_av1 = SWAP_RI_512_D(CONJ_512_D(r4_av1));
+        r4_av1 = _mm512_xor_pd(r4_av1, v_sign_conj);
+        r4_av1 = SWAP_RI_512_D(r4_av1);
         r4_av2 = _mm512_sub_pd(t_b0, t_b2);
         r4_out1 = _mm512_add_pd(r4_av2, r4_av1);
         r4_out3 = _mm512_sub_pd(r4_av2, r4_av1);
@@ -730,41 +751,19 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         SCATTER4_512_D(out_r + out_strides[12], out_group_stride, r4_out1);
         SCATTER4_512_D(out_r + out_strides[24], out_group_stride, r4_out2);
         SCATTER4_512_D(out_r + out_strides[36], out_group_stride, r4_out3);
-
-        if (flag)
-        {
-            twd4 = CONJ_512_D(twd4);
-            twd5 = CONJ_512_D(twd5);
-            twd6 = CONJ_512_D(twd6);
-            twd7 = CONJ_512_D(twd7);
-        }
-
-        __m512d tmp_0_4 = _mm512_mul_pd(v_in[4], twd4);
-        __m512d tmp_1_4 = _mm512_mul_pd(SWAP_RI_512_D(v_in[4]), twd4);
-        __m512d tmp_0_5 = _mm512_mul_pd(v_in[5], twd5);
-        __m512d tmp_1_5 = _mm512_mul_pd(SWAP_RI_512_D(v_in[5]), twd5);
-        __m512d tmp_0_6 = _mm512_mul_pd(v_in[6], twd6);
-        __m512d tmp_1_6 = _mm512_mul_pd(SWAP_RI_512_D(v_in[6]), twd6);
-        __m512d tmp_0_7 = _mm512_mul_pd(v_in[7], twd7);
-        __m512d tmp_1_7 = _mm512_mul_pd(SWAP_RI_512_D(v_in[7]), twd7);
-
-        // Process unpacks and FMAs
-        lo_1 = _mm512_unpacklo_pd(tmp_0_4, tmp_1_4);
-        hi_1 = _mm512_unpackhi_pd(tmp_0_4, tmp_1_4);
-        v_in[4] = _mm512_fmaddsub_pd(ones, lo_1, hi_1);
-
-        lo_1 = _mm512_unpacklo_pd(tmp_0_5, tmp_1_5);
-        hi_1 = _mm512_unpackhi_pd(tmp_0_5, tmp_1_5);
-        v_in[5] = _mm512_fmaddsub_pd(ones, lo_1, hi_1);
-
-        lo_1 = _mm512_unpacklo_pd(tmp_0_6, tmp_1_6);
-        hi_1 = _mm512_unpackhi_pd(tmp_0_6, tmp_1_6);
-        v_in[6] = _mm512_fmaddsub_pd(ones, lo_1, hi_1);
-
-        lo_1 = _mm512_unpacklo_pd(tmp_0_7, tmp_1_7);
-        hi_1 = _mm512_unpackhi_pd(tmp_0_7, tmp_1_7);
-        v_in[7] = _mm512_fmaddsub_pd(ones, lo_1, hi_1);
-
+        
+        __m512d sw4 = SWAP_RI_512_D(v_in[4]);
+        v_in[4] = _mm512_fmaddsub_pd(v_in[4], twd4_real, _mm512_mul_pd(sw4, twd4_imag));
+        
+        __m512d sw5 = SWAP_RI_512_D(v_in[5]);
+        v_in[5] = _mm512_fmaddsub_pd(v_in[5], twd5_real, _mm512_mul_pd(sw5, twd5_imag));
+        
+        __m512d sw6 = SWAP_RI_512_D(v_in[6]);
+        v_in[6] = _mm512_fmaddsub_pd(v_in[6], twd6_real, _mm512_mul_pd(sw6, twd6_imag));
+        
+        __m512d sw7 = SWAP_RI_512_D(v_in[7]);
+        v_in[7] = _mm512_fmaddsub_pd(v_in[7], twd7_real, _mm512_mul_pd(sw7, twd7_imag));
+        
         ab_02 = _mm512_shuffle_f64x2(v_in[4], v_in[5], 0x88);
         ab_13 = _mm512_shuffle_f64x2(v_in[4], v_in[5], 0xDD);
         cd_02 = _mm512_shuffle_f64x2(v_in[6], v_in[7], 0x88);
@@ -773,20 +772,15 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         t_b2 = _mm512_shuffle_f64x2(ab_02, cd_02, 0xDD);
         t_b1 = _mm512_shuffle_f64x2(ab_13, cd_13, 0x88);
         t_b3 = _mm512_shuffle_f64x2(ab_13, cd_13, 0xDD);
-
-        __m512d twd8 = _mm512_load_pd(twiddle_buf_fp64[7]);
-        __m512d twd9 = _mm512_load_pd(twiddle_buf_fp64[8]);
-        __m512d twd10 = _mm512_load_pd(twiddle_buf_fp64[9]);
-        __m512d twd11 = _mm512_load_pd(twiddle_buf_fp64[10]);
-
+        
         r4_av1 = _mm512_add_pd(t_b0, t_b2);
         r4_av2 = _mm512_add_pd(t_b1, t_b3);
         r4_out0 = _mm512_add_pd(r4_av1, r4_av2);
         r4_out2 = _mm512_sub_pd(r4_av1, r4_av2);
 
         r4_av1 = _mm512_sub_pd(t_b1, t_b3);
-        r4_av1 = _mm512_mul_pd(v_C_ONE, r4_av1);
-        r4_av1 = SWAP_RI_512_D(CONJ_512_D(r4_av1));
+        r4_av1 = _mm512_xor_pd(r4_av1, v_sign_conj);
+        r4_av1 = SWAP_RI_512_D(r4_av1);
         r4_av2 = _mm512_sub_pd(t_b0, t_b2);
         r4_out1 = _mm512_add_pd(r4_av2, r4_av1);
         r4_out3 = _mm512_sub_pd(r4_av2, r4_av1);
@@ -795,41 +789,19 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         SCATTER4_512_D(out_r + out_strides[16], out_group_stride, r4_out3);
         SCATTER4_512_D(out_r + out_strides[28], out_group_stride, r4_out2);
         SCATTER4_512_D(out_r + out_strides[40], out_group_stride, r4_out1);
-
-        if (flag)
-        {
-            twd8 = CONJ_512_D(twd8);
-            twd9 = CONJ_512_D(twd9);
-            twd10 = CONJ_512_D(twd10);
-            twd11 = CONJ_512_D(twd11);
-        }
-
-        __m512d tmp_0_8 = _mm512_mul_pd(v_in[8], twd8);
-        __m512d tmp_1_8 = _mm512_mul_pd(SWAP_RI_512_D(v_in[8]), twd8);
-        __m512d tmp_0_9 = _mm512_mul_pd(v_in[9], twd9);
-        __m512d tmp_1_9 = _mm512_mul_pd(SWAP_RI_512_D(v_in[9]), twd9);
-        __m512d tmp_0_10 = _mm512_mul_pd(v_in[10], twd10);
-        __m512d tmp_1_10 = _mm512_mul_pd(SWAP_RI_512_D(v_in[10]), twd10);
-        __m512d tmp_0_11 = _mm512_mul_pd(v_in[11], twd11);
-        __m512d tmp_1_11 = _mm512_mul_pd(SWAP_RI_512_D(v_in[11]), twd11);
-
-        // Process unpacks and FMAs
-        lo_1 = _mm512_unpacklo_pd(tmp_0_8, tmp_1_8);
-        hi_1 = _mm512_unpackhi_pd(tmp_0_8, tmp_1_8);
-        v_in[8] = _mm512_fmaddsub_pd(ones, lo_1, hi_1);
-
-        lo_1 = _mm512_unpacklo_pd(tmp_0_9, tmp_1_9);
-        hi_1 = _mm512_unpackhi_pd(tmp_0_9, tmp_1_9);
-        v_in[9] = _mm512_fmaddsub_pd(ones, lo_1, hi_1);
-
-        lo_1 = _mm512_unpacklo_pd(tmp_0_10, tmp_1_10);
-        hi_1 = _mm512_unpackhi_pd(tmp_0_10, tmp_1_10);
-        v_in[10] = _mm512_fmaddsub_pd(ones, lo_1, hi_1);
-
-        lo_1 = _mm512_unpacklo_pd(tmp_0_11, tmp_1_11);
-        hi_1 = _mm512_unpackhi_pd(tmp_0_11, tmp_1_11);
-        v_in[11] = _mm512_fmaddsub_pd(ones, lo_1, hi_1);
-
+        
+        __m512d sw8 = SWAP_RI_512_D(v_in[8]);
+        v_in[8] = _mm512_fmaddsub_pd(v_in[8], twd8_real, _mm512_mul_pd(sw8, twd8_imag));
+        
+        __m512d sw9 = SWAP_RI_512_D(v_in[9]);
+        v_in[9] = _mm512_fmaddsub_pd(v_in[9], twd9_real, _mm512_mul_pd(sw9, twd9_imag));
+        
+        __m512d sw10 = SWAP_RI_512_D(v_in[10]);
+        v_in[10] = _mm512_fmaddsub_pd(v_in[10], twd10_real, _mm512_mul_pd(sw10, twd10_imag));
+        
+        __m512d sw11 = SWAP_RI_512_D(v_in[11]);
+        v_in[11] = _mm512_fmaddsub_pd(v_in[11], twd11_real, _mm512_mul_pd(sw11, twd11_imag));
+        
         ab_02 = _mm512_shuffle_f64x2(v_in[8], v_in[9], 0x88);
         ab_13 = _mm512_shuffle_f64x2(v_in[8], v_in[9], 0xDD);
         cd_02 = _mm512_shuffle_f64x2(v_in[10], v_in[11], 0x88);
@@ -845,8 +817,8 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         r4_out2 = _mm512_sub_pd(r4_av1, r4_av2);
 
         r4_av1 = _mm512_sub_pd(t_b3, t_b1);
-        r4_av1 = _mm512_mul_pd(v_C_ONE, r4_av1);
-        r4_av1 = SWAP_RI_512_D(CONJ_512_D(r4_av1));
+        r4_av1 = _mm512_xor_pd(r4_av1, v_sign_conj);
+        r4_av1 = SWAP_RI_512_D(r4_av1);
         r4_av2 = _mm512_sub_pd(t_b0, t_b2);
         r4_out1 = _mm512_add_pd(r4_av2, r4_av1);
         r4_out3 = _mm512_sub_pd(r4_av2, r4_av1);
