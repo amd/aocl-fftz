@@ -308,8 +308,8 @@ static VOID r2hc_rfft7avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
         curr_out = out + out_strides[5];
         STHRI_2x128_S(curr_out, v_out_stride, v_out5, v_out6);
 
-        in += v_in_stride * NUM_SETS_REAL_128_S;
-        out += v_out_stride * NUM_SETS_REAL_128_S;
+        in = in + (v_in_stride << 1);
+        out = out + (v_out_stride << 1);
     }
     // tail cases
     if (n & 1)
