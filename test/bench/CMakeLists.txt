@@ -271,6 +271,11 @@ set(STANDARD_TEST_SUITE
     "AVX256_C2R_2D_CT_BATCHED ./aocl_fftz_bench 6:768:1536v24:32:64x16:2:2 -b a -f c2r -o 2"                  # accuracy | real     | double   | LP64       | 2D  | yes      | NDimCT    | outplace  | backward  | AVX256  | AVX256 batched 2D C2R CT, outplace, backward
     "C2R_C_4D_COLMAJOR ./aocl_fftz_bench 2:1:1v20:112:168x2:56:84x7:8:12x6:2:2 -b a -f c2r -p f"              # accuracy | real     | float    | LP64       | 4D  | yes      | NDimCT    | outplace  | backward  | C       | C 4D column major, backward
     "C2R_C_2D_STRIDED ./aocl_fftz_bench 24:8:18x6:2:3 -b a -f c2r -p f"                                       # accuracy | real     | float    | LP64       | 2D  | yes      | NDimCT    | outplace  | backward  | C       | C 2D strided, forward
+    "C2R_C_MULTI_BATCHED ./aocl_fftz_bench 3:400:550x18:20:30v20 -b a -f c2r -p f -m i"                       # accuracy | real     | float    | ILP64      | 1D  | yes      | Batched   | outplace  | backward  | C       | N-D non-fusable batched real FFT
+    "R2C_AVX512_3D_NON_FUSABLE_DIM_INPLACE ./aocl_fftz_bench 12:394:197x28:14:7x12 -b a -f r2c -p f -r i -o 3"# accuracy | real     | float    | LP64       | 3D  | no       | NDim      | inplace   | forward   | AVX512  | AVX512 R2C 3D real FFT with non-fusable dimension, inplace
+    "R2C_C_MULTI_BATCHED ./aocl_fftz_bench 16:820:415x18:45:23v20:2:2 -b a -f r2c"                            # accuracy | real     | double   | LP64       | 1D  | yes      | Batched   | outplace  | forward   | C       | C Multi Batched 1D R2C with non-fusable batches
+    "C2R_C_4D_STRIDED ./aocl_fftz_bench 4:1099:1801x18:61:100x6:10:16x16 -b a -f c2r"                         # accuracy | real     | double   | LP64       | 4D  | no       | NDim      | outplace  | backward  | C       | C 4D C2R with non-fusable dimension
+    "C2R_AVX128_3D_NON_FUSABLE_DIM_INPLACE ./aocl_fftz_bench 4:200:400x18:11:22x8:2:2 -r i -f c2r -b a -o 1"  # accuracy | real     | double   | LP64       | 3D  | no       | NDim      | inplace   | backward  | AVX128  | AVX128 C2R 3D real FFT with non-fusable dimension, inplace
     )
 
     set(EXHAUSTIVE_TEST_SUITE

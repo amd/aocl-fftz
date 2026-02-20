@@ -59,13 +59,17 @@ INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
 
     // Strides are prepared based on real points, so adjust them (scale by 2)
     // for complex points (i.e. R2C output and C2R input)
-    if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
+    // Scale ALL vector strides, not just vecs[0], to handle vec_rank > 1 cases
+    for (INTP i = 0; i < sol->decomp_scheme->vec_rank; i++)
     {
-        sol->decomp_scheme->vecs[0].out_stride *= 2;
-    }
-    else
-    {
-        sol->decomp_scheme->vecs[0].in_stride *= 2;
+        if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
+        {
+            sol->decomp_scheme->vecs[i].out_stride *= 2;
+        }
+        else
+        {
+            sol->decomp_scheme->vecs[i].in_stride *= 2;
+        }
     }
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
