@@ -444,7 +444,6 @@ if(ASAN)
 endif()
 
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${DEST_LIB_PATH}")
 
 #add test bench executable
 set(exe_name aocl_fftz_bench)
@@ -461,6 +460,16 @@ endif()
 target_link_libraries(${exe_name} ${lib_name})
 target_link_libraries(${exe_name} ${CMAKE_DL_LIBS})
 target_link_libraries(${exe_name} ${lib_deps})
+
+# Set rpath so the executable finds the shared library in all scenarios:
+# - Build directory: ./build/aocl_fftz_bench finds ./build/libaocl_fftz.so
+# - Install directory: bin/aocl_fftz_bench finds ../lib/libaocl_fftz.so
+if(UNIX AND NOT BUILD_STATIC_LIBS)
+    set_target_properties(${exe_name} PROPERTIES
+        BUILD_RPATH "$ORIGIN"
+        INSTALL_RPATH "$ORIGIN/../${DEST_LIB_PATH}"
+    )
+endif()
 
 #Install into destination path by using -DCMAKE_INSTALL_PREFIX=<path> while configuring cmake
 message(STATUS "AOCL-FFTZ Library, Interface header files and Test binary will be installed at ${CMAKE_INSTALL_PREFIX}")
