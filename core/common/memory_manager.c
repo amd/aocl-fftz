@@ -354,8 +354,9 @@ aoclfftz_solution_t **alloc_sol_array(INT32 n)
 // Allocates a new scratch_space iff the argument passed is NULL.
 // Otherwise sets the selector's scratch_space to the passed argument.
 aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
-                                    VOID *scratch_space, kernel_t *kertab_dft,
-                                    kernel_t *kertab_twid_dft, INT32 nthreads)
+                                    VOID *scratch_space,
+                                    kernel_tables_t *kernel_tables,
+                                    INT32 nthreads)
 {
     aoclfftz_selector_t *selector = NULL;
 
@@ -364,6 +365,7 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
     if (selector)
     {
         selector->scratch_space = NULL;
+        selector->kernel_tables = NULL;
 
         if (scratch_space == NULL)
         {
@@ -372,22 +374,37 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
             //       buffer is valid (not-null)
             ALLOC_ALIGN_UNINIT(scratch_space, UINT8,
                                scratch_space_capacity * nthreads);
-
         }
         selector->solution = alloc_solution(vec_rank, dim_rank);
-        selector->kertab_dft = kertab_dft;
-        selector->kertab_twid_dft = kertab_twid_dft;
         ALLOC_ALIGN_UNINIT(selector->cost_analysis, cost_analysis_t,
                            sizeof(cost_analysis_t));
-        if (selector->solution == NULL || selector->cost_analysis == NULL)
+        // Allocate kernel_tables if provided
+        if (kernel_tables != NULL)
+        {
+            ALLOC_ALIGN_UNINIT(selector->kernel_tables, kernel_tables_t,
+                               sizeof(kernel_tables_t));
+        }
+
+        if (selector->solution == NULL || selector->cost_analysis == NULL ||
+            (kernel_tables != NULL && selector->kernel_tables == NULL))
         {
             destroy_selector(selector);
             return NULL;
         }
-        selector->scratch_space = scratch_space;
-        selector->solution->dft_bufs->scratch_space = selector->scratch_space;
+
         selector->cost_analysis->ops = 0;
         selector->cost_analysis->time = 0;
+        selector->scratch_space = scratch_space;
+        selector->solution->dft_bufs->scratch_space = selector->scratch_space;
+
+        if (kernel_tables != NULL && selector->kernel_tables != NULL)
+        {
+            // copy kernel table
+            selector->kernel_tables->kt_dft = kernel_tables->kt_dft;
+            selector->kernel_tables->kt_twid_dft = kernel_tables->kt_twid_dft;
+            selector->kernel_tables->kt_rdft = kernel_tables->kt_rdft;
+        }
+
         return selector;
     }
     else
@@ -473,7 +490,8 @@ VOID alloc_inplace_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
     if ((solution->decomp_scheme->dim_rank == 3) &&
         (solution->decomp_scheme->dims[0].in_stride == 1) &&
         (solution->decomp_scheme->vecs[0].n == 1) &&
-        !check_bluestein_problem(solution->decomp_scheme))
+        !check_bluestein_problem(solution->decomp_scheme) &&
+        !IS_REAL(solution->decomp_scheme->flags))
     {
         buffer_length = buffer_length / min_dim_size;
         buffer_size = buffer_length * DATA_STRIDE * dt_bytes;
@@ -570,14 +588,18 @@ VOID destroy_solution(aoclfftz_solution_t* sol, UINT8 destroy_buffers)
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->ct_buffer);
         }
 
-        // Buffered solver will create aux_buffers and the same address will be
-        // used in other solvers.
-        // So free the aux_buffers only for buffered solver.
+        // Free auxiliary buffers based on solver type:
+        // 1. For 1D real problems, real buffered solver will create
+        //    aux_buffers and the same address will be used in other solvers
+        //    So free the aux_buffers only for real buffered solver.
+        // 2. For in-place ND real problem, real ND solver will create
+        //    aux_buffer, so free it.
         //
         // Clearing these buffers will happen only once (which will be from
         // destroy_handle).
         if (solver_type == SOLVER_BUFFERED ||
-            solver_type == SOLVER_REAL_BUFFERED)
+            solver_type == SOLVER_REAL_BUFFERED ||
+            solver_type == SOLVER_REAL_NDIM)
         {
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
@@ -620,12 +642,15 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
                 // Clearing these buffers will happen only once (which will be
                 // from destroy_handle).
                 if ((i == 0) && (solver_type == SOLVER_BUFFERED ||
-                     solver_type == SOLVER_REAL_BUFFERED))
+                     solver_type == SOLVER_REAL_BUFFERED ||
+                     solver_type == SOLVER_REAL_NDIM))
                 {
                     FREE_ALIGN_ALLOCATED_MEM(
                         cur_sol->dft_bufs->buffered->aux_buffer_1);
                     FREE_ALIGN_ALLOCATED_MEM(
                         cur_sol->dft_bufs->buffered->aux_buffer_2);
+                    FREE_ALIGN_ALLOCATED_MEM(
+                        cur_sol->dft_bufs->ct_buffer);
                 }
                 destroy_solution(cur_sol->dft_bufs->nd_sol, 0);
 
@@ -733,7 +758,8 @@ VOID destroy_solution(aoclfftz_solution_t *sol, UINT8 destroy_buffers)
         // Clearing these buffers will happen only once (which will be from
         // destroy_handle).
         if ((i == 0) && (solver_type == SOLVER_BUFFERED ||
-            solver_type == SOLVER_REAL_BUFFERED))
+            solver_type == SOLVER_REAL_BUFFERED ||
+            solver_type == SOLVER_REAL_NDIM))
         {
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
@@ -780,10 +806,14 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
                 // Clearing these buffers will happen only once (which will be
                 // from destroy_handle).
                 if ((i == 0) && (solver_type == SOLVER_BUFFERED ||
-                    solver_type == SOLVER_REAL_BUFFERED))
+                    solver_type == SOLVER_REAL_BUFFERED ||
+                    solver_type == SOLVER_REAL_NDIM))
                 {
-                    FREE_ALIGN_ALLOCATED_MEM(cur_sol->buffered->aux_buffer_1);
-                    FREE_ALIGN_ALLOCATED_MEM(cur_sol->buffered->aux_buffer_2);
+                    FREE_ALIGN_ALLOCATED_MEM(
+                        cur_sol->dft_bufs->buffered->aux_buffer_1);
+                    FREE_ALIGN_ALLOCATED_MEM(
+                        cur_sol->dft_bufs->buffered->aux_buffer_2);
+                    FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->ct_buffer);
                 }
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol->buffered);
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol);
@@ -803,6 +833,7 @@ VOID destroy_selector_without_solution(aoclfftz_selector_t *sel)
     if (sel != NULL)
     {
         FREE_ALIGN_ALLOCATED_MEM(sel->cost_analysis);
+        FREE_ALIGN_ALLOCATED_MEM(sel->kernel_tables);
         FREE_ALIGN_ALLOCATED_MEM(sel);
     }
     return;

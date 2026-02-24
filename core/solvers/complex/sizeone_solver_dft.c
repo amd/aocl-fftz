@@ -32,7 +32,7 @@
  *
  *  This file contains the function that execute the solver.
  *
- *  @author Varun Sanjay
+ *  @author D. Vijay Krishna
  */
 
 #include <string.h> // for memcpy
@@ -83,11 +83,6 @@ INT32 setup_sizeone_solver(aoclfftz_solution_t *sol)
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
     strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
     strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
-
-    VOID *in  = sol->decomp_scheme->in_real;
-    VOID *out = sol->decomp_scheme->out_real;
-    sol->decomp_scheme->in_real = in;
-    sol->decomp_scheme->out_real = out;
 
     UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     sol->solver->kernel_c2c->kfft =

@@ -51,6 +51,7 @@ VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem)
 {
     SET_PROBLEM_LOGGER_MODE(problem);
     VALIDATE_PROBLEM_DESCRIPTOR(problem);
+    PRINT_LP64_PROBLEM_DESCRIPTOR(problem, DT_FLOAT);
     return setup_dft_f(problem);
 }
 
@@ -59,6 +60,7 @@ VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem)
 {
     SET_PROBLEM_LOGGER_MODE(problem);
     VALIDATE_PROBLEM_DESCRIPTOR(problem);
+    PRINT_LP64_PROBLEM_DESCRIPTOR(problem, DT_DOUBLE);
     return setup_dft_d(problem);
 }
 
@@ -67,6 +69,7 @@ VOID *aoclfftz_setup_f_64_(aoclfftz_prob_desc_f_64_ *problem)
 {
     SET_PROBLEM_LOGGER_MODE(problem);
     VALIDATE_PROBLEM_DESCRIPTOR(problem);
+    PRINT_ILP64_PROBLEM_DESCRIPTOR(problem, DT_FLOAT);
     return setup_dft_f_64_(problem);
 }
 
@@ -76,6 +79,7 @@ VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem)
 {
     SET_PROBLEM_LOGGER_MODE(problem);
     VALIDATE_PROBLEM_DESCRIPTOR(problem);
+    PRINT_ILP64_PROBLEM_DESCRIPTOR(problem, DT_DOUBLE);
     return setup_dft_d_64_(problem);
 }
 
@@ -102,10 +106,22 @@ aoclfftz_error_type aoclfftz_execute_io(VOID *handle, VOID *in, VOID *out)
     aoclfftz_executor_t *executor_obj = (aoclfftz_executor_t *)handle;
     aoclfftz_solution_t *sol = executor_obj->solution;
     UINT32 dt_bytes = SOL_DT_SIZE(sol);
+
     sol->decomp_scheme->in_real = in;
     sol->decomp_scheme->in_imag = MOVE_ADDR(in, dt_bytes);
     sol->decomp_scheme->out_real = out;
     sol->decomp_scheme->out_imag = MOVE_ADDR(out, dt_bytes);
+
+
+    // For 1D out-of-place problems, ct_buffer is NULL and ct_buf_real/imag point to
+    // user's output buffer. We must update these pointers to new buffers.
+    // For multi-dim or in-place problems, ct_buffer is internally allocated,
+    // so ct_buf_real/imag should NOT be changed.
+    if (sol->dft_bufs != NULL && sol->dft_bufs->ct_buffer == NULL)
+    {
+        sol->dft_bufs->ct_buf_real = sol->decomp_scheme->out_real;
+        sol->dft_bufs->ct_buf_imag = sol->decomp_scheme->out_imag;
+    }
 
     return aoclfftz_execute(handle);
 }

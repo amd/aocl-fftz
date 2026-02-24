@@ -133,6 +133,14 @@ typedef struct kernel_fp_list
     UINT32 radix;
 } kernel_fp_list_t;
 
+// Group of kernel tables holding different variants
+typedef struct kernel_tables
+{
+    kernel_t *kt_dft;
+    kernel_t *kt_twid_dft;
+    kernel_t *kt_rdft;
+} kernel_tables_t;
+
 // Function declarations for the common routines
 INT32 register_kernels_real(
     kernel_t kertab[NUM_KERNELS_IN_TABLE_REAL],

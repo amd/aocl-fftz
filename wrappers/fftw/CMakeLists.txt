@@ -90,48 +90,81 @@ if(WIN32)
 endif()
 
 # Build fftw_wrapper library
-set(SRC_PATH src)
-set(INC_FILES ${SRC_PATH}/fftw_wrapper.f ${SRC_PATH}/fftw_wrapper.h)
+set(API_SRC_PATH api)
+set(C_WRAPPER_SRC_PATH src/c)
+set(FORTRAN_SRC_PATH src/fortran)
+set(TRANSLATOR_SRC_PATH src/translator)
+set(INC_FILES ${API_SRC_PATH}/fftw_wrapper.f ${API_SRC_PATH}/fftw_wrapper.h)
 
-file(GLOB SRC_FILES ${SRC_PATH}/*.c ${SRC_PATH}/*.h)
+file(GLOB SRC_FILES ${API_SRC_PATH}/*.c ${API_SRC_PATH}/*.h
+                    ${C_WRAPPER_SRC_PATH}/*.c ${C_WRAPPER_SRC_PATH}/*.h
+                    ${FORTRAN_SRC_PATH}/*.c ${FORTRAN_SRC_PATH}/*.h
+                    ${TRANSLATOR_SRC_PATH}/*.c ${TRANSLATOR_SRC_PATH}/*.h)
 include_directories(.)
+
+# Set RPATH to find aocl_fftz library at runtime
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+set(CMAKE_INSTALL_RPATH "$ORIGIN/../../../lib")
 
 if(BUILD_STATIC_LIBS)
     add_library(${lib_name} STATIC ${SRC_FILES} ${UTIL_FILES})
     message(STATUS "FFTW-WRAPPER Library type being built is: Static")
+    set(full_lib_name ${CMAKE_STATIC_LIBRARY_PREFIX}${lib_name}${CMAKE_STATIC_LIBRARY_SUFFIX})
 else()
     add_library(${lib_name} SHARED ${SRC_FILES} ${UTIL_FILES})
     message(STATUS "FFTW-WRAPPER Library type being built is: Shared")
+    set(full_lib_name ${CMAKE_SHARED_LIBRARY_PREFIX}${lib_name}${CMAKE_SHARED_LIBRARY_SUFFIX})
 endif()
 
 target_link_libraries(${lib_name} PRIVATE ${FFTZ_LIB} ${lib_deps})
 
 set(DEST_LIB_PATH wrappers/fftw/lib)
 set(DEST_INCLUDE_PATH wrappers/fftw/include)
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 #Install into destination path by using -DCMAKE_INSTALL_PREFIX=<path> while configuring cmake
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${DEST_LIB_PATH}")
-message(STATUS "FFTW-WRAPPER Library will be installed at ${CMAKE_INSTALL_RPATH}")
+message(STATUS "FFTW-WRAPPER Library will be installed at ${CMAKE_INSTALL_PREFIX}/${DEST_LIB_PATH}")
 install(TARGETS ${lib_name} DESTINATION ${DEST_LIB_PATH})
 install(FILES ${INC_FILES} DESTINATION ${DEST_INCLUDE_PATH})
 
 # create a symlink fftw3.h, fftw3.f and libfftw3xc_wrapper_fftz.so
-set(SYMLINK_SRC_PATH ${CMAKE_INSTALL_PREFIX}/wrappers/fftw)
 set(SYMLINK_DEST_PATH ${CMAKE_INSTALL_PREFIX})
-if(WIN32)
-    set(LIB_SUFFIX .dll)
-else()
-    set(LIB_SUFFIX .so)
-endif()
 
-function(create_sym_link sym_name target_name)
-    install(CODE "execute_process(COMMAND echo Creating symbolic link ${sym_name} to ${target_name})")
-    install(CODE "execute_process(COMMAND rm -f ${sym_name})")
-    install(CODE "execute_process(COMMAND ln -s ${target_name} ${sym_name})")
+function(create_sym_link sym_name target_path link_type_flag)
+    get_filename_component(LINK_NAME "${sym_name}" NAME)
+
+    install(CODE "
+        set(LINK_PATH \"${sym_name}\")
+        set(TARGET_PATH \"${target_path}\")
+
+        message(STATUS \"Creating link ${LINK_NAME} to \${TARGET_PATH}\")
+
+        if(EXISTS \"\${LINK_PATH}\")
+            file(REMOVE \"\${LINK_PATH}\")
+        endif()
+
+        file(CREATE_LINK \"\${TARGET_PATH}\" \"\${LINK_PATH}\" ${link_type_flag} RESULT LINK_RESULT)
+
+        if(LINK_RESULT)
+            message(FATAL_ERROR \"Failed to create link for ${LINK_NAME}: \${LINK_RESULT}\")
+        endif()
+    ")
 endfunction()
 
-if(NOT BUILD_STATIC_LIBS AND NOT WIN32)
-    create_sym_link(${SYMLINK_DEST_PATH}/include/fftw3.h ${SYMLINK_SRC_PATH}/include/fftw_wrapper.h)
-    create_sym_link(${SYMLINK_DEST_PATH}/include/fftw3.f ${SYMLINK_SRC_PATH}/include/fftw_wrapper.f)
-    create_sym_link(${SYMLINK_DEST_PATH}/lib/libfftw3xc_wrapper_fftz${LIB_SUFFIX} ${SYMLINK_SRC_PATH}/lib/libfftw3xc_wrapper_fftz${LIB_SUFFIX})
+if(WIN32)
+    if(ENABLE_HARDLINKS_FOR_WRAPPER)
+        message(STATUS "Creating hard links for FFTW wrapper (Note: hard links require both link and target file on same volume)")
+        set(LINK_TYPE_FLAG "")
+        set(TARGET_PREFIX "\${CMAKE_INSTALL_PREFIX}/wrappers/fftw")
+    else()
+        message(STATUS "Creating symbolic links for FFTW wrapper with relative paths")
+        set(LINK_TYPE_FLAG "SYMBOLIC")
+        set(TARGET_PREFIX "../wrappers/fftw")
+    endif()
+else()
+    # Linux: symbolic links with relative paths
+    set(LINK_TYPE_FLAG "SYMBOLIC")
+    set(TARGET_PREFIX "../wrappers/fftw")
 endif()
+
+create_sym_link(${SYMLINK_DEST_PATH}/include/fftw3.h "${TARGET_PREFIX}/include/fftw_wrapper.h" "${LINK_TYPE_FLAG}")
+create_sym_link(${SYMLINK_DEST_PATH}/include/fftw3.f "${TARGET_PREFIX}/include/fftw_wrapper.f" "${LINK_TYPE_FLAG}")
+create_sym_link(${SYMLINK_DEST_PATH}/lib/${full_lib_name} "${TARGET_PREFIX}/lib/${full_lib_name}" "${LINK_TYPE_FLAG}")

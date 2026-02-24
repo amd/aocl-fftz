@@ -46,6 +46,7 @@
 #define BENCH_2_PI 6.2831853071795864769252867665590057683943388
 #define BENCH_2_PIf 6.2831853071795864769252867665590057683943388f
 
+
 #include "api/aoclfftz.h"
 #include "api/types.h"
 
@@ -127,7 +128,7 @@ typedef enum
     EXECUTION_FAILURE,
     VERIFICATION_FAILURE,
     MEMORY_FAILURE,
-    BENCH_SUCCESS
+    BENCH_SUCCESS = 0,
 } aoclfftz_bench_status_t;
 
 typedef enum

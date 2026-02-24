@@ -78,13 +78,6 @@
     {                                                                          \
         INTP in_scale = (flags.fft_direction == FORWARD_FFT_DIR) ? 2 : 1;      \
         INTP out_scale = (flags.fft_direction == BACKWARD_FFT_DIR) ? 2 : 1;    \
-        if (dim_rank != 1)                                                     \
-        {                                                                      \
-            AOCLFFTZ_ERROR("N-Dimensional real problems are "                  \
-                                       "not supported");                       \
-            errno = AOCLFFTZ_INVALID_INPUT;                                    \
-            goto validation_exit;                                              \
-        }                                                                      \
         /* Validate R2C/C2R dims */                                            \
         /* For R2C, in_stride should be the double of out_stride */            \
         /* (or vice versa for C2R) except for dims[0] for which in_stride */   \

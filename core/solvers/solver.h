@@ -80,6 +80,7 @@ typedef enum
     SOLVER_REAL_BUFFERED,
     SOLVER_REAL_BATCHED,
     SOLVER_REAL_PERM_KER,
+    SOLVER_REAL_SIZEONE,
     SOLVER_REAL_MT_DIRECT,
     SOLVER_REAL_MT_DIRECT_TWIDDLE,
     SOLVER_REAL_MT_BATCHED,
@@ -135,18 +136,15 @@ INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
                                 aoclfftz_solution_t *next_sol,
                                 aoclfftz_realhelper_t *realhelper);
 INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
-                                aoclfftz_realhelper_t *realhelper);
-INT32 setup_real_ct_solver(aoclfftz_solution_t *sol,
-                           aoclfftz_solution_t *sol_r,
-                           aoclfftz_solution_t *sol_m,
-                           UINT32 radix_r,
-                           UINT32 radix_m,
-                           aoclfftz_realhelper_t * realhelper);
-INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
-                                aoclfftz_realhelper_t *realhelper);
+                                 aoclfftz_realhelper_t *realhelper);
 INT32 setup_real_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
                            aoclfftz_solution_t *sol_m, UINT32 radix_r,
                            UINT32 radix_m, aoclfftz_realhelper_t * realhelper);
+INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
+                             aoclfftz_solution_t *real_dim_sol,
+                             aoclfftz_solution_t *complex_dims_sol,
+                             aoclfftz_realhelper_t * realhelper);
+INT32 setup_real_sizeone_solver(aoclfftz_solution_t *sol);
 #ifdef MULTI_THREADING
 INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
                                   cost_analysis_t *cost,
@@ -182,6 +180,8 @@ dft_solver_ register_execute_real_direct_solver(VOID);
 dft_solver_ register_execute_real_batched_solver(VOID);
 dft_solver_ register_execute_real_buffered_solver(VOID);
 dft_solver_ register_execute_real_ct_solver(VOID);
+dft_solver_ register_execute_real_ndim_solver(VOID);
+dft_solver_ register_execute_real_sizeone_solver(VOID);
 
 #ifdef MULTI_THREADING
 dft_solver_ register_execute_real_mt_direct_solver(VOID);

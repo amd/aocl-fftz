@@ -64,6 +64,9 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
             register_execute_real_batched_solver();
         solvers_table[SOLVER_REAL_BUFFERED] =
             register_execute_real_buffered_solver();
+        solvers_table[SOLVER_REAL_NDIM] = register_execute_real_ndim_solver();
+        solvers_table[SOLVER_REAL_SIZEONE] =
+            register_execute_real_sizeone_solver();
 #ifdef MULTI_THREADING
         solvers_table[SOLVER_REAL_MT_DIRECT] =
             register_execute_real_mt_direct_solver();
@@ -73,25 +76,22 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
             register_execute_real_mt_batched_solver();
 #endif
     }
-    else
-    {
-        solvers_table[SOLVER_DIRECT] = register_execute_direct_solver();
-        solvers_table[SOLVER_DIRECT_BATCHED_COLMAJOR] =
-            register_execute_direct_batched_colmajor_solver();
-        solvers_table[SOLVER_DIRECT_BATCHED_ROWMAJOR] =
-            register_execute_direct_batched_rowmajor_solver();
-        solvers_table[SOLVER_CT] = register_execute_ct_solver();
-        solvers_table[SOLVER_CT_TWIDDLE] = register_execute_ct_twiddle_solver();
-        solvers_table[SOLVER_BATCHED] = register_execute_batched_solver();
-        solvers_table[SOLVER_BLUESTEIN] = register_execute_bluestein_solver();
-        solvers_table[SOLVER_NDIM] = register_execute_ndim_solver();
-        solvers_table[SOLVER_SIZEONE] = register_execute_sizeone_solver();
-        solvers_table[SOLVER_TRANSPOSE] = register_execute_transpose_solver();
+    solvers_table[SOLVER_DIRECT] = register_execute_direct_solver();
+    solvers_table[SOLVER_DIRECT_BATCHED_COLMAJOR] =
+        register_execute_direct_batched_colmajor_solver();
+    solvers_table[SOLVER_DIRECT_BATCHED_ROWMAJOR] =
+        register_execute_direct_batched_rowmajor_solver();
+    solvers_table[SOLVER_CT] = register_execute_ct_solver();
+    solvers_table[SOLVER_CT_TWIDDLE] = register_execute_ct_twiddle_solver();
+    solvers_table[SOLVER_BATCHED] = register_execute_batched_solver();
+    solvers_table[SOLVER_BLUESTEIN] = register_execute_bluestein_solver();
+    solvers_table[SOLVER_NDIM] = register_execute_ndim_solver();
+    solvers_table[SOLVER_SIZEONE] = register_execute_sizeone_solver();
+    solvers_table[SOLVER_TRANSPOSE] = register_execute_transpose_solver();
 #ifdef MULTI_THREADING
-        solvers_table[SOLVER_MT_DIRECT] = register_execute_mt_direct_solver();
-        solvers_table[SOLVER_MT_BATCHED] = register_execute_mt_batched_solver();
+    solvers_table[SOLVER_MT_DIRECT] = register_execute_mt_direct_solver();
+    solvers_table[SOLVER_MT_BATCHED] = register_execute_mt_batched_solver();
 #endif
-    }
 
     return SOLVER_SUCCESS;
 }

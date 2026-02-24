@@ -74,13 +74,7 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     INTP input_bytes = params->sz_info.input_bytes;
     INTP output_bytes = params->sz_info.output_bytes;
 
-    // Buffer size adjustment for R2C/C2R in-place operations to accommodate
-    // complex type output/input in R2C/C2R transforms respectively.
-    if (params->fft_type != C2C && params->res_placement == IN_PLACE)
-    {
-        input_bytes = MAX(input_bytes, output_bytes);
-        output_bytes = input_bytes;
-    }
+    EXPAND_REAL_BUFFER_SIZES(params, input_bytes, output_bytes);
 
     VOID *constants, *in1, *in2, *out1, *out2, *out_combined;
     constants = in1 = in2 = out1 = out2 = out_combined = NULL;
@@ -237,13 +231,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
     INTP output_bytes = params->sz_info.output_bytes;
     INT32 logger_mode = params->logger_mode;
 
-    // Buffer size adjustment for R2C/C2R in-place operations to accommodate
-    // complex type output/input in R2C/C2R transforms respectively.
-    if (params->fft_type != C2C && params->res_placement == IN_PLACE)
-    {
-        input_bytes = MAX(input_bytes, output_bytes);
-        output_bytes = input_bytes;
-    }
+    EXPAND_REAL_BUFFER_SIZES(params, input_bytes, output_bytes);
 
     // Create reverse transform parameters for IDFT operation
     aoclfftz_bench_params_t *params_reverse = NULL;
@@ -366,11 +354,11 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
             memcpy(in, input_buffer, input_bytes);
         }
 
-        // For C2R transforms, ensure DC and Nyquist components are real-valued
+        // For C2R transforms, enforce Hermitian symmetry on half-complex input
         if (params->fft_type == C2R)
         {
-            set_zero_for_dc_and_nyquist_nd(
-                in, params->sz_info.n, params->dims[0].n,
+            make_hc_as_hermitian_symmetric(
+                in, params->dims, params->dim_rank,
                 params->sz_info.batches, in_idx_map, params->precision);
         }
 
@@ -385,6 +373,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
 
         // Compute reverse transform: X[k] → x_recovered[n]
         memcpy(params_reverse->in, params->out, output_bytes);
+
         ret = aoclfftz_execute(handle_reverse);
         if (ret != AOCLFFTZ_SUCCESS)
         {
@@ -475,8 +464,8 @@ exit_impulse_transform_test:
                 for (INTP o = 0; o < outer_n; o++)                             \
                 {                                                              \
                     PREPARE_TIMESHIFT_TEST_OUTPUTS(                            \
-                        in + (b * n0_in + o * inner_n) * data_stride,          \
-                        out + (b * n0_in + o * inner_n) * data_stride, cur_n,  \
+                        in + (b * n_in + o * inner_n) * data_stride,           \
+                        out + (b * n_in + o * inner_n) * data_stride, cur_n,   \
                         m, unit_m, idx_map, params->dir, params->precision,    \
                         DATA_STRIDE);                                          \
                 }                                                              \
@@ -487,9 +476,9 @@ exit_impulse_transform_test:
                 for (INTP o = 0; o < outer_n; o++)                             \
                 {                                                              \
                     PREPARE_TIMESHIFT_TEST_OUTPUTS(                            \
-                        in + idx_map_t[b * n0_in + o * inner_n] * data_stride, \
+                        in + idx_map_t[b * n_in + o * inner_n] * data_stride,  \
                         out +                                                  \
-                            idx_map_t[b * n0_in + o * inner_n] * data_stride,  \
+                            idx_map_t[b * n_in + o * inner_n] * data_stride,   \
                         cur_n, m, unit_m, idx_map, params->dir,                \
                         params->precision, DATA_STRIDE);                       \
                 }                                                              \
@@ -531,13 +520,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     INTP full_complex_bytes =
         n * batches * DATA_STRIDE * params->sz_info.dt_bytes;
 
-    // Buffer size adjustment for R2C/C2R in-place operations to accommodate
-    // complex type output/input in R2C/C2R transforms respectively.
-    if (params->fft_type != C2C && params->res_placement == IN_PLACE)
-    {
-        input_bytes = MAX(input_bytes, output_bytes);
-        output_bytes = input_bytes;
-    }
+    EXPAND_REAL_BUFFER_SIZES(params, input_bytes, output_bytes);
 
     // Allocate buffers for timeshift test:
     // in1, in2: original and time-shifted input signals
@@ -592,13 +575,16 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             memcpy(in1, input_buffer, input_bytes);
         }
 
-        // Initialize dimension parameters for ND timeshift testing
+        // Initialize dimension parameters for ND timeshift testing.
+        // For C2R, input is half-complex (n0/2+1), so scale total input size
+        // accordingly. For R2C/C2C, input uses full dimension size.
         INTP cur_n;
         INTP outer_n = 1;
-        INTP inner_n = n;
-        INTP unit_m = n;
         INTP n0 = params->dims[0].n;
         INTP n0_in = params->fft_type == C2R ? n0 / 2 + 1 : n0;
+        INTP n_in = (n * n0_in) / n0;
+        INTP inner_n = n_in;
+        INTP unit_m = n_in;
 
         // Test timeshift property for each dimension (outermost to innermost)
         for (INTP d = params->dim_rank - 1; d >= 0; d--)
@@ -653,10 +639,12 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             // if (params->fft_type == R2C && params->dir == FORWARD)
             if (params->fft_type == R2C)
             {
-                convert_half_complex_to_complex(out1_fc, out1, n, batches,
-                                                out_idx_map, params->precision);
-                convert_half_complex_to_complex(out2_fc, out2, n, batches,
-                                                out_idx_map, params->precision);
+                convert_half_complex_to_complex(
+                    out1_fc, out1, params->dims, params->dim_rank,
+                    params->sz_info.batches, out_idx_map, params->precision);
+                convert_half_complex_to_complex(
+                    out2_fc, out2, params->dims, params->dim_rank,
+                    params->sz_info.batches, out_idx_map, params->precision);
             }
 
             // Apply corresponding transformation to match shifted result
@@ -810,8 +798,8 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
 
 #ifdef ENABLE_DFT_REFERENCE
     // Optional: Compare against reference DFT implementation
-    status =
-        run_dft_reference_test(params, in_idx_map, out_idx_map, handle, NULL);
+    status = run_dft_reference_test(params, in_idx_map, out_idx_map, handle,
+                                    NULL);
     HANDLE_BENCH_STATUS(status);
     if (status != BENCH_SUCCESS)
     {
@@ -822,7 +810,8 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     // Execute core DFT property verification tests
 
     // Test 1: Linearity Property - DFT(a*x + b*y) = a*DFT(x) + b*DFT(y)
-    status = run_linearity_test(params, in_idx_map, out_idx_map, handle, NULL);
+    status = run_linearity_test(params, in_idx_map, out_idx_map, handle,
+                                NULL);
     HANDLE_BENCH_STATUS(status);
     if (status != BENCH_SUCCESS)
     {
@@ -830,8 +819,8 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     }
 
     // Test 2: Transformation Property - IDFT(DFT(x)) = x
-    status = run_impulse_transform_test(params, in_idx_map, out_idx_map, handle,
-                                        NULL);
+    status = run_impulse_transform_test(params, in_idx_map, out_idx_map,
+                                        handle, NULL);
     HANDLE_BENCH_STATUS(status);
     if (status != BENCH_SUCCESS)
     {
@@ -839,7 +828,8 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     }
 
     // Test 3: Timeshift Property - DFT{x(n-m)} = DFT{x(n)} * e^(-j2πkm/N)
-    status = run_timeshift_test(params, in_idx_map, out_idx_map, handle, NULL);
+    status = run_timeshift_test(params, in_idx_map, out_idx_map, handle,
+                                NULL);
     HANDLE_BENCH_STATUS(status);
     if (status != BENCH_SUCCESS)
     {
