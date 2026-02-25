@@ -41,6 +41,8 @@ cmake_minimum_required(VERSION 3.26.0)
 #set the project name
 project(AOCL-FFTZ)
 message(STATUS "Building AOCL-FFTZ LIBRARY AND TEST SUITE")
+# Version used by pkg-config and CMake config
+set(FFTZ_VERSION "5.2.2")
 
 string(TIMESTAMP TODAY "%Y%m%d")
 add_compile_definitions(AOCL_BUILD_VERSION="Build ${TODAY}")
@@ -276,9 +278,10 @@ set(BENCH_DIR test/bench)
 set(TEST_UTILS_DIR test/utils)
 set(BENCH_UTILS_DIR test/bench/utils)
 
-#set library dependencies
+#set library dependencies (empty on Windows; libm on UNIX)
+set(lib_deps "")
 if(UNIX)
-    set(lib_deps m) #math library
+    list(APPEND lib_deps m) # math library
 endif()
 
 #add macro for math constants
@@ -424,13 +427,43 @@ else()
     message(STATUS "Library type being built is: Shared")
 endif()
 
+# Link system deps like libm: PUBLIC for static (consumers need -lm), PRIVATE for shared.
+if(lib_deps)
+    if(BUILD_STATIC_LIBS)
+        target_link_libraries(${lib_name} PUBLIC ${lib_deps})
+    else()
+        target_link_libraries(${lib_name} PRIVATE ${lib_deps})
+    endif()
+endif()
+
 #add required OpenMP flags
 if(ENABLE_MULTI_THREADING)
-    if(WIN32 OR NOT OpenMP_libomp_LIBRARY)
-        target_link_libraries(${lib_name} PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+    if(WIN32)
+        if(BUILD_STATIC_LIBS)
+            # Static libraries must link OpenMP PUBLIC so that apps that link us get the runtime too.
+            target_link_libraries(${lib_name} PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+        else()
+            target_link_libraries(${lib_name} PRIVATE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+        endif()
     else()
-        target_compile_options(${lib_name} PRIVATE -fopenmp)
-        target_link_libraries(${lib_name} PUBLIC ${OpenMP_libomp_LIBRARY})
+        # On Unix, use OpenMP:: targets if we found OpenMP; if user gave a custom lib path, use that + -fopenmp.
+        if(OpenMP_libomp_LIBRARY)
+            if(BUILD_STATIC_LIBS)
+                target_compile_options(${lib_name} PUBLIC -fopenmp)
+                target_link_options(${lib_name} PUBLIC -fopenmp)
+                target_link_libraries(${lib_name} PUBLIC ${OpenMP_libomp_LIBRARY})
+            else()
+                target_compile_options(${lib_name} PRIVATE -fopenmp)
+                target_link_options(${lib_name} PRIVATE -fopenmp)
+                target_link_libraries(${lib_name} PRIVATE ${OpenMP_libomp_LIBRARY})
+            endif()
+        else()
+            if(BUILD_STATIC_LIBS)
+                target_link_libraries(${lib_name} PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+            else()
+                target_link_libraries(${lib_name} PRIVATE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+            endif()
+        endif()
     endif()
 endif()
 
@@ -467,7 +500,9 @@ else()
 endif()
 target_link_libraries(${exe_name} ${lib_name})
 target_link_libraries(${exe_name} ${CMAKE_DL_LIBS})
-target_link_libraries(${exe_name} ${lib_deps})
+if(lib_deps)
+    target_link_libraries(${exe_name} ${lib_deps})
+endif()
 
 # Set rpath so the executable finds the shared library in all scenarios:
 # - Build directory: ./build/aocl_fftz_bench finds ./build/libaocl_fftz.so
@@ -482,8 +517,113 @@ endif()
 #Install into destination path by using -DCMAKE_INSTALL_PREFIX=<path> while configuring cmake
 message(STATUS "AOCL-FFTZ Library, Interface header files and Test binary will be installed at ${CMAKE_INSTALL_PREFIX}")
 install(TARGETS ${exe_name} DESTINATION ${DEST_BIN_PATH})
-install(TARGETS ${lib_name} DESTINATION ${DEST_LIB_PATH})
+install(TARGETS ${lib_name} EXPORT aocl-fftz-targets
+    DESTINATION ${DEST_LIB_PATH}
+    INCLUDES DESTINATION ${DEST_INC_PATH}
+)
 install(FILES ${INC_FILES} DESTINATION ${DEST_INC_PATH})
+
+# CMake package config files
+include(CMakePackageConfigHelpers)
+
+set(FFTZ_INSTALL_CMAKEDIR "${DEST_LIB_PATH}/cmake/aocl-fftz")
+# Config runs find_dependency(OpenMP) only when we ship static + MT with normal OpenMP (not custom path).
+set(AOCL_FFTZ_REQUIRES_OPENMP FALSE)
+if(ENABLE_MULTI_THREADING AND BUILD_STATIC_LIBS AND (WIN32 OR NOT OpenMP_libomp_LIBRARY))
+    set(AOCL_FFTZ_REQUIRES_OPENMP TRUE)
+endif()
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/aocl-fftz-config.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/aocl-fftz-config.cmake"
+    INSTALL_DESTINATION "${FFTZ_INSTALL_CMAKEDIR}"
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/aocl-fftz-config-version.cmake"
+    VERSION "${FFTZ_VERSION}"
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/aocl-fftz-config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/aocl-fftz-config-version.cmake"
+    DESTINATION "${FFTZ_INSTALL_CMAKEDIR}"
+)
+
+install(EXPORT aocl-fftz-targets
+    NAMESPACE aocl-fftz::
+    DESTINATION "${FFTZ_INSTALL_CMAKEDIR}"
+)
+
+# Install .pc files so pkg-config works. CMake projects can use find_package(aocl-fftz) as well.
+set(FFTZ_DESCRIPTION "AOCL-FFTZ: high-performance FFT library")
+if (BUILD_THIRD_PARTY_WRAPPERS)
+    string(APPEND FFTZ_DESCRIPTION " (build includes FFTW-compatible wrappers; see fftw3.pc / fftw3f.pc)")
+endif()
+set(FFTZ_LIBS "-laocl_fftz")
+# Populate Libs.private in the .pc file with the same libs we actually link (e.g. -lm, -fopenmp
+# or custom OpenMP path). That way pkg-config gives downstream the correct link line.
+set(FFTZ_LIBS_PRIVATE "")
+
+# On Unix, we must explicitly link libm.
+if(UNIX)
+    string(APPEND FFTZ_LIBS_PRIVATE " -lm")
+endif()
+
+# Add OpenMP to Libs.private only (not Cflags/Libs). If user set a custom lib path, use that
+# so downstream links the same runtime we did.
+if(ENABLE_MULTI_THREADING)
+    if(NOT WIN32)
+        if(OpenMP_libomp_LIBRARY)
+            get_filename_component(OPENMP_LIB_REAL "${OpenMP_libomp_LIBRARY}" REALPATH)
+            string(APPEND FFTZ_LIBS_PRIVATE " ${OPENMP_LIB_REAL}")
+        else()
+            string(APPEND FFTZ_LIBS_PRIVATE " -fopenmp")
+        endif()
+    elseif(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
+        string(APPEND FFTZ_LIBS_PRIVATE " -fopenmp")
+    endif()
+endif()
+string(STRIP "${FFTZ_LIBS_PRIVATE}" FFTZ_LIBS_PRIVATE)
+# Generate and install fftz.pc.
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/fftz.pc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/fftz.pc
+    @ONLY
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fftz.pc DESTINATION ${DEST_LIB_PATH}/pkgconfig)
+
+# When BUILD_THIRD_PARTY_WRAPPERS is ON, generate and install FFTW-compatible
+# pkg-config files (fftw3.pc, fftw3f.pc) so downstreams can link against
+# AOCL-FFTZ as if it were FFTW.
+if(BUILD_THIRD_PARTY_WRAPPERS)
+    set(aoclfftz_fftw3_pc_in "${CMAKE_CURRENT_SOURCE_DIR}/cmake/fftw3.pc.in")
+    set(aoclfftz_fftw3f_pc_in "${CMAKE_CURRENT_SOURCE_DIR}/cmake/fftw3f.pc.in")
+    if(EXISTS "${aoclfftz_fftw3_pc_in}" AND EXISTS "${aoclfftz_fftw3f_pc_in}")
+        configure_file(
+            ${aoclfftz_fftw3_pc_in}
+            ${CMAKE_CURRENT_BINARY_DIR}/fftw3.pc
+            @ONLY
+        )
+        configure_file(
+            ${aoclfftz_fftw3f_pc_in}
+            ${CMAKE_CURRENT_BINARY_DIR}/fftw3f.pc
+            @ONLY
+        )
+        install(FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/fftw3.pc
+            ${CMAKE_CURRENT_BINARY_DIR}/fftw3f.pc
+            DESTINATION ${DEST_LIB_PATH}/pkgconfig
+        )
+    else()
+        message(WARNING
+            "FFTW wrapper pkg-config templates not found (fftw3.pc.in, fftw3f.pc.in); "
+            "fftw3.pc and fftw3f.pc will not be installed. Wrappers will still be built."
+        )
+    endif()
+endif()
+
 if((NOT BUILD_STATIC_LIBS) AND WIN32 AND (NOT AOCL_TEST_COVERAGE STREQUAL "OFF"))
     add_custom_command(
         TARGET ${lib_name}
