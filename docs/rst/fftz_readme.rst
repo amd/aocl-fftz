@@ -103,8 +103,6 @@ Use the following additional options to configure your build:
      - Specifies maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)
    * - ENABLE_FMA
      - Enables -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)
-   * - ENABLE_HARDLINKS_FOR_WRAPPER
-     - Uses hard links instead of symbolic links for wrapper libraries on Windows (Disabled by default)
    * - ENABLE_MULTI_THREADING
      - Compiles library with multi-threading support using OpenMP (Disabled by default)
    * - ENABLE_STRICT_WARNINGS
@@ -257,7 +255,7 @@ Sample commands for Valgrind:
 .. code-block:: bash
 
     # Build
-    cmake -B <build directory> <CMakeList.txt filepath> -DCMAKE_BUILD_TYPE=Debug -DVALGRIND=ON
+    cmake -B <build directory> <CMakeLists.txt filepath> -DCMAKE_BUILD_TYPE=Debug -DVALGRIND=ON
 
     # Run
     ctest -T memcheck
@@ -268,7 +266,7 @@ Sample commands for ASAN:
 .. code-block:: bash
 
     # Build
-    cmake -B <build directory> <CMakeList.txt filepath> -DCMAKE_BUILD_TYPE=Debug -DASAN=ON
+    cmake -B <build directory> <CMakeLists.txt filepath> -DCMAKE_BUILD_TYPE=Debug -DASAN=ON
 
     # Run
     ctest

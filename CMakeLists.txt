@@ -73,7 +73,6 @@ option(BUILD_STATIC_LIBS "Builds static library (Default build type is shared li
 option(BUILD_THIRD_PARTY_WRAPPERS "Builds fftz third party wrapper libraries along aocl_fftz library" OFF)
 option(CODE_COVERAGE "Enables source code coverage and generates coverage report. Supported only on Linux with GCC compiler (Disabled by default)" OFF)
 option(ENABLE_APP_INFO_LOGS "Enables info logging for FFT problems used by the application (Independent of AOCL_ENABLE_LOG, Disabled by default)" OFF)
-option(ENABLE_HARDLINKS_FOR_WRAPPER "Uses hard links instead of symbolic links for wrapper libraries on Windows (Disabled by default)" OFF)
 set(ENABLE_INSTRUCTIONS_UPTO "AVX512" CACHE STRING "Specifies maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)")
 set_property(CACHE ENABLE_INSTRUCTIONS_UPTO PROPERTY STRINGS "None" "AVX128" "AVX256" "AVX512")
 option(ENABLE_FMA "Enables -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)" ON)
@@ -659,42 +658,5 @@ if (BUILD_DOC)
 endif()
 
 if(BUILD_THIRD_PARTY_WRAPPERS)
-    # On Windows, test symbolic link capability if using symlinks (default)
-    if(WIN32 AND NOT ENABLE_HARDLINKS_FOR_WRAPPER)
-        set(TEST_DIR "${CMAKE_BINARY_DIR}/test_symlink")
-        file(MAKE_DIRECTORY "${TEST_DIR}")
-
-        # Try creating a symbolic link to CMakeLists.txt
-        execute_process(
-            COMMAND ${CMAKE_COMMAND} -E create_symlink
-                    "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
-                    "${TEST_DIR}/link.txt"
-            RESULT_VARIABLE RESULT
-            ERROR_VARIABLE ERROR_MSG
-        )
-
-        file(REMOVE_RECURSE "${TEST_DIR}")
-
-        if(NOT RESULT EQUAL 0)
-            # Check admin privileges
-            execute_process(COMMAND net session RESULT_VARIABLE HAS_ADMIN OUTPUT_QUIET ERROR_QUIET)
-
-            if(HAS_ADMIN EQUAL 0)
-                if(ERROR_MSG)
-                    string(STRIP "${ERROR_MSG}" ERROR_MSG)
-                    set(ERROR_MSG "\n${ERROR_MSG}\n")
-                endif()
-                message(FATAL_ERROR
-                    "Symbolic link creation failed despite admin privileges.${ERROR_MSG}"
-                    "Possible causes: Group Policy, filesystem limitations, or security software.\n"
-                    "Solution: Use -DENABLE_HARDLINKS_FOR_WRAPPER=ON")
-            else()
-                message(FATAL_ERROR
-                    "Symbolic link creation failed.\n"
-                    "Run CMake with admin privileges or build with -DENABLE_HARDLINKS_FOR_WRAPPER=ON")
-            endif()
-        endif()
-    endif()
-
     add_subdirectory(wrappers/fftw)
 endif()
