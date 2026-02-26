@@ -41,6 +41,7 @@
 #ifndef AOCLFFTZ_KERNEL_GTEST_UTILS_H
 #define AOCLFFTZ_KERNEL_GTEST_UTILS_H
 
+#include <omp.h>
 #include <string>
 #include <typeinfo>
 extern "C"

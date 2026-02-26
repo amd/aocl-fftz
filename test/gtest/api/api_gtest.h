@@ -38,6 +38,7 @@
 #include <random>
 #include <climits>
 #include <iostream> // Add this include for debug printing
+#include <omp.h>
 #include "gtest/gtest.h"
 #include "test/gtest/common_gtest_utils.h"
 
