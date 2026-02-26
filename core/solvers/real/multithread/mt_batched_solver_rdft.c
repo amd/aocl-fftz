@@ -206,12 +206,12 @@ INT32 execute_real_mt_batched_solver_internal(aoclfftz_solution_t *sol,
         VOID *out_imag = next_sol[0]->decomp_scheme->out_imag;
 
         INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
+
         #pragma omp parallel for num_threads(n_threads)
         for (INTP b = 0; b < batches; b++)
         {
             INT32 tid = omp_get_thread_num();
-            // process real buffered solver to change the input/output
-            // pointer correctly for each thread
+            INT32 local_status = SOLVER_SUCCESS;
             if (next_sol[tid]->solver->solver_type == SOLVER_REAL_BUFFERED)
             {
                 update_pointers_real_buffered_solution(next_sol[tid], tid);
@@ -225,7 +225,12 @@ INT32 execute_real_mt_batched_solver_internal(aoclfftz_solution_t *sol,
                                 (VOID *)((CHAR *)out_real + b * v_out_stride);
             next_sol[tid]->decomp_scheme->out_imag =
                                 (VOID *)((CHAR *)out_imag + b * v_out_stride);
-            status = next_sol[tid]->solver->execute_solver(next_sol[tid]);
+            local_status = next_sol[tid]->solver->execute_solver(next_sol[tid]);
+            if (local_status != SOLVER_SUCCESS)
+            {
+                #pragma omp atomic write
+                status = local_status;
+            }
         }
     }
     else

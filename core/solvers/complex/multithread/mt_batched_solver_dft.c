@@ -62,7 +62,7 @@ INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol, INT32 num_threads_used)
 
 // Recursively solves batched FFT by handling the innermost dimension first.
 INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
-                                aoclfftz_solution_t **next_sol, INTP vec_rank)
+                                         aoclfftz_solution_t **next_sol, INTP vec_rank)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -92,6 +92,7 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
         for (INTP b = 0; b < batches; b++)
         {
             INT32 tid = omp_get_thread_num();
+            INT32 local_status = SOLVER_SUCCESS;
 
             next_sol[tid]->decomp_scheme->in_real =
                                 MOVE_ADDR(in_real, b * v_in_stride);
@@ -101,7 +102,12 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
                                 MOVE_ADDR(out_real, b * v_out_stride);
             next_sol[tid]->decomp_scheme->out_imag =
                                 MOVE_ADDR(out_imag, b * v_out_stride);
-            status = next_sol[tid]->solver->execute_solver(next_sol[tid]);
+            local_status = next_sol[tid]->solver->execute_solver(next_sol[tid]);
+            if (local_status != SOLVER_SUCCESS)
+            {
+                #pragma omp atomic write
+                status = local_status;
+            }
         }
 
         // reset pointers to enable multiple executions
