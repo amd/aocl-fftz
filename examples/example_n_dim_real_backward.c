@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
+ * Copyright (C) 2026, Advanced Micro Devices. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -26,19 +26,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** @file example_one_dim_real_backward.c
+/** @file example_n_dim_real_backward.c
  *
- *  @brief Example for AOCL-FFTZ APIs to compute 1D real backward problem
+ *  @brief Example for AOCL-FFTZ APIs to compute ND real backward FFT problem.
  *
  *  The following test program shows the sample usage and calling sequence of
- *  AOCL-FFTZ APIs to compute 1D real Backward FFT problem for FLOAT datatype on ILP64
- *  systems. This file also contains helper macros and functions to be used for
- *  initialization of the problem descriptor.
+ *  AOCL-FFTZ APIs to compute ND real backward FFT problem for DOUBLE datatype on ILP64
+ *  systems. Helper macros and functions used for initialization of the
+ *  problem descriptor are provided in helpers.h.
  *
  *  @note To run the program:
- *  example_one_dim_real_backward
+ *  example_n_dim_real_backward
  *
- *  @author Partiksha
+ *  @author Amrin Fathima
  */
 
 #include <stdio.h>
@@ -57,17 +57,21 @@ int main()
      *      `aoclfftz_prob_desc_f_64_` for FLOAT ILP64
      *      `aoclfftz_prob_desc_d_64_` for DOUBLE ILP64
      *
-     * Available dims/vecs types-
+     *  Available dims/vecs types-
      *      `aoclfftz_dim_t` for LP64
      *      `aoclfftz_dim_t_64_` for ILP64
      *
-     * type definition for FLOAT ILP64 is used here.
+     * type definition for DOUBLE ILP64 is used here.
      */
-    aoclfftz_dim_t_64_ dims[] = {{.n = 64, .in_stride = 8, .out_stride = 8}};
-    aoclfftz_dim_t_64_ vecs[] = {{.n = 4, .in_stride = 264, .out_stride = 528}};
-    aoclfftz_prob_desc_f_64_ problem = {
-        .dim_rank = 1, // the number of signal/frequency dimensions, must be >= 1.
-        .vec_rank = 1, // the number of batch/vector dimensions, must be >= 1.
+    aoclfftz_dim_t_64_ dims[] = {{.n = 5, .in_stride = 1, .out_stride = 1},
+                                 {.n = 10, .in_stride = 0, .out_stride = 0},
+                                 {.n = 20, .in_stride = 0, .out_stride = 0}};
+
+    aoclfftz_dim_t_64_ vecs[] = {{.n = 3, .in_stride = 0, .out_stride = 0},
+                                 {.n = 6, .in_stride = 0, .out_stride = 0}};
+    aoclfftz_prob_desc_d_64_ problem = {
+        .dim_rank = 3, // the number of signal/frequency dimensions, must be >= 1.
+        .vec_rank = 2, // the number of batch/vector dimensions, must be >= 1.
         .dims = dims,
         .vecs = vecs,
         .flags = {
@@ -81,7 +85,7 @@ int main()
                     /*
                      * num_threads = 1 for Single Threaded Execution
                      * num_threads > 1 for Multithreaded Execution (Make sure that Library
-                     * is build with ENABLE_MULTI_THREADING=ON for multithreading execution)
+                     * is built with ENABLE_MULTI_THREADING=ON for multithreading execution)
                      */
                      .num_threads = 1,
                      .dynamic_load_model = 0},
@@ -94,46 +98,53 @@ int main()
             },
     };
 
+    /* STEP 1.1: Set default vecs and dims strides values. */
+    set_default_dims_vecs(problem.dims, problem.dim_rank,
+        problem.vecs, problem.vec_rank, problem.flags);
     UINT8 is_out_of_place = problem.flags.fft_placement;
-    UINT8 is_bwd = problem.flags.fft_direction;
 
-    /* STEP 1.1: Set default vecs and dims strides values.
-                 Strides values are already set for the first dimension and
-                 `set_default_dims_vecs()` can be used to set the strides
-                 to default values for higher dimensions. */
+    /* STEP 1.2: Calculate input/output buffer sizes. */
+    UINTP in_buffer_size = 0;
+    UINTP out_buffer_size = 0;
+    calculate_buffer_sizes(problem.dims, problem.dim_rank, problem.vecs,
+                           problem.vec_rank, &in_buffer_size, &out_buffer_size);
 
-    /* STEP 1.2: Calculate input/output buffer sizes.
-                 `calculate_buffer_sizes()` can be used to calculate buffer sizes
-                 for higher dimension problem size.
-                 in_data_stride/out_data_stride must be 1 for real data
-                 2 for complex data to calculate buffer sizes. */
-    UINTP in_buffer_size =  ((dims[0].n - 1) * (dims[0].in_stride)) +
-                            ((vecs[0].n - 1) * (vecs[0].in_stride)) + 1;
-    UINTP out_buffer_size = ((dims[0].n - 1) * (dims[0].out_stride)) +
-                            ((vecs[0].n - 1) * (vecs[0].out_stride)) + 1;
-
-    in_buffer_size *= is_bwd ? 2 : 1;       /* in_data_stride */
-    out_buffer_size *= is_bwd ? 1 : 2;      /* out_data_stride */
-    in_buffer_size = MAX(in_buffer_size, out_buffer_size);
+    /* Real backward: input is half-complex, output is real.
+       Complex values need 2 doubles (real + imag), real values need 1 double. */
+    UINTP in_data_stride = 2;
+    UINTP out_data_stride = 1;
 
     /* STEP 1.3: Allocate memory input/output buffers and
-                 create new output buffer in case of out-of-place problem. */
-    FLOAT *in = NULL;
-    FLOAT *out = NULL;
-    ALLOC(in, FLOAT, (in_buffer_size));
+                 create new output buffer in case of out-of-place problem.
+                 For in-place real FFT, use max(in_size, out_size*out_data_stride). */
+    DOUBLE *in = NULL;
+    DOUBLE *out = NULL;
+    UINTP alloc_size = in_buffer_size * in_data_stride;
+    if (!is_out_of_place && problem.flags.fft_type == 1)
+    {
+        UINTP out_doubles = out_buffer_size * out_data_stride;
+        if (out_doubles > alloc_size)
+        {
+            alloc_size = out_doubles;
+        }
+    }
+    ALLOC(in, DOUBLE, alloc_size);
     if (is_out_of_place)
     {
-        ALLOC(out, FLOAT, out_buffer_size);
+        ALLOC(out, DOUBLE, (out_buffer_size * out_data_stride));
     }
 
     /* STEP 1.4: Prepare input for FFT calculation and
-                 Use input buffer as output for in-place buffer. */
-    PREPARE_RANDOM_INPUT(in, in_buffer_size, problem.flags.fft_type, FLOAT);
+                 Use input buffer as output for in-place buffer.
+                 For real backward, input is complex so fill in_buffer_size*in_data_stride doubles. */
+    UINTP in_elems_to_fill = (in_buffer_size * in_data_stride)
+                             / (UINTP)DATA_STRIDE(problem.flags.fft_type);
+    PREPARE_RANDOM_INPUT(in, in_elems_to_fill, problem.flags.fft_type, DOUBLE);
     problem.in = in;
     problem.out = !is_out_of_place ? in : out;
 
     /* STEP 2: Invoke appropriate setup API to generate solution. */
-    VOID *aoclfftz_handle = aoclfftz_setup_f_64_(&problem);
+    VOID *aoclfftz_handle = aoclfftz_setup_d_64_(&problem);
 
     /* STEP 3: Invoke execute API. */
     if (aoclfftz_handle)
@@ -156,8 +167,8 @@ int main()
         printf("\nSetup Failure\n");
     }
 
-    /* STEP 4: Invoke destroy API to free `aoclfftz_handle` and
-               free the allocated memory. */
+    /* STEP 4: Invoke destroy API to free `aoclfftz_handle`
+               and free the allocated memory. */
     aoclfftz_destroy(aoclfftz_handle);
     free(problem.in);
     if (is_out_of_place)
