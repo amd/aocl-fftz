@@ -60,6 +60,7 @@ aoclfftz_kernel_test_params_t param_float_c2c_c_kernels[] =
     {14, aocl_fftz_kernel_type::C2C_C},
     {15, aocl_fftz_kernel_type::C2C_C},
     {16, aocl_fftz_kernel_type::C2C_C},
+    {20, aocl_fftz_kernel_type::C2C_C},
     {48, aocl_fftz_kernel_type::C2C_C},
 };
 
@@ -81,6 +82,7 @@ aoclfftz_kernel_test_params_t param_double_c2c_c_kernels[] =
     {14, aocl_fftz_kernel_type::C2C_C},
     {15, aocl_fftz_kernel_type::C2C_C},
     {16, aocl_fftz_kernel_type::C2C_C},
+    {20, aocl_fftz_kernel_type::C2C_C},
     {48, aocl_fftz_kernel_type::C2C_C},
 };
 
@@ -102,6 +104,7 @@ aoclfftz_kernel_test_params_t param_float_c2c_avx128_kernels[] =
     {14, aocl_fftz_kernel_type::C2C_AVX128},
     {15, aocl_fftz_kernel_type::C2C_AVX128},
     {16, aocl_fftz_kernel_type::C2C_AVX128},
+    {20, aocl_fftz_kernel_type::C2C_AVX128},
     {48, aocl_fftz_kernel_type::C2C_AVX128},
 };
 
@@ -123,6 +126,7 @@ aoclfftz_kernel_test_params_t param_double_c2c_avx128_kernels[] =
     {14, aocl_fftz_kernel_type::C2C_AVX128},
     {15, aocl_fftz_kernel_type::C2C_AVX128},
     {16, aocl_fftz_kernel_type::C2C_AVX128},
+    {20, aocl_fftz_kernel_type::C2C_AVX128},
     {48, aocl_fftz_kernel_type::C2C_AVX128},
 };
 
@@ -144,6 +148,7 @@ aoclfftz_kernel_test_params_t param_float_c2c_avx256_kernels[] =
     {14, aocl_fftz_kernel_type::C2C_AVX256},
     {15, aocl_fftz_kernel_type::C2C_AVX256},
     {16, aocl_fftz_kernel_type::C2C_AVX256},
+    {20, aocl_fftz_kernel_type::C2C_AVX256},
     {48, aocl_fftz_kernel_type::C2C_AVX256},
 };
 
@@ -165,6 +170,7 @@ aoclfftz_kernel_test_params_t param_double_c2c_avx256_kernels[] =
     {14, aocl_fftz_kernel_type::C2C_AVX256},
     {15, aocl_fftz_kernel_type::C2C_AVX256},
     {16, aocl_fftz_kernel_type::C2C_AVX256},
+    {20, aocl_fftz_kernel_type::C2C_AVX256},
     {48, aocl_fftz_kernel_type::C2C_AVX256},
 };
 
@@ -186,6 +192,7 @@ aoclfftz_kernel_test_params_t param_float_c2c_avx512_kernels[] =
     {14, aocl_fftz_kernel_type::C2C_AVX512},
     {15, aocl_fftz_kernel_type::C2C_AVX512},
     {16, aocl_fftz_kernel_type::C2C_AVX512},
+    {20, aocl_fftz_kernel_type::C2C_AVX512},
     {48, aocl_fftz_kernel_type::C2C_AVX512},
 };
 
@@ -207,6 +214,7 @@ aoclfftz_kernel_test_params_t param_double_c2c_avx512_kernels[] =
     {14, aocl_fftz_kernel_type::C2C_AVX512},
     {15, aocl_fftz_kernel_type::C2C_AVX512},
     {16, aocl_fftz_kernel_type::C2C_AVX512},
+    {20, aocl_fftz_kernel_type::C2C_AVX512},
     {48, aocl_fftz_kernel_type::C2C_AVX512},
 };
 

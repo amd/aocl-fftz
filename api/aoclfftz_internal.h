@@ -140,7 +140,7 @@
 // Number of standard kernels (radix 2 to 16)
 #define NUM_STANDARD_KERNELS 15
 // Number of higher radix kernels (radix > 16, e.g., radix 48)
-#define NUMBER_OF_HIGHER_RADIX_KERNELS 1
+#define NUMBER_OF_HIGHER_RADIX_KERNELS 2
 // Total number of kernels in each category
 #define NUM_KERNELS_IN_EACH_CATEGORY (NUM_STANDARD_KERNELS + NUMBER_OF_HIGHER_RADIX_KERNELS)
 
