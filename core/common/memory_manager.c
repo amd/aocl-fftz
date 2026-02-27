@@ -84,6 +84,7 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sizeof(kernel_info_t) +
         sizeof(kernel_info_t) +
         sizeof(kernel_info_t) +
+        sizeof(kernel_info_t) +
         sizeof(aoclfftz_decomp_scheme_t) +
         //vec_rank and dim_rank can be large numbers, and so should better be
         //allocated separately ? This may avoid a discontinuity in solution_t.
@@ -107,15 +108,18 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
     {
         sol->solver = (aoclfftz_generic_solver_t*)((UINT8*)sol + sizeof(aoclfftz_solution_t));
         sol->solver->kernel_c2c = (kernel_info_t*)((UINT8*)sol->solver + sizeof(aoclfftz_generic_solver_t));
-        sol->solver->kernel_r2hc = (kernel_info_t*)((UINT8*)sol->solver->kernel_c2c + sizeof(kernel_info_t));
+        sol->solver->kernel_c2c_r = (kernel_info_t*)((UINT8*)sol->solver->kernel_c2c + sizeof(kernel_info_t));
+        sol->solver->kernel_r2hc = (kernel_info_t*)((UINT8*)sol->solver->kernel_c2c_r + sizeof(kernel_info_t));
         sol->solver->kernel_r2hcf = (kernel_info_t*)((UINT8*)sol->solver->kernel_r2hc + sizeof(kernel_info_t));
 
         sol->solver->solver_type = SOLVER_NULL;
         sol->solver->execute_solver = NULL;
         sol->solver->kernel_c2c->kfft = NULL;
+        sol->solver->kernel_c2c_r->kfft = NULL;
         sol->solver->kernel_r2hc->kfft = NULL;
         sol->solver->kernel_r2hcf->kfft = NULL;
         sol->solver->kernel_c2c->sets = 1;
+        sol->solver->kernel_c2c_r->sets = 1;
         sol->solver->kernel_r2hc->sets = 1;
         sol->solver->kernel_r2hcf->sets = 1;
         sol->solver->destroy_solver = NULL;
@@ -209,6 +213,7 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->num_ct_buf = 0;
         sol->dft_bufs->ct_buf_allocated = 0;
         sol->solver->kernel_c2c->count = 0;
+        sol->solver->kernel_c2c_r->count = 0;
         sol->solver->kernel_r2hc->count = 0;
         sol->solver->kernel_r2hcf->count = 0;
         sol->decomp_scheme->decomp_level = 0;
@@ -231,6 +236,8 @@ aoclfftz_solution_t* alloc_solution(INT32 vec_rank, INT32 dim_rank)
             sizeof(aoclfftz_generic_solver_t));
         ALLOC_ALIGN_UNINIT(sol->solver->kernel_c2c, kernel_info_t,
             sizeof(kernel_info_t));
+        ALLOC_ALIGN_UNINIT(sol->solver->kernel_c2c_r, kernel_info_t,
+            sizeof(kernel_info_t));
         ALLOC_ALIGN_UNINIT(sol->solver->kernel_r2hc, kernel_info_t,
             sizeof(kernel_info_t));
         ALLOC_ALIGN_UNINIT(sol->solver->kernel_r2hcf, kernel_info_t,
@@ -238,9 +245,11 @@ aoclfftz_solution_t* alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->solver->solver_type = SOLVER_NULL;
         sol->solver->execute_solver = NULL;
         sol->solver->kernel_c2c->kfft = NULL;
+        sol->solver->kernel_c2c_r->kfft = NULL;
         sol->solver->kernel_r2hc->kfft = NULL;
         sol->solver->kernel_r2hcf->kfft = NULL;
         sol->solver->kernel_c2c->sets = 1;
+        sol->solver->kernel_c2c_r->sets = 1;
         sol->solver->kernel_r2hc->sets = 1;
         sol->solver->kernel_r2hcf->sets = 1;
         sol->solver->destroy_solver = NULL;
@@ -330,6 +339,7 @@ aoclfftz_solution_t* alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->num_ct_buf = 0;
         sol->dft_bufs->ct_buf_allocated = 0;
         sol->solver->kernel_c2c->count = 0;
+        sol->solver->kernel_c2c_r->count = 0;
         sol->solver->kernel_r2hc->count = 0;
         sol->solver->kernel_r2hcf->count = 0;
         sol->decomp_scheme->decomp_level = 0;
@@ -351,6 +361,25 @@ VOID alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix)
         ALLOC_ALIGN_UNINIT(strides->in_strides, INTP, radix * sizeof(INTP));
         ALLOC_ALIGN_UNINIT(strides->out_strides, INTP, radix * sizeof(INTP));
     }
+}
+
+// Allocates (if not already allocated) and fills stride arrays with a
+// uniform element-stride pattern: strides[i] = i * stride * DATA_STRIDE.
+INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides, INTP radix,
+                                   INTP in_stride, INTP out_stride)
+{
+    alloc_stride_arrays(strides, radix);
+    if (strides->in_strides == NULL || strides->out_strides == NULL)
+    {
+        return AOCLFFTZ_MEMORY_FAILURE;
+    }
+    
+    for (INTP i = 0; i < radix; i++)
+    {
+        strides->in_strides[i]  = i * in_stride * DATA_STRIDE;
+        strides->out_strides[i] = i * out_stride * DATA_STRIDE;
+    }
+    return SOLVER_SUCCESS;
 }
 
 // Allocate n placeholders for next solution
@@ -751,6 +780,7 @@ VOID destroy_solution(aoclfftz_solution_t *sol, UINT8 destroy_buffers)
         n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
                   (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
         FREE_ALIGN_ALLOCATED_MEM(sol->solver->kernel_c2c);
+        FREE_ALIGN_ALLOCATED_MEM(sol->solver->kernel_c2c_r);
         FREE_ALIGN_ALLOCATED_MEM(sol->solver->kernel_r2hc);
         FREE_ALIGN_ALLOCATED_MEM(sol->solver->kernel_r2hcf);
         FREE_ALIGN_ALLOCATED_MEM(sol->solver);
@@ -808,6 +838,7 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
                           (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
                 destroy_solutions(cur_sol->next_sol, n_sols);
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver->kernel_c2c);
+                FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver->kernel_c2c_r);
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver->kernel_r2hc);
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver->kernel_r2hcf);
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol->solver);

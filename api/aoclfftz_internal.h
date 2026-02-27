@@ -242,6 +242,7 @@ typedef struct aoclfftz_generic_solver
     dft_solver_ execute_solver;
     VOID (*destroy_solver)(aoclfftz_solution_t *solution);
     kernel_info_t *kernel_c2c;
+    kernel_info_t *kernel_c2c_r; // Used by batched_ct_l1_direct solver only
     kernel_info_t *kernel_r2hc;
     kernel_info_t *kernel_r2hcf;
 } aoclfftz_generic_solver_t;

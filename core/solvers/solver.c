@@ -81,6 +81,8 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
         register_execute_direct_batched_colmajor_solver();
     solvers_table[SOLVER_CT] = register_execute_ct_solver();
     solvers_table[SOLVER_CT_TWIDDLE] = register_execute_ct_twiddle_solver();
+    solvers_table[SOLVER_BATCHED_CT_L1_DIRECT] =
+        register_execute_batched_ct_l1_direct_solver();
     solvers_table[SOLVER_BATCHED] = register_execute_batched_solver();
     solvers_table[SOLVER_BUFFERED] = register_execute_buffered_solver();
     solvers_table[SOLVER_BLUESTEIN] = register_execute_bluestein_solver();
@@ -114,4 +116,22 @@ INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj)
 
     solver_obj->execute_solver = solvers_table[solver_obj->solver_type];
     return SOLVER_SUCCESS;
+}
+
+INT64 compute_kernel_cost(const kernel_t *ker, UINT8 precision,
+                          UINT8 direction, INTP batch)
+{
+    ops_cycles_t oc = ker->k_ops_cnt(precision, direction);
+    INT64 ops = (oc.fma   * AMD_ZEN_FP_FMA_CYCLES) +
+                (oc.mul   * AMD_ZEN_FP_MUL_CYCLES) +
+                (oc.add   * AMD_ZEN_FP_ADD_CYCLES) +
+                (oc.move  * AMD_ZEN_FP_MOVE_CYCLES) +
+                (oc.perm  * AMD_ZEN_FP_PERM_CYCLES) +
+                (oc.other * AMD_ZEN_FP_OTHER_CYCLES);
+    UINT8 sets = ker->sets[precision - 2];
+    if (batch >= sets)
+    {
+        ops = (ops + sets - 1) / sets;
+    }
+    return ops * batch;
 }

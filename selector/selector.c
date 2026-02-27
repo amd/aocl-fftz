@@ -211,6 +211,34 @@ INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme)
     return 0;
 }
 
+// Check whether n can be factored as radix_r * radix_m where radix_r
+// has twiddle kernel support and radix_m has plain FFT kernel support.
+INT32 check_batched_ct_l1_direct_solvability(INTP n, kernel_t *kertab_twid,
+                                   kernel_t *kertab_dft)
+{
+    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
+    {
+        INTP radix_r = (INTP)kertab_twid[i].radix;
+        
+        if (radix_r == 0) // End of suitable kernels in the list
+        {
+            break;
+        }
+
+        // Check if this radix can factorize the problem
+        if ((n % radix_r) != 0)
+        {
+            continue;
+        }
+        
+        if (check_FFT_kernel_support(n / radix_r, kertab_dft, 1))
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 // Fixed decision logic and CPI based selector mode execution for the
 // input problem based on the applicable tables of solvers and kernels
 INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
@@ -515,6 +543,12 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
     standalone_transpose_cond =
         GET_STANDALONE_TRANSPOSE(sel->solution->decomp_scheme->flags);
 
+    // SOLVER_BATCHED_CT_L1_DIRECT
+    INT32 is_batched_ct_l1_direct = check_batched_ct_l1_direct_solvability(
+        sel->solution->decomp_scheme->dims[0].n,
+        sel->kernel_tables->kt_twid_dft,
+        sel->kernel_tables->kt_dft);
+
     /** Level 1 decisions : Solvers **/
     // Buffered FFT Solver
     if (level1_cond2 & 0x1)
@@ -528,6 +562,28 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
         // call buffered solver master
         ret = selector_buffered_dft(sel, kertab);
         return ret;
+    }
+
+    // Batched CT one level direct: fuses the batch loop and one
+    // CT-twiddle level (both radix_m and radix_r directly supported)
+    // into a single flat function with direct kernel calls.
+    // Applicable for single-threaded, non-direct sizes, single batch
+    // dimension (vec_rank == 1) and innermost ndim dimension.
+    if (avl_threads <= 1 &&
+        !is_FFT_ker_supported && dim_rank == 1 &&
+        sel->solution->decomp_scheme->vec_rank == 1 &&
+        !IS_NOT_INNERMOST_DIM(sel->solution->decomp_scheme->flags) &&
+        is_batched_ct_l1_direct)
+    {
+        solver_obj->solver_type = SOLVER_BATCHED_CT_L1_DIRECT;
+        if (set_solver_fp(solver_obj) == SOLVER_SUCCESS)
+        {
+            ret = selector_batched_ct_l1_direct_dft(sel);
+            if (ret == SELECTOR_SUCCESS)
+            {
+                return ret;
+            }
+        }
     }
 
     // Batched/vector FFT Solver
@@ -1905,6 +1961,20 @@ VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
                     setup_twiddle_buffer_complex(curr->dft_bufs->sr->odd3_sol);
                 }
             }
+            else if (curr->solver->solver_type == SOLVER_BATCHED_CT_L1_DIRECT)
+            {
+                INTP r = (INTP)curr->solver->kernel_c2c->count;
+                INTP m = (INTP)curr->solver->kernel_c2c_r->count;
+
+                VOID *TW = alloc_twiddle_buffer(r * m, dt_prec);
+                if (TW != NULL)
+                {
+                    compute_twiddle_buffer(TW, r, m, dt_prec);
+                    curr->twiddle->cols = m;
+                    curr->twiddle->TW = TW;
+                    curr->twiddle->twiddle_buf_ptr = TW;
+                }
+            }
             // Process N-D solution after the current solution
             if (curr->solver->solver_type == SOLVER_NDIM)
             {
@@ -2016,6 +2086,17 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
 #endif
 }
 
+/**
+ * @brief Deep-copy a solution subtree for a specific thread.
+ *
+ * Recursively copies each node, assigning unique scratch and ct_buf
+ * slices via scratch_buf_idx and ct_buf_idx.  MT_BATCHED nodes replicate
+ * next_sol[0] across thread slots, advancing both counters. nd_sol and
+ * next_sol share indices (saved/restored around the nd_sol copy).
+ *
+ * BATCHED_CT_L1_DIRECT nodes that own their ct_buffer get a fresh allocation per
+ * copy; those reusing a parent buffer share it via ct_buf_idx offsets.
+ */
 aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
                                              UINT32 *scratch_buf_idx,
                                              UINT32 *ct_buf_idx)
@@ -2030,18 +2111,40 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
     INT32 dim_rank = src->decomp_scheme->dim_rank;
     aoclfftz_solution_t *dst = alloc_solution(vec_rank, dim_rank);
     COPY_SOLUTION_OBJ(dst, src);
-    COPY_STRIDES(dst, src);
+    if (src->solver->solver_type == SOLVER_BATCHED_CT_L1_DIRECT)
+    {
+        COPY_STRIDES_BATCHED_CT_L1_DIRECT(dst, src);
+    }
+    else
+    {
+        COPY_STRIDES(dst, src);
+    }
     dst->dft_bufs->nd_sol = NULL;
 
     // Assign relevant scratch space to each thread
     dst->dft_bufs->scratch_space = MOVE_ADDR(src->dft_bufs->scratch_space,
                                 (*scratch_buf_idx) * scratch_space_capacity);
 
-    // Assign ct buffer pointers offset by ct_buf_idx
-    dst->dft_bufs->ct_buf_real = MOVE_ADDR(src->dft_bufs->ct_buf_real,
+    // If the src BATCHED_CT_L1_DIRECT node owns its ct_buffer (ct_buf_allocated),
+    // allocate a separate copy for dst and mark it for cleanup.
+    // Otherwise, assign ct_buf pointers offset by ct_buf_idx.
+    if (src->solver->solver_type == SOLVER_BATCHED_CT_L1_DIRECT &&
+        src->dft_bufs->ct_buf_allocated)
+    {
+        // mark ct_buf_allocated so destroy_solution frees it correctly.
+        dst->dft_bufs->ct_buf_allocated = 1;
+        ALLOC_ALIGN_UNINIT(dst->dft_bufs->ct_buffer, VOID, src->dft_bufs->ct_buf_size);
+        dst->dft_bufs->ct_buf_real = dst->dft_bufs->ct_buffer;
+        UINT32 dt_bytes = SOL_DT_SIZE(src);
+        dst->dft_bufs->ct_buf_imag = MOVE_ADDR(dst->dft_bufs->ct_buffer, dt_bytes);
+    }
+    else
+    {
+        dst->dft_bufs->ct_buf_real = MOVE_ADDR(src->dft_bufs->ct_buf_real,
+                                       (*ct_buf_idx) * src->dft_bufs->ct_buf_size);
+        dst->dft_bufs->ct_buf_imag = MOVE_ADDR(src->dft_bufs->ct_buf_imag,
                                    (*ct_buf_idx) * src->dft_bufs->ct_buf_size);
-    dst->dft_bufs->ct_buf_imag = MOVE_ADDR(src->dft_bufs->ct_buf_imag,
-                                   (*ct_buf_idx) * src->dft_bufs->ct_buf_size);
+    }
 
     // Hold the current scratch buffer index and restore after copy of each ND-subtree
     // as both nd_sol and next_sol of ND node share the same scratch space
@@ -2276,7 +2379,12 @@ VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx,
             }
         }
 
-        if (sol->solver->solver_type == SOLVER_BUFFERED)
+        // Count nodes that share the parent's ct_buffer via the global
+        // ct_buf_idx scheme: BUFFERED always, and BATCHED_CT_L1_DIRECT when it
+        // reuses the parent's buffer instead of allocating its own.
+        if (sol->solver->solver_type == SOLVER_BUFFERED ||
+            (sol->solver->solver_type == SOLVER_BATCHED_CT_L1_DIRECT &&
+             !sol->dft_bufs->ct_buf_allocated))
         {
             (*num_ct_buf)++;
         }

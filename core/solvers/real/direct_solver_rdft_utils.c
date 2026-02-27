@@ -612,11 +612,6 @@ VOID compute_cost(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     if (GET_SELECTOR_MODE(sol->decomp_scheme->flags) != AOCLFFTZ_FIXED_SELECTOR)
         return;
 
-    UINT8 sets_c2c = kernel_c2c->sets[precision - 2];
-    UINT8 sets_r2hc = kernel_r2hc->sets[precision - 2];
-    UINT8 sets_r2hcf = kernel_r2hcf->sets[precision - 2];
-
-    ops_cycles_t ops_cycles_c2c, ops_cycles_r2hc, ops_cycles_r2hcf;
     cost->time = 0;
     INT64 c2c_cost = 0;
     INT64 r2hc_cost = 0;
@@ -625,55 +620,22 @@ VOID compute_cost(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     // Calculate C2C kernel cost
     if (sol->solver->kernel_c2c->count != 0)
     {
-        ops_cycles_c2c = kernel_c2c->k_ops_cnt(precision, is_backward);
-        c2c_cost = ((ops_cycles_c2c.fma * AMD_ZEN_FP_FMA_CYCLES) +
-                    (ops_cycles_c2c.mul * AMD_ZEN_FP_MUL_CYCLES) +
-                    (ops_cycles_c2c.add * AMD_ZEN_FP_ADD_CYCLES) +
-                    (ops_cycles_c2c.move * AMD_ZEN_FP_MOVE_CYCLES) +
-                    (ops_cycles_c2c.perm * AMD_ZEN_FP_PERM_CYCLES) +
-                    (ops_cycles_c2c.other * AMD_ZEN_FP_OTHER_CYCLES));
-
-        if (sol->solver->kernel_c2c->count >= sets_c2c)
-        {
-            c2c_cost = (c2c_cost + sets_c2c - 1) / sets_c2c;
-        }
-        c2c_cost = c2c_cost * sol->solver->kernel_c2c->count;
+        c2c_cost = compute_kernel_cost(kernel_c2c, precision, is_backward,
+                                       (INTP)sol->solver->kernel_c2c->count);
     }
-
+    
     // Calculate R2HC kernel cost
     if (sol->solver->kernel_r2hc->count != 0)
-    {
-        ops_cycles_r2hc = kernel_r2hc->k_ops_cnt(precision, is_backward);
-        r2hc_cost = ((ops_cycles_r2hc.fma * AMD_ZEN_FP_FMA_CYCLES) +
-                     (ops_cycles_r2hc.mul * AMD_ZEN_FP_MUL_CYCLES) +
-                     (ops_cycles_r2hc.add * AMD_ZEN_FP_ADD_CYCLES) +
-                     (ops_cycles_r2hc.move * AMD_ZEN_FP_MOVE_CYCLES) +
-                     (ops_cycles_r2hc.perm * AMD_ZEN_FP_PERM_CYCLES) +
-                     (ops_cycles_r2hc.other * AMD_ZEN_FP_OTHER_CYCLES));
-
-        if (sol->solver->kernel_r2hc->count >= sets_r2hc)
-        {
-            r2hc_cost = (r2hc_cost + sets_r2hc - 1) / sets_r2hc;
-        }
-        r2hc_cost = r2hc_cost * sol->solver->kernel_r2hc->count;
+    {   
+        r2hc_cost = compute_kernel_cost(kernel_r2hc, precision, is_backward,
+                                        (INTP)sol->solver->kernel_r2hc->count);
     }
 
     // Calculate R2HCF kernel cost
     if (sol->solver->kernel_r2hcf->count != 0)
-    {
-        ops_cycles_r2hcf = kernel_r2hcf->k_ops_cnt(precision, is_backward);
-        r2hcf_cost = ((ops_cycles_r2hcf.fma * AMD_ZEN_FP_FMA_CYCLES) +
-                      (ops_cycles_r2hcf.mul * AMD_ZEN_FP_MUL_CYCLES) +
-                      (ops_cycles_r2hcf.add * AMD_ZEN_FP_ADD_CYCLES) +
-                      (ops_cycles_r2hcf.move * AMD_ZEN_FP_MOVE_CYCLES) +
-                      (ops_cycles_r2hcf.perm * AMD_ZEN_FP_PERM_CYCLES) +
-                      (ops_cycles_r2hcf.other * AMD_ZEN_FP_OTHER_CYCLES));
-
-        if (sol->solver->kernel_r2hcf->count >= sets_r2hcf)
-        {
-            r2hcf_cost = (r2hcf_cost + sets_r2hcf - 1) / sets_r2hcf;
-        }
-        r2hcf_cost = r2hcf_cost * sol->solver->kernel_r2hcf->count;
+    {    
+        r2hcf_cost = compute_kernel_cost(kernel_r2hcf, precision, is_backward,
+                                         (INTP)sol->solver->kernel_r2hcf->count);
     }
 
     cost->ops = c2c_cost + r2hc_cost + r2hcf_cost;

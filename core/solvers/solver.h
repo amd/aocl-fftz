@@ -58,6 +58,7 @@ typedef enum
     SOLVER_DIRECT_BATCHED_COLMAJOR,
     SOLVER_CT,
     SOLVER_CT_TWIDDLE,
+    SOLVER_BATCHED_CT_L1_DIRECT,
     SOLVER_NDIM,
     SOLVER_BUFFERED,
     SOLVER_PERM_KER,
@@ -105,6 +106,9 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
                       aoclfftz_solution_t *sol_m, UINT32 radix_r,
                       UINT32 radix_m);
+INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
+                                        kernel_t *ker_m, kernel_t *ker_r,
+                                        INTP radix_r, INTP radix_m);
 INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
                             aoclfftz_solution_t *next_sol);
 INT32 setup_batched_solver(aoclfftz_solution_t *sol);
@@ -167,6 +171,7 @@ dft_solver_ register_execute_direct_batched_rowmajor_solver(VOID);
 dft_solver_ register_execute_direct_batched_colmajor_solver(VOID);
 dft_solver_ register_execute_ct_solver(VOID);
 dft_solver_ register_execute_ct_twiddle_solver(VOID);
+dft_solver_ register_execute_batched_ct_l1_direct_solver(VOID);
 dft_solver_ register_execute_last_stage_ip_ct_solver(VOID);
 dft_solver_ register_execute_buffered_solver(VOID);
 dft_solver_ register_execute_batched_solver(VOID);
@@ -194,4 +199,7 @@ dft_solver_ register_execute_real_sizeone_solver(VOID);
 dft_solver_ register_execute_real_mt_direct_solver(VOID);
 dft_solver_ register_execute_real_mt_batched_solver(VOID);
 #endif
+INT64 compute_kernel_cost(const kernel_t *ker, UINT8 precision,
+                          UINT8 direction, INTP batch);
+
 #endif // AOCLFFTZ_SOLVER_H

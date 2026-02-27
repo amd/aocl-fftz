@@ -270,7 +270,14 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 }
 
                 COPY_SOLUTION_OBJ(next_sol->next_sol[0], cur_sel_m->solution);
-                COPY_STRIDES(next_sol->next_sol[0], cur_sel_m->solution);
+                if (cur_sel_m->solution->solver->solver_type == SOLVER_BATCHED_CT_L1_DIRECT)
+                {
+                    COPY_STRIDES_BATCHED_CT_L1_DIRECT(next_sol->next_sol[0], cur_sel_m->solution);
+                }
+                else
+                {
+                    COPY_STRIDES(next_sol->next_sol[0], cur_sel_m->solution);
+                }
 
                 if (cur_sel_m->solution->dft_bufs->ct_buf_allocated)
                 {

@@ -50,6 +50,8 @@ INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein, INTP size);
 aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank);
 aoclfftz_solution_t **alloc_sol_array(INT32 n);
 VOID alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix);
+INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides, INTP radix,
+                                   INTP in_stride, INTP out_stride);
 
 aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
                                     VOID *scratch_space,
