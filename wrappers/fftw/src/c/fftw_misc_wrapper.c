@@ -38,6 +38,9 @@
 
 INT32 thread_num = 1;
 
+const CHAR fftw_version[128]  = AOCLFFTZ_LIBRARY_VERSION " (FFTW compatible)";
+const CHAR fftwf_version[128] = AOCLFFTZ_LIBRARY_VERSION " (FFTW compatible)";
+
 /* Single empty string returned by export_wisdom_to_string. No allocation, so no leak.
  * If the caller passes this pointer to fftw_free, we skip the free (safe no-op). */
 static CHAR fftw_export_wisdom_empty_string[] = "";
@@ -159,43 +162,103 @@ VOID fftwf_cleanup_threads(VOID)
     thread_num = 1; // reset to default
 }
 
+VOID fftw_set_timelimit(DOUBLE t)
+{
+    (void)t;
+}
+
+VOID fftwf_set_timelimit(DOUBLE t)
+{
+    (void)t;
+}
+
+VOID fftw_threads_set_callback(
+    VOID (*parallel_loop)(VOID *(*work)(CHAR *),
+    CHAR *jobdata, size_t elsize, INT32 njobs, VOID *data), VOID *data)
+{
+    (void)parallel_loop;
+    (void)data;
+}
+
+VOID fftwf_threads_set_callback(
+    VOID (*parallel_loop)(VOID *(*work)(CHAR *),
+    CHAR *jobdata, size_t elsize, INT32 njobs, VOID *data), VOID *data)
+{
+    (void)parallel_loop;
+    (void)data;
+}
+
+VOID fftw_fprint_plan(const fftw_plan p, FILE *f)
+{
+    (void)p;
+    (void)f;
+}
+
+VOID fftwf_fprint_plan(const fftwf_plan p, FILE *f)
+{
+    (void)p;
+    (void)f;
+}
+
 VOID fftw_print_plan(const fftw_plan p)
 {
-    return;
+    (void)p;
 }
 
 VOID fftwf_print_plan(const fftwf_plan p)
 {
-    return;
+    (void)p;
+}
+
+CHAR *fftw_sprint_plan(const fftw_plan p)
+{
+    (void)p;
+    return (CHAR *)fftw_export_wisdom_empty_string;
+}
+
+CHAR *fftwf_sprint_plan(const fftwf_plan p)
+{
+    (void)p;
+    return (CHAR *)fftw_export_wisdom_empty_string;
 }
 
 VOID fftw_flops(const fftw_plan p, double *add, double *mul, double *fmas)
 {
-    return;
+    (void)p;
+    (void)add;
+    (void)mul;
+    (void)fmas;
 }
 
 VOID fftwf_flops(const fftwf_plan p, double *add, double *mul, double *fmas)
 {
-    return;
+    (void)p;
+    (void)add;
+    (void)mul;
+    (void)fmas;
 }
 
 double fftw_estimate_cost(const fftw_plan p)
 {
+    (void)p;
     return 0;
 }
 
 double fftwf_estimate_cost(const fftwf_plan p)
 {
+    (void)p;
     return 0;
 }
 
 double fftw_cost(const fftw_plan p)
 {
+    (void)p;
     return 0;
 }
 
 double fftwf_cost(const fftwf_plan p)
 {
+    (void)p;
     return 0;
 }
 
@@ -211,23 +274,29 @@ INT32 fftwf_alignment_of(float *p)
 
 /*
  * FFTW3 wisdom API stubs. We have no wisdom to save or load, but apps expect
- * these functions. Import functions do nothing and return 0. export_to_string
- * returns a fixed empty string (no malloc). If the app calls fftw_free on that
- * pointer, we do nothing—no crash, no leak. We never return NULL.
+ * these functions. Export functions return success (1) since there is nothing
+ * to export and the no-op is harmless. Import functions return 0 (failure)
+ * since there is no wisdom to load. export_to_string returns a fixed empty
+ * string (no malloc). If the app calls fftw_free on that pointer, we do
+ * nothing—no crash, no leak. We never return NULL.
  */
-INT32 fftw_import_system_wisdom(VOID)
+VOID fftw_forget_wisdom(VOID)
 {
-    return 0;
 }
 
-INT32 fftw_import_wisdom_from_file(FILE *f)
+VOID fftw_make_planner_thread_safe(VOID)
 {
-    return 0;
 }
 
-INT32 fftw_import_wisdom_from_string(const CHAR *s)
+INT32 fftw_export_wisdom_to_filename(const CHAR *filename)
 {
-    return 0;
+    (void)filename;
+    return 1;
+}
+
+VOID fftw_export_wisdom_to_file(FILE *f)
+{
+    (void)f;
 }
 
 CHAR *fftw_export_wisdom_to_string(VOID)
@@ -235,23 +304,59 @@ CHAR *fftw_export_wisdom_to_string(VOID)
     return (CHAR *)fftw_export_wisdom_empty_string;
 }
 
-VOID fftw_export_wisdom_to_file(FILE *f)
+VOID fftw_export_wisdom(fftw_write_char_func write_char, VOID *data)
 {
+    (void)write_char;
+    (void)data;
 }
 
-INT32 fftwf_import_system_wisdom(VOID)
+INT32 fftw_import_system_wisdom(VOID)
 {
     return 0;
 }
 
-INT32 fftwf_import_wisdom_from_file(FILE *f)
+INT32 fftw_import_wisdom_from_filename(const CHAR *filename)
 {
+    (void)filename;
     return 0;
 }
 
-INT32 fftwf_import_wisdom_from_string(const CHAR *s)
+INT32 fftw_import_wisdom_from_file(FILE *f)
 {
+    (void)f;
     return 0;
+}
+
+INT32 fftw_import_wisdom_from_string(const CHAR *s)
+{
+    (void)s;
+    return 0;
+}
+
+INT32 fftw_import_wisdom(fftw_read_char_func read_char, VOID *data)
+{
+    (void)read_char;
+    (void)data;
+    return 0;
+}
+
+VOID fftwf_forget_wisdom(VOID)
+{
+}
+
+VOID fftwf_make_planner_thread_safe(VOID)
+{
+}
+
+INT32 fftwf_export_wisdom_to_filename(const CHAR *filename)
+{
+    (void)filename;
+    return 1;
+}
+
+VOID fftwf_export_wisdom_to_file(FILE *f)
+{
+    (void)f;
 }
 
 CHAR *fftwf_export_wisdom_to_string(VOID)
@@ -259,6 +364,38 @@ CHAR *fftwf_export_wisdom_to_string(VOID)
     return (CHAR *)fftw_export_wisdom_empty_string;
 }
 
-VOID fftwf_export_wisdom_to_file(FILE *f)
+VOID fftwf_export_wisdom(fftwf_write_char_func write_char, VOID *data)
 {
+    (void)write_char;
+    (void)data;
+}
+
+INT32 fftwf_import_system_wisdom(VOID)
+{
+    return 0;
+}
+
+INT32 fftwf_import_wisdom_from_filename(const CHAR *filename)
+{
+    (void)filename;
+    return 0;
+}
+
+INT32 fftwf_import_wisdom_from_file(FILE *f)
+{
+    (void)f;
+    return 0;
+}
+
+INT32 fftwf_import_wisdom_from_string(const CHAR *s)
+{
+    (void)s;
+    return 0;
+}
+
+INT32 fftwf_import_wisdom(fftwf_read_char_func read_char, VOID *data)
+{
+    (void)read_char;
+    (void)data;
+    return 0;
 }

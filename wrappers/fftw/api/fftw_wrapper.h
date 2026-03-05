@@ -75,8 +75,8 @@ typedef VOID* GEN(plan);                                                        
 typedef struct { INT32 n; INT32 is; INT32 os; } GEN(iodim);                         \
 typedef struct { INTP n; INTP is; INTP os; } GEN(iodim64);                          \
                                                                                     \
-typedef VOID* GEN(write_char_func);                                                 \
-typedef VOID* GEN(read_char_func);                                                  \
+typedef VOID (*GEN(write_char_func))(CHAR c, VOID *);                               \
+typedef INT32 (*GEN(read_char_func))(VOID *);                                       \
                                                                                     \
 EXPORT_SYM_DYN VOID                                                                 \
     GEN(execute)(const GEN(plan) sol);                                              \
@@ -216,6 +216,9 @@ EXPORT_SYM_DYN VOID                                                             
     GEN(cleanup)(VOID);                                                             \
                                                                                     \
 EXPORT_SYM_DYN VOID                                                                 \
+    GEN(set_timelimit)(DOUBLE t);                                                   \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
     GEN(plan_with_nthreads)(INT32 nthreads);                                        \
                                                                                     \
 EXPORT_SYM_DYN INT32                                                                \
@@ -226,6 +229,11 @@ EXPORT_SYM_DYN INT32                                                            
                                                                                     \
 EXPORT_SYM_DYN VOID                                                                 \
     GEN(cleanup_threads)(VOID);                                                     \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
+    GEN(threads_set_callback)(                                                      \
+    VOID (*parallel_loop)(VOID *(*work)(CHAR *),                                    \
+    CHAR *jobdata, size_t elsize, INT32 njobs, VOID *data), VOID *data);            \
                                                                                     \
 EXPORT_SYM_DYN VOID*                                                                \
     GEN(malloc)(size_t ndim);                                                       \
@@ -248,32 +256,54 @@ EXPORT_SYM_DYN DOUBLE                                                           
     GEN(cost)(const GEN(plan) sol);                                                 \
                                                                                     \
 EXPORT_SYM_DYN INT32                                                                \
-    GEN(alignment_of)(Real* sol);
+    GEN(alignment_of)(Real* sol);                                                   \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
+    GEN(fprint_plan)(const GEN(plan) sol, FILE *f);                                 \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
+    GEN(print_plan)(const GEN(plan) sol);                                           \
+                                                                                    \
+EXPORT_SYM_DYN CHAR*                                                                \
+    GEN(sprint_plan)(const GEN(plan) sol);                                          \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
+    GEN(make_planner_thread_safe)(VOID);                                            \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
+    GEN(forget_wisdom)(VOID);                                                       \
+                                                                                    \
+EXPORT_SYM_DYN INT32                                                                \
+    GEN(export_wisdom_to_filename)(const CHAR *f);                                  \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
+    GEN(export_wisdom_to_file)(FILE *f);                                            \
+                                                                                    \
+EXPORT_SYM_DYN CHAR*                                                                \
+    GEN(export_wisdom_to_string)(VOID);                                             \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
+    GEN(export_wisdom)(GEN(write_char_func) write_char, VOID *data);                \
+                                                                                    \
+EXPORT_SYM_DYN INT32                                                                \
+    GEN(import_system_wisdom)(VOID);                                                \
+                                                                                    \
+EXPORT_SYM_DYN INT32                                                                \
+    GEN(import_wisdom_from_filename)(const CHAR *f);                                \
+                                                                                    \
+EXPORT_SYM_DYN INT32                                                                \
+    GEN(import_wisdom_from_file)(FILE *f);                                          \
+                                                                                    \
+EXPORT_SYM_DYN INT32                                                                \
+    GEN(import_wisdom_from_string)(const CHAR *s);                                  \
+                                                                                    \
+EXPORT_SYM_DYN INT32                                                                \
+    GEN(import_wisdom)(GEN(read_char_func) read_char, VOID *data);                  \
+                                                                                    \
+EXPORT_SYM_DYN extern const CHAR GEN(version)[];
 
 FFTW_WRAPPER_API(API_NAME_MANGLE_DOUBLE, DOUBLE, fftw_complex)
 FFTW_WRAPPER_API(API_NAME_MANGLE_FLOAT, FLOAT, fftwf_complex)
-
-/*
- * FFTW3 "wisdom" API — no-op stubs for compatibility.
- * FFTW3 can save/load "wisdom" to speed up future plans.
- * AOCL-FFTZ does not use or store wisdom. The functions below are empty
- * stubs so that applications written for FFTW3 still compile and run
- * without code changes.
- */
-EXPORT_SYM_DYN INT32 fftw_import_system_wisdom(VOID);
-EXPORT_SYM_DYN INT32 fftw_import_wisdom_from_file(FILE *f);
-EXPORT_SYM_DYN INT32 fftw_import_wisdom_from_string(const CHAR *s);
-EXPORT_SYM_DYN CHAR *fftw_export_wisdom_to_string(VOID);
-EXPORT_SYM_DYN VOID fftw_export_wisdom_to_file(FILE *f);
-
-EXPORT_SYM_DYN INT32 fftwf_import_system_wisdom(VOID);
-EXPORT_SYM_DYN INT32 fftwf_import_wisdom_from_file(FILE *f);
-EXPORT_SYM_DYN INT32 fftwf_import_wisdom_from_string(const CHAR *s);
-EXPORT_SYM_DYN CHAR *fftwf_export_wisdom_to_string(VOID);
-EXPORT_SYM_DYN VOID fftwf_export_wisdom_to_file(FILE *f);
-
-#define fftw_version  AOCLFFTZ_LIBRARY_VERSION " (FFTW compatible)"
-#define fftwf_version AOCLFFTZ_LIBRARY_VERSION " (FFTW compatible)"
 
 #define FFTW_FORWARD DIR_FORWARD
 #define FFTW_BACKWARD DIR_BACKWARD

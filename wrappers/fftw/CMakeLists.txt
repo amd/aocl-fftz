@@ -94,7 +94,7 @@ set(API_SRC_PATH api)
 set(C_WRAPPER_SRC_PATH src/c)
 set(FORTRAN_SRC_PATH src/fortran)
 set(TRANSLATOR_SRC_PATH src/translator)
-set(INC_FILES ${API_SRC_PATH}/fftw_wrapper.f ${API_SRC_PATH}/fftw_wrapper.h)
+set(INC_FILES ${API_SRC_PATH}/fftw_wrapper.f ${API_SRC_PATH}/fftw_wrapper.f03 ${API_SRC_PATH}/fftw_wrapper.h)
 
 file(GLOB SRC_FILES ${API_SRC_PATH}/*.c ${API_SRC_PATH}/*.h
                     ${C_WRAPPER_SRC_PATH}/*.c ${C_WRAPPER_SRC_PATH}/*.h
@@ -153,3 +153,4 @@ endif()
 
 install(FILES ${API_SRC_PATH}/fftw_wrapper.h DESTINATION ${DEST_INCLUDE_PATH} RENAME fftw3.h)
 install(FILES ${API_SRC_PATH}/fftw_wrapper.f DESTINATION ${DEST_INCLUDE_PATH} RENAME fftw3.f)
+install(FILES ${API_SRC_PATH}/fftw_wrapper.f03 DESTINATION ${DEST_INCLUDE_PATH} RENAME fftw3.f03)
