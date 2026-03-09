@@ -117,20 +117,53 @@ VOID dfftw_plan_many_dft_(fftw_plan *p, INT32 *rank, const INT32 *n,
                           INT32 *ostride, INT32 *odist, INT32 *sign,
                           INT32 *flags)
 {
-    INT32 *reversed_n = NULL;
+    // since the dim.n is passed in reverse order as compared to that of C APIs,
+    // reverse it for Fortran API.
+
     INT32 dim_rank = *rank;
+    *p = NULL;
+
+    INT32 *reversed_n = NULL;
+    INT32 *reversed_inembed = NULL;
+    INT32 *reversed_onembed = NULL;
+
     ALLOC_ALIGN_UNINIT(reversed_n, INT32, dim_rank * sizeof(INT32));
+
     if (reversed_n == NULL)
     {
         return;
     }
-    // since the dim.n is passed in reverse order as compared to that of C APIs,
-    // reverse it for Fortran API.
+
     reverse_array(n, reversed_n, dim_rank);
-    *p = fftw_plan_many_dft(dim_rank, reversed_n, *howmany, in, inembed, *istride,
-                            *idist, out, onembed, *ostride, *odist, *sign,
+
+    if (inembed != NULL)
+    {
+        ALLOC_ALIGN_UNINIT(reversed_inembed, INT32, dim_rank * sizeof(INT32));
+        if (reversed_inembed == NULL)
+        {
+            goto free_and_exit;
+        }
+        reverse_array(inembed, reversed_inembed, dim_rank);
+    }
+
+    if (onembed != NULL)
+    {
+        ALLOC_ALIGN_UNINIT(reversed_onembed, INT32, dim_rank * sizeof(INT32));
+        if (reversed_onembed == NULL)
+        {
+            goto free_and_exit;
+        }
+        reverse_array(onembed, reversed_onembed, dim_rank);
+    }
+
+    *p = fftw_plan_many_dft(dim_rank, reversed_n, *howmany, in, reversed_inembed, *istride,
+                            *idist, out, reversed_onembed, *ostride, *odist, *sign,
                             *flags);
+
+free_and_exit:
     FREE_ALIGN_ALLOCATED_MEM(reversed_n);
+    FREE_ALIGN_ALLOCATED_MEM(reversed_inembed);
+    FREE_ALIGN_ALLOCATED_MEM(reversed_onembed);
 }
 
 VOID dfftwf_plan_many_dft_(fftwf_plan *p, INT32 *rank, const INT32 *n,
@@ -140,20 +173,53 @@ VOID dfftwf_plan_many_dft_(fftwf_plan *p, INT32 *rank, const INT32 *n,
                            INT32 *ostride, INT32 *odist, INT32 *sign,
                            INT32 *flags)
 {
-    INT32 *reversed_n = NULL;
+    // since the dim.n is passed in reverse order as compared to that of C APIs,
+    // reverse it for Fortran API.
+
     INT32 dim_rank = *rank;
+    *p = NULL;
+
+    INT32 *reversed_n = NULL;
+    INT32 *reversed_inembed = NULL;
+    INT32 *reversed_onembed = NULL;
+
     ALLOC_ALIGN_UNINIT(reversed_n, INT32, dim_rank * sizeof(INT32));
+
     if (reversed_n == NULL)
     {
         return;
     }
-    // since the dim.n is passed in reverse order as compared to that of C APIs,
-    // reverse it for Fortran API.
+
     reverse_array(n, reversed_n, dim_rank);
-    *p = fftwf_plan_many_dft(dim_rank, reversed_n, *howmany, in, inembed, *istride,
-                             *idist, out, onembed, *ostride, *odist, *sign,
+
+    if (inembed != NULL)
+    {
+        ALLOC_ALIGN_UNINIT(reversed_inembed, INT32, dim_rank * sizeof(INT32));
+        if (reversed_inembed == NULL)
+        {
+            goto free_and_exit;
+        }
+        reverse_array(inembed, reversed_inembed, dim_rank);
+    }
+
+    if (onembed != NULL)
+    {
+        ALLOC_ALIGN_UNINIT(reversed_onembed, INT32, dim_rank * sizeof(INT32));
+        if (reversed_onembed == NULL)
+        {
+            goto free_and_exit;
+        }
+        reverse_array(onembed, reversed_onembed, dim_rank);
+    }
+
+    *p = fftwf_plan_many_dft(dim_rank, reversed_n, *howmany, in, reversed_inembed, *istride,
+                             *idist, out, reversed_onembed, *ostride, *odist, *sign,
                              *flags);
+
+free_and_exit:
     FREE_ALIGN_ALLOCATED_MEM(reversed_n);
+    FREE_ALIGN_ALLOCATED_MEM(reversed_inembed);
+    FREE_ALIGN_ALLOCATED_MEM(reversed_onembed);
 }
 
 VOID dfftw_plan_guru_dft_(fftw_plan *p, INT32 *rank, const INT32 *n,
@@ -230,6 +296,7 @@ VOID dfftw_plan_dft_r2c_1d_(fftw_plan *p, INT32 *n, DOUBLE *in,
 {
     *p = fftw_plan_dft_r2c_1d(*n, in, out, *flags);
 }
+
 VOID dfftwf_plan_dft_r2c_1d_(fftwf_plan *p, INT32 *n, FLOAT *in,
                              fftwf_complex *out, INT32 *flags)
 {
@@ -266,20 +333,53 @@ VOID dfftw_plan_many_dft_r2c_(fftw_plan *p, INT32 *rank, const INT32 *n,
                               const INT32 *onembed, INT32 *ostride,
                               INT32 *odist, INT32 *flags)
 {
-    INT32 *reversed_n = NULL;
+    // since the dim.n is passed in reverse order as compared to that of C APIs,
+    // reverse it for Fortran API.
+
     INT32 dim_rank = *rank;
+    *p = NULL;
+
+    INT32 *reversed_n = NULL;
+    INT32 *reversed_inembed = NULL;
+    INT32 *reversed_onembed = NULL;
+
     ALLOC_ALIGN_UNINIT(reversed_n, INT32, dim_rank * sizeof(INT32));
+
     if (reversed_n == NULL)
     {
         return;
     }
-    // since the dim.n is passed in reverse order as compared to that of C APIs,
-    // reverse it for Fortran API.
+
     reverse_array(n, reversed_n, dim_rank);
-    *p = fftw_plan_many_dft_r2c(dim_rank, reversed_n, *howmany, in, inembed,
-                                *istride, *idist, out, onembed, *ostride,
+
+    if (inembed != NULL)
+    {
+        ALLOC_ALIGN_UNINIT(reversed_inembed, INT32, dim_rank * sizeof(INT32));
+        if (reversed_inembed == NULL)
+        {
+            goto free_and_exit;
+        }
+        reverse_array(inembed, reversed_inembed, dim_rank);
+    }
+
+    if (onembed != NULL)
+    {
+        ALLOC_ALIGN_UNINIT(reversed_onembed, INT32, dim_rank * sizeof(INT32));
+        if (reversed_onembed == NULL)
+        {
+            goto free_and_exit;
+        }
+        reverse_array(onembed, reversed_onembed, dim_rank);
+    }
+
+    *p = fftw_plan_many_dft_r2c(dim_rank, reversed_n, *howmany, in, reversed_inembed,
+                                *istride, *idist, out, reversed_onembed, *ostride,
                                 *odist, *flags);
+
+free_and_exit:
     FREE_ALIGN_ALLOCATED_MEM(reversed_n);
+    FREE_ALIGN_ALLOCATED_MEM(reversed_inembed);
+    FREE_ALIGN_ALLOCATED_MEM(reversed_onembed);
 }
 
 VOID dfftwf_plan_many_dft_r2c_(fftwf_plan *p, INT32 *rank, const INT32 *n,
@@ -288,20 +388,53 @@ VOID dfftwf_plan_many_dft_r2c_(fftwf_plan *p, INT32 *rank, const INT32 *n,
                                const INT32 *onembed, INT32 *ostride,
                                INT32 *odist, INT32 *flags)
 {
-    INT32 *reversed_n = NULL;
+    // since the dim.n is passed in reverse order as compared to that of C APIs,
+    // reverse it for Fortran API.
+
     INT32 dim_rank = *rank;
+    *p = NULL;
+
+    INT32 *reversed_n = NULL;
+    INT32 *reversed_inembed = NULL;
+    INT32 *reversed_onembed = NULL;
+
     ALLOC_ALIGN_UNINIT(reversed_n, INT32, dim_rank * sizeof(INT32));
+
     if (reversed_n == NULL)
     {
         return;
     }
-    // since the dim.n is passed in reverse order as compared to that of C APIs,
-    // reverse it for Fortran API.
+
     reverse_array(n, reversed_n, dim_rank);
-    *p = fftwf_plan_many_dft_r2c(dim_rank, reversed_n, *howmany, in, inembed,
-                                 *istride, *idist, out, onembed, *ostride,
+
+    if (inembed != NULL)
+    {
+        ALLOC_ALIGN_UNINIT(reversed_inembed, INT32, dim_rank * sizeof(INT32));
+        if (reversed_inembed == NULL)
+        {
+            goto free_and_exit;
+        }
+        reverse_array(inembed, reversed_inembed, dim_rank);
+    }
+
+    if (onembed != NULL)
+    {
+        ALLOC_ALIGN_UNINIT(reversed_onembed, INT32, dim_rank * sizeof(INT32));
+        if (reversed_onembed == NULL)
+        {
+            goto free_and_exit;
+        }
+        reverse_array(onembed, reversed_onembed, dim_rank);
+    }
+
+    *p = fftwf_plan_many_dft_r2c(dim_rank, reversed_n, *howmany, in, reversed_inembed,
+                                 *istride, *idist, out, reversed_onembed, *ostride,
                                  *odist, *flags);
+
+free_and_exit:
     FREE_ALIGN_ALLOCATED_MEM(reversed_n);
+    FREE_ALIGN_ALLOCATED_MEM(reversed_inembed);
+    FREE_ALIGN_ALLOCATED_MEM(reversed_onembed);
 }
 
 VOID dfftw_plan_guru_dft_r2c_(fftw_plan *p, INT32 *rank, const INT32 *n,
@@ -354,6 +487,7 @@ VOID dfftw_plan_dft_c2r_(fftw_plan *p, INT32 *rank, const INT32 *n,
     *p = fftw_plan_dft_c2r(dim_rank, reversed_n, in, out, *flags);
     FREE_ALIGN_ALLOCATED_MEM(reversed_n);
 }
+
 VOID dfftwf_plan_dft_c2r_(fftwf_plan *p, INT32 *rank, const INT32 *n,
                           fftwf_complex *in, FLOAT *out, INT32 *flags)
 {
@@ -376,16 +510,19 @@ VOID dfftw_plan_dft_c2r_1d_(fftw_plan *p, INT32 *n, fftw_complex *in,
 {
     *p = fftw_plan_dft_c2r_1d(*n, in, out, *flags);
 }
+
 VOID dfftwf_plan_dft_c2r_1d_(fftwf_plan *p, INT32 *n, fftwf_complex *in,
                              FLOAT *out, INT32 *flags)
 {
     *p = fftwf_plan_dft_c2r_1d(*n, in, out, *flags);
 }
+
 VOID dfftw_plan_dft_c2r_2d_(fftw_plan *p, INT32 *nx, INT32 *ny,
                             fftw_complex *in, DOUBLE *out, INT32 *flags)
 {
     *p = fftw_plan_dft_c2r_2d(*ny, *nx, in, out, *flags);
 }
+
 VOID dfftwf_plan_dft_c2r_2d_(fftwf_plan *p, INT32 *nx, INT32 *ny,
                              fftwf_complex *in, FLOAT *out, INT32 *flags)
 {
@@ -410,20 +547,53 @@ VOID dfftw_plan_many_dft_c2r_(fftw_plan *p, INT32 *rank, const INT32 *n,
                               INT32 *idist, DOUBLE *out, const INT32 *onembed,
                               INT32 *ostride, INT32 *odist, INT32 *flags)
 {
-    INT32 *reversed_n = NULL;
+    // since the dim.n is passed in reverse order as compared to that of C APIs,
+    // reverse it for Fortran API.
+
     INT32 dim_rank = *rank;
+    *p = NULL;
+
+    INT32 *reversed_n = NULL;
+    INT32 *reversed_inembed = NULL;
+    INT32 *reversed_onembed = NULL;
+
     ALLOC_ALIGN_UNINIT(reversed_n, INT32, dim_rank * sizeof(INT32));
+
     if (reversed_n == NULL)
     {
         return;
     }
-    // since the dim.n is passed in reverse order as compared to that of C APIs,
-    // reverse it for Fortran API.
+
     reverse_array(n, reversed_n, dim_rank);
-    *p = fftw_plan_many_dft_c2r(dim_rank, reversed_n, *howmany, in, inembed,
-                                *istride, *idist, out, onembed, *ostride,
+
+    if (inembed != NULL)
+    {
+        ALLOC_ALIGN_UNINIT(reversed_inembed, INT32, dim_rank * sizeof(INT32));
+        if (reversed_inembed == NULL)
+        {
+            goto free_and_exit;
+        }
+        reverse_array(inembed, reversed_inembed, dim_rank);
+    }
+
+    if (onembed != NULL)
+    {
+        ALLOC_ALIGN_UNINIT(reversed_onembed, INT32, dim_rank * sizeof(INT32));
+        if (reversed_onembed == NULL)
+        {
+            goto free_and_exit;
+        }
+        reverse_array(onembed, reversed_onembed, dim_rank);
+    }
+
+    *p = fftw_plan_many_dft_c2r(dim_rank, reversed_n, *howmany, in, reversed_inembed,
+                                *istride, *idist, out, reversed_onembed, *ostride,
                                 *odist, *flags);
+
+free_and_exit:
     FREE_ALIGN_ALLOCATED_MEM(reversed_n);
+    FREE_ALIGN_ALLOCATED_MEM(reversed_inembed);
+    FREE_ALIGN_ALLOCATED_MEM(reversed_onembed);
 }
 
 VOID dfftwf_plan_many_dft_c2r_(fftwf_plan *p, INT32 *rank, const INT32 *n,
@@ -432,21 +602,55 @@ VOID dfftwf_plan_many_dft_c2r_(fftwf_plan *p, INT32 *rank, const INT32 *n,
                                INT32 *idist, FLOAT *out, const INT32 *onembed,
                                INT32 *ostride, INT32 *odist, INT32 *flags)
 {
-    INT32 *reversed_n = NULL;
+    // since the dim.n is passed in reverse order as compared to that of C APIs,
+    // reverse it for Fortran API.
+
     INT32 dim_rank = *rank;
+    *p = NULL;
+
+    INT32 *reversed_n = NULL;
+    INT32 *reversed_inembed = NULL;
+    INT32 *reversed_onembed = NULL;
+
     ALLOC_ALIGN_UNINIT(reversed_n, INT32, dim_rank * sizeof(INT32));
+
     if (reversed_n == NULL)
     {
         return;
     }
-    // since the dim.n is passed in reverse order as compared to that of C APIs,
-    // reverse it for Fortran API.
+
     reverse_array(n, reversed_n, dim_rank);
-    *p = fftwf_plan_many_dft_c2r(dim_rank, reversed_n, *howmany, in, inembed,
-                                 *istride, *idist, out, onembed, *ostride,
+
+    if (inembed != NULL)
+    {
+        ALLOC_ALIGN_UNINIT(reversed_inembed, INT32, dim_rank * sizeof(INT32));
+        if (reversed_inembed == NULL)
+        {
+            goto free_and_exit;
+        }
+        reverse_array(inembed, reversed_inembed, dim_rank);
+    }
+
+    if (onembed != NULL)
+    {
+        ALLOC_ALIGN_UNINIT(reversed_onembed, INT32, dim_rank * sizeof(INT32));
+        if (reversed_onembed == NULL)
+        {
+            goto free_and_exit;
+        }
+        reverse_array(onembed, reversed_onembed, dim_rank);
+    }
+
+    *p = fftwf_plan_many_dft_c2r(dim_rank, reversed_n, *howmany, in, reversed_inembed,
+                                 *istride, *idist, out, reversed_onembed, *ostride,
                                  *odist, *flags);
+
+free_and_exit:
     FREE_ALIGN_ALLOCATED_MEM(reversed_n);
+    FREE_ALIGN_ALLOCATED_MEM(reversed_inembed);
+    FREE_ALIGN_ALLOCATED_MEM(reversed_onembed);
 }
+
 VOID dfftw_plan_guru_dft_c2r_(fftw_plan *p, INT32 *rank, const INT32 *n,
                               const INT32 *is, const INT32 *os,
                               INT32 *howmany_rank, const INT32 *h_n,
