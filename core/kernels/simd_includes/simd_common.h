@@ -253,7 +253,7 @@
                          load_multi_cols /* unused */)                         \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
-    const __m128d cd = _mm_loadu_pd((twbuf) + addr);                           \
+    const __m128d cd = _mm_load_pd((twbuf) + addr);                            \
     const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)]);               \
     const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);           \
     const __m128d ca_da = _mm_mul_pd(cd, aa);                                  \
@@ -267,7 +267,7 @@
                         load_multi_cols /* unused */)                          \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
-    const __m128d cd = _mm_loadu_pd((twbuf) + addr);                           \
+    const __m128d cd = _mm_load_pd((twbuf) + addr);                            \
     const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)]);               \
     const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);           \
     const __m128d ca_da = _mm_mul_pd(cd, aa);                                  \

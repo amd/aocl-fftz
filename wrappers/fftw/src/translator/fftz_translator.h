@@ -150,7 +150,7 @@ dv_desc *get_fortran_guru_dv_desc(INT32 rank, const INT32 *n, const INT32 *is,
                                   const INT32 *os, INT32 howmany_rank,
                                   const INT32 *h_n, const INT32 *h_is,
                                   const INT32 *h_os);
-#define MIN_ALIGNMENT 16
+#define MIN_ALIGNMENT 64
 
 #ifdef _WIN32
 

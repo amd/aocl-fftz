@@ -284,7 +284,7 @@ static const union data_union_512
         twv = _mm512_loadu_pd((twbuf) + addr);                                 \
     }                                                                          \
     else {                                                                     \
-        twv = _mm512_broadcast_f64x2(_mm_loadu_pd((twbuf) + addr));            \
+        twv = _mm512_broadcast_f64x2(_mm_load_pd((twbuf) + addr));             \
     }                                                                          \
     __m512d tmp_in;                                                            \
     GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
@@ -306,7 +306,7 @@ static const union data_union_512
         twv = _mm512_loadu_pd((twbuf) + addr);                                 \
     }                                                                          \
     else {                                                                     \
-        twv = _mm512_broadcast_f64x2(_mm_loadu_pd((twbuf) + addr));            \
+        twv = _mm512_broadcast_f64x2(_mm_load_pd((twbuf) + addr));             \
     }                                                                          \
     __m512d tmp_in;                                                            \
     GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \

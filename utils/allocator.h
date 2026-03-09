@@ -42,7 +42,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MIN_ALIGNMENT 16
+#define MIN_ALIGNMENT 64
 
 #ifdef _WINDOWS
 
