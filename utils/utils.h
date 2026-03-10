@@ -151,13 +151,9 @@ typedef struct timespec timeVal;
 #endif
 #endif
 
-VOID cpu_features_detection(INTP fn, INTP optVal,
-                            INTP *eax, INTP *ebx,
-                            INTP *ecx, INTP *edx);
-
 const CHAR* get_status_string(aoclfftz_error_type status);
 
-EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level);
+INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level);
 
 #ifdef ENABLE_APP_INFO_LOGS
 #define PRINT_PROBLEM_DESCRIPTOR(problem, dt_type, f_specifier, data_model)    \

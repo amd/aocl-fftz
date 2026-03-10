@@ -118,7 +118,6 @@ INT32 setup_transpose_solver(aoclfftz_solution_t *sol, INT32 cpu_flags)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-
     // setup all the info
     aoclfftz_transpose_t *transpose = sol->dft_bufs->transpose;
 

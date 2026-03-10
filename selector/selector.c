@@ -53,7 +53,7 @@ selector_model_func_ sel_fp = NULL;
 selector_model_rdft_func_ sel_rdft_fp = NULL;
 
 // Register all applicable solvers and kernels into the respective tables
-// based on the input problem and cpu arch flags
+// based on the input problem and CPU opt level
 INT32 register_solvers_kernels(kernel_tables_t *kernel_tables, INT32 dt,
                                INT32 dir, INT32 is_real, INT32 cpu_flags)
 {
@@ -824,7 +824,7 @@ INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
     INT32 is_FFT_ker_supported = check_FFT_kernel_support(
         sel->solution->decomp_scheme->dims[0].n, kertab,
         !IS_NOT_INNERMOST_DIM(sel->solution->decomp_scheme->flags));
-        
+
     INT32 is_solvable_by_bluestein =
             check_prime_solvability_bluestein(sel->solution->decomp_scheme,
                                               is_FFT_ker_supported, kertab);
@@ -1462,12 +1462,11 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
         return NULL;
     }
 
+    // Determine CPU optimization level to be used by the dynamic dispatcher
     cpu_flags = setup_dynamic_dispatcher(cntrl_params.opt_off,
                                          cntrl_params.opt_level);
-
     //Register solvers and kernels for solving the problem based on
-    //input problem datatype, CPU flags and dynamic dispatcher FMV selection
-
+    //input problem datatype, CPU opt level and dynamic dispatcher FMV selection
     ret = register_solvers_kernels(sel_obj->kernel_tables, DT_FLOAT,
                                    flags.fft_direction, flags.fft_type,
                                    cpu_flags);
@@ -1547,12 +1546,12 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
         return NULL;
     }
 
-    // Find CPU feature flags that will be used by dynamic dispatcher
+    // Determine CPU optimization level to be used by the dynamic dispatcher
     cpu_flags = setup_dynamic_dispatcher(cntrl_params.opt_off,
                                          cntrl_params.opt_level);
 
     // Register solvers and kernels for solving the problem based on
-    // input problem datatype, CPU flags and dynamic dispatcher FMV selection
+    // input problem datatype, CPU opt level and dynamic dispatcher FMV selection
     ret = register_solvers_kernels(sel_obj->kernel_tables, DT_DOUBLE,
                                    flags.fft_direction, flags.fft_type,
                                    cpu_flags);
@@ -1627,12 +1626,12 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
         return NULL;
     }
 
-    // Find CPU feature flags that will be used by dynamic dispatcher
+    // Determine CPU optimization level to be used by the dynamic dispatcher
     cpu_flags = setup_dynamic_dispatcher(cntrl_params.opt_off,
                                          cntrl_params.opt_level);
 
     //Register solvers and kernels for solving the problem based on
-    //input problem datatype, CPU flags and dynamic dispatcher FMV selection
+    //input problem datatype, CPU opt level and dynamic dispatcher FMV selection
     ret = register_solvers_kernels(sel_obj->kernel_tables, DT_FLOAT,
                                    flags.fft_direction, flags.fft_type,
                                    cpu_flags);
@@ -1707,12 +1706,12 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
         return NULL;
     }
 
-    // Find CPU feature flags that will be used by dynamic dispatcher
+    // Determine CPU optimization level to be used by the dynamic dispatcher
     cpu_flags = setup_dynamic_dispatcher(cntrl_params.opt_off,
                                          cntrl_params.opt_level);
 
     //Register solvers and kernels for solving the problem based on
-    //input problem datatype, CPU flags and dynamic dispatcher FMV selection
+    //input problem datatype, CPU opt level and dynamic dispatcher FMV selection
     ret = register_solvers_kernels(sel_obj->kernel_tables, DT_DOUBLE,
                                    flags.fft_direction, flags.fft_type,
                                    cpu_flags);
