@@ -497,6 +497,8 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_ONLY_TINY_VALUES)
             // Execute the FFT
             INT32 exe = aoclfftz_execute(this->handle);
 
+            EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
+
             // Validate that output values are not entirely zero and not NaN/Inf
             UINTP output_size_bytes = 0;
             UINTP input_size_bytes = 0;
