@@ -42,7 +42,14 @@ option(BUILD_STATIC_LIBS "Build static library (Default build type is shared lib
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
-set(FFTZ_LIB aocl_fftz)
+
+if(NOT DEFINED FFTZ_LIB)
+     if(WIN32 AND BUILD_STATIC_LIBS)
+         set(FFTZ_LIB aocl_fftz_static)
+     else()
+         set(FFTZ_LIB aocl_fftz)
+     endif()
+endif()
 
 # If the user does not specify aocl_fftz lib path, search for aocl_fftz library
 # in project's lib directory and link the directory.
@@ -121,36 +128,91 @@ if(UNIX AND NOT BUILD_STATIC_LIBS)
     set_target_properties(${lib_name} PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
 
-target_link_libraries(${lib_name} PRIVATE ${FFTZ_LIB} ${lib_deps})
+# Link to the main AOCL-FFTZ library:
+# - If FFTZ_LIB_TARGET is set and names a CMake target, we are built as a subdirectory; link to that target.
+# - If FFTZ_LIB_TARGET is set but not a target, fail with an error (invalid value).
+# - Otherwise (unset): wrapper built in its dir; link ${FFTZ_LIB} .
+if(FFTZ_LIB_TARGET AND TARGET "${FFTZ_LIB_TARGET}")
+    if(BUILD_STATIC_LIBS)
+        target_link_libraries(${lib_name} PUBLIC
+            $<BUILD_INTERFACE:${FFTZ_LIB_TARGET}>
+            $<INSTALL_INTERFACE:aocl-fftz::aocl_fftz_static>
+            ${lib_deps})
+    else()
+        target_link_libraries(${lib_name} PRIVATE ${FFTZ_LIB_TARGET} ${lib_deps})
+    endif()
+elseif(FFTZ_LIB_TARGET)
+    message(FATAL_ERROR "FFTZ_LIB_TARGET is set to '${FFTZ_LIB_TARGET}' but it is not a CMake target.")
+else()
+    # Built from this directory: use ${FFTZ_LIB} and link_directories from the NOT BUILD_THIRD_PARTY_WRAPPERS block above.
+    # For static wrapper, link FFTZ as PUBLIC so exported FFTW3Targets.cmake propagates the dependency to consumers.
+    if(BUILD_STATIC_LIBS)
+        target_link_libraries(${lib_name} PUBLIC
+            $<BUILD_INTERFACE:${FFTZ_LIB}>
+            $<INSTALL_INTERFACE:aocl-fftz::aocl_fftz_static>
+            ${lib_deps})
+    else()
+        target_link_libraries(${lib_name} PRIVATE ${FFTZ_LIB} ${lib_deps})
+    endif()
+endif()
 
 # Install destination
 set(DEST_LIB_PATH lib)
 set(DEST_INCLUDE_PATH include)
+set(FFTW3_CMAKE_DIR "${DEST_LIB_PATH}/cmake/FFTW3")
 message(STATUS "FFTW-WRAPPER Library will be installed at ${CMAKE_INSTALL_PREFIX}/${DEST_LIB_PATH}")
-install(TARGETS ${lib_name} DESTINATION ${DEST_LIB_PATH})
+install(TARGETS ${lib_name} EXPORT FFTW3Targets
+    DESTINATION ${DEST_LIB_PATH}
+    INCLUDES DESTINATION ${DEST_INCLUDE_PATH}
+)
 
-# Provide libfftw3f for apps that link -lfftw3f (float API).
-if(NOT BUILD_STATIC_LIBS)
-    set(FFTW3F_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}fftw3f${CMAKE_SHARED_LIBRARY_SUFFIX}")
-    add_custom_command(TARGET ${lib_name} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${lib_name}> $<TARGET_FILE_DIR:${lib_name}>/${FFTW3F_NAME})
-    install(FILES $<TARGET_FILE:${lib_name}> DESTINATION ${DEST_LIB_PATH}
-            RENAME ${FFTW3F_NAME}
-            PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-    if(WIN32)
-        add_custom_command(TARGET ${lib_name} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_LINKER_FILE:${lib_name}> $<TARGET_FILE_DIR:${lib_name}>/${CMAKE_IMPORT_LIBRARY_PREFIX}fftw3f${CMAKE_IMPORT_LIBRARY_SUFFIX})
-        install(FILES $<TARGET_LINKER_FILE:${lib_name}> DESTINATION ${DEST_LIB_PATH}
-                RENAME ${CMAKE_IMPORT_LIBRARY_PREFIX}fftw3f${CMAKE_IMPORT_LIBRARY_SUFFIX})
+# Provide libfftw3f, libfftw3_omp and libfftw3f_omp for apps that link -lfftw3f / -lfftw3_omp / -lfftw3f_omp.
+foreach(FFTW3_ALIAS fftw3f fftw3_omp fftw3f_omp)
+    if(BUILD_STATIC_LIBS)
+        set(FFTW3_ALIAS_NAME "${CMAKE_STATIC_LIBRARY_PREFIX}${FFTW3_ALIAS}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+    else()
+        set(FFTW3_ALIAS_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}${FFTW3_ALIAS}${CMAKE_SHARED_LIBRARY_SUFFIX}")
     endif()
-else()
-    set(FFTW3F_NAME "${CMAKE_STATIC_LIBRARY_PREFIX}fftw3f${CMAKE_STATIC_LIBRARY_SUFFIX}")
     add_custom_command(TARGET ${lib_name} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${lib_name}> $<TARGET_FILE_DIR:${lib_name}>/${FFTW3F_NAME})
-    install(FILES $<TARGET_FILE:${lib_name}> DESTINATION ${DEST_LIB_PATH}
-            RENAME ${FFTW3F_NAME})
-endif()
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${lib_name}> $<TARGET_FILE_DIR:${lib_name}>/${FFTW3_ALIAS_NAME})
+    install(FILES $<TARGET_FILE:${lib_name}> DESTINATION ${DEST_LIB_PATH} RENAME ${FFTW3_ALIAS_NAME})
+    if(WIN32 AND NOT BUILD_STATIC_LIBS)
+        set(FFTW3_IMPORT_NAME "${CMAKE_IMPORT_LIBRARY_PREFIX}${FFTW3_ALIAS}${CMAKE_IMPORT_LIBRARY_SUFFIX}")
+        add_custom_command(TARGET ${lib_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_LINKER_FILE:${lib_name}> $<TARGET_FILE_DIR:${lib_name}>/${FFTW3_IMPORT_NAME})
+        install(FILES $<TARGET_LINKER_FILE:${lib_name}> DESTINATION ${DEST_LIB_PATH} RENAME ${FFTW3_IMPORT_NAME})
+    endif()
+endforeach()
 
 install(FILES ${API_SRC_PATH}/fftw_wrapper.h DESTINATION ${DEST_INCLUDE_PATH} RENAME fftw3.h)
 install(FILES ${API_SRC_PATH}/fftw_wrapper.f DESTINATION ${DEST_INCLUDE_PATH} RENAME fftw3.f)
 install(FILES ${API_SRC_PATH}/fftw_wrapper.f03 DESTINATION ${DEST_INCLUDE_PATH} RENAME fftw3.f03)
+
+# FFTW3 CMake config so find_package(FFTW3) finds this wrapper
+include(CMakePackageConfigHelpers)
+install(EXPORT FFTW3Targets
+    NAMESPACE FFTW3::
+    DESTINATION ${FFTW3_CMAKE_DIR}
+    FILE FFTW3Targets.cmake
+)
+set(FFTW3_CONFIG_IN "${CMAKE_SOURCE_DIR}/cmake/FFTW3Config.cmake.in")
+if(EXISTS "${FFTW3_CONFIG_IN}")
+    configure_package_config_file(
+        "${FFTW3_CONFIG_IN}"
+        "${CMAKE_CURRENT_BINARY_DIR}/FFTW3Config.cmake"
+        INSTALL_DESTINATION "${FFTW3_CMAKE_DIR}"
+    )
+    # FFTW3_VERSION must be 3.x so find_package(FFTW3 3) / find_package(FFTW3 3.x) succeeds
+    # SameMajorVersion requires requested major to match; real FFTW library is 3.x.
+    set(FFTW3_VERSION "3.3.10")
+    write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/FFTW3ConfigVersion.cmake"
+        VERSION "${FFTW3_VERSION}"
+        COMPATIBILITY SameMajorVersion
+    )
+    install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/FFTW3Config.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/FFTW3ConfigVersion.cmake"
+        DESTINATION "${FFTW3_CMAKE_DIR}"
+    )
+endif()
