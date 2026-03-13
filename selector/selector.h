@@ -939,5 +939,6 @@ DOUBLE get_kernel_weightage(INTP radix, kernel_t *kertab,
                             aoclfftz_solution_t *sol);
 UINT8 should_use_colmajor_batched_solver(aoclfftz_solution_t *solution,
                                          kernel_t *kertab, INT32 avl_threads);
+UINT8 check_col_major(aoclfftz_decomp_scheme_t *decomp_scheme);
 
 #endif // AOCLFFTZ_SELECTOR_H

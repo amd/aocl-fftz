@@ -121,16 +121,28 @@ INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table, INT32 is_innermo
     return is_supported;
 }
 
+// Check if the problem is col-major or row-major.
+// col-major: vec-strides < elemental-strides
+// row-major: elemental-strides < vec-strides
+UINT8 check_col_major(aoclfftz_decomp_scheme_t *decomp_scheme)
+{
+    UINT8 is_col_major = (decomp_scheme->vecs[0].in_stride <
+        decomp_scheme->dims[0].in_stride) &&
+       (decomp_scheme->vecs[0].out_stride < decomp_scheme->dims[0].out_stride);
+    return is_col_major;
+}
+
 static INT32 is_split_radix_applicable(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
     INTP n = decomp_scheme->dims[0].n;
-    /*
-     * Split-radix is applicable for complex, 1D, non-batched transforms
-     * where the problem size is divisible by 4 and greater than or equal to 4096.
-     */
+    UINT8 is_col_major = check_col_major(decomp_scheme);
+    // Split-radix is applicable for complex, 1D, row-major, non-batched transforms,
+    // innermost dimension where the problem size is divisible by 4 and
+    // greater than or equal to 4096.
     return (!IS_REAL(decomp_scheme->flags) && (n >= 4096) && ((n % 4) == 0)
             && (decomp_scheme->vec_rank == 1) && (decomp_scheme->dim_rank == 1)
-            && (decomp_scheme->batched_vecs == NULL));
+            && (decomp_scheme->batched_vecs == NULL) && (!is_col_major)
+            && (!IS_NOT_INNERMOST_DIM(decomp_scheme->flags)));
 }
 
 INTP check_CT_solvability(INTP n, kernel_t *kertab)
@@ -549,6 +561,8 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
         sel->kernel_tables->kt_twid_dft,
         sel->kernel_tables->kt_dft);
 
+    UINT8 is_col_major = check_col_major(sel->solution->decomp_scheme);
+    
     /** Level 1 decisions : Solvers **/
     // Buffered FFT Solver
     if (level1_cond2 & 0x1)
@@ -567,11 +581,13 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
     // Batched CT one level direct: fuses the batch loop and one
     // CT-twiddle level (both radix_m and radix_r directly supported)
     // into a single flat function with direct kernel calls.
-    // Applicable for single-threaded, non-direct sizes, single batch
-    // dimension (vec_rank == 1) and innermost ndim dimension.
+    // Applicable for single-threaded, non-direct sizes, row-major,
+    // single batch dimension (vec_rank == 1) and innermost ndim dimension.
     if (avl_threads <= 1 &&
         !is_FFT_ker_supported && dim_rank == 1 &&
         sel->solution->decomp_scheme->vec_rank == 1 &&
+        sel->solution->decomp_scheme->batched_vecs == NULL &&
+        !is_col_major &&
         !IS_NOT_INNERMOST_DIM(sel->solution->decomp_scheme->flags) &&
         is_batched_ct_l1_direct)
     {

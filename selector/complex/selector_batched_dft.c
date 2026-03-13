@@ -71,14 +71,7 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_batched_dft;
     }
 
-    // check if the problem is col-major or row-major
-    // col-major: vec-strides < elemental-strides
-    // row-major: elemental-strides < vec-strides
-    UINT8 is_col_major = (sol->decomp_scheme->vecs[0].in_stride <
-                          sol->decomp_scheme->dims[0].in_stride) &&
-                         (sol->decomp_scheme->vecs[0].out_stride <
-                          sol->decomp_scheme->dims[0].out_stride);
-
+    UINT8 is_col_major = check_col_major(sol->decomp_scheme);
     // Bluestein problems are excluded from the batched direct optimization
     // because the memory layout of bluestein buffer allocated is always row
     // major
