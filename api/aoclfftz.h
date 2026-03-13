@@ -171,10 +171,10 @@ typedef struct aoclfftz_cntrl_params
     * - 3 - AVX512 optimizations */
     INT32 opt_off;                         /**< Turn off all optimizations */
     aoclfftz_logger_mode logger_mode;      /**< Set Logger mode with following values.\n
-    * - 0 - `None`,
-    * - 1 - `Info`,
-    * - 2 - `Trace`,
-    * - 3 - `Debug`*/
+    * - @ref AOCLFFTZ_LOG_NONE - Disable all logging
+    * - @ref AOCLFFTZ_LOG_INFO - Detailed debugging logs
+    * - @ref AOCLFFTZ_LOG_TRACE - Logging with complete execution trace
+    * - @ref AOCLFFTZ_LOG_DEBUG - Most detailed logging, with debug logs */
     INT32 measure_stats;    /**< Enable/Disable measure stats (Not supported, must be default value `0`) */
 } aoclfftz_cntrl_params_t;
 

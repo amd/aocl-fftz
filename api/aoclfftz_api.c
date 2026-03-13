@@ -28,7 +28,7 @@
 
 /** @file aoclfftz_api.c
  *
- *  @brief APIs and data structures implementaion of the core (ST, MT) library.
+ *  @brief APIs and data structures implementation of the core (ST, MT) library.
  *
  *  This file contains the implementation of APIs and associated
  *  data structures that are responsible for setting up and executing the

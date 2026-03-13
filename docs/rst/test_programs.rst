@@ -37,9 +37,9 @@ Example Test Programs
    * - `N Dimensional Complex`_
      - Sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded N-dimensional FFT computation for complex input to complex output using double-precision on ILP64 architecture systems.
    * - `One Dimensional Real Forward`_
-     - Sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one dimensional FFT computation for real input to complex output(Forward FFT) using single-precision on LP64 architecture systems.
+     - Sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one dimensional FFT computation for real input to complex output (Forward FFT) using single-precision on LP64 architecture systems.
    * - `One Dimensional Real Backward`_
-     - Sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one-dimensional FFT computation for complex input to real output(Backward FFT) using single-precision on ILP64 architecture systems.
+     - Sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one dimensional FFT computation for complex input to real output (Backward FFT) using single-precision on ILP64 architecture systems.
    * - `N Dimensional Real Forward`_
      - Sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded N-dimensional FFT computation for real input to complex output (Forward FFT) using double-precision on ILP64 architecture systems.
    * - `N Dimensional Real Backward`_
@@ -88,7 +88,7 @@ Before running the example program, ensure it points to the right library depend
 One Dimensional Real Forward
 ----------------------------
 
-The following test program shows the sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one dimensional FFT computation for real input to complex output(Forward FFT) using single-precision precision on LP64 architecture systems:
+The following test program shows the sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one dimensional FFT computation for real input to complex output (Forward FFT) using single-precision on LP64 architecture systems:
 
 .. literalinclude:: ../../examples/example_one_dim_real_forward.c
    :language: c
@@ -108,7 +108,7 @@ Before running the example program, ensure it points to the right library depend
 One Dimensional Real Backward
 -----------------------------
 
-The following test program shows the sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one-dimensional FFT computation for complex input to real output(Backward FFT) using single-precision precision on ILP64 architecture systems:
+The following test program shows the sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one dimensional FFT computation for complex input to real output (Backward FFT) using single-precision on ILP64 architecture systems:
 
 .. literalinclude:: ../../examples/example_one_dim_real_backward.c
    :language: c
