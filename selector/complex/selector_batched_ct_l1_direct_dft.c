@@ -104,6 +104,17 @@ INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    if (sel == NULL || sel->solution == NULL ||
+        sel->solution->decomp_scheme == NULL || sel->kernel_tables == NULL ||
+        sel->kernel_tables->kt_twid_dft == NULL ||
+        sel->kernel_tables->kt_dft == NULL)
+    {
+        AOCLFFTZ_LOG(INFO, global_logger_mode,
+                     "Invalid selector or solution passed to "
+                     "selector_batched_ct_l1_direct_dft");
+        return SELECTOR_FAILURE;
+    }
+
     aoclfftz_solution_t *sol = sel->solution;
     INTP n = sol->decomp_scheme->dims[0].n;
     INTP batch = sol->decomp_scheme->vecs[0].n;

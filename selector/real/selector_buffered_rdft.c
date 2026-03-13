@@ -46,6 +46,15 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    if (sel == NULL || sel->solution == NULL ||
+        sel->solution->decomp_scheme == NULL)
+    {
+        AOCLFFTZ_LOG(INFO, global_logger_mode,
+                     "Invalid selector or solution passed to "
+                     "selector_buffered_rdft");
+        return SELECTOR_FAILURE;
+    }
+
     aoclfftz_selector_t *cur_sel = NULL;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;

@@ -47,6 +47,15 @@ INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    if (sel == NULL || sel->solution == NULL ||
+        sel->solution->decomp_scheme == NULL)
+    {
+        AOCLFFTZ_LOG(INFO, global_logger_mode,
+                     "Invalid selector or solution passed to "
+                     "selector_ndim_rdft");
+        return SELECTOR_FAILURE;
+    }
+
     aoclfftz_selector_t *complex_dims_sol = NULL;
     aoclfftz_selector_t *real_dim_sol = NULL;
 
