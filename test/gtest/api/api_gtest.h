@@ -38,7 +38,9 @@
 #include <random>
 #include <climits>
 #include <iostream> // Add this include for debug printing
+#ifdef MULTI_THREADING
 #include <omp.h>
+#endif
 #include "gtest/gtest.h"
 #include "test/gtest/common_gtest_utils.h"
 

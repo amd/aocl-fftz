@@ -166,9 +166,13 @@ if(NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "None")
         set(CHECK_AVX512_CODE "${AVX_CHECK_HEADER}
         int main() {
             unsigned int eax, ebx, ecx, edx;
+            unsigned int max_cpuid_leaf;
             unsigned long long xcr0;
         #ifdef _WIN32
             int cpuInfo[4];
+            __cpuidex(cpuInfo, 0, 0);
+            max_cpuid_leaf = cpuInfo[0];
+            if (max_cpuid_leaf < 7u) return 1;
             __cpuidex(cpuInfo, 1, 0);
             eax = cpuInfo[0]; ebx = cpuInfo[1]; ecx = cpuInfo[2]; edx = cpuInfo[3];
             if ((ecx & (1u << 27)) == 0) return 1;
@@ -176,12 +180,15 @@ if(NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "None")
             __cpuidex(cpuInfo, 7, 0);
             eax = cpuInfo[0]; ebx = cpuInfo[1]; ecx = cpuInfo[2]; edx = cpuInfo[3];
         #else
+            __cpuid(0, eax, ebx, ecx, edx);
+            max_cpuid_leaf = eax;
+            if (max_cpuid_leaf < 7u) return 1;
             __cpuid(1, eax, ebx, ecx, edx);
             if ((ecx & (1u << 27)) == 0) return 1;
             unsigned int xcr_lo, xcr_hi;
             __asm__ __volatile__(\".byte 0x0f, 0x01, 0xd0\" : \"=a\"(xcr_lo), \"=d\"(xcr_hi) : \"c\"(0));
             xcr0 = ((unsigned long long)xcr_hi << 32) | xcr_lo;
-            __cpuid(7, eax, ebx, ecx, edx);
+            __cpuid_count(7, 0, eax, ebx, ecx, edx);
         #endif
             const unsigned long long mask = (1ULL << 1) | (1ULL << 2) | (1ULL << 5) | (1ULL << 6) | (1ULL << 7);
             if ((xcr0 & mask) != mask) return 1;
@@ -208,36 +215,27 @@ if(NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "None")
         set(CHECK_AVX256_CODE "${AVX_CHECK_HEADER}
         int main() {
             unsigned int eax, ebx, ecx, edx;
-            unsigned int max_cpuid_leaf;
             unsigned int ecx_leaf1;
             unsigned long long xcr0;
         #ifdef _WIN32
             int cpuInfo[4];
-            __cpuidex(cpuInfo, 0, 0);
-            max_cpuid_leaf = cpuInfo[0];
             __cpuidex(cpuInfo, 1, 0);
             eax = cpuInfo[0]; ebx = cpuInfo[1]; ecx = cpuInfo[2]; edx = cpuInfo[3];
             ecx_leaf1 = ecx;
             if ((ecx & (1u << 27)) == 0) return 1;
             xcr0 = _xgetbv(0);
-            __cpuidex(cpuInfo, 7, 0);
-            eax = cpuInfo[0]; ebx = cpuInfo[1]; ecx = cpuInfo[2]; edx = cpuInfo[3];
         #else
-            __cpuid(0, eax, ebx, ecx, edx);
-            max_cpuid_leaf = eax;
             __cpuid(1, eax, ebx, ecx, edx);
             ecx_leaf1 = ecx;
             if ((ecx & (1u << 27)) == 0) return 1;
             unsigned int xcr_lo, xcr_hi;
             __asm__ __volatile__(\".byte 0x0f, 0x01, 0xd0\" : \"=a\"(xcr_lo), \"=d\"(xcr_hi) : \"c\"(0));
             xcr0 = ((unsigned long long)xcr_hi << 32) | xcr_lo;
-            __cpuid(7, eax, ebx, ecx, edx);
         #endif
             const unsigned long long mask = (1ULL << 1) | (1ULL << 2);
             if ((xcr0 & mask) != mask) return 1;
             if ((ecx_leaf1 & (1u << 28)) == 0 || (ecx_leaf1 & (1u << 12)) == 0) return 1;
-            if (max_cpuid_leaf < 7u) return 1;
-            return (ebx & (1u << 5)) ? 0 : 1;
+            return 0;
         }
         ")
 
