@@ -50,9 +50,7 @@
 
 /**
  * @defgroup Data_Structures AOCL-FFTZ - Data Structures and Type Definitions
- * @brief Data structures and typedef definitions associated with APIs of AOCL-FFTZ library.
- *
- * This section contains typedef definitions used by the AOCL-FFTZ
+ * @brief This section contains typedef definitions used by the AOCL-FFTZ
  * library's interface APIs.
  *
  * @note Different variants of data structures are available to support float
@@ -179,6 +177,9 @@ typedef struct aoclfftz_cntrl_params
 } aoclfftz_cntrl_params_t;
 
 /**
+ * @rst
+ * .. _aoclfftz_prob_desc_f:
+ * @endrst
  * @ingroup Data_Structures
  * @brief Defines problem descriptor for float data on LP64 machines.
  */
@@ -197,6 +198,9 @@ typedef struct
 } aoclfftz_prob_desc_f;
 
 /**
+ * @rst
+ * .. _aoclfftz_prob_desc_d:
+ * @endrst
  * @ingroup Data_Structures
  * @brief Defines problem descriptor for double data on LP64 machines.
  */
@@ -215,6 +219,9 @@ typedef struct
 } aoclfftz_prob_desc_d;
 
 /**
+ * @rst
+ * .. _aoclfftz_prob_desc_f_64_:
+ * @endrst
  * @ingroup Data_Structures
  * @brief Defines problem descriptor for float data on ILP64 machines.
  */
@@ -233,6 +240,9 @@ typedef struct
 } aoclfftz_prob_desc_f_64_;
 
 /**
+ * @rst
+ * .. _aoclfftz_prob_desc_d_64_:
+ * @endrst
  * @ingroup Data_Structures
  * @brief Defines problem descriptor for double data on ILP64 machines.
  */
@@ -252,6 +262,9 @@ typedef struct
 
 /* Single-threaded and multi-threaded FFT unified APIs */
 /**
+ * @rst
+ * .. _aoclfftz_setup_f:
+ * @endrst
  * @ingroup APIs
  * @brief Generates a solution handle for a given problem of type FLOAT on LP64 systems.
  *

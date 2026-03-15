@@ -54,6 +54,15 @@ exclude_patterns = [
     'fftz_readme.rst'
 ]
 
+# Override toctree section numbers so a branch can display as 1, 1.1, 1.2, ...
+# (docname -> number string). Adjust or set to {} to use Sphinx default numbering.
+toc_secnumber_overrides = {
+    "data_structures_index": "1",
+    "typedefs": "1.1",
+    "problem_descriptor": "1.2",
+    "data_layout_conventions": "1.3",
+}
+
 # -- Options for HTML output -------------------------------------------------
 
 html_theme = 'rocm_docs_theme'
