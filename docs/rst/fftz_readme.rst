@@ -97,6 +97,8 @@ Use the following additional options to configure your build:
      - Builds all the supported FFTZ third party wrappers (Disabled by default)
    * - CODE_COVERAGE
      - Enables source code coverage and generates coverage report. Supported only on Linux with GCC compiler (Disabled by default)
+   * - CODE_COVERAGE_FOR_ATG
+     - Enables source code coverage instrumentation for running coverage and parsing tools for use by AI Test case Generation (ATG) later. Supported only on Linux with GCC compiler (Disabled by default)
    * - ENABLE_APP_INFO_LOGS
      - Enables info logging for FFT problems used by the application (Independent of AOCL_ENABLE_LOG, Disabled by default)
    * - ENABLE_INSTRUCTIONS_UPTO
