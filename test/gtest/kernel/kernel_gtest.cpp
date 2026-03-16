@@ -967,6 +967,7 @@ INSTANTIATE_TEST_SUITE_P(
 //               load_multi_cols (0 -> broadcast same twiddle, 1 -> load different twiddles)}
 std::vector<std::tuple<INTP, INTP, INTP, UINT8, UINT8, UINT8>> io_params_batch16 = {
                                                             {1,   1,  1, 0, 0, 1},
+                                                            {1,   1,  1, 1, 0, 1},
                                                             {1,   1,  2, 1, 0, 1},
                                                             {5,   3,  3, 0, 1, 1},
                                                             {10, 15,  4, 1, 1, 1},
@@ -992,6 +993,7 @@ std::vector<std::tuple<INTP, INTP, INTP, UINT8, UINT8, UINT8>> io_params_batch16
 // tested by other batch size
 std::vector<std::tuple<INTP, INTP, INTP, UINT8, UINT8, UINT8>> io_params_batch32 = {
                                                             {1,   1,  1, 0, 0, 1},
+                                                            {1,   1,  1, 1, 0, 1},
                                                             {1,   1,  2, 1, 0, 1},
                                                             {5,   3,  3, 0, 1, 1},
                                                             {10, 15,  4, 1, 1, 1},
