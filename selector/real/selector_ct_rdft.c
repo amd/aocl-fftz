@@ -276,6 +276,11 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 destroy_solutions(cur_sel_m->solution->next_sol, 1);
                 cur_sel_m->solution->next_sol = NULL;
                 is_previous_solution_selected = 0;
+                // The solution is being discarded
+                // hence its strides are no longer needed.
+                destroy_strides_grp(cur_sel->solution->strides_grp);
+                destroy_strides_grp(cur_sel_m->solution->strides_grp);
+
                 RESET_COST(cur_sel);
                 RESET_COST(cur_sel_m);
             }

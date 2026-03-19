@@ -64,6 +64,7 @@ VOID alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr);
 VOID destroy_selector(aoclfftz_selector_t *sel);
 VOID destroy_selector_without_solution(aoclfftz_selector_t *sel);
 VOID destroy_selector_without_scratch_space(aoclfftz_selector_t *sel);
+VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp);
 
 VOID destroy_solution(aoclfftz_solution_t *sol, UINT8 destroy_buffers);
 VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n);
