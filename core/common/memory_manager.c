@@ -580,21 +580,21 @@ VOID destroy_bluestein(aoclfftz_bluestein_t* bluestein)
     }
 }
 
-VOID destroy_strides_grp(aoclfftz_solution_t *cur_sol)
+VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp)
 {
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides->in_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides->out_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_c2c->in_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_c2c->out_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_r2hc->in_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_r2hc->out_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_r2hcf->in_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_r2hcf->out_strides);
-    if (cur_sol->strides_grp->strides_c2r_ct_op != NULL)
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides->in_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides->out_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2c->in_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2c->out_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hc->in_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hc->out_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hcf->in_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hcf->out_strides);
+    if (strides_grp->strides_c2r_ct_op != NULL)
     {
-        FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_c2r_ct_op->in_strides);
-        FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_c2r_ct_op->out_strides);
-        FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_c2r_ct_op);
+        FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2r_ct_op->in_strides);
+        FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2r_ct_op->out_strides);
+        FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2r_ct_op);
     }
 }
 
@@ -607,7 +607,7 @@ VOID destroy_solution(aoclfftz_solution_t* sol, UINT8 destroy_buffers)
         n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
                   (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
         destroy_decomp_scheme(sol->decomp_scheme);
-        destroy_strides_grp(sol);
+        destroy_strides_grp(sol->strides_grp);
 
         FREE_ALIGN_ALLOCATED_MEM(sol->twiddle->twiddle_buf_ptr);
         sol->twiddle->TW = NULL;
@@ -665,7 +665,7 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
 
                 destroy_solutions(cur_sol->next_sol, n_sols);
                 destroy_decomp_scheme(cur_sol->decomp_scheme);
-                destroy_strides_grp(cur_sol);
+                destroy_strides_grp(cur_sol->strides_grp);
 
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol->twiddle->twiddle_buf_ptr);
                 cur_sol->twiddle->TW = NULL;
@@ -748,27 +748,27 @@ VOID destroy_bluestein(aoclfftz_bluestein_t* bluestein)
     }
 }
 
-VOID destroy_strides_grp(aoclfftz_solution_t *cur_sol)
+VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp)
 {
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides->in_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides->out_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_c2c->in_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_c2c->out_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_c2c);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_r2hc->in_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_r2hc->out_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_r2hc);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_r2hcf->in_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_r2hcf->out_strides);
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_r2hcf);
-    if (cur_sol->strides_grp->strides_c2r_ct_op != NULL)
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides->in_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides->out_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2c->in_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2c->out_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2c);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hc->in_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hc->out_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hc);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hcf->in_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hcf->out_strides);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hcf);
+    if (strides_grp->strides_c2r_ct_op != NULL)
     {
-        FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_c2r_ct_op->in_strides);
-        FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_c2r_ct_op->out_strides);
-        FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp->strides_c2r_ct_op);
+        FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2r_ct_op->in_strides);
+        FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2r_ct_op->out_strides);
+        FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2r_ct_op);
     }
-    FREE_ALIGN_ALLOCATED_MEM(cur_sol->strides_grp);
+    FREE_ALIGN_ALLOCATED_MEM(strides_grp);
 }
 
 VOID destroy_solution(aoclfftz_solution_t *sol, UINT8 destroy_buffers)
@@ -800,7 +800,7 @@ VOID destroy_solution(aoclfftz_solution_t *sol, UINT8 destroy_buffers)
         destroy_solution(sol->dft_bufs->nd_sol, 0);
         destroy_solution(sol->dft_bufs->sr->odd1_sol, destroy_buffers);
         destroy_solution(sol->dft_bufs->sr->odd3_sol, destroy_buffers);
-        destroy_strides_grp(sol);
+        destroy_strides_grp(sol->strides_grp);
         destroy_solutions(sol->next_sol, n_sols);
         // Buffered solver will create aux_buffers and the same address will be
         // used in other solvers.
@@ -854,7 +854,7 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
                  * is a full teardown path that always frees all buffers */
                 destroy_solution(cur_sol->dft_bufs->sr->odd1_sol, 1);
                 destroy_solution(cur_sol->dft_bufs->sr->odd3_sol, 1);
-                destroy_strides_grp(cur_sol);
+                destroy_strides_grp(cur_sol->strides_grp);
 
                 // Buffered solver will create aux_buffers and the same address
                 // will be used in other solvers.
