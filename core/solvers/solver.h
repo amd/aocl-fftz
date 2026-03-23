@@ -98,6 +98,7 @@ typedef struct solver
 INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags);
 dft_solver_ get_solver_fp(aoclfftz_solution_t *sol);
 INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj);
+INT32 is_solver_registered(aoclfftz_solver_type solver_type);
 
 // Function declarations of all the supported solvers
 // (called by selector and executor)

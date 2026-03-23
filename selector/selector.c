@@ -137,12 +137,15 @@ static INT32 is_split_radix_applicable(aoclfftz_decomp_scheme_t *decomp_scheme)
     INTP n = decomp_scheme->dims[0].n;
     UINT8 is_col_major = check_col_major(decomp_scheme);
     // Split-radix is applicable for complex, 1D, row-major, non-batched transforms,
-    // innermost dimension where the problem size is divisible by 4 and
-    // greater than or equal to 4096.
-    return (!IS_REAL(decomp_scheme->flags) && (n >= 4096) && ((n % 4) == 0)
+    // innermost dimension where the problem size is a power of 2,
+    // >= 4096, and single-threaded only.
+    // TODO: Replace the hardcoded threshold value (4096)
+
+    return (!IS_REAL(decomp_scheme->flags) && (n >= 4096) && ((n & (n - 1)) == 0)
             && (decomp_scheme->vec_rank == 1) && (decomp_scheme->dim_rank == 1)
             && (decomp_scheme->batched_vecs == NULL) && (!is_col_major)
-            && (!IS_NOT_INNERMOST_DIM(decomp_scheme->flags)));
+            && !IS_NOT_INNERMOST_DIM(decomp_scheme->flags)
+            && (decomp_scheme->thread_info->pthr_fft->num_threads == 1));
 }
 
 INTP check_CT_solvability(INTP n, kernel_t *kertab)
@@ -315,7 +318,8 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     level2_cond = is_FFT_ker_supported;
     // SOLVER_SR
     level2_cond |=
-        (is_split_radix_applicable(sel->solution->decomp_scheme) << 1);
+        ((is_solver_registered(SOLVER_SR) == SOLVER_SUCCESS)
+        && is_split_radix_applicable(sel->solution->decomp_scheme)) << 1;
     // SOLVER_PFA
     // SOLVER_RADER
 
@@ -547,7 +551,8 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
     level2_cond = is_FFT_ker_supported;
     // SOLVER_SR
     level2_cond |=
-        (is_split_radix_applicable(sel->solution->decomp_scheme) << 1);
+        ((is_solver_registered(SOLVER_SR) == SOLVER_SUCCESS)
+        && is_split_radix_applicable(sel->solution->decomp_scheme)) << 1;
     // SOLVER_PFA
     // SOLVER_RADER
 
