@@ -88,7 +88,12 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
     solvers_table[SOLVER_BLUESTEIN] = register_execute_bluestein_solver();
     solvers_table[SOLVER_NDIM] = register_execute_ndim_solver();
     solvers_table[SOLVER_SIZEONE] = register_execute_sizeone_solver();
-    solvers_table[SOLVER_SR] = register_execute_sr_solver();
+    // SR is currently limited only to scalar execution as CT outperforms SR
+    // in AVX mode. Skip registration of SR solver.
+    if (cpu_flags == 0)
+    {
+        solvers_table[SOLVER_SR] = register_execute_sr_solver();
+    }
     solvers_table[SOLVER_TRANSPOSE] = register_execute_transpose_solver();
 #ifdef MULTI_THREADING
     solvers_table[SOLVER_MT_DIRECT] = register_execute_mt_direct_solver();
@@ -107,9 +112,18 @@ dft_solver_ get_solver_fp(aoclfftz_solution_t *sol)
     return sol->solver->execute_solver;
 }
 
+INT32 is_solver_registered(aoclfftz_solver_type solver_type)
+{
+    if (solvers_table[solver_type] == NULL)
+    {
+        return SOLVER_FAILURE;
+    }
+    return SOLVER_SUCCESS;
+}
+
 INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj)
 {
-    if (solvers_table[solver_obj->solver_type] == NULL)
+    if (is_solver_registered(solver_obj->solver_type) != SOLVER_SUCCESS)
     {
         return SOLVER_FAILURE;
     }
