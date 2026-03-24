@@ -468,6 +468,9 @@ typedef struct aoclfftz_dft_bufs
     UINT32 ct_buf_allocated; // to know that the solution originally allocated
                              // the buffer and is responsible for freeing it in
                              // the end.
+    INT32 ct_buf_cnt;        // number of ct_buf slots consumed by this
+                             // node's subtree; set by cnt_ct_buffers()
+                             // before post_process_solution(). -1 if unset.
 } aoclfftz_dft_bufs_t;
 #endif
 /////////////////////////// BUFS RELATED : END ////////////////////////////////
