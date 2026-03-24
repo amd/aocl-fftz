@@ -212,6 +212,7 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->ct_buf_size = 0;
         sol->dft_bufs->num_ct_buf = 0;
         sol->dft_bufs->ct_buf_allocated = 0;
+        sol->dft_bufs->ct_buf_cnt = -1;
         sol->solver->kernel_c2c->count = 0;
         sol->solver->kernel_c2c_r->count = 0;
         sol->solver->kernel_r2hc->count = 0;
@@ -338,6 +339,7 @@ aoclfftz_solution_t* alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->ct_buf_size = 0;
         sol->dft_bufs->num_ct_buf = 0;
         sol->dft_bufs->ct_buf_allocated = 0;
+        sol->dft_bufs->ct_buf_cnt = -1;
         sol->solver->kernel_c2c->count = 0;
         sol->solver->kernel_c2c_r->count = 0;
         sol->solver->kernel_r2hc->count = 0;

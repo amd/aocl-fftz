@@ -930,8 +930,6 @@ INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                          aoclfftz_realhelper_t *realhelper);
 VOID destroy_handle(VOID *handle);
 VOID fuse_vecs(aoclfftz_solution_t *sol);
-VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx,
-UINT32 *ct_buf_idx, UINT32 *num_ct_buf);
 INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);
 INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table,
                                INT32 is_innermost_dim);
