@@ -234,7 +234,7 @@ INT32 check_batched_ct_l1_direct_solvability(INTP n, kernel_t *kertab_twid,
     for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
         INTP radix_r = (INTP)kertab_twid[i].radix;
-        
+
         if (radix_r == 0) // End of suitable kernels in the list
         {
             break;
@@ -245,7 +245,7 @@ INT32 check_batched_ct_l1_direct_solvability(INTP n, kernel_t *kertab_twid,
         {
             continue;
         }
-        
+
         if (check_FFT_kernel_support(n / radix_r, kertab_dft, 1))
         {
             return 1;
@@ -289,7 +289,7 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
 
     if (sel->solution->decomp_scheme->vec_rank > 1)
     {
-        fuse_vecs(sel->solution);
+        fuse_vecs(sel->solution, is_FFT_ker_supported);
     }
     // SOLVER_BATCHED
     level1_cond1 =
@@ -522,7 +522,7 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
 
     if (sel->solution->decomp_scheme->vec_rank > 1)
     {
-        fuse_vecs(sel->solution);
+        fuse_vecs(sel->solution, is_FFT_ker_supported);
     }
     // SOLVER_BATCHED
     level1_cond1 =
@@ -567,7 +567,7 @@ INT32 selector_fixed_mode_fused_twid_dft_(aoclfftz_selector_t *sel)
         sel->kernel_tables->kt_dft);
 
     UINT8 is_col_major = check_col_major(sel->solution->decomp_scheme);
-    
+
     /** Level 1 decisions : Solvers **/
     // Buffered FFT Solver
     if (level1_cond2 & 0x1)
@@ -790,7 +790,7 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
 
     if (sel->solution->decomp_scheme->vec_rank > 1)
     {
-        fuse_vecs(sel->solution);
+        fuse_vecs(sel->solution, is_FFT_ker_supported);
     }
     // SOLVER_BATCHED
     level1_cond1 =
@@ -954,7 +954,7 @@ INT32 selector_fixed_mode_fused_twid_rdft_(aoclfftz_selector_t *sel,
 
     if (sel->solution->decomp_scheme->vec_rank > 1)
     {
-        fuse_vecs(sel->solution);
+        fuse_vecs(sel->solution, is_FFT_ker_supported);
     }
 
     // SOLVER_BATCHED
@@ -1875,7 +1875,7 @@ VOID destroy_handle(VOID *handle)
     destroy_selector((aoclfftz_selector_t *)handle);
 }
 
-VOID fuse_vecs(aoclfftz_solution_t *sol)
+VOID fuse_vecs(aoclfftz_solution_t *sol, INT32 is_FFT_ker_supported)
 {
     INT32 last_fused_idx = 0, is_fusable = 0, fused_rank = 0;
     INTP fused_size = sol->decomp_scheme->vecs[0].n;
@@ -1889,9 +1889,14 @@ VOID fuse_vecs(aoclfftz_solution_t *sol)
         INTP expected_out_stride = vecs[i-1].n * vecs[i-1].out_stride;
         INTP actual_in_stride = vecs[i].in_stride;
         INTP actual_out_stride = vecs[i].out_stride;
-        // Do not fuse the first vector
+        // Do not fuse the first vector to enable memory-efficient batch
+        // processing for NDim problems where the outerdimension is CT.
+        // ie., problems like AxBxC that decomposes to BxCvA and A is CT,
+        // its efficient if we do not fuse BxC
         if ((expected_in_stride == actual_in_stride &&
-             expected_out_stride == actual_out_stride) && i != 1)
+             expected_out_stride == actual_out_stride) &&
+             (i != 1 || is_FFT_ker_supported ||
+                        !IS_NOT_INNERMOST_DIM(sol->decomp_scheme->flags)))
         {
             // mark the vector for fusing and compute the new size for the fused
             // vector

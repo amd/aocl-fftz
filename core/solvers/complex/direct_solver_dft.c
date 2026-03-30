@@ -47,6 +47,7 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
+    // TODO: Update the batch to batched_vecs[0].n if batched_vecs is not NULL
     INTP batch = sol->decomp_scheme->vecs[0].n;
     INTP radix = sol->decomp_scheme->dims[0].n;
     UINT8 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
@@ -66,13 +67,15 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
     if (sol->decomp_scheme->batched_vecs != NULL)
     {
-        strides->v_in_stride = sol->decomp_scheme->batched_vecs[0].in_stride * DATA_STRIDE;
+        strides->v_in_stride =
+            sol->decomp_scheme->batched_vecs[0].in_stride * DATA_STRIDE;
         strides->v_out_stride =
             sol->decomp_scheme->batched_vecs[0].out_stride * DATA_STRIDE;
     }
     else
     {
-        strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
+        strides->v_in_stride =
+            sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
         strides->v_out_stride =
             sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
     }
