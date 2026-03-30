@@ -847,9 +847,6 @@ EXPORT_SYM_DYN
 VOID destroy_decomp_scheme_wrapper(aoclfftz_decomp_scheme_t *decomp_scheme);
 EXPORT_SYM_DYN VOID destroy_handle_wrapper(VOID *handle);
 
-/* ---------------- fuse vector wrapper ---------------- */
-EXPORT_SYM_DYN VOID fuse_vecs_wrapper(aoclfftz_solution_t *sol);
-
 /* ---------------- strides wrapper ---------------- */
 EXPORT_SYM_DYN VOID populate_stride_array_wrapper(INTP *strides,
                       INTP stride_val,

@@ -2090,12 +2090,6 @@ VOID destroy_handle_wrapper(VOID *handle)
     destroy_handle(handle);
 }
 
-/* ---------------- fuse vector wrapper ---------------- */
-VOID fuse_vecs_wrapper(aoclfftz_solution_t *sol)
-{
-    fuse_vecs(sol);
-}
-
 /* ---------------- strides wrapper ---------------- */
 VOID populate_stride_array_wrapper(INTP *strides, INTP stride_val, INTP n,
                                    UINT8 compute_half_complex,
