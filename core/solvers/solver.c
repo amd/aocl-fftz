@@ -82,11 +82,6 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
     return SOLVER_SUCCESS;
 }
 
-dft_solver_ get_solver_fp(aoclfftz_solution_t *sol)
-{
-    return sol->solver->execute_solver;
-}
-
 INT32 is_solver_registered(aoclfftz_solver_type solver_type)
 {
     if (solvers_table[solver_type] == NULL)

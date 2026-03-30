@@ -18,7 +18,6 @@
 #include "api/aoclfftz_internal.h"
 #include "selector/selector.h"
 
-#define AOCL_SINGLE_MEM_REGION
 
 aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank);
 INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein, INTP size);

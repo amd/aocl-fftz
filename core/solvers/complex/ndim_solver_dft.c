@@ -57,15 +57,6 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
 
     SET_NOT_INNERMOST_DIM(outer_dim_sol->decomp_scheme->flags);
 
-#if defined (PERFORM_INTER_STAGE_PERMUTE)
-    // In the context of an out-of-place problem, outer_dim_sol has to operate
-    // on the output buffer (populated by n_minus1_sol's result), perform
-    // computation and store the result back in same buffer, typically like an
-    // inplace problem. So, it is necessary to convert the the out-to-place
-    // problem to in-place, for the in & out strides to be properly set.
-    SET_INPLACE(outer_dim_sol->decomp_scheme->flags);
-#endif
-
     outer_dim_sol->decomp_scheme->dim_rank = 1;
     outer_dim_sol->decomp_scheme->dims[0].n =
                     sol->decomp_scheme->dims[dim_rank - 1].n;
@@ -107,21 +98,6 @@ static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
     aoclfftz_solution_t *n_minus1_sol = sol->dft_bufs->nd_sol;
     aoclfftz_solution_t *outer_dim_sol = sol->next_sol[0];
 
-#if defined (PERFORM_INTER_STAGE_PERMUTE)
-
-    // update solution data pointers
-    n_minus1_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
-    n_minus1_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
-    n_minus1_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    n_minus1_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-
-    outer_dim_sol->decomp_scheme->in_real  = sol->decomp_scheme->out_real;
-    outer_dim_sol->decomp_scheme->in_imag  = sol->decomp_scheme->out_imag;
-    outer_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-
-#else
-
     // update solution data pointers
     n_minus1_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
     n_minus1_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
@@ -144,7 +120,6 @@ static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
     outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
     outer_dim_sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buf_real;
     outer_dim_sol->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
-#endif
 
     // execute nd sub-problem
     n_minus1_sol->solver->execute_solver(n_minus1_sol);

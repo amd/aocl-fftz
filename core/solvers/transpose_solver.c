@@ -22,7 +22,7 @@ aoclfftz_transpose_kernel
 get_transpose_kernel(aoclfftz_transpose_dtype type,
                      aoclfftz_dim_t_64_ row_metadata,
                      aoclfftz_dim_t_64_ column_metadata, UINT8 is_inplace,
-                     UINT8 is_square, INTP cpu_flags)
+                     UINT8 is_square)
 {
     aoclfftz_transpose_kernel kernel = NULL;
 
@@ -89,7 +89,7 @@ get_transpose_kernel(aoclfftz_transpose_dtype type,
 }
 // -----------------------------------------------------------------------------
 
-INT32 setup_transpose_solver(aoclfftz_solution_t *sol, INT32 cpu_flags)
+INT32 setup_transpose_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -128,7 +128,7 @@ INT32 setup_transpose_solver(aoclfftz_solution_t *sol, INT32 cpu_flags)
     transpose->kernel = get_transpose_kernel(
         dtype, transpose->row_info, transpose->col_info,
         !IS_OUT_OF_PLACE(sol->decomp_scheme->flags),
-        is_square, cpu_flags);
+        is_square);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;

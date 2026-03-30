@@ -38,8 +38,6 @@ static inline INTP strided_buffer_size(INTP n, INTP stride, INTP elem_size)
 
 #define AOCLFFTZ_STATS
 
-#define AOCLFFTZ_CPUID_SIMD_DETECTION
-
 #if defined(__GNUC__) && __GNUC__ >= 3
 #define FUNC_NAME __func__
 #else

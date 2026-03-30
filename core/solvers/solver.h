@@ -63,15 +63,7 @@ typedef enum
     NUM_SOLVERS_END
 } aoclfftz_solver_type;
 
-// Solver data structure that holds solver object/pointer and its type
-typedef struct solver
-{
-    aoclfftz_generic_solver_t *solver;
-    // aoclfftz_solver_type solv_type;
-} solver_t;
-
 INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags);
-dft_solver_ get_solver_fp(aoclfftz_solution_t *sol);
 INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj);
 INT32 is_solver_registered(aoclfftz_solver_type solver_type);
 
@@ -94,16 +86,10 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
                         aoclfftz_solution_t *n_minus1_sol,
                         aoclfftz_solution_t *outer_dim_sol);
 INT32 setup_sizeone_solver(aoclfftz_solution_t *sol);
-INT32 setup_transpose_solver(aoclfftz_solution_t *sol, INT32 cpu_flags);
+INT32 setup_transpose_solver(aoclfftz_solution_t *sol);
 INT32 setup_sr_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_even,
                       aoclfftz_solution_t *sol_odd1, aoclfftz_solution_t *sol_odd3,
                       INTP n_even, INTP n_odd);
-#if 0
-INT32 setup_permuted_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
-                            kernel_t *kernel);
-INT32 setup_buffered_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
-                            kernel_t *kernel);
-#endif
 #ifdef MULTI_THREADING
 INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                              kernel_t *kernel);
@@ -143,17 +129,14 @@ INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
 #endif
 
 dft_solver_ register_execute_direct_solver(VOID);
-dft_solver_ register_execute_direct_batched_rowmajor_solver(VOID);
 dft_solver_ register_execute_direct_batched_colmajor_solver(VOID);
 dft_solver_ register_execute_ct_solver(VOID);
 dft_solver_ register_execute_ct_twiddle_solver(VOID);
 dft_solver_ register_execute_batched_ct_l1_direct_solver(VOID);
-dft_solver_ register_execute_last_stage_ip_ct_solver(VOID);
 dft_solver_ register_execute_buffered_solver(VOID);
 dft_solver_ register_execute_batched_solver(VOID);
 dft_solver_ register_execute_bluestein_solver(VOID);
 dft_solver_ register_execute_ndim_solver(VOID);
-dft_solver_ register_execute_last_stage_ip_ndim_solver(VOID);
 dft_solver_ register_execute_sizeone_solver(VOID);
 dft_solver_ register_execute_transpose_solver(VOID);
 dft_solver_ register_execute_sr_solver(VOID);

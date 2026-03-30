@@ -29,23 +29,6 @@
 // on the variable
 #define VOLATILE_STRIDE_ARRAY
 
-// Constants related to radix sizes
-#define RADIX_2 2
-#define RADIX_3 3
-#define RADIX_4 4
-#define RADIX_5 5
-#define RADIX_6 6
-#define RADIX_7 7
-#define RADIX_8 8
-#define RADIX_9 9
-#define RADIX_10 10
-#define RADIX_11 11
-#define RADIX_12 12
-#define RADIX_13 13
-#define RADIX_14 14
-#define RADIX_15 15
-#define RADIX_16 16
-
 // Implies the number of sets that can be processed in parallel.
 // Computed using - (register_width / (2 * 8 * sizeof(floating point)))
 #define NUM_SETS_C_S 1

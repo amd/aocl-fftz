@@ -15,47 +15,6 @@
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
 
-// In a single-threaded scenario, for the outer_dim_sol,
-// if the dims are regular strided (where strides are proportional to the prev
-// dim size), it is optimal to fuse those dims together and execute them as a
-// single dim, as opposed to recursive calls for each dim.
-// This function checks for such regular strided cases and returns the number of
-// dims that can be fused.
-INT32 get_fusable_dims(aoclfftz_solution_t *sol, INT32 dim_rank)
-{
-    INT32 fusable_dims = 1;
-
-    // do not club cases where in_stride != out_stride
-    if (sol->decomp_scheme->dims[0].in_stride !=
-        sol->decomp_scheme->dims[0].out_stride)
-    {
-        return fusable_dims;
-    }
-
-    // expected stride is the regular stride we obtain by n * stride of prev dim
-    INTP expected_stride = sol->decomp_scheme->dims[0].n *
-                           sol->decomp_scheme->dims[0].in_stride;
-    for (INT32 i = 1; i < dim_rank; i++)
-    {
-        if (sol->decomp_scheme->dims[i].in_stride !=
-            sol->decomp_scheme->dims[i].out_stride)
-        {
-            break;
-        }
-
-        INTP actual_stride = sol->decomp_scheme->dims[i].in_stride;
-        // we can no longer club
-        if (expected_stride != actual_stride)
-        {
-            break;
-        }
-        fusable_dims += 1;
-        expected_stride = expected_stride * sol->decomp_scheme->dims[i].n;
-    }
-
-    return fusable_dims;
-}
-
 INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");

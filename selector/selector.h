@@ -19,20 +19,11 @@
 
 //#define AOCLFFTZ_FIXED_SELECTOR_MODE
 #define AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_MODE
-//#define AOCLFFTZ_FIXED_SELECTOR_TRANS_DFT_MODE
-//#define AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_PLUS_TRANS_DFT_MODE
 //#define AOCLFFTZ_AUTO_SELECTOR_MODE
-
-/* !! Do not enable these macros for now !! */
-// #define PERFORM_INTER_STAGE_PERMUTE // Broken codepath, functional failure
-// #define DISABLE_OPTIMAL_BUFFERING_BATCHING
-// #define DISABLE_OPTIMAL_BUFFERING
 
 typedef enum {
     AOCLFFTZ_FIXED_SELECTOR = 0,                            // Fixed decision logic
     AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT,                 // Fixed decision logic + Fused Twiddle and DFT kernels
-    AOCLFFTZ_FIXED_SELECTOR_TRANS_DFT,                      // Fixed decision logic + Transpose operation before/after DFT
-    AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_PLUS_TRANS_DFT,  // Fixed decision logic + Fused Twiddle and DFT kernels + Transpose operation before/after DFT
     AOCLFFTZ_AUTO_SELECTOR,                                 // Auto tuner mode
     AOCLFFTZ_SELECTOR_MODELS                                // Total selector models
 } selector_model_t;
@@ -875,8 +866,6 @@ INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
                            aoclfftz_realhelper_t *realhelper);
 VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *sol);
 VOID setup_twiddle_buffer_real(aoclfftz_solution_t *sol);
-INT32 setup_dft_f_(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 setup_dft_d_(aoclfftz_selector_t *sel, kernel_t *kertab);
 VOID *setup_dft_f(aoclfftz_prob_desc_f *problem);
 VOID *setup_dft_d(aoclfftz_prob_desc_d *problem);
 VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem);

@@ -35,12 +35,7 @@ INT32 selector_transpose(aoclfftz_selector_t *sel)
         goto exit_transpose;
     }
 
-    // Find CPU feature flags that will be used by dynamic dispatcher
-    INT32 cpu_flags = setup_dynamic_dispatcher(
-            sel->solution->decomp_scheme->cntrl_params->opt_off,
-            sel->solution->decomp_scheme->cntrl_params->opt_level);
-
-    ret = setup_transpose_solver(sel->solution, cpu_flags);
+    ret = setup_transpose_solver(sel->solution);
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_transpose;
