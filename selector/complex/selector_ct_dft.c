@@ -55,10 +55,8 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_ct_dft;
     }
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                             sel->kernel_tables, 0 /*unused*/);
-    cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                               sel->kernel_tables, 0 /*unused*/);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
 
     if (cur_sel == NULL || cur_sel_m == NULL)
     {
@@ -96,7 +94,6 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     COPY_SOLUTION_OBJ(org_sol, sel->solution);
-    org_sol->dft_bufs->scratch_space = sel->scratch_space;
     org_sol->next_sol = NULL;
 
     // Flag to store whether the previous solution is selected
@@ -125,12 +122,10 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         // if previous solutions is selected
         if (is_previous_solution_selected)
         {
-            destroy_selector_without_scratch_space(cur_sel);
-            destroy_selector_without_scratch_space(cur_sel_m);
-            cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                     sel->kernel_tables, 0 /*unused*/);
-            cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                       sel->kernel_tables, 0 /*unused*/);
+            destroy_selector(cur_sel);
+            destroy_selector(cur_sel_m);
+            cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+            cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
             if (cur_sel == NULL || cur_sel_m == NULL)
             {
                 ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -239,7 +234,6 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 aoclfftz_solution_t **sel_next_sol = next_sol->next_sol;
                 COPY_SOLUTION_OBJ(next_sol, cur_sel->solution);
                 COPY_STRIDES(next_sol, cur_sel->solution);
-                next_sol->dft_bufs->scratch_space = sel->scratch_space;
 
                 // Restore the original next_sol after copy
                 next_sol->next_sol = sel_next_sol;
@@ -267,9 +261,6 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                     next_sol->next_sol[0]->dft_bufs->ct_buf_allocated = 1;
                 }
                 cur_sel_m->solution->dft_bufs->ct_buf_allocated = 0;
-
-                next_sol->next_sol[0]->dft_bufs->scratch_space =
-                        sel->scratch_space;
 
                 // Break the link from cur_sel and cur_sel_m
                 // it can be still accessed through sel object
@@ -307,9 +298,9 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
 exit_ct_dft:
-    destroy_selector_without_scratch_space(cur_sel);
-    destroy_selector_without_scratch_space(cur_sel_m);
-    destroy_solution(org_sol, 0);
+    destroy_selector(cur_sel);
+    destroy_selector(cur_sel_m);
+    destroy_solution(org_sol);
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
 

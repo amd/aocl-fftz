@@ -44,8 +44,7 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     // To hold the selector to perform FFT with extended length m
     aoclfftz_selector_t *next_sel = NULL;
-    next_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                              sel->kernel_tables, 0 /*unused*/);
+    next_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (next_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -84,7 +83,7 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     return SELECTOR_SUCCESS;
 
 exit_bluestein_dft:
-    destroy_selector_without_scratch_space(next_sel);
+    destroy_selector(next_sel);
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit with failure");
 
     return ret;

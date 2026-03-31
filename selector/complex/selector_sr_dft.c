@@ -53,12 +53,9 @@ INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     /* Allocate 3 sub-selectors for even, odd1, and odd3 parts */
     /* nthreads is set to 0 for all recursive SR sub-problems. */
-    cur_sel_even = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                  sel->kernel_tables, 0);
-    cur_sel_odd1 = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                  sel->kernel_tables, 0);
-    cur_sel_odd3 = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                  sel->kernel_tables, 0);
+    cur_sel_even = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel_odd1 = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel_odd3 = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
 
     if (cur_sel_even == NULL || cur_sel_odd1 == NULL || cur_sel_odd3 == NULL)
     {
@@ -149,7 +146,7 @@ INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     cur_sel_even = NULL;
     cur_sel_odd1 = NULL;
     cur_sel_odd3 = NULL;
-    destroy_solution(org_sol, 0);
+    destroy_solution(org_sol);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SELECTOR_SUCCESS;
@@ -163,14 +160,10 @@ exit_sr_dft:
         sel->solution->dft_bufs->sr->input_copy_size = 0;
     }
 
-    /*
-     * Sub-selectors share the parent's scratch_space, so use
-     * destroy_selector_without_scratch_space to avoid double-free.
-     */
-    destroy_selector_without_scratch_space(cur_sel_even);
-    destroy_selector_without_scratch_space(cur_sel_odd1);
-    destroy_selector_without_scratch_space(cur_sel_odd3);
-    destroy_solution(org_sol, 0);
+    destroy_selector(cur_sel_even);
+    destroy_selector(cur_sel_odd1);
+    destroy_selector(cur_sel_odd3);
+    destroy_solution(org_sol);
 
     return ret;
 }

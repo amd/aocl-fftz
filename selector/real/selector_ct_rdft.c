@@ -63,10 +63,8 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         goto exit_ct_dft;
     }
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                             sel->kernel_tables, 0 /*unused*/);
-    cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                               sel->kernel_tables, 0 /*unused*/);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (cur_sel == NULL || cur_sel_m == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -130,12 +128,10 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         // if previous solutions is selected
         if (is_previous_solution_selected)
         {
-            destroy_selector_without_scratch_space(cur_sel);
-            destroy_selector_without_scratch_space(cur_sel_m);
-            cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                     sel->kernel_tables, 0 /*unused*/);
-            cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                       sel->kernel_tables, 0 /*unused*/);
+            destroy_selector(cur_sel);
+            destroy_selector(cur_sel_m);
+            cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+            cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
             if (cur_sel == NULL || cur_sel_m == NULL)
             {
                 ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -267,9 +263,9 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     }
 
 exit_ct_dft:
-    destroy_selector_without_scratch_space(cur_sel);
-    destroy_selector_without_scratch_space(cur_sel_m);
-    destroy_solution(org_sol, 0);
+    destroy_selector(cur_sel);
+    destroy_selector(cur_sel_m);
+    destroy_solution(org_sol);
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
     return ret;

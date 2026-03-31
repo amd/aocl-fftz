@@ -178,7 +178,6 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->transpose->col_info = (aoclfftz_dim_t_64_){0};
         sol->dft_bufs->transpose->aux_mem->size = 0;
         sol->dft_bufs->transpose->aux_mem->data = NULL;
-        sol->dft_bufs->scratch_space = NULL;
         sol->dft_bufs->ct_buffer = NULL;
         sol->dft_bufs->ct_buf_real = NULL;
         sol->dft_bufs->ct_buf_imag = NULL;
@@ -186,7 +185,6 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->ct_buf_size = 0;
         sol->dft_bufs->num_ct_buf = 0;
         sol->dft_bufs->ct_buf_allocated = 0;
-        sol->dft_bufs->ct_buf_cnt = -1;
         sol->solver->kernel_c2c->count = 0;
         sol->solver->kernel_c2c_r->count = 0;
         sol->solver->kernel_r2hc->count = 0;
@@ -246,12 +244,8 @@ aoclfftz_solution_t **alloc_sol_array(INT32 n)
     return sol;
 }
 
-// Allocates a new scratch_space iff the argument passed is NULL.
-// Otherwise sets the selector's scratch_space to the passed argument.
 aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
-                                    VOID *scratch_space,
-                                    kernel_tables_t *kernel_tables,
-                                    INT32 nthreads)
+                                    kernel_tables_t *kernel_tables)
 {
     aoclfftz_selector_t *selector = NULL;
 
@@ -259,17 +253,8 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
                        sizeof(aoclfftz_selector_t));
     if (selector)
     {
-        selector->scratch_space = NULL;
         selector->kernel_tables = NULL;
 
-        if (scratch_space == NULL)
-        {
-            // Note: this allocation could fail, but that is ok. All functions
-            //       that use the scratch buffer are expected to check if the
-            //       buffer is valid (not-null)
-            ALLOC_ALIGN_UNINIT(scratch_space, UINT8,
-                               scratch_space_capacity * nthreads);
-        }
         selector->solution = alloc_solution(vec_rank, dim_rank);
         ALLOC_ALIGN_UNINIT(selector->cost_analysis, cost_analysis_t,
                            sizeof(cost_analysis_t));
@@ -289,8 +274,6 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
 
         selector->cost_analysis->ops = 0;
         selector->cost_analysis->time = 0;
-        selector->scratch_space = scratch_space;
-        selector->solution->dft_bufs->scratch_space = selector->scratch_space;
 
         if (kernel_tables != NULL && selector->kernel_tables != NULL)
         {
@@ -445,7 +428,7 @@ VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp)
     }
 }
 
-VOID destroy_solution(aoclfftz_solution_t* sol, UINT8 destroy_buffers)
+VOID destroy_solution(aoclfftz_solution_t* sol)
 {
     if (sol != NULL)
     {
@@ -485,9 +468,9 @@ VOID destroy_solution(aoclfftz_solution_t* sol, UINT8 destroy_buffers)
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
         }
-        destroy_solution(sol->dft_bufs->nd_sol, 0);
-        destroy_solution(sol->dft_bufs->sr->odd1_sol, destroy_buffers);
-        destroy_solution(sol->dft_bufs->sr->odd3_sol, destroy_buffers);
+        destroy_solution(sol->dft_bufs->nd_sol);
+        destroy_solution(sol->dft_bufs->sr->odd1_sol);
+        destroy_solution(sol->dft_bufs->sr->odd3_sol);
         destroy_solutions(sol->next_sol, n_sols);
 
         FREE_ALIGN_ALLOCATED_MEM(sol);
@@ -542,11 +525,9 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
                     FREE_ALIGN_ALLOCATED_MEM(
                         cur_sol->dft_bufs->buffered->aux_buffer_2);
                 }
-                destroy_solution(cur_sol->dft_bufs->nd_sol, 0);
-                /* Pass destroy_buffers=1 consistently: destroy_solutions
-                 * is a full teardown path that always frees all buffers */
-                destroy_solution(cur_sol->dft_bufs->sr->odd1_sol, 1);
-                destroy_solution(cur_sol->dft_bufs->sr->odd3_sol, 1);
+                destroy_solution(cur_sol->dft_bufs->nd_sol);
+                destroy_solution(cur_sol->dft_bufs->sr->odd1_sol);
+                destroy_solution(cur_sol->dft_bufs->sr->odd3_sol);
 
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol);
             }
@@ -573,21 +554,9 @@ VOID destroy_selector(aoclfftz_selector_t *sel)
 {
     if (sel != NULL)
     {
-        UINT8 destroy_buffer = 1;
-        FREE_ALIGN_ALLOCATED_MEM(sel->scratch_space);
-        destroy_solution(sel->solution, destroy_buffer);
+        destroy_solution(sel->solution);
         destroy_selector_without_solution(sel);
     }
     return;
 }
 
-VOID destroy_selector_without_scratch_space(aoclfftz_selector_t *sel)
-{
-    if (sel != NULL)
-    {
-        UINT8 destroy_buffer = 0;
-        destroy_solution(sel->solution, destroy_buffer);
-        destroy_selector_without_solution(sel);
-    }
-    return;
-}

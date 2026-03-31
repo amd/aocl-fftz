@@ -47,8 +47,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     UINT32 selector_mode = GET_SELECTOR_MODE(decomp_scheme->flags);
     INT32 ret = SELECTOR_FAILURE;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                             sel->kernel_tables, 0 /*unused*/);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (cur_sel == NULL)
     {
         return SELECTOR_FAILURE;
@@ -155,7 +154,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         } // if (radix == n)
     } // End of FOR loop
 
-    destroy_selector_without_scratch_space(cur_sel);
+    destroy_selector(cur_sel);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 

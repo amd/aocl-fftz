@@ -36,10 +36,6 @@ typedef enum
     SELECTOR_SUCCESS // Successful operation
 } aoclfftz_selector_status;
 
-// Note: The choice of size (16 KB) is completely arbitrary and can be
-//       experimented with.
-static const INTP scratch_space_capacity = 16 * 1024; // 16 KB
-
 // Selector data structure that is used to hold the solution and cost analysis
 // at each decomposition level for the associated sub-problem
 typedef struct aoclfftz_selector
@@ -47,9 +43,6 @@ typedef struct aoclfftz_selector
     aoclfftz_solution_t *solution;
     execute_ execute;
     cost_analysis_t *cost_analysis;
-
-    // A global buffer to help with transposition of twiddle multiplied elements
-    void* scratch_space;
     kernel_tables_t *kernel_tables;
 } aoclfftz_selector_t;
 
@@ -76,7 +69,7 @@ typedef struct aoclfftz_selector
 {                                                                              \
     sel_obj->solution->decomp_scheme->vec_rank = problem->vec_rank;            \
     sel_obj->solution->decomp_scheme->dim_rank = dim_rank;                     \
-    UINT32 cnt, idx = 0;                                                       \
+    INT32 cnt, idx = 0;                                                        \
     for (cnt = 0; cnt < problem->dim_rank; cnt++)                              \
     {                                                                          \
         if (problem->dims[cnt].n != 1)                                         \
@@ -142,7 +135,7 @@ typedef struct aoclfftz_selector
 {                                                                              \
     to_decomp_scheme->vec_rank = from_decomp_scheme->vec_rank;                 \
     to_decomp_scheme->dim_rank = from_decomp_scheme->dim_rank;                 \
-    UINT32 cnt, idx = 0;                                                       \
+    INT32 cnt, idx = 0;                                                        \
     for (cnt = 0; cnt < from_decomp_scheme->dim_rank; cnt++)                   \
     {                                                                          \
         if (from_decomp_scheme->dims[cnt].n != 1)                              \
@@ -482,7 +475,7 @@ typedef struct aoclfftz_selector
 #define COPY_SOLUTION_OBJ_OUT_P(to_sol_obj, from_sol_obj)                      \
 {                                                                              \
     COPY_SOLUTION_OBJ(to_sol_obj, from_sol_obj)                                \
-    UINT32 cnt;                                                                \
+    INT32 cnt;                                                                 \
     for (cnt = 0; cnt < to_sol_obj->decomp_scheme->dim_rank; cnt++)            \
     {                                                                          \
         to_sol_obj->decomp_scheme->dims[cnt].n =                               \

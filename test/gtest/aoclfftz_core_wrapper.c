@@ -2037,11 +2037,9 @@ aoclfftz_solution_t *alloc_solution_wrapper(INT32 vec_rank, INT32 dim_rank)
     return alloc_solution(vec_rank, dim_rank);
 }
 aoclfftz_selector_t *alloc_selector_wrapper(INT32 vec_rank, INT32 dim_rank,
-                                            VOID *scratch_space,
                                             kernel_tables_t *kernel_tables)
 {
-    return alloc_selector(vec_rank, dim_rank, scratch_space, kernel_tables,
-                          0 /*unused*/);
+    return alloc_selector(vec_rank, dim_rank, kernel_tables);
 }
 VOID *alloc_twiddle_buffer_wrapper(INTP size, UINT32 dt_prec)
 {
@@ -2054,7 +2052,7 @@ VOID destroy_selector_wrapper(aoclfftz_selector_t *sel)
 }
 VOID destroy_solution_wrapper(aoclfftz_solution_t *sol)
 {
-    destroy_solution(sol, 1);
+    destroy_solution(sol);
 }
 VOID destroy_decomp_scheme_wrapper(aoclfftz_decomp_scheme_t *decomp_scheme)
 {

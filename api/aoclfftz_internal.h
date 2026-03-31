@@ -383,7 +383,6 @@ typedef struct aoclfftz_dft_bufs
     aoclfftz_transpose_t* transpose;
     aoclfftz_solution_t* nd_sol; // may hold one of the solutions of ND
     aoclfftz_sr_t* sr; // split-radix solver specific data (sub-solutions + buffers)
-    VOID* scratch_space; // scratch space for transpose operation
     VOID *ct_buffer; // auxiliary buffer for CT problems
     VOID *ct_buf_real; // real part of ct_buffer
     VOID *ct_buf_imag; // imaginary part of ct_buffer
@@ -399,9 +398,6 @@ typedef struct aoclfftz_dft_bufs
     UINT32 ct_buf_allocated; // to know that the solution originally allocated
                              // the buffer and is responsible for freeing it in
                              // the end.
-    INT32 ct_buf_cnt;        // number of ct_buf slots consumed by this
-                             // node's subtree; set by cnt_ct_buffers()
-                             // before post_process_solution(). -1 if unset.
 } aoclfftz_dft_bufs_t;
 /////////////////////////// BUFS RELATED : END ////////////////////////////////
 

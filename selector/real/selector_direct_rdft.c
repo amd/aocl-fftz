@@ -48,8 +48,7 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     kernel_t *kernel_r2hc = NULL;
     kernel_t *kernel_r2hcf = NULL;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                             sel->kernel_tables, 0 /*unused*/);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (cur_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -178,7 +177,7 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         } // if (radix == n)
     } // End of FOR loop
 
-    destroy_selector_without_scratch_space(cur_sel);
+    destroy_selector(cur_sel);
 
 exit_direct_rdft:
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");

@@ -39,11 +39,9 @@ INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         sel->solution->decomp_scheme->cntrl_params->measure_stats;
     INT32 ret = SELECTOR_FAILURE;
 
-    real_dim_sol = alloc_selector(dim_rank - 1, 1, sel->scratch_space,
-                                  sel->kernel_tables, 0 /*unused*/);
+    real_dim_sol = alloc_selector(dim_rank - 1, 1, sel->kernel_tables);
 
-    complex_dims_sol = alloc_selector(1, dim_rank - 1, sel->scratch_space,
-                                      sel->kernel_tables, 0 /*unused*/);
+    complex_dims_sol = alloc_selector(1, dim_rank - 1, sel->kernel_tables);
 
     if (complex_dims_sol == NULL || real_dim_sol == NULL)
     {
@@ -94,8 +92,8 @@ INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     return SELECTOR_SUCCESS;
 
 exit_nd_dft:
-    destroy_selector_without_scratch_space(real_dim_sol);
-    destroy_selector_without_scratch_space(complex_dims_sol);
+    destroy_selector(real_dim_sol);
+    destroy_selector(complex_dims_sol);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return ret;
