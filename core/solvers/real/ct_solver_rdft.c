@@ -9,6 +9,7 @@
  *  the solver.
  *
  *  @author Srirammaswamy Srinivasan
+ *  @author S. Biplab Raut
  */
 
 #include "core/common/memory_manager.h"
@@ -45,6 +46,32 @@ FFTZ_INT32 setup_real_ct_solver(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
+/**
+ * Recursive Real FFT solution tree (no SWAP):
+ *   CT -> next_sol[0] = radix_r (Direct, stage 0, R2HC/R2HCF real stage)
+ *      -> radix_r->next_sol[0] = radix_m (Direct C2C combine, or nested CT)
+ *
+ * PARTIAL_RECURSION: CT delegates to next_sol[0] = radix_r, which then
+ *   chains to radix_m via HAS_NEXT inside the Direct solver. Each Direct
+ *   solver handles its own R2HC/R2HCF/C2C kernels and the twiddle
+ *   multiplication internally.
+ *
+ * TRUE_RECURSION (default, SELECT_REAL_FFT_EXECUTION_ORDER=TRUE_RECURSION): the CT solver
+ *   explicitly orchestrates its sub-problems, mirroring the Complex CT
+ *   solver (core/solvers/complex/ct_solver_dft.c). The Direct nodes become
+ *   pure leaves (they no longer chain via HAS_NEXT); the CT node drives the
+ *   traversal:
+ *       radix_r (recurse: real -> half-complex stage) -> radix_m (combine).
+ *   The twiddle stays fused inside radix_m's C2C kernel, exactly as the
+ *   Complex CT keeps the twiddle fused inside radix_r's C2C. The order is
+ *   the real-FFT mirror of the complex order: the real-reading (R2HC) stage
+ *   is radix_r (the CT child) and must execute before the C2C combine stage,
+ *   whereas the complex CT executes radix_m (grandchild) before radix_r.
+ *
+ * ctx (aoclfftz_mutable_ctx_t) is threaded through unchanged: the real leaf
+ * solvers route their buffers via decomp_scheme (set at setup), so ctx is
+ * simply forwarded to each sub-solver, matching the real CT delegation model.
+ */
 static FFTZ_INT32 execute_real_ct_solver(aoclfftz_solution_t *sol,
                                          aoclfftz_mutable_ctx_t *ctx)
 {
@@ -52,10 +79,25 @@ static FFTZ_INT32 execute_real_ct_solver(aoclfftz_solution_t *sol,
 
     FFTZ_INT32 ret = SOLVER_SUCCESS;
 
-    // Execute the next direct solution
-    // NOTE: The CT problem is executed in the execute_real_direct_solver,
-    // along with direct problems
-    ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0], ctx);
+    aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
+
+#if REAL_FFT_EXECUTION_ORDER == REAL_FFT_ORDER_TRUE_RECURSION
+    // Recurse into the radix-r (real-reading) sub-problem first.
+    ret = radix_r_sol->solver->execute_solver(radix_r_sol, ctx);
+    if (ret != SOLVER_SUCCESS)
+    {
+        return ret;
+    }
+
+    // Combine via the radix-m sub-problem (nested CT or Direct C2C leaf).
+    // The twiddle multiplication is fused inside radix_m's C2C kernel. A CT node
+    // is an r*m decomposition, so radix_m is always present (as in the complex
+    // CT solver, which likewise executes it unconditionally).
+    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
+    ret = radix_m_sol->solver->execute_solver(radix_m_sol, ctx);
+#else
+    ret = radix_r_sol->solver->execute_solver(radix_r_sol, ctx);
+#endif
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return ret;

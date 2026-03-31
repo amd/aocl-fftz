@@ -240,6 +240,11 @@ FFTZ_INT32 copy_strides_batched_ct_l1_direct(
 // sub-problem
 FFTZ_VOID copy_solution_obj_wo_dims(aoclfftz_solution_t *to_sol_obj,
                                aoclfftz_solution_t *from_sol_obj);
+// Reorder the Real FFT CT/Direct nodes for iterative execution only.
+//   Before swap: CT -> Direct -> CT -> Direct -> ... -> Direct
+//   After swap : Direct -> CT -> Direct -> ... -> CT -> Direct
+// In recursive mode the natural CT-first tree is kept (see prepare_and_setup_dft),
+// so this is invoked only when SELECT_REAL_FFT_EXECUTION_ORDER == ITERATIVE.
 FFTZ_VOID swap_real_ct_solutions(aoclfftz_selector_t *sel);
 FFTZ_INT32 register_solvers_kernels(kernel_tables_t *kernel_tables,
                                     FFTZ_INT32 dt, FFTZ_INT32 dir,

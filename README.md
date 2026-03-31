@@ -121,6 +121,7 @@ CODE_COVERAGE_FOR_ATG               |  Enables source code coverage instrumentat
 ENABLE_APP_INFO_LOGS                |  Enables info logging for FFT problems used by the application (Independent of AOCL_ENABLE_LOG, Disabled by default)
 ENABLE_INSTRUCTIONS_UPTO            |  Specifies maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)
 ENABLE_FMA                          |  Enables -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)
+SELECT_REAL_FFT_EXECUTION_ORDER     |  Selects the Real FFT Cooley-Tukey execution order (all modes are numerically identical): ITERATIVE (legacy Direct-first traversal with SWAP reordering), PARTIAL_RECURSION (recursive CT-first tree with Direct tail-chaining via HAS_NEXT), TRUE_RECURSION (CT-orchestrated recurse-then-combine mirroring the Complex FFT CT solver traversal). Default: TRUE_RECURSION
 ENABLE_MULTI_THREADING              |  Compiles library with multi-threading support using OpenMP (Disabled by default)
 ENABLE_STRICT_WARNINGS              |  Enables compiler flags to treat all warnings as errors (Enabled by default)
 FUZZTEST                            |  Enables Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)

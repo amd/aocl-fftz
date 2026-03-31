@@ -1104,7 +1104,15 @@ static inline FFTZ_INT32 prepare_and_setup_dft(aoclfftz_selector_t *sel_obj)
             realhelper->freq_factor = realhelper->problem_size;
         }
         ret = selector_driver_rdft_(sel_obj, realhelper);
+#if REAL_FFT_EXECUTION_ORDER == REAL_FFT_ORDER_ITERATIVE
+        // Iterative execution consumes a Direct-first chain
+        // (Buffered -> Direct -> CT -> Direct -> ...), so the selector's
+        // natural CT-first tree is reordered here. In recursive mode the tree
+        // is left unswapped (Buffered -> CT -> Direct(r) -> Direct(m) -> ...),
+        // exactly mirroring the complex CT solution tree consumed by the
+        // recursive execute path.
         swap_real_ct_solutions(sel_obj);
+#endif
         setup_twiddle_buffer_real(sel_obj->solution);
         FREE_ALIGN_ALLOCATED_MEM(realhelper);
     }
@@ -1647,34 +1655,86 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                 {
                     return;
                 }
-                FFTZ_INTP radix = curr->decomp_scheme->dims[0].n;
-                FFTZ_INTP num_groups = NUM_RFFT_GROUPS(curr->solver);
-                FFTZ_INTP num_c2c_per_group =
-                    curr->solver->kernel_c2c->count / num_groups;
-                // The twiddle packing must match how execute_c2c_kernels()
-                // consumes it: the asymmetric branch (num_c2c_per_group >=
-                // num_groups) feeds sol->twiddle straight to the kernel and so
-                // needs the tile-packed (lmc == 1) layout; the non-asymmetric
-                // branch forces broadcast and walks the buffer (radix - 1)
-                // cpairs per column, i.e. the plain j-major (lmc == 0) layout.
-                FFTZ_INTP rw = (FFTZ_INTP)curr->solver->kernel_c2c->sets;
-                FFTZ_INTP lmc = (num_c2c_per_group >= num_groups) ? 1 : 0;
-                FFTZ_INTP tw_buf_size = (radix - 1) * num_c2c_per_group *
-                                        DATA_STRIDE;
-                // Allocate Twiddle buffer to store twiddle values for every
-                // radix-n c2c kernel of a group
-                FFTZ_VOID *TW = alloc_twiddle_buffer(tw_buf_size, dt_prec);
-                if (TW != NULL)
+                // In non-SWAP (recursive) tree, the first Direct after CT
+                // is stage-0 with no C2C kernels. Advance to the Direct
+                // that actually needs twiddle (has C2C kernels).
+                while (curr->solver->kernel_c2c->count == 0 && HAS_NEXT(curr))
                 {
-                    FFTZ_INTP p = (curr->decomp_scheme->vecs[0].n *
-                              curr->decomp_scheme->dims[0].n) /
-                             num_groups;
-                    compute_twiddle_buffer_real(TW, radix, num_c2c_per_group, p,
-                                                FORWARD_FFT_DIR, rw, lmc,
-                                                dt_prec);
-                    curr->twiddle->TW = TW;
-                    curr->twiddle->twiddle_buf_ptr = TW;
-                    curr->twiddle->load_multi_cols = lmc;
+                    curr->twiddle->TW = prev->twiddle->TW;
+                    prev = curr;
+                    curr = curr->next_sol[0];
+                }
+                // Allocate twiddle for curr and any subsequent Direct nodes
+                // with C2C kernels in the same chain. In the SWAP (iterative)
+                // tree, each such Direct is separated by a CT node and handled
+                // individually. In the non-SWAP (recursive) tree, the inner
+                // CT's Direct(r) and Direct(m) are chained consecutively and
+                // each needs its own twiddle buffer. The per-Direct packing
+                // uses amd-main's repacked layout (tile-packed vs j-major per
+                // load_multi_cols) so it matches execute_c2c_kernels().
+                FFTZ_UINT8 alloc_more = 1;
+                while (alloc_more)
+                {
+                    // Inherit prev's twiddle first so this Direct still has a
+                    // valid reference if the allocation below fails.
+                    curr->twiddle->TW = prev->twiddle->TW;
+                    // Allocation is intentionally unconditional here (no
+                    // kernel_c2c->count > 0 guard): a C2C-less Direct node that
+                    // reaches this loop still needs its own twiddle_buf_ptr/TW
+                    // assigned for the downstream routing contract (a zero-size
+                    // buffer is a valid no-op). Guarding it regresses real-FFT
+                    // accuracy.
+                    FFTZ_INTP radix = curr->decomp_scheme->dims[0].n;
+                    FFTZ_INTP num_groups = NUM_RFFT_GROUPS(curr->solver);
+                    // Defensive: a Direct node reaching this loop is expected to
+                    // expose at least one real group (r2hc/r2hcf). Guard against
+                    // num_groups == 0 to avoid a division-by-zero below; such a
+                    // degenerate node just keeps prev's inherited twiddle.
+                    if (num_groups > 0)
+                    {
+                        FFTZ_INTP num_c2c_per_group =
+                            curr->solver->kernel_c2c->count / num_groups;
+                        // The twiddle packing must match how
+                        // execute_c2c_kernels() consumes it: the asymmetric
+                        // branch (num_c2c_per_group >= num_groups) feeds
+                        // sol->twiddle straight to the kernel and needs the
+                        // tile-packed (lmc == 1) layout; the non-asymmetric
+                        // branch forces broadcast and walks the buffer
+                        // (radix - 1) cpairs per column, i.e. the plain
+                        // j-major (lmc == 0) layout.
+                        FFTZ_INTP rw = (FFTZ_INTP)curr->solver->kernel_c2c->sets;
+                        FFTZ_INTP lmc =
+                            (num_c2c_per_group >= num_groups) ? 1 : 0;
+                        FFTZ_INTP tw_buf_size = (radix - 1) * num_c2c_per_group *
+                                                DATA_STRIDE;
+                        FFTZ_VOID *TW =
+                            alloc_twiddle_buffer(tw_buf_size, dt_prec);
+                        if (TW != NULL)
+                        {
+                            FFTZ_INTP p = (curr->decomp_scheme->vecs[0].n *
+                                      curr->decomp_scheme->dims[0].n) /
+                                     num_groups;
+                            compute_twiddle_buffer_real(TW, radix,
+                                                        num_c2c_per_group, p,
+                                                        FORWARD_FFT_DIR, rw, lmc,
+                                                        dt_prec);
+                            curr->twiddle->TW = TW;
+                            curr->twiddle->twiddle_buf_ptr = TW;
+                            curr->twiddle->load_multi_cols = lmc;
+                        }
+                    }
+                    alloc_more = 0;
+                    if (HAS_NEXT(curr) &&
+                        (curr->next_sol[0]->solver->solver_type ==
+                             SOLVER_REAL_DIRECT ||
+                         curr->next_sol[0]->solver->solver_type ==
+                             SOLVER_REAL_MT_DIRECT) &&
+                        curr->next_sol[0]->solver->kernel_c2c->count > 0)
+                    {
+                        prev = curr;
+                        curr = curr->next_sol[0];
+                        alloc_more = 1;
+                    }
                 }
             }
             prev = curr;
@@ -1688,38 +1748,116 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
         {
             if (curr->solver->solver_type == SOLVER_REAL_CT &&
                 (prev->solver->solver_type == SOLVER_REAL_DIRECT ||
-                 prev->solver->solver_type == SOLVER_REAL_MT_DIRECT))
+                prev->solver->solver_type == SOLVER_REAL_MT_DIRECT) &&
+                prev->twiddle->twiddle_buf_ptr == NULL)
             {
+                // SWAP tree: Direct(r) → CT. Allocate twiddle for Direct(r).
+                // No kernel_c2c->count > 0 guard on prev: a C2C-less Direct
+                // still needs its twiddle_buf_ptr assigned (zero-size alloc is
+                // a valid no-op). Guarding it regresses C2R accuracy.
                 FFTZ_INTP radix = prev->decomp_scheme->dims[0].n;
                 FFTZ_INTP num_groups = NUM_RFFT_GROUPS(prev->solver);
-                // No. of c2c kernels per group that require twiddle computation
-                FFTZ_INTP num_c2c_per_group =
-                    prev->solver->kernel_c2c->count / num_groups;
-                // Layout must follow execute_c2c_kernels()'s branch: asymmetric
-                // -> tile-packed (lmc == 1); non-asymmetric -> j-major
-                // broadcast (lmc == 0). See the forward branch for details.
-                FFTZ_INTP rw = (FFTZ_INTP)prev->solver->kernel_c2c->sets;
-                FFTZ_INTP lmc = (num_c2c_per_group >= num_groups) ? 1 : 0;
-                FFTZ_INTP tw_buf_sz = (radix - 1) * num_c2c_per_group *
-                                        DATA_STRIDE;
-                // Allocate Twiddle buffer to store twiddle factors for every
-                // radix-n c2c kernel of a group
-                FFTZ_VOID *TW = alloc_twiddle_buffer(tw_buf_sz, dt_prec);
-                if (TW != NULL)
+                // Defensive: guard against num_groups == 0 to avoid a
+                // division-by-zero below (a Direct node is expected to expose
+                // at least one real r2hc/r2hcf group).
+                if (num_groups > 0)
                 {
-                    FFTZ_INTP p = (prev->decomp_scheme->vecs[0].n *
-                              prev->decomp_scheme->dims[0].n) /
-                             num_groups;
-                    compute_twiddle_buffer_real(TW, radix, num_c2c_per_group, p,
-                                                BACKWARD_FFT_DIR, rw, lmc,
-                                                dt_prec);
-                    prev->twiddle->TW = TW;
-                    prev->twiddle->twiddle_buf_ptr = TW;
-                    prev->twiddle->load_multi_cols = lmc;
+                    FFTZ_INTP num_c2c_per_group =
+                        prev->solver->kernel_c2c->count / num_groups;
+                    // Layout must follow execute_c2c_kernels()'s branch:
+                    // asymmetric -> tile-packed (lmc == 1); non-asymmetric ->
+                    // j-major broadcast (lmc == 0). See the forward branch.
+                    FFTZ_INTP rw = (FFTZ_INTP)prev->solver->kernel_c2c->sets;
+                    FFTZ_INTP lmc = (num_c2c_per_group >= num_groups) ? 1 : 0;
+                    FFTZ_INTP tw_buf_sz = (radix - 1) * num_c2c_per_group *
+                                            DATA_STRIDE;
+                    // Allocate Twiddle buffer to store twiddle factors for every
+                    // radix-n c2c kernel of a group
+                    FFTZ_VOID *TW = alloc_twiddle_buffer(tw_buf_sz, dt_prec);
+                    if (TW != NULL)
+                    {
+                        FFTZ_INTP p = (prev->decomp_scheme->vecs[0].n *
+                                  prev->decomp_scheme->dims[0].n) /
+                                 num_groups;
+                        compute_twiddle_buffer_real(TW, radix, num_c2c_per_group,
+                                                    p, BACKWARD_FFT_DIR, rw, lmc,
+                                                    dt_prec);
+                        prev->twiddle->TW = TW;
+                        prev->twiddle->twiddle_buf_ptr = TW;
+                        prev->twiddle->load_multi_cols = lmc;
+                    }
+                }
+                curr->twiddle->TW = prev->twiddle->TW;
+            }
+            else if (prev->solver->solver_type == SOLVER_REAL_CT &&
+                     (curr->solver->solver_type == SOLVER_REAL_DIRECT ||
+                      curr->solver->solver_type == SOLVER_REAL_MT_DIRECT) &&
+                     curr->solver->kernel_c2c->count > 0 &&
+                     curr->twiddle->twiddle_buf_ptr == NULL)
+            {
+                // Non-SWAP (recursive) tree: CT → Direct. Allocate twiddle
+                // for curr and any subsequent Direct nodes with C2C kernels
+                // (chained without intermediate CT nodes).
+                // The twiddle_buf_ptr == NULL guard prevents double-allocation
+                // in the SWAP tree, where an inner Direct between two CTs
+                // would otherwise match both this branch and the SWAP branch
+                // on successive iterations.
+                FFTZ_UINT8 alloc_more = 1;
+                while (alloc_more)
+                {
+                    // Inherit prev's twiddle first so this Direct still has a
+                    // valid reference if the allocation below fails.
+                    curr->twiddle->TW = prev->twiddle->TW;
+                    FFTZ_INTP radix = curr->decomp_scheme->dims[0].n;
+                    FFTZ_INTP num_groups = NUM_RFFT_GROUPS(curr->solver);
+                    // Defensive: guard against num_groups == 0 to avoid a
+                    // division-by-zero below (a Direct node is expected to
+                    // expose at least one real r2hc/r2hcf group).
+                    if (num_groups > 0)
+                    {
+                        FFTZ_INTP num_c2c_per_group =
+                            curr->solver->kernel_c2c->count / num_groups;
+                        // Repacked layout (tile-packed vs j-major per lmc),
+                        // matching execute_c2c_kernels(). See the forward branch.
+                        FFTZ_INTP rw = (FFTZ_INTP)curr->solver->kernel_c2c->sets;
+                        FFTZ_INTP lmc =
+                            (num_c2c_per_group >= num_groups) ? 1 : 0;
+                        FFTZ_INTP tw_buf_sz = (radix - 1) * num_c2c_per_group *
+                                              DATA_STRIDE;
+                        FFTZ_VOID *TW =
+                            alloc_twiddle_buffer(tw_buf_sz, dt_prec);
+                        if (TW != NULL)
+                        {
+                            FFTZ_INTP p = (curr->decomp_scheme->vecs[0].n *
+                                      curr->decomp_scheme->dims[0].n) /
+                                     num_groups;
+                            compute_twiddle_buffer_real(TW, radix,
+                                                        num_c2c_per_group, p,
+                                                        BACKWARD_FFT_DIR, rw, lmc,
+                                                        dt_prec);
+                            curr->twiddle->TW = TW;
+                            curr->twiddle->twiddle_buf_ptr = TW;
+                            curr->twiddle->load_multi_cols = lmc;
+                        }
+                    }
+                    alloc_more = 0;
+                    if (HAS_NEXT(curr) &&
+                        (curr->next_sol[0]->solver->solver_type ==
+                             SOLVER_REAL_DIRECT ||
+                         curr->next_sol[0]->solver->solver_type ==
+                             SOLVER_REAL_MT_DIRECT) &&
+                        curr->next_sol[0]->solver->kernel_c2c->count > 0)
+                    {
+                        prev = curr;
+                        curr = curr->next_sol[0];
+                        alloc_more = 1;
+                    }
                 }
             }
-            // Always inherit the parent's twiddle buffer reference.
-            curr->twiddle->TW = prev->twiddle->TW;
+            else
+            {
+                curr->twiddle->TW = prev->twiddle->TW;
+            }
             prev = curr;
         }
     }
@@ -1728,24 +1866,26 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
 
 #ifdef MULTI_THREADING
 
-/* Configures static aux_buffer_1/2 routing through BUFFERED -> DIRECT -> CT
- * chain. aux_buffer_1 and aux_buffer_2 are spaced by aux_buf_size_per_thread
+/* Configures static aux_buffer_1/2 routing through the buffered CT chain.
+ * aux_buffer_1 and aux_buffer_2 are spaced by aux_buf_size_per_thread
  * (64-byte aligned) so MT deep-copies get non-overlapping cache lines per
  * thread.
  *
- * Solver chain of CT problem after buffered sol
+ * Recursive (default) solver chain of a CT problem after the buffered sol,
+ * mirroring the complex CT tree (no swap applied):
+ * ... -> buffered -> CT -> direct -> [CT -> direct]* -> direct
+ *
+ * Iterative mode uses the Direct-first (swapped) chain instead:
  * ... -> buffered -> direct -> CT -> direct -> ... -> CT -> direct
  *
- * Here, the buffered solver will have in & out of the current batch
- * Buffered solver will change the input/output buffers of direct & CT
- * solution in the following way:
+ * Here, the buffered solver holds the in & out of the current batch. Only the
+ * Direct nodes consume/produce aux buffers (CT nodes are pass-through
+ * delegates). For a 3-level CT problem the Direct data flow is:
  *
- * buffered    [in -> out]
- * |--> direct   [in -> aux1]
- * |----> CT & Direct [aux1 -> aux2]
- * |----> CT & Direct [aux2 -> aux1]
- * |----> CT & Direct [aux1 -> out]
- * this example is for a 3 level CT problem
+ * buffered           [in -> out]
+ * |--> direct(r)       [in   -> aux2]
+ * |--> direct(mid)     [aux2 -> aux1]
+ * |--> direct(last)    [aux1 -> out]
  *
  * the input sol points to the first solution
  * move the sol pointer to buffered_solver and modify the input & output
@@ -1758,7 +1898,7 @@ static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
     if (sol == NULL)
     {
         AOCLFFTZ_ERROR("sol is NULL");
-        return SOLVER_FAILURE;
+        return SELECTOR_FAILURE;
     }
     FFTZ_INT32 dt_bytes = SOL_DT_SIZE(sol);
 
@@ -1771,7 +1911,7 @@ static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
         if (!cur_sol->next_sol || !cur_sol->next_sol[0])
         {
             AOCLFFTZ_ERROR("No REAL_BUFFERED solver found in chain");
-            return SOLVER_FAILURE;
+            return SELECTOR_FAILURE;
         }
         cur_sol = cur_sol->next_sol[0];
     }
@@ -1779,7 +1919,7 @@ static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
     if (cur_sol == NULL)
     {
         AOCLFFTZ_ERROR("No REAL_BUFFERED solver found in chain");
-        return SOLVER_FAILURE;
+        return SELECTOR_FAILURE;
     }
 
     aoclfftz_solution_t *buffered_sol = cur_sol;
@@ -1788,7 +1928,7 @@ static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
         buffered_sol->dft_bufs->buffered->aux_buffer_2 == NULL)
     {
         AOCLFFTZ_ERROR("REAL_BUFFERED aux buffers are not allocated");
-        return SOLVER_FAILURE;
+        return SELECTOR_FAILURE;
     }
 
     if (buffered_sol->dft_bufs->buffered->aux_buf_size_per_thread == 0)
@@ -1802,9 +1942,85 @@ static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
     FFTZ_VOID *aux_in = buffered_sol->dft_bufs->buffered->aux_buffer_1;
     FFTZ_VOID *aux_out = buffered_sol->dft_bufs->buffered->aux_buffer_2;
 
-    // Move to the first direct solution of CT problem
+    // Move to the first solution after buffered solver.
     cur_sol = buffered_sol->next_sol[0];
 
+#if REAL_FFT_EXECUTION_ORDER != REAL_FFT_ORDER_ITERATIVE
+    // Recursive (no-swap) tree from the selector, mirroring the complex CT tree:
+    //   Buffered -> CT -> Direct(radix_r, stage 0) -> Direct(radix_m)
+    //               -> [CT -> Direct]* -> Direct_last
+    //
+    // Only Direct nodes use the aux buffers; CT nodes are pass-through. Every
+    // Direct does aux_in -> aux_out and then swaps the two, so the pair keeps
+    // flipping stage to stage (that flip is why the first and last Direct look
+    // special below):
+    //   first Direct : problem_in -> aux_out    (in comes per batch from Buffered)
+    //   middle Direct: aux_in     -> aux_out
+    //   last Direct  : aux_in     -> problem_out (out set per batch by Buffered)
+    if (cur_sol == NULL)
+    {
+        AOCLFFTZ_ERROR("Invalid solution chain: first node not found");
+        return SELECTOR_FAILURE;
+    }
+
+    FFTZ_UINT8 first_direct_seen = 0;
+    aoclfftz_solution_t *last_direct = NULL;
+
+    while (cur_sol != NULL)
+    {
+        FFTZ_UINT8 is_direct =
+            (cur_sol->solver->solver_type == SOLVER_REAL_DIRECT ||
+             cur_sol->solver->solver_type == SOLVER_REAL_MT_DIRECT);
+        FFTZ_UINT8 is_last =
+            (cur_sol->next_sol == NULL || cur_sol->next_sol[0] == NULL);
+
+        if (is_direct && !first_direct_seen)
+        {
+            // Direct(radix_r, stage 0): input is the per-batch problem input
+            // (set by the buffered executor); output goes to aux_out.
+            cur_sol->decomp_scheme->out_real = aux_out;
+            cur_sol->decomp_scheme->out_imag = MOVE_ADDR(aux_out, dt_bytes);
+            SWAP_BUFFERS(aux_in, aux_out);
+            first_direct_seen = 1;
+            last_direct = cur_sol;
+        }
+        else if (is_direct && is_last)
+        {
+            // Final Direct: reads the current aux buffer; its output pointer
+            // is set per batch by the buffered executor.
+            cur_sol->decomp_scheme->in_real = aux_in;
+            cur_sol->decomp_scheme->in_imag = MOVE_ADDR(aux_in, dt_bytes);
+            last_direct = cur_sol;
+        }
+        else if (is_direct)
+        {
+            // Intermediate Direct: aux_in -> aux_out, then ping-pong.
+            cur_sol->decomp_scheme->in_real = aux_in;
+            cur_sol->decomp_scheme->in_imag = MOVE_ADDR(aux_in, dt_bytes);
+            cur_sol->decomp_scheme->out_real = aux_out;
+            cur_sol->decomp_scheme->out_imag = MOVE_ADDR(aux_out, dt_bytes);
+            SWAP_BUFFERS(aux_in, aux_out);
+            last_direct = cur_sol;
+        }
+        // CT nodes: pass-through.
+
+        if (is_last)
+        {
+            break;
+        }
+        cur_sol = cur_sol->next_sol[0];
+    }
+
+    if (last_direct == NULL)
+    {
+        AOCLFFTZ_ERROR("Invalid solution chain: no direct node found");
+        return SELECTOR_FAILURE;
+    }
+
+    buffered_sol->dft_bufs->buffered->out_ptr =
+                    &last_direct->decomp_scheme->out_real;
+#else
+    // Iterative tree: Buffered -> Direct -> CT -> ... -> CT -> Direct.
     // Update first direct solution's output to aux_out
     cur_sol->decomp_scheme->out_real = aux_out;
     cur_sol->decomp_scheme->out_imag = MOVE_ADDR(aux_out, dt_bytes);
@@ -1833,7 +2049,7 @@ static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
     if (cur_sol == NULL)
     {
         AOCLFFTZ_ERROR("Invalid solution chain: CT solution node not found");
-        return SOLVER_FAILURE;
+        return SELECTOR_FAILURE;
     }
 
     // Update last CT solution's input (output will be set per-batch)
@@ -1844,7 +2060,7 @@ static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
     if (cur_sol->next_sol == NULL || cur_sol->next_sol[0] == NULL)
     {
         AOCLFFTZ_ERROR("Invalid solution chain: direct solution node not found");
-        return SOLVER_FAILURE;
+        return SELECTOR_FAILURE;
     }
     cur_sol = cur_sol->next_sol[0];
     cur_sol->decomp_scheme->in_real = aux_in;
@@ -1854,9 +2070,10 @@ static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
     // This is used by buffered executor to update the final output location
     buffered_sol->dft_bufs->buffered->out_ptr =
                     &cur_sol->decomp_scheme->out_real;
+#endif
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
-    return SOLVER_SUCCESS;
+    return SELECTOR_SUCCESS;
 }
 
 /**
@@ -2058,7 +2275,7 @@ static aoclfftz_solution_t *deep_copy_real_solution_tree(
     if (src->solver->solver_type == SOLVER_REAL_BUFFERED)
     {
         aux_buff_idx++;
-        if (setup_buffered_chain_structure(dst) != SOLVER_SUCCESS)
+        if (setup_buffered_chain_structure(dst) != SELECTOR_SUCCESS)
         {
             ret = AOCLFFTZ_MEMORY_FAILURE;
             goto exit_deep_copy;

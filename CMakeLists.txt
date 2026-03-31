@@ -57,6 +57,8 @@ option(ENABLE_FMA "Enables -ffp-contract=fast (forces FMA generation). Required 
 option(ENABLE_MULTI_THREADING "Compiles library with multi-threading support using OpenMP (Disabled by default)" OFF)
 option(ENABLE_STRICT_WARNINGS "Enables compiler flags to treat all warnings as errors (Enabled by default)" ON)
 option(FUZZTEST "Enables Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)" OFF)
+set(SELECT_REAL_FFT_EXECUTION_ORDER "TRUE_RECURSION" CACHE STRING "Real FFT CT execution order: ITERATIVE (legacy Direct-first with SWAP), PARTIAL_RECURSION (recursive CT-first tree with Direct tail-chaining), TRUE_RECURSION (CT-orchestrated recurse-then-combine mirroring Complex FFT; default)")
+set_property(CACHE SELECT_REAL_FFT_EXECUTION_ORDER PROPERTY STRINGS "ITERATIVE" "PARTIAL_RECURSION" "TRUE_RECURSION")
 option(VALGRIND "Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)" OFF)
 if(WIN32)
     set(OpenMP_libomp_LIBRARY "C:/Program Files/LLVM/lib/libomp.lib" CACHE FILEPATH "Path to the custom OpenMP library")
@@ -267,6 +269,17 @@ endif()
 if(ENABLE_APP_INFO_LOGS)
     add_compile_definitions(ENABLE_APP_INFO_LOGS)
 endif()
+
+if(SELECT_REAL_FFT_EXECUTION_ORDER STREQUAL "ITERATIVE")
+    add_compile_definitions(REAL_FFT_EXECUTION_ORDER=0)
+elseif(SELECT_REAL_FFT_EXECUTION_ORDER STREQUAL "PARTIAL_RECURSION")
+    add_compile_definitions(REAL_FFT_EXECUTION_ORDER=1)
+elseif(SELECT_REAL_FFT_EXECUTION_ORDER STREQUAL "TRUE_RECURSION")
+    add_compile_definitions(REAL_FFT_EXECUTION_ORDER=2)
+else()
+    message(FATAL_ERROR "Invalid SELECT_REAL_FFT_EXECUTION_ORDER='${SELECT_REAL_FFT_EXECUTION_ORDER}'. Allowed values: ITERATIVE, PARTIAL_RECURSION, TRUE_RECURSION.")
+endif()
+message(STATUS "Real FFT execution order: ${SELECT_REAL_FFT_EXECUTION_ORDER}")
 
 # set library and sources
 # Set target name as aocl_fftz on Linux (shared and static) and on Windows use aocl_fftz_static for static build.

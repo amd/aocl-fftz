@@ -274,6 +274,15 @@ static FFTZ_INT32 execute_real_direct_solver(aoclfftz_solution_t *sol,
 
     execute_c2c_kernels(sol, in, out);
 
+#if REAL_FFT_EXECUTION_ORDER == REAL_FFT_ORDER_TRUE_RECURSION
+    // Recurse-then-combine mode: the CT solver owns tree traversal, so the
+    // Direct node behaves as a pure leaf (like the Complex Direct solver) and
+    // never chains to next_sol. Only the terminal leaf emits DC/Nyquist zeroing.
+    if (!HAS_NEXT(sol) && is_fwd)
+    {
+        set_zero_for_dc_and_nyquist(sol);
+    }
+#else
     if (HAS_NEXT(sol))
     {
         ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0], ctx);
@@ -282,6 +291,7 @@ static FFTZ_INT32 execute_real_direct_solver(aoclfftz_solution_t *sol,
     {
         set_zero_for_dc_and_nyquist(sol);
     }
+#endif
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return ret;

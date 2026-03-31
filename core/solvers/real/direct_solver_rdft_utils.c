@@ -371,23 +371,18 @@ FFTZ_INT32 allocate_and_setup_stride(aoclfftz_solution_t *sol,
 
 /** Update the in/out buffers of direct solution for CT problem
  *
- * solution from of CT problem after buffered sol
- * ... -> buffered -> direct -> CT -> direct -> ... -> CT -> direct
+ * This routes the single-thread aux_buffer_1/2 for each Direct node based on
+ * its CT decomposition stage (parity), independent of the node ordering in the
+ * chain. In recursive mode the chain mirrors the complex CT tree:
+ * ... -> buffered -> CT -> direct(r) -> [CT -> direct]* -> direct(last)
  *
- * Here, the buffered will have in & out of the current batch
+ * Here, the buffered holds the in & out of the current batch. The stage-parity
+ * assignment yields the following Direct data flow (3-level CT example):
  *
- * Buffered solver will change the input/output buffers of direct solution
- * in the following way:
- *
- * buffered    [in -> out]
- * |--> direct   [in -> aux1]
- * |----> CT
- * |----> direct   [aux1 -> aux2]
- * |------> CT
- * |------> direct   [aux2 -> aux1]
- * |--------> CT
- * |--------> direct   [aux1 -> out]
- * this example is for a 3 level CT problem
+ * buffered           [in -> out]
+ * |--> direct(r)       [in   -> aux2]   (stage 0: in = problem input)
+ * |--> direct(mid)     [aux2 -> aux1]   (stage 1)
+ * |--> direct(last)    [aux1 -> out]    (last stage: out = problem output)
  */
 FFTZ_VOID update_ct_buffers(aoclfftz_solution_t *sol,
                        aoclfftz_realhelper_t *realhelper)

@@ -28,6 +28,23 @@
 #define AOCLFFTZ_2_PI 6.2831853071795864769252867665590057683943388
 #define AOCLFFTZ_2_PIf 6.2831853071795864769252867665590057683943388f
 
+/*
+ * Real FFT Cooley-Tukey execution order (single source of truth). Selected by the
+ * SELECT_REAL_FFT_EXECUTION_ORDER CMake option, which maps to REAL_FFT_EXECUTION_ORDER:
+ *   ITERATIVE         (0): legacy iterative mode; Direct-first traversal with SWAP reordering.
+ *   PARTIAL_RECURSION (1): recursive CT-first tree; Direct nodes tail-chain via HAS_NEXT.
+ *   TRUE_RECURSION    (2): CT solver orchestrates recurse-then-combine (Direct = pure leaf),
+ *                          mirroring the Complex FFT CT solver traversal.
+ * All three modes are numerically identical; they differ only in execution traversal.
+ */
+#define REAL_FFT_ORDER_ITERATIVE 0
+#define REAL_FFT_ORDER_PARTIAL_RECURSION 1
+#define REAL_FFT_ORDER_TRUE_RECURSION 2
+
+#ifndef REAL_FFT_EXECUTION_ORDER
+#define REAL_FFT_EXECUTION_ORDER REAL_FFT_ORDER_TRUE_RECURSION
+#endif
+
 #define NUM_PRECISIONS 2 // Float, Double : Can be increased to add FP16 or FP8
 // 0, 1 reserved for FP8 & FP16
 #define DT_FLOAT 2
