@@ -42,7 +42,7 @@ cmake_minimum_required(VERSION 3.26.0)
 project(AOCL-FFTZ)
 message(STATUS "Building AOCL-FFTZ LIBRARY AND TEST SUITE")
 # Version used by pkg-config and CMake config
-set(FFTZ_VERSION "5.2.2")
+set(FFTZ_VERSION "5.3.0")
 
 string(TIMESTAMP TODAY "%Y%m%d")
 add_compile_definitions(AOCL_BUILD_VERSION="Build ${TODAY}")
@@ -590,7 +590,7 @@ endif()
 
 # Add OpenMP to Libs.private only (not Cflags/Libs). If user set a custom lib path, use that
 # so downstream links the same runtime we did, and add -fopenmp so pkg-config --static
-# consumers get a complete link line. Otherwise use what FindOpenMP selected so 
+# consumers get a complete link line. Otherwise use what FindOpenMP selected so
 # -lomp vs -lgomp matches the actual link interface.
 if(ENABLE_MULTI_THREADING)
     if(NOT WIN32)
