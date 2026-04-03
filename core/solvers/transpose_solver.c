@@ -122,6 +122,13 @@ INT32 setup_transpose_solver(aoclfftz_solution_t *sol)
             transpose->row_info.n * transpose->col_info.n;
         ALLOC_ALIGN_UNINIT(transpose->aux_mem->data, UINT8,
                            transpose->aux_mem->size);
+        if (transpose->aux_mem->data == NULL)
+        {
+            AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit (failure) : "
+                                                    "aux_mem allocation "
+                                                    "failed");
+            return AOCLFFTZ_MEMORY_FAILURE;
+        }
     }
 
     // Save the required kernel for the transpose operation

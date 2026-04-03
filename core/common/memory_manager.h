@@ -42,7 +42,7 @@ INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein,
                               INTP bs_buf_size, INT32 num_bs_buf);
 aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank);
 aoclfftz_solution_t **alloc_sol_array(INT32 n);
-VOID alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix);
+INT32 alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix);
 INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides, INTP radix,
                                    INTP in_stride, INTP out_stride);
 
@@ -50,7 +50,7 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
                                     kernel_tables_t *kernel_tables);
 
 VOID *alloc_twiddle_buffer(UINTP size, UINT32 dt_prec);
-VOID alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr);
+INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr);
 
 VOID destroy_selector(aoclfftz_selector_t *sel);
 VOID destroy_selector_without_solution(aoclfftz_selector_t *sel);

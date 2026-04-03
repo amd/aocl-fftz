@@ -71,7 +71,7 @@ VOID set_zero_for_dc_and_nyquist(aoclfftz_solution_t *sol);
 
 VOID set_kernel_count_in_each_group(aoclfftz_solution_t *sol,
                              aoclfftz_realhelper_t *realhelper);
-VOID allocate_and_setup_stride(aoclfftz_solution_t *sol,
+INT32 allocate_and_setup_stride(aoclfftz_solution_t *sol,
                                aoclfftz_realhelper_t realhelper);
 VOID update_ct_buffers(aoclfftz_solution_t *sol,
                        aoclfftz_realhelper_t *realhelper);

@@ -45,10 +45,22 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
         {
             ALLOC_ALIGN_INIT(sol->dft_bufs->buffered, aoclfftz_buffered_t,
                              sizeof(aoclfftz_buffered_t));
+            if (sol->dft_bufs->buffered == NULL)
+            {
+                AOCLFFTZ_ERROR("allocate buffered struct failed: %s",
+                               get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+                return AOCLFFTZ_MEMORY_FAILURE;
+            }
         }
         FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
         ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_1, VOID,
             sol->decomp_scheme->outer_buf_cnt * padded_aux_buf_size);
+        if (sol->dft_bufs->buffered->aux_buffer_1 == NULL)
+        {
+            AOCLFFTZ_ERROR("allocate aux buffer failed: %s",
+                           get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+            return AOCLFFTZ_MEMORY_FAILURE;
+        }
         sol->dft_bufs->buffered->aux_buf_size_per_thread = padded_aux_buf_size;
     }
     else

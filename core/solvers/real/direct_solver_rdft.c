@@ -42,7 +42,11 @@ INT32 setup_real_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
     set_kernel_count_in_each_group(sol, realhelper);
 
-    allocate_and_setup_stride(sol, *realhelper);
+    status = allocate_and_setup_stride(sol, *realhelper);
+    if (status != SOLVER_SUCCESS)
+    {
+        return status;
+    }
 
     update_ct_buffers(sol, realhelper);
 

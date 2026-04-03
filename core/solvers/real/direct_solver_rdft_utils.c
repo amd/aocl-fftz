@@ -256,7 +256,7 @@ static inline VOID set_complex_format(aoclfftz_realhelper_t realhelper,
 }
 
 // Configure stride arrays for R2HC kernels
-static inline VOID setup_r2hc_stride_arrays(aoclfftz_solution_t *sol,
+static inline INT32 setup_r2hc_stride_arrays(aoclfftz_solution_t *sol,
                                             aoclfftz_realhelper_t realhelper,
                                             base_strides_t element_strides)
 {
@@ -274,17 +274,22 @@ static inline VOID setup_r2hc_stride_arrays(aoclfftz_solution_t *sol,
                 &input_adjust_to_full_complex, &output_adjust_to_full_complex,
                 &compute_half_complex_input, &compute_half_complex_output);
 
-    alloc_stride_arrays(sol->strides_grp->strides_r2hc, radix);
+    INT32 ret = alloc_stride_arrays(sol->strides_grp->strides_r2hc, radix);
+    if (ret != SOLVER_SUCCESS)
+    {
+        return ret;
+    }
     populate_stride_array(sol->strides_grp->strides_r2hc->in_strides,
                 element_strides.in_stride, radix, compute_half_complex_input,
                 input_adjust_to_full_complex);
     populate_stride_array(sol->strides_grp->strides_r2hc->out_strides,
                 element_strides.out_stride, radix, compute_half_complex_output,
                 output_adjust_to_full_complex);
+    return SOLVER_SUCCESS;
 }
 
 // Configure stride arrays for R2HCF kernels
-static inline VOID setup_r2hcf_stride_arrays(aoclfftz_solution_t *sol,
+static inline INT32 setup_r2hcf_stride_arrays(aoclfftz_solution_t *sol,
                                       aoclfftz_realhelper_t realhelper,
                                       base_strides_t element_strides)
 {
@@ -306,7 +311,11 @@ static inline VOID setup_r2hcf_stride_arrays(aoclfftz_solution_t *sol,
                 &input_adjust_to_full_complex, &output_adjust_to_full_complex,
                 &compute_half_complex_input, &compute_half_complex_output);
 
-    alloc_stride_arrays(sol->strides_grp->strides_r2hcf, radix * 2);
+    INT32 ret = alloc_stride_arrays(sol->strides_grp->strides_r2hcf, radix * 2);
+    if (ret != SOLVER_SUCCESS)
+    {
+        return ret;
+    }
     populate_stride_array(sol->strides_grp->strides_r2hcf->in_strides,
                 is_backward ? element_strides.in_stride / 2
                             : element_strides.in_stride,
@@ -322,10 +331,11 @@ static inline VOID setup_r2hcf_stride_arrays(aoclfftz_solution_t *sol,
                 sol->strides_grp->strides_r2hcf->out_strides :
                 sol->strides_grp->strides_r2hcf->in_strides,
                 radix, num_c2c_per_group * 2 + 1);
+    return SOLVER_SUCCESS;
 }
 
 // Configure stride arrays for complex-to-complex (C2C) kernels
-static inline VOID setup_c2c_stride_arrays(aoclfftz_solution_t *sol,
+static inline INT32 setup_c2c_stride_arrays(aoclfftz_solution_t *sol,
                                            aoclfftz_realhelper_t realhelper,
                                            base_strides_t element_strides,
                                            base_strides_t c2c_stride)
@@ -345,7 +355,11 @@ static inline VOID setup_c2c_stride_arrays(aoclfftz_solution_t *sol,
                                       : element_strides.out_stride * 2,
                           radix, 0, 0); /* half-complex flags are false */
 
-    alloc_stride_arrays(sol->strides_grp->strides_c2c, radix);
+    INT32 ret = alloc_stride_arrays(sol->strides_grp->strides_c2c, radix);
+    if (ret != SOLVER_SUCCESS)
+    {
+        return ret;
+    }
     memcpy(sol->strides_grp->strides_c2c->in_strides,
            sol->strides_grp->strides->in_strides, radix * sizeof(INTP));
     memcpy(sol->strides_grp->strides_c2c->out_strides,
@@ -360,10 +374,11 @@ static inline VOID setup_c2c_stride_arrays(aoclfftz_solution_t *sol,
                               : c2c_stride.out_stride;
     prepare_real_c2c_kernel_strides(target_stride_array, target_stride_array,
                                     radix, freq_factor, c2c_batch_stride);
+    return SOLVER_SUCCESS;
 }
 
 // Allocate and set up stride arrays for different kernel types
-VOID allocate_and_setup_stride(aoclfftz_solution_t *sol,
+INT32 allocate_and_setup_stride(aoclfftz_solution_t *sol,
                                aoclfftz_realhelper_t realhelper)
 {
     INTP radix = sol->decomp_scheme->dims[0].n;
@@ -385,27 +400,44 @@ VOID allocate_and_setup_stride(aoclfftz_solution_t *sol,
         set_base_strides(sol, &element_strides, &vector_strides);
     }
 
-    alloc_stride_arrays(sol->strides_grp->strides, radix);
+    INT32 ret = alloc_stride_arrays(sol->strides_grp->strides, radix);
+    if (ret != SOLVER_SUCCESS)
+    {
+        return ret;
+    }
     // Setup for C2C kernels if needed
     if (sol->solver->kernel_c2c->count != 0)
     {
-        setup_c2c_stride_arrays(sol, realhelper, element_strides, c2c_strides);
+        ret = setup_c2c_stride_arrays(sol, realhelper, element_strides, c2c_strides);
+        if (ret != SOLVER_SUCCESS)
+        {
+            return ret;
+        }
     }
 
     // Setup for R2HC kernels if needed
     if (sol->solver->kernel_r2hc->count != 0)
     {
-        setup_r2hc_stride_arrays(sol, realhelper, element_strides);
+        ret = setup_r2hc_stride_arrays(sol, realhelper, element_strides);
+        if (ret != SOLVER_SUCCESS)
+        {
+            return ret;
+        }
     }
 
     // Setup for R2HCF kernels if needed
     if (sol->solver->kernel_r2hcf->count != 0)
     {
-        setup_r2hcf_stride_arrays(sol, realhelper, element_strides);
+        ret = setup_r2hcf_stride_arrays(sol, realhelper, element_strides);
+        if (ret != SOLVER_SUCCESS)
+        {
+            return ret;
+        }
     }
 
     set_vector_strides_for_kernels(sol, vector_strides, c2c_strides,
                                    use_asymmetric_kernel);
+    return SOLVER_SUCCESS;
 }
 
 /** Update the in/out buffers of direct solution for CT problem

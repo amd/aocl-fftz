@@ -1,7 +1,7 @@
 // Copyright Advanced Micro Devices, Inc.
 // SPDX-License-Identifier: BSD-3-Clause
 
-/** @file memory_manager.h
+/** @file memory_manager.c
  *
  *  @brief Declares memory allocation and management functions of AOCL-FFTZ.
  *
@@ -244,13 +244,27 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
 
 // Allocates memory for the input and output stride arrays within the
 // provided strides structure if they are not already allocated.
-VOID alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix)
+INT32 alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix)
 {
     if (strides->in_strides == NULL)
     {
         ALLOC_ALIGN_UNINIT(strides->in_strides, INTP, radix * sizeof(INTP));
+        if (strides->in_strides == NULL)
+        {
+            AOCLFFTZ_ERROR("alloc_stride_arrays (in_strides) failed: %s",
+                           get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+            return AOCLFFTZ_MEMORY_FAILURE;
+        }
         ALLOC_ALIGN_UNINIT(strides->out_strides, INTP, radix * sizeof(INTP));
+        if (strides->out_strides == NULL)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(strides->in_strides);
+            AOCLFFTZ_ERROR("alloc_stride_arrays (out_strides) failed: %s",
+                           get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+            return AOCLFFTZ_MEMORY_FAILURE;
+        }
     }
+    return AOCLFFTZ_SUCCESS;
 }
 
 // Allocates (if not already allocated) and fills stride arrays with a
@@ -258,10 +272,10 @@ VOID alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix)
 INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides, INTP radix,
                                    INTP in_stride, INTP out_stride)
 {
-    alloc_stride_arrays(strides, radix);
-    if (strides->in_strides == NULL || strides->out_strides == NULL)
+    INT32 ret = alloc_stride_arrays(strides, radix);
+    if (ret != AOCLFFTZ_SUCCESS)
     {
-        return AOCLFFTZ_MEMORY_FAILURE;
+        return ret;
     }
 
     for (INTP i = 0; i < radix; i++)
@@ -269,7 +283,7 @@ INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides, INTP radix,
         strides->in_strides[i]  = i * in_stride * DATA_STRIDE;
         strides->out_strides[i] = i * out_stride * DATA_STRIDE;
     }
-    return SOLVER_SUCCESS;
+    return AOCLFFTZ_SUCCESS;
 }
 
 // Allocate n placeholders for next solution
@@ -280,6 +294,12 @@ aoclfftz_solution_t **alloc_sol_array(INT32 n)
     {
         ALLOC_ALIGN_UNINIT(sol, aoclfftz_solution_t*,
                         n * sizeof(aoclfftz_solution_t*));
+        if (sol == NULL)
+        {
+            AOCLFFTZ_ERROR("alloc_sol_array failed: %s",
+                           get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+            return NULL;
+        }
         for (INT32 i = 0; i < n; i++)
         {
             sol[i] = NULL;
@@ -413,11 +433,14 @@ VOID *alloc_twiddle_buffer(UINTP size, UINT32 dt_prec)
  * Allocates ct_buffer for complex NDIM (see ndim_solver_dft.c).
  * Uses num_ct_buf if set by parent (e.g. REAL_NDIM); otherwise one slot.
  */
-VOID alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
+INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
 {
+    AOCLFFTZ_LOG(INFO, global_logger_mode,
+                 "Allocating ct_buffer for complex NDIM");
+
     if (solution->dft_bufs->ct_buffer)
     {
-        return;
+        return AOCLFFTZ_SUCCESS;
     }
     // allocate buffer for the entire problem
     // this can be optimized by :
@@ -452,11 +475,18 @@ VOID alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
     buffer_size = GET_PADDED_SIZE(buffer_length * DATA_STRIDE * dt_bytes);
     ALLOC_ALIGN_UNINIT(*buffer_ptr, VOID,
             buffer_size * solution->dft_bufs->num_ct_buf * n_threads);
+    if (*buffer_ptr == NULL)
+    {
+        AOCLFFTZ_ERROR("alloc_ndim_buffer (ct_buffer) failed: %s",
+                       get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+        return AOCLFFTZ_MEMORY_FAILURE;
+    }
 
     solution->dft_bufs->ct_buf_size = buffer_size;
     solution->dft_bufs->ct_buf_real = *buffer_ptr;
     solution->dft_bufs->ct_buf_imag = MOVE_ADDR(*buffer_ptr, dt_bytes);
     solution->dft_bufs->ct_buf_allocated = 1;
+    return AOCLFFTZ_SUCCESS;
 }
 
 VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme)

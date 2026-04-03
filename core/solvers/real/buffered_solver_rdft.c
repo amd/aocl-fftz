@@ -34,6 +34,15 @@ INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
                        aux_buf_size * num_slots + dt_bytes); // FIXME: remove the "+ dt_bytes" padding
     ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_2, VOID,
                        aux_buf_size * num_slots + dt_bytes); // FIXME: remove the "+ dt_bytes" padding
+    if (sol->dft_bufs->buffered->aux_buffer_1 == NULL ||
+        sol->dft_bufs->buffered->aux_buffer_2 == NULL)
+    {
+        FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
+        FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
+        AOCLFFTZ_ERROR("setup_real_buffered_solver failed: %s",
+                       get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+        return AOCLFFTZ_MEMORY_FAILURE;
+    }
 
     sol->dft_bufs->buffered->aux_buf_size_per_thread = aux_buf_size;
     sol->dft_bufs->buffered->is_aux_buffer_allocated = 1;

@@ -20,10 +20,10 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    alloc_ndim_buffer(sol, &sol->dft_bufs->ct_buffer);
-    if (sol->dft_bufs->ct_buffer == NULL)
+    INT32 ret = alloc_ndim_buffer(sol, &sol->dft_bufs->ct_buffer);
+    if (ret != SOLVER_SUCCESS)
     {
-        AOCLFFTZ_ERROR("Failed to allocate buffer for ND solver");
+        AOCLFFTZ_ERROR("alloc_ndim_buffer failed: %s", get_status_string(ret));
         return SOLVER_FAILURE;
     }
 

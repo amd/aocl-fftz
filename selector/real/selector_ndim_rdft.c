@@ -87,6 +87,12 @@ INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         // capture stats
     }
     sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
+    if (sel->solution->next_sol == NULL)
+    {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
+        AOCLFFTZ_ERROR("alloc_sol_array failed: %s", get_status_string(ret));
+        goto exit_nd_dft;
+    }
     sel->solution->next_sol[0] = real_dim_sol->solution;
     sel->solution->dft_bufs->nd_sol = complex_dims_sol->solution;
 

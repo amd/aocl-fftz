@@ -239,6 +239,9 @@ static inline VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol, INT32 n
 
                 aoclfftz_strides_t *strides_c2c_per_thread;
                 // TODO: allocation happens per loop iteration > num_threads
+                // TODO: pre-allocate a single strides buffer for all threads outside
+                // the loop and give each thread its own chunk, so the allocation and
+                // its failure check happen once instead of per iteration
                 ALLOC_ALIGN_UNINIT(strides_c2c_per_thread, aoclfftz_strides_t,
                                    sizeof(aoclfftz_strides_t));
                 memcpy(strides_c2c_per_thread, sol->strides_grp->strides_c2c,
