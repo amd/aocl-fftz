@@ -234,7 +234,6 @@ typedef struct aoclfftz_decomp_scheme
     VOID *out_imag;
     aoclfftz_cntrl_params_t *cntrl_params;
     thread_info_t *thread_info;
-    UINT32 decomp_level;
     // Application side flag bits
     //   bit 0: (0) in-place / (1) out-of-place
     //   bit 1: (0) in-order / (1) out-of-order

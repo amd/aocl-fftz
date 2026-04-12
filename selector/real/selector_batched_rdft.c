@@ -58,7 +58,7 @@ INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 
     // Setup batched solver to find the next solution for a single set/unit
     // of the vector problem
-    if (n_threads <= 1)
+    if (n_threads == 1)
     {
         ret = setup_real_batched_solver(sel->solution, cur_sel->solution,
                                         realhelper);

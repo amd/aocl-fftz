@@ -36,8 +36,6 @@ VOID compute_twiddle_buffer_real(VOID *twiddle_buffer, INTP radix,
 VOID compute_sr_twiddle_buffer(VOID *twiddle_buffer, INTP n, UINT32 dt_prec);
 #endif
 
-INT32 twiddle_multiplier(aoclfftz_solution_t *sol);
-INT32 twiddle_multiplier_inplace(aoclfftz_solution_t *sol);
 INT32 twiddle_multiplier_for_real(aoclfftz_solution_t *sol, INTP freq_factor);
 #ifdef MULTI_THREADING
 INT32 twiddle_multiplier_mt_for_real(aoclfftz_solution_t *sol, INTP freq_factor,

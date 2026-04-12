@@ -27,7 +27,6 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     UINT8 precision = DT_PRECISION_FLAG(decomp_scheme->flags);
     UINT8 direction = FFT_DIR(decomp_scheme->flags);
     INT32 status = SOLVER_SUCCESS;
-    UINT8 num_sets = kernel->sets[precision - 2];
 
     if (strides->in_strides == NULL)
     {
@@ -60,6 +59,7 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         cost->time = 0;
         cost->ops = compute_kernel_cost(kernel, precision, direction, n);
     }
+#ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
     else
     {
         /** Auto tuner mode **/
@@ -73,6 +73,7 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         // execute the direct kernel
         INTP v_in_stride, v_out_stride, data_offset;
         UINT32 dt_bytes = SOL_DT_SIZE(sol);
+        UINT8 num_sets = kernel->sets[precision - 2];
         data_offset = DATA_STRIDE * dt_bytes * num_sets;
         v_in_stride = decomp_scheme->vecs[0].in_stride * data_offset;
         v_out_stride = decomp_scheme->vecs[0].out_stride * data_offset;
@@ -110,7 +111,7 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         cost->time = diffTime(clkTick, startTime, endTime);
         cost->ops = compute_kernel_cost(kernel, precision, direction, n);
     }
-
+#endif // AOCLFFTZ_AUTO_SELECTOR_MODE
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
     return status;

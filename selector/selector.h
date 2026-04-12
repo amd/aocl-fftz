@@ -17,15 +17,13 @@
 #include "core/solvers/solver.h"
 #include "core/executor.h"
 
-//#define AOCLFFTZ_FIXED_SELECTOR_MODE
-#define AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_MODE
+#define AOCLFFTZ_FIXED_SELECTOR_MODE
 //#define AOCLFFTZ_AUTO_SELECTOR_MODE
 
 typedef enum {
-    AOCLFFTZ_FIXED_SELECTOR = 0,                            // Fixed decision logic
-    AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT,                 // Fixed decision logic + Fused Twiddle and DFT kernels
-    AOCLFFTZ_AUTO_SELECTOR,                                 // Auto tuner mode
-    AOCLFFTZ_SELECTOR_MODELS                                // Total selector models
+    AOCLFFTZ_FIXED_SELECTOR, // Fixed decision logic + Fused Twiddle and DFT kernels
+    AOCLFFTZ_AUTO_SELECTOR,  // Auto tuner mode
+    AOCLFFTZ_SELECTOR_MODELS // Total selector models
 } selector_model_t;
 
 // Error return codes related to selector
@@ -344,8 +342,6 @@ typedef struct aoclfftz_selector
         from_sol_obj->solver->kernel_r2hcf->sets;                              \
     to_sol_obj->solver->kernel_r2hcf->count =                                  \
         from_sol_obj->solver->kernel_r2hcf->count;                             \
-    to_sol_obj->decomp_scheme->decomp_level =                                  \
-        from_sol_obj->decomp_scheme->decomp_level;                             \
     to_sol_obj->decomp_scheme->vec_rank =                                      \
         from_sol_obj->decomp_scheme->vec_rank;                                 \
     to_sol_obj->decomp_scheme->dim_rank =                                      \
@@ -547,8 +543,6 @@ typedef struct aoclfftz_selector
         from_sol_obj->solver->kernel_r2hcf->sets;                              \
     to_sol_obj->solver->kernel_r2hcf->count =                                  \
         from_sol_obj->solver->kernel_r2hcf->count;                             \
-    to_sol_obj->decomp_scheme->decomp_level =                                  \
-        from_sol_obj->decomp_scheme->decomp_level;                             \
     to_sol_obj->decomp_scheme->in_real =                                       \
         from_sol_obj->decomp_scheme->in_real;                                  \
     to_sol_obj->decomp_scheme->in_imag =                                       \

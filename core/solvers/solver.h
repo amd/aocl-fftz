@@ -32,7 +32,6 @@ typedef enum
     SOLVER_DIRECT = 1,
     SOLVER_DIRECT_BATCHED_COLMAJOR,
     SOLVER_CT,
-    SOLVER_CT_TWIDDLE,
     SOLVER_BATCHED_CT_L1_DIRECT,
     SOLVER_NDIM,
     SOLVER_BUFFERED,
@@ -131,7 +130,6 @@ INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
 dft_solver_ register_execute_direct_solver(VOID);
 dft_solver_ register_execute_direct_batched_colmajor_solver(VOID);
 dft_solver_ register_execute_ct_solver(VOID);
-dft_solver_ register_execute_ct_twiddle_solver(VOID);
 dft_solver_ register_execute_batched_ct_l1_direct_solver(VOID);
 dft_solver_ register_execute_buffered_solver(VOID);
 dft_solver_ register_execute_batched_solver(VOID);

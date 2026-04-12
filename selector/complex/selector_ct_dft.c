@@ -165,7 +165,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         aoclfftz_generic_solver_t* solver_obj = cur_sel->solution->solver;
         INT32 avl_threads =
             cur_sel->solution->decomp_scheme->thread_info->avl_threads;
-        if (avl_threads <= 1)
+        if (avl_threads == 1)
         {
             if (sel->solution->decomp_scheme->batched_vecs == NULL)
             {

@@ -111,7 +111,7 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                     kernel_r2hcf->sets[precision - 2];
 
 #ifdef MULTI_THREADING
-                if (num_threads <= 1)
+                if (num_threads == 1)
                 {
 #endif
                     // call direct solver
@@ -131,18 +131,9 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 {
                     if (selector_mode == AOCLFFTZ_FIXED_SELECTOR)
                     {
-                        if (!sel->cost_analysis->ops)
-                        {
-                            sel->cost_analysis->ops =
-                                cur_sel->cost_analysis->ops;
-                            sel->cost_analysis->time =
-                                cur_sel->cost_analysis->time;
-                            // copy solution object from cur_sel to sel
-                            COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
-                            COPY_STRIDES(sel->solution, cur_sel->solution);
-                        }
-                        if (cur_sel->cost_analysis->ops <
-                            sel->cost_analysis->ops)
+                        if (!sel->cost_analysis->ops
+                            || (cur_sel->cost_analysis->ops
+                                < sel->cost_analysis->ops))
                         {
                             sel->cost_analysis->ops =
                                 cur_sel->cost_analysis->ops;
@@ -153,6 +144,7 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                             COPY_STRIDES(sel->solution, cur_sel->solution);
                         }
                     }
+#ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
                     else
                     {
                         if (cur_sel->cost_analysis->time <
@@ -167,6 +159,7 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                             COPY_STRIDES(sel->solution, cur_sel->solution);
                         }
                     }
+#endif // AOCLFFTZ_AUTO_SELECTOR_MODE
                     if (stats_mode)
                     {
                         // capture stats

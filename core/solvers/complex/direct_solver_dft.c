@@ -61,6 +61,7 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         cost->time = 0;
         cost->ops = compute_kernel_cost(kernel, precision, direction, batch);
     }
+#ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
     else
     {
         /** Auto tuner mode **/
@@ -80,6 +81,7 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         cost->time = diffTime(clkTick, startTime, endTime);
         cost->ops = compute_kernel_cost(kernel, precision, direction, batch);
     }
+#endif // AOCLFFTZ_AUTO_SELECTOR_MODE
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 

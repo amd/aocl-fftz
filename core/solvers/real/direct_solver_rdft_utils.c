@@ -585,7 +585,9 @@ VOID compute_cost(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     if (GET_SELECTOR_MODE(sol->decomp_scheme->flags) != AOCLFFTZ_FIXED_SELECTOR)
+    {
         return;
+    }
 
     cost->time = 0;
     INT64 c2c_cost = 0;

@@ -11,7 +11,6 @@
  *  @author S. Biplab Raut
  */
 
-#include "core/common/twiddle.h"
 #include "core/common/memory_manager.h"
 
 
@@ -31,7 +30,6 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
     {
         SET_BUFFERED(sol_m->decomp_scheme->flags);
     }
-    sol_m->decomp_scheme->decomp_level = sol->decomp_scheme->decomp_level + 1;
     sol_m->decomp_scheme->dims[0].n = radix_m;
     sol_m->decomp_scheme->dims[0].in_stride =
         radix_r * sol->decomp_scheme->dims[0].in_stride;
@@ -60,57 +58,11 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
-	return SOLVER_SUCCESS;
+    return SOLVER_SUCCESS;
 }
 
 
 static INT32 execute_ct_solver(aoclfftz_solution_t *sol)
-{
-    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
-
-    INT32 status = SOLVER_SUCCESS;
-    aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
-    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
-    // update radix-m & radix-r solution data pointers
-    radix_m_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
-    radix_m_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
-    radix_m_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    radix_m_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-    radix_m_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
-
-    radix_r_sol->decomp_scheme->in_real  = sol->decomp_scheme->out_real;
-    radix_r_sol->decomp_scheme->in_imag  = sol->decomp_scheme->out_imag;
-    radix_r_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-    radix_r_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
-
-    // execute radix-m sub-problem
-    radix_m_sol->solver->execute_solver(radix_m_sol);
-
-    if (IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
-    {
-        status = twiddle_multiplier(radix_r_sol);
-    }
-    else
-    {
-        status = twiddle_multiplier_inplace(radix_r_sol);
-    }
-
-    if (status != SOLVER_SUCCESS)
-    {
-        return SOLVER_FAILURE;
-    }
-
-    // execute radix-r DFT
-    radix_r_sol->solver->execute_solver(radix_r_sol);
-
-    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
-
-    return status;
-}
-
-
-static INT32 execute_ct_twiddle_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -147,9 +99,4 @@ static INT32 execute_ct_twiddle_solver(aoclfftz_solution_t *sol)
 dft_solver_ register_execute_ct_solver(VOID)
 {
     return execute_ct_solver;
-}
-
-dft_solver_ register_execute_ct_twiddle_solver(VOID)
-{
-    return execute_ct_twiddle_solver;
 }

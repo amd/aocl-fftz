@@ -16,7 +16,6 @@
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
-#include "core/common/twiddle.h"
 
 INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                        aoclfftz_realhelper_t *realhelper)
@@ -184,10 +183,11 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
             goto exit_ct_dft;
         }
 
-        // TODO: if selector mode is AOCLFFTZ_AUTO_SELECTOR call twiddle multiplier
+        // TODO: if selector mode is AOCLFFTZ_AUTO_SELECTOR
+        // call twiddle multiplier
 
-        if (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
-            AOCLFFTZ_FIXED_SELECTOR)
+        if (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags)
+            == AOCLFFTZ_FIXED_SELECTOR)
         {
             if (sel->cost_analysis->ops == 0 ||
                 ((cur_sel->cost_analysis->ops + cur_sel_m->cost_analysis->ops) <
@@ -196,7 +196,8 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 INTP twiddle_ops_cnt = 0;
                 // For backward FFT, twiddles are computed separately via
                 // twiddle_multiplier_for_real() and not fused into kernels.
-                // Forward FFT uses fused twiddle kernels, so ops are already counted.
+                // Forward FFT uses fused twiddle kernels,
+                // so ops are already counted.
                 if (is_backward && 
                     (cur_sel_m->solution->solver->solver_type != 
                         SOLVER_REAL_DIRECT_TWIDDLE &&

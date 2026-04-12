@@ -17,7 +17,6 @@
 
 #include "api/aoclfftz_internal.h"
 #include "core/common/memory_manager.h"
-#include "core/common/twiddle.h"
 #include "core/kernels/kernel.h"
 #include "selector/selector.h"
 
@@ -42,8 +41,6 @@ INT32 setup_sr_solver(aoclfftz_solution_t *sol,
 
     /* Setup even part (N/2 sub-problem): indices 0, 2, 4, 6, ... */
     COPY_SOLUTION_OBJ(sol_even, sol);
-    sol_even->decomp_scheme->decomp_level =
-        sol->decomp_scheme->decomp_level + 1;
     sol_even->decomp_scheme->dims[0].n = n_even;
     sol_even->decomp_scheme->dims[0].in_stride =
         2 * sol->decomp_scheme->dims[0].in_stride;
@@ -54,8 +51,6 @@ INT32 setup_sr_solver(aoclfftz_solution_t *sol,
 
     /* Setup odd1 part (N/4 sub-problem): indices 1, 5, 9, 13, ... */
     COPY_SOLUTION_OBJ(sol_odd1, sol);
-    sol_odd1->decomp_scheme->decomp_level =
-        sol->decomp_scheme->decomp_level + 1;
     sol_odd1->decomp_scheme->dims[0].n = n_odd;
     sol_odd1->decomp_scheme->dims[0].in_stride =
         4 * sol->decomp_scheme->dims[0].in_stride;
@@ -65,8 +60,6 @@ INT32 setup_sr_solver(aoclfftz_solution_t *sol,
 
     /* Setup odd3 part (N/4 sub-problem): indices 3, 7, 11, 15, ... */
     COPY_SOLUTION_OBJ(sol_odd3, sol);
-    sol_odd3->decomp_scheme->decomp_level =
-        sol->decomp_scheme->decomp_level + 1;
     sol_odd3->decomp_scheme->dims[0].n = n_odd;
     sol_odd3->decomp_scheme->dims[0].in_stride =
         4 * sol->decomp_scheme->dims[0].in_stride;
