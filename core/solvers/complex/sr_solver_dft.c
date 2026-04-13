@@ -40,7 +40,12 @@ INT32 setup_sr_solver(aoclfftz_solution_t *sol,
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     /* Setup even part (N/2 sub-problem): indices 0, 2, 4, 6, ... */
-    COPY_SOLUTION_OBJ(sol_even, sol);
+    INT32 ret = copy_solution_obj(sol_even, sol);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        return ret;
+    }
     sol_even->decomp_scheme->dims[0].n = n_even;
     sol_even->decomp_scheme->dims[0].in_stride =
         2 * sol->decomp_scheme->dims[0].in_stride;
@@ -50,7 +55,12 @@ INT32 setup_sr_solver(aoclfftz_solution_t *sol,
     sol_even->decomp_scheme->vecs[0].n = 1;
 
     /* Setup odd1 part (N/4 sub-problem): indices 1, 5, 9, 13, ... */
-    COPY_SOLUTION_OBJ(sol_odd1, sol);
+    ret = copy_solution_obj(sol_odd1, sol);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        return ret;
+    }
     sol_odd1->decomp_scheme->dims[0].n = n_odd;
     sol_odd1->decomp_scheme->dims[0].in_stride =
         4 * sol->decomp_scheme->dims[0].in_stride;
@@ -59,7 +69,12 @@ INT32 setup_sr_solver(aoclfftz_solution_t *sol,
     sol_odd1->decomp_scheme->vecs[0].n = 1;
 
     /* Setup odd3 part (N/4 sub-problem): indices 3, 7, 11, 15, ... */
-    COPY_SOLUTION_OBJ(sol_odd3, sol);
+    ret = copy_solution_obj(sol_odd3, sol);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        return ret;
+    }
     sol_odd3->decomp_scheme->dims[0].n = n_odd;
     sol_odd3->decomp_scheme->dims[0].in_stride =
         4 * sol->decomp_scheme->dims[0].in_stride;

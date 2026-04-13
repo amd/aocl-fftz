@@ -21,13 +21,17 @@ INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
 
 
     // Setup next_sol with extended length m
-    COPY_SOLUTION_OBJ(next_sol, sol);
+    INT32 ret = copy_solution_obj(next_sol, sol);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        return ret;
+    }
     next_sol->decomp_scheme->dims[0].n = m;
     next_sol->decomp_scheme->dims[0].in_stride = 1;
     next_sol->decomp_scheme->dims[0].out_stride = 1;
 
     UINT32 dt_bytes = SOL_DT_SIZE(sol);
-    INT32 ret = SOLVER_SUCCESS;
     ret = alloc_bluestein_buffers(sol->dft_bufs->bluestein,
                                   m * DATA_STRIDE * dt_bytes);
 

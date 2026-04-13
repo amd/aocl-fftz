@@ -57,8 +57,8 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
     // Compute allocation size in bytes for ct_buffer and aux_buffer_1
     UINTP alloc_size = calculate_max_buffer_size(sol) * DATA_STRIDE * dt_bytes;
 
-    COPY_SOLUTION_OBJ_WO_DIMS(complex_dims_sol, sol);
-    COPY_SOLUTION_OBJ_WO_DIMS(real_dim_sol, sol);
+    copy_solution_obj_wo_dims(complex_dims_sol, sol);
+    copy_solution_obj_wo_dims(real_dim_sol, sol);
 
     // For inplace R2C/C2R problems and out-of-place C2R problems,
     // allocate an auxiliary buffer for intermediate storage.

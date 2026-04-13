@@ -23,7 +23,12 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
     // Setup radix-m sub-problem
     // out-of-order -> in-order for out-of-place problems
     // out-of-order -> out-of-order for inplace problems
-    COPY_SOLUTION_OBJ(sol_m, sol);
+    INT32 ret = copy_solution_obj(sol_m, sol);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        return ret;
+    }
     // Set buffered flag for radix-m sub-problem if the original problem is
     // in-place.
     if (sol->decomp_scheme->in_real == sol->decomp_scheme->out_real)
@@ -44,7 +49,13 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
 
     // Setup radix-r sub-problem
     // out-of-order -> out-of-order for inplace & out-of-place problems
-    COPY_SOLUTION_OBJ_OUT_P(sol_r, sol);
+    ret = copy_solution_obj_out_p(sol_r, sol);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj_out_p failed: %s",
+                       get_status_string(ret));
+        return ret;
+    }
     sol_r->decomp_scheme->dims[0].n = radix_r;
     sol_r->decomp_scheme->dims[0].in_stride =
         radix_m * sol->decomp_scheme->dims[0].out_stride;

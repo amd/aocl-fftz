@@ -43,7 +43,12 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     }
 
     // copy solution object from sel to cur_sel
-    COPY_SOLUTION_OBJ(cur_sel->solution, sel->solution);
+    ret = copy_solution_obj(cur_sel->solution, sel->solution);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        goto exit_batched_dft;
+    }
 
     // Setup buffered solver
     ret = setup_real_buffered_solver(sel->solution, realhelper);

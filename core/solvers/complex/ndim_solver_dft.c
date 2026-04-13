@@ -27,7 +27,7 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
         return SOLVER_FAILURE;
     }
 
-    COPY_SOLUTION_OBJ_WO_DIMS(n_minus1_sol, sol);
+    copy_solution_obj_wo_dims(n_minus1_sol, sol);
     INT32 dim_rank = sol->decomp_scheme->dim_rank;
 
     // NOTE: since "innermost" or "not-innermost" apply only to the leaf nodes
@@ -53,7 +53,7 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     n_minus1_sol->decomp_scheme->vecs[0].out_stride =
                     sol->decomp_scheme->dims[dim_rank - 1].out_stride;
 
-    COPY_SOLUTION_OBJ_WO_DIMS(outer_dim_sol, sol);
+    copy_solution_obj_wo_dims(outer_dim_sol, sol);
 
     SET_NOT_INNERMOST_DIM(outer_dim_sol->decomp_scheme->flags);
 

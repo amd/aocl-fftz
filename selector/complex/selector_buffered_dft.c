@@ -41,7 +41,12 @@ INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     // copy solution object from sel to cur_sel
-    COPY_SOLUTION_OBJ(cur_sel->solution, sel->solution);
+    ret = copy_solution_obj(cur_sel->solution, sel->solution);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        goto exit_buffered_dft;
+    }
     // Clear buffered flag inherited from sel. The flag applies only to
     // the current sel node; cur_sel's buffering is determined by selector logic
     UNSET_BUFFERED(cur_sel->solution->decomp_scheme->flags);

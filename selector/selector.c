@@ -728,9 +728,15 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
         alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (sel_models[AOCLFFTZ_FIXED_SELECTOR] != NULL)
     {
-        COPY_DECOMP_SCHEME(sel_models[AOCLFFTZ_FIXED_SELECTOR]
-                               ->solution->decomp_scheme,
-                           sel->solution->decomp_scheme);
+        ret = copy_decomp_scheme(
+            sel_models[AOCLFFTZ_FIXED_SELECTOR]->solution->decomp_scheme,
+            sel->solution->decomp_scheme);
+        if (ret != AOCLFFTZ_SUCCESS)
+        {
+            AOCLFFTZ_ERROR("copy_decomp_scheme failed: %s",
+                           get_status_string(ret));
+            return ret;
+        }
         SET_PRECISION(sel_models[AOCLFFTZ_FIXED_SELECTOR]
                           ->solution->decomp_scheme->flags,
                       DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags));
@@ -777,9 +783,15 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
         alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (sel_models[AOCLFFTZ_AUTO_SELECTOR] != NULL)
     {
-        COPY_DECOMP_SCHEME(
+        ret = copy_decomp_scheme(
             sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme,
             sel->solution->decomp_scheme);
+        if (ret != AOCLFFTZ_SUCCESS)
+        {
+            AOCLFFTZ_ERROR("copy_decomp_scheme failed: %s",
+                           get_status_string(ret));
+            return ret;
+        }
         SET_PRECISION(
             sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme->flags,
             DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags));
@@ -900,9 +912,15 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
         alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (sel_models[AOCLFFTZ_FIXED_SELECTOR] != NULL)
     {
-        COPY_DECOMP_SCHEME(sel_models[AOCLFFTZ_FIXED_SELECTOR]
-                               ->solution->decomp_scheme,
-                           sel->solution->decomp_scheme);
+        ret = copy_decomp_scheme(
+            sel_models[AOCLFFTZ_FIXED_SELECTOR]->solution->decomp_scheme,
+            sel->solution->decomp_scheme);
+        if (ret != AOCLFFTZ_SUCCESS)
+        {
+            AOCLFFTZ_ERROR("copy_decomp_scheme failed: %s",
+                           get_status_string(ret));
+            return ret;
+        }
         SET_PRECISION(sel_models[AOCLFFTZ_FIXED_SELECTOR]
                           ->solution->decomp_scheme->flags,
                       DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags));
@@ -944,9 +962,15 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
         alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (sel_models[AOCLFFTZ_AUTO_SELECTOR] != NULL)
     {
-        COPY_DECOMP_SCHEME(
+        ret = copy_decomp_scheme(
             sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme,
             sel->solution->decomp_scheme);
+        if (ret != AOCLFFTZ_SUCCESS)
+        {
+            AOCLFFTZ_ERROR("copy_decomp_scheme failed: %s",
+                           get_status_string(ret));
+            return ret;
+        }
         SET_PRECISION(
             sel_models[AOCLFFTZ_AUTO_SELECTOR]->solution->decomp_scheme->flags,
             DT_PRECISION_FLAG(sel->solution->decomp_scheme->flags));
@@ -1026,6 +1050,46 @@ INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
     return ret;
 }
 
+static inline INT32 prepare_and_setup_dft(aoclfftz_selector_t *sel_obj)
+{
+    INT32 ret;
+    sel_obj->execute = register_execute_dft();
+    if (IS_REAL(sel_obj->solution->decomp_scheme->flags))
+    {
+        aoclfftz_realhelper_t *realhelper;
+        ALLOC_ALIGN_UNINIT(realhelper, aoclfftz_realhelper_t,
+            sizeof(aoclfftz_realhelper_t));
+        if (realhelper == NULL)
+        {
+            return AOCLFFTZ_MEMORY_FAILURE;
+        }
+        realhelper->stage = 0;
+        realhelper->is_CT = 0;
+        realhelper->is_buffered_invoked = 0;
+        realhelper->num_aux_buf = 1;
+        realhelper->problem_size = sel_obj->solution->decomp_scheme->dims[0].n;
+        if (FFT_DIR(sel_obj->solution->decomp_scheme->flags) ==
+            FORWARD_FFT_DIR)
+        {
+            realhelper->freq_factor = 1;
+        }
+        else
+        {
+            realhelper->freq_factor = realhelper->problem_size;
+        }
+        ret = selector_driver_rdft_(sel_obj, realhelper);
+        swap_real_ct_solutions(sel_obj);
+        setup_twiddle_buffer_real(sel_obj->solution);
+        FREE_ALIGN_ALLOCATED_MEM(realhelper);
+    }
+    else
+    {
+        ret = selector_driver_dft_(sel_obj);
+        setup_twiddle_buffer_complex(sel_obj->solution);
+    }
+    return ret;
+}
+
 /* Forward declaration: only used under MT. */
 #ifdef MULTI_THREADING
 static INT32 post_process_solution(aoclfftz_solution_t *sol, INT32 *ct_slots);
@@ -1088,7 +1152,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     }
 
     // Select the best solution for the given input problem
-    PREPARE_AND_SETUP_DFT(sel_obj, ret);
+    ret = prepare_and_setup_dft(sel_obj);
     if (ret != SELECTOR_SUCCESS)
     {
         if (ret == SELECTOR_FAILURE)
@@ -1167,7 +1231,7 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     }
 
     // Select the best solution for the given input problem
-    PREPARE_AND_SETUP_DFT(sel_obj, ret);
+    ret = prepare_and_setup_dft(sel_obj);
     if (ret != SELECTOR_SUCCESS)
     {
         if (ret == SELECTOR_FAILURE)
@@ -1246,7 +1310,7 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     }
 
     // Select the best solution for the given input problem
-    PREPARE_AND_SETUP_DFT(sel_obj, ret);
+    ret = prepare_and_setup_dft(sel_obj);
     if (ret != SELECTOR_SUCCESS)
     {
         if (ret == SELECTOR_FAILURE)
@@ -1325,7 +1389,7 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     }
 
     // Select the best solution for the given input problem
-    PREPARE_AND_SETUP_DFT(sel_obj, ret);
+    ret = prepare_and_setup_dft(sel_obj);
     if (ret != SELECTOR_SUCCESS)
     {
         if (ret == SELECTOR_FAILURE)
@@ -1642,14 +1706,35 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
         AOCLFFTZ_ERROR("deep_copy_solution_tree failed, alloc_solution failed");
         goto exit_deep_copy;
     }
-    COPY_SOLUTION_OBJ(dst, src);
+    ret = copy_solution_obj(dst, src);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("deep_copy_solution_tree failed,"
+                       " copy_solution_obj failed: %s",
+                       get_status_string(ret));
+        goto exit_deep_copy;
+    }
     if (src->solver->solver_type == SOLVER_BATCHED_CT_L1_DIRECT)
     {
-        COPY_STRIDES_BATCHED_CT_L1_DIRECT(dst, src);
+        ret = copy_strides_batched_ct_l1_direct(dst, src);
+        if (ret != AOCLFFTZ_SUCCESS)
+        {
+            AOCLFFTZ_ERROR("deep_copy_solution_tree failed,"
+                           " copy_strides_batched_ct_l1_direct failed: %s",
+                           get_status_string(ret));
+            goto exit_deep_copy;
+        }
     }
     else
     {
-        COPY_STRIDES(dst, src);
+        ret = copy_strides(dst, src);
+        if (ret != AOCLFFTZ_SUCCESS)
+        {
+            AOCLFFTZ_ERROR("deep_copy_solution_tree failed,"
+                           " copy_strides failed: %s",
+                           get_status_string(ret));
+            goto exit_deep_copy;
+        }
     }
     dst->dft_bufs->nd_sol = NULL;
 

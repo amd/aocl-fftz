@@ -63,7 +63,12 @@ INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_sr_dft;
     }
 
-    COPY_SOLUTION_OBJ(org_sol, sel->solution);
+    ret = copy_solution_obj(org_sol, sel->solution);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        goto exit_sr_dft;
+    }
     org_sol->next_sol = NULL;
 
     /* Setup SR solver using sub-selector solutions */

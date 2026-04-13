@@ -98,7 +98,12 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         goto exit_ct_dft;
     }
 
-    COPY_SOLUTION_OBJ(org_sol, sel->solution);
+    ret = copy_solution_obj(org_sol, sel->solution);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        goto exit_ct_dft;
+    }
     org_sol->next_sol = NULL;
 
     // Flag to store whether the previous solution is selected
@@ -226,12 +231,38 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                     destroy_solutions(next_sol->next_sol[0]->next_sol, 1);
                 }
                 aoclfftz_solution_t **sel_next_sol = next_sol->next_sol;
-                COPY_SOLUTION_OBJ(next_sol, cur_sel->solution);
-                COPY_STRIDES(next_sol, cur_sel->solution);
+                ret = copy_solution_obj(next_sol, cur_sel->solution);
+                if (ret != AOCLFFTZ_SUCCESS)
+                {
+                    AOCLFFTZ_ERROR("copy_solution_obj failed: %s",
+                                   get_status_string(ret));
+                    goto exit_ct_dft;
+                }
+                ret = copy_strides(next_sol, cur_sel->solution);
+                if (ret != AOCLFFTZ_SUCCESS)
+                {
+                    AOCLFFTZ_ERROR("copy_strides failed: %s",
+                                   get_status_string(ret));
+                    goto exit_ct_dft;
+                }
                 // Restore the original next_sol after copy
                 next_sol->next_sol = sel_next_sol;
-                COPY_SOLUTION_OBJ(next_sol->next_sol[0], cur_sel_m->solution);
-                COPY_STRIDES(next_sol->next_sol[0], cur_sel_m->solution);
+                ret = copy_solution_obj(
+                    next_sol->next_sol[0], cur_sel_m->solution);
+                if (ret != AOCLFFTZ_SUCCESS)
+                {
+                    AOCLFFTZ_ERROR("copy_solution_obj failed: %s",
+                                   get_status_string(ret));
+                    goto exit_ct_dft;
+                }
+                ret = copy_strides(
+                    next_sol->next_sol[0], cur_sel_m->solution);
+                if (ret != AOCLFFTZ_SUCCESS)
+                {
+                    AOCLFFTZ_ERROR("copy_strides failed: %s",
+                                   get_status_string(ret));
+                    goto exit_ct_dft;
+                }
 
                 // Break the link from cur_sel and cur_sel_m
                 // it can be still accessed through sel object

@@ -58,7 +58,12 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     decomp_scheme->thread_info->n_threads = n_threads;
 
     // copy solution object from sel to cur_sel
-    COPY_SOLUTION_OBJ(cur_sel->solution, sel->solution);
+    ret = copy_solution_obj(cur_sel->solution, sel->solution);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        goto exit_direct_dft;
+    }
 
     // find a suitable kernel within the list of C kernels, and if one is found,
     // check for the existance of other implementations for the same radix
@@ -116,8 +121,22 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                             sel->cost_analysis->time =
                                 cur_sel->cost_analysis->time;
                             // copy solution object from cur_sel to sel
-                            COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
-                            COPY_STRIDES(sel->solution, cur_sel->solution);
+                            ret = copy_solution_obj(
+                                sel->solution, cur_sel->solution);
+                            if (ret != AOCLFFTZ_SUCCESS)
+                            {
+                                AOCLFFTZ_ERROR("copy_solution_obj failed: %s",
+                                               get_status_string(ret));
+                                goto exit_direct_dft;
+                            }
+                            ret = copy_strides(
+                                sel->solution, cur_sel->solution);
+                            if (ret != AOCLFFTZ_SUCCESS)
+                            {
+                                AOCLFFTZ_ERROR("copy_strides failed: %s",
+                                               get_status_string(ret));
+                                goto exit_direct_dft;
+                            }
                         }
                     }
 #ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
@@ -131,8 +150,22 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                             sel->cost_analysis->time =
                                 cur_sel->cost_analysis->time;
                             // copy solution object from cur_sel to sel
-                            COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
-                            COPY_STRIDES(sel->solution, cur_sel->solution);
+                            ret = copy_solution_obj(
+                                sel->solution, cur_sel->solution);
+                            if (ret != AOCLFFTZ_SUCCESS)
+                            {
+                                AOCLFFTZ_ERROR("copy_solution_obj failed: %s",
+                                               get_status_string(ret));
+                                goto exit_direct_dft;
+                            }
+                            ret = copy_strides(
+                                sel->solution, cur_sel->solution);
+                            if (ret != AOCLFFTZ_SUCCESS)
+                            {
+                                AOCLFFTZ_ERROR("copy_strides failed: %s",
+                                               get_status_string(ret));
+                                goto exit_direct_dft;
+                            }
                         }
                     }
 #endif // AOCLFFTZ_AUTO_SELECTOR_MODE
@@ -150,5 +183,12 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
-    return SELECTOR_SUCCESS;
+    return ret;
+
+exit_direct_dft:
+    destroy_selector(cur_sel);
+
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
+    return ret;
 }
