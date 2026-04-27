@@ -62,6 +62,11 @@ INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         goto exit_nd_dft;
     }
 
+    // alloc_ndim_buffer and setup_buffered_solver (in complex subtree)
+    // allocate ct_buffer for all outer threads.
+    complex_dims_sol->solution->dft_bufs->num_ct_buf =
+        sel->solution->decomp_scheme->outer_buf_cnt;
+
     // Invoke selector for solving (N-1)D complex sub-problem
     ret = selector_model_dft_(complex_dims_sol);
     if (ret != SELECTOR_SUCCESS)

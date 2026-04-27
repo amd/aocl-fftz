@@ -14,6 +14,33 @@
 #include "core/common/memory_manager.h"
 #include "api/aoclfftz_internal.h"
 
+/**
+ * Compute the maximum buffer size needed for an N-dimensional real FFT
+ * - For dimension 0:   (n0 / 2 + 1) * stride_0
+ * - For other dims:    (ni - 1) * stride_i
+ * Strides are chosen based on FFT direction (forward or backward).
+ */
+UINTP calculate_max_buffer_size(aoclfftz_solution_t *sol)
+{
+    UINTP max_size = 1;
+
+    // Compute max buffer size for ND real FFT using half-complex for first dim
+    // Uses output stride for forward, input stride for backward
+    UINT8 is_forward = (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR);
+    INTP dim0_size = sol->decomp_scheme->dims[0].n / 2 + 1;
+    INTP dim0_stride = is_forward ? sol->decomp_scheme->dims[0].out_stride
+                                  : sol->decomp_scheme->dims[0].in_stride;
+    max_size += ((dim0_size - 1) * dim0_stride);
+    for (INT32 i = 1; i < sol->decomp_scheme->dim_rank; i++)
+    {
+        INTP dimi_size = sol->decomp_scheme->dims[i].n;
+        INTP dimi_stride = is_forward ? sol->decomp_scheme->dims[i].out_stride
+                                      : sol->decomp_scheme->dims[i].in_stride;
+        max_size += ((dimi_size - 1) * dimi_stride);
+    }
+    return max_size;
+}
+
 aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank)
 {
     aoclfftz_decomp_scheme_t *decomp_scheme = NULL;
@@ -176,7 +203,9 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->bluestein->normalize = NULL;
         sol->dft_bufs->buffered->aux_buffer_1 = NULL;
         sol->dft_bufs->buffered->aux_buffer_2 = NULL;
+        sol->dft_bufs->buffered->is_aux_buffer_allocated = 0;
         sol->dft_bufs->buffered->out_ptr = NULL;
+        sol->decomp_scheme->outer_buf_cnt = 1;
         sol->dft_bufs->transpose->row_info = (aoclfftz_dim_t_64_){0};
         sol->dft_bufs->transpose->col_info = (aoclfftz_dim_t_64_){0};
         sol->dft_bufs->transpose->aux_mem->size = 0;
@@ -186,7 +215,7 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->ct_buf_imag = NULL;
         sol->dft_bufs->ct_buf_real_in = NULL;
         sol->dft_bufs->ct_buf_size = 0;
-        sol->dft_bufs->num_ct_buf = 0;
+        sol->dft_bufs->num_ct_buf = 1;
         sol->dft_bufs->ct_buf_allocated = 0;
         sol->solver->kernel_c2c->count = 0;
         sol->solver->kernel_c2c_r->count = 0;
@@ -221,7 +250,7 @@ INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides, INTP radix,
     {
         return AOCLFFTZ_MEMORY_FAILURE;
     }
-    
+
     for (INTP i = 0; i < radix; i++)
     {
         strides->in_strides[i]  = i * in_stride * DATA_STRIDE;
@@ -335,6 +364,10 @@ VOID *alloc_twiddle_buffer(UINTP size, UINT32 dt_prec)
     return buffer;
 }
 
+/**
+ * Allocates ct_buffer for complex NDIM (see ndim_solver_dft.c).
+ * Uses num_ct_buf if set by parent (e.g. REAL_NDIM); otherwise one slot.
+ */
 VOID alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
 {
     if (solution->dft_bufs->ct_buffer)
@@ -367,14 +400,14 @@ VOID alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
         }
     }
     INT32 n_threads = solution->decomp_scheme->thread_info->avl_threads;
-    INT32 num_buffer =
-        solution->dft_bufs->num_ct_buf > 0 ? solution->dft_bufs->num_ct_buf : 1;
     if (solution->decomp_scheme->dim_rank > 2)
     {
         buffer_length = buffer_length / min_dim_size;
     }
     buffer_size = buffer_length * DATA_STRIDE * dt_bytes;
-    ALLOC_ALIGN_UNINIT(*buffer_ptr, VOID, buffer_size * num_buffer * n_threads);
+    ALLOC_ALIGN_UNINIT(*buffer_ptr, VOID,
+                  buffer_size * solution->dft_bufs->num_ct_buf * n_threads);
+
     solution->dft_bufs->ct_buf_size = buffer_size;
     solution->dft_bufs->ct_buf_real = *buffer_ptr;
     solution->dft_bufs->ct_buf_imag = MOVE_ADDR(*buffer_ptr, dt_bytes);
@@ -465,15 +498,26 @@ VOID destroy_solution(aoclfftz_solution_t* sol)
         //    So free the aux_buffers only for real buffered solver.
         // 2. For in-place ND real problem, real ND solver will create
         //    aux_buffer, so free it.
+        // 3. SOLVER_REAL_NDIM root owns aux_buffer_1 for inplace/C2R cases,
+        //    so free it here (for non-batched Real NDIM problems).
         //
         // Clearing these buffers will happen only once (which will be from
         // destroy_handle).
-        if (solver_type == SOLVER_BUFFERED ||
-            solver_type == SOLVER_REAL_BUFFERED ||
-            solver_type == SOLVER_REAL_NDIM)
+        if (solver_type == SOLVER_REAL_BUFFERED &&
+            sol->dft_bufs->buffered->is_aux_buffer_allocated &&
+            (sol->dft_bufs->buffered->aux_buffer_1 ||
+             sol->dft_bufs->buffered->aux_buffer_2))
         {
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
+            sol->dft_bufs->buffered->aux_buffer_1 = NULL;
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
+            sol->dft_bufs->buffered->aux_buffer_2 = NULL;
+        }
+        else if (solver_type == SOLVER_REAL_NDIM && sol->dft_bufs->buffered &&
+                 sol->dft_bufs->buffered->aux_buffer_1)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
+            sol->dft_bufs->buffered->aux_buffer_1 = NULL;
         }
         destroy_solution(sol->dft_bufs->nd_sol);
         destroy_solution(sol->dft_bufs->sr->odd1_sol);
@@ -517,20 +561,29 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
 
                 FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->sr->input_copy);
 
-                // Buffered solver will create aux_buffers and the same address
-                // will be used in other solvers.
-                // So free the aux_buffers only for buffered solver.
-                //
-                // Clearing these buffers will happen only once (which will be
-                // from destroy_handle).
-                if ((i == 0) && (solver_type == SOLVER_BUFFERED ||
-                     solver_type == SOLVER_REAL_BUFFERED ||
-                     solver_type == SOLVER_REAL_NDIM))
+                if (i == 0 && solver_type == SOLVER_REAL_NDIM)
                 {
-                    FREE_ALIGN_ALLOCATED_MEM(
-                        cur_sol->dft_bufs->buffered->aux_buffer_1);
-                    FREE_ALIGN_ALLOCATED_MEM(
-                        cur_sol->dft_bufs->buffered->aux_buffer_2);
+                    // SOLVER_REAL_NDIM: Only has aux_buffer_1 for inplace/C2R cases
+                    if (cur_sol->dft_bufs && cur_sol->dft_bufs->buffered &&
+                        cur_sol->dft_bufs->buffered->aux_buffer_1)
+                    {
+                        FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_1);
+                        cur_sol->dft_bufs->buffered->aux_buffer_1 = NULL;
+                    }
+                }
+
+                // SOLVER_REAL_BUFFERED: Has both aux_buffer_1 and aux_buffer_2,
+                // only the node that allocated frees aux_buffer_1/2
+                else if (solver_type == SOLVER_REAL_BUFFERED &&
+                         cur_sol->dft_bufs->buffered &&
+                         cur_sol->dft_bufs->buffered->is_aux_buffer_allocated &&
+                         (cur_sol->dft_bufs->buffered->aux_buffer_1 ||
+                          cur_sol->dft_bufs->buffered->aux_buffer_2))
+                {
+                    FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_1);
+                    cur_sol->dft_bufs->buffered->aux_buffer_1 = NULL;
+                    FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_2);
+                    cur_sol->dft_bufs->buffered->aux_buffer_2 = NULL;
                 }
                 destroy_solution(cur_sol->dft_bufs->nd_sol);
                 destroy_solution(cur_sol->dft_bufs->sr->odd1_sol);

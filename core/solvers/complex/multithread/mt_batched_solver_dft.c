@@ -28,7 +28,7 @@ INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol, INT32 num_threads_used)
     // update the available threads accordingly so that the remaining threads
     // can be used by the child threads in the next level
     sol->decomp_scheme->thread_info->avl_threads /= num_threads_used;
-    sol->dft_bufs->num_ct_buf = num_threads_used;
+    sol->dft_bufs->num_ct_buf *= num_threads_used;
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 

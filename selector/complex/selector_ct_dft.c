@@ -255,7 +255,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 // Restore the original next_sol after copy
                 next_sol->next_sol = sel_next_sol;
 
-                // Free the ct_buffer if it is allocated in the solution of m
+                // Free the ct_buffer if next_sol->next_sol[0] owns it
                 if (next_sol->next_sol[0]->dft_bufs->ct_buf_allocated)
                 {
                     FREE_ALIGN_ALLOCATED_MEM(
