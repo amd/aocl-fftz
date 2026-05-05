@@ -197,7 +197,6 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->bluestein->B_out = NULL;
         sol->dft_bufs->bluestein->in = NULL;
         sol->dft_bufs->bluestein->out = NULL;
-        sol->dft_bufs->bluestein->is_chirp_fft_computed = 0;
         sol->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR]  = NULL;
         sol->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] = NULL;
         sol->dft_bufs->bluestein->normalize = NULL;

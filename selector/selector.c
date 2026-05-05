@@ -1063,6 +1063,12 @@ INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
     return ret;
 }
 
+#ifdef MULTI_THREADING
+static INT32 post_process_solution(aoclfftz_solution_t *sol, INT32 *ct_slots,
+                                   INT32 *aux_buf_slots);
+#endif
+static INT32 setup_chirp_fft(aoclfftz_solution_t *sol);
+
 static inline INT32 prepare_and_setup_dft(aoclfftz_selector_t *sel_obj)
 {
     INT32 ret;
@@ -1099,14 +1105,30 @@ static inline INT32 prepare_and_setup_dft(aoclfftz_selector_t *sel_obj)
         ret = selector_driver_dft_(sel_obj);
         setup_twiddle_buffer_complex(sel_obj->solution);
     }
+    if (ret != SELECTOR_SUCCESS)
+    {
+        ret = AOCLFFTZ_SETUP_FAILURE;
+        goto exit_prepare_and_setup_dft;
+    }
+#ifdef MULTI_THREADING
+    ret = post_process_solution(sel_obj->solution, NULL, NULL);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        goto exit_prepare_and_setup_dft;
+    }
+#endif
+
+    ret = setup_chirp_fft(sel_obj->solution);
+    if (ret != SELECTOR_SUCCESS)
+    {
+        goto exit_prepare_and_setup_dft;
+    }
+    return ret;
+
+exit_prepare_and_setup_dft:
+    AOCLFFTZ_ERROR("Setup failure with %s", get_status_string(ret));
     return ret;
 }
-
-/* Forward declaration: only used under MT. */
-#ifdef MULTI_THREADING
-static INT32 post_process_solution(aoclfftz_solution_t *sol, INT32 *ct_slots,
-                                   INT32 *aux_buf_slots);
-#endif
 
 // Selector interface function that performs setup for finding solution for a
 // single-precision LP64 problem
@@ -1170,22 +1192,8 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     ret = prepare_and_setup_dft(sel_obj);
     if (ret != SELECTOR_SUCCESS)
     {
-        if (ret == SELECTOR_FAILURE)
-        {
-            ret = AOCLFFTZ_SETUP_FAILURE;
-        }
-        AOCLFFTZ_ERROR("Setup failure with %s",
-                                  get_status_string(ret));
         goto exit_setup_dft_f;
     }
-#ifdef MULTI_THREADING
-    ret = post_process_solution(sel_obj->solution, NULL, NULL);
-    if (ret != SELECTOR_SUCCESS)
-    {
-        AOCLFFTZ_ERROR("Setup failure with %s", get_status_string(ret));
-        goto exit_setup_dft_f;
-    }
-#endif
     return sel_obj;
 
 exit_setup_dft_f:
@@ -1251,22 +1259,8 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     ret = prepare_and_setup_dft(sel_obj);
     if (ret != SELECTOR_SUCCESS)
     {
-        if (ret == SELECTOR_FAILURE)
-        {
-            ret = AOCLFFTZ_SETUP_FAILURE;
-        }
-        AOCLFFTZ_ERROR("Setup failure with %s",
-                                  get_status_string(ret));
         goto exit_setup_dft_d;
     }
-#ifdef MULTI_THREADING
-    ret = post_process_solution(sel_obj->solution, NULL, NULL);
-    if (ret != SELECTOR_SUCCESS)
-    {
-        AOCLFFTZ_ERROR("Setup failure with %s", get_status_string(ret));
-        goto exit_setup_dft_d;
-    }
-#endif
     return sel_obj;
 
 exit_setup_dft_d:
@@ -1332,22 +1326,8 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     ret = prepare_and_setup_dft(sel_obj);
     if (ret != SELECTOR_SUCCESS)
     {
-        if (ret == SELECTOR_FAILURE)
-        {
-            ret = AOCLFFTZ_SETUP_FAILURE;
-        }
-        AOCLFFTZ_ERROR("Setup failure with %s",
-                                  get_status_string(ret));
         goto exit_setup_dft_f_64_;
     }
-#ifdef MULTI_THREADING
-    ret = post_process_solution(sel_obj->solution, NULL, NULL);
-    if (ret != SELECTOR_SUCCESS)
-    {
-        AOCLFFTZ_ERROR("Setup failure with %s", get_status_string(ret));
-        goto exit_setup_dft_f_64_;
-    }
-#endif
     return sel_obj;
 
 exit_setup_dft_f_64_:
@@ -1413,22 +1393,8 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     ret = prepare_and_setup_dft(sel_obj);
     if (ret != SELECTOR_SUCCESS)
     {
-        if (ret == SELECTOR_FAILURE)
-        {
-            ret = AOCLFFTZ_SETUP_FAILURE;
-        }
-        AOCLFFTZ_ERROR("Setup failure with %s",
-                                  get_status_string(ret));
         goto exit_setup_dft_d_64_;
     }
-#ifdef MULTI_THREADING
-    ret = post_process_solution(sel_obj->solution, NULL, NULL);
-    if (ret != SELECTOR_SUCCESS)
-    {
-        AOCLFFTZ_ERROR("Setup failure with %s", get_status_string(ret));
-        goto exit_setup_dft_d_64_;
-    }
-#endif
     return sel_obj;
 
 exit_setup_dft_d_64_:
@@ -2380,6 +2346,70 @@ static INT32 post_process_solution(aoclfftz_solution_t *sol, INT32 *ct_slots, IN
     return SELECTOR_SUCCESS;
 }
 #endif /* MULTI_THREADING */
+
+/**
+ * @brief Walks the solution tree and computes the chirp FFT for every
+ * Bluestein node.
+ *
+ * Called from every setup_dft_* entry point after all twiddles are ready
+ * (ST builds) or after post_process_solution populates per-thread deep
+ * copies of any MT_BATCHED nodes inside a Bluestein's inner FFT(M) subtree
+ * (MT builds). Running here ensures the inner FFT(M) executor (and any
+ * MT_BATCHED deep copies underneath) is fully wired before
+ * compute_chirp_fft invokes it.
+ *
+ * Traversal rules:
+ *  BLUESTEIN      — compute chirp FFT for this node; next_sol[0] (the inner
+ *                   FFT(M) subtree) is then descended by the iterative step
+ *                   below in case it itself contains another Bluestein node.
+ *  NDIM/REAL_NDIM — recurse into nd_sol explicitly; its next_sol[0] is then
+ *                   descended by the iterative step below.
+ *  SR             — skip entirely; split-radix is power-of-2 only, so its
+ *                   descendants cannot contain Bluestein nodes.
+ *  others         — fall through to the iterative step (descend next_sol[0]).
+ *
+ * @param sol Root of the solution (sub-)tree to walk.
+ * @return    SELECTOR_SUCCESS on success, AOCLFFTZ_SETUP_FAILURE if
+ *            compute_chirp_fft fails.
+ */
+static INT32 setup_chirp_fft(aoclfftz_solution_t *sol)
+{
+    while (sol != NULL)
+    {
+        if (sol->solver->solver_type == SOLVER_BLUESTEIN)
+        {
+            INT32 ret = compute_chirp_fft(sol, sol->next_sol[0]);
+            if (ret != SOLVER_SUCCESS)
+            {
+                AOCLFFTZ_ERROR(
+                    "compute_chirp_fft failed for Bluestein node "
+                    "(n=%ld, m=%ld)",
+                    (long)sol->decomp_scheme->dims[0].n,
+                    (long)sol->next_sol[0]->decomp_scheme->dims[0].n);
+                return AOCLFFTZ_SETUP_FAILURE;
+            }
+        }
+
+        if ((sol->solver->solver_type == SOLVER_NDIM) ||
+            (sol->solver->solver_type == SOLVER_REAL_NDIM))
+        {
+            INT32 ret = setup_chirp_fft(sol->dft_bufs->nd_sol);
+            if (ret != SELECTOR_SUCCESS)
+            {
+                return ret;
+            }
+        }
+
+        if (sol->solver->solver_type == SOLVER_SR)
+        {
+            return SELECTOR_SUCCESS;
+        }
+
+        sol = sol->next_sol ? sol->next_sol[0] : NULL;
+    }
+
+    return SELECTOR_SUCCESS;
+}
 
 /**
  * @brief Check if col-major processing MT batched solver should be used based

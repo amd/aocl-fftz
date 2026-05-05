@@ -283,18 +283,16 @@ typedef VOID (*elementwise_mul_)(VOID *out, VOID *a, VOID *b, INTP n);
 // applied uniformly to real and imaginary parts)
 typedef VOID (*normalize_)(VOID *data, INTP n, DOUBLE factor);
 
-// Holds bluestein sequence B used by the bluestein solver
-// When FFT is computed for B, it will be stored in B_out and
-// is_chirp_fft_computed will be set to 1.
-// Also holds the internal input and output buffers, and the elementwise
-// multiplication and normalization kernels selected by the selector.
+// Holds bluestein sequence B used by the bluestein solver, with its FFT
+// computed during plan setup and stored in B_out. Also holds the
+// internal input and output buffers, and the elementwise multiplication
+// and normalization kernels selected by the selector.
 typedef struct aoclfftz_bluestein
 {
     VOID *B;
     VOID *B_out;
     VOID *in;
     VOID *out;
-    UINT8 is_chirp_fft_computed;
     elementwise_mul_ ele_mul[NUM_FFT_DIRS];
     normalize_ normalize;
 } aoclfftz_bluestein_t;

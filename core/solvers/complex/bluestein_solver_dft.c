@@ -16,6 +16,7 @@
 
 #include "core/common/bluestein_utils.h"
 #include "core/common/memory_manager.h"
+#include "core/solvers/solver.h"
 #include "utils/utils.h"
 
 /**
@@ -107,17 +108,34 @@ static inline VOID copy_data(VOID *dst, VOID *src, INTP n, INTP src_stride,
 }
 
 /**
- * @brief Computes FFT of chirp sequence.
+ * @brief Computes FFT of chirp sequence into the shared B_out buffer.
+ *
+ * Runs once during plan setup so the result is available (read-only) for
+ * every subsequent execute call. This removes the first-execute overhead
+ * and lets deep-copied solution trees share B_out safely under MT.
  *
  * @param[in,out] sol      Current solution containing bluestein buffers
  * @param[in,out] next_sol Next solution used for FFT computation
- * @param[in]     dt_bytes Size of data type in bytes
  * @return INT32 SOLVER_SUCCESS on success, SOLVER_FAILURE on error
  */
-static inline INT32 compute_chirp_fft(aoclfftz_solution_t *sol,
-                                      aoclfftz_solution_t *next_sol,
-                                      UINT32 dt_bytes)
+INT32 compute_chirp_fft(aoclfftz_solution_t *sol, aoclfftz_solution_t *next_sol)
 {
+    UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+
+    // Save next_sol I/O and flag state for restoration after execution
+    VOID *in_real = next_sol->decomp_scheme->in_real;
+    VOID *in_imag = next_sol->decomp_scheme->in_imag;
+    VOID *out_real = next_sol->decomp_scheme->out_real;
+    VOID *out_imag = next_sol->decomp_scheme->out_imag;
+    VOID *ct_buf_real = next_sol->dft_bufs->ct_buf_real;
+    VOID *ct_buf_imag = next_sol->dft_bufs->ct_buf_imag;
+    UINT32 initial_flags = next_sol->decomp_scheme->flags;
+
+    // Chirp FFT is always forward. Force it here to prevent AVX kernels
+    // from swapping in_real/in_imag pointers under BACKWARD_FFT_DIR.
+    SET_FFT_DIR(next_sol->decomp_scheme->flags, FORWARD_FFT_DIR);
+
     // Set up input/output buffers for chirp sequence FFT
     next_sol->decomp_scheme->in_real = sol->dft_bufs->bluestein->B;
     next_sol->decomp_scheme->in_imag =
@@ -130,13 +148,21 @@ static inline INT32 compute_chirp_fft(aoclfftz_solution_t *sol,
 
     // Execute forward FFT on chirp sequence
     INT32 status = next_sol->solver->execute_solver(next_sol);
+
+    // Restore next_sol state so execute_bluestein_solver sees the original
+    // pointers set by setup_bluestein_solver
+    next_sol->decomp_scheme->in_real = in_real;
+    next_sol->decomp_scheme->in_imag = in_imag;
+    next_sol->decomp_scheme->out_real = out_real;
+    next_sol->decomp_scheme->out_imag = out_imag;
+    next_sol->dft_bufs->ct_buf_real = ct_buf_real;
+    next_sol->dft_bufs->ct_buf_imag = ct_buf_imag;
+    next_sol->decomp_scheme->flags = initial_flags;
+
     if (status != SOLVER_SUCCESS)
     {
         return SOLVER_FAILURE;
     }
-
-    // Mark as valid for future executions
-    sol->dft_bufs->bluestein->is_chirp_fft_computed = 1;
 
     return SOLVER_SUCCESS;
 }
@@ -148,7 +174,7 @@ static inline INT32 compute_chirp_fft(aoclfftz_solution_t *sol,
  * 1. Multiply input by chirp sequence B_inv (pre-processing)
  * 2. Zero-pad the multiplied input to extended length m
  * 3. Perform forward FFT on the padded sequence
- * 4. Multiply with pre-computed FFT of chirp sequence B
+ * 4. Multiply with computed FFT of chirp sequence B
  * 5. Perform inverse FFT
  * 6. Normalize and multiply by B_inv (post-processing)
  *
@@ -218,22 +244,12 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
         return SOLVER_FAILURE;
     }
 
-    // 2b. Compute FFT of chirp sequence B on the first execute; reused on
-    //     subsequent executes since B depends only on the problem size.
-    if (!sol->dft_bufs->bluestein->is_chirp_fft_computed)
-    {
-        status = compute_chirp_fft(sol, next_sol, dt_bytes);
-        if (status != SOLVER_SUCCESS)
-        {
-            return SOLVER_FAILURE;
-        }
-    }
-
-    // 2c. Pointwise multiplication: A_out × B_out (with conjugate for inverse)
+    // FFT of chirp sequence B (B_out) is computed during plan setup
+    // 2b. Pointwise multiplication: A_out × B_out (with conjugate for inverse)
     sol->dft_bufs->bluestein->ele_mul[!dir](
         out_real, out_real, sol->dft_bufs->bluestein->B_out, m);
 
-    // 2d. Inverse FFT of the product
+    // 2c. Inverse FFT of the product
     next_sol->decomp_scheme->in_real = out_real;
     next_sol->decomp_scheme->in_imag = out_imag;
     next_sol->decomp_scheme->out_real = in_real;
