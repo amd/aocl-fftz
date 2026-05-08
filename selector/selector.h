@@ -131,6 +131,26 @@ typedef struct aoclfftz_selector
 }
 
 /*
+ * @brief Overwrite the solution-side `opt_level` with the dispatcher-resolved
+ * level (cpu_flags = min(user opt_level, hw/build ISA level), or scalar when
+ * opt_off is set or the level is non-positive).
+ *
+ * Conceptually:
+ *   - `problem->cntrl_params.opt_level` holds the user request (unchanged).
+ *   - `sel_obj->solution->decomp_scheme->cntrl_params->opt_level` holds the
+ *     effective level the library will actually run at.
+ * The struct/field name is shared between the two; only the meaning of the
+ * value differs based on which side it lives on.
+ *
+ * Must be called after `INIT_DECOMP_SCHEME` (which initially copies the user
+ * value) and after `setup_dynamic_dispatcher` has produced `cpu_flags`.
+ */
+#define SET_EFFECTIVE_OPT_LEVEL(sel_obj, cpu_flags)                            \
+{                                                                              \
+    sel_obj->solution->decomp_scheme->cntrl_params->opt_level = (cpu_flags);   \
+}
+
+/*
  * @brief Check if the Root problem is a Direct Problem or not.
  * If a problem is not direct, it will be a multi stage with atleast one CT Problem.
  *

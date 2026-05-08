@@ -13,43 +13,39 @@
 
 #include "core/solvers/solver.h"
 
-// Table of solvers that is populated with applicable solvers at setup time
-// ct, direct, nDim, buf, permKer, batched, bluestein, PFA, rader, permCopy,
-// trans
+// Table of (solver_type -> execute function pointer). Re-populated by
+// register_solvers() on every aoclfftz_setup_* call. Each write stores
+// the same pointer value the slot already holds (idempotent), so readers
+// observing a partially-written table still see a valid function
+// pointer; no synchronisation is needed on the read side.
 dft_solver_ solvers_table[NUM_SOLVERS_END] = { 0x0, };
 
-INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
+// Populates solvers_table. Called from every aoclfftz_setup_* entry
+// point, so it runs once per setup rather than once per process. The
+// writes are idempotent (same pointers every time), which makes
+// concurrent setup calls benign even though they technically race.
+INT32 register_solvers(VOID)
 {
-    aoclfftz_solver_type solv_idx;
-
-    for (solv_idx = SOLVER_DIRECT; solv_idx < NUM_SOLVERS_END; solv_idx++)
-    {
-        solvers_table[solv_idx] = NULL;
-    }
-
-    // Add all the available solvers
-    if (is_real)
-    {
-        solvers_table[SOLVER_REAL_DIRECT] = register_execute_real_direct_solver();
-        solvers_table[SOLVER_REAL_DIRECT_TWIDDLE] =
-            register_execute_real_direct_solver();
-        solvers_table[SOLVER_REAL_CT] = register_execute_real_ct_solver();
-        solvers_table[SOLVER_REAL_BATCHED] =
-            register_execute_real_batched_solver();
-        solvers_table[SOLVER_REAL_BUFFERED] =
-            register_execute_real_buffered_solver();
-        solvers_table[SOLVER_REAL_NDIM] = register_execute_real_ndim_solver();
-        solvers_table[SOLVER_REAL_SIZEONE] =
-            register_execute_real_sizeone_solver();
+    // Real solvers
+    solvers_table[SOLVER_REAL_DIRECT] = register_execute_real_direct_solver();
+    solvers_table[SOLVER_REAL_DIRECT_TWIDDLE] =
+        register_execute_real_direct_solver();
+    solvers_table[SOLVER_REAL_CT] = register_execute_real_ct_solver();
+    solvers_table[SOLVER_REAL_BATCHED] = register_execute_real_batched_solver();
+    solvers_table[SOLVER_REAL_BUFFERED] =
+        register_execute_real_buffered_solver();
+    solvers_table[SOLVER_REAL_NDIM] = register_execute_real_ndim_solver();
+    solvers_table[SOLVER_REAL_SIZEONE] = register_execute_real_sizeone_solver();
 #ifdef MULTI_THREADING
-        solvers_table[SOLVER_REAL_MT_DIRECT] =
-            register_execute_real_mt_direct_solver();
-        solvers_table[SOLVER_REAL_MT_DIRECT_TWIDDLE] =
-            register_execute_real_mt_direct_solver();
-        solvers_table[SOLVER_REAL_MT_BATCHED] =
-            register_execute_real_mt_batched_solver();
+    solvers_table[SOLVER_REAL_MT_DIRECT] =
+        register_execute_real_mt_direct_solver();
+    solvers_table[SOLVER_REAL_MT_DIRECT_TWIDDLE] =
+        register_execute_real_mt_direct_solver();
+    solvers_table[SOLVER_REAL_MT_BATCHED] =
+        register_execute_real_mt_batched_solver();
 #endif
-    }
+
+    // Complex solvers
     solvers_table[SOLVER_DIRECT] = register_execute_direct_solver();
     solvers_table[SOLVER_DIRECT_BATCHED_COLMAJOR] =
         register_execute_direct_batched_colmajor_solver();
@@ -61,12 +57,9 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
     solvers_table[SOLVER_BLUESTEIN] = register_execute_bluestein_solver();
     solvers_table[SOLVER_NDIM] = register_execute_ndim_solver();
     solvers_table[SOLVER_SIZEONE] = register_execute_sizeone_solver();
-    // SR is currently limited only to scalar execution as CT outperforms SR
-    // in AVX mode. Skip registration of SR solver.
-    if (cpu_flags == 0)
-    {
-        solvers_table[SOLVER_SR] = register_execute_sr_solver();
-    }
+    // SR is registered unconditionally here. The selector decides whether
+    // to actually dispatch SR based on per-call cpu_flags.
+    solvers_table[SOLVER_SR] = register_execute_sr_solver();
     solvers_table[SOLVER_TRANSPOSE] = register_execute_transpose_solver();
 #ifdef MULTI_THREADING
     solvers_table[SOLVER_MT_DIRECT] = register_execute_mt_direct_solver();

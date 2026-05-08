@@ -16,6 +16,7 @@
 #include "core/common/memory_manager.h"
 #include "core/common/twiddle.h"
 #include "core/kernels/kernel_list.h"
+#include "utils/dispatcher.h"
 #include "utils/utils.h"
 
 // Function pointers to communicate the exact selector model for executing the
@@ -27,20 +28,18 @@ typedef INT32 (*selector_model_rdft_func_)(aoclfftz_selector_t *,
 selector_model_func_ sel_fp = NULL;
 selector_model_rdft_func_ sel_rdft_fp = NULL;
 
-// Register all applicable solvers and kernels into the respective tables
-// based on the input problem and CPU opt level
+// Register all applicable solvers and kernels into the respective tables.
 INT32 register_solvers_kernels(kernel_tables_t *kernel_tables, INT32 dt,
                                INT32 dir, INT32 is_real, INT32 cpu_flags)
 {
-    INT32 ret = SELECTOR_FAILURE;
+    INT32 ret = SELECTOR_SUCCESS;
 
     // Register Solvers
-    ret = register_solvers(dt, is_real, cpu_flags);
+    ret = register_solvers();
     if (ret != SOLVER_SUCCESS)
     {
         return SELECTOR_FAILURE;
     }
-
     // Register Kernels
     if (is_real)
     {
@@ -306,9 +305,11 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     // SOLVER_DIRECT
     level2_cond = is_FFT_ker_supported;
     // SOLVER_SR
+    aoclfftz_cntrl_params_t *cp = sel->solution->decomp_scheme->cntrl_params;
+    INT32 is_scalar_only = (cp != NULL) && (cp->opt_level == optlevel_scalar);
     level2_cond |=
-        ((is_solver_registered(SOLVER_SR) == SOLVER_SUCCESS)
-        && is_split_radix_applicable(sel->solution->decomp_scheme)) << 1;
+        ((is_scalar_only
+         && is_split_radix_applicable(sel->solution->decomp_scheme)) << 1);
     // SOLVER_PFA
     // SOLVER_RADER
 
@@ -1153,6 +1154,7 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     // Initialize decomposition scheme data object
     INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_FLOAT);
+    SET_EFFECTIVE_OPT_LEVEL(sel_obj, cpu_flags);
 
     // Note: Currently the 8th bit of the flags member of both, the problem and
     // the selector represent the same thing -> a standalone transpose
@@ -1238,6 +1240,7 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     // Initialize decomposition scheme data object
     INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_DOUBLE);
+    SET_EFFECTIVE_OPT_LEVEL(sel_obj, cpu_flags);
 
     if (problem->flags.transpose_mode)
     {
@@ -1318,6 +1321,7 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     // Initialize decomposition scheme data object
     INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_FLOAT);
+    SET_EFFECTIVE_OPT_LEVEL(sel_obj, cpu_flags);
 
     if (flags.transpose_mode)
     {
@@ -1398,6 +1402,7 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     // Initialize decomposition scheme data object
     INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank);
     SET_PRECISION(sel_obj->solution->decomp_scheme->flags, DT_DOUBLE);
+    SET_EFFECTIVE_OPT_LEVEL(sel_obj, cpu_flags);
 
     if (flags.transpose_mode)
     {

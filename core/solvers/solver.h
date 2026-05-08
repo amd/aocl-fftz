@@ -62,7 +62,7 @@ typedef enum
     NUM_SOLVERS_END
 } aoclfftz_solver_type;
 
-INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags);
+INT32 register_solvers(VOID);
 INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj);
 INT32 is_solver_registered(aoclfftz_solver_type solver_type);
 
