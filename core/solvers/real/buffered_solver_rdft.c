@@ -25,14 +25,17 @@ INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
     INTP n = sol->decomp_scheme->dims[0].n;
     INTP num_slots = sol->decomp_scheme->outer_buf_cnt
                    * sol->decomp_scheme->thread_info->n_threads;
-    // Copy input to temp buffer
+
+    INTP aux_buf_size = GET_PADDED_SIZE(n * dt_bytes);
+
     FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
     FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
     ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_1, VOID,
-                       n * dt_bytes * num_slots);
+                       aux_buf_size * num_slots);
     ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_2, VOID,
-                       n * dt_bytes * num_slots);
+                       aux_buf_size * num_slots);
 
+    sol->dft_bufs->buffered->aux_buf_size_per_thread = aux_buf_size;
     sol->dft_bufs->buffered->is_aux_buffer_allocated = 1;
     sol->dft_bufs->ct_buf_real_in = sol->dft_bufs->buffered->aux_buffer_1;
 

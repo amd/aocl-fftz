@@ -27,8 +27,10 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     dt_bytes = DT_PRECISION_BYTES(dt_prec);
 
-    // Compute allocation size in bytes for ct_buffer and aux_buffer_1
-    UINTP alloc_size = calculate_max_buffer_size(sol) * DATA_STRIDE * dt_bytes;
+    // Logical bytes per REAL_NDIM aux slab; round up so thread slabs stay aligned.
+    INTP logical_aux_buf_size =
+        calculate_max_buffer_size(sol) * DATA_STRIDE * dt_bytes;
+    INTP padded_aux_buf_size = GET_PADDED_SIZE(logical_aux_buf_size);
 
     copy_solution_obj_wo_dims(complex_dims_sol, sol);
     copy_solution_obj_wo_dims(real_dim_sol, sol);
@@ -46,7 +48,15 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
         }
         FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
         ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_1, VOID,
-                         alloc_size * sol->decomp_scheme->outer_buf_cnt);
+            sol->decomp_scheme->outer_buf_cnt * padded_aux_buf_size);
+        sol->dft_bufs->buffered->aux_buf_size_per_thread = padded_aux_buf_size;
+    }
+    else
+    {
+        if (sol->dft_bufs->buffered != NULL)
+        {
+            sol->dft_bufs->buffered->aux_buf_size_per_thread = 0;
+        }
     }
 
     INT32 dim_rank = sol->decomp_scheme->dim_rank;

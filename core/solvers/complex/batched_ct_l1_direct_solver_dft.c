@@ -70,8 +70,7 @@ INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
     if (sol->dft_bufs->ct_buf_real == NULL ||
         sol->decomp_scheme->out_real == sol->dft_bufs->ct_buf_real)
     {
-        UINTP buffer_length = (UINTP)n;
-        UINTP ct_buf_size = buffer_length * DATA_STRIDE * dt_bytes;
+        INTP ct_buf_size = GET_PADDED_SIZE(n * DATA_STRIDE * dt_bytes);
         ALLOC_ALIGN_UNINIT(sol->dft_bufs->ct_buffer, VOID, ct_buf_size);
         if (sol->dft_bufs->ct_buffer == NULL)
         {

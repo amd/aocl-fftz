@@ -93,15 +93,13 @@ INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
                          (sol->decomp_scheme->batched_vecs[0].out_stride);
     }
 
-    // Mirrors alloc_ndim_buffer (see that function for rationale) so both
-    // allocation sites agree on layout.
-    buffer_size =  buffer_length * DATA_STRIDE * dt_bytes;
+    buffer_size = GET_PADDED_SIZE(buffer_length * DATA_STRIDE * dt_bytes);
     ALLOC_ALIGN_UNINIT(sol->dft_bufs->ct_buffer, VOID,
-                       buffer_size * sol->dft_bufs->num_ct_buf);
+        buffer_size * sol->dft_bufs->num_ct_buf);
     if (sol->dft_bufs->ct_buffer == NULL)
     {
         AOCLFFTZ_ERROR("Failed to allocate ct_buffer of size %ld",
-                       (long)buffer_size);
+                       (long)(buffer_size * sol->dft_bufs->num_ct_buf));
         return SOLVER_FAILURE;
     }
 

@@ -1677,7 +1677,9 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
 
 #ifdef MULTI_THREADING
 
-/* Configures static aux_buffer_1/2 routing through BUFFERED -> DIRECT -> CT chain
+/* Configures static aux_buffer_1/2 routing through BUFFERED -> DIRECT -> CT chain.
+ * aux_buffer_1 and aux_buffer_2 are spaced by aux_buf_size_per_thread (64-byte aligned) so MT
+ * deep-copies get non-overlapping cache lines per thread.
  *
  * Solver chain of CT problem after buffered sol
  * ... -> buffered -> direct -> CT -> direct -> ... -> CT -> direct
@@ -1729,7 +1731,20 @@ static INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
 
     aoclfftz_solution_t *buffered_sol = cur_sol;
 
-    // Get aux buffers
+    if (buffered_sol->dft_bufs->buffered->aux_buffer_1 == NULL ||
+        buffered_sol->dft_bufs->buffered->aux_buffer_2 == NULL)
+    {
+        AOCLFFTZ_ERROR("REAL_BUFFERED aux buffers are not allocated");
+        return SOLVER_FAILURE;
+    }
+
+    if (buffered_sol->dft_bufs->buffered->aux_buf_size_per_thread == 0)
+    {
+        buffered_sol->dft_bufs->buffered->aux_buf_size_per_thread =
+            GET_PADDED_SIZE(buffered_sol->decomp_scheme->dims[0].n * dt_bytes);
+    }
+
+    // Get aux buffers (per-thread region base; pool slots use aux_buf_size_per_thread)
     VOID *aux_in = buffered_sol->dft_bufs->buffered->aux_buffer_1;
     VOID *aux_out = buffered_sol->dft_bufs->buffered->aux_buffer_2;
 
@@ -1815,7 +1830,8 @@ static INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
  * @param ct_bufs Output: number of ct_buf slots consumed by this subtree.
  *                May be NULL if the caller does not need the count.
  * @param aux_buf_base Linear slot into REAL_BUFFERED stretched aux pool
- *                (stride n * dt_bytes per slot; n_slots = n_threads * outer_buf_cnt).
+ *                (stride aux_buf_size_per_thread per slot, 64-byte aligned;
+ *                 n_slots = n_threads * outer_buf_cnt).
  * @param aux_bufs Output: REAL_BUFFERED slot demand for this subtree (max/aggregate).
  * @param aux_ndim_pool_slot_idx For MT duplicate subtrees (post_process thread
  *                i>0), REAL_NDIM multi-slot aux_buffer_1 is offset by this index
@@ -1911,28 +1927,34 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
     if (src->solver->solver_type == SOLVER_REAL_BUFFERED)
     {
         INT32 dt_bytes = SOL_DT_SIZE(dst);
-        INTP aux_buf_slot_size = dst->decomp_scheme->dims[0].n * dt_bytes;
+        INTP aux_buf_size_per_thread =
+                src->dft_bufs->buffered->aux_buf_size_per_thread;
+        if (aux_buf_size_per_thread == 0)
+        {
+            INTP n = dst->decomp_scheme->dims[0].n;
+            aux_buf_size_per_thread = GET_PADDED_SIZE(n * dt_bytes);
+        }
+        INTP aux_buf_offset = aux_buf_base * aux_buf_size_per_thread;
         dst->dft_bufs->buffered->aux_buffer_1 =
-            MOVE_ADDR(src->dft_bufs->buffered->aux_buffer_1,
-                      aux_buf_base * aux_buf_slot_size);
+            MOVE_ADDR(src->dft_bufs->buffered->aux_buffer_1, aux_buf_offset);
         dst->dft_bufs->buffered->aux_buffer_2 =
-            MOVE_ADDR(src->dft_bufs->buffered->aux_buffer_2,
-                      aux_buf_base * aux_buf_slot_size);
+            MOVE_ADDR(src->dft_bufs->buffered->aux_buffer_2, aux_buf_offset);
+        dst->dft_bufs->buffered->aux_buf_size_per_thread =
+            aux_buf_size_per_thread;
         dst->dft_bufs->buffered->is_aux_buffer_allocated = 0;
     }
 
     if (src->solver->solver_type == SOLVER_REAL_NDIM &&
-        dst->dft_bufs && dst->dft_bufs->buffered &&
         src->dft_bufs->buffered &&
         src->dft_bufs->buffered->aux_buffer_1 != NULL &&
+        src->dft_bufs->buffered->aux_buf_size_per_thread > 0 &&
         aux_ndim_pool_slot_idx > 0 &&
         aux_ndim_pool_slot_idx < dst->decomp_scheme->outer_buf_cnt)
     {
-        UINTP per_slot_size = calculate_max_buffer_size(dst)
-                            * DATA_STRIDE * SOL_DT_SIZE(dst);
         VOID *base = src->dft_bufs->buffered->aux_buffer_1;
-        UINTP off = aux_ndim_pool_slot_idx * per_slot_size;
-        dst->dft_bufs->buffered->aux_buffer_1 = MOVE_ADDR(base, off);
+        INTP offset = aux_ndim_pool_slot_idx *
+                       src->dft_bufs->buffered->aux_buf_size_per_thread;
+        dst->dft_bufs->buffered->aux_buffer_1 = MOVE_ADDR(base, offset);
     }
 
     if (src->solver->solver_type == SOLVER_NDIM ||

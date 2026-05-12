@@ -306,6 +306,8 @@ typedef struct aoclfftz_buffered
     // 1: this node allocated aux_buffer_1/2 (must free);
     // 0: offset / alias into shared pool.
     UINT8 is_aux_buffer_allocated;
+    // Padded aux_buffer size (REAL_NDIM / REAL_BUFFERED) per thread; 0 if unused.
+    INTP aux_buf_size_per_thread;
     // this is used to store the address of last direct solution's output buffer
     // NOTE: This is required since we cannot immediately get the address of the
     //       last node from one of the starting nodes.
@@ -414,7 +416,7 @@ typedef struct aoclfftz_dft_bufs
                              use the auxiliary buffer which is not used for computation in that stage
                              to store the modified input.
                            */
-    INTP ct_buf_size; // size of ct_buffer per thread
+    INTP ct_buf_size; // 64-byte aligned size per ct_buf / thread slot
     INT32 num_ct_buf; // number of ct_buffer allocated in total. It should be
                       // equal to the number of threads assigned to the first CT
                       // stage in the solution.

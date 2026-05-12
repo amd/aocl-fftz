@@ -204,6 +204,7 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->buffered->aux_buffer_1 = NULL;
         sol->dft_bufs->buffered->aux_buffer_2 = NULL;
         sol->dft_bufs->buffered->is_aux_buffer_allocated = 0;
+        sol->dft_bufs->buffered->aux_buf_size_per_thread = 0;
         sol->dft_bufs->buffered->out_ptr = NULL;
         sol->decomp_scheme->outer_buf_cnt = 1;
         sol->dft_bufs->transpose->row_info = (aoclfftz_dim_t_64_){0};
@@ -404,9 +405,9 @@ VOID alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
     {
         buffer_length = buffer_length / min_dim_size;
     }
-    buffer_size = buffer_length * DATA_STRIDE * dt_bytes;
+    buffer_size = GET_PADDED_SIZE(buffer_length * DATA_STRIDE * dt_bytes);
     ALLOC_ALIGN_UNINIT(*buffer_ptr, VOID,
-                  buffer_size * solution->dft_bufs->num_ct_buf * n_threads);
+            buffer_size * solution->dft_bufs->num_ct_buf * n_threads);
 
     solution->dft_bufs->ct_buf_size = buffer_size;
     solution->dft_bufs->ct_buf_real = *buffer_ptr;
@@ -619,4 +620,3 @@ VOID destroy_selector(aoclfftz_selector_t *sel)
     }
     return;
 }
-
