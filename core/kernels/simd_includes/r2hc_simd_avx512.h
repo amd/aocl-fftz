@@ -42,6 +42,8 @@
 
 #include "core/kernels/simd_includes/r2hc_simd_avx256.h"
 
+#define NUM_SETS_REAL_512_S 16
+#define NUM_SETS_REAL_512_D 8
 
 /************************ MACRO FUNCTIONS ************************/
 

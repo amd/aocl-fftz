@@ -85,6 +85,15 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    if (sel == NULL || sel->solution == NULL ||
+        sel->solution->decomp_scheme == NULL)
+    {
+        AOCLFFTZ_LOG(INFO, global_logger_mode,
+                     "Invalid selector or solution passed to "
+                     "selector_ndim_dft");
+        return SELECTOR_FAILURE;
+    }
+
     aoclfftz_selector_t *n_minus1_sel = NULL;
     aoclfftz_selector_t *outer_dim_sel = NULL;
 
@@ -94,11 +103,9 @@ INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     INT32 ret = SELECTOR_FAILURE;
 
     n_minus1_sel = alloc_selector(1, dim_rank - 1, sel->scratch_space,
-                                  sel->kertab_dft, sel->kertab_twid_dft,
-                                  0 /*unused*/);
+                                  sel->kernel_tables, 0 /*unused*/);
     outer_dim_sel = alloc_selector(dim_rank - 1, 1, sel->scratch_space,
-                                   sel->kertab_dft, sel->kertab_twid_dft,
-                                   0 /*unused*/);
+                                   sel->kernel_tables, 0 /*unused*/);
 
     if (n_minus1_sel == NULL || outer_dim_sel == NULL)
     {

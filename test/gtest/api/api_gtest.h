@@ -38,6 +38,9 @@
 #include <random>
 #include <climits>
 #include <iostream> // Add this include for debug printing
+#ifdef MULTI_THREADING
+#include <omp.h>
+#endif
 #include "gtest/gtest.h"
 #include "test/gtest/common_gtest_utils.h"
 
@@ -555,13 +558,17 @@ public:
         in = malloc(input_size);
         out = malloc(output_size);
 
+        VOID *temp_out = malloc(output_size);
         memcpy(in, problem->in, input_size);
+        memcpy(temp_out, problem->out, output_size);
         memset(out, 0, output_size);
         exe = aoclfftz_execute_io(handle, in, out);
         EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
 
         // Compare 'out' buffer against output buffer in problem desc
-        INT32 ret = memcmp(out, problem->out, output_size);
+        INT32 ret = memcmp(out, temp_out, output_size);
+        free(temp_out);
+        temp_out = NULL;
         EXPECT_EQ(ret, 0); // Expect successful comparison
 
         aoclfftz_destroy(handle);
@@ -569,6 +576,80 @@ public:
         in = NULL;
         free(out);
         out = NULL;
+    }
+
+    // Tests aoclfftz_execute_io after freeing original buffers and passing new ones.
+    VOID validate_execute_io_after_buffer_free_and_alloc(bool is_forward, bool use_1d_problem)
+    {
+        cleanup_problem();
+
+        if (use_1d_problem)
+        {
+            create_default_1d_pdesc(is_forward, false); // 1D out-of-place
+        }
+        else
+        {
+            create_default_pdesc(is_forward, false); // 3D out-of-place
+        }
+
+        handle = aoclfftz_setup(problem);
+        EXPECT_NE(handle, nullptr) << "Setup failed";
+        if (handle == nullptr)
+        {
+            return;
+        }
+
+        // First execute with original buffers to get reference output
+        INT32 exe = aoclfftz_execute(handle);
+        EXPECT_EQ(exe, AOCLFFTZ_SUCCESS) << "First execute failed";
+
+        UINTP in_size = 0;
+        UINTP out_size = 0;
+        get_inout_size(&in_size, &out_size);
+
+        // Allocate all buffers together
+        VOID *reference_output = malloc(out_size);
+        VOID *new_in = malloc(in_size);
+        VOID *new_out = malloc(out_size);
+
+        // Check allocations, cleanup and return on failure
+        if (reference_output == NULL || new_in == NULL || new_out == NULL)
+        {
+            ADD_FAILURE() << "Memory allocation failed";
+            goto cleanup_and_return;
+        }
+
+        memcpy(new_in, problem->in, in_size);
+        memcpy(reference_output, problem->out, out_size);
+        memset(new_out, 0, out_size);
+
+        // Free original buffers (simulating user freeing their buffers)
+        delete[] problem->in;
+        delete[] problem->out;
+        problem->in = nullptr;
+        problem->out = nullptr;
+
+        // Call execute_io with new buffers
+        exe = aoclfftz_execute_io(handle, new_in, new_out);
+        EXPECT_EQ(exe, AOCLFFTZ_SUCCESS) 
+            << "execute_io failed after buffer realloc"
+            << " [1D=" << use_1d_problem << ", forward=" << is_forward << "]";
+
+        // Verify output matches reference (same input should produce same output)
+        if(exe == AOCLFFTZ_SUCCESS)
+        {
+            INT32 cmp_result = memcmp(new_out, reference_output, out_size);
+            EXPECT_EQ(cmp_result, 0)
+                << "Output mismatch after buffer realloc"
+                << " [1D=" << use_1d_problem << ", forward=" << is_forward << "]";
+        }
+
+    cleanup_and_return:
+        aoclfftz_destroy(handle);
+        handle = nullptr;
+        free(reference_output);
+        free(new_in);
+        free(new_out);
     }
 };
 #endif // AOCLFFTZ_API_GTEST_H

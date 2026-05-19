@@ -37,14 +37,18 @@ Example Test Programs
    * - `N Dimensional Complex`_
      - Sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded N-dimensional FFT computation for complex input to complex output using double-precision on ILP64 architecture systems.
    * - `One Dimensional Real Forward`_
-     - Sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one dimensional FFT computation for real input to complex output(Forward FFT) using single-precision precision on LP64 architecture systems.
+     - Sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one dimensional FFT computation for real input to complex output (Forward FFT) using single-precision on LP64 architecture systems.
    * - `One Dimensional Real Backward`_
-     - Sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one-dimensional FFT computation for complex input to real output(Backward FFT) using single-precision precision on ILP64 architecture systems.
+     - Sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one dimensional FFT computation for complex input to real output (Backward FFT) using single-precision on ILP64 architecture systems.
+   * - `N Dimensional Real Forward`_
+     - Sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded N-dimensional FFT computation for real input to complex output (Forward FFT) using double-precision on ILP64 architecture systems.
+   * - `N Dimensional Real Backward`_
+     - Sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded N-dimensional FFT computation for complex input to real output (Backward FFT) using double-precision on ILP64 architecture systems.
 
 One Dimensional Complex
 -----------------------
 
-The following test program shows the sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one dimensional FFT computation for complex input to complex output using double-precision on LP64 architecture systems :
+The following test program shows the sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one dimensional FFT computation for complex input to complex output using double-precision on LP64 architecture systems:
 
 .. literalinclude:: ../../examples/example_one_dim_complex.c
    :language: c
@@ -52,7 +56,7 @@ The following test program shows the sample usage and calling sequence of AOCL-F
    :lines: 44-159
 
 To build this example test program on a Linux system using GCC or AOCC, you must specify
-path to aocl_fftz.h header file and link with libaocl_fftz.so file as follows:
+path to aoclfftz.h header file and link with libaocl_fftz.so file as follows:
 
 GCC : ``gcc -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_one_dim_complex.c -laocl_fftz -lm``
 
@@ -64,7 +68,7 @@ Before running the example program, ensure it points to the right library depend
 N Dimensional Complex
 ---------------------
 
-The following test program shows the sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded N-dimensional FFT computation for complex input to complex output using double-precision on ILP64 architecture systems :
+The following test program shows the sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded N-dimensional FFT computation for complex input to complex output using double-precision on ILP64 architecture systems:
 
 .. literalinclude:: ../../examples/example_n_dim_complex.c
    :language: c
@@ -72,7 +76,7 @@ The following test program shows the sample usage and calling sequence of AOCL-F
    :lines: 44-160
 
 To build this example test program on a Linux system using GCC or AOCC, you must specify
-path to aocl_fftz.h header file and link with libaocl_fftz.so file as follows:
+path to aoclfftz.h header file and link with libaocl_fftz.so file as follows:
 
 GCC : ``gcc -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_n_dim_complex.c -laocl_fftz -lm``
 
@@ -84,7 +88,7 @@ Before running the example program, ensure it points to the right library depend
 One Dimensional Real Forward
 ----------------------------
 
-The following test program shows the sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one dimensional FFT computation for real input to complex output(Forward FFT) using single-precision precision on LP64 architecture systems :
+The following test program shows the sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one dimensional FFT computation for real input to complex output (Forward FFT) using single-precision on LP64 architecture systems:
 
 .. literalinclude:: ../../examples/example_one_dim_real_forward.c
    :language: c
@@ -92,7 +96,7 @@ The following test program shows the sample usage and calling sequence of AOCL-F
    :lines: 44-167
 
 To build this example test program on a Linux system using GCC or AOCC, you must specify
-path to aocl_fftz.h header file and link with libaocl_fftz.so file as follows:
+path to aoclfftz.h header file and link with libaocl_fftz.so file as follows:
 
 GCC : ``gcc -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_one_dim_real_forward.c -laocl_fftz -lm``
 
@@ -104,7 +108,7 @@ Before running the example program, ensure it points to the right library depend
 One Dimensional Real Backward
 -----------------------------
 
-The following test program shows the sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one-dimensional FFT computation for complex input to real output(Backward FFT) using single-precision precision on ILP64 architecture systems :
+The following test program shows the sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded one dimensional FFT computation for complex input to real output (Backward FFT) using single-precision on ILP64 architecture systems:
 
 .. literalinclude:: ../../examples/example_one_dim_real_backward.c
    :language: c
@@ -118,6 +122,46 @@ path to aoclfftz.h header file and link with libaocl_fftz.so file as follows:
 GCC : ``gcc -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_one_dim_real_backward.c -laocl_fftz -lm``
 
 Clang : ``clang -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_one_dim_real_backward.c -laocl_fftz -lm``
+
+Before running the example program, ensure it points to the right library dependencies for OpenMP for Multithreading.
+
+
+N Dimensional Real Forward
+--------------------------
+
+The following test program shows the sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded N-dimensional FFT computation for real input to complex output (Forward FFT) using double-precision on ILP64 architecture systems:
+
+.. literalinclude:: ../../examples/example_n_dim_real_forward.c
+   :language: c
+   :linenos:
+   :lines: 44-177
+
+To build this example test program on a Linux system using GCC or AOCC, you must specify
+path to aoclfftz.h header file and link with libaocl_fftz.so file as follows:
+
+GCC : ``gcc -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_n_dim_real_forward.c -laocl_fftz -lm``
+
+Clang : ``clang -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_n_dim_real_forward.c -laocl_fftz -lm``
+
+Before running the example program, ensure it points to the right library dependencies for OpenMP for Multithreading.
+
+
+N Dimensional Real Backward
+---------------------------
+
+The following test program shows the sample usage and calling sequence of AOCL-FFTZ APIs for single-threaded N-dimensional FFT computation for complex input to real output (Backward FFT) using double-precision on ILP64 architecture systems:
+
+.. literalinclude:: ../../examples/example_n_dim_real_backward.c
+   :language: c
+   :linenos:
+   :lines: 44-178
+
+To build this example test program on a Linux system using GCC or AOCC, you must specify
+path to aoclfftz.h header file and link with libaocl_fftz.so file as follows:
+
+GCC : ``gcc -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_n_dim_real_backward.c -laocl_fftz -lm``
+
+Clang : ``clang -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_n_dim_real_backward.c -laocl_fftz -lm``
 
 Before running the example program, ensure it points to the right library dependencies for OpenMP for Multithreading.
 

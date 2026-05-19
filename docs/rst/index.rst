@@ -28,16 +28,13 @@
 AOCL-FFTZ
 =========
 
-
-Introduction
-`````````````
 AOCL-FFTZ is a high performance Fast Fourier Transform (FFT) library developed
 by AMD supporting advanced optimizations for AMD’s "Zen"-based CPUs.
 The library computes FFTs of (i) complex data of any size and dimension in
-both forward and backward directions, and (ii) real one-dimensional data of any
-size, excluding prime sizes greater than 7 and their multiples, in both forward
-and backward directions with support for in-place and out-of-place result
-placements.
+both forward and backward directions, and (ii) real data of any
+size and dimension, excluding prime sizes greater than 7 and their multiples,
+in both forward and backward directions with support for in-place and
+out-of-place result placements.
 
 The kernels in this library are vectorized to speed-up the single-threaded core
 performance. The library supports the computations of parallel FFTs by taking
@@ -52,8 +49,8 @@ accuracy tests. GTest-based unit testing framework is also supported by the
 library.
 
 
-APIs
-````
+:doc:`APIs <interface_api>`
+
 AOCL-FFTZ provides a comprehensive set of interface APIs for computing
 both forward (FFT) and backward (IFFT) transforms for real and complex
 data in the supported data models. The library offers flexible interfaces
@@ -61,37 +58,40 @@ that support both single-threaded and multi-threaded execution modes
 to optimize for performance across various workloads.
 
 .. toctree::
+   :hidden:
    :maxdepth: 1
 
    interface_api
 
-Data Structures and Type Definitions
-````````````````````````````````````
-AOCL-FFTZ defines various data structures and type definitions to support
-both single-precision (`FLOAT`) and double-precision (`DOUBLE`) computations.
-These structures encapsulate configuration parameters, execution contexts,
-and other essential parameters and flags required for efficient FFT operations.
+:doc:`Data Structures <data_structures_index>`
+
+Data structures and conventions to describe the FFT problems,
+guides on problem descriptor construction and explains the data layout conventions
+followed through the AOCL-FFTZ library.
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
+   :maxdepth: 2
 
-   typedefs
+   data_structures_index
 
-Datatype Definitions
-````````````````````
+:doc:`Datatype Definitions <std_types>`
+
 Type Definitions of Standard Datatypes for AOCL-FFTZ Library.
 
 .. toctree::
+   :hidden:
    :maxdepth: 1
 
    std_types
 
-Examples
-````````
+:doc:`Examples <test_programs>`
+
 Example programs illustrating how to use AOCL-FFTZ APIs are presented here.
 
 .. toctree::
-   :maxdepth: 2
+   :hidden:
+   :maxdepth: 1
 
    test_programs
 

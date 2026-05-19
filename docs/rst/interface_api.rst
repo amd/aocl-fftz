@@ -27,7 +27,7 @@
 .. _ref-interface-api:
 
 Interface APIs
---------------
+==============
 
 .. doxygengroup:: APIs
    :project: fftz

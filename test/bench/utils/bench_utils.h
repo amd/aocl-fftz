@@ -288,4 +288,34 @@
         }                                                                      \
     }
 
+// For in-place R2C/C2R transforms, allocate buffer based on the larger size.
+// Half-complex data (n/2+1 complex values) requires more space than real data,
+// so both are set to max(input_bytes, output_bytes).
+//
+// Example for R2C (size=6, double precision):
+//   - input_bytes  = 6 real values * 8 bytes = 48 bytes
+//   - output_bytes = 4 complex values * 16 bytes = 64 bytes
+//                    (half-complex output)
+//   - input_bytes is expanded to 64 bytes to accommodate output
+//
+// Example for C2R (size=6, double precision):
+//   - input_bytes  = 4 complex values * 16 bytes = 64 bytes
+//                    (half-complex input)
+//   - output_bytes = 6 real values * 8 bytes = 48 bytes
+//   - output_bytes is expanded to 64 bytes to accommodate input
+#define EXPAND_REAL_BUFFER_SIZES(bench_params, input_bytes, output_bytes)      \
+    {                                                                          \
+        if (bench_params->res_placement == IN_PLACE)                           \
+        {                                                                      \
+            if (input_bytes > output_bytes)                                    \
+            {                                                                  \
+                output_bytes = input_bytes;                                    \
+            }                                                                  \
+            else                                                               \
+            {                                                                  \
+                input_bytes = output_bytes;                                    \
+            }                                                                  \
+        }                                                                      \
+    }
+
 #endif // BENCH_UTILS_H

@@ -61,14 +61,19 @@ INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank)
  * @brief Function to find the required buffer size for memory allocation.
  * calculates the total length of input & output buffers with strides included
  *
- * @param params aoclfftz_bench_params_t struct containing the req info
+ * @param dim_rank rank of the dims array
+ * @param vec_rank rank of the vecs array
+ * @param dims aoclfftz_dim_t_64_ struct holding problem size and strides
+ * @param vecs aoclfftz_dim_t_64_ struct holding batch size and strides
  * @param in_buffer_size register to store input buffer size
  * @param out_buffer_size register to store output buffer size
+ * @param fft_type FFT type (C2C, R2C, or C2R)
  * @return VOID
  */
 VOID calculate_buffer_sizes(INT32 dim_rank,  INT32 vec_rank,
                             aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                            UINTP *in_buffer_size, UINTP *out_buffer_size)
+                            UINTP *in_buffer_size, UINTP *out_buffer_size,
+                            aoclfftz_bench_fft_type_t fft_type)
 {
     // Example: for an 1D problem with 1D batch
     // Problem size : 3:6:6v4:1:1
@@ -83,8 +88,24 @@ VOID calculate_buffer_sizes(INT32 dim_rank,  INT32 vec_rank,
     UINTP out_size = 1;
     for (INT32 i = 0; i < dim_rank; i++)
     {
-        in_size += ((dims[i].n - 1) * (dims[i].in_stride));
-        out_size += ((dims[i].n - 1) * (dims[i].out_stride));
+        INTP in_len = dims[i].n;
+        INTP out_len = dims[i].n;
+        // Half-complex format adjustment for innermost dimension (i=0):
+        // - C2R: Input is half-complex with (n/2 + 1) complex values
+        // - R2C: Output is half-complex with (n/2 + 1) complex values
+        if (i == 0)
+        {
+            if (fft_type == C2R)
+            {
+                in_len = (dims[i].n / 2) + 1;
+            }
+            else if (fft_type == R2C)
+            {
+                out_len = (dims[i].n / 2) + 1;
+            }
+        }
+        in_size += ((in_len - 1) * (dims[i].in_stride));
+        out_size += ((out_len - 1) * (dims[i].out_stride));
     }
     for (INT32 i = 0; i < vec_rank; i++)
     {
@@ -120,9 +141,14 @@ VOID calculate_buffer_sizes(INT32 dim_rank,  INT32 vec_rank,
  * simplified index map (in array representation, where array index is the key) :
  * [0, 1, 2, 3, 6, 7, 8, 9, 12, 13, 14, 15]
  *
- * @param params aoclfftz_bench_params_t struct containing the req info
- * @param in_idx_map buffer to store input index map
- * @param out_idx_map buffer to store output index map
+ * @param dim_rank rank of the dims array
+ * @param vec_rank rank of the vecs array
+ * @param dims aoclfftz_dim_t_64_ struct holding problem size and strides
+ * @param vecs aoclfftz_dim_t_64_ struct holding batch size and strides
+ * @param in_idx_map Buffer to store input index map
+ * @param out_idx_map Buffer to store output index map
+ * @param fft_type FFT type (C2C, R2C, or C2R)
+ * @param is_aligned Flag indicating if memory allocation should be aligned
  * @return VOID
  */
 VOID prepare_index_map(INT32 dim_rank, INT32 vec_rank, aoclfftz_dim_t_64_ *dims,

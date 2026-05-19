@@ -33,8 +33,6 @@
 cmake_minimum_required(VERSION 3.26.0)
 project(aoclfftz_examples C)
 
-# Set the path to the AOCL-FFTZ include and library directories
-set(FFTZ_LIB aocl_fftz)
 set(AOCL_FFTZ_INSTALL_PATH "" CACHE PATH "Path to the AOCL-FFTZ installation directory")
 
 # set the expected path variables
@@ -64,6 +62,22 @@ else()
     # Set paths based on the installed structure
     set(AOCL_FFTZ_LIB_DIR "${AOCL_FFTZ_INSTALL_PATH}/lib")
     set(AOCL_FFTZ_INCLUDE_DIR "${AOCL_FFTZ_INSTALL_PATH}/include")
+    # Choose library name from what is actually installed.
+    # On Windows, prefer shared (aocl_fftz.lib) when present; fall back to aocl_fftz_static.lib when shared is absent.
+    if(NOT DEFINED FFTZ_LIB)
+        if(WIN32)
+            if(EXISTS "${AOCL_FFTZ_LIB_DIR}/aocl_fftz.lib")
+                set(FFTZ_LIB aocl_fftz)
+            elseif(EXISTS "${AOCL_FFTZ_LIB_DIR}/aocl_fftz_static.lib")
+                set(FFTZ_LIB aocl_fftz_static)
+            else()
+                set(FFTZ_LIB aocl_fftz)
+            endif()
+        else()
+            set(FFTZ_LIB aocl_fftz)
+        endif()
+        message(STATUS "Linking against AOCL-FFTZ library: ${FFTZ_LIB}")
+    endif()
 endif()
 
 # Check if the header exists

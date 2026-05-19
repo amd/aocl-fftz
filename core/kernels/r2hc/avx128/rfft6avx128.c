@@ -94,7 +94,7 @@ static VOID r2hc_rfft6avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     FLOAT *curr_in, *curr_out;
-    INTP N = n >> 2;
+    INTP N = n / NUM_SETS_REAL_128_S;
 
     __m128 v_CRTM_6_1 = _mm_broadcast_ss(&CRTM_6_1);
     __m128 v_CRTM_6_2 = _mm_broadcast_ss(&CRTM_6_2);
@@ -162,8 +162,8 @@ static VOID r2hc_rfft6avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
         curr_out = out + out_strides[5];
         STR_128_S(curr_out, v_out_stride, v_out5);
 
-        in = in + (v_in_stride << 2);
-        out = out + (v_out_stride << 2);
+        in += v_in_stride * NUM_SETS_REAL_128_S;
+        out += v_out_stride * NUM_SETS_REAL_128_S;
     }
     // tail cases
     if (n & 2)
@@ -303,7 +303,7 @@ static VOID r2hc_rfft6avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     FLOAT *curr_in, *curr_out;
-    INTP N = n >> 2;
+    INTP N = n / NUM_SETS_REAL_128_S;
 
     __m128 v_CRTM_6_1 = _mm_broadcast_ss(&CRTM_6_1);
 
@@ -371,8 +371,8 @@ static VOID r2hc_rfft6avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
         curr_out = out + out_strides[5];
         STR_128_S(curr_out, v_out_stride, v_out5);
 
-        in = in + (v_in_stride << 2);
-        out = out + (v_out_stride << 2);
+        in += v_in_stride * NUM_SETS_REAL_128_S;
+        out += v_out_stride * NUM_SETS_REAL_128_S;
     }
     // tail cases
     if (n & 2)
@@ -517,7 +517,7 @@ static VOID r2hc_rfft6avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     DOUBLE *curr_in, *curr_out;
-    INTP N = n >> 1;
+    INTP N = n / NUM_SETS_REAL_128_D;
 
     __m128d v_CRTM_6_1 = _mm_set1_pd(CRTM_6_1);
     __m128d v_CRTM_6_2 = _mm_set1_pd(CRTM_6_2);
@@ -585,8 +585,8 @@ static VOID r2hc_rfft6avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
         curr_out = out + out_strides[5];
         STR_128_D(curr_out, v_out_stride, v_out5);
 
-        in = in + (v_in_stride << 1);
-        out = out + (v_out_stride << 1);
+        in += v_in_stride * NUM_SETS_REAL_128_D;
+        out += v_out_stride * NUM_SETS_REAL_128_D;
     }
     // tail cases
     if (n & 1)
@@ -658,7 +658,7 @@ static VOID r2hc_rfft6avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     DOUBLE *curr_in, *curr_out;
-    INTP N = n >> 1;
+    INTP N = n / NUM_SETS_REAL_128_D;
 
     __m128d v_CRTM_6_1 = _mm_set1_pd(CRTM_6_1);
 
@@ -725,8 +725,8 @@ static VOID r2hc_rfft6avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
         curr_out = out + out_strides[5];
         STR_128_D(curr_out, v_out_stride, v_out5);
 
-        in = in + (v_in_stride << 1);
-        out = out + (v_out_stride << 1);
+        in += v_in_stride * NUM_SETS_REAL_128_D;
+        out += v_out_stride * NUM_SETS_REAL_128_D;
     }
     // tail cases
     if (n & 1)

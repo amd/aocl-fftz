@@ -84,10 +84,15 @@ typedef struct aoclfftz_selector
 
     // A global buffer to help with transposition of twiddle multiplied elements
     void* scratch_space;
-    kernel_t* kertab_dft;
-    kernel_t* kertab_twid_dft;
+    kernel_tables_t *kernel_tables;
 } aoclfftz_selector_t;
 
+// Define thread workload threshold to choose between batched direct approaches
+// in MT and these parameters are set based on performance experiments.
+#define MIN_OPCNT_PER_THREAD 5000
+#define MIN_DIM_STRIDE_FOR_COLMAJOR 50000
+// Scaling factor for kernel weightage calculation to normalize cycle counts
+#define KERNEL_WEIGHTAGE_SCALE_FACTOR 100.0
 /*
  * @brief Helper function to iterate over the solutions
  */
@@ -319,7 +324,6 @@ typedef struct aoclfftz_selector
 #define PREPARE_AND_SETUP_DFT(sel_obj, ret)                                    \
 {                                                                              \
     sel_obj->execute = register_execute_dft();                                 \
-    setup_inplace_buffers(sel_obj);                                            \
     if (IS_REAL(sel_obj->solution->decomp_scheme->flags))                      \
     {                                                                          \
         aoclfftz_realhelper_t *realhelper;                                     \
@@ -347,7 +351,6 @@ typedef struct aoclfftz_selector
     else                                                                       \
     {                                                                          \
         ret = selector_driver_dft_(sel_obj);                                   \
-        post_process_for_optimal_buffering_batching(sel_obj->solution);        \
         setup_twiddle_buffer_complex(sel_obj->solution);                       \
     }                                                                          \
 }
@@ -364,6 +367,12 @@ typedef struct aoclfftz_selector
         from_sol_obj->solver->kernel_c2c->sets;                                \
     to_sol_obj->solver->kernel_c2c->count =                                    \
         from_sol_obj->solver->kernel_c2c->count;                               \
+    to_sol_obj->solver->kernel_c2c_r->kfft =                                   \
+        from_sol_obj->solver->kernel_c2c_r->kfft;                              \
+    to_sol_obj->solver->kernel_c2c_r->sets =                                   \
+        from_sol_obj->solver->kernel_c2c_r->sets;                              \
+    to_sol_obj->solver->kernel_c2c_r->count =                                  \
+        from_sol_obj->solver->kernel_c2c_r->count;                             \
     to_sol_obj->solver->kernel_r2hc->kfft =                                    \
         from_sol_obj->solver->kernel_r2hc->kfft;                               \
     to_sol_obj->solver->kernel_r2hc->sets =                                    \
@@ -453,6 +462,10 @@ typedef struct aoclfftz_selector
         from_sol_obj->dft_bufs->buffered->aux_buffer_2;                        \
     to_sol_obj->dft_bufs->buffered->out_ptr =                                  \
         from_sol_obj->dft_bufs->buffered->out_ptr;                             \
+    to_sol_obj->dft_bufs->ct_buffer =                                          \
+        from_sol_obj->dft_bufs->ct_buffer;                                     \
+    to_sol_obj->dft_bufs->num_ct_buf =                                         \
+        from_sol_obj->dft_bufs->num_ct_buf;                                    \
     to_sol_obj->dft_bufs->ct_buf_real =                                        \
         from_sol_obj->dft_bufs->ct_buf_real;                                   \
     to_sol_obj->dft_bufs->ct_buf_imag =                                        \
@@ -460,10 +473,6 @@ typedef struct aoclfftz_selector
     to_sol_obj->dft_bufs->ct_buf_real_in =                                     \
         from_sol_obj->dft_bufs->ct_buf_real_in;                                \
     to_sol_obj->dft_bufs->ct_buf_size = from_sol_obj->dft_bufs->ct_buf_size;   \
-    to_sol_obj->dft_bufs->use_2D_buffering =                                   \
-        from_sol_obj->dft_bufs->use_2D_buffering;                              \
-    to_sol_obj->dft_bufs->reset_ct_buf_offset =                                \
-        from_sol_obj->dft_bufs->reset_ct_buf_offset;                           \
     if (from_sol_obj->dft_bufs->transpose &&                                   \
         to_sol_obj->dft_bufs->transpose)                                       \
     {                                                                          \
@@ -561,6 +570,12 @@ typedef struct aoclfftz_selector
         from_sol_obj->solver->kernel_c2c->sets;                                \
     to_sol_obj->solver->kernel_c2c->count =                                    \
         from_sol_obj->solver->kernel_c2c->count;                               \
+    to_sol_obj->solver->kernel_c2c_r->kfft =                                   \
+        from_sol_obj->solver->kernel_c2c_r->kfft;                              \
+    to_sol_obj->solver->kernel_c2c_r->sets =                                   \
+        from_sol_obj->solver->kernel_c2c_r->sets;                              \
+    to_sol_obj->solver->kernel_c2c_r->count =                                  \
+        from_sol_obj->solver->kernel_c2c_r->count;                             \
     to_sol_obj->solver->kernel_r2hc->kfft =                                    \
         from_sol_obj->solver->kernel_r2hc->kfft;                               \
     to_sol_obj->solver->kernel_r2hc->sets =                                    \
@@ -619,6 +634,8 @@ typedef struct aoclfftz_selector
         from_sol_obj->dft_bufs->buffered->aux_buffer_1;                        \
     to_sol_obj->dft_bufs->buffered->aux_buffer_2 =                             \
         from_sol_obj->dft_bufs->buffered->aux_buffer_2;                        \
+    to_sol_obj->dft_bufs->ct_buffer =                                          \
+        from_sol_obj->dft_bufs->ct_buffer;                                     \
     to_sol_obj->dft_bufs->ct_buf_real =                                        \
         from_sol_obj->dft_bufs->ct_buf_real;                                   \
     to_sol_obj->dft_bufs->ct_buf_imag =                                        \
@@ -626,16 +643,13 @@ typedef struct aoclfftz_selector
     to_sol_obj->dft_bufs->ct_buf_real_in =                                     \
         from_sol_obj->dft_bufs->ct_buf_real_in;                                \
     to_sol_obj->dft_bufs->ct_buf_size = from_sol_obj->dft_bufs->ct_buf_size;   \
-    to_sol_obj->dft_bufs->use_2D_buffering =                                   \
-        from_sol_obj->dft_bufs->use_2D_buffering;                              \
-    to_sol_obj->dft_bufs->reset_ct_buf_offset =                                \
-        from_sol_obj->dft_bufs->reset_ct_buf_offset;                           \
     to_sol_obj->dft_bufs->buffered->out_ptr =                                  \
         from_sol_obj->dft_bufs->buffered->out_ptr;                             \
     to_sol_obj->next_sol = from_sol_obj->next_sol;                             \
 }
 
 // Copy strides from one solution to another
+// except for the BATCHED_CT_L1_DIRECT solver
 #define COPY_STRIDES(to_sol_obj, from_sol_obj)                                 \
 {                                                                              \
     if (from_sol_obj->strides_grp->strides->in_strides != NULL)                \
@@ -801,6 +815,51 @@ typedef struct aoclfftz_selector
     }                                                                          \
 }
 
+// Copy strides from one solution to another for the BATCHED_CT_L1_DIRECT solver
+#define COPY_STRIDES_BATCHED_CT_L1_DIRECT(to_sol_obj, from_sol_obj)            \
+{                                                                              \
+    /* strides (radix_m kernel): radix_m entries, count = kernel_c2c_r */      \
+    FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_grp->strides->in_strides);    \
+    FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_grp->strides->out_strides);   \
+    ALLOC_ALIGN_UNINIT(to_sol_obj->strides_grp->strides->in_strides, INTP,     \
+                        from_sol_obj->solver->kernel_c2c_r->count *            \
+                            sizeof(INTP));                                     \
+    ALLOC_ALIGN_UNINIT(to_sol_obj->strides_grp->strides->out_strides, INTP,    \
+                        from_sol_obj->solver->kernel_c2c_r->count *            \
+                            sizeof(INTP));                                     \
+    memcpy(to_sol_obj->strides_grp->strides->in_strides,                       \
+            from_sol_obj->strides_grp->strides->in_strides,                    \
+            from_sol_obj->solver->kernel_c2c_r->count * sizeof(INTP));         \
+    memcpy(to_sol_obj->strides_grp->strides->out_strides,                      \
+            from_sol_obj->strides_grp->strides->out_strides,                   \
+            from_sol_obj->solver->kernel_c2c_r->count * sizeof(INTP));         \
+    /* strides_c2c (radix_r kernel): radix_r entries, count = kernel_c2c */    \
+    FREE_ALIGN_ALLOCATED_MEM(                                                  \
+        to_sol_obj->strides_grp->strides_c2c->in_strides);                     \
+    FREE_ALIGN_ALLOCATED_MEM(                                                  \
+        to_sol_obj->strides_grp->strides_c2c->out_strides);                    \
+    ALLOC_ALIGN_UNINIT(                                                        \
+        to_sol_obj->strides_grp->strides_c2c->in_strides, INTP,                \
+        from_sol_obj->solver->kernel_c2c->count * sizeof(INTP));               \
+    ALLOC_ALIGN_UNINIT(                                                        \
+        to_sol_obj->strides_grp->strides_c2c->out_strides, INTP,               \
+        from_sol_obj->solver->kernel_c2c->count * sizeof(INTP));               \
+    memcpy(to_sol_obj->strides_grp->strides_c2c->in_strides,                   \
+            from_sol_obj->strides_grp->strides_c2c->in_strides,                \
+            from_sol_obj->solver->kernel_c2c->count * sizeof(INTP));           \
+    memcpy(to_sol_obj->strides_grp->strides_c2c->out_strides,                  \
+            from_sol_obj->strides_grp->strides_c2c->out_strides,               \
+            from_sol_obj->solver->kernel_c2c->count * sizeof(INTP));           \
+    to_sol_obj->strides_grp->strides->v_in_stride =                            \
+        from_sol_obj->strides_grp->strides->v_in_stride;                       \
+    to_sol_obj->strides_grp->strides->v_out_stride =                           \
+        from_sol_obj->strides_grp->strides->v_out_stride;                      \
+    to_sol_obj->strides_grp->strides_c2c->v_in_stride =                        \
+        from_sol_obj->strides_grp->strides_c2c->v_in_stride;                   \
+    to_sol_obj->strides_grp->strides_c2c->v_out_stride =                       \
+        from_sol_obj->strides_grp->strides_c2c->v_out_stride;                  \
+}
+
 #define RESET_COST(sol)                                                        \
 {                                                                              \
     sol->cost_analysis->ops = 0;                                               \
@@ -831,9 +890,8 @@ typedef struct aoclfftz_selector
 }
 
 // Function declarations
-INT32 register_solvers_kernels(kernel_t *kertab_dft, kernel_t *kertab_twid_dft,
-                               INT32 dt, INT32 dir, INT32 is_real,
-                               INT32 cpu_flags);
+INT32 register_solvers_kernels(kernel_tables_t *kernel_tables, INT32 dt,
+                               INT32 dir, INT32 is_real, INT32 cpu_flags);
 INT32 selector_driver_dft_(aoclfftz_selector_t *sel);
 INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
                             aoclfftz_realhelper_t *realhelper);
@@ -855,8 +913,10 @@ INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_permuted_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel);
 INT32 selector_sizeone_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 INT32 selector_transpose(aoclfftz_selector_t *sel);
+INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 
 INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                            aoclfftz_realhelper_t *realhelper);
@@ -866,10 +926,17 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                              aoclfftz_realhelper_t *realhelper);
 INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                        aoclfftz_realhelper_t *realhelper);
+INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+                         aoclfftz_realhelper_t *realhelper);
 VOID destroy_handle(VOID *handle);
-VOID fuse_vecs(aoclfftz_solution_t *sol);
-VOID setup_inplace_buffers(aoclfftz_selector_t *sel);
-VOID post_process_solution(aoclfftz_solution_t *sol, UINT32 *scratch_buf_idx);
+VOID fuse_vecs(aoclfftz_solution_t *sol, INT32 is_FFT_ker_supported);
 INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);
+INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table,
+                               INT32 is_innermost_dim);
+DOUBLE get_kernel_weightage(INTP radix, kernel_t *kertab,
+                            aoclfftz_solution_t *sol);
+UINT8 should_use_colmajor_batched_solver(aoclfftz_solution_t *solution,
+                                         kernel_t *kertab, INT32 avl_threads);
+UINT8 check_col_major(aoclfftz_decomp_scheme_t *decomp_scheme);
 
 #endif // AOCLFFTZ_SELECTOR_H

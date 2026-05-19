@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 Advanced Micro Devices. All rights reserved.
+# Copyright (C) 2023-2026 Advanced Micro Devices. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -41,6 +41,8 @@ cmake_minimum_required(VERSION 3.26.0)
 #set the project name
 project(AOCL-FFTZ)
 message(STATUS "Building AOCL-FFTZ LIBRARY AND TEST SUITE")
+# Version used by pkg-config and CMake config
+set(FFTZ_VERSION "5.3.0")
 
 string(TIMESTAMP TODAY "%Y%m%d")
 add_compile_definitions(AOCL_BUILD_VERSION="Build ${TODAY}")
@@ -61,22 +63,29 @@ endif()
 
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
 
-option(AOCL_ENABLE_LOG "Enable logging support within the library (Disabled by default)" OFF)
-set(AOCL_TEST_COVERAGE "OFF" CACHE STRING "Enable GTest and AOCL test bench based CTest suite (OFF / STANDARD / EXHAUSTIVE, default: OFF)")
+option(AOCL_ENABLE_LOG "Enables logging support within the library (Disabled by default)" OFF)
+set(AOCL_TEST_COVERAGE "OFF" CACHE STRING "Enables GTest and AOCL test bench based CTest suite (OFF / STANDARD / EXHAUSTIVE, default: OFF)")
 set_property(CACHE AOCL_TEST_COVERAGE PROPERTY STRINGS "OFF" "STANDARD" "EXHAUSTIVE")
 option(ACCURACY_WITH_DFT "Enables accuracy mode to run with DFT (Disabled by default)" OFF)
 option(ASAN "Enables address sanitizer checks. Supported only on Linux Debug build (Disabled by default)" OFF)
-option(BUILD_DOC "Build documentation for library (Disabled by default)" OFF)
-option(BUILD_STATIC_LIBS "Build static library (Default build type is shared library)" OFF)
+option(BUILD_DOC "Builds documentation for library (Disabled by default)" OFF)
+option(BUILD_STATIC_LIBS "Builds static library (Default build type is shared library)" OFF)
+option(BUILD_THIRD_PARTY_WRAPPERS "Builds fftz third party wrapper libraries along aocl_fftz library" OFF)
 option(CODE_COVERAGE "Enables source code coverage and generates coverage report. Supported only on Linux with GCC compiler (Disabled by default)" OFF)
-set(ENABLE_INSTRUCTIONS_UPTO "AVX512" CACHE STRING "Specify maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)")
+option(CODE_COVERAGE_FOR_ATG "Enables source code coverage instrumentation for running coverage and parsing tools for use by AI Test case Generation (ATG) later. Supported only on Linux with GCC compiler (Disabled by default)" OFF)
+option(ENABLE_APP_INFO_LOGS "Enables info logging for FFT problems used by the application (Independent of AOCL_ENABLE_LOG, Disabled by default)" OFF)
+set(ENABLE_INSTRUCTIONS_UPTO "AVX512" CACHE STRING "Specifies maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)")
 set_property(CACHE ENABLE_INSTRUCTIONS_UPTO PROPERTY STRINGS "None" "AVX128" "AVX256" "AVX512")
-option(ENABLE_FMA "Enable -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)" ON)
+option(ENABLE_FMA "Enables -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)" ON)
 option(ENABLE_MULTI_THREADING "Compiles library with multi-threading support using OpenMP (Disabled by default)" OFF)
-option(ENABLE_STRICT_WARNINGS "Enable compiler flags to treat all warnings as errors (Enabled by default)" ON)
-option(FUZZTEST "Enable Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)" OFF)
+option(ENABLE_STRICT_WARNINGS "Enables compiler flags to treat all warnings as errors (Enabled by default)" ON)
+option(FUZZTEST "Enables Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)" OFF)
 option(VALGRIND "Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)" OFF)
-option(BUILD_THIRD_PARTY_WRAPPERS "Build fftz third party wrapper libraries along aocl_fftz library" OFF)
+if(WIN32)
+    set(OpenMP_libomp_LIBRARY "C:/Program Files/LLVM/lib/libomp.lib" CACHE FILEPATH "Path to the custom OpenMP library")
+else()
+    set(OpenMP_libomp_LIBRARY "" CACHE FILEPATH "Path to the custom OpenMP library")
+endif()
 
 #list source files to be compiled for the library
 set(CORE_PATH core)
@@ -225,20 +234,22 @@ add_compile_definitions(CXXCompiler="${CMAKE_CXX_COMPILER}")
 add_compile_definitions(CFLAGS_SET2="${CMAKE_C_FLAGS}")
 
 if(ENABLE_MULTI_THREADING)
+    add_compile_definitions(MULTI_THREADING)
     file(GLOB MT_SRC_FILES CONFIGURE_DEPENDS
                         ${CORE_PATH}/solvers/complex/multithread/*.c
                         ${CORE_PATH}/solvers/real/multithread/*.c)
-    if (WIN32)
-	set(OpenMP_libomp_LIBRARY "C:/Program Files/LLVM/lib/libomp.lib" CACHE STRING "OpenMP library path")
-	message(STATUS "OpenMP custom path to look for OpenMP: ${OpenMP_libomp_LIBRARY}")
+    if(WIN32)
+        message(STATUS "Custom path to look for OpenMP: ${OpenMP_libomp_LIBRARY}")
     endif()
-    find_package(OpenMP)
-    if(OPENMP_FOUND)
-        message(STATUS "OpenMP found")
-        add_compile_definitions(MULTI_THREADING)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    if(WIN32 OR NOT OpenMP_libomp_LIBRARY)
+        find_package(OpenMP)
+        if(OpenMP_FOUND)
+            message(STATUS "Using system OpenMP")
+        else()
+            message(FATAL_ERROR "OpenMP Missing! Please install OpenMP to enable multi-threading")
+        endif()
     else()
-	message(FATAL_ERROR "OpenMP Missing! Please install OpenMP to enable multi-threading")
+        message(STATUS "Custom path to look for OpenMP: ${OpenMP_libomp_LIBRARY}")
     endif()
     list(APPEND CORE_SRC_FILES ${MT_SRC_FILES})
 endif()
@@ -251,8 +262,25 @@ if(AOCL_ENABLE_LOG)
     add_compile_definitions(AOCL_ENABLE_LOG)
 endif()
 
-#set library and sources
-set(lib_name aocl_fftz)
+if(ENABLE_APP_INFO_LOGS)
+    add_compile_definitions(ENABLE_APP_INFO_LOGS)
+endif()
+
+# set library and sources
+# Set target name as aocl_fftz on Linux (shared and static) and on Windows use aocl_fftz_static for static build.
+if(BUILD_STATIC_LIBS)
+    set(FFTZ_EXPORT_NAME aocl-fftz-static-targets)
+    set(FFTZ_EXPORTED_TARGET_NAME aocl_fftz_static)
+    if(WIN32)
+        set(lib_name aocl_fftz_static)
+    else()
+        set(lib_name aocl_fftz)
+    endif()
+else()
+    set(lib_name aocl_fftz)
+    set(FFTZ_EXPORT_NAME aocl-fftz-shared-targets)
+    set(FFTZ_EXPORTED_TARGET_NAME aocl_fftz)
+endif()
 set(SRC_FILES
         ${UTILS_SRC_FILES}
         ${API_SRC_FILES}
@@ -263,9 +291,10 @@ set(BENCH_DIR test/bench)
 set(TEST_UTILS_DIR test/utils)
 set(BENCH_UTILS_DIR test/bench/utils)
 
-#set library dependencies
+#set library dependencies (empty on Windows; libm on UNIX)
+set(lib_deps "")
 if(UNIX)
-    set(lib_deps m) #math library
+    list(APPEND lib_deps m) # math library
 endif()
 
 #add macro for math constants
@@ -303,10 +332,11 @@ if(NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "None"
 endif()
 
 # setup to get source code coverage(GCOV)
-if(CODE_COVERAGE)
+if(CODE_COVERAGE OR CODE_COVERAGE_FOR_ATG)
     if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND ${CMAKE_C_COMPILER_ID} STREQUAL "GNU"))
         # Switch off GCOV: target not supported
         set(CODE_COVERAGE OFF)
+        set(CODE_COVERAGE_FOR_ATG OFF)
         message(WARNING "Target not supported. Code coverage is only supported on Linux OS with GCC compiler")
     endif()
 endif()
@@ -338,13 +368,14 @@ if(FUZZTEST)
 endif()
 
 # Setting AOCL_TEST_COVERAGE to STANDARD to enable CTests and GTests for VALGRIND / CODE_COVERAGE / FUZZTEST
-if((VALGRIND OR CODE_COVERAGE OR FUZZTEST) AND (AOCL_TEST_COVERAGE STREQUAL "OFF"))
+if((VALGRIND OR CODE_COVERAGE OR CODE_COVERAGE_FOR_ATG OR FUZZTEST) AND (AOCL_TEST_COVERAGE STREQUAL "OFF"))
     set(AOCL_TEST_COVERAGE "STANDARD")
 endif()
 
 message(STATUS ASAN : ${ASAN})
 message(STATUS VALGRIND : ${VALGRIND})
 message(STATUS CODE COVERAGE : ${CODE_COVERAGE})
+message(STATUS CODE COVERAGE ATG : ${CODE_COVERAGE_FOR_ATG})
 message(STATUS AOCL_ENABLE_LOG : ${AOCL_ENABLE_LOG})
 message(STATUS FUZZTEST : ${FUZZTEST})
 message(STATUS MULTI-THREADING : ${ENABLE_MULTI_THREADING})
@@ -411,17 +442,51 @@ else()
     message(STATUS "Library type being built is: Shared")
 endif()
 
-#add required OpenMP flags
+set_target_properties(${lib_name} PROPERTIES EXPORT_NAME ${FFTZ_EXPORTED_TARGET_NAME})
+
+# Link system deps like libm: PUBLIC for static (consumers need -lm), PRIVATE for shared.
+if(lib_deps)
+    if(BUILD_STATIC_LIBS)
+        target_link_libraries(${lib_name} PUBLIC ${lib_deps})
+    else()
+        target_link_libraries(${lib_name} PRIVATE ${lib_deps})
+    endif()
+endif()
+
+# Add required OpenMP flags
 if(ENABLE_MULTI_THREADING)
     if(WIN32)
-        target_link_libraries(${lib_name} PRIVATE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+        if(BUILD_STATIC_LIBS)
+            # Static libraries must link OpenMP PUBLIC so that apps that link us get the runtime too.
+            target_link_libraries(${lib_name} PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+        else()
+            target_link_libraries(${lib_name} PRIVATE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+        endif()
     else()
-        target_link_options(${lib_name} PUBLIC -fopenmp)
+        # On Unix: For custom path, link that file + -fopenmp and for system OpenMP, link OpenMP::OpenMP_C/OpenMP_CXX
+        # pkg-config uses -lomp/-lgomp in Libs.private.
+        if(OpenMP_libomp_LIBRARY)
+            if(BUILD_STATIC_LIBS)
+                target_compile_options(${lib_name} PUBLIC -fopenmp)
+                target_link_options(${lib_name} PUBLIC -fopenmp)
+                target_link_libraries(${lib_name} PUBLIC ${OpenMP_libomp_LIBRARY})
+            else()
+                target_compile_options(${lib_name} PRIVATE -fopenmp)
+                target_link_options(${lib_name} PRIVATE -fopenmp)
+                target_link_libraries(${lib_name} PRIVATE ${OpenMP_libomp_LIBRARY})
+            endif()
+        else()
+            if(BUILD_STATIC_LIBS)
+                target_link_libraries(${lib_name} PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+            else()
+                target_link_libraries(${lib_name} PRIVATE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+            endif()
+        endif()
     endif()
 endif()
 
 # add the compiler and linker flags for code coverage
-if(CODE_COVERAGE)
+if(CODE_COVERAGE OR CODE_COVERAGE_FOR_ATG)
     target_compile_options(${lib_name} PUBLIC --coverage)
     # Check if the compiler supports -fprofile-abs-path
     check_cxx_compiler_flag("-fprofile-abs-path" HAS_FPROFILE_ABS_PATH)
@@ -438,7 +503,6 @@ if(ASAN)
 endif()
 
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${DEST_LIB_PATH}")
 
 #add test bench executable
 set(exe_name aocl_fftz_bench)
@@ -454,13 +518,160 @@ else()
 endif()
 target_link_libraries(${exe_name} ${lib_name})
 target_link_libraries(${exe_name} ${CMAKE_DL_LIBS})
-target_link_libraries(${exe_name} ${lib_deps})
+if(lib_deps)
+    target_link_libraries(${exe_name} ${lib_deps})
+endif()
+
+# Set rpath so the executable finds the shared library in all scenarios:
+# - Build directory: ./build/aocl_fftz_bench finds ./build/libaocl_fftz.so
+# - Install directory: bin/aocl_fftz_bench finds ../lib/libaocl_fftz.so
+if(UNIX AND NOT BUILD_STATIC_LIBS)
+    set_target_properties(${exe_name} PROPERTIES
+        BUILD_RPATH "$ORIGIN"
+        INSTALL_RPATH "$ORIGIN/../${DEST_LIB_PATH}"
+    )
+endif()
 
 #Install into destination path by using -DCMAKE_INSTALL_PREFIX=<path> while configuring cmake
 message(STATUS "AOCL-FFTZ Library, Interface header files and Test binary will be installed at ${CMAKE_INSTALL_PREFIX}")
 install(TARGETS ${exe_name} DESTINATION ${DEST_BIN_PATH})
-install(TARGETS ${lib_name} DESTINATION ${DEST_LIB_PATH})
+install(TARGETS ${lib_name} EXPORT ${FFTZ_EXPORT_NAME}
+    DESTINATION ${DEST_LIB_PATH}
+    INCLUDES DESTINATION ${DEST_INC_PATH}
+)
 install(FILES ${INC_FILES} DESTINATION ${DEST_INC_PATH})
+
+# CMake package config files
+include(CMakePackageConfigHelpers)
+
+set(FFTZ_INSTALL_CMAKEDIR "${DEST_LIB_PATH}/cmake/aocl-fftz")
+# Config decides at package-load time: find_dependency(OpenMP) when aocl-fftz::aocl_fftz_static has OpenMP in its interface.
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/aocl-fftz-config.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/aocl-fftz-config.cmake"
+    INSTALL_DESTINATION "${FFTZ_INSTALL_CMAKEDIR}"
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/aocl-fftz-config-version.cmake"
+    VERSION "${FFTZ_VERSION}"
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/aocl-fftz-config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/aocl-fftz-config-version.cmake"
+    DESTINATION "${FFTZ_INSTALL_CMAKEDIR}"
+)
+
+install(EXPORT ${FFTZ_EXPORT_NAME}
+    NAMESPACE aocl-fftz::
+    DESTINATION "${FFTZ_INSTALL_CMAKEDIR}"
+)
+
+# Install .pc files so pkg-config works. CMake projects can use find_package(aocl-fftz) as well.
+set(FFTZ_DESCRIPTION "AOCL-FFTZ: high-performance FFT library")
+if (BUILD_THIRD_PARTY_WRAPPERS)
+    string(APPEND FFTZ_DESCRIPTION " (build includes FFTW-compatible wrappers; see fftw3.pc / fftw3f.pc / fftw3_omp.pc / fftw3f_omp.pc)")
+endif()
+if(WIN32 AND BUILD_STATIC_LIBS)
+    set(FFTZ_LIBS "-laocl_fftz_static")
+else()
+    set(FFTZ_LIBS "-laocl_fftz")
+endif()
+# Populate Libs.private in the .pc file with the same libs we actually link (e.g. -lm, -fopenmp
+# or custom OpenMP path). That way pkg-config gives downstream the correct link line.
+set(FFTZ_LIBS_PRIVATE "")
+
+# On Unix, we must explicitly link libm.
+if(UNIX)
+    string(APPEND FFTZ_LIBS_PRIVATE " -lm")
+endif()
+
+# Add OpenMP to Libs.private only (not Cflags/Libs). If user set a custom lib path, use that
+# so downstream links the same runtime we did, and add -fopenmp so pkg-config --static
+# consumers get a complete link line. Otherwise use what FindOpenMP selected so
+# -lomp vs -lgomp matches the actual link interface.
+if(ENABLE_MULTI_THREADING)
+    if(NOT WIN32)
+        if(OpenMP_libomp_LIBRARY)
+            get_filename_component(OPENMP_LIB_REAL "${OpenMP_libomp_LIBRARY}" REALPATH)
+            string(APPEND FFTZ_LIBS_PRIVATE " ${OPENMP_LIB_REAL}")
+            if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
+                string(APPEND FFTZ_LIBS_PRIVATE " -fopenmp")
+            endif()
+        else()
+            if(DEFINED OpenMP_C_LIB_NAMES AND OpenMP_C_LIB_NAMES)
+                foreach(_omp_lib ${OpenMP_C_LIB_NAMES})
+                    string(APPEND FFTZ_LIBS_PRIVATE " -l${_omp_lib}")
+                endforeach()
+            else()
+                if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
+                    string(APPEND FFTZ_LIBS_PRIVATE " -lomp")
+                else()
+                    string(APPEND FFTZ_LIBS_PRIVATE " -lgomp")
+                endif()
+            endif()
+        endif()
+    elseif(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
+        string(APPEND FFTZ_LIBS_PRIVATE " -fopenmp")
+    endif()
+endif()
+string(STRIP "${FFTZ_LIBS_PRIVATE}" FFTZ_LIBS_PRIVATE)
+# Generate and install fftz.pc.
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/fftz.pc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/fftz.pc
+    @ONLY
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fftz.pc DESTINATION ${DEST_LIB_PATH}/pkgconfig)
+
+# When BUILD_THIRD_PARTY_WRAPPERS is ON, generate and install FFTW-compatible
+# pkg-config files (fftw3.pc, fftw3f.pc, fftw3_omp.pc, fftw3f_omp.pc) so downstreams
+# can link against AOCL-FFTZ as if it were FFTW.
+if(BUILD_THIRD_PARTY_WRAPPERS)
+    set(aoclfftz_fftw3_pc_in "${CMAKE_CURRENT_SOURCE_DIR}/cmake/fftw3.pc.in")
+    set(aoclfftz_fftw3f_pc_in "${CMAKE_CURRENT_SOURCE_DIR}/cmake/fftw3f.pc.in")
+    set(aoclfftz_fftw3_omp_pc_in "${CMAKE_CURRENT_SOURCE_DIR}/cmake/fftw3_omp.pc.in")
+    set(aoclfftz_fftw3f_omp_pc_in "${CMAKE_CURRENT_SOURCE_DIR}/cmake/fftw3f_omp.pc.in")
+    if(EXISTS "${aoclfftz_fftw3_pc_in}" AND EXISTS "${aoclfftz_fftw3f_pc_in}"
+            AND EXISTS "${aoclfftz_fftw3_omp_pc_in}" AND EXISTS "${aoclfftz_fftw3f_omp_pc_in}")
+        configure_file(
+            ${aoclfftz_fftw3_pc_in}
+            ${CMAKE_CURRENT_BINARY_DIR}/fftw3.pc
+            @ONLY
+        )
+        configure_file(
+            ${aoclfftz_fftw3f_pc_in}
+            ${CMAKE_CURRENT_BINARY_DIR}/fftw3f.pc
+            @ONLY
+        )
+        configure_file(
+            ${aoclfftz_fftw3_omp_pc_in}
+            ${CMAKE_CURRENT_BINARY_DIR}/fftw3_omp.pc
+            @ONLY
+        )
+        configure_file(
+            ${aoclfftz_fftw3f_omp_pc_in}
+            ${CMAKE_CURRENT_BINARY_DIR}/fftw3f_omp.pc
+            @ONLY
+        )
+        install(FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/fftw3.pc
+            ${CMAKE_CURRENT_BINARY_DIR}/fftw3f.pc
+            ${CMAKE_CURRENT_BINARY_DIR}/fftw3_omp.pc
+            ${CMAKE_CURRENT_BINARY_DIR}/fftw3f_omp.pc
+            DESTINATION ${DEST_LIB_PATH}/pkgconfig
+        )
+    else()
+        message(WARNING
+            "FFTW wrapper pkg-config templates not found (fftw3.pc.in, fftw3f.pc.in, "
+            "fftw3_omp.pc.in, fftw3f_omp.pc.in); FFTW .pc files will not be installed. "
+            "Wrappers will still be built."
+        )
+    endif()
+endif()
+
 if((NOT BUILD_STATIC_LIBS) AND WIN32 AND (NOT AOCL_TEST_COVERAGE STREQUAL "OFF"))
     add_custom_command(
         TARGET ${lib_name}
@@ -496,5 +707,6 @@ if (BUILD_DOC)
 endif()
 
 if(BUILD_THIRD_PARTY_WRAPPERS)
+    set(FFTZ_LIB_TARGET ${lib_name})
     add_subdirectory(wrappers/fftw)
 endif()

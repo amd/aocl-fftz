@@ -70,8 +70,8 @@ int main()
     aoclfftz_dim_t_64_ vecs[] = {{.n = 3, .in_stride = 0, .out_stride = 0},
                                  {.n = 6, .in_stride = 0, .out_stride = 0}};
     aoclfftz_prob_desc_d_64_ problem = {
-        .dim_rank = 3, // the number of batch/vector dimensions, must be >= 1.
-        .vec_rank = 2, // the number of signal/frequency dimensions, must be >= 1.
+        .dim_rank = 3, // the number of signal/frequency dimensions, must be >= 1.
+        .vec_rank = 2, // the number of batch/vector dimensions, must be >= 1.
         .dims = dims,
         .vecs = vecs,
         .flags = {
@@ -91,7 +91,7 @@ int main()
                      .dynamic_load_model = 0},
         .cntrl_params =
             {
-                .opt_level = -1,
+                .opt_level = 0,
                 .opt_off = 1,
                 .logger_mode = 0,
                 .measure_stats = 0,

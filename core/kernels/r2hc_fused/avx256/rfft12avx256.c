@@ -100,7 +100,8 @@ static VOID r2hcf_rfft12avx256_fp32_fwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     FLOAT *curr_in, *curr_out;
-    INTP N = n >> 3;
+    INTP N = n / NUM_SETS_REAL_256_S;
+    INTP remaining_sets = n % NUM_SETS_REAL_256_S;
 
     __m256 v_CRTM_12_1 = _mm256_broadcast_ss(&CRTM_12_1);
     __m256 v_CRTM_12_2 = _mm256_broadcast_ss(&CRTM_12_2);
@@ -367,7 +368,7 @@ static VOID r2hcf_rfft12avx256_fp32_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 3);
     }
     // tail cases
-    if (n & 4)
+    if (remaining_sets & NUM_SETS_REAL_128_S)
     {
         /* Standard DFT */
         __m128 av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6, av_in7,
@@ -632,7 +633,7 @@ static VOID r2hcf_rfft12avx256_fp32_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 2);
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & 2)
     {
         /* Standard DFT */
         __m128 av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6, av_in7,
@@ -897,7 +898,7 @@ static VOID r2hcf_rfft12avx256_fp32_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         /* Standard DFT */
         FLOAT a_in0, a_in1, a_in2, a_in3, a_in4, a_in5, a_in6, a_in7, a_in8,
@@ -1085,7 +1086,8 @@ static VOID r2hcf_rfft12avx256_fp32_bwd(VOID *in_real, VOID *in_imag,
 
      INTP cnt;
      FLOAT *curr_in, *curr_out;
-     INTP N = n >> 3;
+     INTP N = n / NUM_SETS_REAL_256_S;
+    INTP remaining_sets = n % NUM_SETS_REAL_256_S;
 
     __m256 v_CRTM_12_1 = _mm256_broadcast_ss(&CRTM_12_1);
     __m256 v_CRTM_12_2 = _mm256_broadcast_ss(&CRTM_12_2);
@@ -1376,7 +1378,7 @@ static VOID r2hcf_rfft12avx256_fp32_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 3);
     }
     // tail cases
-    if (n & 4)
+    if (remaining_sets & NUM_SETS_REAL_128_S)
     {
         /* Standard DFT */
         __m128 av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6, av_in7,
@@ -1665,7 +1667,7 @@ static VOID r2hcf_rfft12avx256_fp32_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 2);
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & 2)
     {
         /* Standard DFT */
         __m128 av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6, av_in7,
@@ -1954,7 +1956,7 @@ static VOID r2hcf_rfft12avx256_fp32_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         /* Standard DFT */
         FLOAT a_in0, a_in1, a_in2, a_in3, a_in4, a_in5, a_in6, a_in7, a_in8,
@@ -2158,7 +2160,8 @@ static VOID r2hcf_rfft12avx256_fp64_fwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     DOUBLE *curr_in, *curr_out;
-    INTP N = n >> 2;
+    INTP N = n / NUM_SETS_REAL_256_D;
+    INTP remaining_sets = n % NUM_SETS_REAL_256_D;
 
     __m256d v_CRTM_12_1 = _mm256_broadcast_sd(&CRTM_12_1);
     __m256d v_CRTM_12_2 = _mm256_broadcast_sd(&CRTM_12_2);
@@ -2425,7 +2428,7 @@ static VOID r2hcf_rfft12avx256_fp64_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 2);
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & NUM_SETS_REAL_128_D)
     {
         /* Standard DFT */
         __m128d av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6, av_in7,
@@ -2690,7 +2693,7 @@ static VOID r2hcf_rfft12avx256_fp64_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         /* Standard DFT */
         DOUBLE a_in0, a_in1, a_in2, a_in3, a_in4, a_in5, a_in6, a_in7, a_in8,
@@ -2878,7 +2881,8 @@ static VOID r2hcf_rfft12avx256_fp64_bwd(VOID *in_real, VOID *in_imag,
 
      INTP cnt;
      DOUBLE *curr_in, *curr_out;
-     INTP N = n >> 2;
+     INTP N = n / NUM_SETS_REAL_256_D;
+    INTP remaining_sets = n % NUM_SETS_REAL_256_D;
 
     __m256d v_CRTM_12_1 = _mm256_broadcast_sd(&CRTM_12_1);
     __m256d v_CRTM_12_2 = _mm256_broadcast_sd(&CRTM_12_2);
@@ -3169,7 +3173,7 @@ static VOID r2hcf_rfft12avx256_fp64_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 2);
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & NUM_SETS_REAL_128_D)
     {
         /* Standard DFT */
         __m128d av_in0, av_in1, av_in2, av_in3, av_in4, av_in5, av_in6, av_in7,
@@ -3458,7 +3462,7 @@ static VOID r2hcf_rfft12avx256_fp64_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         /* Standard DFT */
         DOUBLE a_in0, a_in1, a_in2, a_in3, a_in4, a_in5, a_in6, a_in7, a_in8,

@@ -1,5 +1,5 @@
 # ##############################################################################
-# Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
+# Copyright (C) 2025-2026, Advanced Micro Devices. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -32,10 +32,10 @@
 import os
 # -- Project information -----------------------------------------------------
 project = 'AOCL-FFTZ'
-copyright = '2025, Advanced Micro Devices, Inc'
+copyright = '2026, Advanced Micro Devices, Inc'
 author = 'Advanced Micro Devices, Inc'
-version = '5.2.0'
-release = '5.2.0'
+version = '5.3.0'
+release = '5.3.0'
 
 extensions = ['breathe', 'myst_parser']
 pwd = os.path.dirname(os.path.abspath(__file__))
@@ -48,6 +48,20 @@ templates_path = ['_template']
 
 # tells the myst_parser to generate labels for heading anchors for h1, h2, and h3 level headings (corresponding to #, ##, and ### in markdown)
 myst_heading_anchors = 3
+
+# Exclude orphaned files that aren't part of any toctree
+exclude_patterns = [
+    'fftz_readme.rst'
+]
+
+# Override toctree section numbers so a branch can display as 1, 1.1, 1.2, ...
+# (docname -> number string). Adjust or set to {} to use Sphinx default numbering.
+toc_secnumber_overrides = {
+    "data_structures_index": "1",
+    "typedefs": "1.1",
+    "problem_descriptor": "1.2",
+    "data_layout_conventions": "1.3",
+}
 
 # -- Options for HTML output -------------------------------------------------
 

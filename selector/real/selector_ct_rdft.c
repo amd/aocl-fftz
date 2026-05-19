@@ -48,6 +48,14 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    if (sel == NULL || sel->solution == NULL ||
+        sel->solution->decomp_scheme == NULL)
+    {
+        AOCLFFTZ_LOG(INFO, global_logger_mode,
+                     "Invalid selector or solution passed to selector_ct_rdft");
+        return SELECTOR_FAILURE;
+    }
+
     aoclfftz_selector_t *cur_sel = NULL;
     aoclfftz_selector_t *cur_sel_m = NULL;
 
@@ -81,11 +89,9 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     }
 
     cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                             sel->kertab_dft, sel->kertab_twid_dft,
-                             0 /*unused*/);
+                             sel->kernel_tables, 0 /*unused*/);
     cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                               sel->kertab_dft, sel->kertab_twid_dft,
-                               0 /*unused*/);
+                               sel->kernel_tables, 0 /*unused*/);
     if (cur_sel == NULL || cur_sel_m == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -152,11 +158,9 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
             destroy_selector_without_scratch_space(cur_sel);
             destroy_selector_without_scratch_space(cur_sel_m);
             cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                     sel->kertab_dft, sel->kertab_twid_dft,
-                                     0 /*unused*/);
+                                     sel->kernel_tables, 0 /*unused*/);
             cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                       sel->kertab_dft, sel->kertab_twid_dft,
-                                       0 /*unused*/);
+                                       sel->kernel_tables, 0 /*unused*/);
             if (cur_sel == NULL || cur_sel_m == NULL)
             {
                 ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -218,8 +222,24 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 ((cur_sel->cost_analysis->ops + cur_sel_m->cost_analysis->ops) <
                  sel->cost_analysis->ops))
             {
+                INTP twiddle_ops_cnt = 0;
+                // For backward FFT, twiddles are computed separately via
+                // twiddle_multiplier_for_real() and not fused into kernels.
+                // Forward FFT uses fused twiddle kernels, so ops are already counted.
+                if (is_backward && 
+                    (cur_sel_m->solution->solver->solver_type != 
+                        SOLVER_REAL_DIRECT_TWIDDLE &&
+                        cur_sel_m->solution->solver->solver_type !=
+                        SOLVER_REAL_MT_DIRECT_TWIDDLE))
+                {
+                    twiddle_ops_cnt = (radix_r - 1) * (radix_m - 1) * 4 
+                                        * AMD_ZEN_FP_MUL_CYCLES +
+                                      (radix_r - 1) * (radix_m - 1) * 2 
+                                        * AMD_ZEN_FP_ADD_CYCLES;
+                }
                 sel->cost_analysis->ops =
-                    cur_sel->cost_analysis->ops + cur_sel_m->cost_analysis->ops;
+                    cur_sel->cost_analysis->ops + cur_sel_m->cost_analysis->ops
+                                            + twiddle_ops_cnt;
                 sel->cost_analysis->time = cur_sel->cost_analysis->time +
                                            cur_sel_m->cost_analysis->time;
 
@@ -256,6 +276,11 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 destroy_solutions(cur_sel_m->solution->next_sol, 1);
                 cur_sel_m->solution->next_sol = NULL;
                 is_previous_solution_selected = 0;
+                // The solution is being discarded
+                // hence its strides are no longer needed.
+                destroy_strides_grp(cur_sel->solution->strides_grp);
+                destroy_strides_grp(cur_sel_m->solution->strides_grp);
+
                 RESET_COST(cur_sel);
                 RESET_COST(cur_sel_m);
             }

@@ -26,8 +26,8 @@
 
 .. _ref-typedefs:
 
-Data Structures
----------------
+Defined Structures
+==================
 
 .. doxygengroup:: Data_Structures
    :project: fftz

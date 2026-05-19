@@ -47,7 +47,8 @@
 INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank);
 VOID calculate_buffer_sizes(INT32 dim_rank,  INT32 vec_rank,
                             aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                            UINTP *in_buffer_size, UINTP *out_buffer_size);
+                            UINTP *in_buffer_size, UINTP *out_buffer_size,
+                            aoclfftz_bench_fft_type_t fft_type);
 VOID prepare_index_map(INT32 dim_rank, INT32 vec_rank, aoclfftz_dim_t_64_ *dims,
                        aoclfftz_dim_t_64_ *vecs, INTP *in_idx_map,
                        INTP *out_idx_map, aoclfftz_bench_fft_type_t fft_type,

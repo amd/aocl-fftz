@@ -43,12 +43,27 @@
 
 INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
-    aoclfftz_decomp_scheme_t *decomp_scheme = sel->solution->decomp_scheme;
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
+    if (sel == NULL || sel->solution == NULL ||
+        sel->solution->decomp_scheme == NULL)
+    {
+        AOCLFFTZ_LOG(INFO, global_logger_mode,
+                     "Invalid selector or solution passed to "
+                     "selector_direct_dft");
+        return SELECTOR_FAILURE;
+    }
+
+    aoclfftz_decomp_scheme_t *decomp_scheme = sel->solution->decomp_scheme;
 
     aoclfftz_selector_t *cur_sel = NULL;
     INTP n = decomp_scheme->dims[0].n;
     INTP batch = decomp_scheme->vecs[0].n;
+    if (decomp_scheme->batched_vecs != NULL &&
+        decomp_scheme->batched_vecs[0].n > batch)
+    {
+        batch = decomp_scheme->batched_vecs[0].n;
+    }
     INT32 vec_rank = decomp_scheme->vec_rank;
     INT32 dim_rank = decomp_scheme->dim_rank;
     INT32 stats_mode = decomp_scheme->cntrl_params->measure_stats;
@@ -58,8 +73,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     INT32 ret = SELECTOR_FAILURE;
 
     cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                             sel->kertab_dft, sel->kertab_twid_dft,
-                             0 /*unused*/);
+                             sel->kernel_tables, 0 /*unused*/);
     if (cur_sel == NULL)
     {
         return SELECTOR_FAILURE;

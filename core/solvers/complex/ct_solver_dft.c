@@ -49,11 +49,16 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-
     // Setup radix-m sub-problem
     // out-of-order -> in-order for out-of-place problems
     // out-of-order -> out-of-order for inplace problems
     COPY_SOLUTION_OBJ(sol_m, sol);
+    // Set buffered flag for radix-m sub-problem if the original problem is
+    // in-place.
+    if (sol->decomp_scheme->in_real == sol->decomp_scheme->out_real)
+    {
+        SET_BUFFERED(sol_m->decomp_scheme->flags);
+    }
     sol_m->decomp_scheme->decomp_level = sol->decomp_scheme->decomp_level + 1;
     sol_m->decomp_scheme->dims[0].n = radix_m;
     sol_m->decomp_scheme->dims[0].in_stride =
@@ -390,17 +395,9 @@ static INT32 execute_ct_twiddle_solver(aoclfftz_solution_t *sol)
     // update radix-m & radix-r solution data pointers
     radix_m_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
     radix_m_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
-    radix_m_sol->decomp_scheme->out_real = sol->dft_bufs->ct_buf_real;
-    radix_m_sol->decomp_scheme->out_imag = sol->dft_bufs->ct_buf_imag;
-    radix_m_sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buf_real;
-    radix_m_sol->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
+    radix_m_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+    radix_m_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
     radix_m_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
-
-    radix_r_sol->decomp_scheme->in_real  = radix_m_sol->decomp_scheme->out_real;
-    radix_r_sol->decomp_scheme->in_imag  = radix_m_sol->decomp_scheme->out_imag;
-    radix_r_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-    radix_r_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
 
     // execute radix-m sub-problem
     radix_m_sol->solver->execute_solver(radix_m_sol);
@@ -410,6 +407,13 @@ static INT32 execute_ct_twiddle_solver(aoclfftz_solution_t *sol)
 #endif
 
     // execute radix-r DFT
+    // Note: radix-r input strides are precomputed at setup time in selector_ct_dft
+    radix_r_sol->decomp_scheme->in_real  = radix_m_sol->decomp_scheme->out_real;
+    radix_r_sol->decomp_scheme->in_imag  = radix_m_sol->decomp_scheme->out_imag;
+    radix_r_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+    radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    radix_r_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
+
     radix_r_sol->solver->execute_solver(radix_r_sol);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");

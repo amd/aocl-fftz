@@ -4,10 +4,10 @@ AOCL-FFTZ
 AOCL-FFTZ is a high performance Fast Fourier Transform (FFT) library developed
 by AMD supporting advanced optimizations for AMD’s "Zen"-based CPUs.
 The library computes FFTs of (i) complex data of any size and dimension in
-both forward and backward directions, and (ii) real one-dimensional data of any
-size, excluding prime sizes greater than 7 and their multiples, in both forward
-and backward directions with support for in-place and out-of-place result
-placements.
+both forward and backward directions, and (ii) real data of any
+size and dimension, excluding prime sizes greater than 7 and their multiples,
+in both forward and backward directions with support for in-place and
+out-of-place result placements.
 
 The kernels in this library are vectorized to speed-up the single-threaded core
 performance. The library supports the computations of parallel FFTs by taking
@@ -109,20 +109,23 @@ Use the following additional options to configure your build:
 
 Option                              |  Description
 ------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------
-AOCL_ENABLE_LOG                     |  Enable logging support within the library (Disabled by default)
+AOCL_ENABLE_LOG                     |  Enables logging support within the library (Disabled by default)
 AOCL_TEST_COVERAGE                  |  Enables GTest and AOCL test bench based CTest suite (OFF / STANDARD / EXHAUSTIVE, default: OFF)
 ACCURACY_WITH_DFT                   |  Enables accuracy mode to run with DFT (Disabled by default)
 ASAN                                |  Enables address sanitizer checks. Supported only on Linux Debug build (Disabled by default)
-BUILD_DOC                           |  Build documentation for library (Disabled by default)
-BUILD_STATIC_LIBS                   |  Build static library (Default build type is shared library)
-BUILD_THIRD_PARTY_WRAPPERS          |  Build all the supported FFTZ third party wrappers (Disabled by default)
+BUILD_DOC                           |  Builds documentation for library (Disabled by default)
+BUILD_STATIC_LIBS                   |  Builds static library (Default build type is shared library)
+BUILD_THIRD_PARTY_WRAPPERS          |  Builds all the supported FFTZ third party wrappers (Disabled by default)
 CODE_COVERAGE                       |  Enables source code coverage and generates coverage report. Supported only on Linux with GCC compiler (Disabled by default)
-ENABLE_INSTRUCTIONS_UPTO            |  Specify maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)
-ENABLE_FMA                          |  Enable -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)
+CODE_COVERAGE_FOR_ATG               |  Enables source code coverage instrumentation for running coverage and parsing tools for use by AI Test case Generation (ATG) later. Supported only on Linux with GCC compiler (Disabled by default)
+ENABLE_APP_INFO_LOGS                |  Enables info logging for FFT problems used by the application (Independent of AOCL_ENABLE_LOG, Disabled by default)
+ENABLE_INSTRUCTIONS_UPTO            |  Specifies maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)
+ENABLE_FMA                          |  Enables -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)
 ENABLE_MULTI_THREADING              |  Compiles library with multi-threading support using OpenMP (Disabled by default)
-ENABLE_STRICT_WARNINGS              |  Enable compiler flags to treat all warnings as errors (Enabled by default)
-FUZZTEST                            |  Enable Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)
+ENABLE_STRICT_WARNINGS              |  Enables compiler flags to treat all warnings as errors (Enabled by default)
+FUZZTEST                            |  Enables Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)
 VALGRIND                            |  Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)
+OpenMP_libomp_LIBRARY               |  Path to the custom OpenMP library (System OpenMP is used if not provided)
 
 
 CPU Architecture Support and FMA Requirements
@@ -143,6 +146,15 @@ AOCL-FFTZ leverages advanced CPU features for optimal performance:
 - The library uses x86 SIMD AVX128, AVX256 and AVX512 instructions when available
 - Library uses dynamic dispatcher to automatically detect the CPU capabilities and
   dispatch the optimal ISA kernels based on selector model
+
+
+Multi-threading with OpenMP
+---------------------------
+
+AOCL-FFTZ currently supports Multi-threading through OpenMP. To enable it, turn on the CMake option `ENABLE_MULTI_THREADING`.
+Additionally, you can also provide a custom OpenMP library through the `OpenMP_libomp_LIBRARY` option to override system OpenMP.
+
+Note: When reusing an already computed solution handle with `execute_io` API, make sure that the multiple application threads calling it maintain separate copies of the solution handle.
 
 Running Test Bench On Linux & Windows
 -------------------------------------

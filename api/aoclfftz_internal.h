@@ -88,9 +88,17 @@
 // Set Flags
 #define SET_PRECISION(flags, val) (flags = (flags & 0x3FFFFFFF) | (val << 30))
 #define SET_INPLACE(flags) SET_BIT_FLAG32(flags, 0, 0)
+#define SET_OUTOFPLACE(flags) SET_BIT_FLAG32(flags, 0, 1)
 
 #define SET_BIT_REPRODUCIBLE(flags, val) SET_BIT_FLAG32(flags, 4, val)
 #define GET_BIT_REPRODUCIBLE(flags) GET_BIT_FLAG32(flags, 4)
+
+#define SET_NOT_INNERMOST_DIM(flags) SET_BIT_FLAG32(flags, 10, 1)
+#define IS_NOT_INNERMOST_DIM(flags) GET_BIT_FLAG32(flags, 10)
+
+#define SET_BUFFERED(flags) SET_BIT_FLAG32(flags, 11, 1)
+#define UNSET_BUFFERED(flags) SET_BIT_FLAG32(flags, 11, 0)
+#define IS_BUFFERED(flags) GET_BIT_FLAG32(flags, 11)
 
 // Get size of datatype based on the precision
 #define DT_PRECISION_BYTES(dt_prec) (1 << dt_prec)
@@ -129,7 +137,13 @@
 
 #define NUM_REAL_KERNELS_VARIANTS 3
 #define NUM_KERNEL_CATEGORIES 4
-#define NUM_KERNELS_IN_EACH_CATEGORY 15
+
+// Number of standard kernels (radix 2 to 16)
+#define NUM_STANDARD_KERNELS 15
+// Number of higher radix kernels (radix > 16, e.g., radix 48)
+#define NUMBER_OF_HIGHER_RADIX_KERNELS 2
+// Total number of kernels in each category
+#define NUM_KERNELS_IN_EACH_CATEGORY (NUM_STANDARD_KERNELS + NUMBER_OF_HIGHER_RADIX_KERNELS)
 
 #define NUM_KERNELS_IN_EACH_DFT_VARIANT                                        \
     (NUM_KERNELS_IN_EACH_CATEGORY * NUM_KERNEL_CATEGORIES)
@@ -175,6 +189,7 @@ typedef struct aoclfftz_strides aoclfftz_strides_t;
 typedef struct aoclfftz_twiddle aoclfftz_twiddle_t;
 typedef struct aoclfftz_bluestein aoclfftz_bluestein_t;
 typedef struct aoclfftz_buffered aoclfftz_buffered_t;
+typedef struct aoclfftz_sr aoclfftz_sr_t;
 typedef struct aoclfftz_executor aoclfftz_executor_t;
 typedef struct aoclfftz_realhelper aoclfftz_realhelper_t;
 
@@ -227,6 +242,7 @@ typedef struct aoclfftz_generic_solver
     dft_solver_ execute_solver;
     VOID (*destroy_solver)(aoclfftz_solution_t *solution);
     kernel_info_t *kernel_c2c;
+    kernel_info_t *kernel_c2c_r; // Used by batched_ct_l1_direct solver only
     kernel_info_t *kernel_r2hc;
     kernel_info_t *kernel_r2hcf;
 } aoclfftz_generic_solver_t;
@@ -259,6 +275,8 @@ typedef struct aoclfftz_decomp_scheme
     //  transpose (alongside DFT): 9th-bit
     //   bit 8     : (0) no-transpose / (1) transpose
     //   bit 9     : (0) (transpose+fft) / (1) fft (no transpose)
+    //   bit 10    : (0) innermost dimension / (1) not innermost dimension (of ND-dim problem)
+    //   bit 11    : (0) not buffered / (1) buffered
     //   bit 16    : (0) fixed selector mode / (1) auto tuner selector mode
     //   bit 30-31 : floating point datatype precision
     //               (00) 8-bit / (01) 16-bit / (10) 32-bit / (11) 64-bit
@@ -302,6 +320,21 @@ typedef struct aoclfftz_buffered
     //       nodes from the current solution.
     VOID **out_ptr;
 } aoclfftz_buffered_t;
+
+// Holds split-radix solver specific sub-solutions and buffers.
+// The SR algorithm decomposes an N-point FFT into:
+//   - Even: N/2-point sub-problem (stored via next_sol[0])
+//   - Odd1: N/4-point sub-problem (indices 1, 5, 9, ...)
+//   - Odd3: N/4-point sub-problem (indices 3, 7, 11, ...)
+// The input_copy buffer is used for in-place transforms to preserve input data
+// before the sub-problems overwrite the output buffer.
+typedef struct aoclfftz_sr
+{
+    aoclfftz_solution_t *odd1_sol;  // N/4-point sub-solution for odd-1 indices
+    aoclfftz_solution_t *odd3_sol;  // N/4-point sub-solution for odd-3 indices
+    VOID *input_copy;               // Pre-allocated buffer for in-place input safety copy
+    INTP  input_copy_size;          // Size of input_copy buffer in bytes
+} aoclfftz_sr_t;
 
 // Internal types to denote complex numbers in fftz's transpose routines
 typedef struct aoclfftz_complex_f
@@ -418,6 +451,7 @@ typedef struct aoclfftz_dft_bufs
     aoclfftz_buffered_t* buffered;
     aoclfftz_transpose_t* transpose;
     aoclfftz_solution_t* nd_sol; // may hold one of the solutions of ND
+    aoclfftz_sr_t* sr; // split-radix solver specific data (sub-solutions + buffers)
     VOID* scratch_space; // scratch space for transpose operation
     VOID *ct_buffer; // auxiliary buffer for CT problems
     VOID *ct_buf_real; // real part of ct_buffer
@@ -428,8 +462,15 @@ typedef struct aoclfftz_dft_bufs
                              to store the modified input.
                            */
     INTP ct_buf_size; // size of ct_buffer per thread
-    UINT8 reset_ct_buf_offset; // when enabled (1), do not move the buffer offset across batches
-    UINT8 use_2D_buffering; // 1 when compact buffer optimized approach is used
+    INT32 num_ct_buf; // number of ct_buffer allocated in total. It should be
+                      // equal to the number of threads assigned to the first CT
+                      // stage in the solution.
+    UINT32 ct_buf_allocated; // to know that the solution originally allocated
+                             // the buffer and is responsible for freeing it in
+                             // the end.
+    INT32 ct_buf_cnt;        // number of ct_buf slots consumed by this
+                             // node's subtree; set by cnt_ct_buffers()
+                             // before post_process_solution(). -1 if unset.
 } aoclfftz_dft_bufs_t;
 #endif
 /////////////////////////// BUFS RELATED : END ////////////////////////////////

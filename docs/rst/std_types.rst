@@ -27,7 +27,7 @@
 .. _ref-std_types:
 
 Types
------
+=====
 
 .. doxygengroup:: std_types
    :project: fftz

@@ -46,6 +46,15 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    if (sel == NULL || sel->solution == NULL ||
+        sel->solution->decomp_scheme == NULL)
+    {
+        AOCLFFTZ_LOG(INFO, global_logger_mode,
+                     "Invalid selector or solution passed to "
+                     "selector_bluestein_dft");
+        return SELECTOR_FAILURE;
+    }
+
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INTP n = sel->solution->decomp_scheme->dims[0].n;
@@ -61,8 +70,7 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     // To hold the selector to perform FFT with extended length m
     aoclfftz_selector_t *next_sel = NULL;
     next_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                              sel->kertab_dft, sel->kertab_twid_dft,
-                              0 /*unused*/);
+                              sel->kernel_tables, 0 /*unused*/);
     if (next_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;

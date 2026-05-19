@@ -36,7 +36,7 @@
 
 #include "../../utils/allocator.h"
 #include "aoclfftz.h"
-#include "src/fftw_wrapper.h"
+#include "api/fftw_wrapper.h"
 
 extern INT32 thread_num;
 
@@ -145,7 +145,12 @@ dv_desc_64_ *get_guru_64_dv_desc(INT32 rank, const fftw_iodim64 *dims,
                                  INT32 howmany_rank,
                                  const fftw_iodim64 *howmany_dims);
 
-#define MIN_ALIGNMENT 16
+VOID reverse_array(const INT32 *p_array, INT32 *p_reversed_array, INT32 size);
+dv_desc *get_fortran_guru_dv_desc(INT32 rank, const INT32 *n, const INT32 *is,
+                                  const INT32 *os, INT32 howmany_rank,
+                                  const INT32 *h_n, const INT32 *h_is,
+                                  const INT32 *h_os);
+#define MIN_ALIGNMENT 64
 
 #ifdef _WIN32
 

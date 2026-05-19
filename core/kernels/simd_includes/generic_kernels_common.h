@@ -112,6 +112,20 @@
 
     #define NEG_ZERO_S(flag) _neg_128_f[flag].s
     #define NEG_ZERO_D(flag) _neg_128_d[flag].d
+
+    // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+    #define LOADU_D _mm_loadu_pd
+    // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+    #define BROADCAST_D(ptr) _mm_loadu_pd((ptr))
+
+    // Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 1, other: 0}
+    #define TW_PRELOADED_D TW_PRELOADED_128_D
+    // Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 2, other: 0}
+    #define ITW_PRELOADED_D ITW_PRELOADED_128_D
+
+    // Variants that take stride value directly (for hoisting optimization)
+    #define TW_PRELOADED_D_V TW_PRELOADED_128_D_V
+    #define ITW_PRELOADED_D_V ITW_PRELOADED_128_D_V
 #endif
 
 #ifdef KERNEL_USE_AVX256
@@ -193,6 +207,20 @@
 
     #define NEG_ZERO_S(flag) _neg_256_f[flag].s
     #define NEG_ZERO_D(flag) _neg_256_d[flag].d
+
+    // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+    #define LOADU_D _mm256_loadu_pd
+    // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 1}
+    #define BROADCAST_D(ptr) _mm256_broadcast_pd((__m128d *)(ptr))
+
+    // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 3, other: 1}
+    #define TW_PRELOADED_D TW_PRELOADED_256_D
+    // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 4, other: 1}
+    #define ITW_PRELOADED_D ITW_PRELOADED_256_D
+
+    // Variants that take stride value directly (for hoisting optimization)
+    #define TW_PRELOADED_D_V TW_PRELOADED_256_D_V
+    #define ITW_PRELOADED_D_V ITW_PRELOADED_256_D_V
 #endif
 
 #ifdef KERNEL_USE_AVX512
@@ -279,6 +307,20 @@
 
     #define NEG_ZERO_S(flag) _neg_512_f[flag].s
     #define NEG_ZERO_D(flag) _neg_512_d[flag].d
+
+    // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+    #define LOADU_D _mm512_loadu_pd
+    // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+    #define BROADCAST_D(ptr) _mm512_broadcast_f64x2(_mm_loadu_pd((ptr)))
+
+    // Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 3, other: 0}
+    #define TW_PRELOADED_D TW_PRELOADED_512_D
+    // Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 4, other: 0}
+    #define ITW_PRELOADED_D ITW_PRELOADED_512_D
+
+    // Variants that take stride value directly (for hoisting optimization)
+    #define TW_PRELOADED_D_V TW_PRELOADED_512_D_V
+    #define ITW_PRELOADED_D_V ITW_PRELOADED_512_D_V
 #endif
 
 #endif // GENERIC_KERNELS_COMMON_H

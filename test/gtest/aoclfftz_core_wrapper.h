@@ -75,6 +75,8 @@ EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft13c_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft14c_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft15c_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft16c_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft20c_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft48c_wrapper(UINT8 prec, UINT8 dir);
 
 #ifdef ENABLE_AVX128
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft2avx128_wrapper(UINT8 prec, UINT8 dir);
@@ -92,6 +94,8 @@ EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft13avx128_wrapper(UINT8 prec, UINT8 di
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft14avx128_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft15avx128_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft16avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft20avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft48avx128_wrapper(UINT8 prec, UINT8 dir);
 #endif
 
 #ifdef ENABLE_AVX256
@@ -110,6 +114,8 @@ EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft13avx256_wrapper(UINT8 prec, UINT8 di
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft14avx256_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft15avx256_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft16avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft20avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft48avx256_wrapper(UINT8 prec, UINT8 dir);
 #endif
 
 #if ENABLE_AVX512
@@ -128,6 +134,8 @@ EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft13avx512_wrapper(UINT8 prec, UINT8 di
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft14avx512_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft15avx512_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft16avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft20avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN ops_cycles_t get_ops_cnt_fft48avx512_wrapper(UINT8 prec, UINT8 dir);
 #endif
 
 // C2C Twiddle Kernels
@@ -432,6 +440,8 @@ EXPORT_SYM_DYN kfft_ register_kernel_fft13c_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN kfft_ register_kernel_fft14c_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN kfft_ register_kernel_fft15c_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN kfft_ register_kernel_fft16c_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_fft20c_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_fft48c_wrapper(UINT8 prec, UINT8 dir);
 
 #ifdef ENABLE_AVX128
 EXPORT_SYM_DYN kfft_ register_kernel_fft2avx128_wrapper(UINT8 prec, UINT8 dir);
@@ -449,6 +459,8 @@ EXPORT_SYM_DYN kfft_ register_kernel_fft13avx128_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN kfft_ register_kernel_fft14avx128_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN kfft_ register_kernel_fft15avx128_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN kfft_ register_kernel_fft16avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_fft20avx128_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_fft48avx128_wrapper(UINT8 prec, UINT8 dir);
 #endif
 
 #ifdef ENABLE_AVX256
@@ -467,6 +479,8 @@ EXPORT_SYM_DYN kfft_ register_kernel_fft13avx256_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN kfft_ register_kernel_fft14avx256_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN kfft_ register_kernel_fft15avx256_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN kfft_ register_kernel_fft16avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_fft20avx256_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_fft48avx256_wrapper(UINT8 prec, UINT8 dir);
 #endif
 
 #ifdef ENABLE_AVX512
@@ -485,6 +499,8 @@ EXPORT_SYM_DYN kfft_ register_kernel_fft13avx512_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN kfft_ register_kernel_fft14avx512_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN kfft_ register_kernel_fft15avx512_wrapper(UINT8 prec, UINT8 dir);
 EXPORT_SYM_DYN kfft_ register_kernel_fft16avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_fft20avx512_wrapper(UINT8 prec, UINT8 dir);
+EXPORT_SYM_DYN kfft_ register_kernel_fft48avx512_wrapper(UINT8 prec, UINT8 dir);
 #endif
 
 // C2C Twiddle Kernels
@@ -822,8 +838,7 @@ EXPORT_SYM_DYN aoclfftz_solution_t *alloc_solution_wrapper(INT32 vec_rank,
 EXPORT_SYM_DYN
 aoclfftz_selector_t *alloc_selector_wrapper(INT32 vec_rank, INT32 dim_rank,
                                             VOID *scratch_space,
-                                            kernel_t * kertab_dft,
-                                            kernel_t * kertab_twid_dft);
+                                            kernel_tables_t *kernel_tables);
 EXPORT_SYM_DYN VOID *alloc_twiddle_for_solution_wrapper(UINT8 rad_size,
                                                         UINT8 dt_prec);
 EXPORT_SYM_DYN VOID destroy_selector_wrapper(aoclfftz_selector_t *sel);
@@ -831,9 +846,6 @@ EXPORT_SYM_DYN VOID destroy_solution_wrapper(aoclfftz_solution_t *sol);
 EXPORT_SYM_DYN
 VOID destroy_decomp_scheme_wrapper(aoclfftz_decomp_scheme_t *decomp_scheme);
 EXPORT_SYM_DYN VOID destroy_handle_wrapper(VOID *handle);
-
-/* ---------------- fuse vector wrapper ---------------- */
-EXPORT_SYM_DYN VOID fuse_vecs_wrapper(aoclfftz_solution_t *sol);
 
 /* ---------------- strides wrapper ---------------- */
 EXPORT_SYM_DYN VOID populate_stride_array_wrapper(INTP *strides,
@@ -868,6 +880,8 @@ static wrapper_kernel_fp_list_t
     {register_kernel_fft14c_wrapper, get_ops_cnt_fft14c_wrapper, 14},
     {register_kernel_fft15c_wrapper, get_ops_cnt_fft15c_wrapper, 15},
     {register_kernel_fft16c_wrapper, get_ops_cnt_fft16c_wrapper, 16},
+    {register_kernel_fft20c_wrapper, get_ops_cnt_fft20c_wrapper, 20},
+    {register_kernel_fft48c_wrapper, get_ops_cnt_fft48c_wrapper, 48},
 };
 #ifdef ENABLE_AVX128
 static wrapper_kernel_fp_list_t
@@ -888,6 +902,8 @@ static wrapper_kernel_fp_list_t
     {register_kernel_fft14avx128_wrapper, get_ops_cnt_fft14avx128_wrapper, 14},
     {register_kernel_fft15avx128_wrapper, get_ops_cnt_fft15avx128_wrapper, 15},
     {register_kernel_fft16avx128_wrapper, get_ops_cnt_fft16avx128_wrapper, 16},
+    {register_kernel_fft20avx128_wrapper, get_ops_cnt_fft20avx128_wrapper, 20},
+    {register_kernel_fft48avx128_wrapper, get_ops_cnt_fft48avx128_wrapper, 48},
 };
 #endif
 #ifdef ENABLE_AVX256
@@ -909,6 +925,8 @@ static wrapper_kernel_fp_list_t
     {register_kernel_fft14avx256_wrapper, get_ops_cnt_fft14avx256_wrapper, 14},
     {register_kernel_fft15avx256_wrapper, get_ops_cnt_fft15avx256_wrapper, 15},
     {register_kernel_fft16avx256_wrapper, get_ops_cnt_fft16avx256_wrapper, 16},
+    {register_kernel_fft20avx256_wrapper, get_ops_cnt_fft20avx256_wrapper, 20},
+    {register_kernel_fft48avx256_wrapper, get_ops_cnt_fft48avx256_wrapper, 48},
 };
 #endif
 #ifdef ENABLE_AVX512
@@ -930,6 +948,8 @@ static wrapper_kernel_fp_list_t
     {register_kernel_fft14avx512_wrapper, get_ops_cnt_fft14avx512_wrapper, 14},
     {register_kernel_fft15avx512_wrapper, get_ops_cnt_fft15avx512_wrapper, 15},
     {register_kernel_fft16avx512_wrapper, get_ops_cnt_fft16avx512_wrapper, 16},
+    {register_kernel_fft20avx512_wrapper, get_ops_cnt_fft20avx512_wrapper, 20},
+    {register_kernel_fft48avx512_wrapper, get_ops_cnt_fft48avx512_wrapper, 48},
 };
 #endif
 

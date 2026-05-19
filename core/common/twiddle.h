@@ -58,6 +58,7 @@ VOID compute_twiddle_buffer(VOID *twiddle_buffer, INTP radix, INTP n_tw_batches,
 VOID compute_twiddle_buffer_real(VOID *twiddle_buffer, INTP radix,
                                  INTP num_c2c_per_group, INTP num_groups,
                                  INTP freq_factor, UINT8 dir, UINT32 dt_prec);
+VOID compute_sr_twiddle_buffer(VOID *twiddle_buffer, INTP n, UINT32 dt_prec);
 #endif
 
 INT32 twiddle_multiplier(aoclfftz_solution_t *sol);

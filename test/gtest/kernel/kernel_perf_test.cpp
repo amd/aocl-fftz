@@ -272,8 +272,8 @@ BENCHMARK_REGISTER_F(PerformanceTest, Kernel_d)
         return *(std::min_element(std::begin(v), std::end(v)));
     })
     ->ArgsProduct({
-                // Covers all direct kernels from 2-16
-                benchmark::CreateDenseRange(2, 16, 1),
+                // Covers all direct kernels from 2-16, 48
+                {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 48},
                 // Batch sizes to cover all possible cases in C & AVX kernels
                 benchmark::CreateDenseRange(1, 15, 1),
                 // aocl_fftz_kernel_type -> C/AVX
@@ -291,8 +291,8 @@ BENCHMARK_REGISTER_F(PerformanceTest, Kernel_f)
         return *(std::min_element(std::begin(v), std::end(v)));
     })
     ->ArgsProduct({
-                // Covers all direct kernels from 2-16
-                benchmark::CreateDenseRange(2, 16, 1),
+                // Covers all direct kernels from 2-16, 48
+                {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 48},
                 // Batch sizes to cover all possible cases in C & AVX kernels
                 benchmark::CreateDenseRange(1, 15, 1),
                 // aocl_fftz_kernel_type -> C/AVX

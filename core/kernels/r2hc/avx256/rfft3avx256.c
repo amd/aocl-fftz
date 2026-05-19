@@ -94,7 +94,8 @@ static VOID r2hc_rfft3avx256_fp32_fwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     FLOAT *curr_in, *curr_out;
-    INTP N = n >> 3;
+    INTP N = n / NUM_SETS_REAL_256_S;
+    INTP remaining_sets = n % NUM_SETS_REAL_256_S;
 
     __m256 v_CRTM_3_1 = _mm256_broadcast_ss(&CRTM_3_1);
     __m256 v_CRTM_3_2 = _mm256_broadcast_ss(&CRTM_3_2);
@@ -136,11 +137,11 @@ static VOID r2hc_rfft3avx256_fp32_fwd(VOID *in_real, VOID *in_imag,
         curr_out = out + out_strides[1];
         STRI_2x256_S(curr_out, v_out_stride, v_out1, v_out2);
 
-        in  = in + (v_in_stride << 3);
-        out = out + (v_out_stride << 3);
+        in  += v_in_stride * NUM_SETS_REAL_256_S;
+        out += v_out_stride * NUM_SETS_REAL_256_S;
     }
     // tail cases
-    if (n & 4)
+    if (remaining_sets & NUM_SETS_REAL_128_S)
     {
         __m128 v_in0, v_in1, v_in2;
         __m128 v_av0, v_av1, v_tv0, v_tv1;
@@ -184,7 +185,7 @@ static VOID r2hc_rfft3avx256_fp32_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 2);
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & 2)
     {
         __m128 v_in0, v_in1, v_in2;
         __m128 v_av0, v_av1, v_tv0, v_tv1;
@@ -228,7 +229,7 @@ static VOID r2hc_rfft3avx256_fp32_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         FLOAT v_in0, v_in1, v_in2;
         FLOAT v_av0, v_av1, v_tv0, v_tv1;
@@ -279,7 +280,8 @@ static VOID r2hc_rfft3avx256_fp32_bwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     FLOAT *curr_in, *curr_out;
-    INTP N = n >> 3;
+    INTP N = n / NUM_SETS_REAL_256_S;
+    INTP remaining_sets = n % NUM_SETS_REAL_256_S;
 
     __m256 v_CRTM_3_1 = _mm256_broadcast_ss(&CRTM_3_1);
 
@@ -316,11 +318,11 @@ static VOID r2hc_rfft3avx256_fp32_bwd(VOID *in_real, VOID *in_imag,
         curr_out = out + out_strides[2];
         STR_256_S(curr_out, v_out_stride, v_out2);
 
-        in  = in + (v_in_stride << 3);
-        out = out + (v_out_stride << 3);
+        in  += v_in_stride * NUM_SETS_REAL_256_S;
+        out += v_out_stride * NUM_SETS_REAL_256_S;
     }
     // tail cases
-    if (n & 4)
+    if (remaining_sets & NUM_SETS_REAL_128_S)
     {
         __m128 v_in0, v_in1, v_in2;
         __m128 v_av0, v_tv0;
@@ -359,7 +361,7 @@ static VOID r2hc_rfft3avx256_fp32_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 2);
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & 2)
     {
         __m128 v_in0, v_in1, v_in2;
         __m128 v_av0, v_tv0;
@@ -398,7 +400,7 @@ static VOID r2hc_rfft3avx256_fp32_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         FLOAT v_in0, v_in1, v_in2;
         FLOAT v_av0, v_tv0;
@@ -447,7 +449,8 @@ static VOID r2hc_rfft3avx256_fp64_fwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     DOUBLE *curr_in, *curr_out;
-    INTP N = n >> 2;
+    INTP N = n / NUM_SETS_REAL_256_D;
+    INTP remaining_sets = n % NUM_SETS_REAL_256_D;
 
     __m256d v_CRTM_3_1 = _mm256_broadcast_sd(&CRTM_3_1);
     __m256d v_CRTM_3_2 = _mm256_broadcast_sd(&CRTM_3_2);
@@ -489,11 +492,11 @@ static VOID r2hc_rfft3avx256_fp64_fwd(VOID *in_real, VOID *in_imag,
         curr_out = out + out_strides[1];
         STRI_2x256_D(curr_out, v_out_stride, v_out1, v_out2);
 
-        in = in + (v_in_stride << 2);
-        out = out + (v_out_stride << 2);
+        in += v_in_stride * NUM_SETS_REAL_256_D;
+        out += v_out_stride * NUM_SETS_REAL_256_D;
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & NUM_SETS_REAL_128_D)
     {
         __m128d v_in0, v_in1, v_in2;
         __m128d v_av0, v_av1, v_tv0, v_tv1;
@@ -537,7 +540,7 @@ static VOID r2hc_rfft3avx256_fp64_fwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         DOUBLE v_in0, v_in1, v_in2;
         DOUBLE v_av0, v_av1, v_tv0, v_tv1;
@@ -588,7 +591,8 @@ static VOID r2hc_rfft3avx256_fp64_bwd(VOID *in_real, VOID *in_imag,
 
     INTP cnt;
     DOUBLE *curr_in, *curr_out;
-    INTP N = n >> 2;
+    INTP N = n / NUM_SETS_REAL_256_D;
+    INTP remaining_sets = n % NUM_SETS_REAL_256_D;
 
     __m256d v_CRTM_3_1 = _mm256_broadcast_sd(&CRTM_3_1);
 
@@ -625,11 +629,11 @@ static VOID r2hc_rfft3avx256_fp64_bwd(VOID *in_real, VOID *in_imag,
         curr_out = out + out_strides[2];
         STR_256_D(curr_out, v_out_stride, v_out2);
 
-        in = in + (v_in_stride << 2);
-        out = out + (v_out_stride << 2);
+        in += v_in_stride * NUM_SETS_REAL_256_D;
+        out += v_out_stride * NUM_SETS_REAL_256_D;
     }
     // tail cases
-    if (n & 2)
+    if (remaining_sets & NUM_SETS_REAL_128_D)
     {
         __m128d v_in0, v_in1, v_in2;
         __m128d v_av0, v_tv0;
@@ -668,7 +672,7 @@ static VOID r2hc_rfft3avx256_fp64_bwd(VOID *in_real, VOID *in_imag,
         out = out + (v_out_stride << 1);
     }
     // tail cases
-    if (n & 1)
+    if (remaining_sets & 1)
     {
         DOUBLE v_in0, v_in1, v_in2;
         DOUBLE v_av0, v_tv0;

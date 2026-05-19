@@ -58,6 +58,8 @@ extern "C"
 #define FLT_TRUE_MIN 1.40129846e-45F
 #endif
 
+#define NUM_FP_SPECIAL_VALUE_CASES 11
+
 #define TINY_VALUES_ONLY_COUNT 8
 #define LARGE_VALUES_ONLY_COUNT 2
 
@@ -88,10 +90,10 @@ typedef struct
  * @brief Generate only tiny values (subnormal and very small normal values)
  *
  * @tparam T data type (float32 or float64)
- * @param value input value to pick the type of value
+ * @param category input category to pick the type of value
  * @return T return a tiny value
  */
-template <class T> T get_subnormal_and_near_underflow_value(INT32 value)
+template <class T> T get_subnormal_and_near_underflow_value(INT32 category)
 {
     if (typeid(T) == typeid(DOUBLE))
     {
@@ -100,7 +102,7 @@ template <class T> T get_subnormal_and_near_underflow_value(INT32 value)
         // DBL_TRUE_MIN = 4.94e-324
         const DOUBLE subnormal_random = DBL_TRUE_MIN * (1 + (rand() % 1000));
 
-        switch (value % TINY_VALUES_ONLY_COUNT)
+        switch (category % TINY_VALUES_ONLY_COUNT)
         {
         case 0:
             return normalised_random;
@@ -127,7 +129,7 @@ template <class T> T get_subnormal_and_near_underflow_value(INT32 value)
         // FLT_TRUE_MIN = 1.40e-45
         const FLOAT subnormal_random = FLT_TRUE_MIN * (1 + (rand() % 1000));
 
-        switch (value % TINY_VALUES_ONLY_COUNT)
+        switch (category % TINY_VALUES_ONLY_COUNT)
         {
         case 0:
             return normalised_random;
@@ -154,11 +156,11 @@ template <class T> T get_subnormal_and_near_underflow_value(INT32 value)
  * @brief Generate only large values (values close to but not exceeding MAX)
  * 
  * @tparam T data type (float32 or float64)
- * @param value input value to pick the type of value
+ * @param category input category to pick the type of value
  * @param in_size size of input array to scale values appropriately
  * @return T return a large value
  */
-template <class T> T get_near_overflow_value(INT32 value, INT32 in_size)
+template <class T> T get_near_overflow_value(INT32 category, INT32 in_size)
 {
     if (typeid(T) == typeid(DOUBLE))
     {
@@ -166,7 +168,7 @@ template <class T> T get_near_overflow_value(INT32 value, INT32 in_size)
         // Scale by input size to prevent overflow during FFT operations
         const DOUBLE large_value = DBL_MAX / (in_size + (rand() % 1000));
 
-        switch (value % LARGE_VALUES_ONLY_COUNT)
+        switch (category % LARGE_VALUES_ONLY_COUNT)
         {
         case 0:
             return large_value;
@@ -180,7 +182,7 @@ template <class T> T get_near_overflow_value(INT32 value, INT32 in_size)
         // Scale by input size to prevent overflow during FFT operations
         const FLOAT large_value = FLT_MAX / (in_size + (rand() % 1000));
 
-        switch (value % LARGE_VALUES_ONLY_COUNT)
+        switch (category % LARGE_VALUES_ONLY_COUNT)
         {
         case 0:
             return large_value;
@@ -198,21 +200,21 @@ template <class T> T get_near_overflow_value(INT32 value, INT32 in_size)
  * edge cases but not so extreme that they cause overflow in FFT operations.
  * 
  * @tparam T data type (float32 or float64)
- * @param value input value to pick the type of value
+ * @param category input category to pick the type of value
  * @param in_size size of input array to scale values appropriately
  * @return T return a near-edge value
  */
-template <class T> T get_near_edge_value(INT32 value, INT32 in_size)
+template <class T> T get_near_edge_value(INT32 category, INT32 in_size)
 {
     // Mix of tiny and large values - reuse existing functions
     // 50% tiny values, 50% large values
-    if (value % (TINY_VALUES_ONLY_COUNT * 2) < TINY_VALUES_ONLY_COUNT)
+    if (category % (TINY_VALUES_ONLY_COUNT * 2) < TINY_VALUES_ONLY_COUNT)
     {
-        return get_subnormal_and_near_underflow_value<T>(value);
+        return get_subnormal_and_near_underflow_value<T>(category);
     }
     else
     {
-        return get_near_overflow_value<T>(value, in_size);
+        return get_near_overflow_value<T>(category, in_size);
     }
 }
 
@@ -220,22 +222,21 @@ template <class T> T get_near_edge_value(INT32 value, INT32 in_size)
  * @brief Get the special values like NaN, infinity, negative infinity
  * floating point min/max/subnormal-min values in positive and negative range.
  * This function may generate the above special values based on the given
- * `value` parameter. value mod 20 is used instead of 10 to limit these
- * special values to 50% probability. Normal random numbers will be in range
+ * `category` parameter. category mod (NUM_FP_SPECIAL_VALUE_CASES * 2) is used
+ * to limit special values to exactly 50% probability (11 special cases
+ * out of NUM_FP_SPECIAL_VALUE_CASES * 2). Random values will be in range
  * [-10.0, 10.0) with 3 decimal precision.
  *
  * @tparam T data type (float32 or float64)
- * @param value input value to pick the type of value
+ * @param category input category to pick the type of value
  * @return T return the normal or special value
  */
-template <class T> T get_fp_special_value(INT32 value)
+template <class T> T get_fp_special_value(INT32 category)
 {
     if (typeid(T) == typeid(DOUBLE))
     {
-        DOUBLE zero = 0.0;
-        DOUBLE divide_by_zero = 1.0 / zero;
-
-        switch (value % 26)
+        // Multiply by 2 to get 50% special values and 50% random values
+        switch (category % (NUM_FP_SPECIAL_VALUE_CASES * 2))
         {
         case 0:
             return 0.0L;
@@ -259,20 +260,14 @@ template <class T> T get_fp_special_value(INT32 value)
             return NAN;
         case 10:
             return -NAN;
-        case 11:
-            return divide_by_zero;
-        case 12:
-            return -divide_by_zero;
         default:
             return ((rand() % 20000) / 1000.0) - 10.0;
         }
     }
     else if (typeid(T) == typeid(FLOAT))
     {
-        FLOAT zero = 0.0;
-        FLOAT divide_by_zero = 1.0f / zero;
-
-        switch (value % 26)
+        // Multiply by 2 to get 50% special values and 50% random values
+        switch (category % (NUM_FP_SPECIAL_VALUE_CASES * 2))
         {
         case 0:
             return 0.0F;
@@ -296,10 +291,6 @@ template <class T> T get_fp_special_value(INT32 value)
             return NAN;
         case 10:
             return -NAN;
-        case 11:
-            return divide_by_zero;
-        case 12:
-            return -divide_by_zero;
         default:
             return ((rand() % 20000) / 1000.0) - 10.0;
         }

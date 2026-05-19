@@ -28,19 +28,20 @@
 
 /** @file fftw_destroy_wrapper.c
  *
- *  @brief Contains wrapper implementations of FFTW destroy APIs.
+ *  @brief Contains wrapper implementations of FFTW Fortran destroy APIs.
  *
- *  This file contains implementations for destroy APIs provided by FFTW.
+ *  This file contains implementations for the Fortran destroy APIs provided by
+ *  FFTW.
  */
 
-#include "fftz_translator.h"
+#include "src/translator/fftz_translator.h"
 
-VOID fftw_destroy_plan(fftw_plan p)
+VOID dfftw_destroy_plan_(fftw_plan *p)
 {
-    aoclfftz_destroy(p);
+    fftw_destroy_plan(*p);
 }
 
-VOID fftwf_destroy_plan(fftwf_plan p)
+VOID dfftwf_destroy_plan_(fftwf_plan *p)
 {
-    aoclfftz_destroy(p);
+    fftwf_destroy_plan(*p);
 }

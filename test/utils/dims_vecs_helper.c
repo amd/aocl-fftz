@@ -334,27 +334,44 @@ VOID set_default_dims_vecs(INT32 dim_rank, INT32 vec_rank,
         if (i == 0)
         {
             aoclfftz_dim_t_64_ last_dim = dims[dim_rank - 1];
-            if (type == R2C && is_in_place)
+            // For 1D (dim_rank == 1), apply half-complex modification
+            // to vecs. For nD (dim_rank > 1), the half-complex is
+            // already handled in dims[1]
+            if (dim_rank == 1)
             {
-                def_in_stride = (last_dim.n / 2 + 1) * last_dim.in_stride * 2;
-                def_out_stride = (last_dim.n / 2 + 1) * last_dim.out_stride;
+                if (type == R2C && is_in_place)
+                {
+                    def_in_stride =
+                        (last_dim.n / 2 + 1) * last_dim.in_stride * 2;
+                    def_out_stride =
+                        (last_dim.n / 2 + 1) * last_dim.out_stride;
+                }
+                else if (type == R2C && !is_in_place)
+                {
+                    def_in_stride = last_dim.n * last_dim.in_stride;
+                    def_out_stride =
+                        (last_dim.n / 2 + 1) * last_dim.out_stride;
+                }
+                else if (type == C2R && is_in_place)
+                {
+                    def_in_stride =
+                        (last_dim.n / 2 + 1) * last_dim.in_stride;
+                    def_out_stride =
+                        (last_dim.n / 2 + 1) * last_dim.out_stride * 2;
+                }
+                else if (type == C2R && !is_in_place)
+                {
+                    def_in_stride =
+                        (last_dim.n / 2 + 1) * last_dim.in_stride;
+                    def_out_stride = last_dim.n * last_dim.out_stride;
+                }
+                else /* C2C */
+                {
+                    def_in_stride = last_dim.n * last_dim.in_stride;
+                    def_out_stride = last_dim.n * last_dim.out_stride;
+                }
             }
-            else if (type == R2C && !is_in_place)
-            {
-                def_in_stride = last_dim.n * last_dim.in_stride;
-                def_out_stride = (last_dim.n / 2 + 1) * last_dim.out_stride;
-            }
-            else if (type == C2R && is_in_place)
-            {
-                def_in_stride = (last_dim.n / 2 + 1) * last_dim.in_stride;
-                def_out_stride = (last_dim.n / 2 + 1) * last_dim.out_stride * 2;
-            }
-            else if (type == C2R && !is_in_place)
-            {
-                def_in_stride = (last_dim.n / 2 + 1) * last_dim.in_stride;
-                def_out_stride = last_dim.n * last_dim.out_stride;
-            }
-            else /* C2C */
+            else /* dim_rank > 1 */
             {
                 def_in_stride = last_dim.n * last_dim.in_stride;
                 def_out_stride = last_dim.n * last_dim.out_stride;

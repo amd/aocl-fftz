@@ -36,7 +36,7 @@
 # Finds Doxygen installation and generates the documentation automatically.
 #
 # @author Srirammaswamy Srinivasan
-# @author Ashwin Godbole
+# @author Ashwin K. Godbole
 
 include(GoogleTest)
 include(ExternalProject)
@@ -140,10 +140,11 @@ foreach(FILE ${GTEST_SRC_FILES})
 endforeach()
 
 if(ENABLE_MULTI_THREADING)
-    if(WIN32)
-        target_link_libraries(${gtest_lib_name} PRIVATE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+    if(WIN32 OR NOT OpenMP_libomp_LIBRARY)
+        target_link_libraries(${gtest_lib_name} PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
     else()
-        target_link_options(${gtest_lib_name} PUBLIC -fopenmp)
+        target_compile_options(${gtest_lib_name} PRIVATE -fopenmp)
+        target_link_libraries(${gtest_lib_name} PUBLIC ${OpenMP_libomp_LIBRARY})
     endif()
 endif()
 
@@ -165,17 +166,33 @@ if(NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "None")
         set(CHECK_AVX512_CODE "${AVX_CHECK_HEADER}
         int main() {
             unsigned int eax, ebx, ecx, edx;
+            unsigned int max_cpuid_leaf;
+            unsigned long long xcr0;
         #ifdef _WIN32
             int cpuInfo[4];
+            __cpuidex(cpuInfo, 0, 0);
+            max_cpuid_leaf = cpuInfo[0];
+            if (max_cpuid_leaf < 7u) return 1;
+            __cpuidex(cpuInfo, 1, 0);
+            eax = cpuInfo[0]; ebx = cpuInfo[1]; ecx = cpuInfo[2]; edx = cpuInfo[3];
+            if ((ecx & (1u << 27)) == 0) return 1;
+            xcr0 = _xgetbv(0);
             __cpuidex(cpuInfo, 7, 0);
-            eax = cpuInfo[0];
-            ebx = cpuInfo[1];
-            ecx = cpuInfo[2];
-            edx = cpuInfo[3];
+            eax = cpuInfo[0]; ebx = cpuInfo[1]; ecx = cpuInfo[2]; edx = cpuInfo[3];
         #else
+            __cpuid(0, eax, ebx, ecx, edx);
+            max_cpuid_leaf = eax;
+            if (max_cpuid_leaf < 7u) return 1;
+            __cpuid(1, eax, ebx, ecx, edx);
+            if ((ecx & (1u << 27)) == 0) return 1;
+            unsigned int xcr_lo, xcr_hi;
+            __asm__ __volatile__(\".byte 0x0f, 0x01, 0xd0\" : \"=a\"(xcr_lo), \"=d\"(xcr_hi) : \"c\"(0));
+            xcr0 = ((unsigned long long)xcr_hi << 32) | xcr_lo;
             __cpuid_count(7, 0, eax, ebx, ecx, edx);
         #endif
-            return (ebx & (1 << 16)) ? 0 : 1;  // AVX512F - bit 16 in EBX
+            const unsigned long long mask = (1ULL << 1) | (1ULL << 2) | (1ULL << 5) | (1ULL << 6) | (1ULL << 7);
+            if ((xcr0 & mask) != mask) return 1;
+            return ((ebx & (1u << 16)) && (ebx & (1u << 17))) ? 0 : 1;
         }
         ")
 
@@ -198,18 +215,27 @@ if(NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "None")
         set(CHECK_AVX256_CODE "${AVX_CHECK_HEADER}
         int main() {
             unsigned int eax, ebx, ecx, edx;
+            unsigned int ecx_leaf1;
+            unsigned long long xcr0;
         #ifdef _WIN32
             int cpuInfo[4];
             __cpuidex(cpuInfo, 1, 0);
-            eax = cpuInfo[0];
-            ebx = cpuInfo[1];
-            ecx = cpuInfo[2];
-            edx = cpuInfo[3];
+            eax = cpuInfo[0]; ebx = cpuInfo[1]; ecx = cpuInfo[2]; edx = cpuInfo[3];
+            ecx_leaf1 = ecx;
+            if ((ecx & (1u << 27)) == 0) return 1;
+            xcr0 = _xgetbv(0);
         #else
             __cpuid(1, eax, ebx, ecx, edx);
+            ecx_leaf1 = ecx;
+            if ((ecx & (1u << 27)) == 0) return 1;
+            unsigned int xcr_lo, xcr_hi;
+            __asm__ __volatile__(\".byte 0x0f, 0x01, 0xd0\" : \"=a\"(xcr_lo), \"=d\"(xcr_hi) : \"c\"(0));
+            xcr0 = ((unsigned long long)xcr_hi << 32) | xcr_lo;
         #endif
-            // check for AVX and FMA as library runs AVX256 kernel with fma instructions
-            return ((ecx & 0x18001000) == 0x18001000) ? 0 : 1;  // AVX - bits 27-28 in ECX & FMA - 12th bit in ECX
+            const unsigned long long mask = (1ULL << 1) | (1ULL << 2);
+            if ((xcr0 & mask) != mask) return 1;
+            if ((ecx_leaf1 & (1u << 28)) == 0 || (ecx_leaf1 & (1u << 12)) == 0) return 1;
+            return 0;
         }
         ")
 
@@ -235,14 +261,24 @@ if(NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "None")
         #ifdef _WIN32
             int cpuInfo[4];
             __cpuidex(cpuInfo, 1, 0);
-            eax = cpuInfo[0];
-            ebx = cpuInfo[1];
-            ecx = cpuInfo[2];
-            edx = cpuInfo[3];
+            eax = cpuInfo[0]; ebx = cpuInfo[1]; ecx = cpuInfo[2]; edx = cpuInfo[3];
         #else
             __cpuid(1, eax, ebx, ecx, edx);
         #endif
-            return ((ecx & 0x18000000) == 0x18000000) ? 0 : 1;  // AVX - bits 27-28 in ECX
+            // is_xgetbv_supported: CPUID.(EAX=1):ECX.OSXSAVE[bit 27]
+            if ((ecx & (1u << 27)) == 0) return 1;
+        #ifdef _WIN32
+            unsigned long long xcr0 = _xgetbv(0);
+        #else
+            unsigned int xcr_lo, xcr_hi;
+            __asm__ __volatile__(\".byte 0x0f, 0x01, 0xd0\" : \"=a\"(xcr_lo), \"=d\"(xcr_hi) : \"c\"(0));
+            unsigned long long xcr0 = ((unsigned long long)xcr_hi << 32) | xcr_lo;
+        #endif
+            // has_avx_support: XCR0 bits 1 (XMM) and 2 (YMM)
+            const unsigned long long mask = (1ULL << 1) | (1ULL << 2);
+            if ((xcr0 & mask) != mask) return 1;
+            // has_avx: CPUID.(EAX=1):ECX.AVX[bit 28]
+            return (ecx & (1u << 28)) ? 0 : 1;
         }
         ")
 
@@ -323,7 +359,11 @@ if(FUZZTEST)
     )
     add_executable(fuzz_test ${FUZZ_TEST_SRC_FILES})
     add_dependencies(fuzz_test ${deps_gfuzztest})
-    target_link_libraries(fuzz_test PRIVATE aocl_fftz)
+    if(WIN32 AND BUILD_STATIC_LIBS)
+        target_link_libraries(fuzz_test PRIVATE aocl_fftz_static)
+    else()
+        target_link_libraries(fuzz_test PRIVATE aocl_fftz)
+    endif()
     target_link_libraries(fuzz_test PRIVATE fuzztest_fuzztest_gtest_main)
     gtest_discover_tests(fuzz_test)
 endif()

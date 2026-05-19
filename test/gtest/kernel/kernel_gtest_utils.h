@@ -41,6 +41,9 @@
 #ifndef AOCLFFTZ_KERNEL_GTEST_UTILS_H
 #define AOCLFFTZ_KERNEL_GTEST_UTILS_H
 
+#ifdef MULTI_THREADING
+#include <omp.h>
+#endif
 #include <string>
 #include <typeinfo>
 extern "C"
