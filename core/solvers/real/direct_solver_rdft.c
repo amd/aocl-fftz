@@ -13,7 +13,6 @@
 
 #include <assert.h>
 #include "core/common/memory_manager.h"
-#include "core/common/twiddle.h"
 #include "core/solvers/real/direct_solver_rdft_utils.h"
 
 /** This function will setup the direct solution with the required information
@@ -153,7 +152,8 @@ static inline FFTZ_VOID execute_c2c_kernels(aoclfftz_solution_t *sol,
                     batch_out_stride);
 
                 // move twiddle buffer to next batch
-                tw_local.TW = MOVE_ADDR(tw_local.TW, DATA_STRIDE * dt_bytes);
+                tw_local.TW = MOVE_ADDR(tw_local.TW, (FFTZ_INTP)(radix - 1) *
+                                        DATA_STRIDE * dt_bytes);
                 // Move the in & out buffers to point the next batch
                 in = MOVE_ADDR(in, batch_in_stride * dt_bytes);
                 out = MOVE_ADDR(out, batch_out_stride * dt_bytes);
@@ -195,7 +195,8 @@ static inline FFTZ_VOID execute_c2c_kernels(aoclfftz_solution_t *sol,
                     sol->strides_grp->strides_c2c->in_strides, radix,
                     batch_in_stride);
                 // move twiddle buffer to next batch
-                tw_local.TW = MOVE_ADDR(tw_local.TW, DATA_STRIDE * dt_bytes);
+                tw_local.TW = MOVE_ADDR(tw_local.TW, (FFTZ_INTP)(radix - 1) *
+                                        DATA_STRIDE * dt_bytes);
                 // Move the in & out buffers to point the next batch
                 in = MOVE_ADDR(in, batch_in_stride * dt_bytes);
                 out = MOVE_ADDR(out, batch_out_stride * dt_bytes);

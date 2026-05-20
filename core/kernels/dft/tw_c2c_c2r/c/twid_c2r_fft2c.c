@@ -14,6 +14,8 @@
 
 #include "core/kernels/kernel.h"
 
+#define RADIX 2
+
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 4, 6, 10, 0, 0},
                                                      {0, 4, 6, 10, 0, 0}};
 
@@ -53,7 +55,6 @@ static FFTZ_VOID twid_c2r_fft2c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
     aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
     FFTZ_FLOAT *tw = (FFTZ_FLOAT *)(tws->TW);
-    FFTZ_UINTP cols = tws->cols;
     FFTZ_UINTP load_multi_cols = tws->load_multi_cols;
 
     in_h1_r = (FFTZ_FLOAT *)in_imag;
@@ -64,6 +65,8 @@ static FFTZ_VOID twid_c2r_fft2c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     out_h2_r = out_h1_r;
     out_h1_i = (FFTZ_FLOAT *)out_real;
     out_h2_i = out_h1_i;
+
+    FFTZ_FLOAT *tw_ptr = tw;
 
     for (cnt = 0; cnt < n; cnt++)
     {
@@ -86,9 +89,8 @@ static FFTZ_VOID twid_c2r_fft2c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         // Output point 2: X(1)
         FFTZ_FLOAT _or_1 = v1r - v2r;
         {
-            FFTZ_UINTP _twa = DATA_STRIDE * (1 * cols + cnt * load_multi_cols);
-            FFTZ_FLOAT _twr = tw[_twa];
-            FFTZ_FLOAT _twi = tw[1 + _twa];
+            FFTZ_FLOAT _twr = tw_ptr[0];
+            FFTZ_FLOAT _twi = tw_ptr[1];
             FFTZ_FLOAT _oi = v1i - v2i;
             out_h2_r[out_strides[1]] = _or_1 * _twr - _oi * _twi;
             out_h2_i[out_strides[1]] = _or_1 * _twi + _oi * _twr;
@@ -102,6 +104,8 @@ static FFTZ_VOID twid_c2r_fft2c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         out_h2_r = out_h2_r + v_out_h2_stride;
         out_h1_i = out_h1_i + v_out_stride;
         out_h2_i = out_h2_i + v_out_h2_stride;
+
+        tw_ptr += load_multi_cols * (RADIX - 1) * DATA_STRIDE;
     }
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
@@ -129,7 +133,6 @@ static FFTZ_VOID twid_c2r_fft2c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
     aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
     FFTZ_DOUBLE *tw = (FFTZ_DOUBLE *)(tws->TW);
-    FFTZ_UINTP cols = tws->cols;
     FFTZ_UINTP load_multi_cols = tws->load_multi_cols;
 
     in_h1_r = (FFTZ_DOUBLE *)in_imag;
@@ -140,6 +143,8 @@ static FFTZ_VOID twid_c2r_fft2c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     out_h2_r = out_h1_r;
     out_h1_i = (FFTZ_DOUBLE *)out_real;
     out_h2_i = out_h1_i;
+
+    FFTZ_DOUBLE *tw_ptr = tw;
 
     for (cnt = 0; cnt < n; cnt++)
     {
@@ -159,9 +164,8 @@ static FFTZ_VOID twid_c2r_fft2c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         // Output point 2: X(0)
         FFTZ_DOUBLE _or_1 = v1r - v2r;
         {
-            FFTZ_UINTP _twa = DATA_STRIDE * (1 * cols + cnt * load_multi_cols);
-            FFTZ_DOUBLE _twr = tw[_twa];
-            FFTZ_DOUBLE _twi = tw[1 + _twa];
+            FFTZ_DOUBLE _twr = tw_ptr[0];
+            FFTZ_DOUBLE _twi = tw_ptr[1];
             FFTZ_DOUBLE _oi = v1i - v2i;
             out_h2_r[out_strides[1]] = _or_1 * _twr - _oi * _twi;
             out_h2_i[out_strides[1]] = _or_1 * _twi + _oi * _twr;
@@ -174,6 +178,8 @@ static FFTZ_VOID twid_c2r_fft2c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         out_h2_r = out_h2_r + v_out_h2_stride;
         out_h1_i = out_h1_i + v_out_stride;
         out_h2_i = out_h2_i + v_out_h2_stride;
+
+        tw_ptr += load_multi_cols * (RADIX - 1) * DATA_STRIDE;
     }
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
@@ -194,3 +200,5 @@ kfft_ register_kernel_twid_c2r_fft2c(FFTZ_UINT8 precision,
         return NULL;
     }
 }
+
+#undef RADIX

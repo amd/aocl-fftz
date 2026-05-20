@@ -94,6 +94,8 @@ FFTZ_INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
     sol->solver->kernel_c2c->kfft[BACKWARD_FFT_DIR] =
         ker_m->kfft[BACKWARD_FFT_DIR];
     sol->solver->kernel_c2c->count = (FFTZ_UINTP)radix_r;
+    sol->solver->kernel_c2c->sets =
+        ker_m->sets[DT_PRECISION_FLAG(sol->decomp_scheme->flags) - 2];
 
     {
         aoclfftz_strides_t *strides_m = sol->strides_grp->strides;
@@ -112,6 +114,8 @@ FFTZ_INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
     sol->solver->kernel_c2c_r->kfft[BACKWARD_FFT_DIR] =
         ker_r->kfft[BACKWARD_FFT_DIR];
     sol->solver->kernel_c2c_r->count = (FFTZ_UINTP)radix_m;
+    sol->solver->kernel_c2c_r->sets =
+        ker_r->sets[DT_PRECISION_FLAG(sol->decomp_scheme->flags) - 2];
 
     {
         aoclfftz_strides_t *strides_r = sol->strides_grp->strides_c2c;
@@ -128,7 +132,6 @@ FFTZ_INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
 
     sol->twiddle->twiddle_buf_ptr = NULL;
     sol->twiddle->TW = NULL;
-    sol->twiddle->cols = 0;
     sol->twiddle->load_multi_cols = 1;
 
     sol->next_sol = NULL;

@@ -139,6 +139,8 @@ static FFTZ_INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
     FFTZ_INTP num_iters = decomp_scheme->vecs[0].n / num_sets;
     FFTZ_INTP rem_iters = decomp_scheme->vecs[0].n - (num_iters * num_sets);
 
+    FFTZ_INTP radix = decomp_scheme->dims[0].n;
+    FFTZ_INTP tw_per_butterfly = (radix - 1) * (FFTZ_INTP)num_sets;
 
     // Set threads for parallel execution
     #pragma omp parallel for num_threads(decomp_scheme->thread_info->n_threads)
@@ -147,8 +149,7 @@ static FFTZ_INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
         aoclfftz_twiddle_t tw_local = {
             .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
             .TW = MOVE_ADDR(sol->twiddle->TW,
-                            DATA_STRIDE * dt_bytes * batch * num_sets),
-            .cols = sol->twiddle->cols,
+                            DATA_STRIDE * dt_bytes * batch * tw_per_butterfly),
             .load_multi_cols = 1, // use different twiddle values across batches
         };
 
@@ -166,8 +167,7 @@ static FFTZ_INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
     aoclfftz_twiddle_t tw_local = {
         .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
         .TW = MOVE_ADDR(sol->twiddle->TW,
-                        DATA_STRIDE * dt_bytes * num_iters * num_sets),
-        .cols = sol->twiddle->cols,
+                        DATA_STRIDE * dt_bytes * num_iters * tw_per_butterfly),
         .load_multi_cols = 1, // use different twiddle values across batches
     };
     if (rem_iters)
@@ -231,6 +231,9 @@ execute_mt_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
     FFTZ_INTP ct_out_stride =
         sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE * dt_bytes;
 
+    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP tw_per_butterfly = (radix - 1) * DATA_STRIDE * (FFTZ_INTP)dt_bytes;
+
     FFTZ_UINT8 num_sets = sol->solver->kernel_c2c->sets;
     FFTZ_INTP num_iters = sol->decomp_scheme->batched_vecs[0].n / num_sets;
     FFTZ_INTP rem_iters =
@@ -257,8 +260,7 @@ execute_mt_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
         {
             aoclfftz_twiddle_t tw_local = {
                 .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
-                .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
-                .cols = sol->twiddle->cols,
+                .TW = MOVE_ADDR(sol->twiddle->TW, i * tw_per_butterfly),
                 .load_multi_cols = 0, // use same twiddle values across batches
             };                        // since different batches solves the same
                                       // DFT butterfly for different problems
@@ -282,8 +284,7 @@ execute_mt_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
         {
             aoclfftz_twiddle_t tw_local = {
                 .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
-                .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
-                .cols = sol->twiddle->cols,
+                .TW = MOVE_ADDR(sol->twiddle->TW, i * tw_per_butterfly),
                 .load_multi_cols = 0, // use same twiddle values across batches
             };                        // since different batches solves the same
                                       // DFT butterfly for different problems
@@ -344,6 +345,9 @@ execute_mt_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
         sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE * dt_bytes;
     FFTZ_INTP ct_out_stride =
         sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE * dt_bytes;
+
+    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP tw_per_butterfly = (radix - 1) * DATA_STRIDE * (FFTZ_INTP)dt_bytes;
     // FFTZ_INTP outer_iters = sol->decomp_scheme->vecs[0].n;
     // FFTZ_INTP inner_iters = sol->decomp_scheme->batched_vecs[0].n;
     FFTZ_INT32 num_sets = sol->solver->kernel_c2c->sets;
@@ -375,8 +379,7 @@ execute_mt_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
             FFTZ_INTP thread_iters = end_iter - start_iter;
             aoclfftz_twiddle_t tw_thr_local = {
                 .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
-                .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
-                .cols = sol->twiddle->cols,
+                .TW = MOVE_ADDR(sol->twiddle->TW, i * tw_per_butterfly),
                 .load_multi_cols = 0, // use same twiddle values across batches
             };                        // since different batches solves the same
                                       // DFT butterfly for different problems
@@ -402,8 +405,7 @@ execute_mt_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
         {
             aoclfftz_twiddle_t tw_local = {
                 .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
-                .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
-                .cols = sol->twiddle->cols,
+                .TW = MOVE_ADDR(sol->twiddle->TW, i * tw_per_butterfly),
                 .load_multi_cols = 0, // use same twiddle values across batches
             };                        // since different batches solves the same
                                       // DFT butterfly for different problems

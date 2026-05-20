@@ -145,13 +145,15 @@ execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
     FFTZ_INTP ct_out_stride =
         sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE * dt_bytes;
 
+    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP tw_per_butterfly = (radix - 1) * DATA_STRIDE * (FFTZ_INTP)dt_bytes;
+
     // execute the direct kernel
     for (FFTZ_INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
     {
         aoclfftz_twiddle_t tw_local = {
             .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
-            .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
-            .cols = sol->twiddle->cols,
+            .TW = MOVE_ADDR(sol->twiddle->TW, i * tw_per_butterfly),
             .load_multi_cols = 0, // use same twiddle values across batches
         };                        // since different batches solve the same
                                   // DFT butterfly of different problems

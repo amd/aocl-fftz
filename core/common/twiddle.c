@@ -16,189 +16,361 @@
 #include <math.h>
 #include "core/common/twiddle.h"
 #include "api/aoclfftz_internal.h"
+#include "core/kernels/kernel.h"
 #include "core/kernels/non_dft/transpose/transpose_utils.h"
 
-
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
-// Setup a twiddle buffer of size `radix x n_tw_batches`
-FFTZ_VOID compute_twiddle_buffer_float(FFTZ_VOID *twiddle_buffer,
-                                       FFTZ_INTP radix, FFTZ_INTP n_tw_batches)
+
+static inline
+FFTZ_INTP populate_twiddle_per_simd_butterfly_float(FFTZ_FLOAT *tw,
+                                                    FFTZ_INTP idx,
+                                                    FFTZ_INTP radix,
+                                                    FFTZ_FLOAT angle_base,
+                                                    FFTZ_INTP base_col,
+                                                    FFTZ_INTP tile_w)
 {
-    FFTZ_FLOAT *twiddle_buffer_real = (FFTZ_FLOAT *)twiddle_buffer;
-    FFTZ_FLOAT *twiddle_buffer_imag = twiddle_buffer_real + 1;
-
-    FFTZ_FLOAT angle_base =
-        -AOCLFFTZ_2_PIf / (FFTZ_FLOAT)(radix * n_tw_batches);
-    FFTZ_INTP c_stride = 1 * DATA_STRIDE;
-    FFTZ_INTP r_stride = n_tw_batches * DATA_STRIDE;
-
-    for (FFTZ_INTP i = 0; i < radix; ++i)
+    for (FFTZ_INTP k = 1; k < radix; ++k)
     {
-        twiddle_buffer_real[LINEAR_IDX_2D(i, 0, c_stride, r_stride)] = 1.0f;
-        twiddle_buffer_imag[LINEAR_IDX_2D(i, 0, c_stride, r_stride)] = 0.0f;
-    }
-    for (FFTZ_INTP j = 1; j < n_tw_batches; ++j)
-    {
-        twiddle_buffer_real[LINEAR_IDX_2D(0, j, c_stride, r_stride)] = 1.0f;
-        twiddle_buffer_imag[LINEAR_IDX_2D(0, j, c_stride, r_stride)] = 0.0f;
-    }
-
-    for (FFTZ_INTP i = 1; i < radix; ++i)
-    {
-        for (FFTZ_INTP j = 1; j < n_tw_batches; ++j)
+        for (FFTZ_INTP j = 0; j < tile_w; ++j)
         {
-            FFTZ_FLOAT angle = angle_base * i * j;
-            FFTZ_FLOAT sin_val = sinf(angle);
-            FFTZ_FLOAT cos_val = cosf(angle);
-            twiddle_buffer_real[LINEAR_IDX_2D(i, j, c_stride, r_stride)] =
-                cos_val;
-            twiddle_buffer_imag[LINEAR_IDX_2D(i, j, c_stride, r_stride)] =
-                sin_val;
+            FFTZ_INTP col = base_col + j;
+            FFTZ_FLOAT angle = angle_base * (FFTZ_FLOAT)k * (FFTZ_FLOAT)col;
+            tw[idx++] = cosf(angle);
+            tw[idx++] = sinf(angle);
         }
+    }
+    return idx;
+}
+
+static inline
+FFTZ_VOID compute_twiddle_buffer_linear_float(FFTZ_FLOAT *tw,
+                                              FFTZ_INTP radix, FFTZ_INTP m,
+                                              FFTZ_INTP register_width,
+                                              FFTZ_INTP load_multi_cols)
+{
+    FFTZ_FLOAT angle_base = -AOCLFFTZ_2_PIf / (FFTZ_FLOAT)(radix * m);
+
+    if (load_multi_cols == 0)
+    {
+        FFTZ_INTP idx = 0;
+        for (FFTZ_INTP j = 0; j < m; ++j)
+        {
+            for (FFTZ_INTP k = 1; k < radix; ++k)
+            {
+                FFTZ_FLOAT angle = angle_base * (FFTZ_FLOAT)k * (FFTZ_FLOAT)j;
+                tw[idx++] = cosf(angle);
+                tw[idx++] = sinf(angle);
+            }
+        }
+        return;
+    }
+
+    FFTZ_INTP idx = 0;
+    FFTZ_INTP base_col = 0;
+    FFTZ_INTP rem = m;
+
+    while (rem >= register_width)
+    {
+        idx = populate_twiddle_per_simd_butterfly_float(
+              tw, idx, radix, angle_base, base_col, register_width);
+        base_col += register_width;
+        rem -= register_width;
+    }
+    if (register_width > NUM_SETS_256_S && rem >= NUM_SETS_256_S)
+    {
+        idx = populate_twiddle_per_simd_butterfly_float(
+              tw, idx, radix, angle_base, base_col, NUM_SETS_256_S);
+        base_col += NUM_SETS_256_S;
+        rem -= NUM_SETS_256_S;
+    }
+    if (register_width > NUM_SETS_128_S && rem >= NUM_SETS_128_S)
+    {
+        idx = populate_twiddle_per_simd_butterfly_float(
+              tw, idx, radix, angle_base, base_col, NUM_SETS_128_S);
+        base_col += NUM_SETS_128_S;
+        rem -= NUM_SETS_128_S;
+    }
+    if (rem > 0)
+    {
+        idx = populate_twiddle_per_simd_butterfly_float(
+              tw, idx, radix, angle_base, base_col, rem);
     }
 }
 
-// Setup a twiddle buffer of size `radix x n_tw_batches`
-FFTZ_VOID compute_twiddle_buffer_double(FFTZ_VOID *twiddle_buffer,
-                                        FFTZ_INTP radix, FFTZ_INTP n_tw_batches)
+// Populate the twiddles for one SIMD butterfly.
+// Returns the advanced index.
+static inline
+FFTZ_INTP populate_twiddle_per_simd_butterfly_double(FFTZ_DOUBLE *tw,
+                                                     FFTZ_INTP idx,
+                                                     FFTZ_INTP radix,
+                                                     FFTZ_DOUBLE angle_base,
+                                                     FFTZ_INTP base_col,
+                                                     FFTZ_INTP tile_w)
 {
-    FFTZ_DOUBLE *twiddle_buffer_real = (FFTZ_DOUBLE *)twiddle_buffer;
-    FFTZ_DOUBLE *twiddle_buffer_imag = twiddle_buffer_real + 1;
-
-    FFTZ_DOUBLE angle_base =
-        -AOCLFFTZ_2_PI / (FFTZ_DOUBLE)(radix * n_tw_batches);
-    FFTZ_INTP c_stride = 1 * DATA_STRIDE;
-    FFTZ_INTP r_stride = n_tw_batches * DATA_STRIDE;
-
-    for (FFTZ_INTP i = 0; i < radix; ++i)
+    for (FFTZ_INTP k = 1; k < radix; ++k)
     {
-        twiddle_buffer_real[LINEAR_IDX_2D(i, 0, c_stride, r_stride)] = 1.0;
-        twiddle_buffer_imag[LINEAR_IDX_2D(i, 0, c_stride, r_stride)] = 0.0;
-    }
-    for (FFTZ_INTP j = 1; j < n_tw_batches; ++j)
-    {
-        twiddle_buffer_real[LINEAR_IDX_2D(0, j, c_stride, r_stride)] = 1.0;
-        twiddle_buffer_imag[LINEAR_IDX_2D(0, j, c_stride, r_stride)] = 0.0;
-    }
-
-    for (FFTZ_INTP i = 1; i < radix; ++i)
-    {
-        for (FFTZ_INTP j = 1; j < n_tw_batches; ++j)
+        for (FFTZ_INTP j = 0; j < tile_w; ++j)
         {
-            FFTZ_DOUBLE angle = angle_base * i * j;
-            FFTZ_DOUBLE sin_val = sin(angle);
-            FFTZ_DOUBLE cos_val = cos(angle);
-            twiddle_buffer_real[LINEAR_IDX_2D(i, j, c_stride, r_stride)] =
-                cos_val;
-            twiddle_buffer_imag[LINEAR_IDX_2D(i, j, c_stride, r_stride)] =
-                sin_val;
+            FFTZ_INTP col = base_col + j;
+            FFTZ_DOUBLE angle = angle_base * (FFTZ_DOUBLE)k * (FFTZ_DOUBLE)col;
+            tw[idx++] = cos(angle);
+            tw[idx++] = sin(angle);
         }
+    }
+    return idx;
+}
+
+static inline
+FFTZ_VOID compute_twiddle_buffer_linear_double(FFTZ_DOUBLE *tw,
+                                               FFTZ_INTP radix,
+                                               FFTZ_INTP m,
+                                               FFTZ_INTP register_width,
+                                               FFTZ_INTP load_multi_cols)
+{
+    FFTZ_DOUBLE angle_base = -AOCLFFTZ_2_PI / (FFTZ_DOUBLE)(radix * m);
+
+    if (load_multi_cols == 0)
+    {
+        FFTZ_INTP idx = 0;
+        for (FFTZ_INTP j = 0; j < m; ++j)
+        {
+            for (FFTZ_INTP k = 1; k < radix; ++k)
+            {
+                FFTZ_DOUBLE angle =
+                    angle_base * (FFTZ_DOUBLE)k * (FFTZ_DOUBLE)j;
+                tw[idx++] = cos(angle);
+                tw[idx++] = sin(angle);
+            }
+        }
+        return;
+    }
+
+    FFTZ_INTP idx = 0;
+    FFTZ_INTP base_col = 0;
+    FFTZ_INTP rem = m;
+
+    while (rem >= register_width)
+    {
+        idx = populate_twiddle_per_simd_butterfly_double(
+              tw, idx, radix, angle_base, base_col, register_width);
+        base_col += register_width;
+        rem -= register_width;
+    }
+    if (register_width > NUM_SETS_256_D && rem >= NUM_SETS_256_D)
+    {
+        idx = populate_twiddle_per_simd_butterfly_double(
+              tw, idx, radix, angle_base, base_col, NUM_SETS_256_D);
+        base_col += NUM_SETS_256_D;
+        rem -= NUM_SETS_256_D;
+    }
+    if (register_width > NUM_SETS_128_D && (rem & 1))
+    {
+        idx = populate_twiddle_per_simd_butterfly_double(
+              tw, idx, radix, angle_base, base_col, NUM_SETS_128_D);
     }
 }
 
 FFTZ_VOID compute_twiddle_buffer(FFTZ_VOID *twiddle_buffer, FFTZ_INTP radix,
-                                 FFTZ_INTP n_tw_batches, FFTZ_UINT32 dt_prec)
+                                 FFTZ_INTP m, FFTZ_INTP register_width,
+                                 FFTZ_INTP load_multi_cols, FFTZ_UINT32 dt_prec)
 {
-    if (dt_prec == DT_FLOAT)
+    if (twiddle_buffer == NULL || radix < 2 || m < 1)
     {
-        compute_twiddle_buffer_float(twiddle_buffer, radix, n_tw_batches);
+        return;
+    }
+
+    if (dt_prec == DT_DOUBLE)
+    {
+        compute_twiddle_buffer_linear_double((FFTZ_DOUBLE *)twiddle_buffer,
+                                             radix, m, register_width,
+                                             load_multi_cols);
     }
     else
     {
-        compute_twiddle_buffer_double(twiddle_buffer, radix, n_tw_batches);
+        compute_twiddle_buffer_linear_float((FFTZ_FLOAT *)twiddle_buffer, radix,
+                                            m, register_width, load_multi_cols);
     }
 }
 #endif
 
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
-FFTZ_VOID compute_twiddle_buffer_real_float(
-    FFTZ_VOID *twiddle_buffer, FFTZ_INTP radix, FFTZ_INTP num_c2c_per_group,
-    FFTZ_INTP num_groups, FFTZ_INTP freq_factor, FFTZ_UINT8 dir)
+// Populate the twiddles for one SIMD butterfly of real-FFT c2c twiddles.
+// Returns the advanced index.
+static inline
+FFTZ_INTP populate_twiddle_per_simd_butterfly_real_float(FFTZ_FLOAT *tw,
+                                                         FFTZ_INTP idx,
+                                                         FFTZ_INTP radix,
+                                                         FFTZ_FLOAT angle_base,
+                                                         FFTZ_INTP base_col,
+                                                         FFTZ_INTP tile_w)
 {
-    FFTZ_FLOAT *twiddle_buffer_real = (FFTZ_FLOAT *)twiddle_buffer;
-    FFTZ_FLOAT *twiddle_buffer_imag = twiddle_buffer_real + 1;
+    for (FFTZ_INTP k = 1; k < radix; ++k)
+    {
+        for (FFTZ_INTP j = 0; j < tile_w; ++j)
+        {
+            FFTZ_INTP col = base_col + j;
+            FFTZ_FLOAT angle =
+                angle_base * (FFTZ_FLOAT)k * (FFTZ_FLOAT)(col + 1);
+            tw[idx++] = cosf(angle);
+            tw[idx++] = sinf(angle);
+        }
+    }
+    return idx;
+}
+
+static inline FFTZ_INTP
+populate_twiddle_per_simd_butterfly_real_double(FFTZ_DOUBLE *tw,
+                                                FFTZ_INTP idx, FFTZ_INTP radix,
+                                                FFTZ_DOUBLE angle_base,
+                                                FFTZ_INTP base_col,
+                                                FFTZ_INTP tile_w)
+{
+    for (FFTZ_INTP k = 1; k < radix; ++k)
+    {
+        for (FFTZ_INTP j = 0; j < tile_w; ++j)
+        {
+            FFTZ_INTP col = base_col + j;
+            FFTZ_DOUBLE angle =
+                angle_base * (FFTZ_DOUBLE)k * (FFTZ_DOUBLE)(col + 1);
+            tw[idx++] = cos(angle);
+            tw[idx++] = sin(angle);
+        }
+    }
+    return idx;
+}
+
+FFTZ_VOID compute_twiddle_buffer_real_float(FFTZ_VOID *twiddle_buffer,
+                                            FFTZ_INTP radix,
+                                            FFTZ_INTP num_c2c_per_group,
+                                            FFTZ_INTP freq_factor,
+                                            FFTZ_UINT8 dir,
+                                            FFTZ_INTP register_width,
+                                            FFTZ_INTP load_multi_cols)
+{
+    FFTZ_FLOAT *tw = (FFTZ_FLOAT *)twiddle_buffer;
 
     FFTZ_FLOAT sign = (dir == BACKWARD_FFT_DIR) ? 1.0 : -1.0;
     FFTZ_FLOAT angle_base = (sign * AOCLFFTZ_2_PI) / (FFTZ_FLOAT)freq_factor;
-    FFTZ_INTP c_stride = DATA_STRIDE;
-    FFTZ_INTP r_stride = num_c2c_per_group * DATA_STRIDE;
 
-    // set the first column of the twiddle matrix to (1 + 0i)
-    for (FFTZ_INTP j = 0; j < num_c2c_per_group; ++j)
+    if (load_multi_cols == 0)
     {
-        FFTZ_INTP buffer_index = LINEAR_IDX_2D(0, j, c_stride, r_stride);
-        twiddle_buffer_real[buffer_index] = 1.0;
-        twiddle_buffer_imag[buffer_index] = 0.0;
-    }
-
-    for (FFTZ_INTP i = 1; i < radix; ++i)
-    {
+        FFTZ_INTP idx = 0;
         for (FFTZ_INTP j = 0; j < num_c2c_per_group; ++j)
         {
-           // twiddle matrix size `r x num_c2c_per_group`
-            FFTZ_FLOAT angle = angle_base * i * (j + 1);
-            FFTZ_FLOAT sin_val = sinf(angle);
-            FFTZ_FLOAT cos_val = cosf(angle);
-            FFTZ_INTP buffer_index = LINEAR_IDX_2D(i, j, c_stride, r_stride);
-            twiddle_buffer_real[buffer_index] = cos_val;
-            twiddle_buffer_imag[buffer_index] = sin_val;
+            for (FFTZ_INTP k = 1; k < radix; ++k)
+            {
+                FFTZ_FLOAT angle =
+                    angle_base * (FFTZ_FLOAT)k * (FFTZ_FLOAT)(j + 1);
+                tw[idx++] = cosf(angle);
+                tw[idx++] = sinf(angle);
+            }
         }
+        return;
+    }
+
+    FFTZ_INTP idx = 0;
+    FFTZ_INTP base_col = 0;
+    FFTZ_INTP rem = num_c2c_per_group;
+
+    while (rem >= register_width)
+    {
+        idx = populate_twiddle_per_simd_butterfly_real_float(
+              tw, idx, radix, angle_base, base_col, register_width);
+        base_col += register_width;
+        rem -= register_width;
+    }
+    if (register_width > NUM_SETS_256_S && rem >= NUM_SETS_256_S)
+    {
+        idx = populate_twiddle_per_simd_butterfly_real_float(
+              tw, idx, radix, angle_base, base_col, NUM_SETS_256_S);
+        base_col += NUM_SETS_256_S;
+        rem -= NUM_SETS_256_S;
+    }
+    if (register_width > NUM_SETS_128_S && rem >= NUM_SETS_128_S)
+    {
+        idx = populate_twiddle_per_simd_butterfly_real_float(
+              tw, idx, radix, angle_base, base_col, NUM_SETS_128_S);
+        base_col += NUM_SETS_128_S;
+        rem -= NUM_SETS_128_S;
+    }
+    if (rem > 0)
+    {
+        idx = populate_twiddle_per_simd_butterfly_real_float(
+              tw, idx, radix, angle_base, base_col, rem);
     }
 }
 
-FFTZ_VOID compute_twiddle_buffer_real_double(
-    FFTZ_VOID *twiddle_buffer, FFTZ_INTP radix, FFTZ_INTP num_c2c_per_group,
-    FFTZ_INTP num_groups, FFTZ_INTP freq_factor, FFTZ_UINT8 dir)
+FFTZ_VOID compute_twiddle_buffer_real_double(FFTZ_VOID *twiddle_buffer,
+                                             FFTZ_INTP radix,
+                                             FFTZ_INTP num_c2c_per_group,
+                                             FFTZ_INTP freq_factor,
+                                             FFTZ_UINT8 dir,
+                                             FFTZ_INTP register_width,
+                                             FFTZ_INTP load_multi_cols)
 {
-    FFTZ_DOUBLE *twiddle_buffer_real = (FFTZ_DOUBLE *)twiddle_buffer;
-    FFTZ_DOUBLE *twiddle_buffer_imag = twiddle_buffer_real + 1;
+    FFTZ_DOUBLE *tw = (FFTZ_DOUBLE *)twiddle_buffer;
 
     FFTZ_DOUBLE sign = (dir == BACKWARD_FFT_DIR) ? 1.0 : -1.0;
     FFTZ_DOUBLE angle_base = (sign * AOCLFFTZ_2_PI) / (FFTZ_DOUBLE)freq_factor;
-    FFTZ_INTP c_stride = DATA_STRIDE;
-    FFTZ_INTP r_stride = num_c2c_per_group * DATA_STRIDE;
 
-    // set the first column of the twiddle matrix to (1 + 0i)
-    for (FFTZ_INTP j = 0; j < num_c2c_per_group; ++j)
+    if (load_multi_cols == 0)
     {
-        FFTZ_INTP buffer_index = LINEAR_IDX_2D(0, j, c_stride, r_stride);
-        twiddle_buffer_real[buffer_index] = 1.0;
-        twiddle_buffer_imag[buffer_index] = 0.0;
-    }
-
-    for (FFTZ_INTP i = 1; i < radix; ++i)
-    {
+        FFTZ_INTP idx = 0;
         for (FFTZ_INTP j = 0; j < num_c2c_per_group; ++j)
         {
-            FFTZ_DOUBLE angle = angle_base * i * (j + 1);
-            FFTZ_DOUBLE sin_val = sin(angle);
-            FFTZ_DOUBLE cos_val = cos(angle);
-            // twiddle matrix size `r x num_c2c_per_group`
-            FFTZ_INTP buffer_index = LINEAR_IDX_2D(i, j, c_stride, r_stride);
-            twiddle_buffer_real[buffer_index] = cos_val;
-            twiddle_buffer_imag[buffer_index] = sin_val;
+            for (FFTZ_INTP k = 1; k < radix; ++k)
+            {
+                FFTZ_DOUBLE angle =
+                    angle_base * (FFTZ_DOUBLE)k * (FFTZ_DOUBLE)(j + 1);
+                tw[idx++] = cos(angle);
+                tw[idx++] = sin(angle);
+            }
         }
+        return;
+    }
+
+    FFTZ_INTP idx = 0;
+    FFTZ_INTP base_col = 0;
+    FFTZ_INTP rem = num_c2c_per_group;
+
+    while (rem >= register_width)
+    {
+        idx = populate_twiddle_per_simd_butterfly_real_double(
+              tw, idx, radix, angle_base, base_col, register_width);
+        base_col += register_width;
+        rem -= register_width;
+    }
+    if (register_width > NUM_SETS_256_D && rem >= NUM_SETS_256_D)
+    {
+        idx = populate_twiddle_per_simd_butterfly_real_double(
+              tw, idx, radix, angle_base, base_col, NUM_SETS_256_D);
+        base_col += NUM_SETS_256_D;
+        rem -= NUM_SETS_256_D;
+    }
+    if (register_width > NUM_SETS_128_D && (rem & 1))
+    {
+        idx = populate_twiddle_per_simd_butterfly_real_double(
+              tw, idx, radix, angle_base, base_col, NUM_SETS_128_D);
     }
 }
 
-FFTZ_VOID compute_twiddle_buffer_real(FFTZ_VOID *twiddle_buffer,
-                                      FFTZ_INTP radix,
-                                      FFTZ_INTP num_c2c_per_group,
-                                      FFTZ_INTP num_groups,
-                                      FFTZ_INTP freq_factor, FFTZ_UINT8 dir,
-                                      FFTZ_UINT32 dt_prec)
+FFTZ_VOID
+compute_twiddle_buffer_real(FFTZ_VOID *twiddle_buffer, FFTZ_INTP radix,
+                            FFTZ_INTP num_c2c_per_group, FFTZ_INTP freq_factor,
+                            FFTZ_UINT8 dir, FFTZ_INTP register_width,
+                            FFTZ_INTP load_multi_cols, FFTZ_UINT32 dt_prec)
 {
     if (dt_prec == DT_FLOAT)
     {
         compute_twiddle_buffer_real_float(twiddle_buffer, radix,
-                                          num_c2c_per_group, num_groups,
-                                          freq_factor, dir);
+                                          num_c2c_per_group, freq_factor, dir,
+                                          register_width, load_multi_cols);
     }
     else
     {
         compute_twiddle_buffer_real_double(twiddle_buffer, radix,
-                                           num_c2c_per_group, num_groups,
-                                           freq_factor, dir);
+                                           num_c2c_per_group, freq_factor, dir,
+                                           register_width, load_multi_cols);
     }
 }
 
@@ -212,8 +384,8 @@ static FFTZ_VOID compute_sr_twiddle_buffer_float(FFTZ_VOID *twiddle_buffer,
     /* For each k, we need W_n^k and W_n^(3k) */
     for (FFTZ_INTP k = 0; k < n4; k++)
     {
-        FFTZ_FLOAT angle1 = -AOCLFFTZ_2_PIf * k / n;  /* W_n^k */
-        FFTZ_FLOAT angle3 = -3.0f * AOCLFFTZ_2_PIf * k / n;  /* W_n^(3k) */
+        FFTZ_FLOAT angle1 = -AOCLFFTZ_2_PIf * k / n;        /* W_n^k */
+        FFTZ_FLOAT angle3 = -3.0f * AOCLFFTZ_2_PIf * k / n; /* W_n^(3k) */
 
         /* Store W^k at even indices */
         tw[k * 2].real = cosf(angle1);
@@ -235,8 +407,8 @@ static FFTZ_VOID compute_sr_twiddle_buffer_double(FFTZ_VOID *twiddle_buffer,
     /* For each k, we need W_n^k and W_n^(3k) */
     for (FFTZ_INTP k = 0; k < n4; k++)
     {
-        FFTZ_DOUBLE angle1 = -AOCLFFTZ_2_PI * k / n;  /* W_n^k */
-        FFTZ_DOUBLE angle3 = -3.0 * AOCLFFTZ_2_PI * k / n;  /* W_n^(3k) */
+        FFTZ_DOUBLE angle1 = -AOCLFFTZ_2_PI * k / n;       /* W_n^k */
+        FFTZ_DOUBLE angle3 = -3.0 * AOCLFFTZ_2_PI * k / n; /* W_n^(3k) */
 
         /* Store W^k at even indices */
         tw[k * 2].real = cos(angle1);

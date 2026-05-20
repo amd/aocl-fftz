@@ -14,6 +14,8 @@
 
 #include "core/kernels/kernel.h"
 
+#define RADIX 13
+
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 116, 200, 76, 0, 0},
                                                      {0, 116, 200, 76, 0, 0}};
 
@@ -95,7 +97,6 @@ static FFTZ_VOID twid_r2c_fft13c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
     aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
     FFTZ_DOUBLE *tw = (FFTZ_DOUBLE *)(tws->TW);
-    FFTZ_UINTP cols = tws->cols;
     FFTZ_UINTP load_multi_cols = tws->load_multi_cols;
     FFTZ_DOUBLE twr, twi;
 
@@ -107,6 +108,8 @@ static FFTZ_VOID twid_r2c_fft13c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     out_h2_r = out_h1_r;
     out_h1_i = (FFTZ_DOUBLE *)out_imag;
     out_h2_i = out_h1_i;
+
+    FFTZ_DOUBLE *tw_ptr = tw;
 
     for (FFTZ_INTP cnt = 0; cnt < n; cnt++)
     {
@@ -144,120 +147,96 @@ static FFTZ_VOID twid_r2c_fft13c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         // Input point 2: x(1)
         FFTZ_DOUBLE v2r_t = in_h1_r[in_strides[1]];
         FFTZ_DOUBLE v2i_t = in_h1_i[in_strides[1]];
-        FFTZ_UINTP twid_addr2 =
-            DATA_STRIDE * (1 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr2];
-        twi = tw[1 + twid_addr2];
+        twr = tw_ptr[0];
+        twi = tw_ptr[1];
         vr[1] = v2r_t * twr - v2i_t * twi;
         vi[1] = v2r_t * twi + v2i_t * twr;
 
         // Input point 3: x(2)
         FFTZ_DOUBLE v3r_t = in_h1_r[in_strides[2]];
         FFTZ_DOUBLE v3i_t = in_h1_i[in_strides[2]];
-        FFTZ_UINTP twid_addr3 =
-            DATA_STRIDE * (2 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr3];
-        twi = tw[1 + twid_addr3];
+        twr = tw_ptr[DATA_STRIDE];
+        twi = tw_ptr[DATA_STRIDE + 1];
         vr[2] = v3r_t * twr - v3i_t * twi;
         vi[2] = v3r_t * twi + v3i_t * twr;
 
         // Input point 4: x(3)
         FFTZ_DOUBLE v4r_t = in_h1_r[in_strides[3]];
         FFTZ_DOUBLE v4i_t = in_h1_i[in_strides[3]];
-        FFTZ_UINTP twid_addr4 =
-            DATA_STRIDE * (3 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr4];
-        twi = tw[1 + twid_addr4];
+        twr = tw_ptr[2 * DATA_STRIDE];
+        twi = tw_ptr[2 * DATA_STRIDE + 1];
         vr[5] = v4r_t * twr - v4i_t * twi;
         vi[5] = v4r_t * twi + v4i_t * twr;
 
         // Input point 5: x(4)
         FFTZ_DOUBLE v5r_t = in_h1_r[in_strides[4]];
         FFTZ_DOUBLE v5i_t = in_h1_i[in_strides[4]];
-        FFTZ_UINTP twid_addr5 =
-            DATA_STRIDE * (4 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr5];
-        twi = tw[1 + twid_addr5];
+        twr = tw_ptr[3 * DATA_STRIDE];
+        twi = tw_ptr[3 * DATA_STRIDE + 1];
         vr[3] = v5r_t * twr - v5i_t * twi;
         vi[3] = v5r_t * twi + v5i_t * twr;
 
         // Input point 6: x(5)
         FFTZ_DOUBLE v6r_t = in_h1_r[in_strides[5]];
         FFTZ_DOUBLE v6i_t = in_h1_i[in_strides[5]];
-        FFTZ_UINTP twid_addr6 =
-            DATA_STRIDE * (5 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr6];
-        twi = tw[1 + twid_addr6];
+        twr = tw_ptr[4 * DATA_STRIDE];
+        twi = tw_ptr[4 * DATA_STRIDE + 1];
         vr[10] = v6r_t * twr - v6i_t * twi;
         vi[10] = v6r_t * twi + v6i_t * twr;
 
         // Input point 7: x(6)
         FFTZ_DOUBLE v7r_t = in_h1_r[in_strides[6]];
         FFTZ_DOUBLE v7i_t = in_h1_i[in_strides[6]];
-        FFTZ_UINTP twid_addr7 =
-            DATA_STRIDE * (6 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr7];
-        twi = tw[1 + twid_addr7];
+        twr = tw_ptr[5 * DATA_STRIDE];
+        twi = tw_ptr[5 * DATA_STRIDE + 1];
         vr[6] = v7r_t * twr - v7i_t * twi;
         vi[6] = v7r_t * twi + v7i_t * twr;
 
         // Input point 8: x(7)
         FFTZ_DOUBLE v8r_t = in_h2_r[in_strides[7]];
         FFTZ_DOUBLE v8i_t = in_h2_i[in_strides[7]];
-        FFTZ_UINTP twid_addr8 =
-            DATA_STRIDE * (7 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr8];
-        twi = tw[1 + twid_addr8];
+        twr = tw_ptr[6 * DATA_STRIDE];
+        twi = tw_ptr[6 * DATA_STRIDE + 1];
         vr[12] = v8r_t * twr - v8i_t * twi;
         vi[12] = v8r_t * twi + v8i_t * twr;
 
         // Input point 9: x(8)
         FFTZ_DOUBLE v9r_t = in_h2_r[in_strides[8]];
         FFTZ_DOUBLE v9i_t = in_h2_i[in_strides[8]];
-        FFTZ_UINTP twid_addr9 =
-            DATA_STRIDE * (8 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr9];
-        twi = tw[1 + twid_addr9];
+        twr = tw_ptr[7 * DATA_STRIDE];
+        twi = tw_ptr[7 * DATA_STRIDE + 1];
         vr[4] = v9r_t * twr - v9i_t * twi;
         vi[4] = v9r_t * twi + v9i_t * twr;
 
         // Input point 10: x(9)
         FFTZ_DOUBLE v10r_t = in_h2_r[in_strides[9]];
         FFTZ_DOUBLE v10i_t = in_h2_i[in_strides[9]];
-        FFTZ_UINTP twid_addr10 =
-            DATA_STRIDE * (9 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr10];
-        twi = tw[1 + twid_addr10];
+        twr = tw_ptr[8 * DATA_STRIDE];
+        twi = tw_ptr[8 * DATA_STRIDE + 1];
         vr[9] = v10r_t * twr - v10i_t * twi;
         vi[9] = v10r_t * twi + v10i_t * twr;
 
         // Input point 11: x(10)
         FFTZ_DOUBLE v11r_t = in_h2_r[in_strides[10]];
         FFTZ_DOUBLE v11i_t = in_h2_i[in_strides[10]];
-        FFTZ_UINTP twid_addr11 =
-            DATA_STRIDE * (10 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr11];
-        twi = tw[1 + twid_addr11];
+        twr = tw_ptr[9 * DATA_STRIDE];
+        twi = tw_ptr[9 * DATA_STRIDE + 1];
         vr[11] = v11r_t * twr - v11i_t * twi;
         vi[11] = v11r_t * twi + v11i_t * twr;
 
         // Input point 12: x(11)
         FFTZ_DOUBLE v12r_t = in_h2_r[in_strides[11]];
         FFTZ_DOUBLE v12i_t = in_h2_i[in_strides[11]];
-        FFTZ_UINTP twid_addr12 =
-            DATA_STRIDE * (11 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr12];
-        twi = tw[1 + twid_addr12];
+        twr = tw_ptr[10 * DATA_STRIDE];
+        twi = tw_ptr[10 * DATA_STRIDE + 1];
         vr[8] = v12r_t * twr - v12i_t * twi;
         vi[8] = v12r_t * twi + v12i_t * twr;
 
         // Input point 13: x(12)
         FFTZ_DOUBLE v13r_t = in_h2_r[in_strides[12]];
         FFTZ_DOUBLE v13i_t = in_h2_i[in_strides[12]];
-        FFTZ_UINTP twid_addr13 =
-            DATA_STRIDE * (12 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr13];
-        twi = tw[1 + twid_addr13];
+        twr = tw_ptr[11 * DATA_STRIDE];
+        twi = tw_ptr[11 * DATA_STRIDE + 1];
         vr[7] = v13r_t * twr - v13i_t * twi;
         vi[7] = v13r_t * twi + v13i_t * twr;
 
@@ -530,6 +509,8 @@ static FFTZ_VOID twid_r2c_fft13c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         out_h2_r += v_out_h2_stride;
         out_h1_i += v_out_stride;
         out_h2_i += v_out_h2_stride;
+
+        tw_ptr += load_multi_cols * (RADIX - 1) * DATA_STRIDE;
     }
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
@@ -599,7 +580,6 @@ static FFTZ_VOID twid_r2c_fft13c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
     aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
     FFTZ_FLOAT *tw = (FFTZ_FLOAT *)(tws->TW);
-    FFTZ_UINTP cols = tws->cols;
     FFTZ_UINTP load_multi_cols = tws->load_multi_cols;
     FFTZ_FLOAT twr, twi;
 
@@ -611,6 +591,8 @@ static FFTZ_VOID twid_r2c_fft13c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     out_h2_r = out_h1_r;
     out_h1_i = (FFTZ_FLOAT *)out_imag;
     out_h2_i = out_h1_i;
+
+    FFTZ_FLOAT *tw_ptr = tw;
 
     for (FFTZ_INTP cnt = 0; cnt < n; cnt++)
     {
@@ -648,120 +630,96 @@ static FFTZ_VOID twid_r2c_fft13c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         // Input point 2: x(1)
         FFTZ_FLOAT v2r_t = in_h1_r[in_strides[1]];
         FFTZ_FLOAT v2i_t = in_h1_i[in_strides[1]];
-        FFTZ_UINTP twid_addr2 =
-            DATA_STRIDE * (1 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr2];
-        twi = tw[1 + twid_addr2];
+        twr = tw_ptr[0];
+        twi = tw_ptr[1];
         vr[1] = v2r_t * twr - v2i_t * twi;
         vi[1] = v2r_t * twi + v2i_t * twr;
 
         // Input point 3: x(2)
         FFTZ_FLOAT v3r_t = in_h1_r[in_strides[2]];
         FFTZ_FLOAT v3i_t = in_h1_i[in_strides[2]];
-        FFTZ_UINTP twid_addr3 =
-            DATA_STRIDE * (2 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr3];
-        twi = tw[1 + twid_addr3];
+        twr = tw_ptr[DATA_STRIDE];
+        twi = tw_ptr[DATA_STRIDE + 1];
         vr[2] = v3r_t * twr - v3i_t * twi;
         vi[2] = v3r_t * twi + v3i_t * twr;
 
         // Input point 4: x(3)
         FFTZ_FLOAT v4r_t = in_h1_r[in_strides[3]];
         FFTZ_FLOAT v4i_t = in_h1_i[in_strides[3]];
-        FFTZ_UINTP twid_addr4 =
-            DATA_STRIDE * (3 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr4];
-        twi = tw[1 + twid_addr4];
+        twr = tw_ptr[2 * DATA_STRIDE];
+        twi = tw_ptr[2 * DATA_STRIDE + 1];
         vr[5] = v4r_t * twr - v4i_t * twi;
         vi[5] = v4r_t * twi + v4i_t * twr;
 
         // Input point 5: x(4)
         FFTZ_FLOAT v5r_t = in_h1_r[in_strides[4]];
         FFTZ_FLOAT v5i_t = in_h1_i[in_strides[4]];
-        FFTZ_UINTP twid_addr5 =
-            DATA_STRIDE * (4 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr5];
-        twi = tw[1 + twid_addr5];
+        twr = tw_ptr[3 * DATA_STRIDE];
+        twi = tw_ptr[3 * DATA_STRIDE + 1];
         vr[3] = v5r_t * twr - v5i_t * twi;
         vi[3] = v5r_t * twi + v5i_t * twr;
 
         // Input point 6: x(5)
         FFTZ_FLOAT v6r_t = in_h1_r[in_strides[5]];
         FFTZ_FLOAT v6i_t = in_h1_i[in_strides[5]];
-        FFTZ_UINTP twid_addr6 =
-            DATA_STRIDE * (5 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr6];
-        twi = tw[1 + twid_addr6];
+        twr = tw_ptr[4 * DATA_STRIDE];
+        twi = tw_ptr[4 * DATA_STRIDE + 1];
         vr[10] = v6r_t * twr - v6i_t * twi;
         vi[10] = v6r_t * twi + v6i_t * twr;
 
         // Input point 7: x(6)
         FFTZ_FLOAT v7r_t = in_h1_r[in_strides[6]];
         FFTZ_FLOAT v7i_t = in_h1_i[in_strides[6]];
-        FFTZ_UINTP twid_addr7 =
-            DATA_STRIDE * (6 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr7];
-        twi = tw[1 + twid_addr7];
+        twr = tw_ptr[5 * DATA_STRIDE];
+        twi = tw_ptr[5 * DATA_STRIDE + 1];
         vr[6] = v7r_t * twr - v7i_t * twi;
         vi[6] = v7r_t * twi + v7i_t * twr;
 
         // Input point 8: x(7)
         FFTZ_FLOAT v8r_t = in_h2_r[in_strides[7]];
         FFTZ_FLOAT v8i_t = in_h2_i[in_strides[7]];
-        FFTZ_UINTP twid_addr8 =
-            DATA_STRIDE * (7 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr8];
-        twi = tw[1 + twid_addr8];
+        twr = tw_ptr[6 * DATA_STRIDE];
+        twi = tw_ptr[6 * DATA_STRIDE + 1];
         vr[12] = v8r_t * twr - v8i_t * twi;
         vi[12] = v8r_t * twi + v8i_t * twr;
 
         // Input point 9: x(8)
         FFTZ_FLOAT v9r_t = in_h2_r[in_strides[8]];
         FFTZ_FLOAT v9i_t = in_h2_i[in_strides[8]];
-        FFTZ_UINTP twid_addr9 =
-            DATA_STRIDE * (8 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr9];
-        twi = tw[1 + twid_addr9];
+        twr = tw_ptr[7 * DATA_STRIDE];
+        twi = tw_ptr[7 * DATA_STRIDE + 1];
         vr[4] = v9r_t * twr - v9i_t * twi;
         vi[4] = v9r_t * twi + v9i_t * twr;
 
         // Input point 10: x(9)
         FFTZ_FLOAT v10r_t = in_h2_r[in_strides[9]];
         FFTZ_FLOAT v10i_t = in_h2_i[in_strides[9]];
-        FFTZ_UINTP twid_addr10 =
-            DATA_STRIDE * (9 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr10];
-        twi = tw[1 + twid_addr10];
+        twr = tw_ptr[8 * DATA_STRIDE];
+        twi = tw_ptr[8 * DATA_STRIDE + 1];
         vr[9] = v10r_t * twr - v10i_t * twi;
         vi[9] = v10r_t * twi + v10i_t * twr;
 
         // Input point 11: x(10)
         FFTZ_FLOAT v11r_t = in_h2_r[in_strides[10]];
         FFTZ_FLOAT v11i_t = in_h2_i[in_strides[10]];
-        FFTZ_UINTP twid_addr11 =
-            DATA_STRIDE * (10 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr11];
-        twi = tw[1 + twid_addr11];
+        twr = tw_ptr[9 * DATA_STRIDE];
+        twi = tw_ptr[9 * DATA_STRIDE + 1];
         vr[11] = v11r_t * twr - v11i_t * twi;
         vi[11] = v11r_t * twi + v11i_t * twr;
 
         // Input point 12: x(11)
         FFTZ_FLOAT v12r_t = in_h2_r[in_strides[11]];
         FFTZ_FLOAT v12i_t = in_h2_i[in_strides[11]];
-        FFTZ_UINTP twid_addr12 =
-            DATA_STRIDE * (11 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr12];
-        twi = tw[1 + twid_addr12];
+        twr = tw_ptr[10 * DATA_STRIDE];
+        twi = tw_ptr[10 * DATA_STRIDE + 1];
         vr[8] = v12r_t * twr - v12i_t * twi;
         vi[8] = v12r_t * twi + v12i_t * twr;
 
         // Input point 13: x(12)
         FFTZ_FLOAT v13r_t = in_h2_r[in_strides[12]];
         FFTZ_FLOAT v13i_t = in_h2_i[in_strides[12]];
-        FFTZ_UINTP twid_addr13 =
-            DATA_STRIDE * (12 * cols + cnt * load_multi_cols);
-        twr = tw[twid_addr13];
-        twi = tw[1 + twid_addr13];
+        twr = tw_ptr[11 * DATA_STRIDE];
+        twi = tw_ptr[11 * DATA_STRIDE + 1];
         vr[7] = v13r_t * twr - v13i_t * twi;
         vi[7] = v13r_t * twi + v13i_t * twr;
 
@@ -1034,6 +992,8 @@ static FFTZ_VOID twid_r2c_fft13c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         out_h2_r += v_out_h2_stride;
         out_h1_i += v_out_stride;
         out_h2_i += v_out_h2_stride;
+
+        tw_ptr += load_multi_cols * (RADIX - 1) * DATA_STRIDE;
     }
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
@@ -1054,3 +1014,5 @@ kfft_ register_kernel_twid_r2c_fft13c(FFTZ_UINT8 precision,
         return NULL;
     }
 }
+
+#undef RADIX

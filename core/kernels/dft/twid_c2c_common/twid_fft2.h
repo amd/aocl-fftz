@@ -18,6 +18,8 @@
 
 #include "core/kernels/simd_includes/generic_kernels_common.h"
 
+#define RADIX 2
+
 static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                                  FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
                                  FFTZ_INTP n, aoclfftz_strides_t *strides,
@@ -52,30 +54,12 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
     aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
     FFTZ_FLOAT *tw = (FFTZ_FLOAT *)tws->TW;
-    FFTZ_UINTP cols = tws->cols;
     FFTZ_UINTP load_multi_cols = tws->load_multi_cols;
 
     FFTZ_INTP N = n / NUM_SETS_S;
     FFTZ_INTP remaining_sets = n % NUM_SETS_S;
 
-#if defined(KERNEL_USE_AVX512)
-    FFTZ_INTP do_256_whole = (FFTZ_INTP)(remaining_sets >= NUM_SETS_256_S);
-    FFTZ_INTP do_128_whole =
-        (FFTZ_INTP)(remaining_sets % NUM_SETS_256_S >= NUM_SETS_128_S);
-    FFTZ_INTP cnt_256 = load_multi_cols * (N * NUM_SETS_512_S);
-    FFTZ_INTP cnt_128 =
-        load_multi_cols * (N * NUM_SETS_512_S + do_256_whole * NUM_SETS_256_S);
-    FFTZ_INTP cnt_128_low =
-        load_multi_cols * (N * NUM_SETS_512_S + do_256_whole * NUM_SETS_256_S +
-                           do_128_whole * NUM_SETS_128_S);
-#elif defined(KERNEL_USE_AVX256)
-    FFTZ_INTP do_128_whole = (FFTZ_INTP)(remaining_sets >= NUM_SETS_128_S);
-    FFTZ_INTP cnt_128 = load_multi_cols * (N * NUM_SETS_256_S);
-    FFTZ_INTP cnt_128_low =
-        load_multi_cols * (N * NUM_SETS_256_S + do_128_whole * NUM_SETS_128_S);
-#elif defined(KERNEL_USE_AVX128)
-    FFTZ_INTP cnt_128_low = load_multi_cols * (N * NUM_SETS_128_S);
-#endif
+    FFTZ_FLOAT *tw_ptr = tw;
 
     FFTZ_INTP count;
 
@@ -83,16 +67,16 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     {
         VREGTYPE_S v_in0, v_in1;
         VREGTYPE_S v_out0, v_out1;
-        FFTZ_INTP col = count * load_multi_cols * NUM_SETS_S;
 
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_S(in_h2_r, in_strides, 1, v_in_h2_stride, v_in1, tw, cols, col,
+        LOAD_IN_S(in_h2_r, in_strides, 1, v_in_h2_stride, v_in1, tw_ptr,
                   load_multi_cols, 0);
         v_in1 = IN_H2_S(v_in1);
 #else
-        LOAD_IN_S(in_r, in_strides, 1, v_in_stride, v_in1, tw, cols, col,
+        LOAD_IN_S(in_r, in_strides, 1, v_in_stride, v_in1, tw_ptr,
                   load_multi_cols, is_contiguous_in);
 #endif
+
         GATHER_S(in_r, v_in_stride, v_in0, is_contiguous_in);
 
         // Output point 1: X[0]
@@ -103,13 +87,14 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         SCATTER_S(out_r, v_out_stride, v_out0, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out1 = OUT_H2_S(v_out1);
-        STORE_OUT_S(out_h2_r, out_strides, 1, v_out_h2_stride, v_out1, tw, cols,
-                    col, load_multi_cols, 0);
+        STORE_OUT_S(out_h2_r, out_strides, 1, v_out_h2_stride, v_out1, tw_ptr,
+                    load_multi_cols, 0);
 #else
-        STORE_OUT_S(out_r, out_strides, 1, v_out_stride, v_out1, tw, cols, col,
+        STORE_OUT_S(out_r, out_strides, 1, v_out_stride, v_out1, tw_ptr,
                     load_multi_cols, is_contiguous_out);
 #endif
 
+        tw_ptr += load_multi_cols * (RADIX - 1) * NUM_SETS_S * DATA_STRIDE;
         in_r += NUM_SETS_S * v_in_stride;
         out_r += NUM_SETS_S * v_out_stride;
 #if defined(KERNEL_VARIANT_C2R)
@@ -130,13 +115,14 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         __m256 v_out0, v_out1;
 
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_256_S(in_h2_r, in_strides, 1, v_in_h2_stride, v_in1, tw, cols,
-                      cnt_256, load_multi_cols, 0);
+        LOAD_IN_256_S(in_h2_r, in_strides, 1, v_in_h2_stride, v_in1, tw_ptr,
+                      load_multi_cols, 0);
         v_in1 = IN_H2_256_S(v_in1);
 #else
-        LOAD_IN_256_S(in_r, in_strides, 1, v_in_stride, v_in1, tw, cols,
-                      cnt_256, load_multi_cols, is_contiguous_in);
+        LOAD_IN_256_S(in_r, in_strides, 1, v_in_stride, v_in1, tw_ptr,
+                      load_multi_cols, is_contiguous_in);
 #endif
+
         GATHER4_256_S(in_r, v_in_stride, v_in0, is_contiguous_in);
 
         // Output point 1: X[0]
@@ -147,12 +133,13 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         SCATTER4_256_S(out_r, v_out_stride, v_out0, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out1 = OUT_H2_256_S(v_out1);
-        STORE_OUT_256_S(out_h2_r, out_strides, 1, v_out_h2_stride, v_out1, tw,
-                        cols, cnt_256, load_multi_cols, 0);
+        STORE_OUT_256_S(out_h2_r, out_strides, 1, v_out_h2_stride, v_out1,
+                        tw_ptr, load_multi_cols, 0);
 #else
-        STORE_OUT_256_S(out_r, out_strides, 1, v_out_stride, v_out1, tw, cols,
-                        cnt_256, load_multi_cols, is_contiguous_out);
+        STORE_OUT_256_S(out_r, out_strides, 1, v_out_stride, v_out1, tw_ptr,
+                        load_multi_cols, is_contiguous_out);
 #endif
+        tw_ptr += load_multi_cols * (RADIX - 1) * NUM_SETS_256_S * DATA_STRIDE;
 
         in_r += NUM_SETS_256_S * v_in_stride;
         out_r += NUM_SETS_256_S * v_out_stride;
@@ -172,13 +159,14 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         __m128 v_out0, v_out1;
 
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_128_S(in_h2_r, in_strides, 1, v_in_h2_stride, v_in1, tw, cols,
-                      cnt_128, load_multi_cols, 0);
+        LOAD_IN_128_S(in_h2_r, in_strides, 1, v_in_h2_stride, v_in1, tw_ptr,
+                      load_multi_cols, 0);
         v_in1 = IN_H2_128_S(v_in1);
 #else
-        LOAD_IN_128_S(in_r, in_strides, 1, v_in_stride, v_in1, tw, cols,
-                      cnt_128, load_multi_cols, is_contiguous_in);
+        LOAD_IN_128_S(in_r, in_strides, 1, v_in_stride, v_in1, tw_ptr,
+                      load_multi_cols, is_contiguous_in);
 #endif
+
         GATHER2_128_S(in_r, v_in_stride, v_in0, is_contiguous_in);
 
         // Output point 1: X[0]
@@ -189,12 +177,13 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         SCATTER2_128_S(out_r, v_out_stride, v_out0, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out1 = OUT_H2_128_S(v_out1);
-        STORE_OUT_128_S(out_h2_r, out_strides, 1, v_out_h2_stride, v_out1, tw,
-                        cols, cnt_128, load_multi_cols, 0);
+        STORE_OUT_128_S(out_h2_r, out_strides, 1, v_out_h2_stride, v_out1,
+                        tw_ptr, load_multi_cols, 0);
 #else
-        STORE_OUT_128_S(out_r, out_strides, 1, v_out_stride, v_out1, tw, cols,
-                        cnt_128, load_multi_cols, is_contiguous_out);
+        STORE_OUT_128_S(out_r, out_strides, 1, v_out_stride, v_out1, tw_ptr,
+                        load_multi_cols, is_contiguous_out);
 #endif
+        tw_ptr += load_multi_cols * (RADIX - 1) * NUM_SETS_128_S * DATA_STRIDE;
 
         in_r += (v_in_stride << 1);
         out_r += (v_out_stride << 1);
@@ -214,12 +203,11 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         __m128 v_out0, v_out1;
 
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_64_S(in_h2_r, in_strides, 1, v_in1, tw, cols, cnt_128_low,
-                     load_multi_cols, 0);
+        LOAD_IN_64_S(in_h2_r, in_strides, 1, v_in1, tw_ptr, load_multi_cols, 0);
         v_in1 = IN_H2_128_S(v_in1);
 #else
-        LOAD_IN_64_S(in_r, in_strides, 1, v_in1, tw, cols, cnt_128_low,
-                     load_multi_cols, is_contiguous_in);
+        LOAD_IN_64_S(in_r, in_strides, 1, v_in1, tw_ptr, load_multi_cols,
+                     is_contiguous_in);
 #endif
 
         LD_LOW_128_S(in_r, v_in0);
@@ -232,11 +220,11 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         ST_LOW_128_S(out_r, v_out0);
 #if defined(KERNEL_VARIANT_R2C)
         v_out1 = OUT_H2_128_S(v_out1);
-        STORE_OUT_64_S(out_h2_r, out_strides, 1, v_out1, tw, cols, cnt_128_low,
+        STORE_OUT_64_S(out_h2_r, out_strides, 1, v_out1, tw_ptr,
                        load_multi_cols, 0);
 #else
-        STORE_OUT_64_S(out_r, out_strides, 1, v_out1, tw, cols, cnt_128_low,
-                       load_multi_cols, is_contiguous_out);
+        STORE_OUT_64_S(out_r, out_strides, 1, v_out1, tw_ptr, load_multi_cols,
+                       is_contiguous_out);
 #endif
     }
 #endif
@@ -277,40 +265,32 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
     aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
     FFTZ_DOUBLE *tw = (FFTZ_DOUBLE *)tws->TW;
-    FFTZ_UINTP cols = tws->cols;
     FFTZ_UINTP load_multi_cols = tws->load_multi_cols;
 
     FFTZ_INTP N = n / NUM_SETS_D;
     FFTZ_INTP count;
 
-#if defined(KERNEL_USE_AVX512)
+#if defined(KERNEL_USE_AVX512) || defined(KERNEL_USE_AVX256)
     FFTZ_INTP remaining_sets = n % NUM_SETS_D;
-    FFTZ_INTP do_256_whole = (FFTZ_INTP)(remaining_sets >= NUM_SETS_256_D);
-    FFTZ_INTP cnt_256 = load_multi_cols * (N * NUM_SETS_512_D);
-    FFTZ_INTP cnt_128 =
-        load_multi_cols * (N * NUM_SETS_512_D + do_256_whole * NUM_SETS_256_D);
-#elif defined(KERNEL_USE_AVX256)
-    FFTZ_INTP remaining_sets = n % NUM_SETS_D;
-    FFTZ_INTP cnt_128 = load_multi_cols * (N * NUM_SETS_256_D);
-#elif defined(KERNEL_USE_AVX128)
-    // nothing, since double doesn't have any tail cases to process
 #endif
+
+    FFTZ_DOUBLE *tw_ptr = tw;
 
     for (count = 0; count < N; count++)
     {
         VREGTYPE_D v_in0, v_in1;
         VREGTYPE_D v_out0, v_out1;
-        FFTZ_INTP col = count * load_multi_cols * NUM_SETS_D;
+
+        GATHER_D(in_r, v_in_stride, v_in0, is_contiguous_in);
 
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_D(in_h2_r, in_strides, 1, v_in_h2_stride, v_in1, tw, cols, col,
+        LOAD_IN_D(in_h2_r, in_strides, 1, v_in_h2_stride, v_in1, tw_ptr,
                   load_multi_cols, 0);
         v_in1 = IN_H2_D(v_in1);
 #else
-        LOAD_IN_D(in_r, in_strides, 1, v_in_stride, v_in1, tw, cols, col,
+        LOAD_IN_D(in_r, in_strides, 1, v_in_stride, v_in1, tw_ptr,
                   load_multi_cols, is_contiguous_in);
 #endif
-        GATHER_D(in_r, v_in_stride, v_in0, is_contiguous_in);
 
         // Output point 1: X[0]
         v_out0 = ADD_D(v_in0, v_in1);
@@ -320,13 +300,14 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         SCATTER_D(out_r, v_out_stride, v_out0, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out1 = OUT_H2_D(v_out1);
-        STORE_OUT_D(out_h2_r, out_strides, 1, v_out_h2_stride, v_out1, tw, cols,
-                    col, load_multi_cols, 0);
+        STORE_OUT_D(out_h2_r, out_strides, 1, v_out_h2_stride, v_out1, tw_ptr,
+                    load_multi_cols, 0);
 #else
-        STORE_OUT_D(out_r, out_strides, 1, v_out_stride, v_out1, tw, cols, col,
+        STORE_OUT_D(out_r, out_strides, 1, v_out_stride, v_out1, tw_ptr,
                     load_multi_cols, is_contiguous_out);
 #endif
 
+        tw_ptr += load_multi_cols * (RADIX - 1) * NUM_SETS_D * DATA_STRIDE;
         in_r += NUM_SETS_D * v_in_stride;
         out_r += NUM_SETS_D * v_out_stride;
 #if defined(KERNEL_VARIANT_C2R)
@@ -346,15 +327,16 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         __m256d v_in0, v_in1;
         __m256d v_out0, v_out1;
 
+        GATHER2_256_D(in_r, v_in_stride, v_in0, is_contiguous_in);
+
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_256_D(in_h2_r, in_strides, 1, v_in_h2_stride, v_in1, tw, cols,
-                      cnt_256, load_multi_cols, 0);
+        LOAD_IN_256_D(in_h2_r, in_strides, 1, v_in_h2_stride, v_in1, tw_ptr,
+                      load_multi_cols, 0);
         v_in1 = IN_H2_256_D(v_in1);
 #else
-        LOAD_IN_256_D(in_r, in_strides, 1, v_in_stride, v_in1, tw, cols,
-                      cnt_256, load_multi_cols, is_contiguous_in);
+        LOAD_IN_256_D(in_r, in_strides, 1, v_in_stride, v_in1, tw_ptr,
+                      load_multi_cols, is_contiguous_in);
 #endif
-        GATHER2_256_D(in_r, v_in_stride, v_in0, is_contiguous_in);
 
         // Output point 1: X[0]
         v_out0 = _mm256_add_pd(v_in0, v_in1);
@@ -364,12 +346,13 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         SCATTER2_256_D(out_r, v_out_stride, v_out0, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out1 = OUT_H2_256_D(v_out1);
-        STORE_OUT_256_D(out_h2_r, out_strides, 1, v_out_h2_stride, v_out1, tw,
-                        cols, cnt_256, load_multi_cols, 0);
+        STORE_OUT_256_D(out_h2_r, out_strides, 1, v_out_h2_stride, v_out1,
+                        tw_ptr, load_multi_cols, 0);
 #else
-        STORE_OUT_256_D(out_r, out_strides, 1, v_out_stride, v_out1, tw, cols,
-                        cnt_256, load_multi_cols, is_contiguous_out);
+        STORE_OUT_256_D(out_r, out_strides, 1, v_out_stride, v_out1, tw_ptr,
+                        load_multi_cols, is_contiguous_out);
 #endif
+        tw_ptr += load_multi_cols * (RADIX - 1) * NUM_SETS_256_D * DATA_STRIDE;
 
         in_r += NUM_SETS_256_D * v_in_stride;
         out_r += NUM_SETS_256_D * v_out_stride;
@@ -387,16 +370,16 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         __m128d v_in0, v_in1;
         __m128d v_out0, v_out1;
 
+        LD_128_D(in_r, v_in0);
+
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_128_D(in_h2_r, in_strides, 1, /* unused */ 0, v_in1, tw, cols,
-                      cnt_128, load_multi_cols, 0);
+        LOAD_IN_128_D(in_h2_r, in_strides, 1, 0, v_in1, tw_ptr, load_multi_cols,
+                      0);
         v_in1 = IN_H2_128_D(v_in1);
 #else
-        LOAD_IN_128_D(in_r, in_strides, 1, /* unused */ 0, v_in1, tw, cols,
-                      cnt_128, load_multi_cols, is_contiguous_in);
+        LOAD_IN_128_D(in_r, in_strides, 1, 0, v_in1, tw_ptr, load_multi_cols,
+                      is_contiguous_in);
 #endif
-
-        LD_128_D(in_r, v_in0);
 
         // Output point 1: X[0]
         v_out0 = _mm_add_pd(v_in0, v_in1);
@@ -406,11 +389,11 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         ST_128_D(out_r, v_out0);
 #if defined(KERNEL_VARIANT_R2C)
         v_out1 = OUT_H2_128_D(v_out1);
-        STORE_OUT_128_D(out_h2_r, out_strides, 1, /* unused */ 0, v_out1, tw,
-                        cols, cnt_128, load_multi_cols, 0);
+        STORE_OUT_128_D(out_h2_r, out_strides, 1, 0, v_out1, tw_ptr,
+                        load_multi_cols, 0);
 #else
-        STORE_OUT_128_D(out_r, out_strides, 1, /* unused */ 0, v_out1, tw, cols,
-                        cnt_128, load_multi_cols, is_contiguous_out);
+        STORE_OUT_128_D(out_r, out_strides, 1, 0, v_out1, tw_ptr,
+                        load_multi_cols, is_contiguous_out);
 #endif
     }
 #endif
@@ -444,3 +427,5 @@ ops_cycles_t GET_OPS_COUNT(FFTZ_UINT8 precision, FFTZ_UINT8 direction)
         return ops_cnt[1];
     }
 }
+
+#undef RADIX

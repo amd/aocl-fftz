@@ -187,11 +187,15 @@ class PerformanceTest : public benchmark::Fixture {
                     .c_str());
             goto cleanup;
         }
-        compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, batches);
+        {
+            FFTZ_INTP rw = twiddle_kernel_register_width<T>(
+                static_cast<aocl_fftz_kernel_type>(kernel_type));
+            compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, batches,
+                                              rw, /*load_multi_cols=*/1);
+        }
 
         tws.TW = twiddle_buffer;
         tws.twiddle_buf_ptr = twiddle_buffer;
-        tws.cols = batches;
         tws.load_multi_cols = 1; // true by default
 
         for (auto _ : state)

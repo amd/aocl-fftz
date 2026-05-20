@@ -169,20 +169,20 @@ kfft_ get_twiddle_kernel(const FFTZ_UINT32 radix, const FFTZ_INT32 dir,
 template <typename T>
 FFTZ_INT32 gtest_twiddle_multiplier_no_transpose(
     T *in_real, T *in_imag, FFTZ_INTP radix, FFTZ_INTP sets,
-    FFTZ_INTP in_stride, FFTZ_INTP v_in_stride, FFTZ_VOID *twiddle_buffer)
+    FFTZ_INTP in_stride, FFTZ_INTP v_in_stride, FFTZ_INTP load_multi_cols)
 {
-    T *twiddle_buffer_real = (T *)twiddle_buffer;
-    T *twiddle_buffer_imag = twiddle_buffer_real + 1;
+    const double TWO_PI = 6.28318530717958647692;
+    const double angle_base = -TWO_PI / (double)(radix * sets);
 
     for (FFTZ_INTP r = 1; r < radix; r++)
     {
         FFTZ_INTP in_index = r * in_stride + v_in_stride;
-        FFTZ_INTP tw_in_index = DATA_STRIDE * (r * sets + 1);
 
         for (FFTZ_INTP s = 1; s < sets; s++)
         {
-            T TW_real = twiddle_buffer_real[tw_in_index];
-            T TW_imag = twiddle_buffer_imag[tw_in_index];
+            const double angle = angle_base * (double)r * (double)s;
+            const T TW_real = (T)cos(angle);
+            const T TW_imag = (T)sin(angle);
 
             T real = in_real[in_index];
             T imag = in_imag[in_index];
@@ -194,7 +194,6 @@ FFTZ_INT32 gtest_twiddle_multiplier_no_transpose(
             in_imag[in_index] = result_imag;
 
             in_index += v_in_stride;
-            tw_in_index += DATA_STRIDE;
         }
     }
     return 1;
@@ -202,20 +201,51 @@ FFTZ_INT32 gtest_twiddle_multiplier_no_transpose(
 
 template <typename T>
 FFTZ_VOID compute_twiddle_buffer_wrapper(FFTZ_VOID *twiddle_buffer, FFTZ_INTP r,
-                                         FFTZ_INTP m);
+                                         FFTZ_INTP m, FFTZ_INTP register_width,
+                                         FFTZ_INTP load_multi_cols);
 
 template <>
 FFTZ_VOID compute_twiddle_buffer_wrapper<FFTZ_FLOAT>(FFTZ_VOID *twiddle_buffer,
-                                                     FFTZ_INTP r, FFTZ_INTP m)
+                                                     FFTZ_INTP r, FFTZ_INTP m,
+                                                     FFTZ_INTP register_width,
+                                                     FFTZ_INTP load_multi_cols)
 {
-    compute_twiddle_buffer_float_wrapper(twiddle_buffer, r, m);
+    compute_twiddle_buffer_float_wrapper(twiddle_buffer, r, m, register_width,
+                                         load_multi_cols);
 }
 
 template <>
 FFTZ_VOID compute_twiddle_buffer_wrapper<FFTZ_DOUBLE>(FFTZ_VOID *twiddle_buffer,
-                                                      FFTZ_INTP r, FFTZ_INTP m)
+                                                      FFTZ_INTP r, FFTZ_INTP m,
+                                                      FFTZ_INTP register_width,
+                                                      FFTZ_INTP load_multi_cols)
 {
-    compute_twiddle_buffer_double_wrapper(twiddle_buffer, r, m);
+    compute_twiddle_buffer_double_wrapper(twiddle_buffer, r, m, register_width,
+                                          load_multi_cols);
+}
+
+// Map a twiddle-kernel ISA enum to the kernel's NUM_SETS_D (the
+// register width in complex pairs that the producer needs to emit the
+// correct linear/tile-packed layout). Falls back to AVX-512 width for
+// any unknown variant (legacy default).
+template <typename T>
+FFTZ_INTP twiddle_kernel_register_width(aocl_fftz_kernel_type kt)
+{
+    FFTZ_INTP data_per_lane =
+        static_cast<FFTZ_INTP>(64 / sizeof(T) / 2); // doubles: 4, floats: 8
+    switch (kt)
+    {
+    case aocl_fftz_kernel_type::C2C_TWID_AVX512:
+        return data_per_lane;
+    case aocl_fftz_kernel_type::C2C_TWID_AVX256:
+        return data_per_lane / 2;
+    case aocl_fftz_kernel_type::C2C_TWID_AVX128:
+        return data_per_lane / 4;
+    case aocl_fftz_kernel_type::C2C_TWID_C:
+        return 1;
+    default:
+        return data_per_lane;
+    }
 }
 
 /**

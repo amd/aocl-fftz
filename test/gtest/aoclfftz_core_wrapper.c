@@ -400,13 +400,17 @@ TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tos_blocked, c)
 
 // twiddle buffer setup wrappers
 EXPORT_SYM_DYN FFTZ_VOID compute_twiddle_buffer_float_wrapper(
-    FFTZ_VOID *twiddle_buffer, FFTZ_INTP r, FFTZ_INTP m)
+    FFTZ_VOID *twiddle_buffer, FFTZ_INTP r, FFTZ_INTP m,
+    FFTZ_INTP register_width, FFTZ_INTP load_multi_cols)
 {
-    compute_twiddle_buffer(twiddle_buffer, r, m, DT_FLOAT);
+    compute_twiddle_buffer(twiddle_buffer, r, m, register_width,
+                           load_multi_cols, DT_FLOAT);
 }
 
 EXPORT_SYM_DYN FFTZ_VOID compute_twiddle_buffer_double_wrapper(
-    FFTZ_VOID *twiddle_buffer, FFTZ_INTP r, FFTZ_INTP m)
+    FFTZ_VOID *twiddle_buffer, FFTZ_INTP r, FFTZ_INTP m,
+    FFTZ_INTP register_width, FFTZ_INTP load_multi_cols)
 {
-    compute_twiddle_buffer(twiddle_buffer, r, m, DT_DOUBLE);
+    compute_twiddle_buffer(twiddle_buffer, r, m, register_width,
+                           load_multi_cols, DT_DOUBLE);
 }

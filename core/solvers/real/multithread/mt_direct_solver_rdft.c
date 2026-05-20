@@ -13,7 +13,6 @@
 
 #include <assert.h>
 #include "core/common/memory_manager.h"
-#include "core/common/twiddle.h"
 #include "core/solvers/real/direct_solver_rdft_utils.h"
 
 /* This function will setup the direct solution with the required information
@@ -269,7 +268,8 @@ static inline FFTZ_VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
                 // twiddle columns; load_multi_cols=0 mirrors the ST path so
                 // each butterfly reuses the same column.
                 aoclfftz_twiddle_t tw_local = *(sol->twiddle);
-                FFTZ_UINTP tw_offset = DATA_STRIDE * dt_bytes * group_id;
+                FFTZ_UINTP tw_offset =
+                    (FFTZ_UINTP)(radix - 1) * DATA_STRIDE * dt_bytes * group_id;
                 tw_local.TW = MOVE_ADDR(tw_local.TW, tw_offset);
                 tw_local.load_multi_cols = 0;
 
@@ -382,7 +382,8 @@ static inline FFTZ_VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
                 update_asymmetric_strides(local_out_strides, radix,
                                           group_id * batch_stride);
 
-                FFTZ_UINTP tw_offset = DATA_STRIDE * dt_bytes * group_id;
+                FFTZ_UINTP tw_offset =
+                    (FFTZ_UINTP)(radix - 1) * DATA_STRIDE * dt_bytes * group_id;
                 aoclfftz_twiddle_t tw_local = *(sol->twiddle);
                 tw_local.TW = MOVE_ADDR(tw_local.TW, tw_offset);
                 tw_local.load_multi_cols = 0;

@@ -206,7 +206,6 @@ FFTZ_INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
     to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;
     to_sol_obj->twiddle->load_multi_cols =
         from_sol_obj->twiddle->load_multi_cols;
-    to_sol_obj->twiddle->cols = from_sol_obj->twiddle->cols;
 
     // dft_bufs
     to_sol_obj->dft_bufs->bluestein->B =
@@ -681,7 +680,6 @@ FFTZ_VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
     to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;
     to_sol_obj->twiddle->load_multi_cols =
         from_sol_obj->twiddle->load_multi_cols;
-    to_sol_obj->twiddle->cols = from_sol_obj->twiddle->cols;
     to_sol_obj->twiddle->twiddle_buf_ptr =
         from_sol_obj->twiddle->twiddle_buf_ptr;
 

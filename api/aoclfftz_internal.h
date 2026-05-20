@@ -274,8 +274,6 @@ typedef struct aoclfftz_twiddle
                                    be allocated/freed with current struct. */
     FFTZ_VOID *TW;   /*< pointer to shared twiddle buffer. It must not be
                         freed/allocated with the struct. */
-    FFTZ_UINTP cols; /*< number of columns/batches/sets that are used to set up
-                        the twiddle buffer in a CT problem */
     FFTZ_UINTP load_multi_cols; /*< determines whether multiple columns are to
                                    be loaded from the twiddle buffer per
                                    iteration in the twiddle kernels */

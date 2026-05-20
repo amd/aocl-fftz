@@ -279,50 +279,37 @@ class AoclfftzKernelTestBase
             GTEST_FATAL_FAILURE_("Twiddle buffer memory allocation failed");
         }
 
-        if (load_multi_cols_param)
-        {
-            // load_multi_cols = 1: compute different twiddles for each column
-            compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, offset);
-        }
-        else
-        {
-            // load_multi_cols = 0 (broadcast mode): compute one set of twiddles
-            // and replicate it for all columns
-            compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, 1);
-            // Replicate the first column's twiddles to all other columns
-            T *tw_ptr = (T *)twiddle_buffer;
-            FFTZ_INTP twiddle_set_size = data_stride * radix;
-            for (FFTZ_INTP col = 1; col < offset; col++)
-            {
-                memcpy(tw_ptr + col * twiddle_set_size,
-                       tw_ptr,
-                       twiddle_set_size * sizeof(T));
-            }
-        }
+        FFTZ_INTP rw = twiddle_kernel_register_width<T>(
+            static_cast<aocl_fftz_kernel_type>(kernel_type));
+        compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, offset, rw,
+                                          load_multi_cols_param);
 
         tws.TW = twiddle_buffer;
         tws.twiddle_buf_ptr = twiddle_buffer;
-        tws.cols = offset;
         tws.load_multi_cols = load_multi_cols_param;
 
         // perform the twiddle multiplication on the kernel's input buffer
         // this is to simulate the condition where the m (offset) fft has been
         // performed and the twiddle multiplication followed by the kernel
         // (radix/r) fft has to be done next.
-        if (is_bwd)
+        if (is_bwd && load_multi_cols_param != 0)
         {
             error = gtest_twiddle_multiplier_no_transpose(
             k_in_i, k_in_r, radix, offset, in_stride_w_ds,
-            k_stride.v_in_stride, twiddle_buffer);
+            k_stride.v_in_stride, (FFTZ_INTP)load_multi_cols_param);
         }
-        else
+        else if (!is_bwd && load_multi_cols_param != 0)
         {
             error = gtest_twiddle_multiplier_no_transpose(
             k_in_r, k_in_i, radix, offset, in_stride_w_ds,
-            k_stride.v_in_stride, twiddle_buffer);
+            k_stride.v_in_stride, (FFTZ_INTP)load_multi_cols_param);
         }
 
-        if (error == 0)
+        // Only validate the multiplier result when a multiplication was
+        // actually attempted. For load_multi_cols == 0 neither branch above
+        // runs (the kernel applies no twiddle in that case), so `error`
+        // legitimately stays 0 and must not be treated as a failure.
+        if (load_multi_cols_param != 0 && error == 0)
         {
             CLEANUP_CODE;
             GTEST_FATAL_FAILURE_(

@@ -168,7 +168,6 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
         sol->strides_grp->strides_r2hcf->v_in_h2_stride = 0;
         sol->strides_grp->strides_r2hcf->v_out_h2_stride = 0;
         sol->twiddle->load_multi_cols = 1; // true by default
-        sol->twiddle->cols = 0;
         sol->twiddle->TW = NULL;
         sol->twiddle->twiddle_buf_ptr = NULL;
         sol->dft_bufs->bluestein->B = NULL;

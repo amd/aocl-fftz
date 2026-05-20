@@ -1465,6 +1465,15 @@ FFTZ_VOID fuse_vecs(aoclfftz_solution_t *sol, FFTZ_INT32 is_FFT_ker_supported)
     sol->decomp_scheme->vec_rank = fused_rank + 1;
 }
 
+// Only for column major problems, we set load_multi_cols to 0
+static inline FFTZ_INTP detect_load_multi_cols(aoclfftz_solution_t *sol)
+{
+    return (sol != NULL && sol->decomp_scheme != NULL
+            && sol->decomp_scheme->batched_vecs != NULL)
+               ? 0
+               : 1;
+}
+
 FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
 {
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
@@ -1485,14 +1494,16 @@ FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
                 FFTZ_INTP r = curr->next_sol[0]->decomp_scheme->dims[0].n;
                 FFTZ_INTP m =
                     curr->next_sol[0]->next_sol[0]->decomp_scheme->dims[0].n;
-
-                FFTZ_VOID *TW = alloc_twiddle_buffer(r * m, dt_prec);
+                FFTZ_INTP rw =
+                    (FFTZ_INTP)curr->next_sol[0]->solver->kernel_c2c->sets;
+                FFTZ_INTP lmc = detect_load_multi_cols(curr);
+                FFTZ_VOID *TW = alloc_twiddle_buffer((r - 1) * m, dt_prec);
                 if (TW != NULL)
                 {
-                    compute_twiddle_buffer(TW, r, m, dt_prec);
-                    curr->next_sol[0]->twiddle->cols = m;
+                    compute_twiddle_buffer(TW, r, m, rw, lmc, dt_prec);
                     curr->next_sol[0]->twiddle->TW = TW;
                     curr->next_sol[0]->twiddle->twiddle_buf_ptr = TW;
+                    curr->next_sol[0]->twiddle->load_multi_cols = lmc;
                 }
             }
             else if (curr->solver->solver_type == SOLVER_SR)
@@ -1508,7 +1519,6 @@ FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
                 if (TW != NULL)
                 {
                     compute_sr_twiddle_buffer(TW, n, dt_prec);
-                    curr->twiddle->cols = sr_tw_pairs;
                     curr->twiddle->TW = TW;
                     curr->twiddle->twiddle_buf_ptr = TW;
                 }
@@ -1528,14 +1538,17 @@ FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
             {
                 FFTZ_INTP r = (FFTZ_INTP)curr->solver->kernel_c2c->count;
                 FFTZ_INTP m = (FFTZ_INTP)curr->solver->kernel_c2c_r->count;
-
-                FFTZ_VOID *TW = alloc_twiddle_buffer(r * m, dt_prec);
+                // In this solver the twiddle (radix-r) kernel lives in
+                // kernel_c2c_r.
+                FFTZ_INTP rw = (FFTZ_INTP)curr->solver->kernel_c2c_r->sets;
+                FFTZ_INTP lmc = detect_load_multi_cols(curr);
+                FFTZ_VOID *TW = alloc_twiddle_buffer((r - 1) * m, dt_prec);
                 if (TW != NULL)
                 {
-                    compute_twiddle_buffer(TW, r, m, dt_prec);
-                    curr->twiddle->cols = m;
+                    compute_twiddle_buffer(TW, r, m, rw, lmc, dt_prec);
                     curr->twiddle->TW = TW;
                     curr->twiddle->twiddle_buf_ptr = TW;
+                    curr->twiddle->load_multi_cols = lmc;
                 }
             }
             // Process N-D solution after the current solution
@@ -1574,7 +1587,7 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                     curr->solver->solver_type != SOLVER_REAL_MT_DIRECT)
                 {
                     curr->twiddle->TW = prev->twiddle->TW;
-                    curr = curr->next_sol[0];
+                    curr = curr->next_sol ? curr->next_sol[0] : NULL;
                 }
                 if (curr == NULL)
                 {
@@ -1584,8 +1597,16 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                 FFTZ_INTP num_groups = NUM_RFFT_GROUPS(curr->solver);
                 FFTZ_INTP num_c2c_per_group =
                     curr->solver->kernel_c2c->count / num_groups;
-                FFTZ_INTP tw_buf_size =
-                    radix * num_c2c_per_group * DATA_STRIDE;
+                // The twiddle packing must match how execute_c2c_kernels()
+                // consumes it: the asymmetric branch (num_c2c_per_group >=
+                // num_groups) feeds sol->twiddle straight to the kernel and so
+                // needs the tile-packed (lmc == 1) layout; the non-asymmetric
+                // branch forces broadcast and walks the buffer (radix - 1)
+                // cpairs per column, i.e. the plain j-major (lmc == 0) layout.
+                FFTZ_INTP rw = (FFTZ_INTP)curr->solver->kernel_c2c->sets;
+                FFTZ_INTP lmc = (num_c2c_per_group >= num_groups) ? 1 : 0;
+                FFTZ_INTP tw_buf_size = (radix - 1) * num_c2c_per_group *
+                                        DATA_STRIDE;
                 // Allocate Twiddle buffer to store twiddle values for every
                 // radix-n c2c kernel of a group
                 FFTZ_VOID *TW = alloc_twiddle_buffer(tw_buf_size, dt_prec);
@@ -1594,12 +1615,12 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                     FFTZ_INTP p = (curr->decomp_scheme->vecs[0].n *
                               curr->decomp_scheme->dims[0].n) /
                              num_groups;
-                    compute_twiddle_buffer_real(TW, radix, num_c2c_per_group,
-                                                num_groups, p,
-                                                FORWARD_FFT_DIR, dt_prec);
-                    curr->twiddle->cols = num_c2c_per_group;
+                    compute_twiddle_buffer_real(TW, radix, num_c2c_per_group, p,
+                                                FORWARD_FFT_DIR, rw, lmc,
+                                                dt_prec);
                     curr->twiddle->TW = TW;
                     curr->twiddle->twiddle_buf_ptr = TW;
+                    curr->twiddle->load_multi_cols = lmc;
                 }
             }
             prev = curr;
@@ -1620,7 +1641,13 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                 // No. of c2c kernels per group that require twiddle computation
                 FFTZ_INTP num_c2c_per_group =
                     prev->solver->kernel_c2c->count / num_groups;
-                FFTZ_INTP tw_buf_sz = radix * num_c2c_per_group * DATA_STRIDE;
+                // Layout must follow execute_c2c_kernels()'s branch: asymmetric
+                // -> tile-packed (lmc == 1); non-asymmetric -> j-major
+                // broadcast (lmc == 0). See the forward branch for details.
+                FFTZ_INTP rw = (FFTZ_INTP)prev->solver->kernel_c2c->sets;
+                FFTZ_INTP lmc = (num_c2c_per_group >= num_groups) ? 1 : 0;
+                FFTZ_INTP tw_buf_sz = (radix - 1) * num_c2c_per_group *
+                                        DATA_STRIDE;
                 // Allocate Twiddle buffer to store twiddle factors for every
                 // radix-n c2c kernel of a group
                 FFTZ_VOID *TW = alloc_twiddle_buffer(tw_buf_sz, dt_prec);
@@ -1629,13 +1656,12 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                     FFTZ_INTP p = (prev->decomp_scheme->vecs[0].n *
                               prev->decomp_scheme->dims[0].n) /
                              num_groups;
-                    compute_twiddle_buffer_real(TW, radix,
-                                                num_c2c_per_group,
-                                                num_groups, p,
-                                                BACKWARD_FFT_DIR, dt_prec);
-                    prev->twiddle->cols = num_c2c_per_group;
+                    compute_twiddle_buffer_real(TW, radix, num_c2c_per_group, p,
+                                                BACKWARD_FFT_DIR, rw, lmc,
+                                                dt_prec);
                     prev->twiddle->TW = TW;
                     prev->twiddle->twiddle_buf_ptr = TW;
+                    prev->twiddle->load_multi_cols = lmc;
                 }
             }
             // Always inherit the parent's twiddle buffer reference.

@@ -186,34 +186,33 @@ static const union data_union_512
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 8, perm: 3, other: 3}
 #define GATHER8_512_S(base, offset, dest, is_contiguous)                       \
+{                                                                              \
+    if (is_contiguous)                                                         \
     {                                                                          \
-        if (is_contiguous)                                                     \
-        {                                                                      \
-            dest = _mm512_loadu_ps(base);                                      \
-        }                                                                      \
-        else                                                                   \
-        {                                                                      \
-            __m128 _low, _high, _tmp;                                          \
-            __m256 _256low, _256high;                                          \
-            _low = _mm_loadu_ps(base);                                         \
-            _tmp = _mm_loadu_ps(base + offset);                                \
-            _low = _mm_shuffle_ps(_low, _tmp, 68);                             \
-            _high = _mm_loadu_ps(base + 2 * offset);                           \
-            _tmp = _mm_loadu_ps(base + 3 * offset);                            \
-            _high = _mm_shuffle_ps(_high, _tmp, 68);                           \
-            _256low =                                                          \
-                _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _high, 1);  \
-            _low = _mm_loadu_ps(base + 4 * offset);                            \
-            _tmp = _mm_loadu_ps(base + 5 * offset);                            \
-            _low = _mm_shuffle_ps(_low, _tmp, 68);                             \
-            _high = _mm_loadu_ps(base + 6 * offset);                           \
-            _high = _mm_loadh_pi(_high, (__m64 *)(base + 7 * offset));         \
-            _256high = _mm256_insertf128_ps(_mm256_castps128_ps256(_low),      \
-                                             _high, 1);                        \
-            dest = _mm512_insertf32x8(_mm512_castps256_ps512(_256low),         \
-                                      _256high, 1);                            \
-        }                                                                      \
-    }
+        dest = _mm512_loadu_ps(base);                                          \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        __m128 _low, _high, _tmp;                                              \
+        __m256 _256low, _256high;                                              \
+        _low = _mm_loadu_ps(base);                                             \
+        _tmp = _mm_loadu_ps(base + offset);                                    \
+        _low = _mm_shuffle_ps(_low, _tmp, 68);                                 \
+        _high = _mm_loadu_ps(base + 2 * offset);                               \
+        _tmp = _mm_loadu_ps(base + 3 * offset);                                \
+        _high = _mm_shuffle_ps(_high, _tmp, 68);                               \
+        _256low = _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _high, 1);\
+        _low = _mm_loadu_ps(base + 4 * offset);                                \
+        _tmp = _mm_loadu_ps(base + 5 * offset);                                \
+        _low = _mm_shuffle_ps(_low, _tmp, 68);                                 \
+        _high = _mm_loadu_ps(base + 6 * offset);                               \
+        _high = _mm_loadh_pi(_high, (__m64 *)(base + 7 * offset));             \
+        _256high = _mm256_insertf128_ps(_mm256_castps128_ps256(_low),          \
+            _high, 1);                                                         \
+        dest = _mm512_insertf32x8(_mm512_castps256_ps512(_256low),             \
+            _256high, 1);                                                      \
+    }                                                                          \
+}
 
 /**
  * @brief store eight complex numbers(real,imaginary) of 32 bit single precision
@@ -302,7 +301,7 @@ static const union data_union_512
         _256high =                                                             \
             _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);      \
         dest = _mm512_insertf64x4(_mm512_castpd256_pd512(_256low),             \
-                                  _256high, 1);                                \
+               _256high, 1);                                                   \
     }                                                                          \
 }
 
@@ -375,18 +374,14 @@ static const union data_union_512
 // Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 8, other: 0}
 #define TRANSPOSE_ST4_512_D(base, offset, src0, src1, src2, src3)              \
 {                                                                              \
-        __m512d _ta = _mm512_shuffle_f64x2((src0), (src1), 0x44);              \
-        __m512d _tb = _mm512_shuffle_f64x2((src0), (src1), 0xEE);              \
-        __m512d _tc = _mm512_shuffle_f64x2((src2), (src3), 0x44);              \
-        __m512d _td = _mm512_shuffle_f64x2((src2), (src3), 0xEE);              \
-        _mm512_storeu_pd(base,                                                 \
-                         _mm512_shuffle_f64x2(_ta, _tc, 0x88));                \
-        _mm512_storeu_pd(base + offset,                                        \
-                         _mm512_shuffle_f64x2(_ta, _tc, 0xDD));                \
-        _mm512_storeu_pd(base + 2 * offset,                                    \
-                         _mm512_shuffle_f64x2(_tb, _td, 0x88));                \
-        _mm512_storeu_pd(base + 3 * offset,                                    \
-                         _mm512_shuffle_f64x2(_tb, _td, 0xDD));                \
+    __m512d _ta = _mm512_shuffle_f64x2((src0), (src1), 0x44);                  \
+    __m512d _tb = _mm512_shuffle_f64x2((src0), (src1), 0xEE);                  \
+    __m512d _tc = _mm512_shuffle_f64x2((src2), (src3), 0x44);                  \
+    __m512d _td = _mm512_shuffle_f64x2((src2), (src3), 0xEE);                  \
+    _mm512_storeu_pd(base, _mm512_shuffle_f64x2(_ta, _tc, 0x88));              \
+    _mm512_storeu_pd(base + offset, _mm512_shuffle_f64x2(_ta, _tc, 0xDD));     \
+    _mm512_storeu_pd(base + 2 * offset, _mm512_shuffle_f64x2(_tb, _td, 0x88)); \
+    _mm512_storeu_pd(base + 3 * offset, _mm512_shuffle_f64x2(_tb, _td, 0xDD)); \
 }
 
 /**
@@ -406,18 +401,18 @@ static const union data_union_512
 // Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 4, other: 2}
 #define TRANSPOSE_ST2_512_D(base, offset, src0, src1)                          \
 {                                                                              \
-        __m256d _lo0 = _mm512_castpd512_pd256(src0);                           \
-        __m256d _lo1 = _mm512_castpd512_pd256(src1);                           \
-        __m256d _hi0 = _mm512_extractf64x4_pd(src0, 1);                        \
-        __m256d _hi1 = _mm512_extractf64x4_pd(src1, 1);                        \
-        _mm256_storeu_pd(base,                                                 \
-                         _mm256_permute2f128_pd(_lo0, _lo1, 0x20));            \
-        _mm256_storeu_pd(base + offset,                                        \
-                         _mm256_permute2f128_pd(_lo0, _lo1, 0x31));            \
-        _mm256_storeu_pd(base + 2 * offset,                                    \
-                         _mm256_permute2f128_pd(_hi0, _hi1, 0x20));            \
-        _mm256_storeu_pd(base + 3 * offset,                                    \
-                         _mm256_permute2f128_pd(_hi0, _hi1, 0x31));            \
+    __m256d _lo0 = _mm512_castpd512_pd256(src0);                               \
+    __m256d _lo1 = _mm512_castpd512_pd256(src1);                               \
+    __m256d _hi0 = _mm512_extractf64x4_pd(src0, 1);                            \
+    __m256d _hi1 = _mm512_extractf64x4_pd(src1, 1);                            \
+    _mm256_storeu_pd(base,                                                     \
+        _mm256_permute2f128_pd(_lo0, _lo1, 0x20));                             \
+    _mm256_storeu_pd(base + offset,                                            \
+        _mm256_permute2f128_pd(_lo0, _lo1, 0x31));                             \
+    _mm256_storeu_pd(base + 2 * offset,                                        \
+        _mm256_permute2f128_pd(_hi0, _hi1, 0x20));                             \
+    _mm256_storeu_pd(base + 3 * offset,                                        \
+        _mm256_permute2f128_pd(_hi0, _hi1, 0x31));                             \
 }
 
 /**
@@ -439,46 +434,46 @@ static const union data_union_512
 #define TRANSPOSE_ST8_512_S(base, offset, src0, src1, src2, src3, src4, src5,  \
                          src6, src7)                                           \
 {                                                                              \
-        __m512d _r0 = _mm512_castps_pd(src0);                                  \
-        __m512d _r1 = _mm512_castps_pd(src1);                                  \
-        __m512d _r2 = _mm512_castps_pd(src2);                                  \
-        __m512d _r3 = _mm512_castps_pd(src3);                                  \
-        __m512d _r4 = _mm512_castps_pd(src4);                                  \
-        __m512d _r5 = _mm512_castps_pd(src5);                                  \
-        __m512d _r6 = _mm512_castps_pd(src6);                                  \
-        __m512d _r7 = _mm512_castps_pd(src7);                                  \
-        __m512d _t0 = _mm512_unpacklo_pd(_r0, _r1);                            \
-        __m512d _t1 = _mm512_unpackhi_pd(_r0, _r1);                            \
-        __m512d _t2 = _mm512_unpacklo_pd(_r2, _r3);                            \
-        __m512d _t3 = _mm512_unpackhi_pd(_r2, _r3);                            \
-        __m512d _t4 = _mm512_unpacklo_pd(_r4, _r5);                            \
-        __m512d _t5 = _mm512_unpackhi_pd(_r4, _r5);                            \
-        __m512d _t6 = _mm512_unpacklo_pd(_r6, _r7);                            \
-        __m512d _t7 = _mm512_unpackhi_pd(_r6, _r7);                            \
-        __m512d _u0 = _mm512_shuffle_f64x2(_t0, _t2, 0x88);                    \
-        __m512d _u1 = _mm512_shuffle_f64x2(_t1, _t3, 0x88);                    \
-        __m512d _u2 = _mm512_shuffle_f64x2(_t0, _t2, 0xDD);                    \
-        __m512d _u3 = _mm512_shuffle_f64x2(_t1, _t3, 0xDD);                    \
-        __m512d _u4 = _mm512_shuffle_f64x2(_t4, _t6, 0x88);                    \
-        __m512d _u5 = _mm512_shuffle_f64x2(_t5, _t7, 0x88);                    \
-        __m512d _u6 = _mm512_shuffle_f64x2(_t4, _t6, 0xDD);                    \
-        __m512d _u7 = _mm512_shuffle_f64x2(_t5, _t7, 0xDD);                    \
-        _mm512_storeu_ps(base,                                                 \
-            _mm512_castpd_ps(_mm512_shuffle_f64x2(_u0, _u4, 0x88)));           \
-        _mm512_storeu_ps(base + offset,                                        \
-            _mm512_castpd_ps(_mm512_shuffle_f64x2(_u1, _u5, 0x88)));           \
-        _mm512_storeu_ps(base + 2 * offset,                                    \
-            _mm512_castpd_ps(_mm512_shuffle_f64x2(_u2, _u6, 0x88)));           \
-        _mm512_storeu_ps(base + 3 * offset,                                    \
-            _mm512_castpd_ps(_mm512_shuffle_f64x2(_u3, _u7, 0x88)));           \
-        _mm512_storeu_ps(base + 4 * offset,                                    \
-            _mm512_castpd_ps(_mm512_shuffle_f64x2(_u0, _u4, 0xDD)));           \
-        _mm512_storeu_ps(base + 5 * offset,                                    \
-            _mm512_castpd_ps(_mm512_shuffle_f64x2(_u1, _u5, 0xDD)));           \
-        _mm512_storeu_ps(base + 6 * offset,                                    \
-            _mm512_castpd_ps(_mm512_shuffle_f64x2(_u2, _u6, 0xDD)));           \
-        _mm512_storeu_ps(base + 7 * offset,                                    \
-            _mm512_castpd_ps(_mm512_shuffle_f64x2(_u3, _u7, 0xDD)));           \
+    __m512d _r0 = _mm512_castps_pd(src0);                                      \
+    __m512d _r1 = _mm512_castps_pd(src1);                                      \
+    __m512d _r2 = _mm512_castps_pd(src2);                                      \
+    __m512d _r3 = _mm512_castps_pd(src3);                                      \
+    __m512d _r4 = _mm512_castps_pd(src4);                                      \
+    __m512d _r5 = _mm512_castps_pd(src5);                                      \
+    __m512d _r6 = _mm512_castps_pd(src6);                                      \
+    __m512d _r7 = _mm512_castps_pd(src7);                                      \
+    __m512d _t0 = _mm512_unpacklo_pd(_r0, _r1);                                \
+    __m512d _t1 = _mm512_unpackhi_pd(_r0, _r1);                                \
+    __m512d _t2 = _mm512_unpacklo_pd(_r2, _r3);                                \
+    __m512d _t3 = _mm512_unpackhi_pd(_r2, _r3);                                \
+    __m512d _t4 = _mm512_unpacklo_pd(_r4, _r5);                                \
+    __m512d _t5 = _mm512_unpackhi_pd(_r4, _r5);                                \
+    __m512d _t6 = _mm512_unpacklo_pd(_r6, _r7);                                \
+    __m512d _t7 = _mm512_unpackhi_pd(_r6, _r7);                                \
+    __m512d _u0 = _mm512_shuffle_f64x2(_t0, _t2, 0x88);                        \
+    __m512d _u1 = _mm512_shuffle_f64x2(_t1, _t3, 0x88);                        \
+    __m512d _u2 = _mm512_shuffle_f64x2(_t0, _t2, 0xDD);                        \
+    __m512d _u3 = _mm512_shuffle_f64x2(_t1, _t3, 0xDD);                        \
+    __m512d _u4 = _mm512_shuffle_f64x2(_t4, _t6, 0x88);                        \
+    __m512d _u5 = _mm512_shuffle_f64x2(_t5, _t7, 0x88);                        \
+    __m512d _u6 = _mm512_shuffle_f64x2(_t4, _t6, 0xDD);                        \
+    __m512d _u7 = _mm512_shuffle_f64x2(_t5, _t7, 0xDD);                        \
+    _mm512_storeu_ps(base,                                                     \
+        _mm512_castpd_ps(_mm512_shuffle_f64x2(_u0, _u4, 0x88)));               \
+    _mm512_storeu_ps(base + offset,                                            \
+        _mm512_castpd_ps(_mm512_shuffle_f64x2(_u1, _u5, 0x88)));               \
+    _mm512_storeu_ps(base + 2 * offset,                                        \
+        _mm512_castpd_ps(_mm512_shuffle_f64x2(_u2, _u6, 0x88)));               \
+    _mm512_storeu_ps(base + 3 * offset,                                        \
+        _mm512_castpd_ps(_mm512_shuffle_f64x2(_u3, _u7, 0x88)));               \
+    _mm512_storeu_ps(base + 4 * offset,                                        \
+        _mm512_castpd_ps(_mm512_shuffle_f64x2(_u0, _u4, 0xDD)));               \
+    _mm512_storeu_ps(base + 5 * offset,                                        \
+        _mm512_castpd_ps(_mm512_shuffle_f64x2(_u1, _u5, 0xDD)));               \
+    _mm512_storeu_ps(base + 6 * offset,                                        \
+        _mm512_castpd_ps(_mm512_shuffle_f64x2(_u2, _u6, 0xDD)));               \
+    _mm512_storeu_ps(base + 7 * offset,                                        \
+        _mm512_castpd_ps(_mm512_shuffle_f64x2(_u3, _u7, 0xDD)));               \
 }
 
 /**
@@ -491,36 +486,36 @@ static const union data_union_512
 // Cost: {fma: 0, mul: 0, add: 0, move: 8, perm: 8, other: 4}
 #define TRANSPOSE_ST4_512_S(base, offset, src0, src1, src2, src3)              \
 {                                                                              \
-        __m512d _a0 = _mm512_castps_pd(src0);                                  \
-        __m512d _a1 = _mm512_castps_pd(src1);                                  \
-        __m512d _a2 = _mm512_castps_pd(src2);                                  \
-        __m512d _a3 = _mm512_castps_pd(src3);                                  \
-        __m512d _t0 = _mm512_unpacklo_pd(_a0, _a1);                            \
-        __m512d _t1 = _mm512_unpackhi_pd(_a0, _a1);                            \
-        __m512d _t2 = _mm512_unpacklo_pd(_a2, _a3);                            \
-        __m512d _t3 = _mm512_unpackhi_pd(_a2, _a3);                            \
-        const __m512i _idxlo = _mm512_setr_epi64(0, 1, 8, 9, 2, 3, 10, 11);    \
-        const __m512i _idxhi = _mm512_setr_epi64(4, 5, 12, 13, 6, 7, 14, 15);  \
-        __m512d _e0 = _mm512_permutex2var_pd(_t0, _idxlo, _t2);                \
-        __m512d _e1 = _mm512_permutex2var_pd(_t0, _idxhi, _t2);                \
-        __m512d _e2 = _mm512_permutex2var_pd(_t1, _idxlo, _t3);                \
-        __m512d _e3 = _mm512_permutex2var_pd(_t1, _idxhi, _t3);                \
-        _mm256_storeu_ps(base,                                                 \
-            _mm256_castpd_ps(_mm512_castpd512_pd256(_e0)));                    \
-        _mm256_storeu_ps(base + offset,                                        \
-            _mm256_castpd_ps(_mm512_castpd512_pd256(_e2)));                    \
-        _mm256_storeu_ps(base + 2 * offset,                                    \
-            _mm256_castpd_ps(_mm512_extractf64x4_pd(_e0, 1)));                 \
-        _mm256_storeu_ps(base + 3 * offset,                                    \
-            _mm256_castpd_ps(_mm512_extractf64x4_pd(_e2, 1)));                 \
-        _mm256_storeu_ps(base + 4 * offset,                                    \
-            _mm256_castpd_ps(_mm512_castpd512_pd256(_e1)));                    \
-        _mm256_storeu_ps(base + 5 * offset,                                    \
-            _mm256_castpd_ps(_mm512_castpd512_pd256(_e3)));                    \
-        _mm256_storeu_ps(base + 6 * offset,                                    \
-            _mm256_castpd_ps(_mm512_extractf64x4_pd(_e1, 1)));                 \
-        _mm256_storeu_ps(base + 7 * offset,                                    \
-            _mm256_castpd_ps(_mm512_extractf64x4_pd(_e3, 1)));                 \
+    __m512d _a0 = _mm512_castps_pd(src0);                                      \
+    __m512d _a1 = _mm512_castps_pd(src1);                                      \
+    __m512d _a2 = _mm512_castps_pd(src2);                                      \
+    __m512d _a3 = _mm512_castps_pd(src3);                                      \
+    __m512d _t0 = _mm512_unpacklo_pd(_a0, _a1);                                \
+    __m512d _t1 = _mm512_unpackhi_pd(_a0, _a1);                                \
+    __m512d _t2 = _mm512_unpacklo_pd(_a2, _a3);                                \
+    __m512d _t3 = _mm512_unpackhi_pd(_a2, _a3);                                \
+    const __m512i _idxlo = _mm512_setr_epi64(0, 1, 8, 9, 2, 3, 10, 11);        \
+    const __m512i _idxhi = _mm512_setr_epi64(4, 5, 12, 13, 6, 7, 14, 15);      \
+    __m512d _e0 = _mm512_permutex2var_pd(_t0, _idxlo, _t2);                    \
+    __m512d _e1 = _mm512_permutex2var_pd(_t0, _idxhi, _t2);                    \
+    __m512d _e2 = _mm512_permutex2var_pd(_t1, _idxlo, _t3);                    \
+    __m512d _e3 = _mm512_permutex2var_pd(_t1, _idxhi, _t3);                    \
+    _mm256_storeu_ps(base,                                                     \
+        _mm256_castpd_ps(_mm512_castpd512_pd256(_e0)));                        \
+    _mm256_storeu_ps(base + offset,                                            \
+        _mm256_castpd_ps(_mm512_castpd512_pd256(_e2)));                        \
+    _mm256_storeu_ps(base + 2 * offset,                                        \
+        _mm256_castpd_ps(_mm512_extractf64x4_pd(_e0, 1)));                     \
+    _mm256_storeu_ps(base + 3 * offset,                                        \
+        _mm256_castpd_ps(_mm512_extractf64x4_pd(_e2, 1)));                     \
+    _mm256_storeu_ps(base + 4 * offset,                                        \
+        _mm256_castpd_ps(_mm512_castpd512_pd256(_e1)));                        \
+    _mm256_storeu_ps(base + 5 * offset,                                        \
+        _mm256_castpd_ps(_mm512_castpd512_pd256(_e3)));                        \
+    _mm256_storeu_ps(base + 6 * offset,                                        \
+        _mm256_castpd_ps(_mm512_extractf64x4_pd(_e1, 1)));                     \
+    _mm256_storeu_ps(base + 7 * offset,                                        \
+        _mm256_castpd_ps(_mm512_extractf64x4_pd(_e3, 1)));                     \
 }
 
 /**
@@ -533,34 +528,37 @@ static const union data_union_512
 // Cost: {fma: 0, mul: 0, add: 0, move: 8, perm: 2, other: 8}
 #define TRANSPOSE_ST2_512_S(base, offset, src0, src1)                          \
 {                                                                              \
-        __m512d _a0 = _mm512_castps_pd(src0);                                  \
-        __m512d _a1 = _mm512_castps_pd(src1);                                  \
-        __m512 _zlo = _mm512_castpd_ps(_mm512_unpacklo_pd(_a0, _a1));          \
-        __m512 _zhi = _mm512_castpd_ps(_mm512_unpackhi_pd(_a0, _a1));          \
-        _mm_storeu_ps(base, _mm512_extractf32x4_ps(_zlo, 0));                  \
-        _mm_storeu_ps(base + offset, _mm512_extractf32x4_ps(_zhi, 0));         \
-        _mm_storeu_ps(base + 2 * offset, _mm512_extractf32x4_ps(_zlo, 1));     \
-        _mm_storeu_ps(base + 3 * offset, _mm512_extractf32x4_ps(_zhi, 1));     \
-        _mm_storeu_ps(base + 4 * offset, _mm512_extractf32x4_ps(_zlo, 2));     \
-        _mm_storeu_ps(base + 5 * offset, _mm512_extractf32x4_ps(_zhi, 2));     \
-        _mm_storeu_ps(base + 6 * offset, _mm512_extractf32x4_ps(_zlo, 3));     \
-        _mm_storeu_ps(base + 7 * offset, _mm512_extractf32x4_ps(_zhi, 3));     \
+    __m512d _a0 = _mm512_castps_pd(src0);                                      \
+    __m512d _a1 = _mm512_castps_pd(src1);                                      \
+    __m512 _zlo = _mm512_castpd_ps(_mm512_unpacklo_pd(_a0, _a1));              \
+    __m512 _zhi = _mm512_castpd_ps(_mm512_unpackhi_pd(_a0, _a1));              \
+    _mm_storeu_ps(base, _mm512_extractf32x4_ps(_zlo, 0));                      \
+    _mm_storeu_ps(base + offset, _mm512_extractf32x4_ps(_zhi, 0));             \
+    _mm_storeu_ps(base + 2 * offset, _mm512_extractf32x4_ps(_zlo, 1));         \
+    _mm_storeu_ps(base + 3 * offset, _mm512_extractf32x4_ps(_zhi, 1));         \
+    _mm_storeu_ps(base + 4 * offset, _mm512_extractf32x4_ps(_zlo, 2));         \
+    _mm_storeu_ps(base + 5 * offset, _mm512_extractf32x4_ps(_zhi, 2));         \
+    _mm_storeu_ps(base + 6 * offset, _mm512_extractf32x4_ps(_zlo, 3));         \
+    _mm_storeu_ps(base + 7 * offset, _mm512_extractf32x4_ps(_zhi, 3));         \
 }
 
 // Cost: {fma: 1, mul: 1, add: 0, move: 6, perm: 3, other: 3}
-#define ITW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
+#define ITW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf,            \
                          load_multi_cols, is_contiguous)                       \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512d twv;                                                               \
-    if ((load_multi_cols)) {                                                   \
+    if ((load_multi_cols))                                                     \
+    {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1) * NUM_SETS_512_D;    \
         twv = _mm512_loadu_pd((twbuf) + addr);                                 \
     }                                                                          \
-    else {                                                                     \
+    else                                                                       \
+    {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = _mm512_broadcast_f64x2(_mm_load_pd((twbuf) + addr));             \
     }                                                                          \
     __m512d tmp_in;                                                            \
-    GATHER4_512_D((gbase) + starr[(stidx)], offset, tmp_in, is_contiguous);    \
+    GATHER4_512_D((gbase) + starr[stidx], offset, tmp_in, is_contiguous);      \
     const __m512d twr = BROADCAST_RE_512_D(twv);                               \
     const __m512d twi = BROADCAST_IM_512_D(twv);                               \
     const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
@@ -568,19 +566,22 @@ static const union data_union_512
 }
 
 // Cost: {fma: 1, mul: 1, add: 0, move: 6, perm: 3, other: 3}
-#define TW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
+#define TW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf,             \
                         load_multi_cols, is_contiguous)                        \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512d twv;                                                               \
-    if ((load_multi_cols)) {                                                   \
+    if ((load_multi_cols))                                                     \
+    {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1) * NUM_SETS_512_D;    \
         twv = _mm512_loadu_pd((twbuf) + addr);                                 \
     }                                                                          \
-    else {                                                                     \
+    else                                                                       \
+    {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = _mm512_broadcast_f64x2(_mm_load_pd((twbuf) + addr));             \
     }                                                                          \
     __m512d tmp_in;                                                            \
-    GATHER4_512_D((gbase) + starr[(stidx)], offset, tmp_in, is_contiguous);    \
+    GATHER4_512_D((gbase) + starr[stidx], offset, tmp_in, is_contiguous);      \
     const __m512d twr = BROADCAST_RE_512_D(twv);                               \
     const __m512d twi = BROADCAST_IM_512_D(twv);                               \
     const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
@@ -588,20 +589,23 @@ static const union data_union_512
 }
 
 // Cost: {fma: 1, mul: 1, add: 0, move: 10, perm: 6, other: 3}
-#define ITW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
+#define ITW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf,            \
                          load_multi_cols, is_contiguous)                       \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512 twv;                                                                \
-    if ((load_multi_cols)) {                                                   \
+    if ((load_multi_cols))                                                     \
+    {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1) * NUM_SETS_512_S;    \
         twv = _mm512_loadu_ps((twbuf) + addr);                                 \
     }                                                                          \
-    else {                                                                     \
-        twv = _mm512_broadcast_f32x2(_mm_loadl_pi(_mm_setzero_ps(),            \
-                                                  (__m64 *)((twbuf) + addr))); \
+    else                                                                       \
+    {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
+        twv = _mm512_broadcast_f32x2(                                          \
+            _mm_loadl_pi(_mm_setzero_ps(), (__m64 *)((twbuf) + addr)));        \
     }                                                                          \
     __m512 tmp_in;                                                             \
-    GATHER8_512_S((gbase) + starr[(stidx)], offset, tmp_in, is_contiguous);    \
+    GATHER8_512_S((gbase) + starr[stidx], offset, tmp_in, is_contiguous);      \
     const __m512 twr = BROADCAST_RE_512_S(twv);                                \
     const __m512 twi = BROADCAST_IM_512_S(twv);                                \
     const __m512 tmp_i = _mm512_mul_ps(SWAP_RI_512_S(tmp_in), twi);            \
@@ -609,20 +613,23 @@ static const union data_union_512
 }
 
 // Cost: {fma: 1, mul: 1, add: 0, move: 10, perm: 6, other: 3}
-#define TW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
+#define TW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf,             \
                         load_multi_cols, is_contiguous)                        \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512 twv;                                                                \
-    if ((load_multi_cols)) {                                                   \
+    if ((load_multi_cols))                                                     \
+    {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1) * NUM_SETS_512_S;    \
         twv = _mm512_loadu_ps((twbuf) + addr);                                 \
     }                                                                          \
-    else {                                                                     \
-        twv = _mm512_broadcast_f32x2(_mm_loadl_pi(_mm_setzero_ps(),            \
-                                                  (__m64 *)((twbuf) + addr))); \
+    else                                                                       \
+    {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
+        twv = _mm512_broadcast_f32x2(                                          \
+            _mm_loadl_pi(_mm_setzero_ps(), (__m64 *)((twbuf) + addr)));        \
     }                                                                          \
     __m512 tmp_in;                                                             \
-    GATHER8_512_S((gbase) + starr[(stidx)], offset, tmp_in, is_contiguous);    \
+    GATHER8_512_S((gbase) + starr[stidx], offset, tmp_in, is_contiguous);      \
     const __m512 twr = BROADCAST_RE_512_S(twv);                                \
     const __m512 twi = BROADCAST_IM_512_S(twv);                                \
     const __m512 tmp_i = _mm512_mul_ps(SWAP_RI_512_S(tmp_in), twi);            \
@@ -634,7 +641,7 @@ static const union data_union_512
                                    is_contiguous)                              \
 {                                                                              \
     __m512d tmp_in;                                                            \
-    GATHER4_512_D((gbase) + starr[(stidx)], offset, tmp_in, is_contiguous);    \
+    GATHER4_512_D((gbase) + starr[stidx], offset, tmp_in, is_contiguous);      \
     const __m512d twr = BROADCAST_RE_512_D(twv);                               \
     const __m512d twi = BROADCAST_IM_512_D(twv);                               \
     const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
@@ -646,7 +653,7 @@ static const union data_union_512
                                   is_contiguous)                               \
 {                                                                              \
     __m512d tmp_in;                                                            \
-    GATHER4_512_D((gbase) + starr[(stidx)], offset, tmp_in, is_contiguous);    \
+    GATHER4_512_D((gbase) + starr[stidx], offset, tmp_in, is_contiguous);      \
     const __m512d twr = BROADCAST_RE_512_D(twv);                               \
     const __m512d twi = BROADCAST_IM_512_D(twv);                               \
     const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
@@ -710,77 +717,85 @@ static const union data_union_512
  * GATHER_NOTW / SCATTER_NOTW -- 512-bit variants
  *****************************************************************************/
 
-#define GATHER_NOTW_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
-                          lmc, is_contiguous)                                  \
+#define GATHER_NOTW_512_S(gbase, starr, stidx, offset, gdest, twbuf, lmc,      \
+                          is_contiguous)                                       \
     GATHER8_512_S((gbase) + starr[(stidx)], offset, gdest, is_contiguous)
 
-#define GATHER_NOTW_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
-                          lmc, is_contiguous)                                  \
+#define GATHER_NOTW_512_D(gbase, starr, stidx, offset, gdest, twbuf, lmc,      \
+                          is_contiguous)                                       \
     GATHER4_512_D((gbase) + starr[(stidx)], offset, gdest, is_contiguous)
 
-#define SCATTER_NOTW_512_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
-                           lmc, is_contiguous)                                 \
+#define SCATTER_NOTW_512_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,      \
+                           is_contiguous)                                      \
     SCATTER8_512_S((sbase) + starr[(stidx)], offset, ssrc, is_contiguous)
 
-#define SCATTER_NOTW_512_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
-                           lmc, is_contiguous)                                 \
+#define SCATTER_NOTW_512_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,      \
+                           is_contiguous)                                      \
     SCATTER4_512_D((sbase) + starr[(stidx)], offset, ssrc, is_contiguous)
 
 /*****************************************************************************
  * TW_SCATTER / ITW_SCATTER -- 512-bit variants
  *****************************************************************************/
 
-#define TW_SCATTER_512_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,     \
-                         lmc, is_contiguous)                                   \
+#define TW_SCATTER_512_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,        \
+                         is_contiguous)                                        \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512d twv;                                                               \
     if ((lmc))                                                                 \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_512_D;                        \
         twv = _mm512_loadu_pd((twbuf) + addr);                                 \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = _mm512_broadcast_f64x2(_mm_loadu_pd((twbuf) + addr));            \
     }                                                                          \
     const __m512d twr = BROADCAST_RE_512_D(twv);                               \
     const __m512d twi = BROADCAST_IM_512_D(twv);                               \
     const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(ssrc), twi);             \
     __m512d _result = FMADDSUB_512_D(ssrc, twr, tmp_i);                        \
-    SCATTER4_512_D((sbase) + starr[(stidx)], offset, _result, is_contiguous);  \
+    SCATTER4_512_D((sbase) + starr[(stidx)], offset, _result,                  \
+        is_contiguous);                                                        \
 }
 
-#define ITW_SCATTER_512_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,    \
-                          lmc, is_contiguous)                                  \
+#define ITW_SCATTER_512_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,       \
+                          is_contiguous)                                       \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512d twv;                                                               \
     if ((lmc))                                                                 \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_512_D;                        \
         twv = _mm512_loadu_pd((twbuf) + addr);                                 \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = _mm512_broadcast_f64x2(_mm_loadu_pd((twbuf) + addr));            \
     }                                                                          \
     const __m512d twr = BROADCAST_RE_512_D(twv);                               \
     const __m512d twi = BROADCAST_IM_512_D(twv);                               \
     const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(ssrc), twi);             \
     __m512d _result = FMSUBADD_512_D(ssrc, twr, tmp_i);                        \
-    SCATTER4_512_D((sbase) + starr[(stidx)], offset, _result, is_contiguous);  \
+    SCATTER4_512_D((sbase) + starr[(stidx)], offset, _result,                  \
+        is_contiguous);                                                        \
 }
 
-#define TW_SCATTER_512_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,     \
-                         lmc, is_contiguous)                                   \
+#define TW_SCATTER_512_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,        \
+                         is_contiguous)                                        \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512 twv;                                                                \
     if ((lmc))                                                                 \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_512_S;                        \
         twv = _mm512_loadu_ps((twbuf) + addr);                                 \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = _mm512_broadcast_f32x2(                                          \
             _mm_loadl_pi(_mm_setzero_ps(), (__m64 *)((twbuf) + addr)));        \
     }                                                                          \
@@ -788,20 +803,23 @@ static const union data_union_512
     const __m512 twi = BROADCAST_IM_512_S(twv);                                \
     const __m512 tmp_i = _mm512_mul_ps(SWAP_RI_512_S(ssrc), twi);              \
     __m512 _result = FMADDSUB_512_S(ssrc, twr, tmp_i);                         \
-    SCATTER8_512_S((sbase) + starr[(stidx)], offset, _result, is_contiguous);  \
+    SCATTER8_512_S((sbase) + starr[(stidx)], offset, _result,                  \
+        is_contiguous);                                                        \
 }
 
-#define ITW_SCATTER_512_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,    \
-                          lmc, is_contiguous)                                  \
+#define ITW_SCATTER_512_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,       \
+                          is_contiguous)                                       \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512 twv;                                                                \
     if ((lmc))                                                                 \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_512_S;                        \
         twv = _mm512_loadu_ps((twbuf) + addr);                                 \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = _mm512_broadcast_f32x2(                                          \
             _mm_loadl_pi(_mm_setzero_ps(), (__m64 *)((twbuf) + addr)));        \
     }                                                                          \
@@ -809,7 +827,8 @@ static const union data_union_512
     const __m512 twi = BROADCAST_IM_512_S(twv);                                \
     const __m512 tmp_i = _mm512_mul_ps(SWAP_RI_512_S(ssrc), twi);              \
     __m512 _result = FMSUBADD_512_S(ssrc, twr, tmp_i);                         \
-    SCATTER8_512_S((sbase) + starr[(stidx)], offset, _result, is_contiguous);  \
+    SCATTER8_512_S((sbase) + starr[(stidx)], offset, _result,                  \
+        is_contiguous);                                                        \
 }
 
 // No-twiddle preloaded gather/scatter: signature-compatible with
@@ -834,20 +853,20 @@ static const union data_union_512
  * GATHER_NOTW / SCATTER_NOTW -- 512-bit variants
  *****************************************************************************/
 
-#define GATHER_NOTW_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
-                          lmc, is_contiguous)                                  \
+#define GATHER_NOTW_512_S(gbase, starr, stidx, offset, gdest, twbuf, lmc,      \
+                          is_contiguous)                                       \
     GATHER8_512_S((gbase) + starr[(stidx)], offset, gdest, is_contiguous)
 
-#define GATHER_NOTW_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
-                          lmc, is_contiguous)                                  \
+#define GATHER_NOTW_512_D(gbase, starr, stidx, offset, gdest, twbuf, lmc,      \
+                          is_contiguous)                                       \
     GATHER4_512_D((gbase) + starr[(stidx)], offset, gdest, is_contiguous)
 
-#define SCATTER_NOTW_512_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
-                           lmc, is_contiguous)                                 \
+#define SCATTER_NOTW_512_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,      \
+                           is_contiguous)                                      \
     SCATTER8_512_S((sbase) + starr[(stidx)], offset, ssrc, is_contiguous)
 
-#define SCATTER_NOTW_512_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
-                           lmc, is_contiguous)                                 \
+#define SCATTER_NOTW_512_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,      \
+                           is_contiguous)                                      \
     SCATTER4_512_D((sbase) + starr[(stidx)], offset, ssrc, is_contiguous)
 
 #endif // AOCLFFTZ_SIMD_COMMON_AVX512_H
