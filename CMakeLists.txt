@@ -19,7 +19,7 @@ cmake_minimum_required(VERSION 3.26.0)
 project(AOCL-FFTZ)
 message(STATUS "Building AOCL-FFTZ LIBRARY AND TEST SUITE")
 # Version used by pkg-config and CMake config
-set(FFTZ_VERSION "5.2.2")
+set(FFTZ_VERSION "5.3.1")
 
 string(TIMESTAMP TODAY "%Y%m%d")
 add_compile_definitions(AOCL_BUILD_VERSION="Build ${TODAY}")
