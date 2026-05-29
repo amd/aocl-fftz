@@ -197,6 +197,9 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->bluestein->B_out = NULL;
         sol->dft_bufs->bluestein->in = NULL;
         sol->dft_bufs->bluestein->out = NULL;
+        sol->dft_bufs->bluestein->bs_buf_size = 0;
+        sol->dft_bufs->bluestein->num_bs_buf = 0;
+        sol->dft_bufs->bluestein->bs_buf_allocated = 0;
         sol->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR]  = NULL;
         sol->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] = NULL;
         sol->dft_bufs->bluestein->normalize = NULL;
@@ -327,33 +330,65 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
     }
 }
 
-INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein, INTP size)
+/**
+ * Allocates the 64-byte aligned Bluestein working buffers: shared chirp
+ * buffers B/B_out, plus in/out scratch split into num_bs_buf per-thread slots
+ * of bs_buf_size bytes. Frees any partial allocation on failure.
+ *
+ * @return AOCLFFTZ_SUCCESS on success, or AOCLFFTZ_MEMORY_FAILURE if any
+ *         allocation fails.
+ */
+INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein,
+                              INTP bs_buf_size, INT32 num_bs_buf)
 {
-    // Allocate bluestein sequence buffers
-    ALLOC_ALIGN_UNINIT(bluestein->B, VOID, size);
+    // A non-MT plan still consumes one slot, so clamp to at least one.
+    if (num_bs_buf < 1)
+    {
+        num_bs_buf = 1;
+    }
+
+    INTP pool_size = bs_buf_size * (INTP)num_bs_buf;
+
+    bluestein->B = NULL;
+    bluestein->B_out = NULL;
+    bluestein->in = NULL;
+    bluestein->out = NULL;
+
+    ALLOC_ALIGN_UNINIT(bluestein->B, VOID, bs_buf_size);
     if (bluestein->B == NULL)
     {
-        return AOCLFFTZ_MEMORY_FAILURE;
+        goto exit_alloc_bluestein_buffers;
     }
-    ALLOC_ALIGN_UNINIT(bluestein->B_out, VOID, size);
+
+    ALLOC_ALIGN_UNINIT(bluestein->B_out, VOID, bs_buf_size);
     if (bluestein->B_out == NULL)
     {
-        return AOCLFFTZ_MEMORY_FAILURE;
+        goto exit_alloc_bluestein_buffers;
     }
 
-    // Allocate bluestein in and out buffers
-    ALLOC_ALIGN_UNINIT(bluestein->in, VOID, size);
+    ALLOC_ALIGN_UNINIT(bluestein->in, VOID, pool_size);
     if (bluestein->in == NULL)
     {
-        return AOCLFFTZ_MEMORY_FAILURE;
-    }
-    ALLOC_ALIGN_UNINIT(bluestein->out, VOID, size);
-    if (bluestein->out == NULL)
-    {
-        return AOCLFFTZ_MEMORY_FAILURE;
+        goto exit_alloc_bluestein_buffers;
     }
 
+    ALLOC_ALIGN_UNINIT(bluestein->out, VOID, pool_size);
+    if (bluestein->out == NULL)
+    {
+        goto exit_alloc_bluestein_buffers;
+    }
+
+    bluestein->bs_buf_size = bs_buf_size;
+    bluestein->num_bs_buf = num_bs_buf;
+    bluestein->bs_buf_allocated = 1;
     return AOCLFFTZ_SUCCESS;
+
+exit_alloc_bluestein_buffers:
+    FREE_ALIGN_ALLOCATED_MEM(bluestein->out);
+    FREE_ALIGN_ALLOCATED_MEM(bluestein->in);
+    FREE_ALIGN_ALLOCATED_MEM(bluestein->B_out);
+    FREE_ALIGN_ALLOCATED_MEM(bluestein->B);
+    return AOCLFFTZ_MEMORY_FAILURE;
 }
 
 VOID *alloc_twiddle_buffer(UINTP size, UINT32 dt_prec)
@@ -441,12 +476,16 @@ VOID destroy_transpose(aoclfftz_transpose_t* transpose)
 
 VOID destroy_bluestein(aoclfftz_bluestein_t* bluestein)
 {
-    if (bluestein != NULL)
+    // Only the originating struct owns B / B_out / in / out (bs_buf_allocated
+    // is set by alloc_bluestein_buffers). Deep-copied solutions and the inner
+    // FFT(M) next_sol alias these pointers, so they must not free them.
+    if (bluestein != NULL && bluestein->bs_buf_allocated)
     {
         FREE_ALIGN_ALLOCATED_MEM(bluestein->B);
         FREE_ALIGN_ALLOCATED_MEM(bluestein->B_out);
         FREE_ALIGN_ALLOCATED_MEM(bluestein->in);
         FREE_ALIGN_ALLOCATED_MEM(bluestein->out);
+        bluestein->bs_buf_allocated = 0;
     }
 }
 

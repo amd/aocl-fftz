@@ -68,6 +68,8 @@ INT32 register_solvers(VOID)
         register_execute_mt_direct_batched_colmajor_solver();
     solvers_table[SOLVER_MT_DIRECT_BATCHED_ROWMAJOR] =
         register_execute_mt_direct_batched_rowmajor_solver();
+    solvers_table[SOLVER_MT_BLUESTEIN] =
+        register_execute_mt_bluestein_solver();
 #endif
 
     return SOLVER_SUCCESS;

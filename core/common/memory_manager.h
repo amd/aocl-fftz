@@ -20,7 +20,26 @@
 
 
 aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank);
-INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein, INTP size);
+/**
+ * Allocates the shared chirp buffers (B, B_out) and the per-thread in/out
+ * pool for a Bluestein node.
+ *
+ * @param bluestein    Bluestein metadata struct (must be non-NULL).
+ * @param bs_buf_size  Bytes consumed by a single thread's in (or out) buffer,
+ *                     i.e. m * DATA_STRIDE * dt_bytes for extended length m,
+ *                     padded to MIN_ALIGNMENT (64 B) so each per-thread slot
+ *                     base stays 64-byte aligned for aligned SIMD load/store.
+ * @param num_bs_buf   Number of concurrent threads that may invoke this
+ *                     Bluestein node (snapshot of dft_bufs->num_ct_buf at
+ *                     setup time; minimum 1). in and out are each allocated
+ *                     as num_bs_buf * bs_buf_size contiguous bytes.
+ *
+ * On success bs_buf_allocated is set to 1 on this struct only; deep copies
+ * that re-point to the same B/B_out/in/out keep bs_buf_allocated = 0 to
+ * prevent double-free in destroy_bluestein.
+ */
+INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein,
+                              INTP bs_buf_size, INT32 num_bs_buf);
 aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank);
 aoclfftz_solution_t **alloc_sol_array(INT32 n);
 VOID alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix);

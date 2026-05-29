@@ -15,6 +15,7 @@
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
 #include "core/common/bluestein_utils.h"
+#include "core/solvers/solver.h"
 #include "utils/utils.h"
 
 INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
@@ -54,9 +55,19 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_bluestein_dft;
     }
 
-    // Allocate in, out buffers for next sol and
-    // Bluestein sequence B buffers for cur sol
-    ret = setup_bluestein_solver(sel->solution, next_sel->solution, m);
+    // Allocate in, out buffers for next sol and Bluestein chirp buffers for
+    // cur sol. The MT and ST variants each carry their own setup function
+    // (mirroring the ST/MT pairing of other solver families in the library).
+#ifdef MULTI_THREADING
+    if (sel->solution->solver->solver_type == SOLVER_MT_BLUESTEIN)
+    {
+        ret = setup_mt_bluestein_solver(sel->solution, next_sel->solution, m);
+    }
+    else
+#endif
+    {
+        ret = setup_bluestein_solver(sel->solution, next_sel->solution, m);
+    }
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_bluestein_dft;

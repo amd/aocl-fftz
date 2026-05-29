@@ -49,15 +49,19 @@ INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
 
     UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
-    // Allocate internal buffers for Bluestein computation
+    // in/out form a pool of num_ct_buf per-thread slots (one per concurrent
+    // Bluestein invocation), each padded to MIN_ALIGNMENT (64 B) so every slot
+    // base is 64-byte aligned for aligned SIMD load/store in normalize.
+    INTP bs_buf_size = GET_PADDED_SIZE((INTP)m * DATA_STRIDE * dt_bytes);
     ret = alloc_bluestein_buffers(sol->dft_bufs->bluestein,
-                                  m * DATA_STRIDE * dt_bytes);
+                                  bs_buf_size, sol->dft_bufs->num_ct_buf);
     if (ret != AOCLFFTZ_SUCCESS)
     {
         return ret;
     }
 
-    // Map internal buffers to next solution's I/O pointers
+    // Map slot 0 of the in/out pool to next_sol's I/O pointers.
+    // deep_copy_solution_tree re-points these to slot t for thread t.
     next_sol->decomp_scheme->in_real = sol->dft_bufs->bluestein->in;
     next_sol->decomp_scheme->in_imag =
         MOVE_ADDR(sol->dft_bufs->bluestein->in, dt_bytes);
@@ -67,44 +71,6 @@ INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
-}
-
-/**
- * @brief Copies complex data between buffers with stride handling.
- *
- * Dispatches to permuted_copy when either source or destination stride is
- * non-unit, otherwise performs a direct memcpy.
- *
- * @param[out] dst        Destination buffer
- * @param[in]  src        Source buffer
- * @param[in]  n          Number of complex elements to copy
- * @param[in]  src_stride Source stride value
- * @param[in]  dst_stride Destination stride value
- * @param[in]  dt_prec    Data precision (DT_FLOAT or DT_DOUBLE)
- * @param[in]  dt_bytes   Size of data type in bytes
- */
-static inline VOID copy_data(VOID *dst, VOID *src, INTP n, INTP src_stride,
-                             INTP dst_stride, UINT8 dt_prec, UINT32 dt_bytes)
-{
-    if (src_stride > 1 || dst_stride > 1)
-    {
-        INTP scaled_src_stride = src_stride * DATA_STRIDE;
-        INTP scaled_dst_stride = dst_stride * DATA_STRIDE;
-        if (dt_prec == DT_FLOAT)
-        {
-            permuted_copy_c_fp32(src, dst, 1, n, scaled_src_stride,
-                                 scaled_dst_stride, 1, 1);
-        }
-        else
-        {
-            permuted_copy_c_fp64(src, dst, 1, n, scaled_src_stride,
-                                 scaled_dst_stride, 1, 1);
-        }
-    }
-    else
-    {
-        memcpy(dst, src, n * DATA_STRIDE * dt_bytes);
-    }
 }
 
 /**
@@ -191,10 +157,10 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     UINT32 dir = FFT_DIR(sol->decomp_scheme->flags);
     UINT32 initial_flags = next_sol->decomp_scheme->flags;
 
-    // Direction flag handling for AVX kernels:
-    // In backward FFT, AVX kernels expect swapped in_real/in_imag pointers.
-    // Since Bluestein doesn't swap these pointers, we temporarily set the
-    // direction to forward to prevent incorrect re-swapping inside the kernel.
+    // next_sol inherits the requested direction, but the convolution always
+    // runs a forward FFT at step 2a and an inverse FFT at step 2c. The kernels
+    // pick forward/inverse from this flag, so force forward here for a backward
+    // request; step 2c restores backward for the inverse transform.
     if (dir == BACKWARD_FFT_DIR)
     {
         SET_FFT_DIR(next_sol->decomp_scheme->flags, FORWARD_FFT_DIR);
@@ -221,7 +187,7 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     //=========================================================================
     // Step 1: Copy input and apply chirp pre-processing
     //=========================================================================
-    copy_data(in_real, cur_in, n, in_stride, 1, dt_prec, dt_bytes);
+    bluestein_copy_data(cur_in, in_real, n, in_stride, 1, dt_prec, dt_bytes);
 
     // Zero-pad the input from index n to m-1
     memset(MOVE_ADDR(in_real, n * DATA_STRIDE * dt_bytes), 0,
@@ -282,7 +248,8 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
         // For non-unit stride: multiply in-place then copy with stride
         sol->dft_bufs->bluestein->ele_mul[dir](
             in_real, in_real, sol->dft_bufs->bluestein->B, n);
-        copy_data(cur_out, in_real, n, 1, out_stride, dt_prec, dt_bytes);
+        bluestein_copy_data(in_real, cur_out, n, 1, out_stride,
+                            dt_prec, dt_bytes);
     }
 
     //=========================================================================
@@ -300,11 +267,6 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     return status;
 }
 
-/**
- * @brief Registers the Bluestein solver execution function.
- *
- * @return Function pointer to execute_bluestein_solver
- */
 dft_solver_ register_execute_bluestein_solver(VOID)
 {
     return execute_bluestein_solver;

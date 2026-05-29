@@ -29,4 +29,14 @@ typedef enum
 INTP get_extended_length(INTP n);
 INT32 compute_chirp_sequence(aoclfftz_solution_t *sol, INTP m);
 
+/**
+ * Copies `n` complex elements between Bluestein I/O buffers.
+ *
+ * For strided cases (src_stride > 1 or dst_stride > 1) dispatches to the
+ * stride-aware permuted_copy_c_* kernel; otherwise falls back to a single
+ * memcpy. Shared by both the ST and MT Bluestein execute paths.
+ */
+VOID bluestein_copy_data(VOID *src, VOID *dst, INTP n, INTP src_stride,
+                         INTP dst_stride, UINT8 dt_prec, UINT32 dt_bytes);
+
 #endif // BLUESTEIN_UTILS_H
