@@ -35,6 +35,31 @@
 // Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
 #define SWAP_RI_512_D(val) _mm512_permute_pd(val, 85)
 
+
+// FMADD: (a * b) + c
+#define FMADD_512_S(a, b, c) _mm512_fmadd_ps((a), (b), (c))
+#define FMADD_512_D(a, b, c) _mm512_fmadd_pd((a), (b), (c))
+
+// FMSUB: (a * b) - c
+#define FMSUB_512_S(a, b, c) _mm512_fmsub_ps((a), (b), (c))
+#define FMSUB_512_D(a, b, c) _mm512_fmsub_pd((a), (b), (c))
+
+// FNMADD: -(a * b) + c
+#define FNMADD_512_S(a, b, c) _mm512_fnmadd_ps((a), (b), (c))
+#define FNMADD_512_D(a, b, c) _mm512_fnmadd_pd((a), (b), (c))
+
+// FNMSUB: -(a * b) - c
+#define FNMSUB_512_S(a, b, c) _mm512_fnmsub_ps((a), (b), (c))
+#define FNMSUB_512_D(a, b, c) _mm512_fnmsub_pd((a), (b), (c))
+
+// FMADDSUB: (a * b) +(odd)/-(even) c
+#define FMADDSUB_512_S(a, b, c) _mm512_fmaddsub_ps((a), (b), (c))
+#define FMADDSUB_512_D(a, b, c) _mm512_fmaddsub_pd((a), (b), (c))
+
+// FMSUBADD: (a * b) -(odd)/+(even) c
+#define FMSUBADD_512_S(a, b, c) _mm512_fmsubadd_ps((a), (b), (c))
+#define FMSUBADD_512_D(a, b, c) _mm512_fmsubadd_pd((a), (b), (c))
+
 /**
  * @brief Broadcasts real parts of complex numbers in a 512-bit register.
  * Shuffle pattern 0xA0 (10100000b) selects elements [0,0,2,2].

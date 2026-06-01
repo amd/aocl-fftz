@@ -153,6 +153,10 @@ if (ENABLE_FMA AND (ENABLE_INSTRUCTIONS_UPTO MATCHES "None|AVX128"))
     set(ENABLE_FMA OFF)
 endif()
 
+if(ENABLE_FMA)
+    add_compile_definitions(ENABLE_FMA)
+endif()
+
 #set(USER_DEBUG_ON "-g")
 message(STATUS "C Compiler used: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ Compiler used: ${CMAKE_CXX_COMPILER}")
@@ -189,22 +193,26 @@ if(WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USER_DEBUG_ON} /O2 /DNDEBUG /Oy")
 
 elseif(UNIX)
-    if(ENABLE_AVX512)
-        if(ENABLE_FMA)
+    if(ENABLE_FMA)
+        if(ENABLE_AVX512)
             set(AVX512_FLAG "-mavx512f -mavx512dq -ffp-contract=fast") # avx512dq for xor, insert and extract instructions
-        else()
+        endif()
+        if(ENABLE_AVX256)
+            set(AVX256_FLAG "-mavx -mfma -ffp-contract=fast")
+        endif()
+        if(ENABLE_AVX128)
+            set(AVX128_FLAG "-mavx -mfma -ffp-contract=fast")
+        endif()
+    else()
+        if(ENABLE_AVX512)
             set(AVX512_FLAG "-mavx512f -mavx512dq") # avx512dq for xor, insert and extract instructions
         endif()
-    endif()
-    if(ENABLE_AVX256)
-        if(ENABLE_FMA)
-            set(AVX256_FLAG "-mavx -mfma -ffp-contract=fast")
-        else()
-            set(AVX256_FLAG "-mavx -mfma")
+        if(ENABLE_AVX256)
+            set(AVX256_FLAG "-mavx")
         endif()
-    endif()
-    if(ENABLE_AVX128)
-        set(AVX128_FLAG "-mavx")
+        if(ENABLE_AVX128)
+            set(AVX128_FLAG "-mavx")
+        endif()
     endif()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${USER_DEBUG_ON} -fomit-frame-pointer -fstrict-aliasing")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USER_DEBUG_ON} -fomit-frame-pointer -fstrict-aliasing")
@@ -572,7 +580,7 @@ endif()
 
 # Add OpenMP to Libs.private only (not Cflags/Libs). If user set a custom lib path, use that
 # so downstream links the same runtime we did, and add -fopenmp so pkg-config --static
-# consumers get a complete link line. Otherwise use what FindOpenMP selected so 
+# consumers get a complete link line. Otherwise use what FindOpenMP selected so
 # -lomp vs -lgomp matches the actual link interface.
 if(ENABLE_MULTI_THREADING)
     if(NOT WIN32)
