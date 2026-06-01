@@ -1,0 +1,59 @@
+name: "CodeQL Advanced"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "amd-main", "AOCL-*-RC" ]
+  pull_request:
+    branches: [ "amd-main", "AOCL-*-RC" ]
+  schedule:
+    - cron: '42 19 * * 5'
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: amd_linux
+    permissions:
+      # required for all workflows
+      security-events: write
+      # required to fetch internal or private CodeQL packs
+      packages: read
+      # only required for workflows in private repositories
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: c-cpp
+            build-mode: manual
+          - language: python
+            build-mode: none
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Initializes the CodeQL tools for scanning.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix['build-mode'] }}
+          queries: security-and-quality
+      # Build
+      - name: Build
+        if: matrix['build-mode'] == 'manual'
+        shell: bash
+        run: |
+          export PATH=/usr/local/bin:$PATH
+          export CC_COMPILER=/usr/bin/gcc
+          export CXX_COMPILER=/usr/bin/g++
+          cmake -B build . -DCMAKE_INSTALL_PREFIX=$PWD/binary -DCMAKE_BUILD_TYPE=Release -DENABLE_MULTI_THREADING=ON -DBUILD_STATIC_LIBS=OFF -DBUILD_THIRD_PARTY_WRAPPERS=ON -DCMAKE_C_COMPILER="${CC_COMPILER}" -DCMAKE_CXX_COMPILER="${CXX_COMPILER}"
+          cmake --build build -v -j --target install
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
