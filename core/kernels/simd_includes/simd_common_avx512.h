@@ -309,11 +309,10 @@ static const union data_union_512
     }                                                                          \
 }
 
-// Cost: {fma: 1, mul: 2, add: 0, move: 6, perm: 4, other: 3}
+// Cost: {fma: 1, mul: 1, add: 0, move: 6, perm: 3, other: 3}
 #define ITW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
                          load_multi_cols)                                      \
 {                                                                              \
-    __m512d ones = _mm512_set1_pd(1.0);                                        \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m512d twv;                                                               \
     if ((load_multi_cols)) {                                                   \
@@ -324,18 +323,16 @@ static const union data_union_512
     }                                                                          \
     __m512d tmp_in;                                                            \
     GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
-    const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
-    const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);           \
-    const __m512d lo_1 = _mm512_unpacklo_pd(tmp_1, tmp_0);                     \
-    const __m512d hi_1 = _mm512_unpackhi_pd(tmp_1, tmp_0);                     \
-    gdest = SWAP_RI_512_D(_mm512_fmaddsub_pd(ones, lo_1, hi_1));               \
+    const __m512d twr = BROADCAST_RE_512_D(twv);                               \
+    const __m512d twi = BROADCAST_IM_512_D(twv);                               \
+    const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
+    gdest = FMSUBADD_512_D(tmp_in, twr, tmp_i);                                \
 }
 
-// Cost: {fma: 1, mul: 2, add: 0, move: 6, perm: 3, other: 3}
+// Cost: {fma: 1, mul: 1, add: 0, move: 6, perm: 3, other: 3}
 #define TW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
                         load_multi_cols)                                       \
 {                                                                              \
-    __m512d ones = _mm512_set1_pd(1.0);                                        \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m512d twv;                                                               \
     if ((load_multi_cols)) {                                                   \
@@ -346,18 +343,16 @@ static const union data_union_512
     }                                                                          \
     __m512d tmp_in;                                                            \
     GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
-    const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
-    const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);           \
-    const __m512d lo_1 = _mm512_unpacklo_pd(tmp_0, tmp_1);                     \
-    const __m512d hi_1 = _mm512_unpackhi_pd(tmp_0, tmp_1);                     \
-    gdest = _mm512_fmaddsub_pd(ones, lo_1, hi_1);                              \
+    const __m512d twr = BROADCAST_RE_512_D(twv);                               \
+    const __m512d twi = BROADCAST_IM_512_D(twv);                               \
+    const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
+    gdest = FMADDSUB_512_D(tmp_in, twr, tmp_i);                                \
 }
 
-// Cost: {fma: 1, mul: 2, add: 0, move: 10, perm: 9, other: 3}
+// Cost: {fma: 1, mul: 1, add: 0, move: 10, perm: 6, other: 3}
 #define ITW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
                          load_multi_cols)                                      \
 {                                                                              \
-    __m512 ones = _mm512_set1_ps(1.0);                                         \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m512 twv;                                                                \
     if ((load_multi_cols)) {                                                   \
@@ -369,20 +364,16 @@ static const union data_union_512
     }                                                                          \
     __m512 tmp_in;                                                             \
     GATHER8_512_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
-    __m512 tmp_0 = _mm512_mul_ps(tmp_in, twv);                                 \
-    __m512 tmp_1 = _mm512_mul_ps(SWAP_RI_512_S(tmp_in), twv);                  \
-    tmp_0 = _mm512_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                     \
-    tmp_1 = _mm512_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                     \
-    const __m512 lo_1 = _mm512_unpacklo_ps(tmp_1, tmp_0);                      \
-    const __m512 hi_1 = _mm512_unpackhi_ps(tmp_1, tmp_0);                      \
-    gdest = SWAP_RI_512_S(_mm512_fmaddsub_ps(ones, lo_1, hi_1));               \
+    const __m512 twr = BROADCAST_RE_512_S(twv);                                \
+    const __m512 twi = BROADCAST_IM_512_S(twv);                                \
+    const __m512 tmp_i = _mm512_mul_ps(SWAP_RI_512_S(tmp_in), twi);            \
+    gdest = FMSUBADD_512_S(tmp_in, twr, tmp_i);                                \
 }
 
-// Cost: {fma: 1, mul: 2, add: 0, move: 10, perm: 8, other: 3}
+// Cost: {fma: 1, mul: 1, add: 0, move: 10, perm: 6, other: 3}
 #define TW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
                         load_multi_cols)                                       \
 {                                                                              \
-    __m512 ones = _mm512_set1_ps(1.0);                                         \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m512 twv;                                                                \
     if ((load_multi_cols)) {                                                   \
@@ -394,67 +385,54 @@ static const union data_union_512
     }                                                                          \
     __m512 tmp_in;                                                             \
     GATHER8_512_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
-    __m512 tmp_0 = _mm512_mul_ps(tmp_in, twv);                                 \
-    __m512 tmp_1 = _mm512_mul_ps(SWAP_RI_512_S(tmp_in), twv);                  \
-    tmp_0 = _mm512_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                     \
-    tmp_1 = _mm512_permute_ps(tmp_1, 0xD8 /*0b11011000*/);                     \
-    const __m512 lo_1 = _mm512_unpacklo_ps(tmp_0, tmp_1);                      \
-    const __m512 hi_1 = _mm512_unpackhi_ps(tmp_0, tmp_1);                      \
-    gdest = _mm512_fmaddsub_ps(ones, lo_1, hi_1);                              \
+    const __m512 twr = BROADCAST_RE_512_S(twv);                                \
+    const __m512 twi = BROADCAST_IM_512_S(twv);                                \
+    const __m512 tmp_i = _mm512_mul_ps(SWAP_RI_512_S(tmp_in), twi);            \
+    gdest = FMADDSUB_512_S(tmp_in, twr, tmp_i);                                \
 }
 
-// Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 4, other: 0}
+// Cost: {fma: 1, mul: 1, add: 0, move: 4, perm: 3, other: 3}
 #define ITW_PRELOADED_512_D(gbase, starr, stidx, offset, gdest, twv)           \
 {                                                                              \
-    __m512d ones = _mm512_set1_pd(1.0);                                        \
     __m512d tmp_in;                                                            \
     GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
-    const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
-    const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);           \
-    const __m512d lo_1 = _mm512_unpacklo_pd(tmp_1, tmp_0);                     \
-    const __m512d hi_1 = _mm512_unpackhi_pd(tmp_1, tmp_0);                     \
-    const __m512d result = _mm512_fmaddsub_pd(ones, lo_1, hi_1);               \
-    gdest = SWAP_RI_512_D(result);                                             \
+    const __m512d twr = BROADCAST_RE_512_D(twv);                               \
+    const __m512d twi = BROADCAST_IM_512_D(twv);                               \
+    const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
+    gdest = FMSUBADD_512_D(tmp_in, twr, tmp_i);                                \
 }
 
-// Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 3, other: 0}
+// Cost: {fma: 1, mul: 1, add: 0, move: 4, perm: 3, other: 3}
 #define TW_PRELOADED_512_D(gbase, starr, stidx, offset, gdest, twv)            \
 {                                                                              \
-    __m512d ones = _mm512_set1_pd(1.0);                                        \
     __m512d tmp_in;                                                            \
     GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
-    const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
-    const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);           \
-    const __m512d lo_1 = _mm512_unpacklo_pd(tmp_0, tmp_1);                     \
-    const __m512d hi_1 = _mm512_unpackhi_pd(tmp_0, tmp_1);                     \
-    gdest = _mm512_fmaddsub_pd(ones, lo_1, hi_1);                              \
+    const __m512d twr = BROADCAST_RE_512_D(twv);                               \
+    const __m512d twi = BROADCAST_IM_512_D(twv);                               \
+    const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
+    gdest = FMADDSUB_512_D(tmp_in, twr, tmp_i);                                \
 }
 
-// Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 4, other: 0}
+// Cost: {fma: 1, mul: 1, add: 0, move: 4, perm: 3, other: 3}
 #define ITW_PRELOADED_512_D_V(gbase, stride, offset, gdest, twv)               \
 {                                                                              \
-    __m512d ones = _mm512_set1_pd(1.0);                                        \
     __m512d tmp_in;                                                            \
     GATHER4_512_D((gbase) + (stride), (offset), tmp_in);                       \
-    const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
-    const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);           \
-    const __m512d lo_1 = _mm512_unpacklo_pd(tmp_1, tmp_0);                     \
-    const __m512d hi_1 = _mm512_unpackhi_pd(tmp_1, tmp_0);                     \
-    const __m512d result = _mm512_fmaddsub_pd(ones, lo_1, hi_1);               \
-    gdest = SWAP_RI_512_D(result);                                             \
+    const __m512d twr = BROADCAST_RE_512_D(twv);                               \
+    const __m512d twi = BROADCAST_IM_512_D(twv);                               \
+    const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
+    gdest = FMSUBADD_512_D(tmp_in, twr, tmp_i);                                \
 }
 
-// Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 3, other: 0}
+// Cost: {fma: 1, mul: 1, add: 0, move: 4, perm: 3, other: 3}
 #define TW_PRELOADED_512_D_V(gbase, stride, offset, gdest, twv)                \
 {                                                                              \
-    __m512d ones = _mm512_set1_pd(1.0);                                        \
     __m512d tmp_in;                                                            \
     GATHER4_512_D((gbase) + (stride), (offset), tmp_in);                       \
-    const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
-    const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);           \
-    const __m512d lo_1 = _mm512_unpacklo_pd(tmp_0, tmp_1);                     \
-    const __m512d hi_1 = _mm512_unpackhi_pd(tmp_0, tmp_1);                     \
-    gdest = _mm512_fmaddsub_pd(ones, lo_1, hi_1);                              \
+    const __m512d twr = BROADCAST_RE_512_D(twv);                               \
+    const __m512d twi = BROADCAST_IM_512_D(twv);                               \
+    const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
+    gdest = FMADDSUB_512_D(tmp_in, twr, tmp_i);                                \
 }
 
 #endif // AOCLFFTZ_SIMD_COMMON_AVX512_H
