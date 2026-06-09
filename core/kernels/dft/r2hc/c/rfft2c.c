@@ -1,0 +1,118 @@
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
+
+/** @file rfft2c.c
+ *
+ *  @brief Radix-2 r2hc Real-FFT kernel with scalar operations in C
+ *
+ *  This file contains the DIT radix-2 real-to-halfcomplex implementations
+ *  using scalar operations for single-precision and double-precision inputs.
+ *
+ *  @author Srirammaswamy Srinivasan
+ *  @author Prasandh Sankarankutty
+ */
+
+#include "core/kernels/kernel.h"
+
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 0, 2, 4, 0, 0},
+                                                     {0, 0, 2, 4, 0, 0}};
+
+ops_cycles_t get_ops_cnt_r2hc_rfft2c(UINT8 precision, UINT8 direction)
+{
+    if (precision == DT_FLOAT)
+    {
+        return ops_cnt[0];
+    }
+    else
+    {
+        return ops_cnt[1];
+    }
+}
+
+VOID r2hc_rfft2c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
+                      VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                      VOID *twd, UINT8 flag)
+{
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
+    FLOAT *in = (FLOAT *)in_real;
+    FLOAT *out = (FLOAT *)out_real;
+#ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+#else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+#endif
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
+    INTP cnt;
+
+    for (cnt = 0; cnt < n; cnt++)
+    {
+        FLOAT v0, v1;
+        // Input point 1: x(0)
+        v0 = *in;
+        // Input point 2: x(1)
+        v1 = in[in_strides[1]];
+        // Output point 1: X(0)
+        *out = v0 + v1;
+        // Output point 2: X(0)
+        out[out_strides[1]] = v0 - v1;
+        in = in + v_in_stride;
+        out = out + v_out_stride;
+    }
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
+}
+
+VOID r2hc_rfft2c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
+                      VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
+                      VOID *twd, UINT8 flag)
+{
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
+    DOUBLE *in = (DOUBLE *)in_real;
+    DOUBLE *out = (DOUBLE *)out_real;
+#ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+#else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+#endif
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
+    INTP cnt;
+
+
+    for (cnt = 0; cnt < n; cnt++)
+    {
+        DOUBLE v0, v1;
+        // Input point 1: x(0)
+        v0 = *in;
+        // Input point 2: x(1)
+        v1 = in[in_strides[1]];
+        // Output point 1: X(0)
+        *out = v0 + v1;
+        // Output point 2: X(0)
+        out[out_strides[1]] = v0 - v1;
+        in = in + v_in_stride;
+        out = out + v_out_stride;
+    }
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
+}
+
+kfft_ register_kernel_r2hc_rfft2c(UINT8 precision, UINT8 direction)
+{
+
+    if (precision == DT_FLOAT)
+    {
+        return r2hc_rfft2c_fp32;
+    }
+    else if (precision == DT_DOUBLE)
+    {
+        return r2hc_rfft2c_fp64;
+    }
+    else
+    {
+        return NULL;
+    }
+}

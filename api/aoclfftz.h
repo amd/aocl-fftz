@@ -1,30 +1,5 @@
-/*
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file aoclfftz.h
  *  @brief AOCL-FFTZ Library - Interface APIs and data structures.
@@ -50,9 +25,7 @@
 
 /**
  * @defgroup Data_Structures AOCL-FFTZ - Data Structures and Type Definitions
- * @brief Data structures and typedef definitions associated with APIs of AOCL-FFTZ library.
- *
- * This section contains typedef definitions used by the AOCL-FFTZ
+ * @brief This section contains typedef definitions used by the AOCL-FFTZ
  * library's interface APIs.
  *
  * @note Different variants of data structures are available to support float
@@ -171,14 +144,17 @@ typedef struct aoclfftz_cntrl_params
     * - 3 - AVX512 optimizations */
     INT32 opt_off;                         /**< Turn off all optimizations */
     aoclfftz_logger_mode logger_mode;      /**< Set Logger mode with following values.\n
-    * - 0 - `None`,
-    * - 1 - `Info`,
-    * - 2 - `Trace`,
-    * - 3 - `Debug`*/
+    * - @ref AOCLFFTZ_LOG_NONE - Disable all logging
+    * - @ref AOCLFFTZ_LOG_INFO - Detailed debugging logs
+    * - @ref AOCLFFTZ_LOG_TRACE - Logging with complete execution trace
+    * - @ref AOCLFFTZ_LOG_DEBUG - Most detailed logging, with debug logs */
     INT32 measure_stats;    /**< Enable/Disable measure stats (Not supported, must be default value `0`) */
 } aoclfftz_cntrl_params_t;
 
 /**
+ * @rst
+ * .. _aoclfftz_prob_desc_f:
+ * @endrst
  * @ingroup Data_Structures
  * @brief Defines problem descriptor for float data on LP64 machines.
  */
@@ -197,6 +173,9 @@ typedef struct
 } aoclfftz_prob_desc_f;
 
 /**
+ * @rst
+ * .. _aoclfftz_prob_desc_d:
+ * @endrst
  * @ingroup Data_Structures
  * @brief Defines problem descriptor for double data on LP64 machines.
  */
@@ -215,6 +194,9 @@ typedef struct
 } aoclfftz_prob_desc_d;
 
 /**
+ * @rst
+ * .. _aoclfftz_prob_desc_f_64_:
+ * @endrst
  * @ingroup Data_Structures
  * @brief Defines problem descriptor for float data on ILP64 machines.
  */
@@ -233,6 +215,9 @@ typedef struct
 } aoclfftz_prob_desc_f_64_;
 
 /**
+ * @rst
+ * .. _aoclfftz_prob_desc_d_64_:
+ * @endrst
  * @ingroup Data_Structures
  * @brief Defines problem descriptor for double data on ILP64 machines.
  */
@@ -252,6 +237,9 @@ typedef struct
 
 /* Single-threaded and multi-threaded FFT unified APIs */
 /**
+ * @rst
+ * .. _aoclfftz_setup_f:
+ * @endrst
  * @ingroup APIs
  * @brief Generates a solution handle for a given problem of type FLOAT on LP64 systems.
  *

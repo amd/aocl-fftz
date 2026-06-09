@@ -1,43 +1,17 @@
-..  Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
-
-..  Redistribution and use in source and binary forms, with or without
-..  modification, are permitted provided that the following conditions are met:
-
-..  1. Redistributions of source code must retain the above copyright notice,
-..  this list of conditions and the following disclaimer.
-..  2. Redistributions in binary form must reproduce the above copyright notice,
-..  this list of conditions and the following disclaimer in the documentation
-..  and/or other materials provided with the distribution.
-..  3. Neither the name of the copyright holder nor the names of its
-..  contributors may be used to endorse or promote products derived from this
-..  software without specific prior written permission.
-
-..  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-..  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-..  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-..  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-..  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-..  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-..  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-..  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-..  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-..  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-..  POSSIBILITY OF SUCH DAMAGE.
+..  Copyright Advanced Micro Devices, Inc.
+..  SPDX-License-Identifier: BSD-3-Clause
 
 =========
 AOCL-FFTZ
 =========
 
-
-Introduction
-`````````````
 AOCL-FFTZ is a high performance Fast Fourier Transform (FFT) library developed
 by AMD supporting advanced optimizations for AMD’s "Zen"-based CPUs.
 The library computes FFTs of (i) complex data of any size and dimension in
-both forward and backward directions, and (ii) real one-dimensional data of any
-size, excluding prime sizes greater than 7 and their multiples, in both forward
-and backward directions with support for in-place and out-of-place result
-placements.
+both forward and backward directions, and (ii) real data of any
+size and dimension, excluding prime sizes greater than 7 and their multiples,
+in both forward and backward directions with support for in-place and
+out-of-place result placements.
 
 The kernels in this library are vectorized to speed-up the single-threaded core
 performance. The library supports the computations of parallel FFTs by taking
@@ -52,8 +26,8 @@ accuracy tests. GTest-based unit testing framework is also supported by the
 library.
 
 
-APIs
-````
+:doc:`APIs <interface_api>`
+
 AOCL-FFTZ provides a comprehensive set of interface APIs for computing
 both forward (FFT) and backward (IFFT) transforms for real and complex
 data in the supported data models. The library offers flexible interfaces
@@ -61,37 +35,40 @@ that support both single-threaded and multi-threaded execution modes
 to optimize for performance across various workloads.
 
 .. toctree::
+   :hidden:
    :maxdepth: 1
 
    interface_api
 
-Data Structures and Type Definitions
-````````````````````````````````````
-AOCL-FFTZ defines various data structures and type definitions to support
-both single-precision (`FLOAT`) and double-precision (`DOUBLE`) computations.
-These structures encapsulate configuration parameters, execution contexts,
-and other essential parameters and flags required for efficient FFT operations.
+:doc:`Data Structures <data_structures_index>`
+
+Data structures and conventions to describe the FFT problems,
+guides on problem descriptor construction and explains the data layout conventions
+followed through the AOCL-FFTZ library.
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
+   :maxdepth: 2
 
-   typedefs
+   data_structures_index
 
-Datatype Definitions
-````````````````````
+:doc:`Datatype Definitions <std_types>`
+
 Type Definitions of Standard Datatypes for AOCL-FFTZ Library.
 
 .. toctree::
+   :hidden:
    :maxdepth: 1
 
    std_types
 
-Examples
-````````
+:doc:`Examples <test_programs>`
+
 Example programs illustrating how to use AOCL-FFTZ APIs are presented here.
 
 .. toctree::
-   :maxdepth: 2
+   :hidden:
+   :maxdepth: 1
 
    test_programs
 

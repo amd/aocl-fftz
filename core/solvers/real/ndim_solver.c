@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file ndim_solver.c
  *
@@ -82,24 +57,8 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
     // Compute allocation size in bytes for ct_buffer and aux_buffer_1
     UINTP alloc_size = calculate_max_buffer_size(sol) * DATA_STRIDE * dt_bytes;
 
-    // Allocate ct_buffer used by complex solvers for
-    // Cooley-Tukey intermediate storage in ND transforms.
-    if (sol->dft_bufs->ct_buffer == NULL)
-    {
-        ALLOC_ALIGN_INIT(sol->dft_bufs->ct_buffer, VOID, alloc_size);
-        if (sol->dft_bufs->ct_buffer == NULL)
-        {
-            AOCLFFTZ_LOG(INFO, global_logger_mode,
-                         "Failed to allocate ct_buffer in ndim_solver");
-            return SOLVER_FAILURE;
-        }
-        sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buffer;
-        sol->dft_bufs->ct_buf_imag =
-            MOVE_ADDR(sol->dft_bufs->ct_buffer, dt_bytes);
-    }
-
-    COPY_SOLUTION_OBJ_WO_DIMS(complex_dims_sol, sol);
-    COPY_SOLUTION_OBJ_WO_DIMS(real_dim_sol, sol);
+    copy_solution_obj_wo_dims(complex_dims_sol, sol);
+    copy_solution_obj_wo_dims(real_dim_sol, sol);
 
     // For inplace R2C/C2R problems and out-of-place C2R problems,
     // allocate an auxiliary buffer for intermediate storage.
@@ -119,6 +78,37 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
 
     INT32 dim_rank = sol->decomp_scheme->dim_rank;
     UINT8 is_forward = (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR);
+
+    // Assign buffer pointers
+    if (is_forward)
+    {
+        real_dim_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
+        real_dim_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
+        real_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+        real_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+        complex_dims_sol->decomp_scheme->in_real =
+            real_dim_sol->decomp_scheme->out_real;
+        complex_dims_sol->decomp_scheme->in_imag =
+            real_dim_sol->decomp_scheme->out_imag;
+        complex_dims_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+        complex_dims_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    }
+    else
+    {
+        complex_dims_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
+        complex_dims_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
+        complex_dims_sol->decomp_scheme->out_real =
+            sol->dft_bufs->buffered->aux_buffer_1;
+        complex_dims_sol->decomp_scheme->out_imag =
+            MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_1, dt_bytes);
+        real_dim_sol->decomp_scheme->in_real =
+            complex_dims_sol->decomp_scheme->out_real;
+        real_dim_sol->decomp_scheme->in_imag =
+            complex_dims_sol->decomp_scheme->out_imag;
+        real_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+        real_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    }
+
 
     // setup (N-1)D solution
     complex_dims_sol->decomp_scheme->dim_rank = dim_rank - 1;
@@ -189,7 +179,6 @@ static INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol)
     INT32 dt_prec, dt_bytes;
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     dt_bytes = DT_PRECISION_BYTES(dt_prec);
-    UINT8 is_inplace = !IS_OUT_OF_PLACE(sol->decomp_scheme->flags);
     UINT8 is_forward = (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR);
 
     if (is_forward)
@@ -197,27 +186,14 @@ static INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol)
         // R2C (forward) Execution Flow:
         // 1. real_dim_sol (1D R2C):
         //    in: input buffer
-        //    out: aux_buffer_1 (in-place) / output buffer (out-of-place)
+        //    out: output buffer
         // 2. complex_dims_sol ((N-1)D C2C):
-        //    in: aux_buffer_1 (in-place) / output buffer (out-of-place)
+        //    in: output buffer
         //    out: output buffer
         real_dim_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
         real_dim_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
-        if (is_inplace)
-        {
-            real_dim_sol->decomp_scheme->out_real =
-                sol->dft_bufs->buffered->aux_buffer_1;
-            real_dim_sol->decomp_scheme->out_imag =
-                MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_1, dt_bytes);
-        }
-        else
-        {
-            real_dim_sol->decomp_scheme->out_real =
-                sol->decomp_scheme->out_real;
-            real_dim_sol->decomp_scheme->out_imag =
-                sol->decomp_scheme->out_imag;
-        }
-
+        real_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
+        real_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
         complex_dims_sol->decomp_scheme->in_real =
             real_dim_sol->decomp_scheme->out_real;
         complex_dims_sol->decomp_scheme->in_imag =

@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2024-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file simd_common.h
  *
@@ -253,7 +228,7 @@
                          load_multi_cols /* unused */)                         \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
-    const __m128d cd = _mm_loadu_pd((twbuf) + addr);                           \
+    const __m128d cd = _mm_load_pd((twbuf) + addr);                            \
     const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)]);               \
     const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);           \
     const __m128d ca_da = _mm_mul_pd(cd, aa);                                  \
@@ -267,7 +242,7 @@
                         load_multi_cols /* unused */)                          \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
-    const __m128d cd = _mm_loadu_pd((twbuf) + addr);                           \
+    const __m128d cd = _mm_load_pd((twbuf) + addr);                            \
     const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)]);               \
     const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);           \
     const __m128d ca_da = _mm_mul_pd(cd, aa);                                  \
@@ -491,6 +466,74 @@
 #define SWAP_RI_256_D(val) _mm256_permute_pd(val, 5)
 
 /**
+ * @brief Broadcasts real parts of complex numbers in a 128-bit register.
+ * Shuffle pattern 0xA0 (10100000b) selects elements [0,0,2,2].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_RE_128_S(val) _mm_shuffle_ps(val, val, 0xA0) // 10100000b: [0,0,2,2]
+
+/**
+ * @brief Broadcasts imaginary parts of complex numbers in a 128-bit register.
+ * Shuffle pattern 0xF5 (11110101b) selects elements [1,1,3,3].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_IM_128_S(val) _mm_shuffle_ps(val, val, 0xF5) // 11110101b: [1,1,3,3]
+
+/**
+ * @brief Broadcasts the real part of a complex number in a 128-bit register
+ * for double precision floating point.
+ * Shuffle pattern 0x0 (00b) selects the low element of each operand: [0,0].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_RE_128_D(val) _mm_shuffle_pd(val, val, 0x0) // 00b: [0,0]
+
+/**
+ * @brief Broadcasts the imaginary part of a complex number in a 128-bit register
+ * for double precision floating point.
+ * Shuffle pattern 0x3 (11b) selects the high element of each operand: [1,1].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_IM_128_D(val) _mm_shuffle_pd(val, val, 0x3) // 11b: [1,1]
+
+/**
+ * @brief Broadcasts real parts of complex numbers in a 256-bit register.
+ * Shuffle pattern 0xA0 (10100000b) selects elements [0,0,2,2].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_RE_256_S(val) _mm256_shuffle_ps(val, val, 0xA0) // 10100000b: [0,0,2,2]
+
+/**
+ * @brief Broadcasts imaginary parts of complex numbers in a 256-bit register.
+ * Shuffle pattern 0xF5 (11110101b) selects elements [1,1,3,3].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_IM_256_S(val) _mm256_shuffle_ps(val, val, 0xF5) // 11110101b: [1,1,3,3]
+
+/**
+ * @brief Broadcasts real parts of complex numbers in a 256-bit register
+ * for double precision floating point.
+ * Shuffle pattern 0x0 (0000b) selects the low element of each 128-bit lane: [0,0,2,2].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_RE_256_D(val) _mm256_shuffle_pd(val, val, 0x0) // 0000b: [0,0,2,2]
+
+/**
+ * @brief Broadcasts imaginary parts of complex numbers in a 256-bit register
+ * for double precision floating point.
+ * Shuffle pattern 0xF (1111b) selects the high element of each 128-bit lane: [1,1,3,3].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_IM_256_D(val) _mm256_shuffle_pd(val, val, 0xF) // 1111b: [1,1,3,3]
+
+/**
  * @brief implies the number of sets that can be processed in parallel.
  * Computed using Register width /(2* sizeof(floating point)
  */
@@ -612,4 +655,97 @@ static const union data_union_256
     a = SWAP_RI_256_D(a);                                                      \
     c = SWAP_RI_256_D(_mm256_addsub_pd(a, b));                                 \
 }
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 4, other: 1}
+#define ITW_PRELOADED_256_D(gbase, starr, stidx, offset, gdest, twv)           \
+{                                                                              \
+    __m256d tmp_in;                                                            \
+    GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
+    const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
+    const __m256d lo_1 = _mm256_unpacklo_pd(tmp_1, tmp_0);                     \
+    const __m256d hi_1 = _mm256_unpackhi_pd(tmp_1, tmp_0);                     \
+    gdest = SWAP_RI_256_D(_mm256_addsub_pd(lo_1, hi_1));                       \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 3, other: 1}
+#define TW_PRELOADED_256_D(gbase, starr, stidx, offset, gdest, twv)            \
+{                                                                              \
+    __m256d tmp_in;                                                            \
+    GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
+    const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
+    const __m256d lo_1 = _mm256_unpacklo_pd(tmp_0, tmp_1);                     \
+    const __m256d hi_1 = _mm256_unpackhi_pd(tmp_0, tmp_1);                     \
+    gdest = _mm256_addsub_pd(lo_1, hi_1);                                      \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 2, other: 0}
+#define ITW_PRELOADED_128_D(gbase, starr, stidx, offset, gdest, twv)           \
+{                                                                              \
+    const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)]);               \
+    const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);           \
+    const __m128d ca_da = _mm_mul_pd(twv, aa);                                 \
+    const __m128d cb_db = _mm_mul_pd(twv, bb);                                 \
+    const __m128d db_cb = SWAP_RI_128_D(cb_db);                                \
+    gdest = SWAP_RI_128_D(_mm_addsub_pd(ca_da, db_cb));                        \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 1, other: 0}
+#define TW_PRELOADED_128_D(gbase, starr, stidx, offset, gdest, twv)            \
+{                                                                              \
+    const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)]);               \
+    const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);           \
+    const __m128d ca_da = _mm_mul_pd(twv, aa);                                 \
+    const __m128d cb_db = _mm_mul_pd(twv, bb);                                 \
+    const __m128d db_cb = SWAP_RI_128_D(cb_db);                                \
+    gdest = _mm_addsub_pd(ca_da, db_cb);                                       \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 4, other: 1}
+#define ITW_PRELOADED_256_D_V(gbase, stride, offset, gdest, twv)               \
+{                                                                              \
+    __m256d tmp_in;                                                            \
+    GATHER2_256_D((gbase) + (stride), (offset), tmp_in);                       \
+    const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
+    const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
+    const __m256d lo_1 = _mm256_unpacklo_pd(tmp_1, tmp_0);                     \
+    const __m256d hi_1 = _mm256_unpackhi_pd(tmp_1, tmp_0);                     \
+    gdest = SWAP_RI_256_D(_mm256_addsub_pd(lo_1, hi_1));                       \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 3, other: 1}
+#define TW_PRELOADED_256_D_V(gbase, stride, offset, gdest, twv)                \
+{                                                                              \
+    __m256d tmp_in;                                                            \
+    GATHER2_256_D((gbase) + (stride), (offset), tmp_in);                       \
+    const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
+    const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
+    const __m256d lo_1 = _mm256_unpacklo_pd(tmp_0, tmp_1);                     \
+    const __m256d hi_1 = _mm256_unpackhi_pd(tmp_0, tmp_1);                     \
+    gdest = _mm256_addsub_pd(lo_1, hi_1);                                      \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 2, other: 0}
+#define ITW_PRELOADED_128_D_V(gbase, stride, offset, gdest, twv)               \
+{                                                                              \
+    const __m128d bb = _mm_loaddup_pd((gbase) + (stride));                     \
+    const __m128d aa = _mm_loaddup_pd((gbase) + (stride) + 1);                 \
+    const __m128d ca_da = _mm_mul_pd(twv, aa);                                 \
+    const __m128d cb_db = _mm_mul_pd(twv, bb);                                 \
+    const __m128d db_cb = SWAP_RI_128_D(cb_db);                                \
+    gdest = SWAP_RI_128_D(_mm_addsub_pd(ca_da, db_cb));                        \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 1, other: 0}
+#define TW_PRELOADED_128_D_V(gbase, stride, offset, gdest, twv)                \
+{                                                                              \
+    const __m128d aa = _mm_loaddup_pd((gbase) + (stride));                     \
+    const __m128d bb = _mm_loaddup_pd((gbase) + (stride) + 1);                 \
+    const __m128d ca_da = _mm_mul_pd(twv, aa);                                 \
+    const __m128d cb_db = _mm_mul_pd(twv, bb);                                 \
+    const __m128d db_cb = SWAP_RI_128_D(cb_db);                                \
+    gdest = _mm_addsub_pd(ca_da, db_cb);                                       \
+}
+
 #endif // AOCLFFTZ_SIMD_COMMON_H

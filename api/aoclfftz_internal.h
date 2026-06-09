@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file aoclfftz_internal.h
  *
@@ -49,8 +24,6 @@
 #include "types.h"
 #include "aoclfftz.h"
 
-#define AOCLFFTZ_INTERNAL_LIBRARY_VERSION "AOCL-FFTZ Internal 1.0"
-
 #define AOCLFFTZ_2_PI 6.2831853071795864769252867665590057683943388
 #define AOCLFFTZ_2_PIf 6.2831853071795864769252867665590057683943388f
 
@@ -58,8 +31,6 @@
 // 0, 1 reserved for FP8 & FP16
 #define DT_FLOAT 2
 #define DT_DOUBLE 3
-#define MAX_GUARANTEED_CACHEABLE_SIZE (2097152) // 2MB
-
 // Set and Get Flags bits
 #define BIT_FLAG32_ON(flags, nbit) ((flags) |= (0x1 << (nbit)))
 #define BIT_FLAG32_OFF(flags, nbit) ((flags) &= ~(0x1 << (nbit)))
@@ -88,9 +59,19 @@
 // Set Flags
 #define SET_PRECISION(flags, val) (flags = (flags & 0x3FFFFFFF) | (val << 30))
 #define SET_INPLACE(flags) SET_BIT_FLAG32(flags, 0, 0)
+#define SET_OUTOFPLACE(flags) SET_BIT_FLAG32(flags, 0, 1)
+
+#define SET_FFT_DIR(flags, val) SET_BIT_FLAG32(flags, 2, val)
 
 #define SET_BIT_REPRODUCIBLE(flags, val) SET_BIT_FLAG32(flags, 4, val)
 #define GET_BIT_REPRODUCIBLE(flags) GET_BIT_FLAG32(flags, 4)
+
+#define SET_NOT_INNERMOST_DIM(flags) SET_BIT_FLAG32(flags, 10, 1)
+#define IS_NOT_INNERMOST_DIM(flags) GET_BIT_FLAG32(flags, 10)
+
+#define SET_BUFFERED(flags) SET_BIT_FLAG32(flags, 11, 1)
+#define UNSET_BUFFERED(flags) SET_BIT_FLAG32(flags, 11, 0)
+#define IS_BUFFERED(flags) GET_BIT_FLAG32(flags, 11)
 
 // Get size of datatype based on the precision
 #define DT_PRECISION_BYTES(dt_prec) (1 << dt_prec)
@@ -129,7 +110,13 @@
 
 #define NUM_REAL_KERNELS_VARIANTS 3
 #define NUM_KERNEL_CATEGORIES 4
-#define NUM_KERNELS_IN_EACH_CATEGORY 15
+
+// Number of standard kernels (radix 2 to 16)
+#define NUM_STANDARD_KERNELS 15
+// Number of higher radix kernels (radix > 16, e.g., radix 48)
+#define NUMBER_OF_HIGHER_RADIX_KERNELS 2
+// Total number of kernels in each category
+#define NUM_KERNELS_IN_EACH_CATEGORY (NUM_STANDARD_KERNELS + NUMBER_OF_HIGHER_RADIX_KERNELS)
 
 #define NUM_KERNELS_IN_EACH_DFT_VARIANT                                        \
     (NUM_KERNELS_IN_EACH_CATEGORY * NUM_KERNEL_CATEGORIES)
@@ -175,6 +162,7 @@ typedef struct aoclfftz_strides aoclfftz_strides_t;
 typedef struct aoclfftz_twiddle aoclfftz_twiddle_t;
 typedef struct aoclfftz_bluestein aoclfftz_bluestein_t;
 typedef struct aoclfftz_buffered aoclfftz_buffered_t;
+typedef struct aoclfftz_sr aoclfftz_sr_t;
 typedef struct aoclfftz_executor aoclfftz_executor_t;
 typedef struct aoclfftz_realhelper aoclfftz_realhelper_t;
 
@@ -227,6 +215,7 @@ typedef struct aoclfftz_generic_solver
     dft_solver_ execute_solver;
     VOID (*destroy_solver)(aoclfftz_solution_t *solution);
     kernel_info_t *kernel_c2c;
+    kernel_info_t *kernel_c2c_r; // Used by batched_ct_l1_direct solver only
     kernel_info_t *kernel_r2hc;
     kernel_info_t *kernel_r2hcf;
 } aoclfftz_generic_solver_t;
@@ -247,7 +236,6 @@ typedef struct aoclfftz_decomp_scheme
     VOID *out_imag;
     aoclfftz_cntrl_params_t *cntrl_params;
     thread_info_t *thread_info;
-    UINT32 decomp_level;
     // Application side flag bits
     //   bit 0: (0) in-place / (1) out-of-place
     //   bit 1: (0) in-order / (1) out-of-order
@@ -259,6 +247,8 @@ typedef struct aoclfftz_decomp_scheme
     //  transpose (alongside DFT): 9th-bit
     //   bit 8     : (0) no-transpose / (1) transpose
     //   bit 9     : (0) (transpose+fft) / (1) fft (no transpose)
+    //   bit 10    : (0) innermost dimension / (1) not innermost dimension (of ND-dim problem)
+    //   bit 11    : (0) not buffered / (1) buffered
     //   bit 16    : (0) fixed selector mode / (1) auto tuner selector mode
     //   bit 30-31 : floating point datatype precision
     //               (00) 8-bit / (01) 16-bit / (10) 32-bit / (11) 64-bit
@@ -277,17 +267,31 @@ typedef struct aoclfftz_twiddle
     UINTP load_multi_cols; /*< determines whether multiple columns are to be loaded from the twiddle buffer per iteration in the twiddle kernels */
 } aoclfftz_twiddle_t;
 
+// Function pointer for elementwise multiplication kernels.
+// Two direction-specialized variants are stored in ele_mul[NUM_FFT_DIRS]:
+// ele_mul[FORWARD_FFT_DIR] computes a .* conj(b), ele_mul[BACKWARD_FFT_DIR]
+// computes a .* b. Selection happens at the call site, not inside the kernel.
+typedef VOID (*elementwise_mul_)(VOID *out, VOID *a, VOID *b, INTP n);
+
+// Function pointer for in-place complex buffer normalization kernels.
+// data[i] *= factor for i in [0, n) complex elements (factor is real and is
+// applied uniformly to real and imaginary parts)
+typedef VOID (*normalize_)(VOID *data, INTP n, DOUBLE factor);
+
 // Holds bluestein sequence B used by the bluestein solver
 // When FFT is computed for B, it will be stored in B_out and
-// is_B_out_valid will be set to 1.
-// Also holds the internal input and output buffers.
+// is_chirp_fft_computed will be set to 1.
+// Also holds the internal input and output buffers, and the elementwise
+// multiplication and normalization kernels selected by the selector.
 typedef struct aoclfftz_bluestein
 {
     VOID *B;
     VOID *B_out;
     VOID *in;
     VOID *out;
-    UINT8 is_B_out_valid;
+    UINT8 is_chirp_fft_computed;
+    elementwise_mul_ ele_mul[NUM_FFT_DIRS];
+    normalize_ normalize;
 } aoclfftz_bluestein_t;
 
 typedef struct aoclfftz_buffered
@@ -302,6 +306,21 @@ typedef struct aoclfftz_buffered
     //       nodes from the current solution.
     VOID **out_ptr;
 } aoclfftz_buffered_t;
+
+// Holds split-radix solver specific sub-solutions and buffers.
+// The SR algorithm decomposes an N-point FFT into:
+//   - Even: N/2-point sub-problem (stored via next_sol[0])
+//   - Odd1: N/4-point sub-problem (indices 1, 5, 9, ...)
+//   - Odd3: N/4-point sub-problem (indices 3, 7, 11, ...)
+// The input_copy buffer is used for in-place transforms to preserve input data
+// before the sub-problems overwrite the output buffer.
+typedef struct aoclfftz_sr
+{
+    aoclfftz_solution_t *odd1_sol;  // N/4-point sub-solution for odd-1 indices
+    aoclfftz_solution_t *odd3_sol;  // N/4-point sub-solution for odd-3 indices
+    VOID *input_copy;               // Pre-allocated buffer for in-place input safety copy
+    INTP  input_copy_size;          // Size of input_copy buffer in bytes
+} aoclfftz_sr_t;
 
 // Internal types to denote complex numbers in fftz's transpose routines
 typedef struct aoclfftz_complex_f
@@ -355,33 +374,6 @@ typedef struct aoclfftz_strides
     INTP v_out_stride;
 } aoclfftz_strides_t;
 
-#if 0 //New - union based
-typedef enum {
-    STRIDE_TYPE_CFFT,
-    STRIDE_TYPE_RFFT,
-    STRIDE_TYPE_RFFT_C2C,
-    STRIDE_TYPE_RFFT_R2HC,
-    STRIDE_TYPE_RFFT_R2HCF
-} stride_type_t;
-
-typedef struct aoclfftz_strides_grp
-{
-    stride_type_t active_type;
-    union
-    {
-        aoclfftz_strides_t* strides;  // Use only this strides for complex ffts
-        struct
-        {                      // Use multiple strides for real ffts
-            aoclfftz_strides_t* strides;
-            aoclfftz_strides_t* strides_c2c;
-            aoclfftz_strides_t* strides_r2hc;
-            aoclfftz_strides_t* strides_r2hcf;
-            aoclfftz_strides_t* strides_c2r_ct_op; // for real C2R out-of-place CT problems
-            uint8_t active_mask;
-        } strides_real;
-    } strides_data;
-} aoclfftz_strides_grp_t;
-#else //New - separate struct of pointers based
 typedef struct aoclfftz_strides_grp
 {
     aoclfftz_strides_t* strides;        // for complex Kernels
@@ -395,30 +387,17 @@ typedef struct aoclfftz_strides_grp
                                               and output strides as unit-strides to align with auxiliary buffer.
                                             */
 } aoclfftz_strides_grp_t;
-#endif //New variants
 
 /////////////////////////// STRIDE RELATED : END //////////////////////////////
 
 /////////////////////////// BUFS RELATED : START //////////////////////////////
-#if 0 //New - union based
-typedef struct aoclfftz_dft_bufs
-{
-    union {
-        aoclfftz_bluestein_t* bluestein;
-        aoclfftz_buffered_t* buffered;
-        aoclfftz_transpose_t* transpose;
-        aoclfftz_solution_t* nd_sol; // may hold one of the solutions of ND
-        VOID* scratch_space;
-    } dft_bufs_data;
-} aoclfftz_dft_bufs_t;
-#else //New - separate struct of pointers based
 typedef struct aoclfftz_dft_bufs
 {
     aoclfftz_bluestein_t* bluestein;
     aoclfftz_buffered_t* buffered;
     aoclfftz_transpose_t* transpose;
     aoclfftz_solution_t* nd_sol; // may hold one of the solutions of ND
-    VOID* scratch_space; // scratch space for transpose operation
+    aoclfftz_sr_t* sr; // split-radix solver specific data (sub-solutions + buffers)
     VOID *ct_buffer; // auxiliary buffer for CT problems
     VOID *ct_buf_real; // real part of ct_buffer
     VOID *ct_buf_imag; // imaginary part of ct_buffer
@@ -428,10 +407,13 @@ typedef struct aoclfftz_dft_bufs
                              to store the modified input.
                            */
     INTP ct_buf_size; // size of ct_buffer per thread
-    UINT8 reset_ct_buf_offset; // when enabled (1), do not move the buffer offset across batches
-    UINT8 use_2D_buffering; // 1 when compact buffer optimized approach is used
+    INT32 num_ct_buf; // number of ct_buffer allocated in total. It should be
+                      // equal to the number of threads assigned to the first CT
+                      // stage in the solution.
+    UINT32 ct_buf_allocated; // to know that the solution originally allocated
+                             // the buffer and is responsible for freeing it in
+                             // the end.
 } aoclfftz_dft_bufs_t;
-#endif
 /////////////////////////// BUFS RELATED : END ////////////////////////////////
 
 // Solution data structure that is returned as a handle by the setup API and
@@ -441,7 +423,6 @@ typedef struct aoclfftz_dft_bufs
 // from a contiguous memory pool
 // Elements within a node => solver->decomp_scheme->strides_grpdft_bufs shall
 // come from contiguous memory region. twiddle (one-time separate alloc region)
-#if 1
 typedef struct aoclfftz_solution
 {
     aoclfftz_generic_solver_t *solver;
@@ -450,28 +431,7 @@ typedef struct aoclfftz_solution
     aoclfftz_dft_bufs_t *dft_bufs;
     aoclfftz_twiddle_t *twiddle;
     aoclfftz_solution_t **next_sol;
-    UINT8* extra1;
-    UINT8* extra2;
 } aoclfftz_solution_t;
-#else
-typedef struct aoclfftz_solution
-{
-    aoclfftz_generic_solver_t* solver;
-    aoclfftz_decomp_scheme_t* decomp_scheme;
-    aoclfftz_strides_t* strides;        // for complex Kernels
-    aoclfftz_strides_t* strides_c2c;    // for real C2C Kernels
-    aoclfftz_strides_t* strides_r2hc;   // for real R2HC Kernels
-    aoclfftz_strides_t* strides_r2hcf;  // for real R2HC-Fused Kernels
-    aoclfftz_strides_t* strides_c2r_ct_op; // for real C2R out-of-place CT problems
-    aoclfftz_twiddle_t* twiddle;
-    aoclfftz_bluestein_t* bluestein;
-    aoclfftz_buffered_t* buffered;
-    aoclfftz_transpose_t* transpose;
-    aoclfftz_solution_t* nd_sol; // holds one of the solutions of ND, else NULL
-    aoclfftz_solution_t** next_sol;
-    void* scratch_space;
-} aoclfftz_solution_t;
-#endif
 
 // Helper data structure to store setup-time information related to real solvers
 // and selectors.
@@ -485,42 +445,6 @@ typedef struct aoclfftz_realhelper
     UINT8 is_buffered_invoked;
     INT32 num_aux_buf;
 } aoclfftz_realhelper_t;
-
-// float LP64
-// DFT data structure that holds all other module objects and is the top-level
-// data structure of the library.
-typedef struct
-{
-    aoclfftz_prob_desc_f *prob_desc;
-    aoclfftz_solution_t *sol_handle;
-} aoclfftz_dft_f;
-
-// double LP64
-// DFT data structure that holds all other module objects and is the top-level
-// data structure of the library.
-typedef struct
-{
-    aoclfftz_prob_desc_d *prob_desc;
-    aoclfftz_solution_t *sol_handle;
-} aoclfftz_dft_d;
-
-// float ILP64
-// DFT data structure that holds all other module objects and is the top-level
-// data structure of the library.
-typedef struct
-{
-    aoclfftz_prob_desc_f_64_ *prob_desc;
-    aoclfftz_solution_t *sol_handle;
-} aoclfftz_dft_f_64_;
-
-// double LP64
-// DFT data structure that holds all other module objects and is the top-level
-// data structure of the library.
-typedef struct
-{
-    aoclfftz_prob_desc_d_64_ *prob_desc;
-    aoclfftz_solution_t *sol_handle;
-} aoclfftz_dft_d_64_;
 
 execute_ register_execute_dft(VOID);
 

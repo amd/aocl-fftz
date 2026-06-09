@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file utils.h
  *
@@ -45,9 +20,23 @@
 
 extern INT32 global_logger_mode;
 
-#define AOCLFFTZ_STATS
+/**
+ * @brief Calculate minimum buffer size for strided array access.
+ *
+ * For @p n elements accessed at positions 0, stride, 2*stride, ...,
+ * (n-1)*stride, returns the minimum contiguous buffer size in bytes.
+ *
+ * @param n         Number of elements
+ * @param stride    Stride between consecutive elements
+ * @param elem_size Size of each element in bytes
+ * @return Required buffer size in bytes
+ */
+static inline INTP strided_buffer_size(INTP n, INTP stride, INTP elem_size)
+{
+    return ((n - 1) * stride + 1) * elem_size;
+}
 
-#define AOCLFFTZ_CPUID_SIMD_DETECTION
+#define AOCLFFTZ_STATS
 
 #if defined(__GNUC__) && __GNUC__ >= 3
 #define FUNC_NAME __func__
@@ -151,13 +140,9 @@ typedef struct timespec timeVal;
 #endif
 #endif
 
-VOID cpu_features_detection(INTP fn, INTP optVal,
-                            INTP *eax, INTP *ebx,
-                            INTP *ecx, INTP *edx);
-
 const CHAR* get_status_string(aoclfftz_error_type status);
 
-EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level);
+INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level);
 
 #ifdef ENABLE_APP_INFO_LOGS
 #define PRINT_PROBLEM_DESCRIPTOR(problem, dt_type, f_specifier, data_model)    \

@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file fftz_translator.c
  *
@@ -159,15 +134,24 @@ dv_desc *get_dv_desc(INT32 rank, const INT32 *n)
     p_dv_desc->vecs[0].in_stride = 1;
     p_dv_desc->vecs[0].out_stride = 1;
 
-    p_dv_desc->dim_rank = rank;
+    p_dv_desc->dim_rank = (rank > 0) ? rank : 1;
     ALLOC_ALIGN_UNINIT(p_dv_desc->dims, aoclfftz_dim_t,
-                       sizeof(aoclfftz_dim_t) * rank);
+                       sizeof(aoclfftz_dim_t) * p_dv_desc->dim_rank);
     if (p_dv_desc->dims == NULL)
     {
         FREE_ALIGN_ALLOCATED_MEM(p_dv_desc->vecs);
         FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
         return NULL;
     }
+
+    if (rank == 0)
+    {
+        p_dv_desc->dims[0].n = 1;
+        p_dv_desc->dims[0].in_stride = 1;
+        p_dv_desc->dims[0].out_stride = 1;
+        return p_dv_desc;
+    }
+
     for (INT32 i = 0; i < rank; i++)
     {
         p_dv_desc->dims[i].n = n[rank - i - 1];
@@ -179,7 +163,7 @@ dv_desc *get_dv_desc(INT32 rank, const INT32 *n)
     {
         p_dv_desc->dims[i].in_stride  = p_dv_desc->dims[i - 1].in_stride *
                                         p_dv_desc->dims[i - 1].n;
-        p_dv_desc->dims[i].out_stride = p_dv_desc->dims[i - 1].in_stride *
+        p_dv_desc->dims[i].out_stride = p_dv_desc->dims[i - 1].out_stride *
                                         p_dv_desc->dims[i - 1].n;
     }
 
@@ -208,15 +192,25 @@ dv_desc *get_r2c_dv_desc(INT32 rank, const INT32 *n, INT32 is_inplace)
     p_dv_desc->vecs[0].in_stride = 1;
     p_dv_desc->vecs[0].out_stride = 1;
 
-    p_dv_desc->dim_rank = rank;
+    INT32 effective_rank = (rank > 0) ? rank : 1;
+    p_dv_desc->dim_rank = effective_rank;
     ALLOC_ALIGN_UNINIT(p_dv_desc->dims, aoclfftz_dim_t,
-                       sizeof(aoclfftz_dim_t) * rank);
+                       sizeof(aoclfftz_dim_t) * effective_rank);
     if (p_dv_desc->dims == NULL)
     {
         FREE_ALIGN_ALLOCATED_MEM(p_dv_desc->vecs);
         FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
         return NULL;
     }
+
+    if (rank == 0)
+    {
+        p_dv_desc->dims[0].n = 1;
+        p_dv_desc->dims[0].in_stride = 1;
+        p_dv_desc->dims[0].out_stride = 1;
+        return p_dv_desc;
+    }
+
     for (INT32 i = 0; i < rank; i++)
     {
         p_dv_desc->dims[i].n = n[rank - i - 1];
@@ -228,23 +222,27 @@ dv_desc *get_r2c_dv_desc(INT32 rank, const INT32 *n, INT32 is_inplace)
     {
         if (is_inplace)
         {
-            p_dv_desc->dims[1].in_stride = p_dv_desc->dims[1].out_stride =
+            p_dv_desc->dims[1].in_stride =
                 (p_dv_desc->dims[0].n / 2 + 1) * 2 *
+                p_dv_desc->dims[0].in_stride;
+            p_dv_desc->dims[1].out_stride =
+                (p_dv_desc->dims[0].n / 2 + 1) *
                 p_dv_desc->dims[0].out_stride;
         }
         else
         {
             p_dv_desc->dims[1].in_stride =
                 p_dv_desc->dims[0].n * p_dv_desc->dims[0].in_stride;
-            p_dv_desc->dims[1].out_stride = (p_dv_desc->dims[0].n / 2 + 1) * 2 *
-                                            p_dv_desc->dims[0].out_stride;
+            p_dv_desc->dims[1].out_stride =
+                (p_dv_desc->dims[0].n / 2 + 1) *
+                p_dv_desc->dims[0].out_stride;
         }
     }
     for (INT32 i = 2; i < rank; i++)
     {
         p_dv_desc->dims[i].in_stride  = p_dv_desc->dims[i - 1].in_stride *
                                         p_dv_desc->dims[i - 1].n;
-        p_dv_desc->dims[i].out_stride = p_dv_desc->dims[i - 1].in_stride *
+        p_dv_desc->dims[i].out_stride = p_dv_desc->dims[i - 1].out_stride *
                                         p_dv_desc->dims[i - 1].n;
     }
 
@@ -273,15 +271,25 @@ dv_desc *get_c2r_dv_desc(INT32 rank, const INT32 *n, INT32 is_inplace)
     p_dv_desc->vecs[0].in_stride = 1;
     p_dv_desc->vecs[0].out_stride = 1;
 
-    p_dv_desc->dim_rank = rank;
+    INT32 effective_rank = (rank > 0) ? rank : 1;
+    p_dv_desc->dim_rank = effective_rank;
     ALLOC_ALIGN_UNINIT(p_dv_desc->dims, aoclfftz_dim_t,
-                       sizeof(aoclfftz_dim_t) * rank);
+                       sizeof(aoclfftz_dim_t) * effective_rank);
     if (p_dv_desc->dims == NULL)
     {
         FREE_ALIGN_ALLOCATED_MEM(p_dv_desc->vecs);
         FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
         return NULL;
     }
+
+    if (rank == 0)
+    {
+        p_dv_desc->dims[0].n = 1;
+        p_dv_desc->dims[0].in_stride = 1;
+        p_dv_desc->dims[0].out_stride = 1;
+        return p_dv_desc;
+    }
+
     for (INT32 i = 0; i < rank; i++)
     {
         p_dv_desc->dims[i].n = n[rank - i - 1];
@@ -293,14 +301,18 @@ dv_desc *get_c2r_dv_desc(INT32 rank, const INT32 *n, INT32 is_inplace)
     {
         if (is_inplace)
         {
-            p_dv_desc->dims[1].in_stride = p_dv_desc->dims[1].out_stride =
+            p_dv_desc->dims[1].in_stride =
+                (p_dv_desc->dims[0].n / 2 + 1) *
+                p_dv_desc->dims[0].in_stride;
+            p_dv_desc->dims[1].out_stride =
                 (p_dv_desc->dims[0].n / 2 + 1) * 2 *
                 p_dv_desc->dims[0].out_stride;
         }
         else
         {
-            p_dv_desc->dims[1].in_stride = (p_dv_desc->dims[0].n / 2 + 1) * 2 *
-                                           p_dv_desc->dims[0].in_stride;
+            p_dv_desc->dims[1].in_stride =
+                (p_dv_desc->dims[0].n / 2 + 1) *
+                p_dv_desc->dims[0].in_stride;
             p_dv_desc->dims[1].out_stride =
                 p_dv_desc->dims[0].n * p_dv_desc->dims[0].out_stride;
         }
@@ -309,7 +321,7 @@ dv_desc *get_c2r_dv_desc(INT32 rank, const INT32 *n, INT32 is_inplace)
     {
         p_dv_desc->dims[i].in_stride  = p_dv_desc->dims[i - 1].in_stride *
                                         p_dv_desc->dims[i - 1].n;
-        p_dv_desc->dims[i].out_stride = p_dv_desc->dims[i - 1].in_stride *
+        p_dv_desc->dims[i].out_stride = p_dv_desc->dims[i - 1].out_stride *
                                         p_dv_desc->dims[i - 1].n;
     }
 
@@ -320,14 +332,11 @@ dv_desc *get_many_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
                                const INT32 *inembed, INT32 istride, INT32 idist,
                                const INT32 *onembed, INT32 ostride, INT32 odist)
 {
-    if (inembed == NULL)
-    {
-        inembed = n;
-    }
-    if (onembed == NULL)
-    {
-        onembed = n;
-    }
+    inembed = (inembed == NULL) ? n : inembed;
+    onembed = (onembed == NULL) ? n : onembed;
+
+    istride = (istride == 0) ? 1 : istride;
+    ostride = (ostride == 0) ? 1 : ostride;
 
     dv_desc *p_dv_desc = NULL;
     ALLOC_ALIGN_UNINIT(p_dv_desc, dv_desc, sizeof(dv_desc));
@@ -344,20 +353,28 @@ dv_desc *get_many_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
         return NULL;
     }
     p_dv_desc->vecs[0].n = howmany;
-    // Since, FFTZ requires in_stride and out_stride to be non-zero.
-    // Setting in_stride and out_stride to 1 if not provided.
     p_dv_desc->vecs[0].in_stride = idist == 0 ? 1 : idist;
     p_dv_desc->vecs[0].out_stride = odist == 0 ? 1 : odist;
 
-    p_dv_desc->dim_rank = rank;
+    INT32 effective_rank = (rank > 0) ? rank : 1;
+    p_dv_desc->dim_rank = effective_rank;
     ALLOC_ALIGN_UNINIT(p_dv_desc->dims, aoclfftz_dim_t,
-                       sizeof(aoclfftz_dim_t) * rank);
+                       sizeof(aoclfftz_dim_t) * effective_rank);
     if (p_dv_desc->dims == NULL)
     {
         FREE_ALIGN_ALLOCATED_MEM(p_dv_desc->vecs);
         FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
         return NULL;
     }
+
+    if (rank == 0)
+    {
+        p_dv_desc->dims[0].n = 1;
+        p_dv_desc->dims[0].in_stride = 1;
+        p_dv_desc->dims[0].out_stride = 1;
+        return p_dv_desc;
+    }
+
     for (INT32 i = 0; i < rank; i++)
     {
         p_dv_desc->dims[i].n = n[rank - i - 1];
@@ -380,6 +397,9 @@ dv_desc *get_many_r2c_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
                                const INT32 *inembed, INT32 istride, INT32 idist,
                                const INT32 *onembed, INT32 ostride, INT32 odist, INT32 is_inplace)
 {
+    istride = (istride == 0) ? 1 : istride;
+    ostride = (ostride == 0) ? 1 : ostride;
+
     dv_desc *p_dv_desc = NULL;
     ALLOC_ALIGN_UNINIT(p_dv_desc, dv_desc, sizeof(dv_desc));
     if (p_dv_desc == NULL)
@@ -394,18 +414,28 @@ dv_desc *get_many_r2c_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
         return NULL;
     }
     p_dv_desc->vecs[0].n = howmany;
-    p_dv_desc->vecs[0].in_stride = idist;
-    p_dv_desc->vecs[0].out_stride = odist;
+    p_dv_desc->vecs[0].in_stride = (idist == 0) ? 1 : idist;
+    p_dv_desc->vecs[0].out_stride = (odist == 0) ? 1 : odist;
 
-    p_dv_desc->dim_rank = rank;
+    INT32 effective_rank = (rank > 0) ? rank : 1;
+    p_dv_desc->dim_rank = effective_rank;
     ALLOC_ALIGN_UNINIT(p_dv_desc->dims, aoclfftz_dim_t,
-                       sizeof(aoclfftz_dim_t) * rank);
+                       sizeof(aoclfftz_dim_t) * effective_rank);
     if (p_dv_desc->dims == NULL)
     {
         FREE_ALIGN_ALLOCATED_MEM(p_dv_desc->vecs);
         FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
         return NULL;
     }
+
+    if (rank == 0)
+    {
+        p_dv_desc->dims[0].n = 1;
+        p_dv_desc->dims[0].in_stride = 1;
+        p_dv_desc->dims[0].out_stride = 1;
+        return p_dv_desc;
+    }
+
     for (INT32 i = 0; i < rank; i++)
     {
         p_dv_desc->dims[i].n = n[rank - i - 1];
@@ -429,9 +459,7 @@ dv_desc *get_many_r2c_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
     }
     else
     {
-        // set in_stride and out_stride for rank 0
         p_dv_desc->dims[0].in_stride = istride;
-        // set in_stride for rank 1
         if (rank > 1)
         {
             if (is_inplace)
@@ -446,7 +474,6 @@ dv_desc *get_many_r2c_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
                     p_dv_desc->dims[0].in_stride * p_dv_desc->dims[0].n;
             }
         }
-        // set in_stride for rank > 1
         for (INT32 i = 2; i < rank; i++)
         {
             p_dv_desc->dims[i].in_stride = p_dv_desc->dims[i - 1].in_stride *
@@ -472,15 +499,12 @@ dv_desc *get_many_r2c_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
     }
     else
     {
-        // set in_stride and out_stride for rank 0
         p_dv_desc->dims[0].out_stride = ostride;
-        // set out_stride for rank 1
         if (rank > 1)
         {
             p_dv_desc->dims[1].out_stride = p_dv_desc->dims[0].out_stride *
-                                            ((p_dv_desc->dims[0].n * 2) + 1);
+                                            ((p_dv_desc->dims[0].n / 2) + 1);
         }
-        // set out_stride for rank > 1
         for (INT32 i = 2; i < rank; i++)
         {
             p_dv_desc->dims[i].out_stride = p_dv_desc->dims[i - 1].out_stride *
@@ -494,6 +518,9 @@ dv_desc *get_many_c2r_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
                                const INT32 *inembed, INT32 istride, INT32 idist,
                                const INT32 *onembed, INT32 ostride, INT32 odist, INT32 is_inplace)
 {
+    istride = (istride == 0) ? 1 : istride;
+    ostride = (ostride == 0) ? 1 : ostride;
+
     dv_desc *p_dv_desc = NULL;
     ALLOC_ALIGN_UNINIT(p_dv_desc, dv_desc, sizeof(dv_desc));
     if (p_dv_desc == NULL)
@@ -509,18 +536,28 @@ dv_desc *get_many_c2r_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
         return NULL;
     }
     p_dv_desc->vecs[0].n = howmany;
-    p_dv_desc->vecs[0].in_stride = idist;
-    p_dv_desc->vecs[0].out_stride = odist;
+    p_dv_desc->vecs[0].in_stride = idist == 0 ? 1 : idist;
+    p_dv_desc->vecs[0].out_stride = odist == 0 ? 1 : odist;
 
-    p_dv_desc->dim_rank = rank;
+    INT32 effective_rank = (rank > 0) ? rank : 1;
+    p_dv_desc->dim_rank = effective_rank;
     ALLOC_ALIGN_UNINIT(p_dv_desc->dims, aoclfftz_dim_t,
-                       sizeof(aoclfftz_dim_t) * rank);
+                       sizeof(aoclfftz_dim_t) * effective_rank);
     if (p_dv_desc->dims == NULL)
     {
         FREE_ALIGN_ALLOCATED_MEM(p_dv_desc->vecs);
         FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
         return NULL;
     }
+
+    if (rank == 0)
+    {
+        p_dv_desc->dims[0].n = 1;
+        p_dv_desc->dims[0].in_stride = 1;
+        p_dv_desc->dims[0].out_stride = 1;
+        return p_dv_desc;
+    }
+
     for (INT32 i = 0; i < rank; i++)
     {
         p_dv_desc->dims[i].n = n[rank - i - 1];
@@ -544,15 +581,13 @@ dv_desc *get_many_c2r_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
     }
     else
     {
-        // set in_stride and out_stride for rank 0
         p_dv_desc->dims[0].in_stride = istride;
-        // set in_stride for rank 1
         if (rank > 1)
         {
             p_dv_desc->dims[1].in_stride =
-                ((p_dv_desc->dims[0].in_stride * p_dv_desc->dims[0].n) * 2) + 1;
+                p_dv_desc->dims[0].in_stride *
+                ((p_dv_desc->dims[0].n / 2) + 1);
         }
-        // set in_stride for rank > 1
         for (INT32 i = 2; i < rank; i++)
         {
             p_dv_desc->dims[i].in_stride = p_dv_desc->dims[i - 1].in_stride *
@@ -578,16 +613,14 @@ dv_desc *get_many_c2r_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
     }
     else
     {
-        // set in_stride and out_stride for rank 0
         p_dv_desc->dims[0].out_stride = ostride;
-        // set out_stride for rank 1
         if (rank > 1)
         {
             if (is_inplace)
             {
                 p_dv_desc->dims[1].out_stride =
-                   (((p_dv_desc->dims[0].out_stride * p_dv_desc->dims[0].n) / 2)
-                      + 1) * 2;
+                    p_dv_desc->dims[0].out_stride *
+                    ((p_dv_desc->dims[0].n / 2) + 1) * 2;
             }
             else
             {
@@ -595,7 +628,6 @@ dv_desc *get_many_c2r_dv_desc(INT32 rank, const INT32 *n, INT32 howmany,
                     p_dv_desc->dims[0].out_stride * p_dv_desc->dims[0].n;
             }
         }
-        // set out_stride for rank > 1
         for (INT32 i = 2; i < rank; i++)
         {
             p_dv_desc->dims[i].out_stride = p_dv_desc->dims[i - 1].out_stride *
@@ -615,35 +647,70 @@ dv_desc *get_guru_dv_desc(INT32 rank, const fftw_iodim *dims,
         return NULL;
     }
 
-    p_dv_desc->vec_rank = howmany_rank;
-    ALLOC_ALIGN_UNINIT(p_dv_desc->vecs, aoclfftz_dim_t,
-                       sizeof(aoclfftz_dim_t) * howmany_rank);
-    if (p_dv_desc->vecs == NULL)
+    if (howmany_rank > 0)
     {
-        FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
-        return NULL;
+        p_dv_desc->vec_rank = howmany_rank;
+        ALLOC_ALIGN_UNINIT(p_dv_desc->vecs, aoclfftz_dim_t,
+                           sizeof(aoclfftz_dim_t) * howmany_rank);
+        if (p_dv_desc->vecs == NULL)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
+            return NULL;
+        }
+        for (INT32 i = 0; i < howmany_rank; i++)
+        {
+            p_dv_desc->vecs[i].n = howmany_dims[howmany_rank - i - 1].n;
+            p_dv_desc->vecs[i].in_stride = howmany_dims[howmany_rank - i - 1].is;
+            p_dv_desc->vecs[i].out_stride = howmany_dims[howmany_rank - i - 1].os;
+        }
     }
-    for (INT32 i = 0; i < howmany_rank; i++)
+    else
     {
-        p_dv_desc->vecs[i].n = howmany_dims[howmany_rank - i - 1].n;
-        p_dv_desc->vecs[i].in_stride = howmany_dims[howmany_rank - i - 1].is;
-        p_dv_desc->vecs[i].out_stride = howmany_dims[howmany_rank - i - 1].os;
+        p_dv_desc->vec_rank = 1;
+        ALLOC_ALIGN_UNINIT(p_dv_desc->vecs, aoclfftz_dim_t,
+                           sizeof(aoclfftz_dim_t));
+        if (p_dv_desc->vecs == NULL)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
+            return NULL;
+        }
+        p_dv_desc->vecs[0].n = 1;
+        p_dv_desc->vecs[0].in_stride = 1;
+        p_dv_desc->vecs[0].out_stride = 1;
     }
 
-    p_dv_desc->dim_rank = rank;
-    ALLOC_ALIGN_UNINIT(p_dv_desc->dims, aoclfftz_dim_t,
-                       sizeof(aoclfftz_dim_t) * rank);
-    if (p_dv_desc->dims == NULL)
+    if (rank > 0)
     {
-        FREE_ALIGN_ALLOCATED_MEM(p_dv_desc->vecs);
-        FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
-        return NULL;
+        p_dv_desc->dim_rank = rank;
+        ALLOC_ALIGN_UNINIT(p_dv_desc->dims, aoclfftz_dim_t,
+                           sizeof(aoclfftz_dim_t) * rank);
+        if (p_dv_desc->dims == NULL)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(p_dv_desc->vecs);
+            FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
+            return NULL;
+        }
+        for (INT32 i = 0; i < rank; i++)
+        {
+            p_dv_desc->dims[i].n = dims[rank - i - 1].n;
+            p_dv_desc->dims[i].in_stride = dims[rank - i - 1].is;
+            p_dv_desc->dims[i].out_stride = dims[rank - i - 1].os;
+        }
     }
-    for (INT32 i = 0; i < rank; i++)
+    else
     {
-        p_dv_desc->dims[i].n = dims[rank - i - 1].n;
-        p_dv_desc->dims[i].in_stride = dims[rank - i - 1].is;
-        p_dv_desc->dims[i].out_stride = dims[rank - i - 1].os;
+        p_dv_desc->dim_rank = 1;
+        ALLOC_ALIGN_UNINIT(p_dv_desc->dims, aoclfftz_dim_t,
+                           sizeof(aoclfftz_dim_t));
+        if (p_dv_desc->dims == NULL)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(p_dv_desc->vecs);
+            FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
+            return NULL;
+        }
+        p_dv_desc->dims[0].n = 1;
+        p_dv_desc->dims[0].in_stride = 1;
+        p_dv_desc->dims[0].out_stride = 1;
     }
 
     return p_dv_desc;
@@ -660,35 +727,70 @@ dv_desc_64_ *get_guru_64_dv_desc(INT32 rank, const fftw_iodim64 *dims,
         return NULL;
     }
 
-    p_dv_desc->vec_rank = howmany_rank;
-    ALLOC_ALIGN_UNINIT(p_dv_desc->vecs, aoclfftz_dim_t_64_,
-                       sizeof(aoclfftz_dim_t_64_) * howmany_rank);
-    if (p_dv_desc->vecs == NULL)
+    if (howmany_rank > 0)
     {
-        FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
-        return NULL;
+        p_dv_desc->vec_rank = howmany_rank;
+        ALLOC_ALIGN_UNINIT(p_dv_desc->vecs, aoclfftz_dim_t_64_,
+                           sizeof(aoclfftz_dim_t_64_) * howmany_rank);
+        if (p_dv_desc->vecs == NULL)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
+            return NULL;
+        }
+        for (INT32 i = 0; i < howmany_rank; i++)
+        {
+            p_dv_desc->vecs[i].n = howmany_dims[howmany_rank - i - 1].n;
+            p_dv_desc->vecs[i].in_stride = howmany_dims[howmany_rank - i - 1].is;
+            p_dv_desc->vecs[i].out_stride = howmany_dims[howmany_rank - i - 1].os;
+        }
     }
-    for (INT32 i = 0; i < howmany_rank; i++)
+    else
     {
-        p_dv_desc->vecs[i].n = howmany_dims[howmany_rank - i - 1].n;
-        p_dv_desc->vecs[i].in_stride = howmany_dims[howmany_rank - i - 1].is;
-        p_dv_desc->vecs[i].out_stride = howmany_dims[howmany_rank - i - 1].os;
+        p_dv_desc->vec_rank = 1;
+        ALLOC_ALIGN_UNINIT(p_dv_desc->vecs, aoclfftz_dim_t_64_,
+                           sizeof(aoclfftz_dim_t_64_));
+        if (p_dv_desc->vecs == NULL)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
+            return NULL;
+        }
+        p_dv_desc->vecs[0].n = 1;
+        p_dv_desc->vecs[0].in_stride = 1;
+        p_dv_desc->vecs[0].out_stride = 1;
     }
 
-    p_dv_desc->dim_rank = rank;
-    ALLOC_ALIGN_UNINIT(p_dv_desc->dims, aoclfftz_dim_t_64_,
-                       sizeof(aoclfftz_dim_t_64_) * rank);
-    if (p_dv_desc->dims == NULL)
+    if (rank > 0)
     {
-        FREE_ALIGN_ALLOCATED_MEM(p_dv_desc->vecs);
-        FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
-        return NULL;
+        p_dv_desc->dim_rank = rank;
+        ALLOC_ALIGN_UNINIT(p_dv_desc->dims, aoclfftz_dim_t_64_,
+                           sizeof(aoclfftz_dim_t_64_) * rank);
+        if (p_dv_desc->dims == NULL)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(p_dv_desc->vecs);
+            FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
+            return NULL;
+        }
+        for (INT32 i = 0; i < rank; i++)
+        {
+            p_dv_desc->dims[i].n = dims[rank - i - 1].n;
+            p_dv_desc->dims[i].in_stride = dims[rank - i - 1].is;
+            p_dv_desc->dims[i].out_stride = dims[rank - i - 1].os;
+        }
     }
-    for (INT32 i = 0; i < rank; i++)
+    else
     {
-        p_dv_desc->dims[i].n = dims[rank - i - 1].n;
-        p_dv_desc->dims[i].in_stride = dims[rank - i - 1].is;
-        p_dv_desc->dims[i].out_stride = dims[rank - i - 1].os;
+        p_dv_desc->dim_rank = 1;
+        ALLOC_ALIGN_UNINIT(p_dv_desc->dims, aoclfftz_dim_t_64_,
+                           sizeof(aoclfftz_dim_t_64_));
+        if (p_dv_desc->dims == NULL)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(p_dv_desc->vecs);
+            FREE_ALIGN_ALLOCATED_MEM(p_dv_desc);
+            return NULL;
+        }
+        p_dv_desc->dims[0].n = 1;
+        p_dv_desc->dims[0].in_stride = 1;
+        p_dv_desc->dims[0].out_stride = 1;
     }
 
     return p_dv_desc;

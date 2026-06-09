@@ -1,0 +1,293 @@
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
+
+/** @file rfft3c.c
+ *
+ *  @brief Radix-3 r2hc Real-FFT kernel with scalar operations in C
+ *
+ *  This file contains the DIT radix-3 real-to-halfcomplex implementations
+ *  using scalar operations for single-precision and double-precision inputs.
+ *
+ *  @author Srirammaswamy Srinivasan
+ */
+
+#include "core/kernels/kernel.h"
+
+// Forward and backward opscount are identical for float and double
+static const ops_cycles_t ops_cnt[NUM_PRECISIONS][NUM_FFT_DIRS] =
+                                                    {{{0, 2, 4, 6, 0, 0},
+                                                      {0, 2, 4, 6, 0, 0}},
+                                                     {{0, 2, 4, 6, 0, 0},
+                                                      {0, 2, 4, 6, 0, 0}}};
+
+ops_cycles_t get_ops_cnt_r2hc_rfft3c(UINT8 precision, UINT8 direction)
+{
+    if (precision == DT_FLOAT)
+    {
+        if (direction == FORWARD_FFT_DIR)
+        {
+            return ops_cnt[0][0];
+        }
+        else
+        {
+            return ops_cnt[0][1];
+        }
+    }
+    else
+    {
+        if (direction == FORWARD_FFT_DIR)
+        {
+            return ops_cnt[1][0];
+        }
+        else
+        {
+            return ops_cnt[1][1];
+        }
+    }
+}
+
+static VOID r2hc_rfft3c_fp32_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
+                                 VOID *out_imag, INTP n,
+                                 aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
+{
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
+    const FLOAT CRTM_3_1 = 0.500000000000000000000000000000000000000000000f;
+    const FLOAT CRTM_3_2 = 0.866025403784438646763723170752936183471402627f;
+
+    FLOAT *in = (FLOAT *)in_real;
+    FLOAT *out = (FLOAT *)out_real;
+#ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+#else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+#endif
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
+    INTP cnt;
+
+    for (cnt = 0; cnt < n; cnt++)
+    {
+        FLOAT v0, v1, v2;
+        FLOAT t0, t1, t2, t3;
+
+        // Input point 1: x(0)
+        v0 = *in;
+        // Input point 2: x(1)
+        v1 = in[in_strides[1]];
+        // Input point 3: x(2)
+        v2 = in[in_strides[2]];
+
+        t0 = v2 + v1;
+        t1 = v2 - v1;
+
+        t2 = CRTM_3_1 * t0;
+        t3 = CRTM_3_2 * t1;
+
+        // Output point 1: X(0)
+        *out = v0 + t0;
+
+        // Output point 2: X(1)
+        out[out_strides[1]] = v0 - t2;
+
+        // Output point 3: X(2)
+        out[out_strides[2]] = t3;
+
+        in = in + v_in_stride;
+        out = out + v_out_stride;
+    }
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
+}
+
+static VOID r2hc_rfft3c_fp32_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
+                                 VOID *out_imag, INTP n,
+                                 aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
+{
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
+    const FLOAT CRTM_3_1 = 1.732050807568877293527446341505872366942805254f;
+    const FLOAT CRTM_3_2 = 2.0f;
+
+    FLOAT *in = (FLOAT *)in_real;
+    FLOAT *out = (FLOAT *)out_real;
+#ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+#else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+#endif
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
+    INTP cnt;
+
+    for (cnt = 0; cnt < n; cnt++)
+    {
+        FLOAT v0, v1, v2;
+        FLOAT t0, t1, t2;
+
+        // Input point 1: x(0)
+        v0 = *in;
+        // Input point 2: x(1)
+        v1 = in[in_strides[1]];
+        // Input point 3: x(2)
+        v2 = in[in_strides[2]];
+
+        t0 = v0 - v1;
+        t1 = CRTM_3_1 * v2;
+        t2 = CRTM_3_2 * v1;
+
+        // Output point 1: X(0)
+        *out = v0 + t2;
+
+        // Output point 2: X(1)
+        out[out_strides[1]] = t0 - t1;
+
+        // Output point 3: X(2)
+        out[out_strides[2]] = t0 + t1;
+
+        in = in + v_in_stride;
+        out = out + v_out_stride;
+    }
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
+}
+
+static VOID r2hc_rfft3c_fp64_fwd(VOID *in_real, VOID *in_imag, VOID *out_real,
+                                 VOID *out_imag, INTP n,
+                                 aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
+{
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
+    const DOUBLE CRTM_3_1 = 0.500000000000000000000000000000000000000000000;
+    const DOUBLE CRTM_3_2 = 0.866025403784438646763723170752936183471402627;
+
+    DOUBLE *in = (DOUBLE *)in_real;
+    DOUBLE *out = (DOUBLE *)out_real;
+#ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+#else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+#endif
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
+    INTP cnt;
+
+    for (cnt = 0; cnt < n; cnt++)
+    {
+        DOUBLE v0, v1, v2;
+        DOUBLE t0, t1, t2, t3;
+
+        // Input point 1: x(0)
+        v0 = *in;
+        // Input point 2: x(1)
+        v1 = in[in_strides[1]];
+        // Input point 3: x(2)
+        v2 = in[in_strides[2]];
+
+        t0 = v2 + v1;
+        t1 = v2 - v1;
+
+        t2 = CRTM_3_1 * t0;
+        t3 = CRTM_3_2 * t1;
+
+        // Output point 1: X(0)
+        *out = v0 + t0;
+
+        // Output point 2: X(1)
+        out[out_strides[1]] = v0 - t2;
+
+        // Output point 3: X(2)
+        out[out_strides[2]] = t3;
+
+        in = in + v_in_stride;
+        out = out + v_out_stride;
+    }
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
+}
+
+static VOID r2hc_rfft3c_fp64_bwd(VOID *in_real, VOID *in_imag, VOID *out_real,
+                                 VOID *out_imag, INTP n,
+                                 aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
+{
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
+    const DOUBLE CRTM_3_1 = 1.732050807568877293527446341505872366942805254;
+    const DOUBLE CRTM_3_2 = 2.0;
+
+    DOUBLE *in = (DOUBLE *)in_real;
+    DOUBLE *out = (DOUBLE *)out_real;
+#ifdef VOLATILE_STRIDE_ARRAY
+    volatile INTP *in_strides = strides->in_strides;
+    volatile INTP *out_strides = strides->out_strides;
+#else
+    INTP *in_strides = strides->in_strides;
+    INTP *out_strides = strides->out_strides;
+#endif
+    INTP v_in_stride = strides->v_in_stride;
+    INTP v_out_stride = strides->v_out_stride;
+    INTP cnt;
+
+    for (cnt = 0; cnt < n; cnt++)
+    {
+        DOUBLE v0, v1, v2;
+        DOUBLE t0, t1, t2;
+
+        // Input point 1: x(0)
+        v0 = *in;
+        // Input point 2: x(1)
+        v1 = in[in_strides[1]];
+        // Input point 3: x(2)
+        v2 = in[in_strides[2]];
+
+        t0 = v0 - v1;
+        t1 = CRTM_3_1 * v2;
+        t2 = CRTM_3_2 * v1;
+
+        // Output point 1: X(0)
+        *out = v0 + t2;
+
+        // Output point 2: X(1)
+        out[out_strides[1]] = t0 - t1;
+
+        // Output point 3: X(2)
+        out[out_strides[2]] = t0 + t1;
+
+        in = in + v_in_stride;
+        out = out + v_out_stride;
+    }
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
+}
+
+kfft_ register_kernel_r2hc_rfft3c(UINT8 precision, UINT8 direction)
+{
+    if (direction == FORWARD_FFT_DIR)
+    {
+        if (precision == DT_FLOAT)
+        {
+            return r2hc_rfft3c_fp32_fwd;
+        }
+        else if (precision == DT_DOUBLE)
+        {
+            return r2hc_rfft3c_fp64_fwd;
+        }
+        else
+        {
+            return NULL;
+        }
+    }
+    else
+    {
+        if (precision == DT_FLOAT)
+        {
+            return r2hc_rfft3c_fp32_bwd;
+        }
+        else if (precision == DT_DOUBLE)
+        {
+            return r2hc_rfft3c_fp64_bwd;
+        }
+        else
+        {
+            return NULL;
+        }
+    }
+}

@@ -1,0 +1,40 @@
+# Copyright Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+
+# AOCL-FFTZ CMake Package Configuration File
+#
+#   aocl-fftz::aocl_fftz        - Shared library target
+#   aocl-fftz::aocl_fftz_static - Static library target
+#
+# Usage:
+#   find_package(aocl-fftz REQUIRED)
+#   target_link_libraries(target_app PRIVATE aocl-fftz::aocl_fftz)         # shared
+#   target_link_libraries(target_app PRIVATE aocl-fftz::aocl_fftz_static)  # static
+#
+
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Load shared and/or static target definitions, depending on what is installed.
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/aocl-fftz-shared-targets.cmake")
+  include("${CMAKE_CURRENT_LIST_DIR}/aocl-fftz-shared-targets.cmake")
+endif()
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/aocl-fftz-static-targets.cmake")
+  include("${CMAKE_CURRENT_LIST_DIR}/aocl-fftz-static-targets.cmake")
+endif()
+
+if(NOT TARGET aocl-fftz::aocl_fftz AND NOT TARGET aocl-fftz::aocl_fftz_static)
+  message(FATAL_ERROR "find_package(aocl-fftz): No imported targets found. "
+    "Missing aocl-fftz-shared-targets.cmake and/or aocl-fftz-static-targets.cmake in "
+    "${CMAKE_CURRENT_LIST_DIR}. Check if the package was installed correctly.")
+endif()
+
+# If the static target was built with OpenMP, resolve it at package-load time.
+if(TARGET aocl-fftz::aocl_fftz_static)
+  get_target_property(_aoclfftz_static_libs aocl-fftz::aocl_fftz_static INTERFACE_LINK_LIBRARIES)
+  if(_aoclfftz_static_libs AND _aoclfftz_static_libs MATCHES "OpenMP::")
+    find_dependency(OpenMP REQUIRED)
+  endif()
+  unset(_aoclfftz_static_libs)
+endif()

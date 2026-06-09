@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file selector_batched_dft.c
  *
@@ -44,25 +19,82 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    if (sel == NULL || sel->solution == NULL ||
+        sel->solution->decomp_scheme == NULL)
+    {
+        AOCLFFTZ_LOG(INFO, global_logger_mode,
+                     "Invalid selector or solution passed to "
+                     "selector_batched_dft");
+        return SELECTOR_FAILURE;
+    }
+
     aoclfftz_selector_t *cur_sel = NULL;
     INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
                        measure_stats;
+    aoclfftz_solution_t *sol = sel->solution;
     INT32 rnk = 0;
     INTP batch_size = 1;
     INT32 ret = SELECTOR_FAILURE;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                             sel->kernel_tables, 0 /*unused*/);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (cur_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_batched_dft;
     }
 
+    UINT8 is_col_major = check_col_major(sol->decomp_scheme);
+    // Bluestein problems are excluded from the batched direct optimization
+    // because the memory layout of bluestein buffer allocated is always row
+    // major
+    if (is_col_major && !check_bluestein_problem(sol->decomp_scheme) &&
+        dim_rank == 1)
+    {
+        // allocate a new struct in the direct solver to hold the
+        // vecs[0] from batched solver
+        ALLOC_ALIGN_UNINIT(sol->decomp_scheme->batched_vecs, aoclfftz_dim_t_64_,
+                           sizeof(aoclfftz_dim_t_64_));
+        if (sol->decomp_scheme->batched_vecs != NULL)
+        {
+            sol->decomp_scheme->batched_vecs[0].n =
+                sol->decomp_scheme->vecs[0].n;
+            sol->decomp_scheme->batched_vecs[0].in_stride =
+                sol->decomp_scheme->vecs[0].in_stride;
+            sol->decomp_scheme->batched_vecs[0].out_stride =
+                sol->decomp_scheme->vecs[0].out_stride;
+
+            aoclfftz_dim_t_64_ *vecs = sol->decomp_scheme->vecs;
+            if (vec_rank == 1)
+            {
+                // vec_rank must be at least 1, so set vecs[0].n = 1 to make it
+                // non-batched
+                sol->decomp_scheme->vecs[0].n = 1;
+                sol->decomp_scheme->vecs[0].in_stride = 1;
+                sol->decomp_scheme->vecs[0].out_stride = 1;
+            }
+            else
+            {
+                // remove vecs[0] from batched solver
+                sol->decomp_scheme->vec_rank -= 1;
+                for (INT32 i = 0; i < sol->decomp_scheme->vec_rank; i++)
+                {
+                    vecs[i].n = vecs[i + 1].n;
+                    vecs[i].in_stride = vecs[i + 1].in_stride;
+                    vecs[i].out_stride = vecs[i + 1].out_stride;
+                }
+            }
+        }
+    }
+
     // copy solution object from sel to cur_sel
-    COPY_SOLUTION_OBJ(cur_sel->solution, sel->solution);
+    ret = copy_solution_obj(cur_sel->solution, sel->solution);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        goto exit_batched_dft;
+    }
 
     INT32 n_threads = 1;
 #ifdef MULTI_THREADING
@@ -71,14 +103,27 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     // dimensions later with CPUPL-6843
     INT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
     INT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
-    n_threads = (inner_batch < avl_threads) ? inner_batch : avl_threads;
+    if (sol->decomp_scheme->batched_vecs)
+    {
+        // Avoid nested parallelism: use 1 thread if inner_batch is small,
+        // otherwise all threads
+        n_threads = (inner_batch < avl_threads) ? 1 : avl_threads;
+    }
+    else
+    {
+        // Standard case: use minimum of inner_batch and available threads
+        n_threads = (inner_batch < avl_threads) ? inner_batch : avl_threads;
+    }
     sel->solution->decomp_scheme->thread_info->n_threads = n_threads;
 #endif
 
-    if (n_threads <= 1)
+    if (n_threads == 1)
     {
         // Setup batched solver to find the next solution for a single set/unit
         // of the vector problem
+        sel->solution->solver->solver_type = SOLVER_BATCHED;
+        sel->solution->solver->execute_solver =
+            register_execute_batched_solver();
         ret = setup_batched_solver(cur_sel->solution);
     }
 #ifdef MULTI_THREADING
@@ -86,6 +131,9 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     {
         // Setup multi threaded batched solver to find solution for a
         // vector problem
+        sel->solution->solver->solver_type = SOLVER_MT_BATCHED;
+        sel->solution->solver->execute_solver =
+            register_execute_mt_batched_solver();
         ret = setup_mt_batched_solver(cur_sel->solution, n_threads);
     }
 #endif
@@ -125,7 +173,7 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     return SELECTOR_SUCCESS;
 
 exit_batched_dft:
-    destroy_selector_without_scratch_space(cur_sel);
+    destroy_selector(cur_sel);
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
 

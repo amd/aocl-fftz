@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file solver.h
  *
@@ -37,7 +12,6 @@
  */
 
 #include "core/solvers/solver.h"
-#include "solver.h"
 
 // Table of solvers that is populated with applicable solvers at setup time
 // ct, direct, nDim, buf, permKer, batched, bluestein, PFA, rader, permCopy,
@@ -79,35 +53,67 @@ INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags)
     solvers_table[SOLVER_DIRECT] = register_execute_direct_solver();
     solvers_table[SOLVER_DIRECT_BATCHED_COLMAJOR] =
         register_execute_direct_batched_colmajor_solver();
-    solvers_table[SOLVER_DIRECT_BATCHED_ROWMAJOR] =
-        register_execute_direct_batched_rowmajor_solver();
     solvers_table[SOLVER_CT] = register_execute_ct_solver();
-    solvers_table[SOLVER_CT_TWIDDLE] = register_execute_ct_twiddle_solver();
+    solvers_table[SOLVER_BATCHED_CT_L1_DIRECT] =
+        register_execute_batched_ct_l1_direct_solver();
     solvers_table[SOLVER_BATCHED] = register_execute_batched_solver();
+    solvers_table[SOLVER_BUFFERED] = register_execute_buffered_solver();
     solvers_table[SOLVER_BLUESTEIN] = register_execute_bluestein_solver();
     solvers_table[SOLVER_NDIM] = register_execute_ndim_solver();
     solvers_table[SOLVER_SIZEONE] = register_execute_sizeone_solver();
+    // SR is currently limited only to scalar execution as CT outperforms SR
+    // in AVX mode. Skip registration of SR solver.
+    if (cpu_flags == 0)
+    {
+        solvers_table[SOLVER_SR] = register_execute_sr_solver();
+    }
     solvers_table[SOLVER_TRANSPOSE] = register_execute_transpose_solver();
 #ifdef MULTI_THREADING
     solvers_table[SOLVER_MT_DIRECT] = register_execute_mt_direct_solver();
     solvers_table[SOLVER_MT_BATCHED] = register_execute_mt_batched_solver();
+    solvers_table[SOLVER_MT_DIRECT_BATCHED_COLMAJOR] =
+        register_execute_mt_direct_batched_colmajor_solver();
+    solvers_table[SOLVER_MT_DIRECT_BATCHED_ROWMAJOR] =
+        register_execute_mt_direct_batched_rowmajor_solver();
 #endif
 
     return SOLVER_SUCCESS;
 }
 
-dft_solver_ get_solver_fp(aoclfftz_solution_t *sol)
+INT32 is_solver_registered(aoclfftz_solver_type solver_type)
 {
-    return sol->solver->execute_solver;
+    if (solvers_table[solver_type] == NULL)
+    {
+        return SOLVER_FAILURE;
+    }
+    return SOLVER_SUCCESS;
 }
 
 INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj)
 {
-    if (solvers_table[solver_obj->solver_type] == NULL)
+    if (is_solver_registered(solver_obj->solver_type) != SOLVER_SUCCESS)
     {
         return SOLVER_FAILURE;
     }
 
     solver_obj->execute_solver = solvers_table[solver_obj->solver_type];
     return SOLVER_SUCCESS;
+}
+
+INT64 compute_kernel_cost(const kernel_t *ker, UINT8 precision,
+                          UINT8 direction, INTP batch)
+{
+    ops_cycles_t oc = ker->k_ops_cnt(precision, direction);
+    INT64 ops = (oc.fma   * AMD_ZEN_FP_FMA_CYCLES) +
+                (oc.mul   * AMD_ZEN_FP_MUL_CYCLES) +
+                (oc.add   * AMD_ZEN_FP_ADD_CYCLES) +
+                (oc.move  * AMD_ZEN_FP_MOVE_CYCLES) +
+                (oc.perm  * AMD_ZEN_FP_PERM_CYCLES) +
+                (oc.other * AMD_ZEN_FP_OTHER_CYCLES);
+    UINT8 sets = ker->sets[precision - 2];
+    if (batch >= sets)
+    {
+        ops = (ops + sets - 1) / sets;
+    }
+    return ops * batch;
 }

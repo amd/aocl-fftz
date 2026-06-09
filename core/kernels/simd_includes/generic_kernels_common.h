@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file generic_kernels_common.h
  *
@@ -112,6 +87,20 @@
 
     #define NEG_ZERO_S(flag) _neg_128_f[flag].s
     #define NEG_ZERO_D(flag) _neg_128_d[flag].d
+
+    // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+    #define LOADU_D _mm_loadu_pd
+    // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+    #define BROADCAST_D(ptr) _mm_loadu_pd((ptr))
+
+    // Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 1, other: 0}
+    #define TW_PRELOADED_D TW_PRELOADED_128_D
+    // Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 2, other: 0}
+    #define ITW_PRELOADED_D ITW_PRELOADED_128_D
+
+    // Variants that take stride value directly (for hoisting optimization)
+    #define TW_PRELOADED_D_V TW_PRELOADED_128_D_V
+    #define ITW_PRELOADED_D_V ITW_PRELOADED_128_D_V
 #endif
 
 #ifdef KERNEL_USE_AVX256
@@ -193,6 +182,20 @@
 
     #define NEG_ZERO_S(flag) _neg_256_f[flag].s
     #define NEG_ZERO_D(flag) _neg_256_d[flag].d
+
+    // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+    #define LOADU_D _mm256_loadu_pd
+    // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 1}
+    #define BROADCAST_D(ptr) _mm256_broadcast_pd((__m128d *)(ptr))
+
+    // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 3, other: 1}
+    #define TW_PRELOADED_D TW_PRELOADED_256_D
+    // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 4, other: 1}
+    #define ITW_PRELOADED_D ITW_PRELOADED_256_D
+
+    // Variants that take stride value directly (for hoisting optimization)
+    #define TW_PRELOADED_D_V TW_PRELOADED_256_D_V
+    #define ITW_PRELOADED_D_V ITW_PRELOADED_256_D_V
 #endif
 
 #ifdef KERNEL_USE_AVX512
@@ -279,6 +282,20 @@
 
     #define NEG_ZERO_S(flag) _neg_512_f[flag].s
     #define NEG_ZERO_D(flag) _neg_512_d[flag].d
+
+    // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+    #define LOADU_D _mm512_loadu_pd
+    // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+    #define BROADCAST_D(ptr) _mm512_broadcast_f64x2(_mm_loadu_pd((ptr)))
+
+    // Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 3, other: 0}
+    #define TW_PRELOADED_D TW_PRELOADED_512_D
+    // Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 4, other: 0}
+    #define ITW_PRELOADED_D ITW_PRELOADED_512_D
+
+    // Variants that take stride value directly (for hoisting optimization)
+    #define TW_PRELOADED_D_V TW_PRELOADED_512_D_V
+    #define ITW_PRELOADED_D_V ITW_PRELOADED_512_D_V
 #endif
 
 #endif // GENERIC_KERNELS_COMMON_H

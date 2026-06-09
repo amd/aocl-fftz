@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file kernel_gtest_base.h
  *
@@ -79,7 +54,7 @@ template <class T>
 class AoclfftzKernelTestBase
     : public ::testing::TestWithParam<std::tuple<aoclfftz_kernel_test_params_t,
                                       std::tuple<INTP, INTP, INTP, UINT8,
-                                      UINT8>>>
+                                      UINT8, UINT8>>>
 // clang-format on
 {
   protected:
@@ -135,6 +110,7 @@ class AoclfftzKernelTestBase
         offset          = std::get<2>(io_param);
         is_bwd          = std::get<3>(io_param);
         is_out_of_place = std::get<4>(io_param);
+        UINT8 load_multi_cols_param = std::get<5>(io_param);
         radix           = std::get<0>(param);
         kernel_type     = std::get<1>(param);
 
@@ -298,12 +274,31 @@ class AoclfftzKernelTestBase
             GTEST_FATAL_FAILURE_("Twiddle buffer memory allocation failed");
         }
 
-        compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, offset);
+        if (load_multi_cols_param)
+        {
+            // load_multi_cols = 1: compute different twiddles for each column
+            compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, offset);
+        }
+        else
+        {
+            // load_multi_cols = 0 (broadcast mode): compute one set of twiddles
+            // and replicate it for all columns
+            compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, 1);
+            // Replicate the first column's twiddles to all other columns
+            T *tw_ptr = (T *)twiddle_buffer;
+            INTP twiddle_set_size = data_stride * radix;
+            for (INTP col = 1; col < offset; col++)
+            {
+                memcpy(tw_ptr + col * twiddle_set_size,
+                       tw_ptr,
+                       twiddle_set_size * sizeof(T));
+            }
+        }
 
         tws.TW = twiddle_buffer;
         tws.twiddle_buf_ptr = twiddle_buffer;
         tws.cols = offset;
-        tws.load_multi_cols = 1; // true by default
+        tws.load_multi_cols = load_multi_cols_param;
 
         // perform the twiddle multiplication on the kernel's input buffer
         // this is to simulate the condition where the m (offset) fft has been
@@ -363,6 +358,7 @@ class AoclfftzKernelTestBase
         offset          = std::get<2>(io_param);
         is_bwd          = std::get<3>(io_param);
         is_out_of_place = std::get<4>(io_param);
+        // UINT8 load_multi_cols = std::get<5>(io_param);  // unused in non-twiddle tests
         radix           = std::get<0>(param);
         kernel_type     = std::get<1>(param);
 

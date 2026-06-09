@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file fftw_wrapper.h
  *
@@ -36,6 +11,7 @@
 #ifndef FFTW_WRAPPER_H
 #define FFTW_WRAPPER_H
 
+#include <stdio.h>
 #include "aoclfftz.h"
 
 #ifdef __cplusplus
@@ -74,8 +50,8 @@ typedef VOID* GEN(plan);                                                        
 typedef struct { INT32 n; INT32 is; INT32 os; } GEN(iodim);                         \
 typedef struct { INTP n; INTP is; INTP os; } GEN(iodim64);                          \
                                                                                     \
-typedef VOID* GEN(write_char_func);                                                 \
-typedef VOID* GEN(read_char_func);                                                  \
+typedef VOID (*GEN(write_char_func))(CHAR c, VOID *);                               \
+typedef INT32 (*GEN(read_char_func))(VOID *);                                       \
                                                                                     \
 EXPORT_SYM_DYN VOID                                                                 \
     GEN(execute)(const GEN(plan) sol);                                              \
@@ -215,6 +191,9 @@ EXPORT_SYM_DYN VOID                                                             
     GEN(cleanup)(VOID);                                                             \
                                                                                     \
 EXPORT_SYM_DYN VOID                                                                 \
+    GEN(set_timelimit)(DOUBLE t);                                                   \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
     GEN(plan_with_nthreads)(INT32 nthreads);                                        \
                                                                                     \
 EXPORT_SYM_DYN INT32                                                                \
@@ -225,6 +204,11 @@ EXPORT_SYM_DYN INT32                                                            
                                                                                     \
 EXPORT_SYM_DYN VOID                                                                 \
     GEN(cleanup_threads)(VOID);                                                     \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
+    GEN(threads_set_callback)(                                                      \
+    VOID (*parallel_loop)(VOID *(*work)(CHAR *),                                    \
+    CHAR *jobdata, size_t elsize, INT32 njobs, VOID *data), VOID *data);            \
                                                                                     \
 EXPORT_SYM_DYN VOID*                                                                \
     GEN(malloc)(size_t ndim);                                                       \
@@ -247,13 +231,54 @@ EXPORT_SYM_DYN DOUBLE                                                           
     GEN(cost)(const GEN(plan) sol);                                                 \
                                                                                     \
 EXPORT_SYM_DYN INT32                                                                \
-    GEN(alignment_of)(Real* sol);
+    GEN(alignment_of)(Real* sol);                                                   \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
+    GEN(fprint_plan)(const GEN(plan) sol, FILE *f);                                 \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
+    GEN(print_plan)(const GEN(plan) sol);                                           \
+                                                                                    \
+EXPORT_SYM_DYN CHAR*                                                                \
+    GEN(sprint_plan)(const GEN(plan) sol);                                          \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
+    GEN(make_planner_thread_safe)(VOID);                                            \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
+    GEN(forget_wisdom)(VOID);                                                       \
+                                                                                    \
+EXPORT_SYM_DYN INT32                                                                \
+    GEN(export_wisdom_to_filename)(const CHAR *f);                                  \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
+    GEN(export_wisdom_to_file)(FILE *f);                                            \
+                                                                                    \
+EXPORT_SYM_DYN CHAR*                                                                \
+    GEN(export_wisdom_to_string)(VOID);                                             \
+                                                                                    \
+EXPORT_SYM_DYN VOID                                                                 \
+    GEN(export_wisdom)(GEN(write_char_func) write_char, VOID *data);                \
+                                                                                    \
+EXPORT_SYM_DYN INT32                                                                \
+    GEN(import_system_wisdom)(VOID);                                                \
+                                                                                    \
+EXPORT_SYM_DYN INT32                                                                \
+    GEN(import_wisdom_from_filename)(const CHAR *f);                                \
+                                                                                    \
+EXPORT_SYM_DYN INT32                                                                \
+    GEN(import_wisdom_from_file)(FILE *f);                                          \
+                                                                                    \
+EXPORT_SYM_DYN INT32                                                                \
+    GEN(import_wisdom_from_string)(const CHAR *s);                                  \
+                                                                                    \
+EXPORT_SYM_DYN INT32                                                                \
+    GEN(import_wisdom)(GEN(read_char_func) read_char, VOID *data);                  \
+                                                                                    \
+EXPORT_SYM_DYN extern const CHAR GEN(version)[];
 
 FFTW_WRAPPER_API(API_NAME_MANGLE_DOUBLE, DOUBLE, fftw_complex)
 FFTW_WRAPPER_API(API_NAME_MANGLE_FLOAT, FLOAT, fftwf_complex)
-
-#define fftw_version  AOCLFFTZ_LIBRARY_VERSION " (FFTW compatible)"
-#define fftwf_version AOCLFFTZ_LIBRARY_VERSION " (FFTW compatible)"
 
 #define FFTW_FORWARD DIR_FORWARD
 #define FFTW_BACKWARD DIR_BACKWARD

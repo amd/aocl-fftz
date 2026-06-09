@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file kernel_gtest_utils.h
  *
@@ -41,6 +16,9 @@
 #ifndef AOCLFFTZ_KERNEL_GTEST_UTILS_H
 #define AOCLFFTZ_KERNEL_GTEST_UTILS_H
 
+#ifdef MULTI_THREADING
+#include <omp.h>
+#endif
 #include <string>
 #include <typeinfo>
 extern "C"
@@ -461,21 +439,26 @@ bool is_fused_kernel(UINT8 kernel_type)
  * @param out output array to store the permuted output
  * @param n no. of sets (or) offset
  * @param size size of each offset (or) n
- * @param strides data stride values (in-stride for dir 0, out-stride for dir 1)
+ * @param in_stride input data stride
+ * @param out_stride output data stride
+ * @param v_in_stride vectorized input stride
+ * @param v_out_stride vectorized output stride
  */
 template <class T>
-void permuted_copy(T *in, T *out, INTP n, INTP size,
-                   aoclfftz_strides_t *strides, UINT8 data_stride)
+void permuted_copy(T *in, T *out, INTP n, INTP size, INTP in_stride,
+                   INTP out_stride, INTP v_in_stride, INTP v_out_stride)
 {
     if (typeid(T) == typeid(FLOAT32))
     {
         permuted_copy_c_fp32_wrapper((FLOAT32 *)in, (FLOAT32 *)out, n, size,
-                                     strides, data_stride);
+                                     in_stride, out_stride, v_in_stride,
+                                     v_out_stride);
     }
     else if (typeid(T) == typeid(FLOAT64))
     {
         permuted_copy_c_fp64_wrapper((FLOAT64 *)in, (FLOAT64 *)out, n, size,
-                                     strides, data_stride);
+                                     in_stride, out_stride, v_in_stride,
+                                     v_out_stride);
     }
 }
 

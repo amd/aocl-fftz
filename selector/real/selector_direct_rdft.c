@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file selector_direct_rdft.c
  *
@@ -45,8 +20,18 @@
 INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                            aoclfftz_realhelper_t *realhelper)
 {
-    aoclfftz_decomp_scheme_t *decomp_scheme = sel->solution->decomp_scheme;
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
+    if (sel == NULL || sel->solution == NULL ||
+        sel->solution->decomp_scheme == NULL)
+    {
+        AOCLFFTZ_LOG(INFO, global_logger_mode,
+                     "Invalid selector or solution passed to "
+                     "selector_direct_rdft");
+        return SELECTOR_FAILURE;
+    }
+
+    aoclfftz_decomp_scheme_t *decomp_scheme = sel->solution->decomp_scheme;
 
     aoclfftz_selector_t *cur_sel = NULL;
     INTP n = decomp_scheme->dims[0].n;
@@ -63,8 +48,7 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     kernel_t *kernel_r2hc = NULL;
     kernel_t *kernel_r2hcf = NULL;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                             sel->kernel_tables, 0 /*unused*/);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (cur_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -75,7 +59,12 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     decomp_scheme->thread_info->n_threads = num_threads;
 
     // copy solution object from sel to cur_sel
-    COPY_SOLUTION_OBJ(cur_sel->solution, sel->solution);
+    ret = copy_solution_obj(cur_sel->solution, sel->solution);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        goto exit_direct_rdft;
+    }
 
     // find a suitable kernel within the list of C kernels, and if one is found,
     // check for the existance of other implementations for the same radix
@@ -127,7 +116,7 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                     kernel_r2hcf->sets[precision - 2];
 
 #ifdef MULTI_THREADING
-                if (num_threads <= 1)
+                if (num_threads == 1)
                 {
 #endif
                     // call direct solver
@@ -147,28 +136,34 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 {
                     if (selector_mode == AOCLFFTZ_FIXED_SELECTOR)
                     {
-                        if (!sel->cost_analysis->ops)
+                        if (!sel->cost_analysis->ops
+                            || (cur_sel->cost_analysis->ops
+                                < sel->cost_analysis->ops))
                         {
                             sel->cost_analysis->ops =
                                 cur_sel->cost_analysis->ops;
                             sel->cost_analysis->time =
                                 cur_sel->cost_analysis->time;
                             // copy solution object from cur_sel to sel
-                            COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
-                            COPY_STRIDES(sel->solution, cur_sel->solution);
-                        }
-                        if (cur_sel->cost_analysis->ops <
-                            sel->cost_analysis->ops)
-                        {
-                            sel->cost_analysis->ops =
-                                cur_sel->cost_analysis->ops;
-                            sel->cost_analysis->time =
-                                cur_sel->cost_analysis->time;
-                            // copy solution object from cur_sel to sel
-                            COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
-                            COPY_STRIDES(sel->solution, cur_sel->solution);
+                            ret = copy_solution_obj(
+                                sel->solution, cur_sel->solution);
+                            if (ret != AOCLFFTZ_SUCCESS)
+                            {
+                                AOCLFFTZ_ERROR("copy_solution_obj failed: %s",
+                                               get_status_string(ret));
+                                goto exit_direct_rdft;
+                            }
+                            ret = copy_strides(
+                                sel->solution, cur_sel->solution);
+                            if (ret != AOCLFFTZ_SUCCESS)
+                            {
+                                AOCLFFTZ_ERROR("copy_strides failed: %s",
+                                               get_status_string(ret));
+                                goto exit_direct_rdft;
+                            }
                         }
                     }
+#ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
                     else
                     {
                         if (cur_sel->cost_analysis->time <
@@ -179,10 +174,25 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                             sel->cost_analysis->time =
                                 cur_sel->cost_analysis->time;
                             // copy solution object from cur_sel to sel
-                            COPY_SOLUTION_OBJ(sel->solution, cur_sel->solution);
-                            COPY_STRIDES(sel->solution, cur_sel->solution);
+                            ret = copy_solution_obj(
+                                sel->solution, cur_sel->solution);
+                            if (ret != AOCLFFTZ_SUCCESS)
+                            {
+                                AOCLFFTZ_ERROR("copy_solution_obj failed: %s",
+                                               get_status_string(ret));
+                                goto exit_direct_rdft;
+                            }
+                            ret = copy_strides(
+                                sel->solution, cur_sel->solution);
+                            if (ret != AOCLFFTZ_SUCCESS)
+                            {
+                                AOCLFFTZ_ERROR("copy_strides failed: %s",
+                                               get_status_string(ret));
+                                goto exit_direct_rdft;
+                            }
                         }
                     }
+#endif // AOCLFFTZ_AUTO_SELECTOR_MODE
                     if (stats_mode)
                     {
                         // capture stats
@@ -193,9 +203,14 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         } // if (radix == n)
     } // End of FOR loop
 
-    destroy_selector_without_scratch_space(cur_sel);
+    destroy_selector(cur_sel);
+
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+
+    return SELECTOR_SUCCESS;
 
 exit_direct_rdft:
+    destroy_selector(cur_sel);
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return ret;
 }

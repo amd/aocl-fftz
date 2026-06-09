@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file mt_direct_solver_dft.c
  *
@@ -46,49 +21,45 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     aoclfftz_decomp_scheme_t *decomp_scheme = sol->decomp_scheme;
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    ops_cycles_t ops_cycles;
     INTP n = decomp_scheme->vecs[0].n;
     INTP radix = decomp_scheme->dims[0].n;
     UINT8 precision = DT_PRECISION_FLAG(decomp_scheme->flags);
     UINT8 direction = FFT_DIR(decomp_scheme->flags);
     INT32 status = SOLVER_SUCCESS;
-    UINT8 num_sets = kernel->sets[precision - 2];
 
     if (strides->in_strides == NULL)
     {
-        ALLOC_ALIGN_UNINIT(strides->in_strides, INTP, radix * sizeof(INTP));
-        ALLOC_ALIGN_UNINIT(strides->out_strides, INTP, radix * sizeof(INTP));
-        INTP in_stride = decomp_scheme->dims[0].in_stride;
-        INTP out_stride = decomp_scheme->dims[0].out_stride;
-        for (INTP i = 0; i < radix; i++)
+        INT32 ret = alloc_and_fill_stride_arrays(strides, radix,
+                        decomp_scheme->dims[0].in_stride,
+                        decomp_scheme->dims[0].out_stride);
+        if (ret != SOLVER_SUCCESS)
         {
-            strides->in_strides[i] = i * in_stride * DATA_STRIDE;
-            strides->out_strides[i] = i * out_stride * DATA_STRIDE;
+            return ret;
         }
     }
 
-    strides->v_in_stride = decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
-    strides->v_out_stride = decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
+    if (sol->decomp_scheme->batched_vecs != NULL)
+    {
+        strides->v_in_stride =
+            sol->decomp_scheme->batched_vecs[0].in_stride * DATA_STRIDE;
+        strides->v_out_stride =
+            sol->decomp_scheme->batched_vecs[0].out_stride * DATA_STRIDE;
+    }
+    else
+    {
+        strides->v_in_stride =
+            sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
+        strides->v_out_stride =
+            sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
+    }
 
     if (GET_SELECTOR_MODE(decomp_scheme->flags) == AOCLFFTZ_FIXED_SELECTOR)
     {
-        /** Fixed mode **/
         cost->time = 0;
-        ops_cycles = kernel->k_ops_cnt(precision, direction);
-        cost->ops = ((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
-                     (ops_cycles.mul * AMD_ZEN_FP_MUL_CYCLES) +
-                     (ops_cycles.add * AMD_ZEN_FP_ADD_CYCLES) +
-                     (ops_cycles.move * AMD_ZEN_FP_MOVE_CYCLES) +
-                     (ops_cycles.perm * AMD_ZEN_FP_PERM_CYCLES) +
-                     (ops_cycles.other * AMD_ZEN_FP_OTHER_CYCLES));
-        if (n >= num_sets)
-        {
-            cost->ops = (cost->ops + num_sets - 1) / num_sets; // ceil div
-        }
-        cost->ops = cost->ops * n;
+        cost->ops = compute_kernel_cost(kernel, precision, direction, n);
     }
+#ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
     else
     {
         /** Auto tuner mode **/
@@ -102,6 +73,7 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         // execute the direct kernel
         INTP v_in_stride, v_out_stride, data_offset;
         UINT32 dt_bytes = SOL_DT_SIZE(sol);
+        UINT8 num_sets = kernel->sets[precision - 2];
         data_offset = DATA_STRIDE * dt_bytes * num_sets;
         v_in_stride = decomp_scheme->vecs[0].in_stride * data_offset;
         v_out_stride = decomp_scheme->vecs[0].out_stride * data_offset;
@@ -124,7 +96,7 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         }
 
         // Process the tail cases of the kernel
-        if(rem_iters)
+        if (rem_iters)
         {
             INTP v_istride = num_iters * v_in_stride;
             INTP v_ostride = num_iters * v_out_stride;
@@ -137,20 +109,9 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
         getTime(endTime);
         cost->time = diffTime(clkTick, startTime, endTime);
-        ops_cycles = kernel->k_ops_cnt(precision, direction);
-        cost->ops = ((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
-                     (ops_cycles.mul * AMD_ZEN_FP_MUL_CYCLES) +
-                     (ops_cycles.add * AMD_ZEN_FP_ADD_CYCLES) +
-                     (ops_cycles.move * AMD_ZEN_FP_MOVE_CYCLES) +
-                     (ops_cycles.perm * AMD_ZEN_FP_PERM_CYCLES) +
-                     (ops_cycles.other * AMD_ZEN_FP_OTHER_CYCLES));
-        if (n >= num_sets)
-        {
-            cost->ops = (cost->ops + num_sets - 1) / num_sets; // ceil div
-        }
-        cost->ops = cost->ops * n;
+        cost->ops = compute_kernel_cost(kernel, precision, direction, n);
     }
-
+#endif // AOCLFFTZ_AUTO_SELECTOR_MODE
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
     return status;
@@ -180,9 +141,9 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
     for (INTP batch = 0; batch < num_iters; batch++)
     {
         aoclfftz_twiddle_t tw_local = {
+            .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
             .TW = MOVE_ADDR(sol->twiddle->TW,
                             DATA_STRIDE * dt_bytes * batch * num_sets),
-            .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
             .cols = sol->twiddle->cols,
             .load_multi_cols = 1, // use different twiddle values across batches
         };
@@ -198,9 +159,9 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
 
     // Process the tail cases of the kernel
     aoclfftz_twiddle_t tw_local = {
+        .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
         .TW = MOVE_ADDR(sol->twiddle->TW,
                         DATA_STRIDE * dt_bytes * num_iters * num_sets),
-        .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
         .cols = sol->twiddle->cols,
         .load_multi_cols = 1, // use different twiddle values across batches
     };
@@ -287,9 +248,9 @@ static INT32 execute_mt_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
         for (INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
         {
             aoclfftz_twiddle_t tw_local = {
+                .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
                 .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
                 .cols = sol->twiddle->cols,
-                .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
                 .load_multi_cols = 0, // use same twiddle values across batches
             };                        // since different batches solves the same
                                       // DFT butterfly for different problems
@@ -312,9 +273,9 @@ static INT32 execute_mt_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
         for (INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
         {
             aoclfftz_twiddle_t tw_local = {
+                .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
                 .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
                 .cols = sol->twiddle->cols,
-                .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
                 .load_multi_cols = 0, // use same twiddle values across batches
             };                        // since different batches solves the same
                                       // DFT butterfly for different problems
@@ -399,9 +360,9 @@ static INT32 execute_mt_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
             INTP end_iter = start_iter + block_sz + (block < rem_blocks ? 1 : 0);
             INTP thread_iters = end_iter - start_iter;
             aoclfftz_twiddle_t tw_thr_local = {
+                .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
                 .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
                 .cols = sol->twiddle->cols,
-                .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
                 .load_multi_cols = 0, // use same twiddle values across batches
             };                        // since different batches solves the same
                                       // DFT butterfly for different problems
@@ -424,9 +385,9 @@ static INT32 execute_mt_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
         for (INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
         {
             aoclfftz_twiddle_t tw_local = {
+                .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
                 .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
                 .cols = sol->twiddle->cols,
-                .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
                 .load_multi_cols = 0, // use same twiddle values across batches
             };                        // since different batches solves the same
                                       // DFT butterfly for different problems

@@ -13,11 +13,11 @@ Building on Linux
 
 1. To create a build directory and configure the build system in it, run the following:
    ```
-    cmake -B <build directory> <CMakeList.txt filepath>
+    cmake -B <build directory> <CMakeLists.txt filepath>
    ```
    Additional options that can be specified for build configuration are:
    ```
-   cmake -B <build directory> <CMakeList.txt filepath>
+   cmake -B <build directory> <CMakeLists.txt filepath>
       -DAOCL_FFTZ_INSTALL_PATH=<Installed path of AOCL-FFTZ Library>
       -DCMAKE_INSTALL_PREFIX=<install path for examples binaries>
    ```
@@ -69,7 +69,7 @@ Building with Visual Studio IDE (command line)
 2. Go to the build folder.
 3. Use the following command to configure and build example executables.
 ```
-cmake .. -T ClangCl -G <installed Visual Studio version> && cmake --build . --config Release
+cmake .. -T ClangCl -G <installed Visual Studio version> -DAOCL_FFTZ_INSTALL_PATH=<Installed path of AOCL-FFTZ Library> && cmake --build . --config Release
 ```
 
 Manual Compilation

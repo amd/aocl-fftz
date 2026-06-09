@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file utils.c
  *
@@ -37,158 +12,45 @@
  */
 
 #include "utils/utils.h"
+#include "utils/dispatcher.h"
 
 // Note: This is not thread safe, nor is it multiple instance safe.
 //       When called through a multiple instance interface, the logger mode
 //       provided in the last setup call will be used.
 INT32 global_logger_mode = 0;
 
-#define AVX512_SUPPORTED 3
-#define AVX256_SUPPORTED 2
-#define AVX128_SUPPORTED 1
-#define C_SUPPORTED 0
-#define UNSUPPORTED -1
-
-INTP is_AVX_supported(void)
-{
-    INTP ret;
-    INTP eax, ebx, ecx, edx;
-    cpu_features_detection(0x00000001, 0, &eax, &ebx, &ecx, &edx);
-    ret = ((ecx & 0x18000000) == 0x18000000);
-    AOCLFFTZ_LOG(INFO, global_logger_mode, "AVX SIMD %s supported",
-                           (ret ? "is" : "is not"));
-
-    return ret;
-}
-
-INTP is_AVX2_supported(void)
-{
-    INTP ret;
-    INTP eax, ebx, ecx, edx;
-    cpu_features_detection(0x00000007, 0, &eax, &ebx, &ecx, &edx);
-    ret = ((ebx & (1 << 5)) != 0);
-    AOCLFFTZ_LOG(INFO, global_logger_mode, "AVX2 SIMD %s supported",
-                           (ret ? "is" : "is not"));
-
-    return ret;
-}
-
-static inline INTP xgetbv(INTP opt)
-{
-    INT32 eax, edx;
-    __asm__(".byte 0x0f, 0x01, 0xd0" : "=a"(eax), "=d"(edx) : "c"(opt));
-    return eax;
-}
-
-INTP is_AVX512_supported(void)
-{
-    INTP ret = 0;
-    INTP eax, ebx, ecx, edx;
-    // Below is the set of checks for AVX512 detection
-    // 1. Check CPU support for ZMM state management using OSXSAVE
-    // Its support also implies that XGETBV is enabled for application use
-    cpu_features_detection(0x1, 0, &eax, &ebx, &ecx, &edx);
-    if ((ecx & 0x08000000) == 0x08000000)
-    {
-        // 2. Check OS support for XGETBV instruction and ZMM register state
-        INTP reg_support_bits = (7 << 5) | (1 << 2) | (1 << 1);
-        if ((xgetbv(0) & reg_support_bits) == reg_support_bits)
-        {
-            // 3. Check CPU support for AVX-512 Foundation instructions
-            cpu_features_detection(7, 0, &eax, &ebx, &ecx, &edx);
-            if (ebx & (1 << 16))
-            {
-                ret = 1;
-            }
-        }
-    }
-    AOCLFFTZ_LOG(INFO, global_logger_mode,
-                           "AVX512 SIMD %s supported", (ret ? "is" : "is not"));
-
-    return ret;
-}
-
-INTP is_FMA_supported(void)
-
-{
-    INTP ret;
-    INTP eax, ebx, ecx, edx;
-    cpu_features_detection(0x00000001, 0, &eax, &ebx, &ecx, &edx);
-    ret = ((ecx & (1 << 12)) != 0);
-    AOCLFFTZ_LOG(INFO, global_logger_mode, "FMA %s supported",
-                           (ret ? "is" : "is not"));
-
-    return ret;
-}
-
-// CPU Features detection using CPUID
-#ifdef AOCLFFTZ_CPUID_SIMD_DETECTION
-#ifndef _WINDOWS
-inline VOID cpu_features_detection(INTP fn, INTP optVal,
-                                   INTP *eax, INTP *ebx,
-                                   INTP *ecx, INTP *edx)
-{
-    *eax = fn;
-    *ecx = optVal;
-    *ebx = 0;
-    *edx = 0;
-    __asm__("cpuid            \n\t"
-            : "+a"(*eax), "+b"(*ebx), "+c"(*ecx), "+d"(*edx));
-}
-#else
-#include <intrin.h>
-inline VOID cpu_features_detection(INTP fn, INTP optVal,
-                                   INTP *eax, INTP *ebx,
-                                   INTP *ecx, INTP *edx)
-{
-    INT32 CPUInfo[4];
-
-    __cpuid(CPUInfo, fn);
-
-    *eax = CPUInfo[0];
-    *ebx = CPUInfo[1];
-    *ecx = CPUInfo[2];
-    *edx = CPUInfo[3];
-}
-#endif
-#endif
-
-EXPORT_SYM_DYN INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level)
+/**
+ * Resolve effective dispatch level (clamped between user opt_level and HW+Build ISA level):
+ * 1. init_dynamic_dispatcher() runs capability detection.
+ * 2. effective_level = min(opt_level, get_max_build_isa_level()) so it stays between
+ *    requested opt_level and hardware-supported level.
+ *
+ * @return: INT32 effective optimization level (optlevel_*).
+ *         if opt_off or if opt_level <= 0, optlevel_scalar else effective_level.
+ */
+INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-
     if (opt_off)
     {
-        return UNSUPPORTED;
+        AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+        return optlevel_scalar;
     }
+    if (opt_level <= 0)
+    {
+        AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+        return optlevel_scalar;
+    }
+    /* CPU feature bitmask (UINT64). */
+    UINT64 cpu_capabilities = (UINT64)0;
+    init_dynamic_dispatcher(&cpu_capabilities);
+    INT32 hw_level = get_max_build_isa_level(cpu_capabilities); // Build max ISA dispatch level
 
-    if (opt_level == 0)
-    {
-        return C_SUPPORTED;
-    }
-#ifdef ENABLE_AVX512
-    if (opt_level > 2 && is_AVX512_supported()) // opt_level == 3
-    {
-        return AVX512_SUPPORTED;
-    }
-#endif
-#ifdef ENABLE_AVX256
-    if (opt_level > 1 && is_AVX_supported() && is_FMA_supported()) // opt_level == 2
-    {
-        return AVX256_SUPPORTED;
-    }
-#endif
-#ifdef ENABLE_AVX128
-    if (opt_level > 0 && is_AVX_supported()) // opt_level == 1
-    {
-        return AVX128_SUPPORTED;
-    }
-#endif
-    return C_SUPPORTED;
-
+    // Effective dispatch level is the minimum of the requested opt_level and the build max ISA dispatch level
+    INT32 cpu_flags = (opt_level > hw_level) ? hw_level : opt_level;
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
-
+    return cpu_flags;
 }
 
 const CHAR* get_status_string(aoclfftz_error_type status)

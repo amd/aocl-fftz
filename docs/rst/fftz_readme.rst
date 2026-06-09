@@ -1,3 +1,6 @@
+..  Copyright Advanced Micro Devices, Inc.
+..  SPDX-License-Identifier: BSD-3-Clause
+
 Building on Linux
 ~~~~~~~~~~~~~~~~~
 
@@ -97,14 +100,14 @@ Use the following additional options to configure your build:
      - Builds all the supported FFTZ third party wrappers (Disabled by default)
    * - CODE_COVERAGE
      - Enables source code coverage and generates coverage report. Supported only on Linux with GCC compiler (Disabled by default)
+   * - CODE_COVERAGE_FOR_ATG
+     - Enables source code coverage instrumentation for running coverage and parsing tools for use by AI Test case Generation (ATG) later. Supported only on Linux with GCC compiler (Disabled by default)
    * - ENABLE_APP_INFO_LOGS
      - Enables info logging for FFT problems used by the application (Independent of AOCL_ENABLE_LOG, Disabled by default)
    * - ENABLE_INSTRUCTIONS_UPTO
      - Specifies maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)
    * - ENABLE_FMA
      - Enables -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)
-   * - ENABLE_HARDLINKS_FOR_WRAPPER
-     - Uses hard links instead of symbolic links for wrapper libraries on Windows (Disabled by default)
    * - ENABLE_MULTI_THREADING
      - Compiles library with multi-threading support using OpenMP (Disabled by default)
    * - ENABLE_STRICT_WARNINGS
@@ -257,7 +260,7 @@ Sample commands for Valgrind:
 .. code-block:: bash
 
     # Build
-    cmake -B <build directory> <CMakeList.txt filepath> -DCMAKE_BUILD_TYPE=Debug -DVALGRIND=ON
+    cmake -B <build directory> <CMakeLists.txt filepath> -DCMAKE_BUILD_TYPE=Debug -DVALGRIND=ON
 
     # Run
     ctest -T memcheck
@@ -268,7 +271,7 @@ Sample commands for ASAN:
 .. code-block:: bash
 
     # Build
-    cmake -B <build directory> <CMakeList.txt filepath> -DCMAKE_BUILD_TYPE=Debug -DASAN=ON
+    cmake -B <build directory> <CMakeLists.txt filepath> -DCMAKE_BUILD_TYPE=Debug -DASAN=ON
 
     # Run
     ctest

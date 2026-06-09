@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file simd_common_avx512.h
  *
@@ -59,6 +34,42 @@
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
 #define SWAP_RI_512_D(val) _mm512_permute_pd(val, 85)
+
+/**
+ * @brief Broadcasts real parts of complex numbers in a 512-bit register.
+ * Shuffle pattern 0xA0 (10100000b) selects elements [0,0,2,2].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_RE_512_S(val) _mm512_shuffle_ps(val, val, 0xA0) // 10100000b: [0,0,2,2]
+
+/**
+ * @brief Broadcasts imaginary parts of complex numbers in a 512-bit register.
+ * Shuffle pattern 0xF5 (11110101b) selects elements [1,1,3,3].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_IM_512_S(val) _mm512_shuffle_ps(val, val, 0xF5) // 11110101b: [1,1,3,3]
+
+/**
+ * @brief Broadcasts real parts of complex numbers in a 512-bit register
+ * for double precision floating point.
+ * Shuffle pattern 0x00 (00000000b) selects the low element of each 128-bit lane:
+ * [0,0,2,2,4,4,6,6].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_RE_512_D(val) _mm512_shuffle_pd(val, val, 0x00) // 00000000b: [0,0,2,2,4,4,6,6]
+
+/**
+ * @brief Broadcasts imaginary parts of complex numbers in a 512-bit register
+ * for double precision floating point.
+ * Shuffle pattern 0xFF (11111111b) selects the high element of each 128-bit lane:
+ * [1,1,3,3,5,5,7,7].
+ * Operation : 1 PERM(shuffle)
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
+#define BROADCAST_IM_512_D(val) _mm512_shuffle_pd(val, val, 0xFF) // 11111111b: [1,1,3,3,5,5,7,7]
 
 /**
  * @brief implies the number of sets that can be processed in parallel.
@@ -284,7 +295,7 @@ static const union data_union_512
         twv = _mm512_loadu_pd((twbuf) + addr);                                 \
     }                                                                          \
     else {                                                                     \
-        twv = _mm512_broadcast_f64x2(_mm_loadu_pd((twbuf) + addr));            \
+        twv = _mm512_broadcast_f64x2(_mm_load_pd((twbuf) + addr));             \
     }                                                                          \
     __m512d tmp_in;                                                            \
     GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
@@ -306,7 +317,7 @@ static const union data_union_512
         twv = _mm512_loadu_pd((twbuf) + addr);                                 \
     }                                                                          \
     else {                                                                     \
-        twv = _mm512_broadcast_f64x2(_mm_loadu_pd((twbuf) + addr));            \
+        twv = _mm512_broadcast_f64x2(_mm_load_pd((twbuf) + addr));             \
     }                                                                          \
     __m512d tmp_in;                                                            \
     GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
@@ -365,6 +376,60 @@ static const union data_union_512
     const __m512 lo_1 = _mm512_unpacklo_ps(tmp_0, tmp_1);                      \
     const __m512 hi_1 = _mm512_unpackhi_ps(tmp_0, tmp_1);                      \
     gdest = _mm512_fmaddsub_ps(ones, lo_1, hi_1);                              \
+}
+
+// Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 4, other: 0}
+#define ITW_PRELOADED_512_D(gbase, starr, stidx, offset, gdest, twv)           \
+{                                                                              \
+    __m512d ones = _mm512_set1_pd(1.0);                                        \
+    __m512d tmp_in;                                                            \
+    GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
+    const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);           \
+    const __m512d lo_1 = _mm512_unpacklo_pd(tmp_1, tmp_0);                     \
+    const __m512d hi_1 = _mm512_unpackhi_pd(tmp_1, tmp_0);                     \
+    const __m512d result = _mm512_fmaddsub_pd(ones, lo_1, hi_1);               \
+    gdest = SWAP_RI_512_D(result);                                             \
+}
+
+// Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 3, other: 0}
+#define TW_PRELOADED_512_D(gbase, starr, stidx, offset, gdest, twv)            \
+{                                                                              \
+    __m512d ones = _mm512_set1_pd(1.0);                                        \
+    __m512d tmp_in;                                                            \
+    GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
+    const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);           \
+    const __m512d lo_1 = _mm512_unpacklo_pd(tmp_0, tmp_1);                     \
+    const __m512d hi_1 = _mm512_unpackhi_pd(tmp_0, tmp_1);                     \
+    gdest = _mm512_fmaddsub_pd(ones, lo_1, hi_1);                              \
+}
+
+// Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 4, other: 0}
+#define ITW_PRELOADED_512_D_V(gbase, stride, offset, gdest, twv)               \
+{                                                                              \
+    __m512d ones = _mm512_set1_pd(1.0);                                        \
+    __m512d tmp_in;                                                            \
+    GATHER4_512_D((gbase) + (stride), (offset), tmp_in);                       \
+    const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
+    const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);           \
+    const __m512d lo_1 = _mm512_unpacklo_pd(tmp_1, tmp_0);                     \
+    const __m512d hi_1 = _mm512_unpackhi_pd(tmp_1, tmp_0);                     \
+    const __m512d result = _mm512_fmaddsub_pd(ones, lo_1, hi_1);               \
+    gdest = SWAP_RI_512_D(result);                                             \
+}
+
+// Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 3, other: 0}
+#define TW_PRELOADED_512_D_V(gbase, stride, offset, gdest, twv)                \
+{                                                                              \
+    __m512d ones = _mm512_set1_pd(1.0);                                        \
+    __m512d tmp_in;                                                            \
+    GATHER4_512_D((gbase) + (stride), (offset), tmp_in);                       \
+    const __m512d tmp_0 = _mm512_mul_pd(tmp_in, twv);                          \
+    const __m512d tmp_1 = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twv);           \
+    const __m512d lo_1 = _mm512_unpacklo_pd(tmp_0, tmp_1);                     \
+    const __m512d hi_1 = _mm512_unpackhi_pd(tmp_0, tmp_1);                     \
+    gdest = _mm512_fmaddsub_pd(ones, lo_1, hi_1);                              \
 }
 
 #endif // AOCLFFTZ_SIMD_COMMON_AVX512_H

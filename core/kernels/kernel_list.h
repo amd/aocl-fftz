@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file kernel_list.h
  *
@@ -45,7 +20,7 @@
 
 #include "core/kernels/kernel.h"
 
-// Kernel registration simpification macros
+// Kernel registration simplification macros
 // These are included directly into this file because they are not used anywhere
 // outside the scope of this file.
 #define KREG_C_(pref, rad)                                                     \
@@ -112,6 +87,8 @@ static kernel_fp_list_t kernels_c2c[NUM_KERNELS_IN_EACH_CATEGORY]
     {KREG(fft, 14)}, // radix 14
     {KREG(fft, 15)}, // radix 15
     {KREG(fft, 16)}, // radix 16
+    {KREG(fft, 20)}, // radix 20
+    {KREG(fft, 48)}, // radix 48
 };
 
 // Twiddle C2C kernel table
@@ -156,7 +133,7 @@ static kernel_fp_list_t kernels_real[NUM_REAL_KERNELS_VARIANTS]
         {KREG(r2hc_rfft, 8)},  // radix  8
         //{KREG(r2hc_rfft, 9)},  // radix  9
         {KREG(r2hc_rfft, 10)}, // radix 10
-        //{KREG(r2hc_rfft, 11)}, // radix 11
+        {KREG(r2hc_rfft, 11)}, // radix 11
         {KREG(r2hc_rfft, 12)}, // radix 12
         //{KREG(r2hc_rfft, 13)}, // radix 13
         {KREG(r2hc_rfft, 14)}, // radix 14
@@ -173,7 +150,7 @@ static kernel_fp_list_t kernels_real[NUM_REAL_KERNELS_VARIANTS]
         {KREG(r2hcf_rfft, 8)},  // radix  8
         //{KREG(r2hcf_rfft, 9)},  // radix  9
         {KREG(r2hcf_rfft, 10)}, // radix 10
-        //{KREG(r2hcf_rfft, 11)}, // radix 11
+        {KREG(r2hcf_rfft, 11)}, // radix 11
         {KREG(r2hcf_rfft, 12)}, // radix 12
         //{KREG(r2hcf_rfft, 13)}, // radix 13
         {KREG(r2hcf_rfft, 14)}, // radix 14
@@ -190,7 +167,7 @@ static kernel_fp_list_t kernels_real[NUM_REAL_KERNELS_VARIANTS]
         {KREG(fft, 8)},  // radix  8
         //{KREG(fft, 9)},  // radix  9
         {KREG(fft, 10)}, // radix 10
-        //{KREG(fft, 11)}, // radix 11
+        {KREG(fft, 11)}, // radix 11
         {KREG(fft, 12)}, // radix 12
         //{KREG(fft, 13)}, // radix 13
         {KREG(fft, 14)}, // radix 14
@@ -217,7 +194,7 @@ static kernel_fp_list_t kernels_twid_real[NUM_REAL_KERNELS_VARIANTS]
         {KREG(r2hc_rfft, 8)},  // radix  8
         //{KREG(r2hc_rfft, 9)},  // radix  9
         {KREG(r2hc_rfft, 10)}, // radix 10
-        //{KREG(r2hc_rfft, 11)}, // radix 11
+        {KREG(r2hc_rfft, 11)}, // radix 11
         {KREG(r2hc_rfft, 12)}, // radix 12
         //{KREG(r2hc_rfft, 13)}, // radix 13
         {KREG(r2hc_rfft, 14)}, // radix 14
@@ -234,7 +211,7 @@ static kernel_fp_list_t kernels_twid_real[NUM_REAL_KERNELS_VARIANTS]
         {KREG(r2hcf_rfft, 8)},  // radix  8
         //{KREG(r2hcf_rfft, 9)},  // radix  9
         {KREG(r2hcf_rfft, 10)}, // radix 10
-        //{KREG(r2hcf_rfft, 11)}, // radix 11
+        {KREG(r2hcf_rfft, 11)}, // radix 11
         {KREG(r2hcf_rfft, 12)}, // radix 12
         //{KREG(r2hcf_rfft, 13)}, // radix 13
         {KREG(r2hcf_rfft, 14)}, // radix 14
@@ -251,7 +228,7 @@ static kernel_fp_list_t kernels_twid_real[NUM_REAL_KERNELS_VARIANTS]
         {KREG(twid_fft, 8)},  // radix  8
         //{KREG(twid_fft, 9)},  // radix  9
         {KREG(twid_fft, 10)}, // radix 10
-        //{KREG(twid_fft, 11)}, // radix 11
+        {KREG(twid_fft, 11)}, // radix 11
         {KREG(twid_fft, 12)}, // radix 12
         //{KREG(twid_fft, 13)}, // radix 13
         {KREG(twid_fft, 14)}, // radix 14

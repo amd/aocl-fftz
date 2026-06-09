@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file direct_solver_rdft_utils.c
  *
@@ -610,13 +585,10 @@ VOID compute_cost(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
     UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     if (GET_SELECTOR_MODE(sol->decomp_scheme->flags) != AOCLFFTZ_FIXED_SELECTOR)
+    {
         return;
+    }
 
-    UINT8 sets_c2c = kernel_c2c->sets[precision - 2];
-    UINT8 sets_r2hc = kernel_r2hc->sets[precision - 2];
-    UINT8 sets_r2hcf = kernel_r2hcf->sets[precision - 2];
-
-    ops_cycles_t ops_cycles_c2c, ops_cycles_r2hc, ops_cycles_r2hcf;
     cost->time = 0;
     INT64 c2c_cost = 0;
     INT64 r2hc_cost = 0;
@@ -625,55 +597,22 @@ VOID compute_cost(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     // Calculate C2C kernel cost
     if (sol->solver->kernel_c2c->count != 0)
     {
-        ops_cycles_c2c = kernel_c2c->k_ops_cnt(precision, is_backward);
-        c2c_cost = ((ops_cycles_c2c.fma * AMD_ZEN_FP_FMA_CYCLES) +
-                    (ops_cycles_c2c.mul * AMD_ZEN_FP_MUL_CYCLES) +
-                    (ops_cycles_c2c.add * AMD_ZEN_FP_ADD_CYCLES) +
-                    (ops_cycles_c2c.move * AMD_ZEN_FP_MOVE_CYCLES) +
-                    (ops_cycles_c2c.perm * AMD_ZEN_FP_PERM_CYCLES) +
-                    (ops_cycles_c2c.other * AMD_ZEN_FP_OTHER_CYCLES));
-
-        if (sol->solver->kernel_c2c->count >= sets_c2c)
-        {
-            c2c_cost = (c2c_cost + sets_c2c - 1) / sets_c2c;
-        }
-        c2c_cost = c2c_cost * sol->solver->kernel_c2c->count;
+        c2c_cost = compute_kernel_cost(kernel_c2c, precision, is_backward,
+                                       (INTP)sol->solver->kernel_c2c->count);
     }
-
+    
     // Calculate R2HC kernel cost
     if (sol->solver->kernel_r2hc->count != 0)
-    {
-        ops_cycles_r2hc = kernel_r2hc->k_ops_cnt(precision, is_backward);
-        r2hc_cost = ((ops_cycles_r2hc.fma * AMD_ZEN_FP_FMA_CYCLES) +
-                     (ops_cycles_r2hc.mul * AMD_ZEN_FP_MUL_CYCLES) +
-                     (ops_cycles_r2hc.add * AMD_ZEN_FP_ADD_CYCLES) +
-                     (ops_cycles_r2hc.move * AMD_ZEN_FP_MOVE_CYCLES) +
-                     (ops_cycles_r2hc.perm * AMD_ZEN_FP_PERM_CYCLES) +
-                     (ops_cycles_r2hc.other * AMD_ZEN_FP_OTHER_CYCLES));
-
-        if (sol->solver->kernel_r2hc->count >= sets_r2hc)
-        {
-            r2hc_cost = (r2hc_cost + sets_r2hc - 1) / sets_r2hc;
-        }
-        r2hc_cost = r2hc_cost * sol->solver->kernel_r2hc->count;
+    {   
+        r2hc_cost = compute_kernel_cost(kernel_r2hc, precision, is_backward,
+                                        (INTP)sol->solver->kernel_r2hc->count);
     }
 
     // Calculate R2HCF kernel cost
     if (sol->solver->kernel_r2hcf->count != 0)
-    {
-        ops_cycles_r2hcf = kernel_r2hcf->k_ops_cnt(precision, is_backward);
-        r2hcf_cost = ((ops_cycles_r2hcf.fma * AMD_ZEN_FP_FMA_CYCLES) +
-                      (ops_cycles_r2hcf.mul * AMD_ZEN_FP_MUL_CYCLES) +
-                      (ops_cycles_r2hcf.add * AMD_ZEN_FP_ADD_CYCLES) +
-                      (ops_cycles_r2hcf.move * AMD_ZEN_FP_MOVE_CYCLES) +
-                      (ops_cycles_r2hcf.perm * AMD_ZEN_FP_PERM_CYCLES) +
-                      (ops_cycles_r2hcf.other * AMD_ZEN_FP_OTHER_CYCLES));
-
-        if (sol->solver->kernel_r2hcf->count >= sets_r2hcf)
-        {
-            r2hcf_cost = (r2hcf_cost + sets_r2hcf - 1) / sets_r2hcf;
-        }
-        r2hcf_cost = r2hcf_cost * sol->solver->kernel_r2hcf->count;
+    {    
+        r2hcf_cost = compute_kernel_cost(kernel_r2hcf, precision, is_backward,
+                                         (INTP)sol->solver->kernel_r2hcf->count);
     }
 
     cost->ops = c2c_cost + r2hc_cost + r2hcf_cost;

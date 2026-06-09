@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file selector_ct_dft.c
  *
@@ -45,6 +20,14 @@
 INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
+    if (sel == NULL || sel->solution == NULL ||
+        sel->solution->decomp_scheme == NULL)
+    {
+        AOCLFFTZ_LOG(INFO, global_logger_mode,
+                     "Invalid selector or solution passed to selector_ct_dft");
+        return SELECTOR_FAILURE;
+    }
 
     aoclfftz_selector_t *cur_sel = NULL;
     aoclfftz_selector_t *cur_sel_m = NULL;
@@ -72,10 +55,8 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_ct_dft;
     }
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                             sel->kernel_tables, 0 /*unused*/);
-    cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                               sel->kernel_tables, 0 /*unused*/);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
 
     if (cur_sel == NULL || cur_sel_m == NULL)
     {
@@ -112,8 +93,12 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_ct_dft;
     }
 
-    COPY_SOLUTION_OBJ(org_sol, sel->solution);
-    org_sol->dft_bufs->scratch_space = sel->scratch_space;
+    ret = copy_solution_obj(org_sol, sel->solution);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        goto exit_ct_dft;
+    }
     org_sol->next_sol = NULL;
 
     // Flag to store whether the previous solution is selected
@@ -142,12 +127,10 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         // if previous solutions is selected
         if (is_previous_solution_selected)
         {
-            destroy_selector_without_scratch_space(cur_sel);
-            destroy_selector_without_scratch_space(cur_sel_m);
-            cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                     sel->kernel_tables, 0 /*unused*/);
-            cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                       sel->kernel_tables, 0 /*unused*/);
+            destroy_selector(cur_sel);
+            destroy_selector(cur_sel_m);
+            cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+            cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
             if (cur_sel == NULL || cur_sel_m == NULL)
             {
                 ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -176,16 +159,46 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 #if 0
         ret = selector_model_dft_(cur_sel);//Call direct solver instead
 #else
+        aoclfftz_solution_t *radix_r_sol = cur_sel->solution;
+        aoclfftz_solution_t *radix_m_sol = cur_sel_m->solution;
+
+        radix_r_sol->decomp_scheme->dims[0].in_stride =
+            radix_m_sol->decomp_scheme->vecs[0].out_stride;
+        radix_r_sol->decomp_scheme->vecs[0].in_stride =
+            radix_m_sol->decomp_scheme->dims[0].out_stride;
+
         aoclfftz_generic_solver_t* solver_obj = cur_sel->solution->solver;
         INT32 avl_threads =
             cur_sel->solution->decomp_scheme->thread_info->avl_threads;
-        if (avl_threads <= 1)
+        if (avl_threads == 1)
         {
-            solver_obj->solver_type = SOLVER_DIRECT;
+            if (sel->solution->decomp_scheme->batched_vecs == NULL)
+            {
+                solver_obj->solver_type = SOLVER_DIRECT;
+            }
+            else
+            {
+                solver_obj->solver_type = SOLVER_DIRECT_BATCHED_COLMAJOR;
+            }
         }
         else
         {
-            solver_obj->solver_type = SOLVER_MT_DIRECT;
+            if (sel->solution->decomp_scheme->batched_vecs == NULL)
+            {
+                solver_obj->solver_type = SOLVER_MT_DIRECT;
+            }
+            else
+            {
+                if (should_use_colmajor_batched_solver(cur_sel->solution,
+                                                       kertab, avl_threads))
+                {
+                    solver_obj->solver_type = SOLVER_MT_DIRECT_BATCHED_COLMAJOR;
+                }
+                else
+                {
+                    solver_obj->solver_type = SOLVER_MT_DIRECT_BATCHED_ROWMAJOR;
+                }
+            }
         }
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
@@ -224,16 +237,71 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 }
 
                 aoclfftz_solution_t **sel_next_sol = next_sol->next_sol;
-                COPY_SOLUTION_OBJ(next_sol, cur_sel->solution);
-                COPY_STRIDES(next_sol, cur_sel->solution);
-                next_sol->dft_bufs->scratch_space = sel->scratch_space;
+                ret = copy_solution_obj(next_sol, cur_sel->solution);
+                if (ret != AOCLFFTZ_SUCCESS)
+                {
+                    AOCLFFTZ_ERROR("copy_solution_obj failed: %s",
+                                   get_status_string(ret));
+                    goto exit_ct_dft;
+                }
+                ret = copy_strides(next_sol, cur_sel->solution);
+                if (ret != AOCLFFTZ_SUCCESS)
+                {
+                    AOCLFFTZ_ERROR("copy_strides failed: %s",
+                                   get_status_string(ret));
+                    goto exit_ct_dft;
+                }
 
                 // Restore the original next_sol after copy
                 next_sol->next_sol = sel_next_sol;
-                COPY_SOLUTION_OBJ(next_sol->next_sol[0], cur_sel_m->solution);
-                COPY_STRIDES(next_sol->next_sol[0], cur_sel_m->solution);
-                next_sol->next_sol[0]->dft_bufs->scratch_space =
-                        sel->scratch_space;
+
+                // Free the ct_buffer if it is allocated in the solution of m
+                if (next_sol->next_sol[0]->dft_bufs->ct_buf_allocated)
+                {
+                    FREE_ALIGN_ALLOCATED_MEM(
+                        next_sol->next_sol[0]->dft_bufs->ct_buffer);
+                    next_sol->next_sol[0]->dft_bufs->ct_buf_allocated = 0;
+                }
+
+                ret = copy_solution_obj(
+                    next_sol->next_sol[0], cur_sel_m->solution);
+                if (ret != AOCLFFTZ_SUCCESS)
+                {
+                    AOCLFFTZ_ERROR("copy_solution_obj failed: %s",
+                                   get_status_string(ret));
+                    goto exit_ct_dft;
+                }
+                if (cur_sel_m->solution->solver->solver_type ==
+                    SOLVER_BATCHED_CT_L1_DIRECT)
+                {
+                    ret = copy_strides_batched_ct_l1_direct(
+                        next_sol->next_sol[0],
+                        cur_sel_m->solution);
+                    if (ret != AOCLFFTZ_SUCCESS)
+                    {
+                        AOCLFFTZ_ERROR(
+                            "copy_strides_batched_ct_l1_direct failed: %s",
+                            get_status_string(ret));
+                        goto exit_ct_dft;
+                    }
+                }
+                else
+                {
+                    ret = copy_strides(
+                        next_sol->next_sol[0], cur_sel_m->solution);
+                    if (ret != AOCLFFTZ_SUCCESS)
+                    {
+                        AOCLFFTZ_ERROR("copy_strides failed: %s",
+                                       get_status_string(ret));
+                        goto exit_ct_dft;
+                    }
+                }
+
+                if (cur_sel_m->solution->dft_bufs->ct_buf_allocated)
+                {
+                    next_sol->next_sol[0]->dft_bufs->ct_buf_allocated = 1;
+                }
+                cur_sel_m->solution->dft_bufs->ct_buf_allocated = 0;
 
                 // Break the link from cur_sel and cur_sel_m
                 // it can be still accessed through sel object
@@ -250,8 +318,18 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 destroy_solutions(cur_sel_m->solution->next_sol, 1);
                 cur_sel_m->solution->next_sol = NULL;
                 is_previous_solution_selected = 0;
+                // The solution is being discarded
+                // hence its strides are no longer needed.
+                destroy_strides_grp(cur_sel->solution->strides_grp);
+                destroy_strides_grp(cur_sel_m->solution->strides_grp);
+
                 RESET_COST(cur_sel);
                 RESET_COST(cur_sel_m);
+                if (cur_sel_m->solution->dft_bufs->ct_buf_allocated)
+                {
+                    FREE_ALIGN_ALLOCATED_MEM(cur_sel_m->solution->dft_bufs->ct_buffer);
+                    cur_sel_m->solution->dft_bufs->ct_buf_allocated = 0;
+                }
             }
         }
         if (stats_mode)
@@ -261,9 +339,9 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
 exit_ct_dft:
-    destroy_selector_without_scratch_space(cur_sel);
-    destroy_selector_without_scratch_space(cur_sel_m);
-    destroy_solution(org_sol, 0);
+    destroy_selector(cur_sel);
+    destroy_selector(cur_sel_m);
+    destroy_solution(org_sol);
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
 
