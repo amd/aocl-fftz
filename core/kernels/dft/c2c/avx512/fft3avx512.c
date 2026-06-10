@@ -92,11 +92,20 @@ static VOID fft3avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Output point 2: X[2]
         v_out2 = _mm512_add_ps(v_tv0, v_tv1);
 
-        SCATTER8_512_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
-        curr_out = out_r + out_strides[1];
-        SCATTER8_512_S(curr_out, v_out_stride, v_out1, is_contiguous_out);
-        curr_out = out_r + out_strides[2];
-        SCATTER8_512_S(curr_out, v_out_stride, v_out2, is_contiguous_out);
+        if (out_strides[1] == DATA_STRIDE)
+        {
+            TRANSPOSE_ST2_512_S(curr_out, v_out_stride, v_out0, v_out1);
+            curr_out = curr_out + 2 * DATA_STRIDE;
+            SCATTER8_512_S_STRIDED(curr_out, v_out_stride, v_out2);
+        }
+        else
+        {
+            SCATTER8_512_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
+            curr_out = out_r + out_strides[1];
+            SCATTER8_512_S(curr_out, v_out_stride, v_out1, is_contiguous_out);
+            curr_out = out_r + out_strides[2];
+            SCATTER8_512_S(curr_out, v_out_stride, v_out2, is_contiguous_out);
+        }
 
         in_r += NUM_SETS_512_S * v_in_stride;
         out_r += NUM_SETS_512_S * v_out_stride;
@@ -136,11 +145,20 @@ static VOID fft3avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Output point 3 : X[2]
         v_out2 = _mm256_add_ps(v_tv0, v_tv1);
 
-        SCATTER4_256_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
-        curr_out = out_r + out_strides[1];
-        SCATTER4_256_S(curr_out, v_out_stride, v_out1, is_contiguous_out);
-        curr_out = out_r + out_strides[2];
-        SCATTER4_256_S(curr_out, v_out_stride, v_out2, is_contiguous_out);
+        if (out_strides[1] == DATA_STRIDE)
+        {
+            TRANSPOSE_ST2_256_S(curr_out, v_out_stride, v_out0, v_out1);
+            curr_out = curr_out + 2 * DATA_STRIDE;
+            SCATTER4_256_S_STRIDED(curr_out, v_out_stride, v_out2);
+        }
+        else
+        {
+            SCATTER4_256_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
+            curr_out = out_r + out_strides[1];
+            SCATTER4_256_S(curr_out, v_out_stride, v_out1, is_contiguous_out);
+            curr_out = out_r + out_strides[2];
+            SCATTER4_256_S(curr_out, v_out_stride, v_out2, is_contiguous_out);
+        }
 
         in_r += NUM_SETS_256_S * v_in_stride;
         out_r += NUM_SETS_256_S * v_out_stride;
@@ -181,11 +199,20 @@ static VOID fft3avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Output point 3 : X[2]
         v_out2 = _mm_add_ps(v_tv0, v_tv1);
 
-        SCATTER2_128_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
-        curr_out = out_r + out_strides[1];
-        SCATTER2_128_S(curr_out, v_out_stride, v_out1, is_contiguous_out);
-        curr_out = out_r + out_strides[2];
-        SCATTER2_128_S(curr_out, v_out_stride, v_out2, is_contiguous_out);
+        if (out_strides[1] == DATA_STRIDE)
+        {
+            TRANSPOSE_ST2_128_S(curr_out, v_out_stride, v_out0, v_out1);
+            curr_out = curr_out + NUM_SETS_128_S * DATA_STRIDE;
+            SCATTER2_128_S_STRIDED(curr_out, v_out_stride, v_out2);
+        }
+        else
+        {
+            SCATTER2_128_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
+            curr_out = out_r + out_strides[1];
+            SCATTER2_128_S(curr_out, v_out_stride, v_out1, is_contiguous_out);
+            curr_out = out_r + out_strides[2];
+            SCATTER2_128_S(curr_out, v_out_stride, v_out2, is_contiguous_out);
+        }
 
         in_r = in_r + (v_in_stride << 1);
         out_r = out_r + (v_out_stride << 1);
@@ -225,11 +252,20 @@ static VOID fft3avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Output point 3 : X[2]
         v_out2 = _mm_add_ps(v_tv0, v_tv1);
 
-        ST_LOW_128_S(curr_out, v_out0);
-        curr_out = out_r + out_strides[1];
-        ST_LOW_128_S(curr_out, v_out1);
-        curr_out = out_r + out_strides[2];
-        ST_LOW_128_S(curr_out, v_out2);
+        if (out_strides[1] == DATA_STRIDE)
+        {
+            ST_128_S(curr_out, v_out0, v_out1);
+            curr_out = out_r + 2 * DATA_STRIDE;
+            ST_LOW_128_S(curr_out, v_out2);
+        }
+        else
+        {
+            ST_LOW_128_S(curr_out, v_out0);
+            curr_out = out_r + out_strides[1];
+            ST_LOW_128_S(curr_out, v_out1);
+            curr_out = out_r + out_strides[2];
+            ST_LOW_128_S(curr_out, v_out2);
+        }
     }
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
@@ -296,11 +332,20 @@ static VOID fft3avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Output point 2: X[2]
         v_out2 = _mm512_add_pd(v_tv0, v_tv1);
 
-        SCATTER4_512_D(curr_out, v_out_stride, v_out0, is_contiguous_out);
-        curr_out = out_r + out_strides[1];
-        SCATTER4_512_D(curr_out, v_out_stride, v_out1, is_contiguous_out);
-        curr_out = out_r + out_strides[2];
-        SCATTER4_512_D(curr_out, v_out_stride, v_out2, is_contiguous_out);
+        if (out_strides[1] == DATA_STRIDE)
+        {
+            TRANSPOSE_ST2_512_D(curr_out, v_out_stride, v_out0, v_out1);
+            curr_out = curr_out + 2 * DATA_STRIDE;
+            SCATTER4_512_D_STRIDED(curr_out, v_out_stride, v_out2);
+        }
+        else
+        {
+            SCATTER4_512_D(curr_out, v_out_stride, v_out0, is_contiguous_out);
+            curr_out = out_r + out_strides[1];
+            SCATTER4_512_D(curr_out, v_out_stride, v_out1, is_contiguous_out);
+            curr_out = out_r + out_strides[2];
+            SCATTER4_512_D(curr_out, v_out_stride, v_out2, is_contiguous_out);
+        }
 
         in_r += NUM_SETS_512_D * v_in_stride;
         out_r += NUM_SETS_512_D * v_out_stride;
@@ -340,11 +385,20 @@ static VOID fft3avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Output point 3 : X[2]
         v_out2 = _mm256_add_pd(v_tv0, v_tv1);
 
-        SCATTER2_256_D(curr_out, v_out_stride, v_out0, is_contiguous_out);
-        curr_out = out_r + out_strides[1];
-        SCATTER2_256_D(curr_out, v_out_stride, v_out1, is_contiguous_out);
-        curr_out = out_r + out_strides[2];
-        SCATTER2_256_D(curr_out, v_out_stride, v_out2, is_contiguous_out);
+        if (out_strides[1] == DATA_STRIDE)
+        {
+            TRANSPOSE_ST2_256_D(curr_out, v_out_stride, v_out0, v_out1);
+            curr_out = curr_out + NUM_SETS_256_D * DATA_STRIDE;
+            SCATTER2_256_D_STRIDED(curr_out, v_out_stride, v_out2);
+        }
+        else
+        {
+            SCATTER2_256_D(curr_out, v_out_stride, v_out0, is_contiguous_out);
+            curr_out = out_r + out_strides[1];
+            SCATTER2_256_D(curr_out, v_out_stride, v_out1, is_contiguous_out);
+            curr_out = out_r + out_strides[2];
+            SCATTER2_256_D(curr_out, v_out_stride, v_out2, is_contiguous_out);
+        }
 
         in_r += NUM_SETS_256_D * v_in_stride;
         out_r += NUM_SETS_256_D * v_out_stride;

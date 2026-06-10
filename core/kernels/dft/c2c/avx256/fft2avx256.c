@@ -70,9 +70,16 @@ static VOID fft2avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         _out1 = _mm256_sub_ps(_in0, _in1);
 
         curr_out = out_r;
-        SCATTER4_256_S(curr_out, v_out_stride, _out0, is_contiguous_out);
-        curr_out = out_r + out_strides[1];
-        SCATTER4_256_S(curr_out, v_out_stride, _out1, is_contiguous_out);
+        if (out_strides[1] == DATA_STRIDE)
+        {
+            TRANSPOSE_ST2_256_S(curr_out, v_out_stride, _out0, _out1);
+        }
+        else
+        {
+            SCATTER4_256_S(curr_out, v_out_stride, _out0, is_contiguous_out);
+            curr_out = out_r + out_strides[1];
+            SCATTER4_256_S(curr_out, v_out_stride, _out1, is_contiguous_out);
+        }
         in_r += NUM_SETS_256_S * v_in_stride;
         out_r += NUM_SETS_256_S * v_out_stride;
     }
@@ -92,9 +99,16 @@ static VOID fft2avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         _out1 = _mm_sub_ps(_in0, _in1);
 
         curr_out = out_r;
-        SCATTER2_128_S(curr_out, v_out_stride, _out0, is_contiguous_out);
-        curr_out = out_r + out_strides[1];
-        SCATTER2_128_S(curr_out, v_out_stride, _out1, is_contiguous_out);
+        if (out_strides[1] == DATA_STRIDE)
+        {
+            TRANSPOSE_ST2_128_S(curr_out, v_out_stride, _out0, _out1);
+        }
+        else
+        {
+            SCATTER2_128_S(curr_out, v_out_stride, _out0, is_contiguous_out);
+            curr_out = out_r + out_strides[1];
+            SCATTER2_128_S(curr_out, v_out_stride, _out1, is_contiguous_out);
+        }
 
         in_r = in_r + (v_in_stride << 1);
         out_r = out_r + (v_out_stride << 1);
@@ -115,9 +129,16 @@ static VOID fft2avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         _out1 = _mm_sub_ps(_in0, _in1);
 
         curr_out = out_r;
-        ST_LOW_128_S(curr_out, _out0);
-        curr_out = out_r + out_strides[1];
-        ST_LOW_128_S(curr_out, _out1);
+        if (out_strides[1] == DATA_STRIDE)
+        {
+            ST_128_S(curr_out, _out0, _out1);
+        }
+        else
+        {
+            ST_LOW_128_S(curr_out, _out0);
+            curr_out = out_r + out_strides[1];
+            ST_LOW_128_S(curr_out, _out1);
+        }
     }
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
@@ -160,9 +181,16 @@ static VOID fft2avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         _out1 = _mm256_sub_pd(_in0, _in1);
 
         curr_out = out_r;
-        SCATTER2_256_D(curr_out, v_out_stride, _out0, is_contiguous_out);
-        curr_out = out_r + out_strides[1];
-        SCATTER2_256_D(curr_out, v_out_stride, _out1, is_contiguous_out);
+        if (out_strides[1] == DATA_STRIDE)
+        {
+            TRANSPOSE_ST2_256_D(curr_out, v_out_stride, _out0, _out1);
+        }
+        else
+        {
+            SCATTER2_256_D(curr_out, v_out_stride, _out0, is_contiguous_out);
+            curr_out = out_r + out_strides[1];
+            SCATTER2_256_D(curr_out, v_out_stride, _out1, is_contiguous_out);
+        }
 
         in_r += NUM_SETS_256_D * v_in_stride;
         out_r += NUM_SETS_256_D * v_out_stride;

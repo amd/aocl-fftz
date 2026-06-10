@@ -91,11 +91,20 @@ static VOID fft3avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Output point 3: X[2]
         v_out2 = _mm_add_ps(v_tv0, v_tv1);
 
-        SCATTER2_128_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
-        curr_out = out_r + out_strides[1];
-        SCATTER2_128_S(curr_out, v_out_stride, v_out1, is_contiguous_out);
-        curr_out = out_r + out_strides[2];
-        SCATTER2_128_S(curr_out, v_out_stride, v_out2, is_contiguous_out);
+        if (out_strides[1] == DATA_STRIDE)
+        {
+            TRANSPOSE_ST2_128_S(curr_out, v_out_stride, v_out0, v_out1);
+            curr_out = curr_out + NUM_SETS_128_S * DATA_STRIDE;
+            SCATTER2_128_S_STRIDED(curr_out, v_out_stride, v_out2);
+        }
+        else
+        {
+            SCATTER2_128_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
+            curr_out = out_r + out_strides[1];
+            SCATTER2_128_S(curr_out, v_out_stride, v_out1, is_contiguous_out);
+            curr_out = out_r + out_strides[2];
+            SCATTER2_128_S(curr_out, v_out_stride, v_out2, is_contiguous_out);
+        }
 
         in_r += NUM_SETS_128_S * v_in_stride;
         out_r += NUM_SETS_128_S * v_out_stride;
@@ -126,11 +135,20 @@ static VOID fft3avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         v_out2 = _mm_add_ps(v_tv0, v_tv1);
 
         curr_out = out_r;
-        ST_LOW_128_S(curr_out, v_out0);
-        curr_out = out_r + out_strides[1];
-        ST_LOW_128_S(curr_out, v_out1);
-        curr_out = out_r + out_strides[2];
-        ST_LOW_128_S(curr_out, v_out2);
+        if (out_strides[1] == DATA_STRIDE)
+        {
+            ST_128_S(curr_out, v_out0, v_out1);
+            curr_out = out_r + 2 * DATA_STRIDE;
+            ST_LOW_128_S(curr_out, v_out2);
+        }
+        else
+        {
+            ST_LOW_128_S(curr_out, v_out0);
+            curr_out = out_r + out_strides[1];
+            ST_LOW_128_S(curr_out, v_out1);
+            curr_out = out_r + out_strides[2];
+            ST_LOW_128_S(curr_out, v_out2);
+        }
     }
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
