@@ -637,7 +637,7 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
                 if (i == 0 && solver_type == SOLVER_REAL_NDIM)
                 {
                     // SOLVER_REAL_NDIM: Only has aux_buffer_1 for inplace/C2R cases
-                    if (cur_sol->dft_bufs && cur_sol->dft_bufs->buffered &&
+                    if (cur_sol->dft_bufs->buffered &&
                         cur_sol->dft_bufs->buffered->aux_buffer_1)
                     {
                         FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_1);

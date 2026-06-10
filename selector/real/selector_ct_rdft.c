@@ -203,7 +203,7 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 sel->cost_analysis->time = cur_sel->cost_analysis->time +
                                            cur_sel_m->cost_analysis->time;
 
-                if (next_sol == NULL || next_sol->next_sol == NULL)
+                if (next_sol->next_sol == NULL)
                 {
                     goto exit_ct_dft;
                 }

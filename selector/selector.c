@@ -1750,7 +1750,7 @@ static INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
 
     if (cur_sol == NULL)
     {
-        AOCLFFTZ_ERROR("Unexpected NULL in chain after CT solutions");
+        AOCLFFTZ_ERROR("Invalid solution chain: CT solution node not found");
         return SOLVER_FAILURE;
     }
 
@@ -1759,6 +1759,11 @@ static INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
     cur_sol->decomp_scheme->in_imag = MOVE_ADDR(aux_in, dt_bytes);
 
     // Update last direct solution's input
+    if (cur_sol->next_sol == NULL || cur_sol->next_sol[0] == NULL)
+    {
+        AOCLFFTZ_ERROR("Invalid solution chain: direct solution node not found");
+        return SOLVER_FAILURE;
+    }
     cur_sol = cur_sol->next_sol[0];
     cur_sol->decomp_scheme->in_real = aux_in;
     cur_sol->decomp_scheme->in_imag = MOVE_ADDR(aux_in, dt_bytes);
