@@ -151,7 +151,7 @@ static kernel_fp_list_t kernels_twid_real_r2c[NUM_REAL_KERNELS_VARIANTS]
         {KREG(r2hc_rfft, 10)}, // radix 10
         {KREG(r2hc_rfft, 11)}, // radix 11
         {KREG(r2hc_rfft, 12)}, // radix 12
-        //{KREG(r2hc_rfft, 13)}, // radix 13
+        {KREG(r2hc_rfft, 13)}, // radix 13
         {KREG(r2hc_rfft, 14)}, // radix 14
         {KREG(r2hc_rfft, 15)}, // radix 15
         {KREG(r2hc_rfft, 16)}, // radix 16
@@ -168,7 +168,7 @@ static kernel_fp_list_t kernels_twid_real_r2c[NUM_REAL_KERNELS_VARIANTS]
         {KREG(r2hcf_rfft, 10)}, // radix 10
         {KREG(r2hcf_rfft, 11)}, // radix 11
         {KREG(r2hcf_rfft, 12)}, // radix 12
-        //{KREG(r2hcf_rfft, 13)}, // radix 13
+        {KREG(r2hcf_rfft, 13)}, // radix 13
         {KREG(r2hcf_rfft, 14)}, // radix 14
         {KREG(r2hcf_rfft, 15)}, // radix 15
         {KREG(r2hcf_rfft, 16)}, // radix 16
@@ -185,7 +185,7 @@ static kernel_fp_list_t kernels_twid_real_r2c[NUM_REAL_KERNELS_VARIANTS]
         {KREG(twid_r2c_fft, 10)}, // radix 10
         {KREG(twid_r2c_fft, 11)}, // radix 11
         {KREG(twid_r2c_fft, 12)}, // radix 12
-        //{KREG(twid_r2c_fft, 13)}, // radix 13
+        {KREG(twid_r2c_fft, 13)}, // radix 13
         {KREG(twid_r2c_fft, 14)}, // radix 14
         {KREG(twid_r2c_fft, 15)}, // radix 15
         {KREG(twid_r2c_fft, 16)}, // radix 16
@@ -209,7 +209,7 @@ static kernel_fp_list_t kernels_twid_real_c2r[NUM_REAL_KERNELS_VARIANTS]
         {KREG(r2hc_rfft, 10)}, // radix 10
         {KREG(r2hc_rfft, 11)}, // radix 11
         {KREG(r2hc_rfft, 12)}, // radix 12
-        //{KREG(r2hc_rfft, 13)}, // radix 13
+        {KREG(r2hc_rfft, 13)}, // radix 13
         {KREG(r2hc_rfft, 14)}, // radix 14
         {KREG(r2hc_rfft, 15)}, // radix 15
         {KREG(r2hc_rfft, 16)}, // radix 16
@@ -226,7 +226,7 @@ static kernel_fp_list_t kernels_twid_real_c2r[NUM_REAL_KERNELS_VARIANTS]
         {KREG(r2hcf_rfft, 10)}, // radix 10
         {KREG(r2hcf_rfft, 11)}, // radix 11
         {KREG(r2hcf_rfft, 12)}, // radix 12
-        //{KREG(r2hcf_rfft, 13)}, // radix 13
+        {KREG(r2hcf_rfft, 13)}, // radix 13
         {KREG(r2hcf_rfft, 14)}, // radix 14
         {KREG(r2hcf_rfft, 15)}, // radix 15
         {KREG(r2hcf_rfft, 16)}, // radix 16
@@ -243,7 +243,7 @@ static kernel_fp_list_t kernels_twid_real_c2r[NUM_REAL_KERNELS_VARIANTS]
         {KREG(twid_c2r_fft, 10)}, // radix 10
         {KREG(twid_c2r_fft, 11)}, // radix 11
         {KREG(twid_c2r_fft, 12)}, // radix 12
-        //{KREG(twid_c2r_fft, 13)}, // radix 13
+        {KREG(twid_c2r_fft, 13)}, // radix 13
         {KREG(twid_c2r_fft, 14)}, // radix 14
         {KREG(twid_c2r_fft, 15)}, // radix 15
         {KREG(twid_c2r_fft, 16)}, // radix 16

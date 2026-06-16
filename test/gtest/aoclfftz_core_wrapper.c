@@ -97,6 +97,7 @@
     GET_OPS_CNT_REAL_WRAPPER_DEFN(kind, 10, isa)                               \
     GET_OPS_CNT_REAL_WRAPPER_DEFN(kind, 11, isa)                               \
     GET_OPS_CNT_REAL_WRAPPER_DEFN(kind, 12, isa)                               \
+    GET_OPS_CNT_REAL_WRAPPER_DEFN(kind, 13, isa)                               \
     GET_OPS_CNT_REAL_WRAPPER_DEFN(kind, 14, isa)                               \
     GET_OPS_CNT_REAL_WRAPPER_DEFN(kind, 15, isa)                               \
     GET_OPS_CNT_REAL_WRAPPER_DEFN(kind, 16, isa)
@@ -113,6 +114,7 @@
     REGISTER_KERNEL_REAL_WRAPPER_DEFN(kind, 10, isa)                           \
     REGISTER_KERNEL_REAL_WRAPPER_DEFN(kind, 11, isa)                           \
     REGISTER_KERNEL_REAL_WRAPPER_DEFN(kind, 12, isa)                           \
+    REGISTER_KERNEL_REAL_WRAPPER_DEFN(kind, 13, isa)                           \
     REGISTER_KERNEL_REAL_WRAPPER_DEFN(kind, 14, isa)                           \
     REGISTER_KERNEL_REAL_WRAPPER_DEFN(kind, 15, isa)                           \
     REGISTER_KERNEL_REAL_WRAPPER_DEFN(kind, 16, isa)

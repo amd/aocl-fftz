@@ -129,6 +129,7 @@ typedef struct wrapper_kernel_fp_list
     GET_OPS_CNT_REAL_WRAPPER_DECL(kind, 10, isa)                               \
     GET_OPS_CNT_REAL_WRAPPER_DECL(kind, 11, isa)                               \
     GET_OPS_CNT_REAL_WRAPPER_DECL(kind, 12, isa)                               \
+    GET_OPS_CNT_REAL_WRAPPER_DECL(kind, 13, isa)                               \
     GET_OPS_CNT_REAL_WRAPPER_DECL(kind, 14, isa)                               \
     GET_OPS_CNT_REAL_WRAPPER_DECL(kind, 15, isa)                               \
     GET_OPS_CNT_REAL_WRAPPER_DECL(kind, 16, isa)
@@ -145,6 +146,7 @@ typedef struct wrapper_kernel_fp_list
     REGISTER_KERNEL_REAL_WRAPPER_DECL(kind, 10, isa)                           \
     REGISTER_KERNEL_REAL_WRAPPER_DECL(kind, 11, isa)                           \
     REGISTER_KERNEL_REAL_WRAPPER_DECL(kind, 12, isa)                           \
+    REGISTER_KERNEL_REAL_WRAPPER_DECL(kind, 13, isa)                           \
     REGISTER_KERNEL_REAL_WRAPPER_DECL(kind, 14, isa)                           \
     REGISTER_KERNEL_REAL_WRAPPER_DECL(kind, 15, isa)                           \
     REGISTER_KERNEL_REAL_WRAPPER_DECL(kind, 16, isa)
@@ -161,6 +163,7 @@ typedef struct wrapper_kernel_fp_list
     WRAPPER_KERNEL_REAL_TABLE_ENTRY(kind, 10, isa)                             \
     WRAPPER_KERNEL_REAL_TABLE_ENTRY(kind, 11, isa)                             \
     WRAPPER_KERNEL_REAL_TABLE_ENTRY(kind, 12, isa)                             \
+    WRAPPER_KERNEL_REAL_TABLE_ENTRY(kind, 13, isa)                             \
     WRAPPER_KERNEL_REAL_TABLE_ENTRY(kind, 14, isa)                             \
     WRAPPER_KERNEL_REAL_TABLE_ENTRY(kind, 15, isa)                             \
     WRAPPER_KERNEL_REAL_TABLE_ENTRY(kind, 16, isa)

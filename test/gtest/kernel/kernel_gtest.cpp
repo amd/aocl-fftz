@@ -367,6 +367,7 @@ aoclfftz_kernel_test_params_t param_float_r2hc_c_kernels[] =
     {10, aocl_fftz_kernel_type::R2HC_C},
     {11, aocl_fftz_kernel_type::R2HC_C},
     {12, aocl_fftz_kernel_type::R2HC_C},
+    {13, aocl_fftz_kernel_type::R2HC_C},
     {14, aocl_fftz_kernel_type::R2HC_C},
     {15, aocl_fftz_kernel_type::R2HC_C},
     {16, aocl_fftz_kernel_type::R2HC_C}
@@ -386,6 +387,7 @@ aoclfftz_kernel_test_params_t param_double_r2hc_c_kernels[] =
     {10, aocl_fftz_kernel_type::R2HC_C},
     {11, aocl_fftz_kernel_type::R2HC_C},
     {12, aocl_fftz_kernel_type::R2HC_C},
+    {13, aocl_fftz_kernel_type::R2HC_C},
     {14, aocl_fftz_kernel_type::R2HC_C},
     {15, aocl_fftz_kernel_type::R2HC_C},
     {16, aocl_fftz_kernel_type::R2HC_C}
@@ -405,6 +407,7 @@ aoclfftz_kernel_test_params_t param_float_r2hcf_c_kernels[] =
     {10, aocl_fftz_kernel_type::R2HCF_C},
     {11, aocl_fftz_kernel_type::R2HCF_C},
     {12, aocl_fftz_kernel_type::R2HCF_C},
+    {13, aocl_fftz_kernel_type::R2HCF_C},
     {14, aocl_fftz_kernel_type::R2HCF_C},
     {15, aocl_fftz_kernel_type::R2HCF_C},
     {16, aocl_fftz_kernel_type::R2HCF_C}
@@ -424,6 +427,7 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_c_kernels[] =
     {10, aocl_fftz_kernel_type::R2HCF_C},
     {11, aocl_fftz_kernel_type::R2HCF_C},
     {12, aocl_fftz_kernel_type::R2HCF_C},
+    {13, aocl_fftz_kernel_type::R2HCF_C},
     {14, aocl_fftz_kernel_type::R2HCF_C},
     {15, aocl_fftz_kernel_type::R2HCF_C},
     {16, aocl_fftz_kernel_type::R2HCF_C}
@@ -444,6 +448,7 @@ aoclfftz_kernel_test_params_t param_double_r2hc_avx128_kernels[] =
     {10, aocl_fftz_kernel_type::R2HC_AVX128},
     {11, aocl_fftz_kernel_type::R2HC_AVX128},
     {12, aocl_fftz_kernel_type::R2HC_AVX128},
+    {13, aocl_fftz_kernel_type::R2HC_AVX128},
     {14, aocl_fftz_kernel_type::R2HC_AVX128},
     {15, aocl_fftz_kernel_type::R2HC_AVX128},
     {16, aocl_fftz_kernel_type::R2HC_AVX128}
@@ -463,6 +468,7 @@ aoclfftz_kernel_test_params_t param_float_r2hc_avx128_kernels[] =
     {10, aocl_fftz_kernel_type::R2HC_AVX128},
     {11, aocl_fftz_kernel_type::R2HC_AVX128},
     {12, aocl_fftz_kernel_type::R2HC_AVX128},
+    {13, aocl_fftz_kernel_type::R2HC_AVX128},
     {14, aocl_fftz_kernel_type::R2HC_AVX128},
     {15, aocl_fftz_kernel_type::R2HC_AVX128},
     {16, aocl_fftz_kernel_type::R2HC_AVX128}
@@ -482,6 +488,7 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_avx128_kernels[] =
     {10, aocl_fftz_kernel_type::R2HCF_AVX128},
     {11, aocl_fftz_kernel_type::R2HCF_AVX128},
     {12, aocl_fftz_kernel_type::R2HCF_AVX128},
+    {13, aocl_fftz_kernel_type::R2HCF_AVX128},
     {14, aocl_fftz_kernel_type::R2HCF_AVX128},
     {15, aocl_fftz_kernel_type::R2HCF_AVX128},
     {16, aocl_fftz_kernel_type::R2HCF_AVX128}
@@ -501,6 +508,7 @@ aoclfftz_kernel_test_params_t param_float_r2hcf_avx128_kernels[] =
     {10, aocl_fftz_kernel_type::R2HCF_AVX128},
     {11, aocl_fftz_kernel_type::R2HCF_AVX128},
     {12, aocl_fftz_kernel_type::R2HCF_AVX128},
+    {13, aocl_fftz_kernel_type::R2HCF_AVX128},
     {14, aocl_fftz_kernel_type::R2HCF_AVX128},
     {15, aocl_fftz_kernel_type::R2HCF_AVX128},
     {16, aocl_fftz_kernel_type::R2HCF_AVX128}
@@ -522,6 +530,7 @@ aoclfftz_kernel_test_params_t param_double_r2hc_avx256_kernels[] =
     {10, aocl_fftz_kernel_type::R2HC_AVX256},
     {11, aocl_fftz_kernel_type::R2HC_AVX256},
     {12, aocl_fftz_kernel_type::R2HC_AVX256},
+    {13, aocl_fftz_kernel_type::R2HC_AVX256},
     {14, aocl_fftz_kernel_type::R2HC_AVX256},
     {15, aocl_fftz_kernel_type::R2HC_AVX256},
     {16, aocl_fftz_kernel_type::R2HC_AVX256}
@@ -541,6 +550,7 @@ aoclfftz_kernel_test_params_t param_float_r2hc_avx256_kernels[] =
     {10, aocl_fftz_kernel_type::R2HC_AVX256},
     {11, aocl_fftz_kernel_type::R2HC_AVX256},
     {12, aocl_fftz_kernel_type::R2HC_AVX256},
+    {13, aocl_fftz_kernel_type::R2HC_AVX256},
     {14, aocl_fftz_kernel_type::R2HC_AVX256},
     {15, aocl_fftz_kernel_type::R2HC_AVX256},
     {16, aocl_fftz_kernel_type::R2HC_AVX256}
@@ -560,6 +570,7 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_avx256_kernels[] =
     {10, aocl_fftz_kernel_type::R2HCF_AVX256},
     {11, aocl_fftz_kernel_type::R2HCF_AVX256},
     {12, aocl_fftz_kernel_type::R2HCF_AVX256},
+    {13, aocl_fftz_kernel_type::R2HCF_AVX256},
     {14, aocl_fftz_kernel_type::R2HCF_AVX256},
     {15, aocl_fftz_kernel_type::R2HCF_AVX256},
     {16, aocl_fftz_kernel_type::R2HCF_AVX256}
@@ -579,6 +590,7 @@ aoclfftz_kernel_test_params_t param_float_r2hcf_avx256_kernels[] =
     {10, aocl_fftz_kernel_type::R2HCF_AVX256},
     {11, aocl_fftz_kernel_type::R2HCF_AVX256},
     {12, aocl_fftz_kernel_type::R2HCF_AVX256},
+    {13, aocl_fftz_kernel_type::R2HCF_AVX256},
     {14, aocl_fftz_kernel_type::R2HCF_AVX256},
     {15, aocl_fftz_kernel_type::R2HCF_AVX256},
     {16, aocl_fftz_kernel_type::R2HCF_AVX256}
@@ -600,6 +612,7 @@ aoclfftz_kernel_test_params_t param_double_r2hc_avx512_kernels[] =
     {10, aocl_fftz_kernel_type::R2HC_AVX512},
     {11, aocl_fftz_kernel_type::R2HC_AVX512},
     {12, aocl_fftz_kernel_type::R2HC_AVX512},
+    {13, aocl_fftz_kernel_type::R2HC_AVX512},
     {14, aocl_fftz_kernel_type::R2HC_AVX512},
     {15, aocl_fftz_kernel_type::R2HC_AVX512},
     {16, aocl_fftz_kernel_type::R2HC_AVX512}
@@ -619,6 +632,7 @@ aoclfftz_kernel_test_params_t param_float_r2hc_avx512_kernels[] =
     {10, aocl_fftz_kernel_type::R2HC_AVX512},
     {11, aocl_fftz_kernel_type::R2HC_AVX512},
     {12, aocl_fftz_kernel_type::R2HC_AVX512},
+    {13, aocl_fftz_kernel_type::R2HC_AVX512},
     {14, aocl_fftz_kernel_type::R2HC_AVX512},
     {15, aocl_fftz_kernel_type::R2HC_AVX512},
     {16, aocl_fftz_kernel_type::R2HC_AVX512}
@@ -638,6 +652,7 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_avx512_kernels[] =
     {10, aocl_fftz_kernel_type::R2HCF_AVX512},
     {11, aocl_fftz_kernel_type::R2HCF_AVX512},
     {12, aocl_fftz_kernel_type::R2HCF_AVX512},
+    {13, aocl_fftz_kernel_type::R2HCF_AVX512},
     {14, aocl_fftz_kernel_type::R2HCF_AVX512},
     {15, aocl_fftz_kernel_type::R2HCF_AVX512},
     {16, aocl_fftz_kernel_type::R2HCF_AVX512}
@@ -657,6 +672,7 @@ aoclfftz_kernel_test_params_t param_float_r2hcf_avx512_kernels[] =
     {10, aocl_fftz_kernel_type::R2HCF_AVX512},
     {11, aocl_fftz_kernel_type::R2HCF_AVX512},
     {12, aocl_fftz_kernel_type::R2HCF_AVX512},
+    {13, aocl_fftz_kernel_type::R2HCF_AVX512},
     {14, aocl_fftz_kernel_type::R2HCF_AVX512},
     {15, aocl_fftz_kernel_type::R2HCF_AVX512},
     {16, aocl_fftz_kernel_type::R2HCF_AVX512}
