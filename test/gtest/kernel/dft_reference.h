@@ -106,6 +106,8 @@ VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_complex(
 
     kernel_stride.v_in_stride  = in_stride_w_ds * radix;
     kernel_stride.v_out_stride = out_stride_w_ds * radix;
+    kernel_stride.v_in_h2_stride  = kernel_stride.v_in_stride;
+    kernel_stride.v_out_h2_stride = kernel_stride.v_out_stride;
 
     // populating strides and executing FFT for complex kernels
     populate_stride_array_wrapper(kernel_stride.in_strides,
@@ -224,6 +226,8 @@ VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_real(
 
     kernel_stride.v_in_stride  = in_stride_w_ds * buf_size_multiplier * radix;
     kernel_stride.v_out_stride = out_stride_w_ds * buf_size_multiplier * radix;
+    kernel_stride.v_in_h2_stride  = kernel_stride.v_in_stride;
+    kernel_stride.v_out_h2_stride = kernel_stride.v_out_stride;
 
     // populating strides and executing FFT for real kernels
     populate_stride_array_wrapper(kernel_stride.in_strides,

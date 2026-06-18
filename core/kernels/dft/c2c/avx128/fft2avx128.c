@@ -47,7 +47,9 @@ static VOID fft2avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP *out_strides = strides->out_strides;
 #endif
     INTP v_in_stride = strides->v_in_stride;
+    UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
     INTP v_out_stride = strides->v_out_stride;
+    UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
     INTP N = n / NUM_SETS_128_S;
     INTP count;
 
@@ -59,18 +61,18 @@ static VOID fft2avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_in = in_r;
         curr_out = out_r;
 
-        GATHER2_128_S(curr_in, v_in_stride, _in0);
+        GATHER2_128_S(curr_in, v_in_stride, _in0, is_contiguous_in);
         curr_in = in_r + in_strides[1];
-        GATHER2_128_S(curr_in, v_in_stride, _in1);
+        GATHER2_128_S(curr_in, v_in_stride, _in1, is_contiguous_in);
 
         // Output point 1: X[0]
         _out0 = _mm_add_ps(_in0, _in1);
         // Output point 2: X[1]
         _out1 = _mm_sub_ps(_in0, _in1);
 
-        SCATTER2_128_S(curr_out, v_out_stride, _out0);
+        SCATTER2_128_S(curr_out, v_out_stride, _out0, is_contiguous_out);
         curr_out = out_r + out_strides[1];
-        SCATTER2_128_S(curr_out, v_out_stride, _out1);
+        SCATTER2_128_S(curr_out, v_out_stride, _out1, is_contiguous_out);
 
         in_r += NUM_SETS_128_S * v_in_stride;
         out_r += NUM_SETS_128_S * v_out_stride;

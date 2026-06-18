@@ -70,7 +70,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
         UINT32 radix = kertab[i].radix;
-
+        UINT8 direction = FFT_DIR(decomp_scheme->flags);
         if (radix == 0) // End of search for suitable kernels in the list
         {
             break;
@@ -82,12 +82,15 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
             {
                 INTP kloc = (kcat * NUM_KERNELS_IN_EACH_CATEGORY) + i;
 
-                if (kertab[kloc].kfft == NULL)
+                if (kertab[kloc].kfft[direction] == NULL)
                 {
                     continue;
                 }
 
-                cur_sel->solution->solver->kernel_c2c->kfft = kertab[kloc].kfft;
+                cur_sel->solution->solver->kernel_c2c->kfft[FORWARD_FFT_DIR] =
+                    kertab[kloc].kfft[FORWARD_FFT_DIR];
+                cur_sel->solution->solver->kernel_c2c->kfft[BACKWARD_FFT_DIR] =
+                    kertab[kloc].kfft[BACKWARD_FFT_DIR];
                 cur_sel->solution->solver->kernel_c2c->sets =
                     kertab[kloc].sets[precision - 2];
 

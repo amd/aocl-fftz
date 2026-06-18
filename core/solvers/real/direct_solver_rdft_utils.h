@@ -25,7 +25,7 @@ typedef struct base_strides
 {
     INTP in_stride;  /**< Stride for input buffer access */
     INTP out_stride; /**< Stride for output buffer access */
-}base_strides_t;
+} base_strides_t;
 
 /**
  * @brief In RFFT, output can be the real problem input buffer or a temp buffer.
@@ -65,11 +65,6 @@ static inline VOID update_asymmetric_strides(INTP *strides, INTP radix,
         strides[i] -= h2_stride;
     }
 }
-
-VOID compute_conjugates(VOID *data, INTP radix, INTP n, INTP *strides,
-                        INTP vec_stride, UINT32 prec);
-VOID compute_conjugates_outplace(VOID *out, VOID *in, INTP radix, INTP n,
-                                 INTP *strides, INTP vec_stride, UINT32 prec);
 
 VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t *sol);
 VOID set_zero_for_dc_and_nyquist(aoclfftz_solution_t *sol);

@@ -28,8 +28,6 @@ INT32 register_solvers(VOID)
 {
     // Real solvers
     solvers_table[SOLVER_REAL_DIRECT] = register_execute_real_direct_solver();
-    solvers_table[SOLVER_REAL_DIRECT_TWIDDLE] =
-        register_execute_real_direct_solver();
     solvers_table[SOLVER_REAL_CT] = register_execute_real_ct_solver();
     solvers_table[SOLVER_REAL_BATCHED] = register_execute_real_batched_solver();
     solvers_table[SOLVER_REAL_BUFFERED] =
@@ -38,8 +36,6 @@ INT32 register_solvers(VOID)
     solvers_table[SOLVER_REAL_SIZEONE] = register_execute_real_sizeone_solver();
 #ifdef MULTI_THREADING
     solvers_table[SOLVER_REAL_MT_DIRECT] =
-        register_execute_real_mt_direct_solver();
-    solvers_table[SOLVER_REAL_MT_DIRECT_TWIDDLE] =
         register_execute_real_mt_direct_solver();
     solvers_table[SOLVER_REAL_MT_BATCHED] =
         register_execute_real_mt_batched_solver();

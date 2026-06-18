@@ -185,9 +185,9 @@ static const union data_union_512
  * Cast is excluded as it will be a compile time operation.
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 8, perm: 3, other: 3}
-#define GATHER8_512_S(base, offset, dest)                                      \
+#define GATHER8_512_S(base, offset, dest, is_contiguous)                       \
     {                                                                          \
-        if (offset == 2)                                                       \
+        if (is_contiguous)                                                     \
         {                                                                      \
             dest = _mm512_loadu_ps(base);                                      \
         }                                                                      \
@@ -223,9 +223,9 @@ static const union data_union_512
  * Cast is excluded as it will be a compile time operation.
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 8, perm: 0, other: 3}
-#define SCATTER8_512_S(base, offset, src)                                      \
+#define SCATTER8_512_S(base, offset, src, is_contiguous)                       \
 {                                                                              \
-    if (offset == 2)                                                           \
+    if (is_contiguous)                                                         \
     {                                                                          \
         _mm512_storeu_ps(base, src);                                           \
     }                                                                          \
@@ -257,9 +257,9 @@ static const union data_union_512
  * Cast is excluded as it will be a compile time operation
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 0, other: 3}
-#define GATHER4_512_D(base, offset, dest)                                      \
+#define GATHER4_512_D(base, offset, dest, is_contiguous)                       \
 {                                                                              \
-    if (offset == 2)                                                           \
+    if (is_contiguous)                                                         \
     {                                                                          \
         dest = _mm512_loadu_pd(base);                                          \
     }                                                                          \
@@ -269,13 +269,14 @@ static const union data_union_512
         __m256d _256low, _256high;                                             \
         _low = _mm_loadu_pd(base);                                             \
         _high = _mm_loadu_pd((base) + (offset));                               \
-        _256low = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);\
+        _256low =                                                              \
+            _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);      \
         _low = _mm_loadu_pd((base) + offset * 2);                              \
         _high = _mm_loadu_pd((base) + offset * 3);                             \
         _256high =                                                             \
             _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);      \
         dest = _mm512_insertf64x4(_mm512_castpd256_pd512(_256low),             \
-                                    _256high, 1);                              \
+                                  _256high, 1);                                \
     }                                                                          \
 }
 
@@ -287,9 +288,9 @@ static const union data_union_512
  * Cast is excluded as it will be a compile time operation.
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 0, other: 3}
-#define SCATTER4_512_D(base, offset, src)                                      \
+#define SCATTER4_512_D(base, offset, src, is_contiguous)                       \
 {                                                                              \
-    if (offset == 2)                                                           \
+    if (is_contiguous)                                                         \
     {                                                                          \
         _mm512_storeu_pd(base, src);                                           \
     }                                                                          \
@@ -311,7 +312,7 @@ static const union data_union_512
 
 // Cost: {fma: 1, mul: 1, add: 0, move: 6, perm: 3, other: 3}
 #define ITW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
-                         load_multi_cols)                                      \
+                         load_multi_cols, is_contiguous)                       \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m512d twv;                                                               \
@@ -322,7 +323,7 @@ static const union data_union_512
         twv = _mm512_broadcast_f64x2(_mm_load_pd((twbuf) + addr));             \
     }                                                                          \
     __m512d tmp_in;                                                            \
-    GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in, is_contiguous);  \
     const __m512d twr = BROADCAST_RE_512_D(twv);                               \
     const __m512d twi = BROADCAST_IM_512_D(twv);                               \
     const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
@@ -331,7 +332,7 @@ static const union data_union_512
 
 // Cost: {fma: 1, mul: 1, add: 0, move: 6, perm: 3, other: 3}
 #define TW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
-                        load_multi_cols)                                       \
+                        load_multi_cols, is_contiguous)                        \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m512d twv;                                                               \
@@ -342,7 +343,7 @@ static const union data_union_512
         twv = _mm512_broadcast_f64x2(_mm_load_pd((twbuf) + addr));             \
     }                                                                          \
     __m512d tmp_in;                                                            \
-    GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in, is_contiguous);  \
     const __m512d twr = BROADCAST_RE_512_D(twv);                               \
     const __m512d twi = BROADCAST_IM_512_D(twv);                               \
     const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
@@ -351,7 +352,7 @@ static const union data_union_512
 
 // Cost: {fma: 1, mul: 1, add: 0, move: 10, perm: 6, other: 3}
 #define ITW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
-                         load_multi_cols)                                      \
+                         load_multi_cols, is_contiguous)                       \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m512 twv;                                                                \
@@ -363,7 +364,7 @@ static const union data_union_512
                                                   (__m64 *)((twbuf) + addr))); \
     }                                                                          \
     __m512 tmp_in;                                                             \
-    GATHER8_512_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    GATHER8_512_S((gbase) + starr[(stidx)], (offset), tmp_in, is_contiguous);  \
     const __m512 twr = BROADCAST_RE_512_S(twv);                                \
     const __m512 twi = BROADCAST_IM_512_S(twv);                                \
     const __m512 tmp_i = _mm512_mul_ps(SWAP_RI_512_S(tmp_in), twi);            \
@@ -372,7 +373,7 @@ static const union data_union_512
 
 // Cost: {fma: 1, mul: 1, add: 0, move: 10, perm: 6, other: 3}
 #define TW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
-                        load_multi_cols)                                       \
+                        load_multi_cols, is_contiguous)                        \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m512 twv;                                                                \
@@ -384,29 +385,55 @@ static const union data_union_512
                                                   (__m64 *)((twbuf) + addr))); \
     }                                                                          \
     __m512 tmp_in;                                                             \
-    GATHER8_512_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    GATHER8_512_S((gbase) + starr[(stidx)], (offset), tmp_in, is_contiguous);  \
     const __m512 twr = BROADCAST_RE_512_S(twv);                                \
     const __m512 twi = BROADCAST_IM_512_S(twv);                                \
     const __m512 tmp_i = _mm512_mul_ps(SWAP_RI_512_S(tmp_in), twi);            \
     gdest = FMADDSUB_512_S(tmp_in, twr, tmp_i);                                \
 }
 
-// Cost: {fma: 1, mul: 1, add: 0, move: 4, perm: 3, other: 3}
-#define ITW_PRELOADED_512_D(gbase, starr, stidx, offset, gdest, twv)           \
+// Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 4, other: 0}
+#define ITW_PRELOADED_GATHER_512_D(gbase, starr, stidx, offset, gdest, twv,    \
+                                   is_contiguous)                              \
 {                                                                              \
     __m512d tmp_in;                                                            \
-    GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in, is_contiguous);  \
     const __m512d twr = BROADCAST_RE_512_D(twv);                               \
     const __m512d twi = BROADCAST_IM_512_D(twv);                               \
     const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
     gdest = FMSUBADD_512_D(tmp_in, twr, tmp_i);                                \
 }
 
-// Cost: {fma: 1, mul: 1, add: 0, move: 4, perm: 3, other: 3}
-#define TW_PRELOADED_512_D(gbase, starr, stidx, offset, gdest, twv)            \
+// Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 3, other: 0}
+#define TW_PRELOADED_GATHER_512_D(gbase, starr, stidx, offset, gdest, twv,     \
+                                  is_contiguous)                               \
 {                                                                              \
     __m512d tmp_in;                                                            \
-    GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    GATHER4_512_D((gbase) + starr[(stidx)], (offset), tmp_in, is_contiguous);  \
+    const __m512d twr = BROADCAST_RE_512_D(twv);                               \
+    const __m512d twi = BROADCAST_IM_512_D(twv);                               \
+    const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
+    gdest = FMADDSUB_512_D(tmp_in, twr, tmp_i);                                \
+}
+
+// Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 4, other: 0}
+#define ITW_PRELOADED_GATHER_512_D_V(gbase, stride, offset, gdest, twv,        \
+                                     is_contiguous)                            \
+{                                                                              \
+    __m512d tmp_in;                                                            \
+    GATHER4_512_D((gbase) + (stride), (offset), tmp_in, is_contiguous);        \
+    const __m512d twr = BROADCAST_RE_512_D(twv);                               \
+    const __m512d twi = BROADCAST_IM_512_D(twv);                               \
+    const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
+    gdest = FMSUBADD_512_D(tmp_in, twr, tmp_i);                                \
+}
+
+// Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 3, other: 0}
+#define TW_PRELOADED_GATHER_512_D_V(gbase, stride, offset, gdest, twv,         \
+                                    is_contiguous)                             \
+{                                                                              \
+    __m512d tmp_in;                                                            \
+    GATHER4_512_D((gbase) + (stride), (offset), tmp_in, is_contiguous);        \
     const __m512d twr = BROADCAST_RE_512_D(twv);                               \
     const __m512d twi = BROADCAST_IM_512_D(twv);                               \
     const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
@@ -414,25 +441,176 @@ static const union data_union_512
 }
 
 // Cost: {fma: 1, mul: 1, add: 0, move: 4, perm: 3, other: 3}
-#define ITW_PRELOADED_512_D_V(gbase, stride, offset, gdest, twv)               \
+#define TW_PRELOADED_SCATTER_512_D(sbase, stride, offset, ssrc, twv,           \
+                                   is_contiguous)                              \
 {                                                                              \
-    __m512d tmp_in;                                                            \
-    GATHER4_512_D((gbase) + (stride), (offset), tmp_in);                       \
     const __m512d twr = BROADCAST_RE_512_D(twv);                               \
     const __m512d twi = BROADCAST_IM_512_D(twv);                               \
-    const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
-    gdest = FMSUBADD_512_D(tmp_in, twr, tmp_i);                                \
+    const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(ssrc), twi);             \
+    __m512d result = FMADDSUB_512_D(ssrc, twr, tmp_i);                         \
+    SCATTER4_512_D((sbase) + (stride), (offset), result, is_contiguous);       \
 }
 
-// Cost: {fma: 1, mul: 1, add: 0, move: 4, perm: 3, other: 3}
-#define TW_PRELOADED_512_D_V(gbase, stride, offset, gdest, twv)                \
+// No-twiddle preloaded gather/scatter: signature-compatible with
+// TW_PRELOADED_GATHER_512_D_V / TW_PRELOADED_SCATTER_512_D, accepts and
+// ignores twv. Used by c2r load and fwd/bwd/r2c store paths so wrapper-local
+// TWID_LOAD/STORE_PRELOADED_*_D shims can be pure name-substitution defines.
+#define PRELOADED_GATHER_NOTW_512_D(gbase, stride, offset, gdest, twv,         \
+                                    is_contiguous)                             \
 {                                                                              \
-    __m512d tmp_in;                                                            \
-    GATHER4_512_D((gbase) + (stride), (offset), tmp_in);                       \
+    (VOID)twv;                                                                 \
+    GATHER4_512_D((gbase) + (stride), (offset), (gdest), is_contiguous);       \
+}
+
+#define PRELOADED_SCATTER_NOTW_512_D(sbase, stride, offset, ssrc, twv,         \
+                                     is_contiguous)                            \
+{                                                                              \
+    (VOID)twv;                                                                 \
+    SCATTER4_512_D((sbase) + (stride), (offset), (ssrc), is_contiguous);       \
+}
+
+/*****************************************************************************
+ * GATHER_NOTW / SCATTER_NOTW -- 512-bit variants
+ *****************************************************************************/
+
+#define GATHER_NOTW_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
+                          lmc, is_contiguous)                                  \
+    GATHER8_512_S((gbase) + starr[(stidx)], (offset), gdest, is_contiguous)
+
+#define GATHER_NOTW_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
+                          lmc, is_contiguous)                                  \
+    GATHER4_512_D((gbase) + starr[(stidx)], (offset), gdest, is_contiguous)
+
+#define SCATTER_NOTW_512_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
+                           lmc, is_contiguous)                                 \
+    SCATTER8_512_S((sbase) + starr[(stidx)], (offset), ssrc, is_contiguous)
+
+#define SCATTER_NOTW_512_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
+                           lmc, is_contiguous)                                 \
+    SCATTER4_512_D((sbase) + starr[(stidx)], (offset), ssrc, is_contiguous)
+
+/*****************************************************************************
+ * TW_SCATTER / ITW_SCATTER -- 512-bit variants
+ *****************************************************************************/
+
+#define TW_SCATTER_512_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,     \
+                         lmc, is_contiguous)                                   \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    __m512d twv;                                                               \
+    if ((lmc))                                                                 \
+    {                                                                          \
+        twv = _mm512_loadu_pd((twbuf) + addr);                                 \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = _mm512_broadcast_f64x2(_mm_loadu_pd((twbuf) + addr));            \
+    }                                                                          \
     const __m512d twr = BROADCAST_RE_512_D(twv);                               \
     const __m512d twi = BROADCAST_IM_512_D(twv);                               \
-    const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(tmp_in), twi);           \
-    gdest = FMADDSUB_512_D(tmp_in, twr, tmp_i);                                \
+    const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(ssrc), twi);             \
+    __m512d _result = FMADDSUB_512_D(ssrc, twr, tmp_i);                        \
+    SCATTER4_512_D((sbase) + starr[(stidx)], (offset), _result, is_contiguous);\
 }
+
+#define ITW_SCATTER_512_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,    \
+                          lmc, is_contiguous)                                  \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    __m512d twv;                                                               \
+    if ((lmc))                                                                 \
+    {                                                                          \
+        twv = _mm512_loadu_pd((twbuf) + addr);                                 \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = _mm512_broadcast_f64x2(_mm_loadu_pd((twbuf) + addr));            \
+    }                                                                          \
+    const __m512d twr = BROADCAST_RE_512_D(twv);                               \
+    const __m512d twi = BROADCAST_IM_512_D(twv);                               \
+    const __m512d tmp_i = _mm512_mul_pd(SWAP_RI_512_D(ssrc), twi);             \
+    __m512d _result = FMSUBADD_512_D(ssrc, twr, tmp_i);                        \
+    SCATTER4_512_D((sbase) + starr[(stidx)], (offset), _result, is_contiguous);\
+}
+
+#define TW_SCATTER_512_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,     \
+                         lmc, is_contiguous)                                   \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    __m512 twv;                                                                \
+    if ((lmc))                                                                 \
+    {                                                                          \
+        twv = _mm512_loadu_ps((twbuf) + addr);                                 \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = _mm512_broadcast_f32x2(                                          \
+            _mm_loadl_pi(_mm_setzero_ps(), (__m64 *)((twbuf) + addr)));        \
+    }                                                                          \
+    const __m512 twr = BROADCAST_RE_512_S(twv);                                \
+    const __m512 twi = BROADCAST_IM_512_S(twv);                                \
+    const __m512 tmp_i = _mm512_mul_ps(SWAP_RI_512_S(ssrc), twi);              \
+    __m512 _result = FMADDSUB_512_S(ssrc, twr, tmp_i);                         \
+    SCATTER8_512_S((sbase) + starr[(stidx)], (offset), _result, is_contiguous);\
+}
+
+#define ITW_SCATTER_512_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,    \
+                          lmc, is_contiguous)                                  \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    __m512 twv;                                                                \
+    if ((lmc))                                                                 \
+    {                                                                          \
+        twv = _mm512_loadu_ps((twbuf) + addr);                                 \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = _mm512_broadcast_f32x2(                                          \
+            _mm_loadl_pi(_mm_setzero_ps(), (__m64 *)((twbuf) + addr)));        \
+    }                                                                          \
+    const __m512 twr = BROADCAST_RE_512_S(twv);                                \
+    const __m512 twi = BROADCAST_IM_512_S(twv);                                \
+    const __m512 tmp_i = _mm512_mul_ps(SWAP_RI_512_S(ssrc), twi);              \
+    __m512 _result = FMSUBADD_512_S(ssrc, twr, tmp_i);                         \
+    SCATTER8_512_S((sbase) + starr[(stidx)], (offset), _result, is_contiguous);\
+}
+
+// No-twiddle preloaded gather/scatter: signature-compatible with
+// TW_PRELOADED_GATHER_512_D_V / TW_PRELOADED_SCATTER_512_D, accepts and
+// ignores twv. Used by c2r load and fwd/bwd/r2c store paths so wrapper-local
+// TWID_PRELOADED_LOAD/STORE_*_D shims can be pure name-substitution defines.
+#define PRELOADED_GATHER_NOTW_512_D(gbase, stride, offset, gdest, twv,         \
+                                    is_contiguous)                             \
+{                                                                              \
+    (VOID)twv;                                                                 \
+    GATHER4_512_D((gbase) + (stride), (offset), (gdest), is_contiguous);       \
+}
+
+#define PRELOADED_SCATTER_NOTW_512_D(sbase, stride, offset, ssrc, twv,         \
+                                     is_contiguous)                            \
+{                                                                              \
+    (VOID)twv;                                                                 \
+    SCATTER4_512_D((sbase) + (stride), (offset), (ssrc), is_contiguous);       \
+}
+
+/*****************************************************************************
+ * GATHER_NOTW / SCATTER_NOTW -- 512-bit variants
+ *****************************************************************************/
+
+#define GATHER_NOTW_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
+                          lmc, is_contiguous)                                  \
+    GATHER8_512_S((gbase) + starr[(stidx)], (offset), gdest, is_contiguous)
+
+#define GATHER_NOTW_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
+                          lmc, is_contiguous)                                  \
+    GATHER4_512_D((gbase) + starr[(stidx)], (offset), gdest, is_contiguous)
+
+#define SCATTER_NOTW_512_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
+                           lmc, is_contiguous)                                 \
+    SCATTER8_512_S((sbase) + starr[(stidx)], (offset), ssrc, is_contiguous)
+
+#define SCATTER_NOTW_512_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
+                           lmc, is_contiguous)                                 \
+    SCATTER4_512_D((sbase) + starr[(stidx)], (offset), ssrc, is_contiguous)
 
 #endif // AOCLFFTZ_SIMD_COMMON_AVX512_H

@@ -27,9 +27,9 @@
  * Operations : 2 MOV(load)
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 2, perm: 0, other: 0}
-#define GATHER2_128_S(base, offset, dest)                                      \
+#define GATHER2_128_S(base, offset, dest, is_contiguous)                       \
 {                                                                              \
-    if (offset == 2)                                                           \
+    if (is_contiguous)                                                         \
     {                                                                          \
         dest = _mm_loadu_ps(base);                                             \
     }                                                                          \
@@ -47,9 +47,9 @@
  * Operations : 2 MOV(store)
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 2, perm: 0, other: 0}
-#define SCATTER2_128_S(base, offset, src)                                      \
+#define SCATTER2_128_S(base, offset, src, is_contiguous)                       \
 {                                                                              \
-    if (offset == 2)                                                           \
+    if (is_contiguous)                                                         \
     {                                                                          \
         _mm_storeu_ps(base, src);                                              \
     }                                                                          \
@@ -100,8 +100,9 @@
 // changing the signature of LD_128_D and causing unnecessary edits in all the
 // existing functions that use LD_128_D, we create a copy.
 // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
-#define LD_128_OFFSET_D(base, offset, dest)                                    \
+#define LD_128_OFFSET_D(base, offset, dest, is_contiguous)                     \
 {                                                                              \
+    (VOID)is_contiguous;                                                       \
     dest = _mm_loadu_pd(base);                                                 \
 }
 
@@ -121,8 +122,9 @@
 // changing the signature of ST_128_D and causing unnecessary edits in all the
 // existing functions that use ST_128_D, we create a copy.
 // Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
-#define ST_128_OFFSET_D(base, offset, src)                                     \
+#define ST_128_OFFSET_D(base, offset, src, is_contiguous)                      \
 {                                                                              \
+    (VOID)is_contiguous;                                                       \
     _mm_storeu_pd(base, src);                                                  \
 }
 
@@ -134,9 +136,9 @@
  * as it will be a compile time operation.
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 1, other: 1}
-#define GATHER4_256_S(base, offset, dest)                                      \
+#define GATHER4_256_S(base, offset, dest, is_contiguous)                       \
 {                                                                              \
-    if (offset == 2)                                                           \
+    if (is_contiguous)                                                         \
     {                                                                          \
         dest = _mm256_loadu_ps(base);                                          \
     }                                                                          \
@@ -160,9 +162,9 @@
  * will be a compile time operation.
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 0, other: 1}
-#define SCATTER4_256_S(base, offset, src)                                      \
+#define SCATTER4_256_S(base, offset, src, is_contiguous)                       \
 {                                                                              \
-    if (offset == 2)                                                           \
+    if (is_contiguous)                                                         \
     {                                                                          \
         _mm256_storeu_ps(base, src);                                           \
     }                                                                          \
@@ -185,9 +187,9 @@
  * will be a compile time operation.
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 2, perm: 0, other: 1}
-#define GATHER2_256_D(base, offset, dest)                                      \
+#define GATHER2_256_D(base, offset, dest, is_contiguous)                       \
 {                                                                              \
-    if (offset == 2)                                                           \
+    if (is_contiguous)                                                         \
     {                                                                          \
         dest = _mm256_loadu_pd(base);                                          \
     }                                                                          \
@@ -208,9 +210,9 @@
  * will be a compile time operation.
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 2, perm: 0, other: 1}
-#define SCATTER2_256_D(base, offset, src)                                      \
+#define SCATTER2_256_D(base, offset, src, is_contiguous)                       \
 {                                                                              \
-    if (offset == 2)                                                           \
+    if (is_contiguous)                                                         \
     {                                                                          \
         _mm256_storeu_pd(base, src);                                           \
     }                                                                          \
@@ -391,7 +393,7 @@
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 2, other: 0}
 #define ITW_GATHER_128_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
-                         load_multi_cols /* unused */)                         \
+                         load_multi_cols /* unused */, is_contiguous)          \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     const __m128d cd = _mm_load_pd((twbuf) + addr);                            \
@@ -405,7 +407,7 @@
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 1, other: 0}
 #define TW_GATHER_128_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
-                        load_multi_cols /* unused */)                          \
+                        load_multi_cols /* unused */, is_contiguous)           \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     const __m128d cd = _mm_load_pd((twbuf) + addr);                            \
@@ -419,7 +421,7 @@
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 4, other: 1}
 #define ITW_GATHER_256_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
-                         load_multi_cols)                                      \
+                         load_multi_cols, is_contiguous)                       \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m256d twv;                                                               \
@@ -432,7 +434,7 @@
         twv = _mm256_broadcast_pd((__m128d *)((twbuf) + addr));                \
     }                                                                          \
     __m256d tmp_in;                                                            \
-    GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in, is_contiguous);  \
     const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
     const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
     const __m256d lo_1 = _mm256_unpacklo_pd(tmp_1, tmp_0);                     \
@@ -442,7 +444,7 @@
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 3, other: 1}
 #define TW_GATHER_256_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
-                        load_multi_cols)                                       \
+                        load_multi_cols, is_contiguous)                        \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m256d twv;                                                               \
@@ -455,7 +457,7 @@
         twv = _mm256_broadcast_pd((__m128d *)((twbuf) + addr));                \
     }                                                                          \
     __m256d tmp_in;                                                            \
-    GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in, is_contiguous);  \
     const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
     const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
     const __m256d lo_1 = _mm256_unpacklo_pd(tmp_0, tmp_1);                     \
@@ -465,7 +467,7 @@
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 5, perm: 7, other: 1}
 #define ITW_GATHER_256_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
-                         load_multi_cols)                                      \
+                         load_multi_cols, is_contiguous)                       \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m256 twv;                                                                \
@@ -478,7 +480,7 @@
         twv = (__m256)(_mm256_broadcast_sd((DOUBLE *)((twbuf) + addr)));       \
     }                                                                          \
     __m256 tmp_in;                                                             \
-    GATHER4_256_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    GATHER4_256_S((gbase) + starr[(stidx)], (offset), tmp_in, is_contiguous);  \
     __m256 tmp_0 = _mm256_mul_ps(tmp_in, twv);                                 \
     __m256 tmp_1 = _mm256_mul_ps(SWAP_RI_256_S(tmp_in), twv);                  \
     tmp_0 = _mm256_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                     \
@@ -490,7 +492,7 @@
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 5, perm: 6, other: 1}
 #define TW_GATHER_256_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
-                        load_multi_cols)                                       \
+                        load_multi_cols, is_contiguous)                        \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m256 twv;                                                                \
@@ -503,7 +505,7 @@
         twv = (__m256)(_mm256_broadcast_sd((DOUBLE *)((twbuf) + addr)));       \
     }                                                                          \
     __m256 tmp_in;                                                             \
-    GATHER4_256_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    GATHER4_256_S((gbase) + starr[(stidx)], (offset), tmp_in, is_contiguous);  \
     __m256 tmp_0 = _mm256_mul_ps(tmp_in, twv);                                 \
     __m256 tmp_1 = _mm256_mul_ps(SWAP_RI_256_S(tmp_in), twv);                  \
     tmp_0 = _mm256_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                     \
@@ -515,7 +517,7 @@
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 6, other: 0}
 #define ITW_GATHER_128_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
-                         load_multi_cols)                                      \
+                         load_multi_cols, is_contiguous)                       \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m128 twv;                                                                \
@@ -528,7 +530,7 @@
         twv = (__m128)(_mm_loaddup_pd((DOUBLE *)((twbuf) + addr)));            \
     }                                                                          \
     __m128 tmp_in;                                                             \
-    GATHER2_128_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    GATHER2_128_S((gbase) + starr[(stidx)], (offset), tmp_in, is_contiguous);  \
     __m128 tmp_0 = _mm_mul_ps(tmp_in, twv);                                    \
     __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(tmp_in), twv);                     \
     tmp_0 = _mm_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                        \
@@ -540,7 +542,7 @@
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 5, other: 0}
 #define TW_GATHER_128_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
-                        load_multi_cols)                                       \
+                        load_multi_cols, is_contiguous)                        \
 {                                                                              \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m128 twv;                                                                \
@@ -553,7 +555,7 @@
         twv = (__m128)(_mm_loaddup_pd((DOUBLE *)((twbuf) + addr)));            \
     }                                                                          \
     __m128 tmp_in;                                                             \
-    GATHER2_128_S((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    GATHER2_128_S((gbase) + starr[(stidx)], (offset), tmp_in, is_contiguous);  \
     __m128 tmp_0 = _mm_mul_ps(tmp_in, twv);                                    \
     __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(tmp_in), twv);                     \
     tmp_0 = _mm_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                        \
@@ -565,8 +567,9 @@
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 6, other: 0}
 #define ITW_GATHER_LOW_128_S(gbase, starr, stidx, gdest, twbuf, n, col,        \
-                             load_multi_cols /* unused */)                     \
+                             load_multi_cols /* unused */, is_contiguous)      \
 {                                                                              \
+    (VOID)is_contiguous;                                                       \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m128 tmp_in, twv;                                                        \
     LD_LOW_128_S((twbuf) + addr, twv);                                         \
@@ -582,8 +585,9 @@
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 5, other: 0}
 #define TW_GATHER_LOW_128_S(gbase, starr, stidx, gdest, twbuf, n, col,         \
-                            load_multi_cols /* unused */)                      \
+                            load_multi_cols /* unused */, is_contiguous)       \
 {                                                                              \
+    (VOID)is_contiguous;                                                       \
     const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
     __m128 tmp_in, twv;                                                        \
     LD_LOW_128_S((twbuf) + addr, twv);                                         \
@@ -657,10 +661,9 @@
 #define BROADCAST_RE_128_D(val) _mm_shuffle_pd(val, val, 0x0) // 00b: [0,0]
 
 /**
- * @brief Broadcasts the imaginary part of a complex number in a 128-bit register
- * for double precision floating point.
- * Shuffle pattern 0x3 (11b) selects the high element of each operand: [1,1].
- * Operation : 1 PERM(shuffle)
+ * @brief Broadcasts the imaginary part of a complex number in a 128-bit
+ * register for double precision floating point. Shuffle pattern 0x3 (11b)
+ * selects the high element of each operand: [1,1]. Operation : 1 PERM(shuffle)
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
 #define BROADCAST_IM_128_D(val) _mm_shuffle_pd(val, val, 0x3) // 11b: [1,1]
@@ -684,8 +687,8 @@
 /**
  * @brief Broadcasts real parts of complex numbers in a 256-bit register
  * for double precision floating point.
- * Shuffle pattern 0x0 (0000b) selects the low element of each 128-bit lane: [0,0,2,2].
- * Operation : 1 PERM(shuffle)
+ * Shuffle pattern 0x0 (0000b) selects the low element of each 128-bit lane:
+ * [0,0,2,2]. Operation : 1 PERM(shuffle)
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
 #define BROADCAST_RE_256_D(val) _mm256_shuffle_pd(val, val, 0x0) // 0000b: [0,0,2,2]
@@ -693,8 +696,8 @@
 /**
  * @brief Broadcasts imaginary parts of complex numbers in a 256-bit register
  * for double precision floating point.
- * Shuffle pattern 0xF (1111b) selects the high element of each 128-bit lane: [1,1,3,3].
- * Operation : 1 PERM(shuffle)
+ * Shuffle pattern 0xF (1111b) selects the high element of each 128-bit lane:
+ * [1,1,3,3]. Operation : 1 PERM(shuffle)
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 0, perm: 1, other: 0}
 #define BROADCAST_IM_256_D(val) _mm256_shuffle_pd(val, val, 0xF) // 1111b: [1,1,3,3]
@@ -724,43 +727,35 @@ union data_union_256
     __m256d d;
 };
 
-static const union data_union_128
-            _conj_128_f = {{ 0x00000000, 0x80000000, 0x00000000, 0x80000000 }};
-static const union data_union_128
-            _conj_128_d = {{ 0x00000000, 0x00000000, 0x00000000, 0x80000000 }};
+static const union data_union_128 _conj_128_f = {
+    {0x00000000, 0x80000000, 0x00000000, 0x80000000}};
+static const union data_union_128 _conj_128_d = {
+    {0x00000000, 0x00000000, 0x00000000, 0x80000000}};
 
-static const union data_union_128
-    _neg_128_f[2] = {
-        {.u = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 }},
-        {.u = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 }}
-    };
-static const union data_union_128
-    _neg_128_d[2] = {
-        {.u = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 }},
-        {.u = { 0x00000000, 0x80000000, 0x00000000, 0x80000000 }}
-    };
+static const union data_union_128 _neg_128_f[2] = {
+    {.u = {0x00000000, 0x00000000, 0x00000000, 0x00000000}},
+    {.u = {0x80000000, 0x80000000, 0x80000000, 0x80000000}}};
+static const union data_union_128 _neg_128_d[2] = {
+    {.u = {0x00000000, 0x00000000, 0x00000000, 0x00000000}},
+    {.u = {0x00000000, 0x80000000, 0x00000000, 0x80000000}}};
 
-static const union data_union_256
-            _conj_256_f = {{ 0x00000000, 0x80000000, 0x00000000, 0x80000000,
-                             0x00000000, 0x80000000, 0x00000000, 0x80000000 }};
-static const union data_union_256
-            _conj_256_d = {{ 0x00000000, 0x00000000, 0x00000000, 0x80000000,
-                             0x00000000, 0x00000000, 0x00000000, 0x80000000 }};
+static const union data_union_256 _conj_256_f = {
+    {0x00000000, 0x80000000, 0x00000000, 0x80000000, 0x00000000, 0x80000000,
+     0x00000000, 0x80000000}};
+static const union data_union_256 _conj_256_d = {
+    {0x00000000, 0x00000000, 0x00000000, 0x80000000, 0x00000000, 0x00000000,
+     0x00000000, 0x80000000}};
 
-static const union data_union_256
-    _neg_256_f[2] = {
-        {.u = { 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-                0x00000000, 0x00000000, 0x00000000, 0x00000000 }},
-        {.u = { 0x80000000, 0x80000000, 0x80000000, 0x80000000,
-                0x80000000, 0x80000000, 0x80000000, 0x80000000 }}
-    };
-static const union data_union_256
-    _neg_256_d[2] = {
-        {.u = { 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-                0x00000000, 0x00000000, 0x00000000, 0x00000000 }},
-        {.u = { 0x00000000, 0x80000000, 0x00000000, 0x80000000,
-                0x00000000, 0x80000000, 0x00000000, 0x80000000 }}
-    };
+static const union data_union_256 _neg_256_f[2] = {
+    {.u = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+           0x00000000, 0x00000000, 0x00000000}},
+    {.u = {0x80000000, 0x80000000, 0x80000000, 0x80000000, 0x80000000,
+           0x80000000, 0x80000000, 0x80000000}}};
+static const union data_union_256 _neg_256_d[2] = {
+    {.u = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+           0x00000000, 0x00000000, 0x00000000}},
+    {.u = {0x00000000, 0x80000000, 0x00000000, 0x80000000, 0x00000000,
+           0x80000000, 0x00000000, 0x80000000}}};
 
 /**
  * @brief take conjugate of the complex number A+Bi => A-Bi
@@ -823,10 +818,11 @@ static const union data_union_256
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 4, other: 1}
-#define ITW_PRELOADED_256_D(gbase, starr, stidx, offset, gdest, twv)           \
+#define ITW_PRELOADED_GATHER_256_D(gbase, starr, stidx, offset, gdest, twv,    \
+                                   is_contiguous)                              \
 {                                                                              \
     __m256d tmp_in;                                                            \
-    GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in, is_contiguous);  \
     const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
     const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
     const __m256d lo_1 = _mm256_unpacklo_pd(tmp_1, tmp_0);                     \
@@ -835,10 +831,11 @@ static const union data_union_256
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 3, other: 1}
-#define TW_PRELOADED_256_D(gbase, starr, stidx, offset, gdest, twv)            \
+#define TW_PRELOADED_GATHER_256_D(gbase, starr, stidx, offset, gdest, twv,     \
+                                  is_contiguous)                               \
 {                                                                              \
     __m256d tmp_in;                                                            \
-    GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in);                 \
+    GATHER2_256_D((gbase) + starr[(stidx)], (offset), tmp_in, is_contiguous);  \
     const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
     const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
     const __m256d lo_1 = _mm256_unpacklo_pd(tmp_0, tmp_1);                     \
@@ -847,8 +844,10 @@ static const union data_union_256
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 2, other: 0}
-#define ITW_PRELOADED_128_D(gbase, starr, stidx, offset, gdest, twv)           \
+#define ITW_PRELOADED_GATHER_128_D(gbase, starr, stidx, offset, gdest, twv,    \
+                                   is_contiguous)                              \
 {                                                                              \
+    (VOID)is_contiguous;                                                       \
     const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)]);               \
     const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);           \
     const __m128d ca_da = _mm_mul_pd(twv, aa);                                 \
@@ -858,8 +857,10 @@ static const union data_union_256
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 1, other: 0}
-#define TW_PRELOADED_128_D(gbase, starr, stidx, offset, gdest, twv)            \
+#define TW_PRELOADED_GATHER_128_D(gbase, starr, stidx, offset, gdest, twv,     \
+                                  is_contiguous)                               \
 {                                                                              \
+    (VOID)is_contiguous;                                                       \
     const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)]);               \
     const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);           \
     const __m128d ca_da = _mm_mul_pd(twv, aa);                                 \
@@ -869,10 +870,11 @@ static const union data_union_256
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 4, other: 1}
-#define ITW_PRELOADED_256_D_V(gbase, stride, offset, gdest, twv)               \
+#define ITW_PRELOADED_GATHER_256_D_V(gbase, stride, offset, gdest, twv,        \
+                                     is_contiguous)                            \
 {                                                                              \
     __m256d tmp_in;                                                            \
-    GATHER2_256_D((gbase) + (stride), (offset), tmp_in);                       \
+    GATHER2_256_D((gbase) + (stride), (offset), tmp_in, is_contiguous);        \
     const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
     const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
     const __m256d lo_1 = _mm256_unpacklo_pd(tmp_1, tmp_0);                     \
@@ -881,10 +883,11 @@ static const union data_union_256
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 3, other: 1}
-#define TW_PRELOADED_256_D_V(gbase, stride, offset, gdest, twv)                \
+#define TW_PRELOADED_GATHER_256_D_V(gbase, stride, offset, gdest, twv,         \
+                                    is_contiguous)                             \
 {                                                                              \
     __m256d tmp_in;                                                            \
-    GATHER2_256_D((gbase) + (stride), (offset), tmp_in);                       \
+    GATHER2_256_D((gbase) + (stride), (offset), tmp_in, is_contiguous);        \
     const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
     const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
     const __m256d lo_1 = _mm256_unpacklo_pd(tmp_0, tmp_1);                     \
@@ -893,8 +896,10 @@ static const union data_union_256
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 2, other: 0}
-#define ITW_PRELOADED_128_D_V(gbase, stride, offset, gdest, twv)               \
+#define ITW_PRELOADED_GATHER_128_D_V(gbase, stride, offset, gdest, twv,        \
+                                     is_contiguous)                            \
 {                                                                              \
+    (VOID)is_contiguous;                                                       \
     const __m128d bb = _mm_loaddup_pd((gbase) + (stride));                     \
     const __m128d aa = _mm_loaddup_pd((gbase) + (stride) + 1);                 \
     const __m128d ca_da = _mm_mul_pd(twv, aa);                                 \
@@ -904,14 +909,324 @@ static const union data_union_256
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 1, other: 0}
-#define TW_PRELOADED_128_D_V(gbase, stride, offset, gdest, twv)                \
+#define TW_PRELOADED_GATHER_128_D_V(gbase, stride, offset, gdest, twv,         \
+                                    is_contiguous)                             \
 {                                                                              \
+    (VOID)is_contiguous;                                                       \
     const __m128d aa = _mm_loaddup_pd((gbase) + (stride));                     \
     const __m128d bb = _mm_loaddup_pd((gbase) + (stride) + 1);                 \
     const __m128d ca_da = _mm_mul_pd(twv, aa);                                 \
     const __m128d cb_db = _mm_mul_pd(twv, bb);                                 \
     const __m128d db_cb = SWAP_RI_128_D(cb_db);                                \
     gdest = _mm_addsub_pd(ca_da, db_cb);                                       \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 3, other: 1}
+#define TW_PRELOADED_SCATTER_256_D(sbase, stride, offset, ssrc, twv,           \
+                                   is_contiguous)                              \
+{                                                                              \
+    const __m256d tmp_0 = _mm256_mul_pd(ssrc, twv);                            \
+    const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(ssrc), twv);             \
+    const __m256d lo_1 = _mm256_unpacklo_pd(tmp_0, tmp_1);                     \
+    const __m256d hi_1 = _mm256_unpackhi_pd(tmp_0, tmp_1);                     \
+    __m256d _result = _mm256_addsub_pd(lo_1, hi_1);                            \
+    SCATTER2_256_D((sbase) + (stride), (offset), _result, is_contiguous);      \
+}
+
+// Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 1, other: 0}
+#define TW_PRELOADED_SCATTER_128_D(sbase, stride, offset, ssrc, twv,           \
+                                   is_contiguous)                              \
+{                                                                              \
+    (VOID)is_contiguous;                                                       \
+    const __m128d tmp_0 = _mm_mul_pd(ssrc, twv);                               \
+    const __m128d tmp_1 = _mm_mul_pd(SWAP_RI_128_D(ssrc), twv);                \
+    const __m128d lo_1 = _mm_unpacklo_pd(tmp_0, tmp_1);                        \
+    const __m128d hi_1 = _mm_unpackhi_pd(tmp_0, tmp_1);                        \
+    __m128d _result = _mm_addsub_pd(lo_1, hi_1);                               \
+    ST_128_OFFSET_D((sbase) + (stride), (offset), _result, is_contiguous);     \
+}
+
+// No-twiddle preloaded gather/scatter: signature-compatible with
+// TW_PRELOADED_GATHER_*_D_V / TW_PRELOADED_SCATTER_*_D, accepts and ignores
+// twv. Used by c2r load and fwd/bwd/r2c store paths so wrapper-local
+// TWID_PRELOADED_LOAD/STORE_*_D shims can be pure name-substitution defines.
+#define PRELOADED_GATHER_NOTW_256_D(gbase, stride, offset, gdest, twv,         \
+                                    is_contiguous)                             \
+{                                                                              \
+    (VOID)twv;                                                                 \
+    GATHER2_256_D((gbase) + (stride), (offset), (gdest), is_contiguous);       \
+}
+
+#define PRELOADED_SCATTER_NOTW_256_D(sbase, stride, offset, ssrc, twv,         \
+                                     is_contiguous)                            \
+{                                                                              \
+    (VOID)twv;                                                                 \
+    SCATTER2_256_D((sbase) + (stride), (offset), (ssrc), is_contiguous);       \
+}
+
+#define PRELOADED_GATHER_NOTW_128_D(gbase, stride, offset, gdest, twv,         \
+                                    is_contiguous)                             \
+{                                                                              \
+    (VOID)twv;                                                                 \
+    LD_128_OFFSET_D((gbase) + (stride), (offset), (gdest), is_contiguous);     \
+}
+
+#define PRELOADED_SCATTER_NOTW_128_D(sbase, stride, offset, ssrc, twv,         \
+                                     is_contiguous)                            \
+{                                                                              \
+    (VOID)twv;                                                                 \
+    ST_128_OFFSET_D((sbase) + (stride), (offset), (ssrc), is_contiguous);      \
+}
+
+/*****************************************************************************
+ * GATHER_NOTW / SCATTER_NOTW -- signature-compatible with TW_GATHER /
+ * TW_SCATTER
+ * but perform plain load/store, ignoring twiddle arguments.
+ *****************************************************************************/
+
+#define GATHER_NOTW_128_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
+                          lmc, is_contiguous)                                  \
+    LD_128_OFFSET_D((gbase) + starr[(stidx)], (offset), gdest, is_contiguous)
+
+#define GATHER_NOTW_256_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
+                          lmc, is_contiguous)                                  \
+    GATHER2_256_D((gbase) + starr[(stidx)], (offset), gdest, is_contiguous)
+
+#define GATHER_NOTW_256_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
+                          lmc, is_contiguous)                                  \
+    GATHER4_256_S((gbase) + starr[(stidx)], (offset), gdest, is_contiguous)
+
+#define GATHER_NOTW_128_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
+                          lmc, is_contiguous)                                  \
+    GATHER2_128_S((gbase) + starr[(stidx)], (offset), gdest, is_contiguous)
+
+#define GATHER_NOTW_LOW_128_S(gbase, starr, stidx, gdest, twbuf, n, col, lmc,  \
+                              is_contiguous)                                   \
+{                                                                              \
+    (VOID)is_contiguous;                                                       \
+    LD_LOW_128_S((gbase) + starr[(stidx)], gdest);                             \
+}
+
+#define SCATTER_NOTW_128_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
+                           lmc, is_contiguous)                                 \
+    ST_128_OFFSET_D((sbase) + starr[(stidx)], (offset), ssrc, is_contiguous)
+
+#define SCATTER_NOTW_256_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
+                           lmc, is_contiguous)                                 \
+    SCATTER2_256_D((sbase) + starr[(stidx)], (offset), ssrc, is_contiguous)
+
+#define SCATTER_NOTW_256_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
+                           lmc, is_contiguous)                                 \
+    SCATTER4_256_S((sbase) + starr[(stidx)], (offset), ssrc, is_contiguous)
+
+#define SCATTER_NOTW_128_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
+                           lmc, is_contiguous)                                 \
+    SCATTER2_128_S((sbase) + starr[(stidx)], (offset), ssrc, is_contiguous)
+
+#define SCATTER_NOTW_LOW_128_S(sbase, starr, stidx, ssrc, twbuf, n, col, lmc,  \
+                              is_contiguous)                                   \
+{                                                                              \
+    (VOID)is_contiguous;                                                       \
+    ST_LOW_128_S((sbase) + starr[(stidx)], ssrc);                              \
+}
+
+/*****************************************************************************
+ * TW_SCATTER / ITW_SCATTER -- twiddle multiply then store.
+ * Mirrors TW_GATHER / ITW_GATHER with same signature but store side.
+ *****************************************************************************/
+
+#define TW_SCATTER_128_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,     \
+                         lmc, is_contiguous)                                   \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m128d cd = _mm_loadu_pd((twbuf) + addr);                           \
+    const __m128d _tw_t0 = _mm_mul_pd(ssrc, cd);                               \
+    const __m128d _tw_t1 = _mm_mul_pd(SWAP_RI_128_D(ssrc), cd);                \
+    const __m128d _tw_lo = _mm_unpacklo_pd(_tw_t0, _tw_t1);                    \
+    const __m128d _tw_hi = _mm_unpackhi_pd(_tw_t0, _tw_t1);                    \
+    __m128d _result = _mm_addsub_pd(_tw_lo, _tw_hi);                           \
+    ST_128_OFFSET_D((sbase) + starr[(stidx)], (offset), _result,               \
+                    is_contiguous);                                            \
+}
+
+#define ITW_SCATTER_128_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,    \
+                          lmc, is_contiguous)                                  \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const __m128d cd = _mm_loadu_pd((twbuf) + addr);                           \
+    const __m128d _tw_t0 = _mm_mul_pd(ssrc, cd);                               \
+    const __m128d _tw_t1 = _mm_mul_pd(SWAP_RI_128_D(ssrc), cd);                \
+    const __m128d _tw_lo = _mm_unpacklo_pd(_tw_t1, _tw_t0);                    \
+    const __m128d _tw_hi = _mm_unpackhi_pd(_tw_t1, _tw_t0);                    \
+    __m128d _result = SWAP_RI_128_D(_mm_addsub_pd(_tw_lo, _tw_hi));            \
+    ST_128_OFFSET_D((sbase) + starr[(stidx)], (offset), _result,               \
+                    is_contiguous);                                            \
+}
+
+#define TW_SCATTER_256_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,     \
+                         lmc, is_contiguous)                                   \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    __m256d twv;                                                               \
+    if ((lmc))                                                                 \
+    {                                                                          \
+        twv = _mm256_loadu_pd((twbuf) + addr);                                 \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = _mm256_broadcast_pd((__m128d *)((twbuf) + addr));                \
+    }                                                                          \
+    const __m256d tmp_0 = _mm256_mul_pd(ssrc, twv);                            \
+    const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(ssrc), twv);             \
+    const __m256d lo_1 = _mm256_unpacklo_pd(tmp_0, tmp_1);                     \
+    const __m256d hi_1 = _mm256_unpackhi_pd(tmp_0, tmp_1);                     \
+    __m256d _result = _mm256_addsub_pd(lo_1, hi_1);                            \
+    SCATTER2_256_D((sbase) + starr[(stidx)], (offset), _result, is_contiguous);\
+}
+
+#define ITW_SCATTER_256_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,    \
+                          lmc, is_contiguous)                                  \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    __m256d twv;                                                               \
+    if ((lmc))                                                                 \
+    {                                                                          \
+        twv = _mm256_loadu_pd((twbuf) + addr);                                 \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = _mm256_broadcast_pd((__m128d *)((twbuf) + addr));                \
+    }                                                                          \
+    const __m256d tmp_0 = _mm256_mul_pd(ssrc, twv);                            \
+    const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(ssrc), twv);             \
+    const __m256d lo_1 = _mm256_unpacklo_pd(tmp_1, tmp_0);                     \
+    const __m256d hi_1 = _mm256_unpackhi_pd(tmp_1, tmp_0);                     \
+    __m256d _result = SWAP_RI_256_D(_mm256_addsub_pd(lo_1, hi_1));             \
+    SCATTER2_256_D((sbase) + starr[(stidx)], (offset), _result, is_contiguous);\
+}
+
+#define TW_SCATTER_256_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,     \
+                         lmc, is_contiguous)                                   \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    __m256 twv;                                                                \
+    if ((lmc))                                                                 \
+    {                                                                          \
+        twv = _mm256_loadu_ps((twbuf) + addr);                                 \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = (__m256)(_mm256_broadcast_sd((DOUBLE *)((twbuf) + addr)));       \
+    }                                                                          \
+    __m256 tmp_0 = _mm256_mul_ps(ssrc, twv);                                   \
+    __m256 tmp_1 = _mm256_mul_ps(SWAP_RI_256_S(ssrc), twv);                    \
+    tmp_0 = _mm256_permute_ps(tmp_0, 0xD8);                                    \
+    tmp_1 = _mm256_permute_ps(tmp_1, 0xD8);                                    \
+    const __m256 lo_1 = _mm256_unpacklo_ps(tmp_0, tmp_1);                      \
+    const __m256 hi_1 = _mm256_unpackhi_ps(tmp_0, tmp_1);                      \
+    __m256 _result = _mm256_addsub_ps(lo_1, hi_1);                             \
+    SCATTER4_256_S((sbase) + starr[(stidx)], (offset), _result, is_contiguous);\
+}
+
+#define ITW_SCATTER_256_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,    \
+                          lmc, is_contiguous)                                  \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    __m256 twv;                                                                \
+    if ((lmc))                                                                 \
+    {                                                                          \
+        twv = _mm256_loadu_ps((twbuf) + addr);                                 \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = (__m256)(_mm256_broadcast_sd((DOUBLE *)((twbuf) + addr)));       \
+    }                                                                          \
+    __m256 tmp_0 = _mm256_mul_ps(ssrc, twv);                                   \
+    __m256 tmp_1 = _mm256_mul_ps(SWAP_RI_256_S(ssrc), twv);                    \
+    tmp_0 = _mm256_permute_ps(tmp_0, 0xD8);                                    \
+    tmp_1 = _mm256_permute_ps(tmp_1, 0xD8);                                    \
+    const __m256 lo_1 = _mm256_unpacklo_ps(tmp_1, tmp_0);                      \
+    const __m256 hi_1 = _mm256_unpackhi_ps(tmp_1, tmp_0);                      \
+    __m256 _result = SWAP_RI_256_S(_mm256_addsub_ps(lo_1, hi_1));              \
+    SCATTER4_256_S((sbase) + starr[(stidx)], (offset), _result, is_contiguous);\
+}
+
+#define TW_SCATTER_128_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,     \
+                         lmc, is_contiguous)                                   \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    __m128 twv;                                                                \
+    if ((lmc))                                                                 \
+    {                                                                          \
+        twv = _mm_loadu_ps((twbuf) + addr);                                    \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = (__m128)(_mm_loaddup_pd((DOUBLE *)((twbuf) + addr)));            \
+    }                                                                          \
+    __m128 tmp_0 = _mm_mul_ps(ssrc, twv);                                      \
+    __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(ssrc), twv);                       \
+    tmp_0 = _mm_permute_ps(tmp_0, 0xD8);                                       \
+    tmp_1 = _mm_permute_ps(tmp_1, 0xD8);                                       \
+    const __m128 lo_1 = _mm_unpacklo_ps(tmp_0, tmp_1);                         \
+    const __m128 hi_1 = _mm_unpackhi_ps(tmp_0, tmp_1);                         \
+    __m128 _result = _mm_addsub_ps(lo_1, hi_1);                                \
+    SCATTER2_128_S((sbase) + starr[(stidx)], (offset), _result, is_contiguous);\
+}
+
+#define ITW_SCATTER_128_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,    \
+                          lmc, is_contiguous)                                  \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    __m128 twv;                                                                \
+    if ((lmc))                                                                 \
+    {                                                                          \
+        twv = _mm_loadu_ps((twbuf) + addr);                                    \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        twv = (__m128)(_mm_loaddup_pd((DOUBLE *)((twbuf) + addr)));            \
+    }                                                                          \
+    __m128 tmp_0 = _mm_mul_ps(ssrc, twv);                                      \
+    __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(ssrc), twv);                       \
+    tmp_0 = _mm_permute_ps(tmp_0, 0xD8);                                       \
+    tmp_1 = _mm_permute_ps(tmp_1, 0xD8);                                       \
+    const __m128 lo_1 = _mm_unpacklo_ps(tmp_1, tmp_0);                         \
+    const __m128 hi_1 = _mm_unpackhi_ps(tmp_1, tmp_0);                         \
+    __m128 _result = SWAP_RI_128_S(_mm_addsub_ps(lo_1, hi_1));                 \
+    SCATTER2_128_S((sbase) + starr[(stidx)], (offset), _result, is_contiguous);\
+}
+
+#define TW_SCATTER_LOW_128_S(sbase, starr, stidx, ssrc, twbuf, n, col, lmc,    \
+                             is_contiguous)                                    \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    __m128 twv;                                                                \
+    LD_LOW_128_S((twbuf) + addr, twv);                                         \
+    __m128 tmp_0 = _mm_mul_ps(ssrc, twv);                                      \
+    __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(ssrc), twv);                       \
+    tmp_0 = _mm_permute_ps(tmp_0, 0xD8);                                       \
+    tmp_1 = _mm_permute_ps(tmp_1, 0xD8);                                       \
+    const __m128 lo_1 = _mm_unpacklo_ps(tmp_0, tmp_1);                         \
+    const __m128 hi_1 = _mm_unpackhi_ps(tmp_0, tmp_1);                         \
+    __m128 _result = _mm_addsub_ps(lo_1, hi_1);                                \
+    ST_LOW_128_S((sbase) + starr[(stidx)], _result);                           \
+}
+
+#define ITW_SCATTER_LOW_128_S(sbase, starr, stidx, ssrc, twbuf, n, col, lmc,   \
+                              is_contiguous)                                   \
+{                                                                              \
+    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    __m128 twv;                                                                \
+    LD_LOW_128_S((twbuf) + addr, twv);                                         \
+    __m128 tmp_0 = _mm_mul_ps(ssrc, twv);                                      \
+    __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(ssrc), twv);                       \
+    tmp_0 = _mm_permute_ps(tmp_0, 0xD8);                                       \
+    tmp_1 = _mm_permute_ps(tmp_1, 0xD8);                                       \
+    const __m128 lo_1 = _mm_unpacklo_ps(tmp_1, tmp_0);                         \
+    const __m128 hi_1 = _mm_unpackhi_ps(tmp_1, tmp_0);                         \
+    __m128 _result = SWAP_RI_128_S(_mm_addsub_ps(lo_1, hi_1));                 \
+    ST_LOW_128_S((sbase) + starr[(stidx)], _result);                           \
 }
 
 #endif // AOCLFFTZ_SIMD_COMMON_H

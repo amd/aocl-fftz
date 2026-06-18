@@ -59,7 +59,7 @@ static kernel_choice_t find_best_kernel(kernel_t *kertab, INTP base_idx,
     for (INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
     {
         INTP kloc = kcat * NUM_KERNELS_IN_EACH_CATEGORY + base_idx;
-        if (kertab[kloc].kfft == NULL)
+        if (kertab[kloc].kfft[direction] == NULL)
         {
             continue;
         }

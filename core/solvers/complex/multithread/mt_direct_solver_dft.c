@@ -41,16 +41,16 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
     if (sol->decomp_scheme->batched_vecs != NULL)
     {
-        strides->v_in_stride =
+        strides->v_in_h2_stride = strides->v_in_stride =
             sol->decomp_scheme->batched_vecs[0].in_stride * DATA_STRIDE;
-        strides->v_out_stride =
+        strides->v_out_h2_stride = strides->v_out_stride =
             sol->decomp_scheme->batched_vecs[0].out_stride * DATA_STRIDE;
     }
     else
     {
-        strides->v_in_stride =
+        strides->v_in_h2_stride = strides->v_in_stride =
             sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
-        strides->v_out_stride =
+        strides->v_out_h2_stride = strides->v_out_stride =
             sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
     }
 
@@ -81,6 +81,8 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         INTP num_iters = decomp_scheme->vecs[0].n / num_sets;
         INTP rem_iters = decomp_scheme->vecs[0].n - (num_iters * num_sets);
 
+        kfft_ kfft = kernel->kfft[direction];
+
         // Set threads for parallel execution
         INT32 n_threads = decomp_scheme->thread_info->n_threads;
         #pragma omp parallel for num_threads(n_threads)
@@ -88,11 +90,11 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         {
             INTP v_istride = batch * v_in_stride;
             INTP v_ostride = batch * v_out_stride;
-            kernel->kfft(MOVE_ADDR(decomp_scheme->in_real, v_istride),
-                         MOVE_ADDR(decomp_scheme->in_imag, v_istride),
-                         MOVE_ADDR(decomp_scheme->out_real, v_ostride),
-                         MOVE_ADDR(decomp_scheme->out_imag, v_ostride),
-                         num_sets, strides, sol->twiddle->TW, FFT_DIR(decomp_scheme->flags));
+            kfft(MOVE_ADDR(decomp_scheme->in_real, v_istride),
+                 MOVE_ADDR(decomp_scheme->in_imag, v_istride),
+                 MOVE_ADDR(decomp_scheme->out_real, v_ostride),
+                 MOVE_ADDR(decomp_scheme->out_imag, v_ostride),
+                 num_sets, strides, sol->twiddle->TW, direction);
         }
 
         // Process the tail cases of the kernel
@@ -100,11 +102,11 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         {
             INTP v_istride = num_iters * v_in_stride;
             INTP v_ostride = num_iters * v_out_stride;
-            kernel->kfft(MOVE_ADDR(decomp_scheme->in_real, v_istride),
-                         MOVE_ADDR(decomp_scheme->in_imag, v_istride),
-                         MOVE_ADDR(decomp_scheme->out_real, v_ostride),
-                         MOVE_ADDR(decomp_scheme->out_imag, v_ostride),
-                         rem_iters, strides, sol->twiddle->TW, FFT_DIR(decomp_scheme->flags));
+            kfft(MOVE_ADDR(decomp_scheme->in_real, v_istride),
+                 MOVE_ADDR(decomp_scheme->in_imag, v_istride),
+                 MOVE_ADDR(decomp_scheme->out_real, v_ostride),
+                 MOVE_ADDR(decomp_scheme->out_imag, v_ostride),
+                 rem_iters, strides, sol->twiddle->TW, direction);
         }
 
         getTime(endTime);
@@ -123,7 +125,8 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    kfft_ kernel = sol->solver->kernel_c2c->kfft;
+    UINT8 direction = FFT_DIR(decomp_scheme->flags);
+    kfft_ kernel = sol->solver->kernel_c2c->kfft[direction];
     UINT8 num_sets = sol->solver->kernel_c2c->sets;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
 
@@ -135,6 +138,7 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
 
     INTP num_iters = decomp_scheme->vecs[0].n / num_sets;
     INTP rem_iters = decomp_scheme->vecs[0].n - (num_iters * num_sets);
+
 
     // Set threads for parallel execution
     #pragma omp parallel for num_threads(decomp_scheme->thread_info->n_threads)
@@ -154,9 +158,10 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
                MOVE_ADDR(decomp_scheme->in_imag, v_istride),
                MOVE_ADDR(decomp_scheme->out_real, v_ostride),
                MOVE_ADDR(decomp_scheme->out_imag, v_ostride),
-               num_sets, strides, &tw_local, FFT_DIR(decomp_scheme->flags));
+               num_sets, strides, &tw_local, direction);
     }
 
+    // Process the tail cases of the kernel
     // Process the tail cases of the kernel
     aoclfftz_twiddle_t tw_local = {
         .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
@@ -173,7 +178,7 @@ static INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
                MOVE_ADDR(decomp_scheme->in_imag, v_istride),
                MOVE_ADDR(decomp_scheme->out_real, v_ostride),
                MOVE_ADDR(decomp_scheme->out_imag, v_ostride),
-               rem_iters, strides, &tw_local, FFT_DIR(decomp_scheme->flags));
+               rem_iters, strides, &tw_local, direction);
     }
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
@@ -207,9 +212,9 @@ static INT32 execute_mt_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    kfft_ kernel = sol->solver->kernel_c2c->kfft;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
     UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    kfft_ kernel = sol->solver->kernel_c2c->kfft[direction];
 
     VOID *in_real = sol->decomp_scheme->in_real;
     VOID *in_imag = sol->decomp_scheme->in_imag;
@@ -228,6 +233,7 @@ static INT32 execute_mt_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
     INTP num_iters = sol->decomp_scheme->batched_vecs[0].n / num_sets;
     INTP rem_iters =
         sol->decomp_scheme->batched_vecs[0].n - (num_iters * num_sets);
+
 
     // Set threads for parallel execution
     // **NOTE**:
@@ -318,9 +324,9 @@ static INT32 execute_mt_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    kfft_ kernel = sol->solver->kernel_c2c->kfft;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
     UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    kfft_ kernel = sol->solver->kernel_c2c->kfft[direction];
 
     VOID *in_real = sol->decomp_scheme->in_real;
     VOID *in_imag = sol->decomp_scheme->in_imag;

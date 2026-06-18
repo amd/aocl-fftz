@@ -115,10 +115,14 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
 
         sol->solver->solver_type = SOLVER_NULL;
         sol->solver->execute_solver = NULL;
-        sol->solver->kernel_c2c->kfft = NULL;
-        sol->solver->kernel_c2c_r->kfft = NULL;
-        sol->solver->kernel_r2hc->kfft = NULL;
-        sol->solver->kernel_r2hcf->kfft = NULL;
+        sol->solver->kernel_c2c->kfft[FORWARD_FFT_DIR] = NULL;
+        sol->solver->kernel_c2c->kfft[BACKWARD_FFT_DIR] = NULL;
+        sol->solver->kernel_c2c_r->kfft[FORWARD_FFT_DIR] = NULL;
+        sol->solver->kernel_c2c_r->kfft[BACKWARD_FFT_DIR] = NULL;
+        sol->solver->kernel_r2hc->kfft[FORWARD_FFT_DIR] = NULL;
+        sol->solver->kernel_r2hc->kfft[BACKWARD_FFT_DIR] = NULL;
+        sol->solver->kernel_r2hcf->kfft[FORWARD_FFT_DIR] = NULL;
+        sol->solver->kernel_r2hcf->kfft[BACKWARD_FFT_DIR] = NULL;
         sol->solver->kernel_c2c->sets = 1;
         sol->solver->kernel_c2c_r->sets = 1;
         sol->solver->kernel_r2hc->sets = 1;
@@ -176,19 +180,26 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->strides_grp->strides->out_strides = NULL;
         sol->strides_grp->strides->v_in_stride = 0;
         sol->strides_grp->strides->v_out_stride = 0;
+        sol->strides_grp->strides->v_in_h2_stride = 0;
+        sol->strides_grp->strides->v_out_h2_stride = 0;
         sol->strides_grp->strides_c2c->in_strides = NULL;
         sol->strides_grp->strides_c2c->out_strides = NULL;
         sol->strides_grp->strides_c2c->v_in_stride = 0;
         sol->strides_grp->strides_c2c->v_out_stride = 0;
+        sol->strides_grp->strides_c2c->v_in_h2_stride = 0;
+        sol->strides_grp->strides_c2c->v_out_h2_stride = 0;
         sol->strides_grp->strides_r2hc->in_strides = NULL;
         sol->strides_grp->strides_r2hc->out_strides = NULL;
         sol->strides_grp->strides_r2hc->v_in_stride = 0;
         sol->strides_grp->strides_r2hc->v_out_stride = 0;
+        sol->strides_grp->strides_r2hc->v_in_h2_stride = 0;
+        sol->strides_grp->strides_r2hc->v_out_h2_stride = 0;
         sol->strides_grp->strides_r2hcf->in_strides = NULL;
         sol->strides_grp->strides_r2hcf->out_strides = NULL;
         sol->strides_grp->strides_r2hcf->v_in_stride = 0;
         sol->strides_grp->strides_r2hcf->v_out_stride = 0;
-        sol->strides_grp->strides_c2r_ct_op = NULL;
+        sol->strides_grp->strides_r2hcf->v_in_h2_stride = 0;
+        sol->strides_grp->strides_r2hcf->v_out_h2_stride = 0;
         sol->twiddle->load_multi_cols = 1; // true by default
         sol->twiddle->cols = 0;
         sol->twiddle->TW = NULL;
@@ -216,7 +227,6 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->ct_buffer = NULL;
         sol->dft_bufs->ct_buf_real = NULL;
         sol->dft_bufs->ct_buf_imag = NULL;
-        sol->dft_bufs->ct_buf_real_in = NULL;
         sol->dft_bufs->ct_buf_size = 0;
         sol->dft_bufs->num_ct_buf = 1;
         sol->dft_bufs->ct_buf_allocated = 0;
@@ -499,12 +509,6 @@ VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp)
     FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hc->out_strides);
     FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hcf->in_strides);
     FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hcf->out_strides);
-    if (strides_grp->strides_c2r_ct_op != NULL)
-    {
-        FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2r_ct_op->in_strides);
-        FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2r_ct_op->out_strides);
-        FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2r_ct_op);
-    }
 }
 
 VOID destroy_solution(aoclfftz_solution_t* sol)

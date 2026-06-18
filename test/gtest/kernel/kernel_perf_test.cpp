@@ -85,6 +85,8 @@ class PerformanceTest : public benchmark::Fixture {
 
         strides.v_in_stride = v_in_stride * data_stride;
         strides.v_out_stride = v_out_stride * data_stride;
+        strides.v_in_h2_stride = strides.v_in_stride;
+        strides.v_out_h2_stride = strides.v_out_stride;
 
         for (auto _ : state)
         {
@@ -165,6 +167,8 @@ class PerformanceTest : public benchmark::Fixture {
 
         strides.v_in_stride = v_in_stride * data_stride;
         strides.v_out_stride = v_out_stride * data_stride;
+        strides.v_in_h2_stride = strides.v_in_stride;
+        strides.v_out_h2_stride = strides.v_out_stride;
 
         VOID *twiddle_buffer = NULL;
         // setup the twiddle buffer

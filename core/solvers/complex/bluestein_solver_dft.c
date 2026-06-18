@@ -35,7 +35,6 @@ INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-
     // Setup next_sol with extended length m
     INT32 ret = copy_solution_obj(next_sol, sol);
     if (ret != AOCLFFTZ_SUCCESS)
@@ -194,8 +193,8 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
            (m - n) * DATA_STRIDE * dt_bytes);
 
     // Multiply input by chirp sequence B (or its conjugate)
-    sol->dft_bufs->bluestein->ele_mul[dir](
-        in_real, in_real, sol->dft_bufs->bluestein->B, n);
+    sol->dft_bufs->bluestein->ele_mul[dir](in_real, in_real,
+                                           sol->dft_bufs->bluestein->B, n);
 
     //=========================================================================
     // Step 2: Convolution via FFT
@@ -212,8 +211,8 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
 
     // FFT of chirp sequence B (B_out) is computed during plan setup
     // 2b. Pointwise multiplication: A_out × B_out (with conjugate for inverse)
-    sol->dft_bufs->bluestein->ele_mul[!dir](
-        out_real, out_real, sol->dft_bufs->bluestein->B_out, m);
+    sol->dft_bufs->bluestein->ele_mul[!dir](out_real, out_real,
+                                            sol->dft_bufs->bluestein->B_out, m);
 
     // 2c. Inverse FFT of the product
     next_sol->decomp_scheme->in_real = out_real;
@@ -240,8 +239,8 @@ static INT32 execute_bluestein_solver(aoclfftz_solution_t *sol)
     if (out_stride == 1)
     {
         // Optimization: multiply directly to output for unit stride
-        sol->dft_bufs->bluestein->ele_mul[dir](
-            cur_out, in_real, sol->dft_bufs->bluestein->B, n);
+        sol->dft_bufs->bluestein->ele_mul[dir](cur_out, in_real,
+                                               sol->dft_bufs->bluestein->B, n);
     }
     else
     {

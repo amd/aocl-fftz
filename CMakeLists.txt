@@ -82,7 +82,10 @@ file(GLOB CORE_C_FILES CONFIGURE_DEPENDS
                         ${CORE_PATH}/kernels/non_dft/perm_copy/c/*.c
                         ${CORE_PATH}/kernels/dft/r2hc/c/*.c ${CORE_PATH}/kernels/dft/r2hc/c/*.h
                         ${CORE_PATH}/kernels/dft/r2hc_fused/c/*.c ${CORE_PATH}/kernels/dft/r2hc_fused/c/*.h
-                        ${CORE_PATH}/kernels/dft/tw_c2c/c/*.c)
+                        ${CORE_PATH}/kernels/dft/tw_c2c_fwd/c/*.c
+                        ${CORE_PATH}/kernels/dft/tw_c2c_bwd/c/*.c
+                        ${CORE_PATH}/kernels/dft/tw_c2c_r2c/c/*.c
+                        ${CORE_PATH}/kernels/dft/tw_c2c_c2r/c/*.c)
 list(APPEND CORE_SRC_FILES ${CORE_C_FILES})
 
 #Add AVX Kernels based on the flags ENABLE_AVX128, ENABLE_AVX256 & ENABLE_AVX512
@@ -94,7 +97,10 @@ if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX512")
                             ${CORE_PATH}/kernels/non_dft/ele_mul/avx512/*.c
                             ${CORE_PATH}/kernels/dft/r2hc/avx512/*.c
                             ${CORE_PATH}/kernels/dft/r2hc_fused/avx512/*.c
-                            ${CORE_PATH}/kernels/dft/tw_c2c/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/tw_c2c_fwd/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/tw_c2c_bwd/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/tw_c2c_r2c/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/tw_c2c_c2r/avx512/*.c
                             ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx512.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX512_FILES})
 endif()
@@ -105,7 +111,10 @@ if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX256|AVX512")
                                                   ${CORE_PATH}/kernels/non_dft/ele_mul/avx256/*.c
                                                   ${CORE_PATH}/kernels/dft/r2hc/avx256/*.c
                                                   ${CORE_PATH}/kernels/dft/r2hc_fused/avx256/*.c
-                                                  ${CORE_PATH}/kernels/dft/tw_c2c/avx256/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_fwd/avx256/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_bwd/avx256/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_r2c/avx256/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_c2r/avx256/*.c
                                                   ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx256.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX256_FILES})
 endif()
@@ -116,7 +125,10 @@ if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX128|AVX256|AVX512")
                                                   ${CORE_PATH}/kernels/non_dft/ele_mul/avx128/*.c
                                                   ${CORE_PATH}/kernels/dft/r2hc/avx128/*.c
                                                   ${CORE_PATH}/kernels/dft/r2hc_fused/avx128/*.c
-                                                  ${CORE_PATH}/kernels/dft/tw_c2c/avx128/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_fwd/avx128/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_bwd/avx128/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_r2c/avx128/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_c2r/avx128/*.c
                                                   ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx128.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX128_FILES})
 endif()

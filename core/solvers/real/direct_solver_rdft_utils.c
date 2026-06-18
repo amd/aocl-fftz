@@ -13,119 +13,6 @@
 #include "core/solvers/real/direct_solver_rdft_utils.h"
 
 /**
- * @brief Compute complex conjugates for a set of selective points.
- *        Conjugate the second half of the complex numbers in the input buffer.
- *
- * Example:
- * Given an input for radix 4 (4 complex numbers in interleaved format)
- * input  -> (1,  2), (3,  4), (5,  6), (7,  8)
- * output -> (1,  2), (3,  4), (5, -6), (7, -8)
- *
- * @param data in/out data buffer
- * @param radix radix of the C2C kernel
- * @param n batch of the C2C kernels
- * @param strides strides array for the buffer
- * @param vec_stride vector stride for the buffer
- * @param prec precision flag (DT_FLOAT or DT_DOUBLE)
- * @return VOID
- */
-VOID compute_conjugates(VOID *data, INTP radix, INTP n, INTP *strides,
-                        INTP vec_stride, UINT32 prec)
-{
-    INTP points = (radix + 1) >> 1; // ceil div
-    if (prec == DT_FLOAT)
-    {
-        FLOAT *data_i = (FLOAT *)data + 1;
-        for (INTP i = 0; i < n; i++)
-        {
-            for (INTP j = points; j < radix; j++)
-            {
-                data_i[strides[j]] = -data_i[strides[j]];
-            }
-            data_i += vec_stride;
-        }
-    }
-    else
-    {
-        DOUBLE *data_i = (DOUBLE *)data + 1;
-        for (INTP i = 0; i < n; i++)
-        {
-            for (INTP j = points; j < radix; j++)
-            {
-                data_i[strides[j]] = -data_i[strides[j]];
-            }
-            data_i += vec_stride;
-        }
-    }
-}
-
-/**
- * @brief Compute complex conjugates for a set of selective points.
- *        Conjugate the second half of the complex numbers in the input buffer.
- *
- * Example:
- * Given an input for radix 4 (4 complex numbers in interleaved format)
- * input  -> (1,  2), (3,  4), (5,  6), (7,  8)
- * output -> (1,  2), (3,  4), (5, -6), (7, -8)
- *
- * This is the out-of-place version of the compute_conjugates function.
- *
- * @param out out data buffer
- * @param in in data buffer
- * @param radix radix of the C2C kernel
- * @param n batch of the C2C kernels
- * @param strides strides array for the buffer
- * @param vec_stride vector stride for the buffer
- * @param prec precision flag (DT_FLOAT or DT_DOUBLE)
- * @return VOID
- */
-VOID compute_conjugates_outplace(VOID *out, VOID *in, INTP radix, INTP n,
-                                 INTP *strides, INTP vec_stride, UINT32 prec)
-{
-    INTP points = (radix + 1) >> 1; // ceil div
-    if (prec == DT_FLOAT)
-    {
-        FLOAT *in_f = (FLOAT *)in;
-        FLOAT *out_f = (FLOAT *)out;
-        for (INTP i = 0; i < n; i++)
-        {
-            for (INTP j = 0; j < points; j++)
-            {
-                out_f[j * DATA_STRIDE] = in_f[strides[j]];
-                out_f[j * DATA_STRIDE + 1] = in_f[strides[j] + 1];
-            }
-            for (INTP j = points; j < radix; j++)
-            {
-                out_f[j * DATA_STRIDE] = in_f[strides[j]];
-                out_f[j * DATA_STRIDE + 1] = -in_f[strides[j] + 1];
-            }
-            in_f += vec_stride;
-            out_f += (radix * DATA_STRIDE);
-        }
-    }
-    else
-    {
-        DOUBLE *in_d = (DOUBLE *)in;
-        DOUBLE *out_d = (DOUBLE *)out;
-        for (INTP i = 0; i < n; i++)
-        {
-            for (INTP j = 0; j < points; j++)
-            {
-                out_d[j * DATA_STRIDE] = in_d[strides[j]];
-                out_d[j * DATA_STRIDE + 1] = in_d[strides[j] + 1];
-            }
-            for (INTP j = points; j < radix; j++)
-            {
-                out_d[j * DATA_STRIDE] = in_d[strides[j]];
-                out_d[j * DATA_STRIDE + 1] = -in_d[strides[j] + 1];
-            }
-            in_d += vec_stride;
-            out_d += (radix * DATA_STRIDE);
-        }
-    }
-}
-
-/**
  * @brief Sets imaginary parts of DC and Nyquist frequencies to zero for
  * batched R2C transforms.
  *
@@ -297,18 +184,48 @@ static inline VOID set_base_strides(aoclfftz_solution_t *sol,
 
 // Set vector strides for different kernel types (c2c, r2hc, r2hcf)
 static inline VOID set_vector_strides_for_kernels(aoclfftz_solution_t *sol,
-                                                  base_strides_t vector_strides)
+                                                  base_strides_t vector_strides,
+                                                  base_strides_t c2c_strides,
+                                                  UINT8 use_asymmetric_kernel)
 {
     aoclfftz_strides_grp_t *strides_grp = sol->strides_grp;
+    UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
 
-    strides_grp->strides->v_in_stride = vector_strides.in_stride;
-    strides_grp->strides->v_out_stride = vector_strides.out_stride;
-    strides_grp->strides_c2c->v_in_stride = vector_strides.in_stride;
-    strides_grp->strides_c2c->v_out_stride = vector_strides.out_stride;
-    strides_grp->strides_r2hc->v_in_stride = vector_strides.in_stride;
-    strides_grp->strides_r2hc->v_out_stride = vector_strides.out_stride;
-    strides_grp->strides_r2hcf->v_in_stride = vector_strides.in_stride;
-    strides_grp->strides_r2hcf->v_out_stride = vector_strides.out_stride;
+    strides_grp->strides->v_in_stride =
+        strides_grp->strides->v_in_h2_stride = vector_strides.in_stride;
+    strides_grp->strides->v_out_stride =
+        strides_grp->strides->v_out_h2_stride = vector_strides.out_stride;
+    if (!use_asymmetric_kernel)
+    {
+        // The strides within kernel will be symmetric strides
+        strides_grp->strides_c2c->v_in_stride =
+            strides_grp->strides_c2c->v_in_h2_stride =
+                strides_grp->strides->v_in_stride;
+        strides_grp->strides_c2c->v_out_stride =
+            strides_grp->strides_c2c->v_out_h2_stride =
+                strides_grp->strides->v_out_stride;
+    }
+    else
+    {
+        // The strides within kernel will be asymmetric strides
+        strides_grp->strides_c2c->v_in_stride = 2 * c2c_strides.in_stride;
+        strides_grp->strides_c2c->v_out_stride = 2 * c2c_strides.out_stride;
+        strides_grp->strides_c2c->v_in_h2_stride =
+            strides_grp->strides_c2c->v_in_stride * (is_backward ? -1 : 1);
+        strides_grp->strides_c2c->v_out_h2_stride =
+            strides_grp->strides_c2c->v_out_stride *
+            (is_backward ? 1 : -1);
+    }
+
+    strides_grp->strides_r2hc->v_in_stride =
+        strides_grp->strides_r2hc->v_in_h2_stride = vector_strides.in_stride;
+    strides_grp->strides_r2hc->v_out_stride =
+        strides_grp->strides_r2hc->v_out_h2_stride = vector_strides.out_stride;
+    strides_grp->strides_r2hcf->v_in_stride =
+        strides_grp->strides_r2hcf->v_in_h2_stride = vector_strides.in_stride;
+    strides_grp->strides_r2hcf->v_out_stride =
+        strides_grp->strides_r2hcf->v_out_h2_stride = vector_strides.out_stride;
+
 }
 
 // Determine complex and half-complex flags for kernel strides
@@ -450,6 +367,9 @@ VOID allocate_and_setup_stride(aoclfftz_solution_t *sol,
                                aoclfftz_realhelper_t realhelper)
 {
     INTP radix = sol->decomp_scheme->dims[0].n;
+    INTP num_groups = NUM_RFFT_GROUPS(sol->solver);
+    INTP num_c2c_per_group = sol->solver->kernel_c2c->count / num_groups;
+    UINT8 use_asymmetric_kernel = num_c2c_per_group >= num_groups;
     base_strides_t element_strides = {1, 1};      // Individual element access
     base_strides_t vector_strides = {1, 1};       // Vector/batch traversal
     base_strides_t c2c_strides = {1, 1};          // C2C kernel batch stepping
@@ -484,37 +404,8 @@ VOID allocate_and_setup_stride(aoclfftz_solution_t *sol,
         setup_r2hcf_stride_arrays(sol, realhelper, element_strides);
     }
 
-    set_vector_strides_for_kernels(sol, vector_strides);
-
-    // for C2R out-of-place CT problems, allocate and prepare
-    // `strides_c2r_ct_op` for the CT stage that accesses the input buffer
-    if (IS_OUT_OF_PLACE(sol->decomp_scheme->flags) && realhelper.is_CT &&
-        is_input_prob_buffer(sol))
-    {
-        if (sol->strides_grp->strides_c2r_ct_op == NULL)
-        {
-            ALLOC_ALIGN_INIT(sol->strides_grp->strides_c2r_ct_op,
-                             aoclfftz_strides_t, sizeof(aoclfftz_strides_t));
-            FREE_ALIGN_ALLOCATED_MEM(
-                sol->strides_grp->strides_c2r_ct_op->in_strides);
-            FREE_ALIGN_ALLOCATED_MEM(
-                sol->strides_grp->strides_c2r_ct_op->out_strides);
-            ALLOC_ALIGN_INIT(sol->strides_grp->strides_c2r_ct_op->in_strides,
-                             INTP, radix * sizeof(INTP));
-            ALLOC_ALIGN_INIT(sol->strides_grp->strides_c2r_ct_op->out_strides,
-                             INTP, radix * sizeof(INTP));
-        }
-        memcpy(sol->strides_grp->strides_c2r_ct_op->out_strides,
-               sol->strides_grp->strides->out_strides, radix * sizeof(INTP));
-        sol->strides_grp->strides_c2r_ct_op->v_in_stride = radix * DATA_STRIDE;
-        sol->strides_grp->strides_c2r_ct_op->v_out_stride =
-            sol->strides_grp->strides_c2c->v_out_stride;
-        for (INT32 r = 0; r < radix; r++)
-        {
-            sol->strides_grp->strides_c2r_ct_op->in_strides[r] =
-                r * DATA_STRIDE;
-        }
-    }
+    set_vector_strides_for_kernels(sol, vector_strides, c2c_strides,
+                                   use_asymmetric_kernel);
 }
 
 /** Update the in/out buffers of direct solution for CT problem

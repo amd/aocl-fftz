@@ -107,26 +107,34 @@ INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
     to_sol_obj->solver->solver_type = from_sol_obj->solver->solver_type;
     to_sol_obj->solver->execute_solver = from_sol_obj->solver->execute_solver;
     to_sol_obj->solver->destroy_solver = from_sol_obj->solver->destroy_solver;
-    to_sol_obj->solver->kernel_c2c->kfft =
-        from_sol_obj->solver->kernel_c2c->kfft;
+    to_sol_obj->solver->kernel_c2c->kfft[FORWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_c2c->kfft[FORWARD_FFT_DIR];
+    to_sol_obj->solver->kernel_c2c->kfft[BACKWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_c2c->kfft[BACKWARD_FFT_DIR];
     to_sol_obj->solver->kernel_c2c->sets =
         from_sol_obj->solver->kernel_c2c->sets;
     to_sol_obj->solver->kernel_c2c->count =
         from_sol_obj->solver->kernel_c2c->count;
-    to_sol_obj->solver->kernel_c2c_r->kfft =
-        from_sol_obj->solver->kernel_c2c_r->kfft;
+    to_sol_obj->solver->kernel_c2c_r->kfft[FORWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_c2c_r->kfft[FORWARD_FFT_DIR];
+    to_sol_obj->solver->kernel_c2c_r->kfft[BACKWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_c2c_r->kfft[BACKWARD_FFT_DIR];
     to_sol_obj->solver->kernel_c2c_r->sets =
         from_sol_obj->solver->kernel_c2c_r->sets;
     to_sol_obj->solver->kernel_c2c_r->count =
         from_sol_obj->solver->kernel_c2c_r->count;
-    to_sol_obj->solver->kernel_r2hc->kfft =
-        from_sol_obj->solver->kernel_r2hc->kfft;
+    to_sol_obj->solver->kernel_r2hc->kfft[FORWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_r2hc->kfft[FORWARD_FFT_DIR];
+    to_sol_obj->solver->kernel_r2hc->kfft[BACKWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_r2hc->kfft[BACKWARD_FFT_DIR];
     to_sol_obj->solver->kernel_r2hc->sets =
         from_sol_obj->solver->kernel_r2hc->sets;
     to_sol_obj->solver->kernel_r2hc->count =
         from_sol_obj->solver->kernel_r2hc->count;
-    to_sol_obj->solver->kernel_r2hcf->kfft =
-        from_sol_obj->solver->kernel_r2hcf->kfft;
+    to_sol_obj->solver->kernel_r2hcf->kfft[FORWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_r2hcf->kfft[FORWARD_FFT_DIR];
+    to_sol_obj->solver->kernel_r2hcf->kfft[BACKWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_r2hcf->kfft[BACKWARD_FFT_DIR];
     to_sol_obj->solver->kernel_r2hcf->sets =
         from_sol_obj->solver->kernel_r2hcf->sets;
     to_sol_obj->solver->kernel_r2hcf->count =
@@ -380,6 +388,10 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->strides_grp->strides->v_in_stride;
     to_sol_obj->strides_grp->strides->v_out_stride =
         from_sol_obj->strides_grp->strides->v_out_stride;
+    to_sol_obj->strides_grp->strides->v_in_h2_stride =
+        from_sol_obj->strides_grp->strides->v_in_h2_stride;
+    to_sol_obj->strides_grp->strides->v_out_h2_stride =
+        from_sol_obj->strides_grp->strides->v_out_h2_stride;
 
     if (from_sol_obj->solver->kernel_c2c->count != 0)
     {
@@ -419,6 +431,10 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             from_sol_obj->strides_grp->strides_c2c->v_in_stride;
         to_sol_obj->strides_grp->strides_c2c->v_out_stride =
             from_sol_obj->strides_grp->strides_c2c->v_out_stride;
+        to_sol_obj->strides_grp->strides_c2c->v_in_h2_stride =
+            from_sol_obj->strides_grp->strides_c2c->v_in_h2_stride;
+        to_sol_obj->strides_grp->strides_c2c->v_out_h2_stride =
+            from_sol_obj->strides_grp->strides_c2c->v_out_h2_stride;
     }
 
     if (from_sol_obj->solver->kernel_r2hc->count != 0)
@@ -459,6 +475,10 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             from_sol_obj->strides_grp->strides_r2hc->v_in_stride;
         to_sol_obj->strides_grp->strides_r2hc->v_out_stride =
             from_sol_obj->strides_grp->strides_r2hc->v_out_stride;
+        to_sol_obj->strides_grp->strides_r2hc->v_in_h2_stride =
+            from_sol_obj->strides_grp->strides_r2hc->v_in_h2_stride;
+        to_sol_obj->strides_grp->strides_r2hc->v_out_h2_stride =
+            from_sol_obj->strides_grp->strides_r2hc->v_out_h2_stride;
     }
 
     if (from_sol_obj->solver->kernel_r2hcf->count != 0)
@@ -503,63 +523,12 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             from_sol_obj->strides_grp->strides_r2hcf->v_in_stride;
         to_sol_obj->strides_grp->strides_r2hcf->v_out_stride =
             from_sol_obj->strides_grp->strides_r2hcf->v_out_stride;
+        to_sol_obj->strides_grp->strides_r2hcf->v_in_h2_stride =
+            from_sol_obj->strides_grp->strides_r2hcf->v_in_h2_stride;
+        to_sol_obj->strides_grp->strides_r2hcf->v_out_h2_stride =
+            from_sol_obj->strides_grp->strides_r2hcf->v_out_h2_stride;
     }
 
-    if (from_sol_obj->strides_grp->strides_c2r_ct_op != NULL)
-    {
-        if (to_sol_obj->strides_grp->strides_c2r_ct_op != NULL)
-        {
-            FREE_ALIGN_ALLOCATED_MEM(
-                to_sol_obj->strides_grp->strides_c2r_ct_op->in_strides);
-            FREE_ALIGN_ALLOCATED_MEM(
-                to_sol_obj->strides_grp->strides_c2r_ct_op->out_strides);
-            FREE_ALIGN_ALLOCATED_MEM(
-                to_sol_obj->strides_grp->strides_c2r_ct_op);
-        }
-        ALLOC_ALIGN_INIT(to_sol_obj->strides_grp->strides_c2r_ct_op,
-                         aoclfftz_strides_t, sizeof(aoclfftz_strides_t));
-        if (to_sol_obj->strides_grp->strides_c2r_ct_op == NULL)
-        {
-            AOCLFFTZ_ERROR("Memory allocation failed.");
-            return AOCLFFTZ_MEMORY_FAILURE;
-        }
-        if (from_sol_obj->strides_grp->strides_c2r_ct_op->in_strides != NULL)
-        {
-            FREE_ALIGN_ALLOCATED_MEM(
-                to_sol_obj->strides_grp->strides_c2r_ct_op->in_strides);
-            ALLOC_ALIGN_UNINIT(
-                to_sol_obj->strides_grp->strides_c2r_ct_op->in_strides, INTP,
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
-            if (to_sol_obj->strides_grp->strides_c2r_ct_op->in_strides == NULL)
-            {
-                AOCLFFTZ_ERROR("Memory allocation failed.");
-                return AOCLFFTZ_MEMORY_FAILURE;
-            }
-            memcpy(to_sol_obj->strides_grp->strides_c2r_ct_op->in_strides,
-                    from_sol_obj->strides_grp->strides_c2r_ct_op->in_strides,
-                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
-        }
-        if (from_sol_obj->strides_grp->strides_c2r_ct_op->out_strides != NULL)
-        {
-            FREE_ALIGN_ALLOCATED_MEM(
-                to_sol_obj->strides_grp->strides_c2r_ct_op->out_strides);
-            ALLOC_ALIGN_UNINIT(
-                to_sol_obj->strides_grp->strides_c2r_ct_op->out_strides, INTP,
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
-            if (to_sol_obj->strides_grp->strides_c2r_ct_op->out_strides == NULL)
-            {
-                AOCLFFTZ_ERROR("Memory allocation failed.");
-                return AOCLFFTZ_MEMORY_FAILURE;
-            }
-            memcpy(to_sol_obj->strides_grp->strides_c2r_ct_op->out_strides,
-                    from_sol_obj->strides_grp->strides_c2r_ct_op->out_strides,
-                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
-        }
-        to_sol_obj->strides_grp->strides_c2r_ct_op->v_in_stride =
-            from_sol_obj->strides_grp->strides_c2r_ct_op->v_in_stride;
-        to_sol_obj->strides_grp->strides_c2r_ct_op->v_out_stride =
-            from_sol_obj->strides_grp->strides_c2r_ct_op->v_out_stride;
-    }
     return AOCLFFTZ_SUCCESS;
 }
 
@@ -625,10 +594,18 @@ INT32 copy_strides_batched_ct_l1_direct( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->strides_grp->strides->v_in_stride;
     to_sol_obj->strides_grp->strides->v_out_stride =
         from_sol_obj->strides_grp->strides->v_out_stride;
+    to_sol_obj->strides_grp->strides->v_in_h2_stride =
+        from_sol_obj->strides_grp->strides->v_in_h2_stride;
+    to_sol_obj->strides_grp->strides->v_out_h2_stride =
+        from_sol_obj->strides_grp->strides->v_out_h2_stride;
     to_sol_obj->strides_grp->strides_c2c->v_in_stride =
         from_sol_obj->strides_grp->strides_c2c->v_in_stride;
     to_sol_obj->strides_grp->strides_c2c->v_out_stride =
         from_sol_obj->strides_grp->strides_c2c->v_out_stride;
+    to_sol_obj->strides_grp->strides_c2c->v_in_h2_stride =
+        from_sol_obj->strides_grp->strides_c2c->v_in_h2_stride;
+    to_sol_obj->strides_grp->strides_c2c->v_out_h2_stride =
+        from_sol_obj->strides_grp->strides_c2c->v_out_h2_stride;
     return AOCLFFTZ_SUCCESS;
 }
 
@@ -644,26 +621,34 @@ VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->solver->execute_solver;
     to_sol_obj->solver->destroy_solver =
         from_sol_obj->solver->destroy_solver;
-    to_sol_obj->solver->kernel_c2c->kfft =
-        from_sol_obj->solver->kernel_c2c->kfft;
+    to_sol_obj->solver->kernel_c2c->kfft[FORWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_c2c->kfft[FORWARD_FFT_DIR];
+    to_sol_obj->solver->kernel_c2c->kfft[BACKWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_c2c->kfft[BACKWARD_FFT_DIR];
     to_sol_obj->solver->kernel_c2c->sets =
         from_sol_obj->solver->kernel_c2c->sets;
     to_sol_obj->solver->kernel_c2c->count =
         from_sol_obj->solver->kernel_c2c->count;
-    to_sol_obj->solver->kernel_c2c_r->kfft =
-        from_sol_obj->solver->kernel_c2c_r->kfft;
+    to_sol_obj->solver->kernel_c2c_r->kfft[FORWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_c2c_r->kfft[FORWARD_FFT_DIR];
+    to_sol_obj->solver->kernel_c2c_r->kfft[BACKWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_c2c_r->kfft[BACKWARD_FFT_DIR];
     to_sol_obj->solver->kernel_c2c_r->sets =
         from_sol_obj->solver->kernel_c2c_r->sets;
     to_sol_obj->solver->kernel_c2c_r->count =
         from_sol_obj->solver->kernel_c2c_r->count;
-    to_sol_obj->solver->kernel_r2hc->kfft =
-        from_sol_obj->solver->kernel_r2hc->kfft;
+    to_sol_obj->solver->kernel_r2hc->kfft[FORWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_r2hc->kfft[FORWARD_FFT_DIR];
+    to_sol_obj->solver->kernel_r2hc->kfft[BACKWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_r2hc->kfft[BACKWARD_FFT_DIR];
     to_sol_obj->solver->kernel_r2hc->sets =
         from_sol_obj->solver->kernel_r2hc->sets;
     to_sol_obj->solver->kernel_r2hc->count =
         from_sol_obj->solver->kernel_r2hc->count;
-    to_sol_obj->solver->kernel_r2hcf->kfft =
-        from_sol_obj->solver->kernel_r2hcf->kfft;
+    to_sol_obj->solver->kernel_r2hcf->kfft[FORWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_r2hcf->kfft[FORWARD_FFT_DIR];
+    to_sol_obj->solver->kernel_r2hcf->kfft[BACKWARD_FFT_DIR] =
+        from_sol_obj->solver->kernel_r2hcf->kfft[BACKWARD_FFT_DIR];
     to_sol_obj->solver->kernel_r2hcf->sets =
         from_sol_obj->solver->kernel_r2hcf->sets;
     to_sol_obj->solver->kernel_r2hcf->count =
@@ -736,8 +721,6 @@ VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->dft_bufs->ct_buf_real;
     to_sol_obj->dft_bufs->ct_buf_imag =
         from_sol_obj->dft_bufs->ct_buf_imag;
-    to_sol_obj->dft_bufs->ct_buf_real_in =
-        from_sol_obj->dft_bufs->ct_buf_real_in;
     to_sol_obj->dft_bufs->ct_buf_size = from_sol_obj->dft_bufs->ct_buf_size;
     to_sol_obj->dft_bufs->num_ct_buf = from_sol_obj->dft_bufs->num_ct_buf;
     to_sol_obj->dft_bufs->buffered->out_ptr =
@@ -757,11 +740,7 @@ VOID swap_real_ct_solutions(aoclfftz_selector_t *sel)
             (sel->solution->next_sol[0]->solver->solver_type ==
                  SOLVER_REAL_DIRECT ||
              sel->solution->next_sol[0]->solver->solver_type ==
-                 SOLVER_REAL_DIRECT_TWIDDLE ||
-             sel->solution->next_sol[0]->solver->solver_type ==
-                 SOLVER_REAL_MT_DIRECT ||
-             sel->solution->next_sol[0]->solver->solver_type ==
-                 SOLVER_REAL_MT_DIRECT_TWIDDLE))
+                 SOLVER_REAL_MT_DIRECT))
         {
             sel->solution = curr->next_sol[0];
             curr->next_sol[0] = sel->solution->next_sol[0];
@@ -775,9 +754,7 @@ VOID swap_real_ct_solutions(aoclfftz_selector_t *sel)
             next = curr->next_sol[0];
             if (curr->solver->solver_type == SOLVER_REAL_CT &&
                 (next->solver->solver_type == SOLVER_REAL_DIRECT ||
-                 next->solver->solver_type == SOLVER_REAL_DIRECT_TWIDDLE ||
-                 next->solver->solver_type == SOLVER_REAL_MT_DIRECT ||
-                 next->solver->solver_type == SOLVER_REAL_MT_DIRECT_TWIDDLE))
+                 next->solver->solver_type == SOLVER_REAL_MT_DIRECT))
             {
                 prev->next_sol[0] = next;
                 curr->next_sol[0] = next->next_sol[0];

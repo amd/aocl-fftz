@@ -31,9 +31,9 @@ INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
     FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
     FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
     ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_1, VOID,
-                       aux_buf_size * num_slots);
+                       aux_buf_size * num_slots + dt_bytes); // FIXME: remove the "+ dt_bytes" padding
     ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_2, VOID,
-                       aux_buf_size * num_slots);
+                       aux_buf_size * num_slots + dt_bytes); // FIXME: remove the "+ dt_bytes" padding
 
     sol->dft_bufs->buffered->aux_buf_size_per_thread = aux_buf_size;
     sol->dft_bufs->buffered->is_aux_buffer_allocated = 1;
@@ -49,15 +49,12 @@ static INT32 execute_real_buffered_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-
     INT32 ret = SOLVER_SUCCESS;
 
     // composite problem input
     sol->next_sol[0]->decomp_scheme->in_real = sol->decomp_scheme->in_real;
     // composite problem output
     *sol->dft_bufs->buffered->out_ptr = sol->decomp_scheme->out_real;
-
-    sol->next_sol[0]->dft_bufs->ct_buf_real_in = sol->dft_bufs->ct_buf_real_in;
 
     ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0]);
 

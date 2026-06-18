@@ -50,7 +50,9 @@ static VOID fft3avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP *out_strides = strides->out_strides;
 #endif
     INTP v_in_stride = strides->v_in_stride;
+    UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
     INTP v_out_stride = strides->v_out_stride;
+    UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
 
     INTP N = n / NUM_SETS_512_S;
     INTP remaining_sets = n % NUM_SETS_512_S;
@@ -69,11 +71,11 @@ static VOID fft3avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_in = in_r;
         curr_out = out_r;
 
-        GATHER8_512_S(curr_in, v_in_stride, v_in0);
+        GATHER8_512_S(curr_in, v_in_stride, v_in0, is_contiguous_in);
         curr_in = in_r + in_strides[1];
-        GATHER8_512_S(curr_in, v_in_stride, v_in1);
+        GATHER8_512_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         curr_in = in_r + in_strides[2];
-        GATHER8_512_S(curr_in, v_in_stride, v_in2);
+        GATHER8_512_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_av0 = _mm512_add_ps(v_in1, v_in2);
         v_av1 = _mm512_sub_ps(v_in1, v_in2);
@@ -90,11 +92,11 @@ static VOID fft3avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Output point 2: X[2]
         v_out2 = _mm512_add_ps(v_tv0, v_tv1);
 
-        SCATTER8_512_S(curr_out, v_out_stride, v_out0);
+        SCATTER8_512_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
         curr_out = out_r + out_strides[1];
-        SCATTER8_512_S(curr_out, v_out_stride, v_out1);
+        SCATTER8_512_S(curr_out, v_out_stride, v_out1, is_contiguous_out);
         curr_out = out_r + out_strides[2];
-        SCATTER8_512_S(curr_out, v_out_stride, v_out2);
+        SCATTER8_512_S(curr_out, v_out_stride, v_out2, is_contiguous_out);
 
         in_r += NUM_SETS_512_S * v_in_stride;
         out_r += NUM_SETS_512_S * v_out_stride;
@@ -112,11 +114,11 @@ static VOID fft3avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_in = in_r;
         curr_out = out_r;
 
-        GATHER4_256_S(curr_in, v_in_stride, v_in0);
+        GATHER4_256_S(curr_in, v_in_stride, v_in0, is_contiguous_in);
         curr_in = in_r + in_strides[1];
-        GATHER4_256_S(curr_in, v_in_stride, v_in1);
+        GATHER4_256_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         curr_in = in_r + in_strides[2];
-        GATHER4_256_S(curr_in, v_in_stride, v_in2);
+        GATHER4_256_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_av0 = _mm256_add_ps(v_in1, v_in2);
         v_av1 = _mm256_sub_ps(v_in1, v_in2);
@@ -134,11 +136,11 @@ static VOID fft3avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Output point 3 : X[2]
         v_out2 = _mm256_add_ps(v_tv0, v_tv1);
 
-        SCATTER4_256_S(curr_out, v_out_stride, v_out0);
+        SCATTER4_256_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
         curr_out = out_r + out_strides[1];
-        SCATTER4_256_S(curr_out, v_out_stride, v_out1);
+        SCATTER4_256_S(curr_out, v_out_stride, v_out1, is_contiguous_out);
         curr_out = out_r + out_strides[2];
-        SCATTER4_256_S(curr_out, v_out_stride, v_out2);
+        SCATTER4_256_S(curr_out, v_out_stride, v_out2, is_contiguous_out);
 
         in_r += NUM_SETS_256_S * v_in_stride;
         out_r += NUM_SETS_256_S * v_out_stride;
@@ -157,11 +159,11 @@ static VOID fft3avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_in = in_r;
         curr_out = out_r;
 
-        GATHER2_128_S(curr_in, v_in_stride, v_in0);
+        GATHER2_128_S(curr_in, v_in_stride, v_in0, is_contiguous_in);
         curr_in = in_r + in_strides[1];
-        GATHER2_128_S(curr_in, v_in_stride, v_in1);
+        GATHER2_128_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         curr_in = in_r + in_strides[2];
-        GATHER2_128_S(curr_in, v_in_stride, v_in2);
+        GATHER2_128_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_av0 = _mm_add_ps(v_in1, v_in2);
         v_av1 = _mm_sub_ps(v_in1, v_in2);
@@ -179,11 +181,11 @@ static VOID fft3avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Output point 3 : X[2]
         v_out2 = _mm_add_ps(v_tv0, v_tv1);
 
-        SCATTER2_128_S(curr_out, v_out_stride, v_out0);
+        SCATTER2_128_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
         curr_out = out_r + out_strides[1];
-        SCATTER2_128_S(curr_out, v_out_stride, v_out1);
+        SCATTER2_128_S(curr_out, v_out_stride, v_out1, is_contiguous_out);
         curr_out = out_r + out_strides[2];
-        SCATTER2_128_S(curr_out, v_out_stride, v_out2);
+        SCATTER2_128_S(curr_out, v_out_stride, v_out2, is_contiguous_out);
 
         in_r = in_r + (v_in_stride << 1);
         out_r = out_r + (v_out_stride << 1);
@@ -252,7 +254,9 @@ static VOID fft3avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     INTP *out_strides = strides->out_strides;
 #endif
     INTP v_in_stride = strides->v_in_stride;
+    UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
     INTP v_out_stride = strides->v_out_stride;
+    UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
 
     INTP N = n / NUM_SETS_512_D;
     INTP remaining_sets = n % NUM_SETS_512_D;
@@ -271,11 +275,11 @@ static VOID fft3avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_in = in_r;
         curr_out = out_r;
 
-        GATHER4_512_D(curr_in, v_in_stride, v_in0);
+        GATHER4_512_D(curr_in, v_in_stride, v_in0, is_contiguous_in);
         curr_in = in_r + in_strides[1];
-        GATHER4_512_D(curr_in, v_in_stride, v_in1);
+        GATHER4_512_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         curr_in = in_r + in_strides[2];
-        GATHER4_512_D(curr_in, v_in_stride, v_in2);
+        GATHER4_512_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_av0 = _mm512_add_pd(v_in1, v_in2);
         v_av1 = _mm512_sub_pd(v_in1, v_in2);
@@ -292,11 +296,11 @@ static VOID fft3avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Output point 2: X[2]
         v_out2 = _mm512_add_pd(v_tv0, v_tv1);
 
-        SCATTER4_512_D(curr_out, v_out_stride, v_out0);
+        SCATTER4_512_D(curr_out, v_out_stride, v_out0, is_contiguous_out);
         curr_out = out_r + out_strides[1];
-        SCATTER4_512_D(curr_out, v_out_stride, v_out1);
+        SCATTER4_512_D(curr_out, v_out_stride, v_out1, is_contiguous_out);
         curr_out = out_r + out_strides[2];
-        SCATTER4_512_D(curr_out, v_out_stride, v_out2);
+        SCATTER4_512_D(curr_out, v_out_stride, v_out2, is_contiguous_out);
 
         in_r += NUM_SETS_512_D * v_in_stride;
         out_r += NUM_SETS_512_D * v_out_stride;
@@ -314,11 +318,11 @@ static VOID fft3avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         curr_in = in_r;
         curr_out = out_r;
 
-        GATHER2_256_D(curr_in, v_in_stride, v_in0);
+        GATHER2_256_D(curr_in, v_in_stride, v_in0, is_contiguous_in);
         curr_in = in_r + in_strides[1];
-        GATHER2_256_D(curr_in, v_in_stride, v_in1);
+        GATHER2_256_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         curr_in = in_r + in_strides[2];
-        GATHER2_256_D(curr_in, v_in_stride, v_in2);
+        GATHER2_256_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_av0 = _mm256_add_pd(v_in1, v_in2);
         v_av1 = _mm256_sub_pd(v_in1, v_in2);
@@ -336,11 +340,11 @@ static VOID fft3avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         // Output point 3 : X[2]
         v_out2 = _mm256_add_pd(v_tv0, v_tv1);
 
-        SCATTER2_256_D(curr_out, v_out_stride, v_out0);
+        SCATTER2_256_D(curr_out, v_out_stride, v_out0, is_contiguous_out);
         curr_out = out_r + out_strides[1];
-        SCATTER2_256_D(curr_out, v_out_stride, v_out1);
+        SCATTER2_256_D(curr_out, v_out_stride, v_out1, is_contiguous_out);
         curr_out = out_r + out_strides[2];
-        SCATTER2_256_D(curr_out, v_out_stride, v_out2);
+        SCATTER2_256_D(curr_out, v_out_stride, v_out2, is_contiguous_out);
 
         in_r += NUM_SETS_256_D * v_in_stride;
         out_r += NUM_SETS_256_D * v_out_stride;

@@ -42,6 +42,7 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     INT32 avl_threads = decomp_scheme->thread_info->avl_threads;
     UINT32 precision = DT_PRECISION_FLAG(decomp_scheme->flags);
     UINT32 selector_mode = GET_SELECTOR_MODE(decomp_scheme->flags);
+    UINT8 dir = FFT_DIR(decomp_scheme->flags);
     INT32 ret = SELECTOR_FAILURE;
 
     kernel_t *kernel_c2c = NULL;
@@ -90,9 +91,9 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 INTP kloc_r2hcf = 1 * NUM_KERNELS_IN_EACH_DFT_VARIANT + kloc;
                 INTP kloc_c2c   = 2 * NUM_KERNELS_IN_EACH_DFT_VARIANT + kloc;
 
-                if (kertab[kloc_r2hc].kfft == NULL ||
-                    kertab[kloc_r2hcf].kfft == NULL ||
-                    kertab[kloc_c2c].kfft == NULL)
+                if (kertab[kloc_r2hc].kfft[dir] == NULL ||
+                    kertab[kloc_r2hcf].kfft[dir] == NULL ||
+                    kertab[kloc_c2c].kfft[dir] == NULL)
                 {
                     continue;
                 }
@@ -101,12 +102,18 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 kernel_r2hc = &kertab[kloc_r2hc];
                 kernel_r2hcf = &kertab[kloc_r2hcf];
 
-                cur_sel->solution->solver->kernel_c2c->kfft =
-                    kernel_c2c->kfft;
-                cur_sel->solution->solver->kernel_r2hc->kfft =
-                    kernel_r2hc->kfft;
-                cur_sel->solution->solver->kernel_r2hcf->kfft =
-                    kernel_r2hcf->kfft;
+                cur_sel->solution->solver->kernel_c2c->kfft[FORWARD_FFT_DIR] =
+                    kernel_c2c->kfft[FORWARD_FFT_DIR];
+                cur_sel->solution->solver->kernel_c2c->kfft[BACKWARD_FFT_DIR] =
+                    kernel_c2c->kfft[BACKWARD_FFT_DIR];
+                cur_sel->solution->solver->kernel_r2hc->kfft[FORWARD_FFT_DIR] =
+                    kernel_r2hc->kfft[FORWARD_FFT_DIR];
+                cur_sel->solution->solver->kernel_r2hc->kfft[BACKWARD_FFT_DIR] =
+                    kernel_r2hc->kfft[BACKWARD_FFT_DIR];
+                cur_sel->solution->solver->kernel_r2hcf->kfft[FORWARD_FFT_DIR] =
+                    kernel_r2hcf->kfft[FORWARD_FFT_DIR];
+                cur_sel->solution->solver->kernel_r2hcf->kfft[BACKWARD_FFT_DIR] =
+                    kernel_r2hcf->kfft[BACKWARD_FFT_DIR];
 
                 cur_sel->solution->solver->kernel_c2c->sets =
                     kernel_c2c->sets[precision - 2];
