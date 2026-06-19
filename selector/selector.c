@@ -2261,6 +2261,9 @@ static FFTZ_VOID compute_exec_metadata(
     //   - BUFFERED:    active_threads_at_level * ct_buf_size  (buffered_solver_dft.c)
     //   - CTL1D-owner: active_threads_at_level * ct_buf_size  (batched_ct_l1_direct_solver_dft.c)
     //   - NDIM:        active_threads_at_level * n_threads * ct_buf_size  (alloc_ndim_buffer)
+    // NDIM's n_threads is avl_threads, except alloc_ndim_buffer forces it to 1
+    // for the 2D multithreaded case (dim_rank == 2 && avl_threads > 1); mirror
+    // that here so the sizing stays consistent with the setup-time allocation.
     if (sol->dft_bufs->ct_buf_allocated && sol->dft_bufs->ct_buf_size > 0)
     {
         thread_info_t *thread_info = sol->decomp_scheme->thread_info;
@@ -2268,7 +2271,11 @@ static FFTZ_VOID compute_exec_metadata(
         FFTZ_UINTP total = n_above * (FFTZ_UINTP)sol->dft_bufs->ct_buf_size;
         if (stype == SOLVER_NDIM)
         {
-            FFTZ_INT32 n_threads = sol->decomp_scheme->thread_info->avl_threads;
+            FFTZ_INT32 n_threads = thread_info->avl_threads;
+            if (sol->decomp_scheme->dim_rank == 2 && n_threads > 1)
+            {
+                n_threads = 1;
+            }
             total *= (FFTZ_UINTP)n_threads;
         }
         if (total > metadata->ct_buffer_total_size)

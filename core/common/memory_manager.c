@@ -414,6 +414,14 @@ FFTZ_INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution,
         buffer_length = buffer_length / min_dim_size;
     }
     buffer_size = GET_PADDED_SIZE(buffer_length * DATA_STRIDE * dt_bytes);
+
+    // for 2D problems, a 2D sized buffer is sufficient for avl_threads to run
+    // MT.
+    if (dim_rank == 2 && n_threads > 1)
+    {
+        n_threads = 1;
+    }
+
     FFTZ_INT32 active_threads =
         solution->decomp_scheme->thread_info->active_threads;
     ALLOC_ALIGN_UNINIT(*buffer_ptr, FFTZ_VOID,

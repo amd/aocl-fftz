@@ -58,15 +58,6 @@ FFTZ_INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
     // Buffer allocated at NDIM level can be reused by any solution subtree
     // under the NDIM node (both next_sol and nd_sol paths), avoiding
     // reallocation.
-    if (sol->dft_bufs->ct_buffer != NULL)
-    {
-        // Buffer already allocated, reuse it
-        AOCLFFTZ_LOG(TRACE, global_logger_mode,
-                     "Buffer already allocated, reusing it");
-        setup_buffered_output_strides(sol, next_sol);
-        AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
-        return SOLVER_SUCCESS;
-    }
 
     FFTZ_INT32 dim_rank = sol->decomp_scheme->dim_rank;
     FFTZ_INT32 vec_rank = sol->decomp_scheme->vec_rank;
@@ -91,6 +82,18 @@ FFTZ_INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
         // Multiply by both n and out_stride to account for strided access
         buffer_length *= (sol->decomp_scheme->batched_vecs[0].n) *
                          (sol->decomp_scheme->batched_vecs[0].out_stride);
+    }
+
+    if (sol->dft_bufs->ct_buffer != NULL)
+    {
+        // Unpadded: mt_batched uses ct_buf_size as the per-thread slice stride
+        // (ct_offset += tid * ct_buf_size). Padding it would push the slice of
+        // each higher thread past its assigned region in the shared pool.
+        buffer_size = buffer_length * DATA_STRIDE * dt_bytes;
+        sol->dft_bufs->ct_buf_size = buffer_size;
+        setup_buffered_output_strides(sol, next_sol);
+        next_sol->dft_bufs->ct_buf_size = sol->dft_bufs->ct_buf_size;
+        return SOLVER_SUCCESS;
     }
 
     buffer_size = GET_PADDED_SIZE(buffer_length * DATA_STRIDE * dt_bytes);
