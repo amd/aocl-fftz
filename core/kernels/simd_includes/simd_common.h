@@ -223,6 +223,172 @@
     }                                                                          \
 }
 
+#ifdef ENABLE_FMA
+
+// FMADD: (a * b) + c
+#define FMADD_128_S(a, b, c) _mm_fmadd_ps((a), (b), (c))
+#define FMADD_256_S(a, b, c) _mm256_fmadd_ps((a), (b), (c))
+#define FMADD_128_D(a, b, c) _mm_fmadd_pd((a), (b), (c))
+#define FMADD_256_D(a, b, c) _mm256_fmadd_pd((a), (b), (c))
+
+// FMSUB: (a * b) - c
+#define FMSUB_128_S(a, b, c) _mm_fmsub_ps((a), (b), (c))
+#define FMSUB_256_S(a, b, c) _mm256_fmsub_ps((a), (b), (c))
+#define FMSUB_128_D(a, b, c) _mm_fmsub_pd((a), (b), (c))
+#define FMSUB_256_D(a, b, c) _mm256_fmsub_pd((a), (b), (c))
+
+// FNMADD: -(a * b) + c
+#define FNMADD_128_S(a, b, c) _mm_fnmadd_ps((a), (b), (c))
+#define FNMADD_256_S(a, b, c) _mm256_fnmadd_ps((a), (b), (c))
+#define FNMADD_128_D(a, b, c) _mm_fnmadd_pd((a), (b), (c))
+#define FNMADD_256_D(a, b, c) _mm256_fnmadd_pd((a), (b), (c))
+
+// FNMSUB: -(a * b) - c
+#define FNMSUB_128_S(a, b, c) _mm_fnmsub_ps((a), (b), (c))
+#define FNMSUB_256_S(a, b, c) _mm256_fnmsub_ps((a), (b), (c))
+#define FNMSUB_128_D(a, b, c) _mm_fnmsub_pd((a), (b), (c))
+#define FNMSUB_256_D(a, b, c) _mm256_fnmsub_pd((a), (b), (c))
+
+// FMADDSUB: (a * b) +(odd)/-(even) c
+#define FMADDSUB_128_S(a, b, c) _mm_fmaddsub_ps((a), (b), (c))
+#define FMADDSUB_256_S(a, b, c) _mm256_fmaddsub_ps((a), (b), (c))
+#define FMADDSUB_128_D(a, b, c) _mm_fmaddsub_pd((a), (b), (c))
+#define FMADDSUB_256_D(a, b, c) _mm256_fmaddsub_pd((a), (b), (c))
+
+// FMSUBADD: (a * b) -(odd)/+(even) c
+#define FMSUBADD_128_S(a, b, c) _mm_fmsubadd_ps((a), (b), (c))
+#define FMSUBADD_256_S(a, b, c) _mm256_fmsubadd_ps((a), (b), (c))
+#define FMSUBADD_128_D(a, b, c) _mm_fmsubadd_pd((a), (b), (c))
+#define FMSUBADD_256_D(a, b, c) _mm256_fmsubadd_pd((a), (b), (c))
+
+#else
+
+// FMADD: (a * b) + c
+#define FMADD_128_S(a, b, c) _mm_add_ps(_mm_mul_ps((a), (b)), (c))
+#define FMADD_256_S(a, b, c) _mm256_add_ps(_mm256_mul_ps((a), (b)), (c))
+#define FMADD_128_D(a, b, c) _mm_add_pd(_mm_mul_pd((a), (b)), (c))
+#define FMADD_256_D(a, b, c) _mm256_add_pd(_mm256_mul_pd((a), (b)), (c))
+
+// FMSUB: (a * b) - c
+#define FMSUB_128_S(a, b, c) _mm_sub_ps(_mm_mul_ps((a), (b)), (c))
+#define FMSUB_256_S(a, b, c) _mm256_sub_ps(_mm256_mul_ps((a), (b)), (c))
+#define FMSUB_128_D(a, b, c) _mm_sub_pd(_mm_mul_pd((a), (b)), (c))
+#define FMSUB_256_D(a, b, c) _mm256_sub_pd(_mm256_mul_pd((a), (b)), (c))
+
+// FNMADD: -(a * b) + c
+#define FNMADD_128_S(a, b, c)                                                  \
+    _mm_add_ps(                                                                \
+        _mm_xor_ps(                                                            \
+            _mm_mul_ps((a), (b)),                                              \
+            _neg_128_f[1].s                                                    \
+        ),                                                                     \
+        (c)                                                                    \
+    )
+
+#define FNMADD_256_S(a, b, c)                                                  \
+    _mm256_add_ps(                                                             \
+        _mm256_xor_ps(                                                         \
+            _mm256_mul_ps((a), (b)),                                           \
+            _neg_256_f[1].s                                                    \
+        ),                                                                     \
+        (c)                                                                    \
+    )
+
+#define FNMADD_128_D(a, b, c)                                                  \
+    _mm_add_pd(                                                                \
+        _mm_xor_pd(                                                            \
+            _mm_mul_pd((a), (b)),                                              \
+            _neg_128_d[1].d                                                    \
+        ),                                                                     \
+        (c)                                                                    \
+    )
+
+#define FNMADD_256_D(a, b, c)                                                  \
+    _mm256_add_pd(                                                             \
+        _mm256_xor_pd(                                                         \
+            _mm256_mul_pd((a), (b)),                                           \
+            _neg_256_d[1].d                                                    \
+        ),                                                                     \
+        (c)                                                                    \
+    )
+
+// FNMSUB: -(a * b) - c
+#define FNMSUB_128_S(a, b, c)                                                  \
+    _mm_sub_ps(                                                                \
+        _mm_xor_ps(                                                            \
+            _mm_mul_ps((a), (b)),                                              \
+            _neg_128_f[1].s                                                    \
+        ),                                                                     \
+        (c)                                                                    \
+    )
+
+#define FNMSUB_256_S(a, b, c)                                                  \
+    _mm256_sub_ps(                                                             \
+        _mm256_xor_ps(                                                         \
+            _mm256_mul_ps((a), (b)),                                           \
+            _neg_256_f[1].s                                                    \
+        ),                                                                     \
+        (c)                                                                    \
+    )
+
+#define FNMSUB_128_D(a, b, c)                                                  \
+    _mm_sub_pd(                                                                \
+        _mm_xor_pd(                                                            \
+            _mm_mul_pd((a), (b)),                                              \
+            _neg_128_d[1].d                                                    \
+        ),                                                                     \
+        (c)                                                                    \
+    )
+
+#define FNMSUB_256_D(a, b, c)                                                  \
+    _mm256_sub_pd(                                                             \
+        _mm256_xor_pd(                                                         \
+            _mm256_mul_pd((a), (b)),                                           \
+            _neg_256_d[1].d                                                    \
+        ),                                                                     \
+        (c)                                                                    \
+    )
+
+// FMADDSUB: (a * b) +(odd)/-(even) c
+#define FMADDSUB_128_S(a, b, c)                                                \
+    _mm_addsub_ps(_mm_mul_ps((a), (b)), (c))
+
+#define FMADDSUB_256_S(a, b, c)                                                \
+    _mm256_addsub_ps(_mm256_mul_ps((a), (b)), (c))
+
+#define FMADDSUB_128_D(a, b, c)                                                \
+    _mm_addsub_pd(_mm_mul_pd((a), (b)), (c))
+
+#define FMADDSUB_256_D(a, b, c)                                                \
+    _mm256_addsub_pd(_mm256_mul_pd((a), (b)), (c))
+
+// FMSUBADD: (a * b) -(odd)/+(even) c
+#define FMSUBADD_128_S(a, b, c)                                                \
+    _mm_addsub_ps(                                                             \
+        _mm_mul_ps((a), (b)),                                                  \
+        _mm_xor_ps((c), _neg_128_f[1].s)                                       \
+    )
+
+#define FMSUBADD_256_S(a, b, c)                                                \
+    _mm256_addsub_ps(                                                          \
+        _mm256_mul_ps((a), (b)),                                               \
+        _mm256_xor_ps((c), _neg_256_f[1].s)                                    \
+    )
+
+#define FMSUBADD_128_D(a, b, c)                                                \
+    _mm_addsub_pd(                                                             \
+        _mm_mul_pd((a), (b)),                                                  \
+        _mm_xor_pd((c), _neg_128_d[1].d)                                       \
+    )
+
+#define FMSUBADD_256_D(a, b, c)                                                \
+    _mm256_addsub_pd(                                                          \
+        _mm256_mul_pd((a), (b)),                                               \
+        _mm256_xor_pd((c), _neg_256_d[1].d)                                    \
+    )
+
+#endif // ENABLE_FMA
+
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 2, other: 0}
 #define ITW_GATHER_128_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
                          load_multi_cols /* unused */)                         \

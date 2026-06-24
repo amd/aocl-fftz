@@ -62,7 +62,7 @@ typedef enum
     NUM_SOLVERS_END
 } aoclfftz_solver_type;
 
-INT32 register_solvers(INT32 dt, INT32 is_real, INT32 cpu_flags);
+INT32 register_solvers(VOID);
 INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj);
 INT32 is_solver_registered(aoclfftz_solver_type solver_type);
 
@@ -113,7 +113,7 @@ INT32 setup_real_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
 INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
                              aoclfftz_solution_t *real_dim_sol,
                              aoclfftz_solution_t *complex_dims_sol,
-                             aoclfftz_realhelper_t * realhelper);
+                             aoclfftz_realhelper_t *realhelper);
 INT32 setup_real_sizeone_solver(aoclfftz_solution_t *sol);
 #ifdef MULTI_THREADING
 INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,

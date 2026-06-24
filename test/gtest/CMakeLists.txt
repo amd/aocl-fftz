@@ -110,9 +110,46 @@ foreach(FILE ${GTEST_SRC_FILES})
     if(NOT "${TNAME}" MATCHES "[A-Za-z0-9_]*_gtest")
         continue()
     endif()
+
+    # Concurrency gtests use OpenMP for their parallel region and rendezvous
+    # barrier, which is how they actually create the multi-thread race window
+    # they are designed to stress. They must therefore link OpenMP into the
+    # test binary even when the library itself was built single-threaded
+    # (ENABLE_MULTI_THREADING=OFF), otherwise the `#pragma omp parallel` is
+    # silently dropped and the test degrades to a meaningless serial run.
+    # Top-level CMake only calls find_package(OpenMP) when
+    # ENABLE_MULTI_THREADING=ON, so locate it here as a *soft* dependency:
+    # if OpenMP can't be found, skip the concurrency test rather than failing
+    # configure (preserves the prior single-thread-without-OpenMP build path).
+    if("${FILE}" MATCHES ".*/concurrency/.*")
+        # NB: on Windows, OpenMP_libomp_LIBRARY has a non-empty default
+        # cache value (LLVM path) even though it isn't consumed there, so
+        # gate on the imported target rather than that variable.
+        if(WIN32 OR NOT OpenMP_libomp_LIBRARY)
+            if(NOT TARGET OpenMP::OpenMP_C)
+                find_package(OpenMP)
+            endif()
+            if(NOT TARGET OpenMP::OpenMP_C)
+                message(STATUS "OpenMP not found: skipping concurrency gtest ${TNAME}")
+                continue()
+            endif()
+        endif()
+    endif()
+
     add_executable(${TNAME} ${FILE})
     add_dependencies(${TNAME} ${deps_googletest})
-    target_link_libraries(${TNAME} ${gtest_lib_name} gtest gtest_main Threads::Threads)
+    target_link_libraries(${TNAME} PRIVATE ${gtest_lib_name} gtest gtest_main Threads::Threads)
+
+    if("${FILE}" MATCHES ".*/concurrency/.*")
+        if(WIN32 OR NOT OpenMP_libomp_LIBRARY)
+            target_link_libraries(${TNAME} PRIVATE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+        else()
+            target_compile_options(${TNAME} PRIVATE -fopenmp)
+            target_link_options(${TNAME} PRIVATE -fopenmp)
+            target_link_libraries(${TNAME} PRIVATE ${OpenMP_libomp_LIBRARY})
+        endif()
+    endif()
+
     gtest_discover_tests(${TNAME})
 endforeach()
 

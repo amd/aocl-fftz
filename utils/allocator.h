@@ -19,6 +19,12 @@
 
 #define MIN_ALIGNMENT 64
 
+#define GET_PADDED_SIZE(x)                                                     \
+    (                                                                          \
+        (((UINTP)(x) + (UINTP)(MIN_ALIGNMENT) - 1u)                            \
+         & ~((UINTP)(MIN_ALIGNMENT) - 1u))                                     \
+    )
+
 #ifdef _WINDOWS
 
 #define ALLOC_ALIGN_UNINIT(ptr, type, num_bytes)                               \

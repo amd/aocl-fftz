@@ -92,27 +92,19 @@ INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
         buffer_length *= (sol->decomp_scheme->batched_vecs[0].n) *
                          (sol->decomp_scheme->batched_vecs[0].out_stride);
     }
-    if (sol->dft_bufs->num_ct_buf > 1)
-    {
-        buffer_length *= sol->dft_bufs->num_ct_buf;
-    }
-    buffer_size = buffer_length * DATA_STRIDE * dt_bytes;
-    ALLOC_ALIGN_UNINIT(sol->dft_bufs->ct_buffer, VOID, buffer_size);
+
+    buffer_size = GET_PADDED_SIZE(buffer_length * DATA_STRIDE * dt_bytes);
+    ALLOC_ALIGN_UNINIT(sol->dft_bufs->ct_buffer, VOID,
+        buffer_size * sol->dft_bufs->num_ct_buf);
     if (sol->dft_bufs->ct_buffer == NULL)
     {
         AOCLFFTZ_ERROR("Failed to allocate ct_buffer of size %ld",
-                       (long)buffer_size);
+                       (long)(buffer_size * sol->dft_bufs->num_ct_buf));
         return SOLVER_FAILURE;
     }
+
     sol->dft_bufs->ct_buf_allocated = 1;
-    if (sol->dft_bufs->num_ct_buf > 1)
-    {
-        sol->dft_bufs->ct_buf_size = buffer_size / sol->dft_bufs->num_ct_buf;
-    }
-    else
-    {
-        sol->dft_bufs->ct_buf_size = buffer_size;
-    }
+    sol->dft_bufs->ct_buf_size = buffer_size;
     sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buffer;
     sol->dft_bufs->ct_buf_imag =
         MOVE_ADDR(sol->dft_bufs->ct_buffer, SOL_DT_SIZE(sol));

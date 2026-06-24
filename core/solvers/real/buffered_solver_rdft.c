@@ -20,19 +20,23 @@ INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
 
     INT32 status = SOLVER_SUCCESS;
     realhelper->is_buffered_invoked = 1;
-    INT32 num_aux_buf = realhelper->num_aux_buf;
 
     INT32 dt_bytes = SOL_DT_SIZE(sol);
     INTP n = sol->decomp_scheme->dims[0].n;
+    INTP num_slots = sol->decomp_scheme->outer_buf_cnt
+                   * sol->decomp_scheme->thread_info->n_threads;
 
-    // Copy input to temp buffer
+    INTP aux_buf_size = GET_PADDED_SIZE(n * dt_bytes);
+
     FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
     FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
     ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_1, VOID,
-                     num_aux_buf * n * dt_bytes);
+                       aux_buf_size * num_slots);
     ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_2, VOID,
-                     num_aux_buf * n * dt_bytes);
+                       aux_buf_size * num_slots);
 
+    sol->dft_bufs->buffered->aux_buf_size_per_thread = aux_buf_size;
+    sol->dft_bufs->buffered->is_aux_buffer_allocated = 1;
     sol->dft_bufs->ct_buf_real_in = sol->dft_bufs->buffered->aux_buffer_1;
 
 #ifdef AOCL_ENABLE_LOG

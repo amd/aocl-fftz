@@ -16,33 +16,6 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-/**
- * Compute the maximum buffer size needed for an N-dimensional real FFT
- * - For dimension 0:   (n0 / 2 + 1) * stride_0
- * - For other dims:    (ni - 1) * stride_i
- * Strides are chosen based on FFT direction (forward or backward).
- */
-UINTP calculate_max_buffer_size(aoclfftz_solution_t *sol)
-{
-    UINTP max_size = 1;
-
-    // Compute max buffer size for ND real FFT using half-complex for first dim
-    // Uses output stride for forward, input stride for backward
-    UINT8 is_forward = (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR);
-    INTP dim0_size = sol->decomp_scheme->dims[0].n / 2 + 1;
-    INTP dim0_stride = is_forward ? sol->decomp_scheme->dims[0].out_stride
-                                  : sol->decomp_scheme->dims[0].in_stride;
-    max_size += ((dim0_size - 1) * dim0_stride);
-    for (INT32 i = 1; i < sol->decomp_scheme->dim_rank; i++)
-    {
-        INTP dimi_size = sol->decomp_scheme->dims[i].n;
-        INTP dimi_stride = is_forward ? sol->decomp_scheme->dims[i].out_stride
-                                      : sol->decomp_scheme->dims[i].in_stride;
-        max_size += ((dimi_size - 1) * dimi_stride);
-    }
-    return max_size;
-}
-
 INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
                              aoclfftz_solution_t *real_dim_sol,
                              aoclfftz_solution_t *complex_dims_sol,
@@ -54,8 +27,10 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     dt_bytes = DT_PRECISION_BYTES(dt_prec);
 
-    // Compute allocation size in bytes for ct_buffer and aux_buffer_1
-    UINTP alloc_size = calculate_max_buffer_size(sol) * DATA_STRIDE * dt_bytes;
+    // Logical bytes per REAL_NDIM aux slab; round up so thread slabs stay aligned.
+    INTP logical_aux_buf_size =
+        calculate_max_buffer_size(sol) * DATA_STRIDE * dt_bytes;
+    INTP padded_aux_buf_size = GET_PADDED_SIZE(logical_aux_buf_size);
 
     copy_solution_obj_wo_dims(complex_dims_sol, sol);
     copy_solution_obj_wo_dims(real_dim_sol, sol);
@@ -73,7 +48,15 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
         }
         FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
         ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_1, VOID,
-                         alloc_size);
+            sol->decomp_scheme->outer_buf_cnt * padded_aux_buf_size);
+        sol->dft_bufs->buffered->aux_buf_size_per_thread = padded_aux_buf_size;
+    }
+    else
+    {
+        if (sol->dft_bufs->buffered != NULL)
+        {
+            sol->dft_bufs->buffered->aux_buf_size_per_thread = 0;
+        }
     }
 
     INT32 dim_rank = sol->decomp_scheme->dim_rank;

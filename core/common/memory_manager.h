@@ -41,5 +41,5 @@ VOID destroy_solution(aoclfftz_solution_t *sol);
 VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n);
 VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme);
 VOID destroy_bluestein(aoclfftz_bluestein_t *bluestein);
-
+UINTP calculate_max_buffer_size(aoclfftz_solution_t *sol);
 #endif // MEMORY_MANAGER_H

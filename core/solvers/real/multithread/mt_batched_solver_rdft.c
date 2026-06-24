@@ -30,8 +30,17 @@ INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
     // used by the child threads in the next level
     INT32 num_threads_used = sol->decomp_scheme->thread_info->n_threads;
     next_sol->decomp_scheme->thread_info->avl_threads /= num_threads_used;
-    realhelper->num_aux_buf = num_threads_used;
+    next_sol->decomp_scheme->thread_info->n_threads = num_threads_used;
 
+    // Save the number of threads used for the outer level
+    // to calculate the size of aux_buffer_1 and ct_buffer.
+    // So that, REAL_NDIM solvers can be executed in parallel
+    // for batched real nd problems.
+    if (next_sol->decomp_scheme->outer_buf_cnt == 1 &&
+        next_sol->decomp_scheme->dim_rank > 1)
+    {
+        next_sol->decomp_scheme->outer_buf_cnt = num_threads_used;
+    }
     // Strides are prepared based on real points, so adjust them (scale by 2)
     // for complex points (i.e. R2C output and C2R input)
     // Scale ALL vector strides, not just vecs[0], to handle vec_rank > 1 cases
@@ -46,107 +55,6 @@ INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
             sol->decomp_scheme->vecs[i].in_stride *= 2;
         }
     }
-
-    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
-    return SOLVER_SUCCESS;
-}
-
-INT32 update_pointers_real_buffered_solution(aoclfftz_solution_t *sol, INTP tid)
-{
-    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
-
-    INTP n = sol->decomp_scheme->dims->n;
-    INT32 dt_bytes = SOL_DT_SIZE(sol);
-
-    // problem_out points to the start addresses of out buffers
-    VOID *problem_out = sol->decomp_scheme->out_real;
-
-    // solution from of CT problem after buffered sol
-    // ... -> buffered -> direct -> CT -> direct -> ... -> CT -> direct
-    //
-    // Here, the buffered will have in & out of the current batch
-    //
-    // Buffered solver will change the input/output buffers of direct & CT
-    // solution in the following way:
-    //
-    // buffered    [in -> out]
-    // |--> direct   [in -> aux1]
-    // |----> CT       [aux1 -> aux2]
-    // |----> direct   [aux1 -> aux2]
-    // |------> CT       [aux2 -> aux1]
-    // |------> direct   [aux2 -> aux1]
-    // |--------> CT       [aux1 -> out]
-    // |--------> direct   [aux1 -> out]
-    // this example is for a 3 level CT problem
-
-    // the input sol points to the first solution
-    // move the sol pointer to buffered_solver and modify the input & output
-    // addresses of buffered struct to point the updated problem input & output
-    while (sol != NULL && (sol->solver->solver_type != SOLVER_REAL_BUFFERED))
-    {
-        sol = sol->next_sol[0];
-    }
-
-    if (sol == NULL)
-    {
-        return SOLVER_FAILURE;
-    }
-
-    // storing aux buffers in a temp variable
-    aoclfftz_solution_t *buffered_sol = sol;
-    VOID *aux_in = MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_1,
-                             n * tid * dt_bytes);
-    VOID *aux_out = MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_2,
-                             n * tid * dt_bytes);
-
-    // update `ct_buf_real_in` pointers used for C2R out-of-place problems
-    sol->dft_bufs->ct_buf_real_in = aux_in;
-
-    // move to the first direct solution of CT problem
-    sol = sol->next_sol[0];
-
-    // update first direct solution's in/out
-    sol->decomp_scheme->out_real = aux_out;
-    sol->decomp_scheme->out_imag = MOVE_ADDR(aux_out, dt_bytes);
-    // swap aux buffers so that the current output should be the next input
-    SWAP_BUFFERS(aux_in, aux_out);
-    sol = sol->next_sol[0];
-
-    // update all the CT + direct solutions' in/out
-    // (except first direct and last CT + direct)
-    while (sol && sol->next_sol[0] && sol->next_sol[0]->next_sol)
-    {
-        sol->decomp_scheme->in_real = aux_in;
-        sol->decomp_scheme->in_imag = MOVE_ADDR(aux_in, dt_bytes);
-        sol->decomp_scheme->out_real = aux_out;
-        sol->decomp_scheme->out_imag = MOVE_ADDR(aux_out, dt_bytes);
-        // swap aux buffers after every direct solution
-        if (sol->solver->solver_type == SOLVER_REAL_DIRECT ||
-            sol->solver->solver_type == SOLVER_REAL_DIRECT_TWIDDLE ||
-            sol->solver->solver_type == SOLVER_REAL_MT_DIRECT ||
-            sol->solver->solver_type == SOLVER_REAL_MT_DIRECT_TWIDDLE)
-        {
-            SWAP_BUFFERS(aux_in, aux_out);
-        }
-        sol = sol->next_sol[0];
-    }
-    if (sol == NULL)
-    {
-        return SOLVER_FAILURE;
-    }
-    // update last CT solution's in/out
-    sol->decomp_scheme->in_real = aux_in;
-    sol->decomp_scheme->in_imag = MOVE_ADDR(aux_in, dt_bytes);
-    sol->decomp_scheme->out_real = problem_out;
-    sol->decomp_scheme->out_imag = MOVE_ADDR(problem_out, dt_bytes);
-    // update last direct solution's in/out
-    sol = sol->next_sol[0];
-    sol->decomp_scheme->in_real = aux_in;
-    sol->decomp_scheme->in_imag = MOVE_ADDR(aux_in, dt_bytes);
-
-    // store the address of last direct sol output as buffered->out_ptr
-    // this will be modified by buffered executor
-    buffered_sol->dft_bufs->buffered->out_ptr = &sol->decomp_scheme->out_real;
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
@@ -187,19 +95,17 @@ INT32 execute_real_mt_batched_solver_internal(aoclfftz_solution_t *sol,
         {
             INT32 tid = omp_get_thread_num();
             INT32 local_status = SOLVER_SUCCESS;
-            if (next_sol[tid]->solver->solver_type == SOLVER_REAL_BUFFERED)
-            {
-                update_pointers_real_buffered_solution(next_sol[tid], tid);
-            }
 
+            // Update batch-specific input/output pointers
             next_sol[tid]->decomp_scheme->in_real =
-                                (VOID *)((CHAR *)in_real + b * v_in_stride);
+                                MOVE_ADDR(in_real, b * v_in_stride);
             next_sol[tid]->decomp_scheme->in_imag =
-                                (VOID *)((CHAR *)in_imag + b * v_in_stride);
+                                MOVE_ADDR(in_imag, b * v_in_stride);
             next_sol[tid]->decomp_scheme->out_real =
-                                (VOID *)((CHAR *)out_real + b * v_out_stride);
+                                MOVE_ADDR(out_real, b * v_out_stride);
             next_sol[tid]->decomp_scheme->out_imag =
-                                (VOID *)((CHAR *)out_imag + b * v_out_stride);
+                                MOVE_ADDR(out_imag, b * v_out_stride);
+
             local_status = next_sol[tid]->solver->execute_solver(next_sol[tid]);
             if (local_status != SOLVER_SUCCESS)
             {

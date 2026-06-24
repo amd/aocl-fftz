@@ -62,6 +62,9 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         sel->solution->dft_bufs->buffered->aux_buffer_1;
     cur_sel->solution->dft_bufs->buffered->aux_buffer_2 =
         sel->solution->dft_bufs->buffered->aux_buffer_2;
+    cur_sel->solution->dft_bufs->buffered->is_aux_buffer_allocated = 0;
+    cur_sel->solution->dft_bufs->buffered->aux_buf_size_per_thread =
+        sel->solution->dft_bufs->buffered->aux_buf_size_per_thread;
 
     // Call selector for solving it as a non-buffered problem
     ret = selector_model_rdft_(cur_sel, realhelper);

@@ -95,6 +95,7 @@ INT32 copy_decomp_scheme( aoclfftz_decomp_scheme_t *to_ds,
     to_ds->thread_info->avl_threads =
         from_ds->thread_info->avl_threads;
     to_ds->thread_info->n_threads = 1;
+    to_ds->outer_buf_cnt = from_ds->outer_buf_cnt;
     to_ds->flags = from_ds->flags;
     return AOCLFFTZ_SUCCESS;
 }
@@ -191,6 +192,8 @@ INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->decomp_scheme->thread_info->avl_threads;
     to_sol_obj->decomp_scheme->thread_info->n_threads =
         from_sol_obj->decomp_scheme->thread_info->n_threads;
+    to_sol_obj->decomp_scheme->outer_buf_cnt =
+        from_sol_obj->decomp_scheme->outer_buf_cnt;
     to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;
 
     // twiddle
@@ -220,6 +223,8 @@ INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->dft_bufs->buffered->aux_buffer_1;
     to_sol_obj->dft_bufs->buffered->aux_buffer_2 =
         from_sol_obj->dft_bufs->buffered->aux_buffer_2;
+    to_sol_obj->dft_bufs->buffered->aux_buf_size_per_thread =
+        from_sol_obj->dft_bufs->buffered->aux_buf_size_per_thread;
     to_sol_obj->dft_bufs->buffered->out_ptr =
         from_sol_obj->dft_bufs->buffered->out_ptr;
     to_sol_obj->dft_bufs->ct_buffer =
@@ -687,6 +692,8 @@ VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->decomp_scheme->thread_info->avl_threads;
     to_sol_obj->decomp_scheme->thread_info->n_threads =
         from_sol_obj->decomp_scheme->thread_info->n_threads;
+    to_sol_obj->decomp_scheme->outer_buf_cnt =
+        from_sol_obj->decomp_scheme->outer_buf_cnt;
     to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;
 
     // twiddle
@@ -717,6 +724,8 @@ VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->dft_bufs->buffered->aux_buffer_1;
     to_sol_obj->dft_bufs->buffered->aux_buffer_2 =
         from_sol_obj->dft_bufs->buffered->aux_buffer_2;
+    to_sol_obj->dft_bufs->buffered->aux_buf_size_per_thread =
+        from_sol_obj->dft_bufs->buffered->aux_buf_size_per_thread;
     to_sol_obj->dft_bufs->ct_buffer =
         from_sol_obj->dft_bufs->ct_buffer;
     to_sol_obj->dft_bufs->ct_buf_real =
@@ -726,6 +735,7 @@ VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
     to_sol_obj->dft_bufs->ct_buf_real_in =
         from_sol_obj->dft_bufs->ct_buf_real_in;
     to_sol_obj->dft_bufs->ct_buf_size = from_sol_obj->dft_bufs->ct_buf_size;
+    to_sol_obj->dft_bufs->num_ct_buf = from_sol_obj->dft_bufs->num_ct_buf;
     to_sol_obj->dft_bufs->buffered->out_ptr =
         from_sol_obj->dft_bufs->buffered->out_ptr;
     to_sol_obj->next_sol = from_sol_obj->next_sol;

@@ -120,6 +120,7 @@ typedef struct aoclfftz_selector
     sel_obj->solution->decomp_scheme->thread_info->avl_threads =               \
     sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads;      \
     sel_obj->solution->decomp_scheme->thread_info->n_threads = 1;              \
+    sel_obj->solution->decomp_scheme->outer_buf_cnt = 1;                       \
     sel_obj->solution->decomp_scheme->flags =                                  \
         (problem->flags.fft_placement       << 0) |                            \
         (problem->flags.storage_order       << 1) |                            \
@@ -127,6 +128,26 @@ typedef struct aoclfftz_selector
         (problem->flags.fft_type            << 3) |                            \
         (problem->flags.bit_reproducibility << 4) |                            \
         (problem->flags.transpose_mode      << 8);                             \
+}
+
+/*
+ * @brief Overwrite the solution-side `opt_level` with the dispatcher-resolved
+ * level (cpu_flags = min(user opt_level, hw/build ISA level), or scalar when
+ * opt_off is set or the level is non-positive).
+ *
+ * Conceptually:
+ *   - `problem->cntrl_params.opt_level` holds the user request (unchanged).
+ *   - `sel_obj->solution->decomp_scheme->cntrl_params->opt_level` holds the
+ *     effective level the library will actually run at.
+ * The struct/field name is shared between the two; only the meaning of the
+ * value differs based on which side it lives on.
+ *
+ * Must be called after `INIT_DECOMP_SCHEME` (which initially copies the user
+ * value) and after `setup_dynamic_dispatcher` has produced `cpu_flags`.
+ */
+#define SET_EFFECTIVE_OPT_LEVEL(sel_obj, cpu_flags)                            \
+{                                                                              \
+    sel_obj->solution->decomp_scheme->cntrl_params->opt_level = (cpu_flags);   \
 }
 
 /*
