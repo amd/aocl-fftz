@@ -114,14 +114,14 @@ INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table, INT32 is_innermo
     return is_supported;
 }
 
-// Check if the problem is col-major or row-major.
-// col-major: vec-strides < elemental-strides
-// row-major: elemental-strides < vec-strides
+// Column-major iff multiple batches exist and vec-stride < dim-stride
+// for both input and output.
 UINT8 check_col_major(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
     UINT8 is_col_major = (decomp_scheme->vecs[0].in_stride <
         decomp_scheme->dims[0].in_stride) &&
-       (decomp_scheme->vecs[0].out_stride < decomp_scheme->dims[0].out_stride);
+        (decomp_scheme->vecs[0].out_stride < decomp_scheme->dims[0].out_stride)
+        && (decomp_scheme->vecs[0].n > 1);
     return is_col_major;
 }
 
