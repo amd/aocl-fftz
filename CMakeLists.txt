@@ -435,19 +435,59 @@ if(ENABLE_STRICT_WARNINGS)
     endif()
 endif()
 
-# add library
+# ---------------------------------------------------------------------------
+# OBJECT library: compiles all FFTZ sources and exposes the public API headers
+# via target_include_directories PUBLIC.  A parent project can aggregate the
+# object files into any library using:
+#   add_library(<<PARENT>> SHARED $<TARGET_OBJECTS:fftz_objects>)
+#   target_link_libraries(<<PARENT>> PUBLIC fftz_objects)
+# ---------------------------------------------------------------------------
+add_library(fftz_objects OBJECT ${SRC_FILES})
+target_include_directories(fftz_objects PUBLIC .)
+
+# Build object files as PIC so they can be aggregated into either a SHARED
+# or STATIC library by a parent project, regardless of how this project's
+# own ${lib_name} is configured. Required for ELF platforms.
+# No-op on Windows (CMake silently ignores POSITION_INDEPENDENT_CODE there).
+set_target_properties(fftz_objects PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+# Standalone library built from the OBJECT target above.
+# Used when aocl-fftz is consumed directly (not aggregated by a parent project).
 if(BUILD_STATIC_LIBS)
-    add_library(${lib_name} STATIC ${SRC_FILES})
+    add_library(${lib_name} STATIC $<TARGET_OBJECTS:fftz_objects>)
     message(STATUS "Library type being built is: Static")
 else()
-    add_library(${lib_name} SHARED ${SRC_FILES})
+    add_library(${lib_name} SHARED $<TARGET_OBJECTS:fftz_objects>)
     message(STATUS "Library type being built is: Shared")
+endif()
+
+# ${lib_name}'s own usage requirements (include dir, libm, OpenMP, coverage,
+# ASAN) are set on ${lib_name} directly below; fftz_objects carries the same
+# as INTERFACE / PUBLIC props for parent-project aggregation via
+# $<TARGET_OBJECTS:fftz_objects> + target_link_libraries(parent PUBLIC fftz_objects).
+
+# Expose the FFTZ public headers to downstream consumers of ${lib_name}.
+# BUILD_INTERFACE: header dir inside the source tree during build.
+# INSTALL_INTERFACE: relative path under CMAKE_INSTALL_PREFIX after install.
+target_include_directories(${lib_name} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:${DEST_INC_PATH}>
+)
+
+# AOCL Build-It-Yourself unified build: compile the same sources into a sibling
+# OBJECT library whose objects are pulled directly into the single libaocl.
+if(AOCL_TB_UNIFIED_BUILD)
+    aocl_tb_objectify(${lib_name})
 endif()
 
 set_target_properties(${lib_name} PROPERTIES EXPORT_NAME ${FFTZ_EXPORTED_TARGET_NAME})
 
 # Link system deps like libm: PUBLIC for static (consumers need -lm), PRIVATE for shared.
+# Also expose them as INTERFACE on fftz_objects so a parent project that aggregates
+# $<TARGET_OBJECTS:fftz_objects> into its own library inherits them via
+# target_link_libraries(parent PUBLIC fftz_objects).
 if(lib_deps)
+    target_link_libraries(fftz_objects INTERFACE ${lib_deps})
     if(BUILD_STATIC_LIBS)
         target_link_libraries(${lib_name} PUBLIC ${lib_deps})
     else()
@@ -458,6 +498,9 @@ endif()
 # Add required OpenMP flags
 if(ENABLE_MULTI_THREADING)
     if(WIN32)
+        # PUBLIC on the OBJECT lib propagates OpenMP::OpenMP_C/CXX as INTERFACE
+        # link items to consumers (parent aggregation case).
+        target_link_libraries(fftz_objects PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
         if(BUILD_STATIC_LIBS)
             # Static libraries must link OpenMP PUBLIC so that apps that link us get the runtime too.
             target_link_libraries(${lib_name} PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
@@ -468,16 +511,24 @@ if(ENABLE_MULTI_THREADING)
         # On Unix: For custom path, link that file + -fopenmp and for system OpenMP, link OpenMP::OpenMP_C/OpenMP_CXX
         # pkg-config uses -lomp/-lgomp in Libs.private.
         if(OpenMP_libomp_LIBRARY)
+            # PUBLIC compile option so fftz_objects' own sources get -fopenmp AND
+            # the flag is propagated as INTERFACE_COMPILE_OPTIONS to consumers.
+            target_compile_options(fftz_objects PUBLIC -fopenmp)
+            # INTERFACE link options/libs on fftz_objects so parent aggregations
+            # get -fopenmp on the link line and the libomp runtime library.
+            target_link_options(fftz_objects INTERFACE -fopenmp)
+            target_link_libraries(fftz_objects INTERFACE ${OpenMP_libomp_LIBRARY})
             if(BUILD_STATIC_LIBS)
-                target_compile_options(${lib_name} PUBLIC -fopenmp)
                 target_link_options(${lib_name} PUBLIC -fopenmp)
                 target_link_libraries(${lib_name} PUBLIC ${OpenMP_libomp_LIBRARY})
             else()
-                target_compile_options(${lib_name} PRIVATE -fopenmp)
                 target_link_options(${lib_name} PRIVATE -fopenmp)
                 target_link_libraries(${lib_name} PRIVATE ${OpenMP_libomp_LIBRARY})
             endif()
         else()
+            # System OpenMP: PUBLIC on fftz_objects so OpenMP::OpenMP_C/CXX is
+            # propagated to consumers (compile flags + runtime link).
+            target_link_libraries(fftz_objects PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
             if(BUILD_STATIC_LIBS)
                 target_link_libraries(${lib_name} PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
             else()
@@ -488,19 +539,23 @@ if(ENABLE_MULTI_THREADING)
 endif()
 
 # add the compiler and linker flags for code coverage
+# Compile flags go on fftz_objects (PUBLIC, propagated to consumers).
+# Link flags go on both ${lib_name} (PUBLIC, for direct consumers via find_package)
+# and fftz_objects (INTERFACE, for parent aggregation of $<TARGET_OBJECTS:fftz_objects>).
 if(CODE_COVERAGE OR CODE_COVERAGE_FOR_ATG)
-    target_compile_options(${lib_name} PUBLIC --coverage)
-    # Check if the compiler supports -fprofile-abs-path
+    target_compile_options(fftz_objects PUBLIC --coverage)
     check_cxx_compiler_flag("-fprofile-abs-path" HAS_FPROFILE_ABS_PATH)
     if(HAS_FPROFILE_ABS_PATH)
-        target_compile_options(${lib_name} PUBLIC -fprofile-abs-path)
+        target_compile_options(fftz_objects PUBLIC -fprofile-abs-path)
     endif()
+    target_link_options(fftz_objects INTERFACE --coverage)
     target_link_options(${lib_name} PUBLIC --coverage)
 endif()
 
 # add the compiler and linker flags for AddressSanitizer
 if(ASAN)
-    target_compile_options(${lib_name} PUBLIC -fsanitize=address -O0 -gdwarf-5 -g3 )
+    target_compile_options(fftz_objects PUBLIC -fsanitize=address -O0 -gdwarf-5 -g3)
+    target_link_options(fftz_objects INTERFACE -fsanitize=address)
     target_link_options(${lib_name} PUBLIC -fsanitize=address)
 endif()
 
@@ -683,15 +738,19 @@ if((NOT BUILD_STATIC_LIBS) AND WIN32 AND (NOT AOCL_TEST_COVERAGE STREQUAL "OFF")
         )
 endif()
 
-#Uninstall the binary. library and header files using custom command
-add_custom_target("uninstall" COMMENT "Uninstalling the installed files from ${install_dir}")
-add_custom_command(
-    TARGET "uninstall"
-    POST_BUILD
-    COMMENT "Uninstall the installed files as per install_manifest.txt and from ${ROOT_DIR}/lib/"
-    COMMAND ${CMAKE_COMMAND} -E echo "Checking for install_manifest.txt..."
-    COMMAND [ -f install_manifest.txt ] && xargs rm -vf < install_manifest.txt || echo 'install_manifest.txt is not present, nothing to uninstall, install the library!'
-    )
+# Uninstall the binary, library and header files using custom command.
+# Guarded: when built as part of the unified AOCL project, another component
+# may already define a global "uninstall" target.
+if(NOT TARGET uninstall)
+    add_custom_target("uninstall" COMMENT "Uninstalling the installed files from ${CMAKE_INSTALL_PREFIX}")
+    add_custom_command(
+        TARGET "uninstall"
+        POST_BUILD
+        COMMENT "Uninstall the installed files as per install_manifest.txt and from ${ROOT_DIR}/lib/"
+        COMMAND ${CMAKE_COMMAND} -E echo "Checking for install_manifest.txt..."
+        COMMAND [ -f install_manifest.txt ] && xargs rm -vf < install_manifest.txt || echo 'install_manifest.txt is not present, nothing to uninstall, install the library!'
+        )
+endif()
 
 # copy library from build directory to lib directory
 add_custom_command(
