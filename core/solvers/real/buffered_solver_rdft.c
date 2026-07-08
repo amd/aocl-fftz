@@ -55,7 +55,8 @@ FFTZ_INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
     return status;
 }
 
-static FFTZ_INT32 execute_real_buffered_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_real_buffered_solver(aoclfftz_solution_t *sol,
+                                               aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -66,7 +67,7 @@ static FFTZ_INT32 execute_real_buffered_solver(aoclfftz_solution_t *sol)
     // composite problem output
     *sol->dft_bufs->buffered->out_ptr = sol->decomp_scheme->out_real;
 
-    ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0]);
+    ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0], ctx);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return ret;

@@ -470,7 +470,8 @@ static inline FFTZ_VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
      4. Execute the fused C2C kernels (twiddle multiplication and the
         half-point conjugation are handled internally by the kernel).
 */
-static FFTZ_INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol,
+                                                aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -526,7 +527,7 @@ static FFTZ_INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol)
 
     if (HAS_NEXT(sol))
     {
-        ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0]);
+        ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0], ctx);
     }
     else if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
     {

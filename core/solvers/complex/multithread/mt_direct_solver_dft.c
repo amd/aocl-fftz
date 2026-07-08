@@ -119,22 +119,28 @@ FFTZ_INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol,
     return status;
 }
 
-static FFTZ_INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol,
+                                           aoclfftz_mutable_ctx_t *ctx)
 {
     aoclfftz_decomp_scheme_t *decomp_scheme = sol->decomp_scheme;
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    FFTZ_UINT8 direction = FFT_DIR(decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(ctx->flags);
     kfft_ kernel = sol->solver->kernel_c2c->kfft[direction];
     FFTZ_UINT8 num_sets = sol->solver->kernel_c2c->sets;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
 
     FFTZ_INTP v_in_stride, v_out_stride, data_offset;
-    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(ctx);
     data_offset = DATA_STRIDE * dt_bytes * num_sets;
     v_in_stride = decomp_scheme->vecs[0].in_stride * data_offset;
     v_out_stride = decomp_scheme->vecs[0].out_stride * data_offset;
+
+    FFTZ_VOID *in_real  = ctx->in_real;
+    FFTZ_VOID *in_imag  = ctx->in_imag;
+    FFTZ_VOID *out_real = ctx->out_real;
+    FFTZ_VOID *out_imag = ctx->out_imag;
 
     FFTZ_INTP num_iters = decomp_scheme->vecs[0].n / num_sets;
     FFTZ_INTP rem_iters = decomp_scheme->vecs[0].n - (num_iters * num_sets);
@@ -155,10 +161,10 @@ static FFTZ_INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
 
         FFTZ_INTP v_istride = batch * v_in_stride;
         FFTZ_INTP v_ostride = batch * v_out_stride;
-        kernel(MOVE_ADDR(decomp_scheme->in_real, v_istride),
-               MOVE_ADDR(decomp_scheme->in_imag, v_istride),
-               MOVE_ADDR(decomp_scheme->out_real, v_ostride),
-               MOVE_ADDR(decomp_scheme->out_imag, v_ostride),
+        kernel(MOVE_ADDR(in_real, v_istride),
+               MOVE_ADDR(in_imag, v_istride),
+               MOVE_ADDR(out_real, v_ostride),
+               MOVE_ADDR(out_imag, v_ostride),
                num_sets, strides, &tw_local, direction);
     }
 
@@ -174,10 +180,10 @@ static FFTZ_INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
     {
         FFTZ_INTP v_istride = num_iters * v_in_stride;
         FFTZ_INTP v_ostride = num_iters * v_out_stride;
-        kernel(MOVE_ADDR(decomp_scheme->in_real, v_istride),
-               MOVE_ADDR(decomp_scheme->in_imag, v_istride),
-               MOVE_ADDR(decomp_scheme->out_real, v_ostride),
-               MOVE_ADDR(decomp_scheme->out_imag, v_ostride),
+        kernel(MOVE_ADDR(in_real, v_istride),
+               MOVE_ADDR(in_imag, v_istride),
+               MOVE_ADDR(out_real, v_ostride),
+               MOVE_ADDR(out_imag, v_ostride),
                rem_iters, strides, &tw_local, direction);
     }
 
@@ -208,22 +214,22 @@ static FFTZ_INT32 execute_mt_direct_solver(aoclfftz_solution_t *sol)
  *          for (1..4) // butterflies
  *              kernel(radix-12)
  */
-static FFTZ_INT32
-execute_mt_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_mt_direct_batched_rowmajor_solver(
+                                                    aoclfftz_solution_t *sol,
+                                                    aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(ctx->flags);
     kfft_ kernel = sol->solver->kernel_c2c->kfft[direction];
 
-    FFTZ_VOID *in_real = sol->decomp_scheme->in_real;
-    FFTZ_VOID *in_imag = sol->decomp_scheme->in_imag;
-    FFTZ_VOID *out_real = sol->decomp_scheme->out_real;
-    FFTZ_VOID *out_imag = sol->decomp_scheme->out_imag;
-
-    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(ctx);
+    FFTZ_VOID *in_real  = ctx->in_real;
+    FFTZ_VOID *in_imag  = ctx->in_imag;
+    FFTZ_VOID *out_real = ctx->out_real;
+    FFTZ_VOID *out_imag = ctx->out_imag;
 
     // vec-strides across DFT butterflies of the same CT problem
     FFTZ_INTP ct_in_stride =
@@ -323,22 +329,22 @@ execute_mt_direct_batched_rowmajor_solver(aoclfftz_solution_t *sol)
  *          for (1..100) // batches
  *              kernel(radix-12)
  */
-static FFTZ_INT32
-execute_mt_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_mt_direct_batched_colmajor_solver(
+                                                    aoclfftz_solution_t *sol,
+                                                    aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(ctx->flags);
     kfft_ kernel = sol->solver->kernel_c2c->kfft[direction];
 
-    FFTZ_VOID *in_real = sol->decomp_scheme->in_real;
-    FFTZ_VOID *in_imag = sol->decomp_scheme->in_imag;
-    FFTZ_VOID *out_real = sol->decomp_scheme->out_real;
-    FFTZ_VOID *out_imag = sol->decomp_scheme->out_imag;
-
-    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(ctx);
+    FFTZ_VOID *in_real  = ctx->in_real;
+    FFTZ_VOID *in_imag  = ctx->in_imag;
+    FFTZ_VOID *out_real = ctx->out_real;
+    FFTZ_VOID *out_imag = ctx->out_imag;
 
     // vec-strides across DFT butterflies of the same CT problem
     FFTZ_INTP ct_in_stride =

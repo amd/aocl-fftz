@@ -66,6 +66,11 @@ FFTZ_INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_nd_dft;
     }
 
+    // Propagate ndim_concurrency upward from n_minus1_sel only: the outer-dim child
+    // is always 1D, so a nested ndim node can arise solely in the (N-1)D subtree.
+    sel->solution->decomp_scheme->thread_info->ndim_concurrency =
+        n_minus1_sel->solution->decomp_scheme->thread_info->ndim_concurrency;
+
     sel->cost_analysis->ops = n_minus1_sel->cost_analysis->ops +
                               outer_dim_sel->cost_analysis->ops;
     sel->cost_analysis->time = n_minus1_sel->cost_analysis->time +

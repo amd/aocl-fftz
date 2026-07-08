@@ -141,12 +141,11 @@ FFTZ_INT32 setup_transpose_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
-static FFTZ_INT32 execute_transpose_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_transpose_solver(aoclfftz_solution_t *sol,
+                                           aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-
-    aoclfftz_decomp_scheme_t *decomp_scheme = sol->decomp_scheme;
 
     if (sol->dft_bufs->transpose->aux_mem->size > 0)
     {
@@ -154,8 +153,8 @@ static FFTZ_INT32 execute_transpose_solver(aoclfftz_solution_t *sol)
                sol->dft_bufs->transpose->aux_mem->size * sizeof(FFTZ_UINT8));
     }
 
-    sol->dft_bufs->transpose->kernel((FFTZ_VOID *)decomp_scheme->in_real,
-                                     (FFTZ_VOID *)decomp_scheme->out_real,
+    sol->dft_bufs->transpose->kernel((FFTZ_VOID *)ctx->in_real,
+                                     (FFTZ_VOID *)ctx->out_real,
                                      sol->dft_bufs->transpose->row_info,
                                      sol->dft_bufs->transpose->col_info,
                                      sol->dft_bufs->transpose->aux_mem);

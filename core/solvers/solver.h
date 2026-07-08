@@ -79,12 +79,13 @@ FFTZ_INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
                             aoclfftz_solution_t *next_sol);
 FFTZ_INT32 setup_batched_solver(aoclfftz_solution_t *sol);
 FFTZ_INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
-                             aoclfftz_solution_t *next_sol, FFTZ_INTP m);
+                                  aoclfftz_solution_t *next_sol, FFTZ_INTP m);
 FFTZ_INT32 compute_chirp_fft(aoclfftz_solution_t *sol,
-                        aoclfftz_solution_t *next_sol);
+                             aoclfftz_solution_t *next_sol,
+                             aoclfftz_mutable_ctx_t *ctx);
 FFTZ_INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
-                        aoclfftz_solution_t *n_minus1_sol,
-                        aoclfftz_solution_t *outer_dim_sol);
+                             aoclfftz_solution_t *n_minus1_sol,
+                             aoclfftz_solution_t *outer_dim_sol);
 FFTZ_INT32 setup_sizeone_solver(aoclfftz_solution_t *sol);
 FFTZ_INT32 setup_transpose_solver(aoclfftz_solution_t *sol);
 FFTZ_INT32 setup_sr_solver(aoclfftz_solution_t *sol,

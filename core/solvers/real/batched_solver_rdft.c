@@ -48,7 +48,8 @@ FFTZ_INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
 // Recursively solves batched RFFT by handling the innermost dimension first.
 FFTZ_INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
                                            aoclfftz_solution_t *next_sol,
-                                           FFTZ_INTP vec_rank)
+                                           FFTZ_INTP vec_rank,
+                                           aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -71,7 +72,7 @@ FFTZ_INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
 
         for (FFTZ_INTP b = 0; b < batches; b++)
         {
-            status = next_sol->solver->execute_solver(next_sol);
+            status = next_sol->solver->execute_solver(next_sol, ctx);
             if (status != SOLVER_SUCCESS)
             {
                 return status;
@@ -102,7 +103,7 @@ FFTZ_INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
 
             // recursive call to solve the inner batches
             status = execute_real_batched_solver_internal(sol, next_sol,
-                                                          vec_rank - 1);
+                                                          vec_rank - 1, ctx);
             if (status != SOLVER_SUCCESS)
             {
                 return status;
@@ -121,7 +122,8 @@ FFTZ_INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
     return status;
 }
 
-static FFTZ_INT32 execute_real_batched_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_real_batched_solver(aoclfftz_solution_t *sol,
+                                              aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -135,7 +137,8 @@ static FFTZ_INT32 execute_real_batched_solver(aoclfftz_solution_t *sol)
     next_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
 
     status = execute_real_batched_solver_internal(sol, next_sol,
-                                                  sol->decomp_scheme->vec_rank);
+                                                  sol->decomp_scheme->vec_rank,
+                                                  ctx);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return status;

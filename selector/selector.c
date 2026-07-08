@@ -1066,12 +1066,16 @@ FFTZ_INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
     return ret;
 }
 
+static FFTZ_VOID compute_exec_metadata(aoclfftz_solution_t *sol,
+                                  aoclfftz_immutable_metadata_t *out);
+
 #ifdef MULTI_THREADING
-static FFTZ_INT32 post_process_solution(aoclfftz_solution_t *sol,
-                                        FFTZ_INT32 *ct_slots,
-                                        FFTZ_INT32 *aux_buf_slots);
+static FFTZ_INT32 post_process_real_solution(aoclfftz_solution_t *sol,
+                                             FFTZ_INT32 *aux_buf_slots);
 #endif
-static FFTZ_INT32 setup_chirp_fft(aoclfftz_solution_t *sol);
+
+static FFTZ_INT32 setup_chirp_fft(aoclfftz_solution_t *sol,
+                                  aoclfftz_mutable_ctx_t *ctx);
 
 static inline FFTZ_INT32 prepare_and_setup_dft(aoclfftz_selector_t *sel_obj)
 {
@@ -1114,15 +1118,64 @@ static inline FFTZ_INT32 prepare_and_setup_dft(aoclfftz_selector_t *sel_obj)
         ret = AOCLFFTZ_SETUP_FAILURE;
         goto exit_prepare_and_setup_dft;
     }
-#ifdef MULTI_THREADING
-    ret = post_process_solution(sel_obj->solution, NULL, NULL);
-    if (ret != AOCLFFTZ_SUCCESS)
+
+    ALLOC_ALIGN_UNINIT(sel_obj->exec_metadata,
+                       aoclfftz_immutable_metadata_t,
+                       sizeof(aoclfftz_immutable_metadata_t));
+    if (sel_obj->exec_metadata == NULL)
     {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_prepare_and_setup_dft;
+    }
+    *sel_obj->exec_metadata = (aoclfftz_immutable_metadata_t){0};
+
+#ifdef MULTI_THREADING
+    if (IS_REAL(sel_obj->solution->decomp_scheme->flags))
+    {
+        // Real plans still rely on the legacy per-thread next_sol[i]
+        // clones populated by post_process_real_solution: the real
+        // solvers mutate decomp_scheme->in/out per batch.
+        // The C2C subtree is left untouched and uses the per-call
+        // exec ctx for its concurrency-safety.
+        ret = post_process_real_solution(sel_obj->solution, NULL);
+        if (ret != AOCLFFTZ_SUCCESS)
+        {
+            goto exit_prepare_and_setup_dft;
+        }
     }
 #endif
 
-    ret = setup_chirp_fft(sel_obj->solution);
+    // Populate per-call scratch sizes and plan-time scratch pointers
+    // directly into exec_metadata->base_ctx. This also assigns each Bluestein node a
+    // disjoint slice (bs_dim_offset) within the shared bs pool.
+    compute_exec_metadata(sel_obj->solution, sel_obj->exec_metadata);
+
+    // Allocate the shared bs_in_base / bs_out_base scratch pools.
+    // Each Bluestein node carves out its own slice using bs_dim_offset.
+    if (sel_obj->exec_metadata->bs_buffer_size > 0)
+    {
+        ALLOC_ALIGN_UNINIT(sel_obj->exec_metadata->base_ctx.bs_in_base,
+                           FFTZ_VOID,
+                           sel_obj->exec_metadata->bs_buffer_size);
+        ALLOC_ALIGN_UNINIT(sel_obj->exec_metadata->base_ctx.bs_out_base,
+                           FFTZ_VOID,
+                           sel_obj->exec_metadata->bs_buffer_size);
+        if (sel_obj->exec_metadata->base_ctx.bs_in_base == NULL ||
+            sel_obj->exec_metadata->base_ctx.bs_out_base == NULL)
+        {
+            ret = AOCLFFTZ_MEMORY_FAILURE;
+            goto exit_prepare_and_setup_dft;
+        }
+    }
+
+    aoclfftz_mutable_ctx_t *base = &sel_obj->exec_metadata->base_ctx;
+    base->in_real  = sel_obj->solution->decomp_scheme->in_real;
+    base->in_imag  = sel_obj->solution->decomp_scheme->in_imag;
+    base->out_real = sel_obj->solution->decomp_scheme->out_real;
+    base->out_imag = sel_obj->solution->decomp_scheme->out_imag;
+    base->flags    = sel_obj->solution->decomp_scheme->flags;
+
+    ret = setup_chirp_fft(sel_obj->solution, base);
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_prepare_and_setup_dft;
@@ -1131,6 +1184,7 @@ static inline FFTZ_INT32 prepare_and_setup_dft(aoclfftz_selector_t *sel_obj)
 
 exit_prepare_and_setup_dft:
     AOCLFFTZ_ERROR("Setup failure with %s", get_status_string(ret));
+
     return ret;
 }
 
@@ -1806,29 +1860,17 @@ static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
 }
 
 /**
- * @brief Recursively deep-copies a solution subtree for one MT thread.
+ * @brief Recursively deep-copies a real solution subtree for one MT thread.
  *
- * Creates an independent copy of every node in the subtree rooted at @p src,
- * assigning each copy its own ct_buf and aux_buffer_1/2 region so that
- * concurrent threads do not share mutable buffers.
+ * Creates an independent copy of every node in the real subtree rooted at
+ * src. The C2C tree is concurrent-safe via per-call ctx and does not need
+ * per-thread clones.
  *
- * Traversal order mirrors post_process_solution():
- *   NDIM / REAL_NDIM — copy nd_sol then next_sol[0] (same ct_base; branches
- *                      share the pool, sequential execution).
- *                      ct_bufs = max(nd_ct_bufs, ns_ct_bufs).
- *   SR               — copy next_sol[0], odd1_sol, odd3_sol (same ct_base;
- *                      sequential branches share the pool).
- *                      ct_bufs = max across all three branches.
- *   MT_BATCHED       — copy thread 0 first; the returned ct_bufs gives
- *                      per_thread_ct_bufs, then threads 1..N use
- *                      ct_base + i * per_thread_ct_bufs (non-overlapping).
- *                      ct_bufs = n_threads * per_thread_ct_bufs.
+ * Traversal order mirrors post_process_real_solution():
+ *   REAL_NDIM         — share nd_sol (C2C boundary), copy next_sol[0].
+ *   REAL_MT_BATCHED   — copy thread 0 first, then threads 1..N.
  *
  * @param src     Root of the source subtree to copy. If NULL, returns NULL.
- * @param ct_base Thread's base slot index into the shared ct_buf pool.
- *                Passed unchanged to every node in the subtree.
- * @param ct_bufs Output: number of ct_buf slots consumed by this subtree.
- *                May be NULL if the caller does not need the count.
  * @param aux_buf_base Linear slot into REAL_BUFFERED stretched aux pool
  *                (stride aux_buf_size_per_thread per slot, 64-byte aligned;
  *                 n_slots = active_threads).
@@ -1838,26 +1880,15 @@ static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
  *                i>0), REAL_NDIM multi-slot aux_buffer_1 is offset by this
  * index into the pool; pass 0 for template / thread-0 trees. Under nested
  *                REAL_MT_BATCHED, use parent_slot * n_threads + inner index.
- * @param bs_slot_idx Index into the Bluestein in/out pool for this concurrent
- *                execution. Always compounds across MT_BATCHED levels
- *                (parent_slot * n_threads + i) so that the product equals the
- *                Bluestein node's num_bs_buf and every (outer, ..., inner)
- *                thread combination gets a unique slice. At a BLUESTEIN node,
- *                dst's inner FFT(M) next_sol[0]->decomp_scheme->in_real/
- *                in_imag/out_real/out_imag (and the dst bluestein->in/out
- *                fields) are offset by bs_slot_idx * bs_buf_size from the
- *                pool base.
  *
  * @return Pointer to the newly allocated copy of the subtree, or NULL on
  *         allocation failure (partial allocations are freed before returning).
  */
-aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
-                                             FFTZ_INT32 ct_base,
-                                             FFTZ_INT32 *ct_bufs,
-                                             FFTZ_INT32 aux_buf_base,
-                                             FFTZ_INT32 *aux_bufs,
-                                             FFTZ_INT32 aux_ndim_pool_slot_idx,
-                                             FFTZ_INT32 bs_slot_idx)
+static aoclfftz_solution_t *deep_copy_real_solution_tree(
+                                            aoclfftz_solution_t *src,
+                                            FFTZ_INT32 aux_buf_base,
+                                            FFTZ_INT32 *aux_bufs,
+                                            FFTZ_INT32 aux_ndim_pool_slot_idx)
 {
     if (!src)
     {
@@ -1872,67 +1903,33 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
     if (!dst)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
-        AOCLFFTZ_ERROR("deep_copy_solution_tree failed, alloc_solution failed");
+        AOCLFFTZ_ERROR("deep_copy_real_solution_tree failed,"
+                       " alloc_solution failed");
         goto exit_deep_copy;
     }
     ret = copy_solution_obj(dst, src);
     if (ret != AOCLFFTZ_SUCCESS)
     {
-        AOCLFFTZ_ERROR("deep_copy_solution_tree failed,"
+        AOCLFFTZ_ERROR("deep_copy_real_solution_tree failed,"
                        " copy_solution_obj failed: %s",
                        get_status_string(ret));
         goto exit_deep_copy;
     }
-    if (src->solver->solver_type == SOLVER_BATCHED_CT_L1_DIRECT)
+    ret = copy_strides(dst, src);
+    if (ret != AOCLFFTZ_SUCCESS)
     {
-        ret = copy_strides_batched_ct_l1_direct(dst, src);
-        if (ret != AOCLFFTZ_SUCCESS)
-        {
-            AOCLFFTZ_ERROR("deep_copy_solution_tree failed,"
-                           " copy_strides_batched_ct_l1_direct failed: %s",
-                           get_status_string(ret));
-            goto exit_deep_copy;
-        }
-    }
-    else
-    {
-        ret = copy_strides(dst, src);
-        if (ret != AOCLFFTZ_SUCCESS)
-        {
-            AOCLFFTZ_ERROR("deep_copy_solution_tree failed,"
-                           " copy_strides failed: %s",
-                           get_status_string(ret));
-            goto exit_deep_copy;
-        }
+        AOCLFFTZ_ERROR("deep_copy_real_solution_tree failed,"
+                       " copy_strides failed: %s",
+                       get_status_string(ret));
+        goto exit_deep_copy;
     }
     dst->dft_bufs->nd_sol = NULL;
 
-    // BATCHED_CT_L1_DIRECT with its own allocation gets a fresh buffer per
-    // copy. Other nodes are offset into the shared ct_buffer by ct_base.
-    if (src->solver->solver_type == SOLVER_BATCHED_CT_L1_DIRECT &&
-        src->dft_bufs->ct_buf_allocated)
+    if (src->solver->solver_type == SOLVER_REAL_NDIM)
     {
-        ALLOC_ALIGN_UNINIT(dst->dft_bufs->ct_buffer, FFTZ_VOID,
-                           src->dft_bufs->ct_buf_size);
-        if (!dst->dft_bufs->ct_buffer)
-        {
-            ret = AOCLFFTZ_MEMORY_FAILURE;
-            AOCLFFTZ_ERROR(
-                "deep_copy_solution_tree failed, ct_buffer allocation failed");
-            goto exit_deep_copy;
-        }
-        dst->dft_bufs->ct_buf_allocated = 1;
-        dst->dft_bufs->ct_buf_real = dst->dft_bufs->ct_buffer;
-        FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(dst);
-        dst->dft_bufs->ct_buf_imag =
-            MOVE_ADDR(dst->dft_bufs->ct_buffer, dt_bytes);
-    }
-    else
-    {
-        dst->dft_bufs->ct_buf_real = MOVE_ADDR(src->dft_bufs->ct_buf_real,
-                                       ct_base * src->dft_bufs->ct_buf_size);
-        dst->dft_bufs->ct_buf_imag = MOVE_ADDR(src->dft_bufs->ct_buf_imag,
-                                       ct_base * src->dft_bufs->ct_buf_size);
+        // Share the C2C inner subtree across all clones; only the real-dim
+        // sub-solution chain (next_sol[0]) is real.
+        dst->dft_bufs->nd_sol = src->dft_bufs->nd_sol;
     }
 
     if (src->solver->solver_type == SOLVER_REAL_BUFFERED)
@@ -1969,154 +1966,63 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
         dst->dft_bufs->buffered->aux_buffer_1 = MOVE_ADDR(base, offset);
     }
 
-    if (src->solver->solver_type == SOLVER_NDIM ||
-        src->solver->solver_type == SOLVER_REAL_NDIM)
+    if (src->solver->solver_type == SOLVER_REAL_NDIM)
     {
-        FFTZ_INT32 nd_ct_bufs = 0, ns_ct_bufs = 0;
-        FFTZ_INT32 nd_aux_bufs = 0, ns_aux_bufs = 0;
-        dst->dft_bufs->nd_sol = deep_copy_solution_tree(
-                            src->dft_bufs->nd_sol, ct_base, &nd_ct_bufs,
-                            aux_buf_base, &nd_aux_bufs,
-                            aux_ndim_pool_slot_idx, bs_slot_idx);
-        if (!dst->dft_bufs->nd_sol)
-        {
-            ret = AOCLFFTZ_MEMORY_FAILURE;
-            goto exit_deep_copy;
-        }
+        // nd_sol (C2C subtree) is already shared at the top of this function;
+        // only next_sol[0] (the real-dim chain) needs a per-thread clone.
+        FFTZ_INT32 ns_aux_bufs = 0;
 
-        dst->next_sol = alloc_sol_array(1);
-        if (!dst->next_sol)
-        {
-            ret = AOCLFFTZ_MEMORY_FAILURE;
-            AOCLFFTZ_ERROR("deep_copy_solution_tree failed, alloc_sol_array "
-                           "failed (NDIM)");
-            goto exit_deep_copy;
-        }
-        dst->next_sol[0] = deep_copy_solution_tree(
-                            src->next_sol[0], ct_base, &ns_ct_bufs,
-                            aux_buf_base, &ns_aux_bufs,
-                            aux_ndim_pool_slot_idx, bs_slot_idx);
-        if (!dst->next_sol[0])
-        {
-            ret = AOCLFFTZ_MEMORY_FAILURE;
-            goto exit_deep_copy;
-        }
-
-        if (ct_bufs)
-        {
-            *ct_bufs = nd_ct_bufs > ns_ct_bufs ? nd_ct_bufs : ns_ct_bufs;
-        }
-        if (aux_bufs)
-        {
-            *aux_bufs = nd_aux_bufs > ns_aux_bufs ? nd_aux_bufs : ns_aux_bufs;
-        }
-        return dst;
-    }
-
-    if (src->solver->solver_type == SOLVER_SR)
-    {
-        FFTZ_INT32 even_ct_bufs = 0, odd1_ct_bufs = 0, odd3_ct_bufs = 0;
-        FFTZ_INT32 even_aux_buff = 0, odd1_aux_buff = 0, odd3_aux_buff = 0;
         dst->next_sol = alloc_sol_array(1);
         if (!dst->next_sol)
         {
             ret = AOCLFFTZ_MEMORY_FAILURE;
             AOCLFFTZ_ERROR(
-                "deep_copy_solution_tree failed, alloc_sol_array failed (SR)");
+                "deep_copy_real_solution_tree failed,"
+                " alloc_sol_array failed (NDIM)");
             goto exit_deep_copy;
         }
-        dst->next_sol[0] = deep_copy_solution_tree(
-                            src->next_sol[0], ct_base, &even_ct_bufs,
-                            aux_buf_base, &even_aux_buff,
-                            aux_ndim_pool_slot_idx, bs_slot_idx);
+        dst->next_sol[0] = deep_copy_real_solution_tree(
+                            src->next_sol[0],
+                            aux_buf_base, &ns_aux_bufs,
+                            aux_ndim_pool_slot_idx);
         if (!dst->next_sol[0])
         {
             ret = AOCLFFTZ_MEMORY_FAILURE;
             goto exit_deep_copy;
         }
 
-        dst->dft_bufs->sr->odd1_sol = deep_copy_solution_tree(
-            src->dft_bufs->sr->odd1_sol, ct_base, &odd1_ct_bufs,
-            aux_buf_base, &odd1_aux_buff,
-            aux_ndim_pool_slot_idx, bs_slot_idx);
-        if (!dst->dft_bufs->sr->odd1_sol)
-        {
-            ret = AOCLFFTZ_MEMORY_FAILURE;
-            goto exit_deep_copy;
-        }
-        dst->dft_bufs->sr->odd3_sol = deep_copy_solution_tree(
-                src->dft_bufs->sr->odd3_sol, ct_base, &odd3_ct_bufs,
-                aux_buf_base, &odd3_aux_buff,
-                aux_ndim_pool_slot_idx, bs_slot_idx);
-        if (!dst->dft_bufs->sr->odd3_sol)
-        {
-            ret = AOCLFFTZ_MEMORY_FAILURE;
-            goto exit_deep_copy;
-        }
-
-        if (ct_bufs)
-        {
-            FFTZ_INT32 max = even_ct_bufs;
-            if (odd1_ct_bufs > max)
-            {
-                max = odd1_ct_bufs;
-            }
-            if (odd3_ct_bufs > max)
-            {
-                max = odd3_ct_bufs;
-            }
-            *ct_bufs = max;
-        }
         if (aux_bufs)
         {
-            FFTZ_INT32 max = even_aux_buff;
-            if (odd1_aux_buff > max)
-            {
-                max = odd1_aux_buff;
-            }
-            if (odd3_aux_buff > max)
-            {
-                max = odd3_aux_buff;
-            }
-            *aux_bufs = max;
+            *aux_bufs = ns_aux_bufs;
         }
         return dst;
     }
 
-    FFTZ_INT32 is_mt = (src->solver->solver_type == SOLVER_MT_BATCHED ||
-                   src->solver->solver_type == SOLVER_REAL_MT_BATCHED);
-    FFTZ_INT32 is_real_mt =
-        (src->solver->solver_type == SOLVER_REAL_MT_BATCHED);
-    FFTZ_INT32 ns_ct_bufs = 0;
+    FFTZ_INT32 is_real_mt = src->solver->solver_type == SOLVER_REAL_MT_BATCHED;
     FFTZ_INT32 ns_aux_bufs = 0;
     if (src->next_sol)
     {
-        FFTZ_INT32 n = is_mt ? src->decomp_scheme->thread_info->n_threads : 1;
+        FFTZ_INT32 n = is_real_mt ? src->decomp_scheme->thread_info->n_threads
+                                  : 1;
         dst->next_sol = alloc_sol_array(n);
         if (!dst->next_sol)
         {
             ret = AOCLFFTZ_MEMORY_FAILURE;
-            AOCLFFTZ_ERROR("deep_copy_solution_tree failed, "
-                           "alloc_sol_array failed (MT_BATCHED)");
+            AOCLFFTZ_ERROR("deep_copy_real_solution_tree failed,"
+                           " alloc_sol_array failed (REAL_MT_BATCHED)");
             goto exit_deep_copy;
         }
 
         // Copy thread 0 first; per_thread_ct_bufs drives the ct_base stride
         // for threads 1..N. When n == 1, the loop is skipped entirely.
-        FFTZ_INT32 per_thread_ct_bufs = 0;
         FFTZ_INT32 per_thread_aux_buff = 0;
         FFTZ_INT32 child_ndim_slot0 = is_real_mt
                                ? aux_ndim_pool_slot_idx * n
                                : aux_ndim_pool_slot_idx;
-        // bs_slot_idx compounds at every MT_BATCHED level (real or not) so the
-        // cumulative index over all nested MT levels enumerates 0..prod(n)-1,
-        // exactly matching the Bluestein node's num_bs_buf (= product of the
-        // MT thread counts captured at setup time).
-        FFTZ_INT32 child_bs_slot0 = bs_slot_idx * n;
-        dst->next_sol[0] = deep_copy_solution_tree(
-            src->next_sol[0], ct_base, &per_thread_ct_bufs,
+        dst->next_sol[0] = deep_copy_real_solution_tree(
+            src->next_sol[0],
             aux_buf_base, &per_thread_aux_buff,
-            child_ndim_slot0, child_bs_slot0);
+            child_ndim_slot0);
         if (!dst->next_sol[0])
         {
             ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -2128,12 +2034,10 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
             FFTZ_INT32 child_ndim_slot_i = is_real_mt
                                     ? aux_ndim_pool_slot_idx * n + i
                                     : aux_ndim_pool_slot_idx;
-            FFTZ_INT32 child_bs_slot_i = bs_slot_idx * n + i;
-            dst->next_sol[i] = deep_copy_solution_tree(
+            dst->next_sol[i] = deep_copy_real_solution_tree(
                 src->next_sol[0],
-                ct_base + i * per_thread_ct_bufs, NULL,
                 aux_buf_base + i * per_thread_aux_buff, NULL,
-                child_ndim_slot_i, child_bs_slot_i);
+                child_ndim_slot_i);
             if (!dst->next_sol[i])
             {
                 ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -2142,8 +2046,8 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
         }
         // MT spawns `n` concurrent executions, each needing per_thread slots;
         // linear chain runs sequentially and reuses a single shared slice.
-        ns_ct_bufs = is_mt ? n * per_thread_ct_bufs : per_thread_ct_bufs;
-        ns_aux_bufs = is_mt ? n * per_thread_aux_buff : per_thread_aux_buff;
+        ns_aux_bufs = is_real_mt ? n * per_thread_aux_buff
+                                 : per_thread_aux_buff;
     }
     else
     {
@@ -2161,51 +2065,9 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
         }
     }
 
-    /* ---- Nodes that consume a ct_buf slot ---- */
-    FFTZ_INT32 node_ct_bufs = 0;
-    if (src->solver->solver_type == SOLVER_BUFFERED ||
-        (src->solver->solver_type == SOLVER_BATCHED_CT_L1_DIRECT &&
-         !src->dft_bufs->ct_buf_allocated))
-    {
-        node_ct_bufs++;
-    }
-    if (ct_bufs)
-    {
-        *ct_bufs = node_ct_bufs + ns_ct_bufs;
-    }
     if (aux_bufs)
     {
         *aux_bufs = aux_buff_idx + ns_aux_bufs;
-    }
-
-    // Each concurrent thread gets its own scratch slot in the shared in/out
-    // pool, so no two threads overwrite each other. bs_slot_idx is this
-    // thread's unique index; point its Bluestein buffers and inner FFT(M) I/O
-    // at that slot. Runs after next_sol[0] is copied (the subtree we redirect).
-    if ((src->solver->solver_type == SOLVER_BLUESTEIN ||
-         src->solver->solver_type == SOLVER_MT_BLUESTEIN) &&
-        dst->next_sol != NULL && dst->next_sol[0] != NULL &&
-        src->dft_bufs->bluestein->bs_buf_allocated &&
-        src->dft_bufs->bluestein->num_bs_buf > 0)
-    {
-        aoclfftz_bluestein_t *src_bs = src->dft_bufs->bluestein;
-        aoclfftz_bluestein_t *dst_bs = dst->dft_bufs->bluestein;
-        FFTZ_INTP   bs_buf_size = src_bs->bs_buf_size;
-        FFTZ_INT32  slot        = bs_slot_idx % src_bs->num_bs_buf;
-        FFTZ_INTP   slot_offset = (FFTZ_INTP)slot * bs_buf_size;
-        FFTZ_UINT32 dt_bytes    = SOL_DT_SIZE(dst);
-
-        FFTZ_VOID *thr_in  = MOVE_ADDR(src_bs->in,  slot_offset);
-        FFTZ_VOID *thr_out = MOVE_ADDR(src_bs->out, slot_offset);
-
-        dst_bs->in  = thr_in;
-        dst_bs->out = thr_out;
-
-        dst->next_sol[0]->decomp_scheme->in_real  = thr_in;
-        dst->next_sol[0]->decomp_scheme->in_imag = MOVE_ADDR(thr_in, dt_bytes);
-        dst->next_sol[0]->decomp_scheme->out_real = thr_out;
-        dst->next_sol[0]->decomp_scheme->out_imag =
-            MOVE_ADDR(thr_out, dt_bytes);
     }
 
 exit_deep_copy:
@@ -2218,77 +2080,50 @@ exit_deep_copy:
 }
 
 /**
- * @brief Post-processes the FFT solution tree for multi-threaded execution.
+ * @brief Post-processes the real FFT solution tree for multi-threaded execution.
  *
- * Single-pass traversal that simultaneously:
- *  - Counts ct_buf slots consumed by each subtree, returning that count to
- *    the caller.
- *  - At each MT_BATCHED node: deep-copies next_sol[0] for threads 1..N with
- *    ct_base = i * per_thread_ct_bufs (per_thread_ct_bufs returned by the
- *    recursive call on next_sol[0]).
+ * At each REAL_MT_BATCHED node: deep-copies next_sol[0] for threads 1..N
+ * so that each OMP-parallel batch has its own writable solution clone.
  *
  * Traversal rules:
- *  MT_BATCHED  — recurse into next_sol[0], multiply count by n_threads.
- *  NDIM        — recurse into both nd_sol and next_sol[0] (same ct_base,
- *                sequential), return max of both counts.
- *  SR          — recurse into next_sol[0], odd1_sol, odd3_sol (same ct_base,
- *                sequential), return max of all three counts.
- *  BUFFERED    — consumes one ct_buf slot; count = max(count, 1).
- *  BATCHED_CT_L1_DIRECT (non-self-allocated)
- *              — sequential nodes reuse the same slice, so we cap at 1
- *                instead of summing along the chain.
+ *  REAL_MT_BATCHED — recurse into next_sol[0], then deep-copy for threads 1..N.
+ *  REAL_NDIM       — recurse into next_sol[0] (nd_sol is C2C, skipped).
  *
- * @param sol      Root of the solution (sub-)tree to process.
- * @param ct_slots Output: number of ct_buf slots consumed by this subtree.
- * @param aux_buf_slots Output: REAL_BUFFERED aux slot demand (same max rules as
- * ct). May be NULL if the caller does not need the count.
- * @return         AOCLFFTZ_SUCCESS (0) on success, AOCLFFTZ_MEMORY_FAILURE
- * if any deep_copy_solution_tree call fails.
+ * @param sol           Root of the solution (sub-)tree to process.
+ * @param aux_buf_slots Output: REAL_BUFFERED aux slot demand (same max rules as ct).
+ *                      May be NULL if the caller does not need the count.
+ *
+ * @return  AOCLFFTZ_SUCCESS (0) on success, AOCLFFTZ_MEMORY_FAILURE
+ *          if any deep_copy_real_solution_tree call fails.
  */
-static FFTZ_INT32 post_process_solution(aoclfftz_solution_t *sol,
-                                        FFTZ_INT32 *ct_slots,
+static FFTZ_INT32 post_process_real_solution(aoclfftz_solution_t *sol,
                                         FFTZ_INT32 *aux_buf_slots)
 {
-    FFTZ_INT32 total_count = 0;
     FFTZ_INT32 total_aux_buff = 0;
 
     while (sol != NULL)
     {
-        if ((sol->solver->solver_type == SOLVER_MT_BATCHED) ||
-            (sol->solver->solver_type == SOLVER_REAL_MT_BATCHED))
+        if (sol->solver->solver_type == SOLVER_REAL_MT_BATCHED)
         {
             FFTZ_INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
 
-            FFTZ_INT32 per_thread_ct_bufs = 0;
             FFTZ_INT32 per_thread_aux_buff = 0;
-            if (post_process_solution(sol->next_sol[0], &per_thread_ct_bufs,
-                                      &per_thread_aux_buff) != SELECTOR_SUCCESS)
+            if (post_process_real_solution(sol->next_sol[0],
+                                           &per_thread_aux_buff) !=
+                SELECTOR_SUCCESS)
             {
                 return AOCLFFTZ_MEMORY_FAILURE;
             }
 
             for (FFTZ_INT32 i = 1; i < n_threads; i++)
             {
-                // Pass i as both the REAL_NDIM aux pool slot and the initial
-                // Bluestein pool slot. deep_copy compounds bs_slot_idx at every
-                // nested MT_BATCHED level, so each (outer, ..., inner) thread
-                // combination resolves to a unique Bluestein slot.
-                sol->next_sol[i] = deep_copy_solution_tree(sol->next_sol[0],
-                                       i * per_thread_ct_bufs, NULL,
-                                       i * per_thread_aux_buff, NULL,
-                                       i, i);
+                sol->next_sol[i] = deep_copy_real_solution_tree(
+                                            sol->next_sol[0],
+                                            i * per_thread_aux_buff, NULL, i);
                 if (!sol->next_sol[i])
                 {
                     return AOCLFFTZ_MEMORY_FAILURE;
                 }
-            }
-            if (ct_slots)
-            {
-                // MT is the only slot-multiplying boundary; the preceding
-                // chain (BUFFERED etc.) runs sequentially BEFORE the MT
-                // fires, so take max instead of summing.
-                FFTZ_INT32 mt_count = n_threads * per_thread_ct_bufs;
-                *ct_slots = total_count > mt_count ? total_count : mt_count;
             }
             if (aux_buf_slots)
             {
@@ -2299,118 +2134,29 @@ static FFTZ_INT32 post_process_solution(aoclfftz_solution_t *sol,
             return SELECTOR_SUCCESS;
         }
 
-        if ((sol->solver->solver_type == SOLVER_NDIM) ||
-            (sol->solver->solver_type == SOLVER_REAL_NDIM))
+        if (sol->solver->solver_type == SOLVER_REAL_NDIM)
         {
-            FFTZ_INT32 nd_count = 0, ns_count = 0;
             FFTZ_INT32 nd_aux_bufs = 0, ns_aux_bufs = 0;
-            if (post_process_solution(sol->dft_bufs->nd_sol, &nd_count,
-                                      &nd_aux_bufs) != SELECTOR_SUCCESS)
+            if (post_process_real_solution(sol->dft_bufs->nd_sol,
+                                           &nd_aux_bufs) !=
+                SELECTOR_SUCCESS)
             {
                 return AOCLFFTZ_MEMORY_FAILURE;
             }
-            if (post_process_solution(sol->next_sol[0], &ns_count,
-                                      &ns_aux_bufs) != SELECTOR_SUCCESS)
+            if (post_process_real_solution(sol->next_sol[0], &ns_aux_bufs) !=
+                                           SELECTOR_SUCCESS)
             {
                 return AOCLFFTZ_MEMORY_FAILURE;
             }
-            if (ct_slots)
-            {
-                // NDIM's two branches run sequentially within a thread and
-                // share the ct_buf slice; combine with the preceding chain
-                // by taking the max, not summing.
-                FFTZ_INT32 branch_max =
-                    nd_count > ns_count ? nd_count : ns_count;
-                *ct_slots =
-                    total_count > branch_max ? total_count : branch_max;
-            }
+
             if (aux_buf_slots)
             {
                 FFTZ_INT32 branch_max = nd_aux_bufs > ns_aux_bufs ? nd_aux_bufs
-                                                             : ns_aux_bufs;
+                                                                  : ns_aux_bufs;
                 *aux_buf_slots = total_aux_buff > branch_max ? total_aux_buff
-                                                              : branch_max;
+                                                             : branch_max;
             }
             return SELECTOR_SUCCESS;
-        }
-
-        if (sol->solver->solver_type == SOLVER_SR)
-        {
-            FFTZ_INT32 even_count = 0;
-            FFTZ_INT32 even_aux_buff = 0;
-            if (post_process_solution(sol->next_sol[0], &even_count,
-                                      &even_aux_buff) != SELECTOR_SUCCESS)
-            {
-                return AOCLFFTZ_MEMORY_FAILURE;
-            }
-
-            FFTZ_INT32 odd1_count = 0;
-            FFTZ_INT32 odd1_aux_buff = 0;
-            if (post_process_solution(sol->dft_bufs->sr->odd1_sol,
-                    &odd1_count, &odd1_aux_buff) != SELECTOR_SUCCESS)
-            {
-                return AOCLFFTZ_MEMORY_FAILURE;
-            }
-
-            FFTZ_INT32 odd3_count = 0;
-            FFTZ_INT32 odd3_aux_buff = 0;
-            if (post_process_solution(sol->dft_bufs->sr->odd3_sol,
-                    &odd3_count, &odd3_aux_buff) != SELECTOR_SUCCESS)
-            {
-                return AOCLFFTZ_MEMORY_FAILURE;
-            }
-
-            FFTZ_INT32 node_count = even_count;
-            if (odd1_count > node_count)
-            {
-                node_count = odd1_count;
-            }
-            if (odd3_count > node_count)
-            {
-                node_count = odd3_count;
-            }
-
-            FFTZ_INT32 node_aux_buff = even_aux_buff;
-            if (odd1_aux_buff > node_aux_buff)
-            {
-                node_aux_buff = odd1_aux_buff;
-            }
-            if (odd3_aux_buff > node_aux_buff)
-            {
-                node_aux_buff = odd3_aux_buff;
-            }
-
-            if (ct_slots)
-            {
-                // SR's three branches run sequentially within a thread and
-                // share the ct_buf slice; combine with the preceding chain
-                // by taking the max, not summing.
-                *ct_slots =
-                    total_count > node_count ? total_count : node_count;
-            }
-
-            if (aux_buf_slots)
-            {
-                *aux_buf_slots = total_aux_buff > node_aux_buff ? total_aux_buff
-                                                                : node_aux_buff;
-            }
-            return SELECTOR_SUCCESS;
-        }
-
-        /* ---- Nodes that consume a ct_buf slot ----
-         * Sequential chain: BUFFERED / non-self-allocated BATCHED_CT_L1_DIRECT
-         * execute one after another and reuse the same ct_buf slice, so take
-         * max (cap at 1) rather than summing. MT nesting is handled above via
-         * the early-return branch.
-         */
-        if (sol->solver->solver_type == SOLVER_BUFFERED ||
-            (sol->solver->solver_type == SOLVER_BATCHED_CT_L1_DIRECT &&
-             !sol->dft_bufs->ct_buf_allocated))
-        {
-            if (total_count < 1)
-            {
-                total_count = 1;
-            }
         }
 
         if (sol->solver->solver_type == SOLVER_REAL_BUFFERED)
@@ -2424,10 +2170,6 @@ static FFTZ_INT32 post_process_solution(aoclfftz_solution_t *sol,
         sol = sol->next_sol ? sol->next_sol[0] : NULL;
     }
 
-    if (ct_slots)
-    {
-        *ct_slots = total_count;
-    }
     if (aux_buf_slots)
     {
         *aux_buf_slots = total_aux_buff;
@@ -2437,20 +2179,126 @@ static FFTZ_INT32 post_process_solution(aoclfftz_solution_t *sol,
 }
 #endif /* MULTI_THREADING */
 
+
+/**
+ * @brief Walk the (post-setup) solution tree and record scratch sizes and
+ * setup-time allocated scratch addresses into the handle's exec_metadata.
+ *
+ * For real plans, the walk enters the inner C2C sub-tree via nd_sol
+ * and populates bluestein/ct_buf/sr pointers used by those solvers.
+ *
+ * aoclfftz_execute always uses these setup-time buffers. In execute_io only the
+ * owning thread reuses them; other concurrent callers allocate a fresh per-call
+ * slab from the sizes so threads sharing one handle don't trample each other.
+ *
+ * Sizing rules:
+ *   - bs_buffer_size / bluestein: sum of each Bluestein node's padded, disjoint
+ *     slice (active_threads_at_level * bs_buf_size); each node records its start
+ *     in bs_dim_offset. Once the total size is known, the end of setup allocates
+ *     the shared bs_in/bs_out pool (bs_buffer_size each), and each per-call
+ *     execute_io allocates two matching regions of bs_buffer_size each.
+ *   - sr_input_copy_size: max SR input_copy_size across all SR nodes.
+ *   - ct_buffer_total_size: registers the largest CT buffer size across the CT
+ *     scratch owners NDIM/BUFFERED/CTL1D only one among them allocates the pool.
+ *
+ * @param sol       Pointer to the root solution node of the plan tree to walk
+ * @param metadata  Pointer to the execution metadata struct to populate with scratch sizes
+ */
+static FFTZ_VOID compute_exec_metadata(
+                                    aoclfftz_solution_t *sol,
+                                    aoclfftz_immutable_metadata_t *metadata)
+{
+    if (sol == NULL)
+    {
+        return;
+    }
+
+    aoclfftz_solver_type stype = sol->solver->solver_type;
+
+    if (sol->dft_bufs->nd_sol != NULL)
+    {
+        compute_exec_metadata(sol->dft_bufs->nd_sol, metadata);
+    }
+    if (sol->dft_bufs->sr != NULL)
+    {
+        compute_exec_metadata(sol->dft_bufs->sr->odd1_sol, metadata);
+        compute_exec_metadata(sol->dft_bufs->sr->odd3_sol, metadata);
+    }
+
+    if ((stype == SOLVER_BLUESTEIN || stype == SOLVER_MT_BLUESTEIN)
+        && sol->dft_bufs->bluestein != NULL
+        && sol->dft_bufs->bluestein->bs_buf_size > 0)
+    {
+        // Every Bluestein node shares one bs_[in/out]_base pool but gets a DISJOINT
+        // slice, so different-sized nodes running concurrently never overlap.
+        // Assign this node a region at the running total and grow the pool by
+        // its full size (slots * per-slot bytes), 64-byte aligned for SIMD.
+        //
+        // The node slices its region by bs_slot_idx, a dense index in
+        // [0, active_threads_at_level), so it needs active_threads_at_level slots.
+        thread_info_t *thread_info = sol->decomp_scheme->thread_info;
+        FFTZ_UINTP n_slots = (FFTZ_UINTP)thread_info->active_threads;
+        FFTZ_UINTP node_size = n_slots
+                          * (FFTZ_UINTP)sol->dft_bufs->bluestein->bs_buf_size;
+        sol->dft_bufs->bluestein->bs_dim_offset = metadata->bs_buffer_size;
+        metadata->bs_buffer_size += GET_PADDED_SIZE(node_size);
+    }
+
+    if (stype == SOLVER_SR && sol->dft_bufs->sr != NULL)
+    {
+        FFTZ_UINTP sr_size = (FFTZ_UINTP)sol->dft_bufs->sr->input_copy_size;
+        if (sr_size > metadata->sr_input_copy_size)
+        {
+            metadata->sr_input_copy_size = sr_size;
+            metadata->base_ctx.sr_input_copy_base =
+                            sol->dft_bufs->sr->input_copy;
+        }
+    }
+
+    // Replicate the ct_buffer allocation size used by every CT scratch owner.
+    // A CTL1D owns its pool only when no parent pool exists, so all owners share
+    // the single ct_buf_base region. Setup-time allocation sizes:
+    //   - BUFFERED:    active_threads_at_level * ct_buf_size  (buffered_solver_dft.c)
+    //   - CTL1D-owner: active_threads_at_level * ct_buf_size  (batched_ct_l1_direct_solver_dft.c)
+    //   - NDIM:        active_threads_at_level * n_threads * ct_buf_size  (alloc_ndim_buffer)
+    if (sol->dft_bufs->ct_buf_allocated && sol->dft_bufs->ct_buf_size > 0)
+    {
+        thread_info_t *thread_info = sol->decomp_scheme->thread_info;
+        FFTZ_UINTP n_above = (FFTZ_UINTP)thread_info->active_threads;
+        FFTZ_UINTP total = n_above * (FFTZ_UINTP)sol->dft_bufs->ct_buf_size;
+        if (stype == SOLVER_NDIM)
+        {
+            FFTZ_INT32 n_threads = sol->decomp_scheme->thread_info->avl_threads;
+            total *= (FFTZ_UINTP)n_threads;
+        }
+        if (total > metadata->ct_buffer_total_size)
+        {
+            metadata->ct_buffer_total_size = total;
+            metadata->base_ctx.ct_buf_base = sol->dft_bufs->ct_buf_real;
+        }
+    }
+
+    if (sol->next_sol != NULL && sol->next_sol[0] != NULL)
+    {
+        compute_exec_metadata(sol->next_sol[0], metadata);
+    }
+}
+
 /**
  * @brief Walks the solution tree and computes the chirp FFT for every
  * Bluestein node.
  *
- * Called from every setup_dft_* entry point after all twiddles are ready
- * (ST builds) or after post_process_solution populates per-thread deep
- * copies of any MT_BATCHED nodes inside a Bluestein's inner FFT(M) subtree
- * (MT builds). Running here ensures the inner FFT(M) executor (and any
- * MT_BATCHED deep copies underneath) is fully wired before
- * compute_chirp_fft invokes it.
+ * Called from prepare_and_setup_dft once the plan is fully built: all twiddles
+ * are ready and the shared Bluestein pool is allocated.
+ * A Bluestein node's inner FFT(M) subtree is complex (C2C): it is fully wired
+ * at plan-build time and relies on the per-call execution ctx for
+ * concurrency-safety. Computing the chirp actually executes each Bluestein
+ * node's inner FFT(M), so this walk must run last - after the rest of the plan
+ * is set up.
  *
  * Traversal rules:
- *  BLUESTEIN      — compute chirp FFT for this node; next_sol[0] (the inner
- *                   FFT(M) subtree) is then descended by the iterative step
+ *  BLUESTEIN/     — compute chirp FFT for this node; next_sol[0] (the inner
+ *  MT_BLUESTEIN     FFT(M) subtree) is then descended by the iterative step
  *                   below in case it itself contains another Bluestein node.
  *  NDIM/REAL_NDIM — recurse into nd_sol explicitly; its next_sol[0] is then
  *                   descended by the iterative step below.
@@ -2459,17 +2307,19 @@ static FFTZ_INT32 post_process_solution(aoclfftz_solution_t *sol,
  *  others         — fall through to the iterative step (descend next_sol[0]).
  *
  * @param sol Root of the solution (sub-)tree to walk.
+ * @param ctx Base execution context used to run each chirp FFT.
  * @return    SELECTOR_SUCCESS on success, AOCLFFTZ_SETUP_FAILURE if
  *            compute_chirp_fft fails.
  */
-static FFTZ_INT32 setup_chirp_fft(aoclfftz_solution_t *sol)
+static FFTZ_INT32 setup_chirp_fft(aoclfftz_solution_t *sol,
+                                  aoclfftz_mutable_ctx_t *ctx)
 {
     while (sol != NULL)
     {
         if (sol->solver->solver_type == SOLVER_BLUESTEIN ||
             sol->solver->solver_type == SOLVER_MT_BLUESTEIN)
         {
-            FFTZ_INT32 ret = compute_chirp_fft(sol, sol->next_sol[0]);
+            FFTZ_INT32 ret = compute_chirp_fft(sol, sol->next_sol[0], ctx);
             if (ret != SOLVER_SUCCESS)
             {
                 AOCLFFTZ_ERROR(
@@ -2484,7 +2334,7 @@ static FFTZ_INT32 setup_chirp_fft(aoclfftz_solution_t *sol)
         if ((sol->solver->solver_type == SOLVER_NDIM) ||
             (sol->solver->solver_type == SOLVER_REAL_NDIM))
         {
-            FFTZ_INT32 ret = setup_chirp_fft(sol->dft_bufs->nd_sol);
+            FFTZ_INT32 ret = setup_chirp_fft(sol->dft_bufs->nd_sol, ctx);
             if (ret != SELECTOR_SUCCESS)
             {
                 return ret;

@@ -212,14 +212,8 @@ FFTZ_INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->dft_bufs->bluestein->B;
     to_sol_obj->dft_bufs->bluestein->B_out =
         from_sol_obj->dft_bufs->bluestein->B_out;
-    to_sol_obj->dft_bufs->bluestein->in =
-        from_sol_obj->dft_bufs->bluestein->in;
-    to_sol_obj->dft_bufs->bluestein->out =
-        from_sol_obj->dft_bufs->bluestein->out;
     to_sol_obj->dft_bufs->bluestein->bs_buf_size =
         from_sol_obj->dft_bufs->bluestein->bs_buf_size;
-    to_sol_obj->dft_bufs->bluestein->num_bs_buf =
-        from_sol_obj->dft_bufs->bluestein->num_bs_buf;
     to_sol_obj->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR] =
         from_sol_obj->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR];
     to_sol_obj->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] =
@@ -687,14 +681,8 @@ FFTZ_VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
     to_sol_obj->dft_bufs->bluestein->B = from_sol_obj->dft_bufs->bluestein->B;
     to_sol_obj->dft_bufs->bluestein->B_out =
         from_sol_obj->dft_bufs->bluestein->B_out;
-    to_sol_obj->dft_bufs->bluestein->in =
-        from_sol_obj->dft_bufs->bluestein->in;
-    to_sol_obj->dft_bufs->bluestein->out =
-        from_sol_obj->dft_bufs->bluestein->out;
     to_sol_obj->dft_bufs->bluestein->bs_buf_size =
         from_sol_obj->dft_bufs->bluestein->bs_buf_size;
-    to_sol_obj->dft_bufs->bluestein->num_bs_buf =
-        from_sol_obj->dft_bufs->bluestein->num_bs_buf;
     to_sol_obj->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR] =
         from_sol_obj->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR];
     to_sol_obj->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] =

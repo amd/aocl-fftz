@@ -151,6 +151,74 @@ FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_batched_dft;
     }
 
+    /*
+    * ndim_concurrency rules:
+    *     - This variable is used when the problem type is NDIM.
+    *     - It first takes effect at an MT_BATCHED -> NDIM boundary, where it is
+    *       initialised to the MT_BATCHED node's n_threads.
+    *     - At every subsequent MT_BATCHED -> NDIM boundary, it is scaled up by that
+    *       MT_BATCHED node's n_threads.
+    *
+    * ct_buf_size rules:
+    *     Setup time can be broken down into two phases:
+    *         - Phase 1: Solver tree construction phase
+    *             Base setters (allocate ct_buffer, set ct_buf_size to a per-slice base size):
+    *                 - BUFFERED solver
+    *                 - CTL1D solver
+    *                 - NDIM solver
+    *                 Any other solver which is a child of these solvers
+    *                 simply copies its parent's ct_buf_size down to its child.
+    *
+    *         - Phase 2: Unwinding phase, here two selectors propagate ct_buf_size
+    *             from the child to the parent:
+    *             - CT selector: copies the radix-m child's ct_buf_size as-is (the
+    *               radix-r child never touches ct_buffer).
+    *             - Batched selector: Scales up ct_buf_size based on the need for concurrent slots
+    *                 1. NDIM child: scale the child's ct_buf_size by ndim_concurrency,
+    *                    and set this [mt_]batched node's own ct_buf_size to
+    *                    n_threads * child_ct_buf_size. This propagated value is
+    *                    consumed only by a real NDIM solver sitting above this
+    *                    [mt_]batched node.
+    *                 2. non-NDIM child: multiply ct_buf_size by n_threads.
+    *
+    *     Execution time responsibilities:
+    *         - MT_BATCHED advances each thread's ct_offset by tid * next_sol_ct_buf_size,
+    *           then handsover ct_buf_size to the next solver.
+    */
+    if (cur_sel->solution->solver->solver_type == SOLVER_NDIM)
+    {
+        FFTZ_INT32 child_ndim_conc =
+            cur_sel->solution->decomp_scheme->thread_info->ndim_concurrency;
+        if(child_ndim_conc)
+        {
+            // This value is used by MT_BATCHED solver to advance the
+            // ct_offset by `tid * ct_buf_size`
+            cur_sel->solution->dft_bufs->ct_buf_size =
+                child_ndim_conc * cur_sel->solution->dft_bufs->ct_buf_size;
+            // This propagated ct_buf_size is consumed only when a real NDIM
+            // solver sits above this batched node.
+            sel->solution->dft_bufs->ct_buf_size =
+                (FFTZ_INTP)n_threads * cur_sel->solution->dft_bufs->ct_buf_size;
+            sel->solution->decomp_scheme->thread_info->ndim_concurrency =
+                child_ndim_conc * n_threads;
+        }
+        else
+        {
+            // This propagated ct_buf_size is consumed only when a real NDIM
+            // solver sits above this batched node.
+            sel->solution->dft_bufs->ct_buf_size =
+                (FFTZ_INTP)n_threads * cur_sel->solution->dft_bufs->ct_buf_size;
+            sel->solution->decomp_scheme->thread_info->ndim_concurrency =
+                n_threads;
+        }
+    }
+    else
+    {
+        // Handles the case of multi-level CT problem and also real NDIM problem
+        sel->solution->dft_bufs->ct_buf_size =
+            (FFTZ_INTP)n_threads * cur_sel->solution->dft_bufs->ct_buf_size;
+    }
+
     // Calculate the batch size of all the sub-problems in the vector problem
     for (rnk = 0; rnk < vec_rank; rnk++)
     {
@@ -164,7 +232,8 @@ FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     {
         // capture stats
     }
-    sel->solution->next_sol = alloc_sol_array(n_threads);
+    // TODO: Instead of allocating an array of solutions (one sized), just allocate a single solution
+    sel->solution->next_sol = alloc_sol_array(1);
     if (sel->solution->next_sol == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;

@@ -9,13 +9,13 @@ TYPED_TEST_SUITE_P(AoclfftzAPITest);
 // Setup API test cases
 TYPED_TEST_P(AoclfftzAPITest, PTEST_CNTRL_PARAMETERS)
 {
-    for (auto optOff : {0,1})
+    for (auto opt_off : {0,1})
     {
         // Invalid optlevel -2 to ensure setup doesn't fail on invalid inputs
-        for (auto optLevel : {-2, -1, 0, 1, 2, 3})
+        for (auto opt_level : {-2, -1, 0, 1, 2, 3})
         {
-            this->problem->cntrl_params.opt_off = optOff;
-            this->problem->cntrl_params.opt_level = optLevel;
+            this->problem->cntrl_params.opt_off = opt_off;
+            this->problem->cntrl_params.opt_level = opt_level;
             this->run_setup_and_validate(VALID); // Run setup with valid case
         }
     }
@@ -57,9 +57,9 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_THREADS)
 // Test with all valid combinations of opt_off, opt_level, flags, pthr_fft
 TYPED_TEST_P(AoclfftzAPITest, PTEST_COMBINE)
 {
-    for (auto optOff : {0,1})
+    for (auto opt_off : {0,1})
     {
-        for (auto optLevel : this->get_supported_optlevels())
+        for (auto opt_level : this->get_supported_optlevels())
         {
             for (auto flags : this->get_supported_flags())
             {
@@ -75,8 +75,8 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_COMBINE)
                         this->cleanup_problem();
                         this->problem->flags = flags;
                         this->create_default_pdesc(is_fwd, is_inplace);
-                        this->problem->cntrl_params.opt_off = optOff;
-                        this->problem->cntrl_params.opt_level = optLevel;
+                        this->problem->cntrl_params.opt_off = opt_off;
+                        this->problem->cntrl_params.opt_level = opt_level;
                         this->problem->pthr_fft.num_threads = num_threads;
                         this->problem->pthr_fft.dynamic_load_model =
                                                             dynamic_load_model;
@@ -700,3 +700,138 @@ TEST(AoclfftzAPITest, NTEST_DESTROY_NULL_HANDLE)
     aoclfftz_destroy(handle);
     EXPECT_TRUE(is_handle_null(handle));
 }
+
+#ifdef AOCLFFTZ_API_CONCURRENCY_TESTS
+// ===========================================================================
+// Concurrent aoclfftz_execute_io tests (C2C)
+// ---------------------------------------------------------------------------
+// Verifies that aoclfftz_execute_io is safe to call from multiple application
+// threads simultaneously on a single shared handle. The cases below cover the
+// solvers that exercise the per-call scratch surface introduced for MT-safety:
+//   * Bluestein  -> bs_in_base / bs_out_base
+//   * Split-radix -> sr_input_copy_base
+//   * NDim/CTL1D -> ct_buffer
+// ===========================================================================
+
+namespace concurrent_exec_io
+{
+    // Stress one problem across both inplace & out-of-place over a range of internal
+    // thread counts, with the number of application threads calling execute_io
+    // concurrently such that internal_threads * app_threads ~= cores
+    template<typename Fixture>
+    void sweep(Fixture *f, const std::vector<FFTZ_INT32> &dims,
+               FFTZ_INT32 batch)
+    {
+        const FFTZ_INT32 max_procs = omp_get_num_procs();
+        // App threads always run concurrently; internal threads only matter in
+        // a multi-threaded library, so a single-thread build sweeps just 1.
+#ifdef MULTI_THREADING
+        const std::vector<FFTZ_INT32> internal_thread_counts =
+            {1, 3, 8, 40, 90, max_procs};
+#else
+        const std::vector<FFTZ_INT32> internal_thread_counts = {1};
+#endif
+
+        for (bool inplace : {false, true})
+        {
+            for (FFTZ_INT32 num_threads : internal_thread_counts)
+            {
+                if (num_threads > max_procs)
+                {
+                    continue;
+                }
+                const FFTZ_INT32 concurrent_api_count = max_procs / num_threads;
+                f->run_concurrent_execute_io(dims, batch, inplace,
+                                             /*is_forward=*/true,
+                                             concurrent_api_count, num_threads);
+                if (::testing::Test::HasFatalFailure())
+                {
+                    return;
+                }
+            }
+        }
+    }
+} // namespace concurrent_exec_io
+
+template<typename ProblemType>
+class AoclfftzConcurrentTest : public AoclfftzAPITest<ProblemType>
+{
+};
+
+TYPED_TEST_SUITE_P(AoclfftzConcurrentTest);
+
+// Each test runs both placements (OOP + in-place) via sweep();
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_DIRECT)
+{
+    concurrent_exec_io::sweep(this, {15}, 1);
+}
+
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_BATCHED_DIRECT)
+{
+    concurrent_exec_io::sweep(this, {16}, 8);
+}
+
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_CTL1D)
+{
+    concurrent_exec_io::sweep(this, {256}, 32);
+}
+
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_NDIM)
+{
+    concurrent_exec_io::sweep(this, {21, 25, 32}, 1);
+}
+
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_BATCHED_NDIM)
+{
+    concurrent_exec_io::sweep(this, {5, 25, 32}, 7);
+}
+
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_SPLIT_RADIX)
+{
+    concurrent_exec_io::sweep(this, {4096}, 1);
+}
+
+// Bluestein: prime size > 16 (not kernel-supported, not CT-solvable).
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_BLUESTEIN)
+{
+    concurrent_exec_io::sweep(this, {199}, 1);
+}
+
+// Batched Bluestein: batched parent with Bluestein child.
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_BATCHED_BLUESTEIN)
+{
+    concurrent_exec_io::sweep(this, {53}, 10);
+}
+
+// Batched NDim Bluestein with (outer dim < inner dim).
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_BATCHED_NDIM_BS_1)
+{
+    concurrent_exec_io::sweep(this, {19, 97}, 5);
+}
+
+// Batched NDim Bluestein with (outer dim > inner dim).
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_BATCHED_NDIM_BS_2)
+{
+    concurrent_exec_io::sweep(this, {97, 19}, 3);
+}
+
+REGISTER_TYPED_TEST_SUITE_P(
+    AoclfftzConcurrentTest,
+    C2C_DIRECT,
+    C2C_BATCHED_DIRECT,
+    C2C_CTL1D,
+    C2C_NDIM,
+    C2C_BATCHED_NDIM,
+    C2C_SPLIT_RADIX,
+    C2C_BLUESTEIN,
+    C2C_BATCHED_BLUESTEIN,
+    C2C_BATCHED_NDIM_BS_1,
+    C2C_BATCHED_NDIM_BS_2
+);
+
+// Concurrency is the focus here, not type coverage, so run a single type
+// (double) to keep the heavy stress suite fast.
+using ConcurrentTestTypes = ::testing::Types<aoclfftz_prob_desc_d>;
+INSTANTIATE_TYPED_TEST_SUITE_P(FFTZ_tests_concurrent_execute_io,
+                                AoclfftzConcurrentTest, ConcurrentTestTypes);
+#endif // AOCLFFTZ_API_CONCURRENCY_TESTS

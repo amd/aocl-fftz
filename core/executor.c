@@ -14,7 +14,8 @@
 
 #include "core/executor.h"
 
-static FFTZ_INT32 execute_dft(aoclfftz_executor_t *executor_obj)
+static FFTZ_INT32 execute_dft(aoclfftz_executor_t *executor_obj,
+                              aoclfftz_mutable_ctx_t *ctx)
 {
     aoclfftz_solution_t *sol = executor_obj->solution;
 
@@ -28,7 +29,7 @@ static FFTZ_INT32 execute_dft(aoclfftz_executor_t *executor_obj)
 
         // Set maximum nested levels to 3 as it is needed by real solutions
         omp_set_max_active_levels(3);
-        FFTZ_INT32 ret = sol->solver->execute_solver(sol);
+        FFTZ_INT32 ret = sol->solver->execute_solver(sol, ctx);
 
         // Restore max nested levels to original state
         omp_set_max_active_levels(cur_max_levels);
@@ -37,7 +38,7 @@ static FFTZ_INT32 execute_dft(aoclfftz_executor_t *executor_obj)
     else
 #endif
     {
-        return sol->solver->execute_solver(sol);
+        return sol->solver->execute_solver(sol, ctx);
     }
 }
 

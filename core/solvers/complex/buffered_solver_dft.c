@@ -110,32 +110,42 @@ FFTZ_INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
     sol->dft_bufs->ct_buf_imag =
         MOVE_ADDR(sol->dft_bufs->ct_buffer, SOL_DT_SIZE(sol));
     setup_buffered_output_strides(sol, next_sol);
+
     next_sol->dft_bufs->ct_buffer = sol->dft_bufs->ct_buffer;
+    next_sol->dft_bufs->ct_buf_allocated = 0;
+    next_sol->dft_bufs->ct_buf_size = sol->dft_bufs->ct_buf_size;
+    next_sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buffer;
+    next_sol->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
     return SOLVER_SUCCESS;
 }
 
-static FFTZ_INT32 execute_buffered_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_buffered_solver(aoclfftz_solution_t *sol,
+                                          aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    FFTZ_INT32 status = SOLVER_SUCCESS;
+    FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(ctx);
     aoclfftz_solution_t *next_sol = sol->next_sol[0];
+    aoclfftz_mutable_ctx_t child_ctx = *ctx;
+    // Reroute the child's output into a private CT-buffer slot.
+#ifdef MULTI_THREADING
+    // Pick this thread's slot within the shared ct_buffer.
+    child_ctx.out_real = MOVE_ADDR(ctx->ct_buf_base, ctx->ct_offset);
+    child_ctx.out_imag = MOVE_ADDR(child_ctx.out_real, dt_bytes);
+#else
+    child_ctx.out_real = ctx->ct_buf_base;
+    child_ctx.out_imag = MOVE_ADDR(ctx->ct_buf_base, dt_bytes);
+#endif
+    ctx->out_real = child_ctx.out_real;
+    ctx->out_imag = child_ctx.out_imag;
+    // Alias ct_buf_base to out so the inner CTL1D takes its in-place path:
+    // (m) in -> out, then (r) out -> out.
+    child_ctx.ct_buf_base = child_ctx.out_real;
 
-    // Update sol and next_sol's output pointers to the buffer.
-    next_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
-    next_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
-    // For inplace CT, reroute buf node output to ct_buf; Radix-m writes here,
-    // Radix-r reads.
-    sol->decomp_scheme->out_real = sol->dft_bufs->ct_buf_real;
-    sol->decomp_scheme->out_imag = sol->dft_bufs->ct_buf_imag;
-
-    next_sol->decomp_scheme->out_real = sol->dft_bufs->ct_buf_real;
-    next_sol->decomp_scheme->out_imag = sol->dft_bufs->ct_buf_imag;
-    next_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
-    next_sol->solver->execute_solver(next_sol);
+    FFTZ_INT32 status = next_sol->solver->execute_solver(next_sol, &child_ctx);
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
     return status;

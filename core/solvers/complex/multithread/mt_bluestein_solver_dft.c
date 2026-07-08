@@ -162,9 +162,7 @@ FFTZ_INT32 setup_mt_bluestein_solver(aoclfftz_solution_t *sol,
     // load/store in normalize.
     FFTZ_INTP bs_buf_size = GET_PADDED_SIZE(
         (FFTZ_INTP)m * DATA_STRIDE * dt_bytes);
-    FFTZ_INT32 active_threads = sol->decomp_scheme->thread_info->active_threads;
-    ret = alloc_bluestein_buffers(sol->dft_bufs->bluestein,
-                                  bs_buf_size, active_threads);
+    ret = alloc_bluestein_buffers(sol->dft_bufs->bluestein, bs_buf_size);
     if (ret != AOCLFFTZ_SUCCESS)
     {
         return ret;
@@ -174,14 +172,10 @@ FFTZ_INT32 setup_mt_bluestein_solver(aoclfftz_solution_t *sol,
     sol->decomp_scheme->thread_info->n_threads =
         sol->decomp_scheme->thread_info->avl_threads;
 
-    // Map slot 0 of the in/out pool to next_sol's I/O pointers.
-    // deep_copy_solution_tree re-points these to slot t for thread t.
-    next_sol->decomp_scheme->in_real = sol->dft_bufs->bluestein->in;
-    next_sol->decomp_scheme->in_imag =
-        MOVE_ADDR(sol->dft_bufs->bluestein->in, dt_bytes);
-    next_sol->decomp_scheme->out_real = sol->dft_bufs->bluestein->out;
-    next_sol->decomp_scheme->out_imag =
-        MOVE_ADDR(sol->dft_bufs->bluestein->out, dt_bytes);
+    next_sol->decomp_scheme->in_real = NULL;
+    next_sol->decomp_scheme->in_imag = NULL;
+    next_sol->decomp_scheme->out_real = NULL;
+    next_sol->decomp_scheme->out_imag = NULL;
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
@@ -204,19 +198,34 @@ FFTZ_INT32 setup_mt_bluestein_solver(aoclfftz_solution_t *sol,
  * @param[in,out] sol Solution object containing problem configuration
  * @return FFTZ_INT32 SOLVER_SUCCESS on success, SOLVER_FAILURE on error
  */
-static FFTZ_INT32 execute_mt_bluestein_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_mt_bluestein_solver(aoclfftz_solution_t *sol,
+                                              aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
     aoclfftz_solution_t *next_sol = sol->next_sol[0];
     aoclfftz_bluestein_t *bluestein = sol->dft_bufs->bluestein;
-    FFTZ_UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    FFTZ_UINT8 dt_prec = DT_PRECISION_FLAG(ctx->flags);
     FFTZ_UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
-    FFTZ_UINT32 dir = FFT_DIR(sol->decomp_scheme->flags);
-    FFTZ_UINT32 initial_flags = next_sol->decomp_scheme->flags;
+    FFTZ_UINT32 dir = FFT_DIR(ctx->flags);
     FFTZ_INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
     FFTZ_INTP elem_bytes = (FFTZ_INTP)DATA_STRIDE * dt_bytes;
+    aoclfftz_mutable_ctx_t bs_ctx = *ctx;
+
+    // Bluestein convolution doesn't use ct_buffer, but reset
+    // ct_offset anyway to avoid invalid values downstream.
+    bs_ctx.ct_offset = 0;
+
+    // Two-level split of the shared bs pool: bs_dim_offset selects this dim's slice,
+    // then bs_buf_size * bs_slot_idx picks this thread's slot within it.
+    FFTZ_INTP bs_buf_offset = bluestein->bs_dim_offset +
+                              bluestein->bs_buf_size * ctx->bs_slot_idx;
+
+    bs_ctx.in_real     = MOVE_ADDR(ctx->bs_in_base, bs_buf_offset);
+    bs_ctx.in_imag     = MOVE_ADDR(bs_ctx.in_real, dt_bytes);
+    bs_ctx.out_real    = MOVE_ADDR(ctx->bs_out_base, bs_buf_offset);
+    bs_ctx.out_imag    = MOVE_ADDR(bs_ctx.out_real, dt_bytes);
 
     // next_sol inherits the requested direction, but the convolution always
     // runs a forward FFT at step 2a and an inverse FFT at step 2c. The kernels
@@ -224,7 +233,7 @@ static FFTZ_INT32 execute_mt_bluestein_solver(aoclfftz_solution_t *sol)
     // request; step 2c restores backward for the inverse transform.
     if (dir == BACKWARD_FFT_DIR)
     {
-        SET_FFT_DIR(next_sol->decomp_scheme->flags, FORWARD_FFT_DIR);
+        SET_FFT_DIR(bs_ctx.flags, FORWARD_FFT_DIR);
     }
 
     FFTZ_INTP n = sol->decomp_scheme->dims[0].n;      // Original length
@@ -233,29 +242,24 @@ static FFTZ_INT32 execute_mt_bluestein_solver(aoclfftz_solution_t *sol)
     FFTZ_INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
     FFTZ_INT32 status = SOLVER_SUCCESS;
 
-    // Save original buffer pointers for restoration after execution
-    FFTZ_VOID *in_real = next_sol->decomp_scheme->in_real;
-    FFTZ_VOID *in_imag = next_sol->decomp_scheme->in_imag;
-    FFTZ_VOID *out_real = next_sol->decomp_scheme->out_real;
-    FFTZ_VOID *out_imag = next_sol->decomp_scheme->out_imag;
-    FFTZ_VOID *ct_buf_real = next_sol->dft_bufs->ct_buf_real;
-    FFTZ_VOID *ct_buf_imag = next_sol->dft_bufs->ct_buf_imag;
+    FFTZ_VOID *bs_in_real  = bs_ctx.in_real;
+    FFTZ_VOID *bs_out_real = bs_ctx.out_real;
 
     // Current solution I/O buffers
-    FFTZ_VOID *cur_in = sol->decomp_scheme->in_real;
-    FFTZ_VOID *cur_out = sol->decomp_scheme->out_real;
+    FFTZ_VOID *cur_in = ctx->in_real;
+    FFTZ_VOID *cur_out = ctx->out_real;
 
     //=========================================================================
     // Step 1: Copy input and apply chirp pre-processing
     //=========================================================================
-    bluestein_copy_data(cur_in, in_real, n, in_stride, 1, dt_prec, dt_bytes);
+    bluestein_copy_data(cur_in, bs_in_real, n, in_stride, 1, dt_prec, dt_bytes);
 
     // Zero-pad the input from index n to m-1
-    memset(MOVE_ADDR(in_real, n * elem_bytes), 0, (m - n) * elem_bytes);
+    memset(MOVE_ADDR(bs_in_real, n * elem_bytes), 0, (m - n) * elem_bytes);
 
     // Multiply input by chirp sequence B (or its conjugate)
-    mt_ele_mul_dispatch(bluestein->ele_mul[dir], in_real, in_real, bluestein->B,
-                        n, n_threads, elem_bytes);
+    mt_ele_mul_dispatch(bluestein->ele_mul[dir], bs_in_real, bs_in_real,
+                        bluestein->B, n, n_threads, elem_bytes);
 
     //=========================================================================
     // Step 2: Convolution via FFT
@@ -263,28 +267,28 @@ static FFTZ_INT32 execute_mt_bluestein_solver(aoclfftz_solution_t *sol)
 
     // 2a. Forward FFT of pre-processed input.
     //     FFT of chirp sequence B is pre-computed during plan setup
-    next_sol->dft_bufs->ct_buf_real = next_sol->decomp_scheme->out_real;
-    next_sol->dft_bufs->ct_buf_imag = next_sol->decomp_scheme->out_imag;
-    status = next_sol->solver->execute_solver(next_sol);
+    //     ct_buf_base is set to this thread's private out slot
+    bs_ctx.ct_buf_base = bs_out_real;
+
+    status = next_sol->solver->execute_solver(next_sol, &bs_ctx);
     if (status != SOLVER_SUCCESS)
     {
         goto exit_mt_bluestein_solver;
     }
 
     // 2b. Pointwise multiplication: A_out × B_out (with conjugate for inverse)
-    mt_ele_mul_dispatch(bluestein->ele_mul[!dir], out_real, out_real,
+    mt_ele_mul_dispatch(bluestein->ele_mul[!dir], bs_out_real, bs_out_real,
                         bluestein->B_out, m, n_threads, elem_bytes);
 
-    // 2c. Inverse FFT of the product
-    next_sol->decomp_scheme->in_real = out_real;
-    next_sol->decomp_scheme->in_imag = out_imag;
-    next_sol->decomp_scheme->out_real = in_real;
-    next_sol->decomp_scheme->out_imag = in_imag;
-    next_sol->dft_bufs->ct_buf_real = next_sol->decomp_scheme->out_real;
-    next_sol->dft_bufs->ct_buf_imag = next_sol->decomp_scheme->out_imag;
-    SET_FFT_DIR(next_sol->decomp_scheme->flags, BACKWARD_FFT_DIR);
+    // 2c. Inverse FFT of the product.
+    bs_ctx.in_real     = bs_out_real;
+    bs_ctx.in_imag     = MOVE_ADDR(bs_out_real, dt_bytes);
+    bs_ctx.out_real    = bs_in_real;
+    bs_ctx.out_imag    = MOVE_ADDR(bs_in_real, dt_bytes);
+    bs_ctx.ct_buf_base = bs_ctx.out_real;
+    SET_FFT_DIR(bs_ctx.flags, BACKWARD_FFT_DIR);
 
-    status = next_sol->solver->execute_solver(next_sol);
+    status = next_sol->solver->execute_solver(next_sol, &bs_ctx);
     if (status != SOLVER_SUCCESS)
     {
         goto exit_mt_bluestein_solver;
@@ -294,39 +298,26 @@ static FFTZ_INT32 execute_mt_bluestein_solver(aoclfftz_solution_t *sol)
     // Step 3: Post-processing - 1/N scaling and apply final chirp
     // multiplication
     //=========================================================================
-    mt_normalize_dispatch(bluestein->normalize, in_real, n, (1.0 / m),
+    mt_normalize_dispatch(bluestein->normalize, bs_in_real, n, (1.0 / m),
                           n_threads, elem_bytes);
 
     // Apply final chirp multiplication and copy with stride optimization
     if (out_stride == 1)
     {
         // Optimization: multiply directly to output for unit stride
-        mt_ele_mul_dispatch(bluestein->ele_mul[dir], cur_out, in_real,
+        mt_ele_mul_dispatch(bluestein->ele_mul[dir], cur_out, bs_in_real,
                             bluestein->B, n, n_threads, elem_bytes);
     }
     else
     {
         // For non-unit stride: multiply in-place then copy with stride
-        mt_ele_mul_dispatch(bluestein->ele_mul[dir], in_real, in_real,
+        mt_ele_mul_dispatch(bluestein->ele_mul[dir], bs_in_real, bs_in_real,
                             bluestein->B, n, n_threads, elem_bytes);
-        bluestein_copy_data(in_real, cur_out, n, 1, out_stride,
+        bluestein_copy_data(bs_in_real, cur_out, n, 1, out_stride,
                             dt_prec, dt_bytes);
     }
 
-    //=========================================================================
-    // Cleanup: Restore original buffer pointers and flags. Reached on both the
-    // success path and any error goto, so a failed execute never leaves
-    // next_sol re-wired for a subsequent invocation.
-    //=========================================================================
 exit_mt_bluestein_solver:
-    next_sol->decomp_scheme->in_real = in_real;
-    next_sol->decomp_scheme->in_imag = in_imag;
-    next_sol->decomp_scheme->out_real = out_real;
-    next_sol->decomp_scheme->out_imag = out_imag;
-    next_sol->dft_bufs->ct_buf_real = ct_buf_real;
-    next_sol->dft_bufs->ct_buf_imag = ct_buf_imag;
-    next_sol->decomp_scheme->flags = initial_flags;
-
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return status;
 }

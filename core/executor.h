@@ -25,13 +25,14 @@ typedef enum
     EXECUTOR_SUCCESS         // Successful operation
 } aoclfftz_executor_status;
 
-// Executor data structure that is used to hold the solution and cost analysis
-// at each decomposition level for the associated sub-problem
+// Executor data structure that holds the built plan needed to run a problem.
 typedef struct aoclfftz_executor
 {
     aoclfftz_solution_t *solution;
     execute_ execute;
-    // cost_analysis_t *cost_analysis;
+    aoclfftz_immutable_metadata_t *exec_metadata;
+    // cost_analysis_t *cost_analysis; // selector-only: unused in executor
+    // kernel_tables_t *kernel_tables; // selector-only: unused in executor
 } aoclfftz_executor_t;
 
 #endif // AOCLFFTZ_EXECUTOR_H

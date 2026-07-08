@@ -91,41 +91,27 @@ FFTZ_INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
-static FFTZ_INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_ndim_solver(aoclfftz_solution_t *sol,
+                                      aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     aoclfftz_solution_t *n_minus1_sol = sol->dft_bufs->nd_sol;
     aoclfftz_solution_t *outer_dim_sol = sol->next_sol[0];
 
-    // update solution data pointers
-    n_minus1_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
-    n_minus1_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
-    n_minus1_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    n_minus1_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-
-    // propagate the pointers to next solution for it to set to the solution
-    // after it ie., n_minus1_sol->next_sol->next_sol
-    // only required for n_minus1_sol sub-problem since outer_dim_sol
-    // will not have an NDim sub-problem
-    n_minus1_sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buf_real;
-    n_minus1_sol->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
-
-    // outer_dim_sol pointer updates
-    outer_dim_sol->decomp_scheme->in_real  =
-        n_minus1_sol->decomp_scheme->out_real;
-    outer_dim_sol->decomp_scheme->in_imag  =
-        n_minus1_sol->decomp_scheme->out_imag;
-    outer_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-    outer_dim_sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buf_real;
-    outer_dim_sol->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
+    // Build child ctx for n_minus1_sol: same in/out as parent
+    aoclfftz_mutable_ctx_t n_minus1_ctx = *ctx;
 
     // execute nd sub-problem
-    n_minus1_sol->solver->execute_solver(n_minus1_sol);
+    n_minus1_sol->solver->execute_solver(n_minus1_sol, &n_minus1_ctx);
+
+    // Build child ctx for outer_dim_sol: input = n_minus1's output, output = parent's output
+    aoclfftz_mutable_ctx_t outer_ctx = *ctx;
+    outer_ctx.in_real = n_minus1_ctx.out_real;
+    outer_ctx.in_imag = n_minus1_ctx.out_imag;
 
     // execute 1d sub-problem
-    outer_dim_sol->solver->execute_solver(outer_dim_sol);
+    outer_dim_sol->solver->execute_solver(outer_dim_sol, &outer_ctx);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 

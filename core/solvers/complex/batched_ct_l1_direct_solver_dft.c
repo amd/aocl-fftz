@@ -67,27 +67,28 @@ FFTZ_INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
     FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
     FFTZ_INTP buffer_out_stride = 1;
 
-    // Allocate a private scratch buffer when no parent buffer exists or
-    // when the parent's is BUFFERED.
-    // Otherwise reuse the parent ND buffer already pointed to by ct_buf_real.
-    // TODO: In all cases, we should use the parent ND buffer instead of
-    // allocating a new one.
-    if (sol->dft_bufs->ct_buf_real == NULL ||
-        sol->decomp_scheme->out_real == sol->dft_bufs->ct_buf_real)
+    // Unpadded: the inherited NDIM pool has no per-slice padding, if parent is mt_batched
+    // the padded ct_buf_size might cross the assigned memory slot, hence avoid padding.
+    FFTZ_INTP ct_buf_size = n * DATA_STRIDE * dt_bytes;
+
+    // Allocate a private scratch buffer when no parent buffer exists
+    if (sol->dft_bufs->ct_buf_real == NULL)
     {
-        FFTZ_INTP ct_buf_size = GET_PADDED_SIZE(n * DATA_STRIDE * dt_bytes);
-        ALLOC_ALIGN_UNINIT(sol->dft_bufs->ct_buffer, FFTZ_VOID, ct_buf_size);
+        ct_buf_size = GET_PADDED_SIZE(n * DATA_STRIDE * dt_bytes);
+        FFTZ_INT32 n_bufs = sol->decomp_scheme->thread_info->active_threads;
+        ALLOC_ALIGN_UNINIT(sol->dft_bufs->ct_buffer, FFTZ_VOID, ct_buf_size
+                                                                * n_bufs);
         if (sol->dft_bufs->ct_buffer == NULL)
         {
             ret = AOCLFFTZ_MEMORY_FAILURE;
             goto exit_setup;
         }
         sol->dft_bufs->ct_buf_allocated = 1;
-        sol->dft_bufs->ct_buf_size = ct_buf_size;
         sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buffer;
         sol->dft_bufs->ct_buf_imag =
             MOVE_ADDR(sol->dft_bufs->ct_buffer, dt_bytes);
     }
+    sol->dft_bufs->ct_buf_size = ct_buf_size;
 
     sol->solver->kernel_c2c->kfft[FORWARD_FFT_DIR] =
         ker_m->kfft[FORWARD_FFT_DIR];
@@ -141,12 +142,13 @@ exit_setup:
     return ret;
 }
 
-static FFTZ_INT32 execute_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
+                                                    aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
-    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(ctx);
+    FFTZ_UINT8 direction = FFT_DIR(ctx->flags);
 
     kfft_ kfft_m = sol->solver->kernel_c2c->kfft[direction];
     aoclfftz_strides_t *strides_m = sol->strides_grp->strides;
@@ -158,30 +160,56 @@ static FFTZ_INT32 execute_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol)
     FFTZ_INTP vecs_r = (FFTZ_INTP)sol->solver->kernel_c2c_r->count;
 
     FFTZ_INTP v_in_stride = sol->decomp_scheme->vecs[0].in_stride *
-                       DATA_STRIDE * dt_bytes;
+                            DATA_STRIDE * dt_bytes;
     FFTZ_INTP v_out_stride = sol->decomp_scheme->vecs[0].out_stride *
-                        DATA_STRIDE * dt_bytes;
+                             DATA_STRIDE * dt_bytes;
 
-    FFTZ_VOID *in_real  = sol->decomp_scheme->in_real;
-    FFTZ_VOID *in_imag  = sol->decomp_scheme->in_imag;
-    FFTZ_VOID *out_real = sol->decomp_scheme->out_real;
-    FFTZ_VOID *out_imag = sol->decomp_scheme->out_imag;
-    FFTZ_VOID *ct_buf_real = sol->dft_bufs->ct_buf_real;
-    FFTZ_VOID *ct_buf_imag = sol->dft_bufs->ct_buf_imag;
+    FFTZ_VOID *in_real  = ctx->in_real;
+    FFTZ_VOID *in_imag  = ctx->in_imag;
+    FFTZ_VOID *out_real = ctx->out_real;
+    FFTZ_VOID *out_imag = ctx->out_imag;
 
     FFTZ_INTP batches = sol->decomp_scheme->vecs[0].n;
 
-    for (FFTZ_INTP b = 0; b < batches; b++)
+    if (ctx->ct_buf_base != out_real)
     {
-        kfft_m(in_real, in_imag, ct_buf_real, ct_buf_imag,
-               vecs_m, strides_m, NULL, direction);
-        kfft_r(ct_buf_real, ct_buf_imag, out_real, out_imag,
-               vecs_r, strides_r, twiddle_r, direction);
+        // Out-of-place path: radix-m writes into this thread's private CT slot,
+        // radix-r then reads that slot into out. (m) in -> ct, (r) ct -> out.
+        FFTZ_VOID *ct_buf_real;
+        FFTZ_VOID *ct_buf_imag;
 
-        in_real  = MOVE_ADDR(in_real,  v_in_stride);
-        in_imag  = MOVE_ADDR(in_imag,  v_in_stride);
-        out_real = MOVE_ADDR(out_real, v_out_stride);
-        out_imag = MOVE_ADDR(out_imag, v_out_stride);
+        // Pick this thread's slot within the shared ct_buffer.
+        ct_buf_real = MOVE_ADDR(ctx->ct_buf_base, ctx->ct_offset);
+        ct_buf_imag = MOVE_ADDR(ct_buf_real, dt_bytes);
+
+        for (FFTZ_INTP b = 0; b < batches; b++)
+        {
+            kfft_m(in_real, in_imag, ct_buf_real, ct_buf_imag,
+                vecs_m, strides_m, NULL, direction);
+            kfft_r(ct_buf_real, ct_buf_imag, out_real, out_imag,
+                vecs_r, strides_r, twiddle_r, direction);
+
+            in_real  = MOVE_ADDR(in_real,  v_in_stride);
+            in_imag  = MOVE_ADDR(in_imag,  v_in_stride);
+            out_real = MOVE_ADDR(out_real, v_out_stride);
+            out_imag = MOVE_ADDR(out_imag, v_out_stride);
+        }
+    }
+    else
+    {
+        // In-place path (ct_buf_base aliased to out): (m) in -> out, (r) out -> out.
+        for (FFTZ_INTP b = 0; b < batches; b++)
+        {
+            kfft_m(in_real, in_imag, out_real, out_imag,
+                vecs_m, strides_m, NULL, direction);
+            kfft_r(out_real, out_imag, out_real, out_imag,
+                vecs_r, strides_r, twiddle_r, direction);
+
+            in_real  = MOVE_ADDR(in_real,  v_in_stride);
+            in_imag  = MOVE_ADDR(in_imag,  v_in_stride);
+            out_real = MOVE_ADDR(out_real, v_out_stride);
+            out_imag = MOVE_ADDR(out_imag, v_out_stride);
+        }
     }
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");

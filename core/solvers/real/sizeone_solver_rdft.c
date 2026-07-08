@@ -228,7 +228,8 @@ static FFTZ_INT32 execute_real_sizeone_solver_internal(aoclfftz_solution_t *sol,
  *
  * @return SOLVER_SUCCESS on successful execution, error code otherwise
  */
-static FFTZ_INT32 execute_real_sizeone_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_real_sizeone_solver(aoclfftz_solution_t *sol,
+                                              aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 

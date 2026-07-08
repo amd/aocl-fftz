@@ -304,6 +304,11 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 }
                 cur_sel_m->solution->dft_bufs->ct_buf_allocated = 0;
 
+                // Only the radix-m sub-solver uses the ct_buffer, so take the CT
+                // node's ct_buf_size from it (ignore radix-r solver).
+                sel->solution->dft_bufs->ct_buf_size =
+                    cur_sel_m->solution->dft_bufs->ct_buf_size;
+
                 // Break the link from cur_sel and cur_sel_m
                 // it can be still accessed through sel object
                 cur_sel->solution->next_sol = NULL;

@@ -45,7 +45,8 @@ FFTZ_INT32 setup_real_ct_solver(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
-static FFTZ_INT32 execute_real_ct_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_real_ct_solver(aoclfftz_solution_t *sol,
+                                         aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -54,7 +55,7 @@ static FFTZ_INT32 execute_real_ct_solver(aoclfftz_solution_t *sol)
     // Execute the next direct solution
     // NOTE: The CT problem is executed in the execute_real_direct_solver,
     // along with direct problems
-    ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0]);
+    ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0], ctx);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return ret;

@@ -154,7 +154,12 @@ Multi-threading with OpenMP
 AOCL-FFTZ currently supports Multi-threading through OpenMP. To enable it, turn on the CMake option `ENABLE_MULTI_THREADING`.
 Additionally, you can also provide a custom OpenMP library through the `OpenMP_libomp_LIBRARY` option to override system OpenMP.
 
-Note: When reusing an already computed solution handle with `execute_io` API, make sure that the multiple application threads calling it maintain separate copies of the solution handle.
+Note: Concurrent use of a shared handle is only supported for complex (C2C)
+plans via `aoclfftz_execute_io`.
+For real (R2C/C2R) plans, `aoclfftz_execute_io` is not thread-safe when a
+shared handle is used with custom `in`/`out` pointers.
+`aoclfftz_execute` is also not concurrency-safe on a shared handle; call it
+from a single thread per handle.
 
 Running Test Bench On Linux & Windows
 -------------------------------------

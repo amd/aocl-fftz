@@ -42,6 +42,7 @@ typedef struct aoclfftz_selector
 {
     aoclfftz_solution_t *solution;
     execute_ execute;
+    aoclfftz_immutable_metadata_t *exec_metadata;
     cost_analysis_t *cost_analysis;
     kernel_tables_t *kernel_tables;
 } aoclfftz_selector_t;

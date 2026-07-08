@@ -53,7 +53,8 @@ FFTZ_INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
 // Recursively solves batched RFFT by handling the innermost dimension first.
 FFTZ_INT32 execute_real_mt_batched_solver_internal(aoclfftz_solution_t *sol,
                                               aoclfftz_solution_t **next_sol,
-                                              FFTZ_INTP vec_rank)
+                                              FFTZ_INTP vec_rank,
+                                              aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -96,7 +97,18 @@ FFTZ_INT32 execute_real_mt_batched_solver_internal(aoclfftz_solution_t *sol,
             next_sol[tid]->decomp_scheme->out_imag =
                                 MOVE_ADDR(out_imag, b * v_out_stride);
 
-            local_status = next_sol[tid]->solver->execute_solver(next_sol[tid]);
+            aoclfftz_mutable_ctx_t thr_ctx = *ctx;
+
+            // Relevant only when the child is an ndim complex sub-solver (nd_sol),
+            // give each thread its own ct pool slice.
+            thr_ctx.ct_offset = ctx->ct_offset +
+               (FFTZ_INTP)tid * (FFTZ_INTP)next_sol[tid]->dft_bufs->ct_buf_size;
+
+            // Index used to slice the bs_[in/out]_base for Bluestein/MT_Bluestein.
+            thr_ctx.bs_slot_idx = ctx->bs_slot_idx * n_threads + tid;
+
+            local_status = next_sol[tid]->solver->execute_solver(
+                                                    next_sol[tid], &thr_ctx);
             if (local_status != SOLVER_SUCCESS)
             {
                 #pragma omp atomic write
@@ -119,7 +131,7 @@ FFTZ_INT32 execute_real_mt_batched_solver_internal(aoclfftz_solution_t *sol,
 
             // recursive call to solve the inner batches
             status = execute_real_mt_batched_solver_internal(sol, next_sol,
-                                                          vec_rank - 1);
+                                                            vec_rank - 1, ctx);
             if (status != SOLVER_SUCCESS)
             {
                 return status;
@@ -147,7 +159,8 @@ FFTZ_INT32 execute_real_mt_batched_solver_internal(aoclfftz_solution_t *sol,
 /*
  * TODO: Support ND batches for real problems
  */
-static FFTZ_INT32 execute_real_mt_batched_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_real_mt_batched_solver(aoclfftz_solution_t *sol,
+                                                 aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -164,7 +177,8 @@ static FFTZ_INT32 execute_real_mt_batched_solver(aoclfftz_solution_t *sol)
     }
 
     status = execute_real_mt_batched_solver_internal(sol, next_sol,
-                                                  sol->decomp_scheme->vec_rank);
+                                                  sol->decomp_scheme->vec_rank,
+                                                  ctx);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return status;

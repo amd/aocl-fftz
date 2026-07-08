@@ -169,7 +169,8 @@ FFTZ_INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
-static FFTZ_INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol,
+                                           aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -181,6 +182,10 @@ static FFTZ_INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol)
     dt_bytes = DT_PRECISION_BYTES(dt_prec);
     FFTZ_UINT8 is_forward = (
         FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR);
+
+    // Build a child ctx for the (N-1)D C2C sub-FFT with overridden in/out.
+    // The 1D real sub-FFT reads in/out from decomp_scheme, not ctx.
+    aoclfftz_mutable_ctx_t c2c_child_ctx = *ctx;
 
     if (is_forward)
     {
@@ -195,20 +200,17 @@ static FFTZ_INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol)
         real_dim_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
         real_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
         real_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-        complex_dims_sol->decomp_scheme->in_real =
-            real_dim_sol->decomp_scheme->out_real;
-        complex_dims_sol->decomp_scheme->in_imag =
-            real_dim_sol->decomp_scheme->out_imag;
-        complex_dims_sol->decomp_scheme->out_real =
-            sol->decomp_scheme->out_real;
-        complex_dims_sol->decomp_scheme->out_imag =
-            sol->decomp_scheme->out_imag;
-
         // execute 1d sub-problem
-        real_dim_sol->solver->execute_solver(real_dim_sol);
+        real_dim_sol->solver->execute_solver(real_dim_sol, ctx);
 
+        c2c_child_ctx.in_real  = sol->decomp_scheme->out_real;
+        c2c_child_ctx.in_imag  = sol->decomp_scheme->out_imag;
+        c2c_child_ctx.out_real = sol->decomp_scheme->out_real;
+        c2c_child_ctx.out_imag = sol->decomp_scheme->out_imag;
+        c2c_child_ctx.flags    = complex_dims_sol->decomp_scheme->flags;
         // execute (n-1)d sub-problem
-        complex_dims_sol->solver->execute_solver(complex_dims_sol);
+        complex_dims_sol->solver->execute_solver(complex_dims_sol,
+                                                 &c2c_child_ctx);
     }
     else
     {
@@ -217,26 +219,24 @@ static FFTZ_INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol)
         //    in: input buffer, out: aux_buffer_1
         // 2. real_dim_sol (1D C2R):
         //    in: aux_buffer_1, out: output buffer
-        complex_dims_sol->decomp_scheme->in_real =
-            sol->decomp_scheme->in_real;
-        complex_dims_sol->decomp_scheme->in_imag =
-            sol->decomp_scheme->in_imag;
-        complex_dims_sol->decomp_scheme->out_real =
-            sol->dft_bufs->buffered->aux_buffer_1;
-        complex_dims_sol->decomp_scheme->out_imag =
-            MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_1, dt_bytes);
-        real_dim_sol->decomp_scheme->in_real =
-            complex_dims_sol->decomp_scheme->out_real;
-        real_dim_sol->decomp_scheme->in_imag =
-            complex_dims_sol->decomp_scheme->out_imag;
+        FFTZ_VOID *aux_real = sol->dft_bufs->buffered->aux_buffer_1;
+        FFTZ_VOID *aux_imag = MOVE_ADDR(aux_real, dt_bytes);
+
+        c2c_child_ctx.in_real  = sol->decomp_scheme->in_real;
+        c2c_child_ctx.in_imag  = sol->decomp_scheme->in_imag;
+        c2c_child_ctx.out_real = aux_real;
+        c2c_child_ctx.out_imag = aux_imag;
+        c2c_child_ctx.flags    = complex_dims_sol->decomp_scheme->flags;
+
+        real_dim_sol->decomp_scheme->in_real  = aux_real;
+        real_dim_sol->decomp_scheme->in_imag  = aux_imag;
         real_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
         real_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-
         // execute (n-1)d sub-problem
-        complex_dims_sol->solver->execute_solver(complex_dims_sol);
-
+        complex_dims_sol->solver->execute_solver(complex_dims_sol,
+                                                 &c2c_child_ctx);
         // execute 1d sub-problem
-        real_dim_sol->solver->execute_solver(real_dim_sol);
+        real_dim_sol->solver->execute_solver(real_dim_sol, ctx);
     }
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");

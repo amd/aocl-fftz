@@ -76,6 +76,7 @@ typedef std::tuple<std::string, FFTZ_INT32, FFTZ_INT32,
     aoclfftz_selector_test_params_t;
 
 // function pointer to dft_solver
-typedef FFTZ_INT32 (*dft_solver_)(aoclfftz_solution_t *sol);
+typedef FFTZ_INT32 (*dft_solver_)(aoclfftz_solution_t *sol,
+                                  aoclfftz_mutable_ctx_t *ctx);
 
 #endif // AOCLFFTZ_GTEST_TYPES_H

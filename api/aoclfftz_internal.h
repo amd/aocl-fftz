@@ -21,6 +21,7 @@
 #ifdef MULTI_THREADING
 #include <omp.h>
 #endif
+
 #include "types.h"
 #include "aoclfftz.h"
 
@@ -76,11 +77,15 @@
 // Get size of datatype based on the precision
 #define DT_PRECISION_BYTES(dt_prec) (1 << dt_prec)
 
+#define DT_SIZE(flags) DT_PRECISION_BYTES(DT_PRECISION_FLAG(flags))
+
 /*
  * @brief Get size of datatype from solution, in bytes
  * */
-#define SOL_DT_SIZE(sol)                                                       \
-    DT_PRECISION_BYTES(DT_PRECISION_FLAG(sol->decomp_scheme->flags))
+#define SOL_DT_SIZE(sol) DT_SIZE(sol->decomp_scheme->flags)
+
+// Get size of datatype from execution context, in bytes
+#define CTX_DT_SIZE(ctx) DT_SIZE((ctx)->flags)
 
 #define SET_SELECTOR_MODE(flags, value) SET_BIT_FLAG32(flags, 16, value)
 #define GET_SELECTOR_MODE(flags) GET_BIT_FLAG32(flags, 16)
@@ -158,6 +163,20 @@
 #define NUM_RFFT_GROUPS(solver)                                                \
     (solver)->kernel_r2hcf->count + (solver)->kernel_r2hc->count
 
+// Compiler-portable atomics. Extend the branches below for new toolchains.
+#if defined(__GNUC__) || defined(__clang__)
+
+#define AOCLFFTZ_ATOMIC_CMP_XCHG(ptr, expected, desired)                       \
+    __atomic_compare_exchange_n((ptr), (expected), (desired), 0,               \
+                                __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)
+
+#define AOCLFFTZ_ATOMIC_STORE(ptr, value)                                      \
+    __atomic_store_n((ptr), (value), __ATOMIC_RELEASE)
+
+#else
+#error "AOCL-FFTZ: atomics not supported on this compiler/platform."
+#endif
+
 // Forward declarations
 typedef struct aoclfftz_solution aoclfftz_solution_t;
 typedef struct aoclfftz_generic_solver aoclfftz_generic_solver_t;
@@ -168,6 +187,47 @@ typedef struct aoclfftz_buffered aoclfftz_buffered_t;
 typedef struct aoclfftz_sr aoclfftz_sr_t;
 typedef struct aoclfftz_executor aoclfftz_executor_t;
 typedef struct aoclfftz_realhelper aoclfftz_realhelper_t;
+
+// Stack-local execution context passed through the solver tree.
+// Holds per-call mutable state so the solution tree remains read-only.
+typedef struct aoclfftz_mutable_ctx
+{
+    FFTZ_VOID *in_real;              // Input buffer real part
+    FFTZ_VOID *in_imag;              // Input buffer imag part
+    FFTZ_VOID *out_real;             // Output buffer real part
+    FFTZ_VOID *out_imag;             // Output buffer imag part
+    FFTZ_VOID *ct_buf_base;          // ct_buffer allocated by
+                                     // BUFFERED/NDIM/CTL1D solvers
+    FFTZ_VOID *bs_in_base;           // Bluestein per-call input scratch
+    FFTZ_VOID *bs_out_base;          // Bluestein per-call output scratch
+    FFTZ_VOID *sr_input_copy_base;   // Split-radix per-call input copy scratch
+    FFTZ_INTP ct_offset;             // Byte offset into the ct_buffer,
+                                     // accumulated per-thread by mt_batched
+    FFTZ_UINT32 flags;               // Plan flags (direction, precision, etc.)
+    FFTZ_INT32 bs_slot_idx;          // Slot index used by
+                                     // Bluestein/MT_Bluestein to slice
+                                     // bs_[in/out]_base
+} aoclfftz_mutable_ctx_t;
+
+// Per-handle scratch byte sizes & the immutable execution context recorded at
+// setup time. The scratch sizes are used by aoclfftz_execute_io to allocate a
+// fresh per-call scratch slab so that concurrent application threads can share
+// a single handle without trampling on each other's internal scratch.
+//
+// All sizes are in bytes. A zero value means the corresponding scratch
+// region is not needed by this plan.
+typedef struct aoclfftz_immutable_metadata
+{
+    FFTZ_UINTP bs_buffer_size;          // Total Bluestein pool size, summed
+                                        // over all Bluestein nodes
+    FFTZ_UINTP sr_input_copy_size;      // Split-radix in-place input copy
+    FFTZ_UINTP ct_buffer_total_size;    // CT scratch pool size for the owners
+                                        // -> NDIM, BUFFERED, CTL1D
+    aoclfftz_mutable_ctx_t base_ctx;    // execution context built at setup time
+    FFTZ_INT32 setup_buffers_acquired;  // 0 = setup-time buffers free; whoever
+                                        // grabs them flips to 1, so others
+                                        // allocate their own scratch
+} aoclfftz_immutable_metadata_t;
 
 // Computational cost analysis of solution of an executed problem/sub-problem
 typedef struct cost_analysis
@@ -207,13 +267,17 @@ typedef struct thread_info
     FFTZ_INT32 active_threads;      // number of threads active at this node (product of the
                                     // threads spawned by each MT_BATCHED level above it)
     FFTZ_INT32 n_threads;           // Number of threads assigned to a particular solver
+    FFTZ_INT32 ndim_concurrency;    // Number of innermost NDIM instances
+                                    // running concurrently in this subtree
 } thread_info_t;
 
 // Solver execute template function pointer
-typedef FFTZ_INT32 (*dft_solver_)(aoclfftz_solution_t *solution);
+typedef FFTZ_INT32 (*dft_solver_)(aoclfftz_solution_t *solution,
+                                  aoclfftz_mutable_ctx_t *ctx);
 
 // Executor function pointer
-typedef FFTZ_INT32 (*execute_)(aoclfftz_executor_t *executor_obj);
+typedef FFTZ_INT32 (*execute_)(aoclfftz_executor_t *executor_obj,
+                               aoclfftz_mutable_ctx_t *ctx);
 
 // Base data structure acting as an abstract class that is derived by the
 // top-level DFT data structure and implemented by all the solvers
@@ -293,23 +357,20 @@ typedef FFTZ_VOID (*normalize_)(FFTZ_VOID *data, FFTZ_INTP n,
                                 FFTZ_DOUBLE factor);
 
 // Holds the Bluestein chirp sequence B and its FFT B_out (computed once
-// during plan setup), the internal in/out scratch buffers, and the
-// elementwise-multiply / normalize kernels selected by the selector.
+// during plan setup), and the elementwise-multiply / normalize kernels
+// selected by the selector.
 //
-// in / out are a pool of num_bs_buf contiguous slots of bs_buf_size bytes
-// so concurrent MT_BATCHED threads each get a private slot; bs_buf_allocated
-// is 1 only on the struct that owns (and frees) the pool
+// B/B_out are allocated (non-NULL) only on the owning node and are read at
+// execution time.
 typedef struct aoclfftz_bluestein
 {
     FFTZ_VOID *B;
     FFTZ_VOID *B_out;
-    FFTZ_VOID *in;
-    FFTZ_VOID *out;
     elementwise_mul_ ele_mul[NUM_FFT_DIRS];
     normalize_ normalize;
-    FFTZ_INTP bs_buf_size;         // bytes per per-thread in/out slot
-    FFTZ_INT32 num_bs_buf;         // number of per-thread slots in in/out
-    FFTZ_UINT8 bs_buf_allocated;   // 1 on the originating struct, 0 on copies
+    FFTZ_INTP bs_buf_size;       // bytes per per-thread in/out slot
+    FFTZ_INTP bs_dim_offset;     // Per-dimension byte offset into the shared
+                                 // bs_in/bs_out pool.
 } aoclfftz_bluestein_t;
 
 typedef struct aoclfftz_buffered

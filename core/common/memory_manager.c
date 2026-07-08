@@ -172,11 +172,8 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
         sol->twiddle->twiddle_buf_ptr = NULL;
         sol->dft_bufs->bluestein->B = NULL;
         sol->dft_bufs->bluestein->B_out = NULL;
-        sol->dft_bufs->bluestein->in = NULL;
-        sol->dft_bufs->bluestein->out = NULL;
         sol->dft_bufs->bluestein->bs_buf_size = 0;
-        sol->dft_bufs->bluestein->num_bs_buf = 0;
-        sol->dft_bufs->bluestein->bs_buf_allocated = 0;
+        sol->dft_bufs->bluestein->bs_dim_offset = 0;
         sol->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR]  = NULL;
         sol->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] = NULL;
         sol->dft_bufs->bluestein->normalize = NULL;
@@ -185,6 +182,7 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
         sol->dft_bufs->buffered->is_aux_buffer_allocated = 0;
         sol->dft_bufs->buffered->aux_buf_size_per_thread = 0;
         sol->dft_bufs->buffered->out_ptr = NULL;
+        sol->decomp_scheme->thread_info->ndim_concurrency = 0;
         sol->dft_bufs->transpose->row_info = (aoclfftz_dim_t_64_){0};
         sol->dft_bufs->transpose->col_info = (aoclfftz_dim_t_64_){0};
         sol->dft_bufs->transpose->aux_mem->size = 0;
@@ -285,6 +283,7 @@ aoclfftz_selector_t *alloc_selector(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank,
     if (selector)
     {
         selector->kernel_tables = NULL;
+        selector->exec_metadata = NULL;
 
         selector->solution = alloc_solution(vec_rank, dim_rank);
         ALLOC_ALIGN_UNINIT(selector->cost_analysis, cost_analysis_t,
@@ -328,28 +327,17 @@ aoclfftz_selector_t *alloc_selector(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank,
 }
 
 /**
- * Allocates the 64-byte aligned Bluestein working buffers: shared chirp
- * buffers B/B_out, plus in/out scratch split into num_bs_buf per-thread slots
- * of bs_buf_size bytes. Frees any partial allocation on failure.
+ * Allocates the 64-byte aligned shared Bluestein chirp buffers B/B_out
+ * (bs_buf_size bytes each). Frees any partial allocation on failure.
  *
  * @return AOCLFFTZ_SUCCESS on success, or AOCLFFTZ_MEMORY_FAILURE if any
  *         allocation fails.
  */
 FFTZ_INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein,
-                              FFTZ_INTP bs_buf_size, FFTZ_INT32 num_bs_buf)
+                                   FFTZ_INTP bs_buf_size)
 {
-    // A non-MT plan still consumes one slot, so clamp to at least one.
-    if (num_bs_buf < 1)
-    {
-        num_bs_buf = 1;
-    }
-
-    FFTZ_INTP pool_size = bs_buf_size * (FFTZ_INTP)num_bs_buf;
-
     bluestein->B = NULL;
     bluestein->B_out = NULL;
-    bluestein->in = NULL;
-    bluestein->out = NULL;
 
     ALLOC_ALIGN_UNINIT(bluestein->B, FFTZ_VOID, bs_buf_size);
     if (bluestein->B == NULL)
@@ -363,26 +351,10 @@ FFTZ_INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein,
         goto exit_alloc_bluestein_buffers;
     }
 
-    ALLOC_ALIGN_UNINIT(bluestein->in, FFTZ_VOID, pool_size);
-    if (bluestein->in == NULL)
-    {
-        goto exit_alloc_bluestein_buffers;
-    }
-
-    ALLOC_ALIGN_UNINIT(bluestein->out, FFTZ_VOID, pool_size);
-    if (bluestein->out == NULL)
-    {
-        goto exit_alloc_bluestein_buffers;
-    }
-
     bluestein->bs_buf_size = bs_buf_size;
-    bluestein->num_bs_buf = num_bs_buf;
-    bluestein->bs_buf_allocated = 1;
     return AOCLFFTZ_SUCCESS;
 
 exit_alloc_bluestein_buffers:
-    FREE_ALIGN_ALLOCATED_MEM(bluestein->out);
-    FREE_ALIGN_ALLOCATED_MEM(bluestein->in);
     FREE_ALIGN_ALLOCATED_MEM(bluestein->B_out);
     FREE_ALIGN_ALLOCATED_MEM(bluestein->B);
     return AOCLFFTZ_MEMORY_FAILURE;
@@ -452,7 +424,6 @@ FFTZ_INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution,
                        get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return AOCLFFTZ_MEMORY_FAILURE;
     }
-
     solution->dft_bufs->ct_buf_size = buffer_size;
     solution->dft_bufs->ct_buf_real = *buffer_ptr;
     solution->dft_bufs->ct_buf_imag = MOVE_ADDR(*buffer_ptr, dt_bytes);
@@ -487,16 +458,12 @@ FFTZ_VOID destroy_transpose(aoclfftz_transpose_t* transpose)
 
 FFTZ_VOID destroy_bluestein(aoclfftz_bluestein_t* bluestein)
 {
-    // Only the originating struct owns B / B_out / in / out (bs_buf_allocated
-    // is set by alloc_bluestein_buffers). Deep-copied solutions and the inner
-    // FFT(M) next_sol alias these pointers, so they must not free them.
-    if (bluestein != NULL && bluestein->bs_buf_allocated)
+    // Only the owning node has non-NULL B/B_out (next_sol is copied
+    // before allocation, so its pointers stay NULL)
+    if (bluestein != NULL)
     {
         FREE_ALIGN_ALLOCATED_MEM(bluestein->B);
         FREE_ALIGN_ALLOCATED_MEM(bluestein->B_out);
-        FREE_ALIGN_ALLOCATED_MEM(bluestein->in);
-        FREE_ALIGN_ALLOCATED_MEM(bluestein->out);
-        bluestein->bs_buf_allocated = 0;
     }
 }
 
@@ -517,9 +484,9 @@ FFTZ_VOID destroy_solution(aoclfftz_solution_t* sol)
     if (sol != NULL)
     {
         FFTZ_INT32 solver_type = sol->solver->solver_type;
-        FFTZ_INT32 n_sols = sol->decomp_scheme->thread_info->n_threads;
-        n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
-                  (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
+        FFTZ_INT32 n_sols = (solver_type == SOLVER_REAL_MT_BATCHED)
+                             ? sol->decomp_scheme->thread_info->n_threads
+                             : 1;
         destroy_decomp_scheme(sol->decomp_scheme);
         destroy_strides_grp(sol->strides_grp);
 
@@ -583,11 +550,9 @@ FFTZ_VOID destroy_solutions(aoclfftz_solution_t **sol, FFTZ_INT32 n)
             if (cur_sol != NULL)
             {
                 FFTZ_INT32 solver_type = cur_sol->solver->solver_type;
-                FFTZ_INT32 n_sols =
-                    cur_sol->decomp_scheme->thread_info->n_threads;
-                // All other solvers (CT, SR, BLUESTEIN, NDIM, etc.) use next_sol[0] only
-                n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
-                          (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
+                FFTZ_INT32 n_sols = (solver_type == SOLVER_REAL_MT_BATCHED)
+                                ? cur_sol->decomp_scheme->thread_info->n_threads
+                                : 1;
 
                 destroy_solutions(cur_sol->next_sol, n_sols);
                 destroy_decomp_scheme(cur_sol->decomp_scheme);
@@ -630,7 +595,16 @@ FFTZ_VOID destroy_solutions(aoclfftz_solution_t **sol, FFTZ_INT32 n)
                     FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_2);
                     cur_sol->dft_bufs->buffered->aux_buffer_2 = NULL;
                 }
-                destroy_solution(cur_sol->dft_bufs->nd_sol);
+                // Free nd_sol exactly once. SOLVER_NDIM allocates a single
+                // solution with no deep copies. SOLVER_REAL_NDIM creates clones
+                // that all share clone 0's nd_sol (complex_dims_sol),
+                // so only the owner (i == 0) frees it.
+                if ((solver_type == SOLVER_NDIM) ||
+                   ((solver_type == SOLVER_REAL_NDIM) && (i == 0)))
+                {
+                    destroy_solution(cur_sol->dft_bufs->nd_sol);
+                    cur_sol->dft_bufs->nd_sol = NULL;
+                }
                 destroy_solution(cur_sol->dft_bufs->sr->odd1_sol);
                 destroy_solution(cur_sol->dft_bufs->sr->odd3_sol);
 
@@ -650,6 +624,12 @@ FFTZ_VOID destroy_selector_without_solution(aoclfftz_selector_t *sel)
     {
         FREE_ALIGN_ALLOCATED_MEM(sel->cost_analysis);
         FREE_ALIGN_ALLOCATED_MEM(sel->kernel_tables);
+        if (sel->exec_metadata != NULL)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(sel->exec_metadata->base_ctx.bs_in_base);
+            FREE_ALIGN_ALLOCATED_MEM(sel->exec_metadata->base_ctx.bs_out_base);
+        }
+        FREE_ALIGN_ALLOCATED_MEM(sel->exec_metadata);
         FREE_ALIGN_ALLOCATED_MEM(sel);
     }
     return;

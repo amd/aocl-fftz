@@ -69,6 +69,12 @@ FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         goto exit_nd_dft;
     }
 
+    // Propagate the (N-1)D complex child's ct_buf_size up so a parent MT_BATCHED
+    // can stride ct_offset by it (tid * ct_buf_size) and give each concurrent
+    // NDIM complex child its own non-overlapping ct pool slice.
+    sel->solution->dft_bufs->ct_buf_size =
+        complex_dims_sol->solution->dft_bufs->ct_buf_size;
+
     // Setup twiddle factors for the complex dimensions sub-problem
     setup_twiddle_buffer_complex(complex_dims_sol->solution);
 

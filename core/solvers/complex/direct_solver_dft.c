@@ -89,17 +89,17 @@ FFTZ_INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     return status;
 }
 
-static FFTZ_INT32 execute_direct_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_direct_solver(aoclfftz_solution_t *sol,
+                                        aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(ctx->flags);
 
     kfft_ kfft = sol->solver->kernel_c2c->kfft[direction];
-    kfft(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
-         sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
+    kfft(ctx->in_real, ctx->in_imag, ctx->out_real, ctx->out_imag,
          sol->decomp_scheme->vecs[0].n, strides, sol->twiddle, direction);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
@@ -122,22 +122,22 @@ static FFTZ_INT32 execute_direct_solver(aoclfftz_solution_t *sol)
  * executing all problem batches (batched_vecs) for each CT batch. This access
  * pattern is optimal when problem batch stride < elemental stride.
  */
-static FFTZ_INT32
-execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_direct_batched_colmajor_solver(
+                                                    aoclfftz_solution_t *sol,
+                                                    aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(ctx->flags);
     kfft_ kernel = sol->solver->kernel_c2c->kfft[direction];
 
-    FFTZ_VOID *in_real = sol->decomp_scheme->in_real;
-    FFTZ_VOID *in_imag = sol->decomp_scheme->in_imag;
-    FFTZ_VOID *out_real = sol->decomp_scheme->out_real;
-    FFTZ_VOID *out_imag = sol->decomp_scheme->out_imag;
-
-    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(ctx);
+    FFTZ_VOID *in_real  = ctx->in_real;
+    FFTZ_VOID *in_imag  = ctx->in_imag;
+    FFTZ_VOID *out_real = ctx->out_real;
+    FFTZ_VOID *out_imag = ctx->out_imag;
 
     // vec-strides across DFT butterflies of the same CT problem
     FFTZ_INTP ct_in_stride =
