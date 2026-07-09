@@ -15,8 +15,33 @@
  */
 
 #include <math.h>
-#include <string.h> /* for memset */
+#include <string.h> /* for memset, memcpy */
 #include "core/common/bluestein_utils.h"
+#include "core/kernels/kernel.h"
+
+VOID bluestein_copy_data(VOID *src, VOID *dst, INTP n, INTP src_stride,
+                         INTP dst_stride, UINT8 dt_prec, UINT32 dt_bytes)
+{
+    if (src_stride > 1 || dst_stride > 1)
+    {
+        INTP scaled_src_stride = src_stride * DATA_STRIDE;
+        INTP scaled_dst_stride = dst_stride * DATA_STRIDE;
+        if (dt_prec == DT_FLOAT)
+        {
+            permuted_copy_c_fp32(src, dst, 1, n, scaled_src_stride,
+                                 scaled_dst_stride, 1, 1);
+        }
+        else
+        {
+            permuted_copy_c_fp64(src, dst, 1, n, scaled_src_stride,
+                                 scaled_dst_stride, 1, 1);
+        }
+    }
+    else
+    {
+        memcpy(dst, src, n * DATA_STRIDE * dt_bytes);
+    }
+}
 
 /**
  * Supported prime factors for efficient FFT computation.

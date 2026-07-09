@@ -48,6 +48,7 @@ typedef enum
     SOLVER_MT_DIRECT_BATCHED_COLMAJOR,
     SOLVER_MT_DIRECT_BATCHED_ROWMAJOR,
     SOLVER_MT_BATCHED,
+    SOLVER_MT_BLUESTEIN,
     SOLVER_REAL_DIRECT,
     SOLVER_REAL_DIRECT_TWIDDLE,
     SOLVER_REAL_CT,
@@ -81,6 +82,8 @@ INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
 INT32 setup_batched_solver(aoclfftz_solution_t *sol);
 INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
                              aoclfftz_solution_t *next_sol, INTP m);
+INT32 compute_chirp_fft(aoclfftz_solution_t *sol,
+                        aoclfftz_solution_t *next_sol);
 INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
                         aoclfftz_solution_t *n_minus1_sol,
                         aoclfftz_solution_t *outer_dim_sol);
@@ -94,6 +97,8 @@ INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                              kernel_t *kernel);
 INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol,
                               INT32 num_threads_used);
+INT32 setup_mt_bluestein_solver(aoclfftz_solution_t *sol,
+                                aoclfftz_solution_t *next_sol, INTP m);
 #endif
 
 // RealFFT-Solvers
@@ -143,6 +148,7 @@ dft_solver_ register_execute_mt_direct_solver(VOID);
 dft_solver_ register_execute_mt_direct_batched_rowmajor_solver(VOID);
 dft_solver_ register_execute_mt_direct_batched_colmajor_solver(VOID);
 dft_solver_ register_execute_mt_batched_solver(VOID);
+dft_solver_ register_execute_mt_bluestein_solver(VOID);
 #endif
 
 dft_solver_ register_execute_real_direct_solver(VOID);

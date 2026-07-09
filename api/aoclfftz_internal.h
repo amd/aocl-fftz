@@ -283,20 +283,24 @@ typedef VOID (*elementwise_mul_)(VOID *out, VOID *a, VOID *b, INTP n);
 // applied uniformly to real and imaginary parts)
 typedef VOID (*normalize_)(VOID *data, INTP n, DOUBLE factor);
 
-// Holds bluestein sequence B used by the bluestein solver
-// When FFT is computed for B, it will be stored in B_out and
-// is_chirp_fft_computed will be set to 1.
-// Also holds the internal input and output buffers, and the elementwise
-// multiplication and normalization kernels selected by the selector.
+// Holds the Bluestein chirp sequence B and its FFT B_out (computed once
+// during plan setup), the internal in/out scratch buffers, and the
+// elementwise-multiply / normalize kernels selected by the selector.
+//
+// in / out are a pool of num_bs_buf contiguous slots of bs_buf_size bytes
+// so concurrent MT_BATCHED threads each get a private slot; bs_buf_allocated
+// is 1 only on the struct that owns (and frees) the pool
 typedef struct aoclfftz_bluestein
 {
     VOID *B;
     VOID *B_out;
     VOID *in;
     VOID *out;
-    UINT8 is_chirp_fft_computed;
     elementwise_mul_ ele_mul[NUM_FFT_DIRS];
     normalize_ normalize;
+    INTP bs_buf_size;         // bytes per per-thread in/out slot
+    INT32 num_bs_buf;         // number of per-thread slots in in/out
+    UINT8 bs_buf_allocated;   // 1 on the originating struct, 0 on copies
 } aoclfftz_bluestein_t;
 
 typedef struct aoclfftz_buffered

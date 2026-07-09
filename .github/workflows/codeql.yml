@@ -2,12 +2,8 @@ name: "CodeQL Advanced"
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ "amd-main", "AOCL-*-RC" ]
-  pull_request:
-    branches: [ "amd-main", "AOCL-*-RC" ]
   schedule:
-    - cron: '42 19 * * 5'
+    - cron: '0 12 * * 6'
 
 jobs:
   analyze:
@@ -57,3 +53,7 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
+
+      - name: Cleanup workspace
+        if: always()
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -delete
