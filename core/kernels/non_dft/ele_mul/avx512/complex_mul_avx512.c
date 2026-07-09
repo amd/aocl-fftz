@@ -17,15 +17,16 @@
 #include "core/kernels/kernel.h"
 #include "core/kernels/simd_includes/simd_common_avx512.h"
 
-static VOID complex_mul_fp32_avx512_fwd(VOID *out, VOID *a, VOID *b, INTP n)
+static FFTZ_VOID complex_mul_fp32_avx512_fwd(FFTZ_VOID *out, FFTZ_VOID *a,
+                                             FFTZ_VOID *b, FFTZ_INTP n)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    FLOAT *ptr_out = (FLOAT *)out;
-    const FLOAT *ptr_a = (const FLOAT *)a;
-    const FLOAT *ptr_b = (const FLOAT *)b;
-    INTP N = n / NUM_SETS_512_S;
-    INTP remaining_sets = n % NUM_SETS_512_S;
-    INTP count;
+    FFTZ_FLOAT *ptr_out = (FFTZ_FLOAT *)out;
+    const FFTZ_FLOAT *ptr_a = (const FFTZ_FLOAT *)a;
+    const FFTZ_FLOAT *ptr_b = (const FFTZ_FLOAT *)b;
+    FFTZ_INTP N = n / NUM_SETS_512_S;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_512_S;
+    FFTZ_INTP count;
 
     for (count = 0; count < N; count++)
     {
@@ -97,25 +98,26 @@ static VOID complex_mul_fp32_avx512_fwd(VOID *out, VOID *a, VOID *b, INTP n)
     // tail cases
     if (remaining_sets & NUM_SETS_C_S)
     {
-        FLOAT a_re = ptr_a[0];
-        FLOAT a_im = ptr_a[1];
-        FLOAT b_re = ptr_b[0];
-        FLOAT b_im = -ptr_b[1];
+        FFTZ_FLOAT a_re = ptr_a[0];
+        FFTZ_FLOAT a_im = ptr_a[1];
+        FFTZ_FLOAT b_re = ptr_b[0];
+        FFTZ_FLOAT b_im = -ptr_b[1];
 
         ptr_out[0] = (a_re * b_re) - (a_im * b_im);
         ptr_out[1] = (a_re * b_im) + (a_im * b_re);
     }
 }
 
-static VOID complex_mul_fp32_avx512_bwd(VOID *out, VOID *a, VOID *b, INTP n)
+static FFTZ_VOID complex_mul_fp32_avx512_bwd(FFTZ_VOID *out, FFTZ_VOID *a,
+                                             FFTZ_VOID *b, FFTZ_INTP n)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    FLOAT *ptr_out = (FLOAT *)out;
-    const FLOAT *ptr_a = (const FLOAT *)a;
-    const FLOAT *ptr_b = (const FLOAT *)b;
-    INTP N = n / NUM_SETS_512_S;
-    INTP remaining_sets = n % NUM_SETS_512_S;
-    INTP count;
+    FFTZ_FLOAT *ptr_out = (FFTZ_FLOAT *)out;
+    const FFTZ_FLOAT *ptr_a = (const FFTZ_FLOAT *)a;
+    const FFTZ_FLOAT *ptr_b = (const FFTZ_FLOAT *)b;
+    FFTZ_INTP N = n / NUM_SETS_512_S;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_512_S;
+    FFTZ_INTP count;
 
     for (count = 0; count < N; count++)
     {
@@ -181,25 +183,26 @@ static VOID complex_mul_fp32_avx512_bwd(VOID *out, VOID *a, VOID *b, INTP n)
     // tail cases
     if (remaining_sets & NUM_SETS_C_S)
     {
-        FLOAT a_re = ptr_a[0];
-        FLOAT a_im = ptr_a[1];
-        FLOAT b_re = ptr_b[0];
-        FLOAT b_im = ptr_b[1];
+        FFTZ_FLOAT a_re = ptr_a[0];
+        FFTZ_FLOAT a_im = ptr_a[1];
+        FFTZ_FLOAT b_re = ptr_b[0];
+        FFTZ_FLOAT b_im = ptr_b[1];
 
         ptr_out[0] = (a_re * b_re) - (a_im * b_im);
         ptr_out[1] = (a_re * b_im) + (a_im * b_re);
     }
 }
 
-static VOID complex_mul_fp64_avx512_fwd(VOID *out, VOID *a, VOID *b, INTP n)
+static FFTZ_VOID complex_mul_fp64_avx512_fwd(FFTZ_VOID *out, FFTZ_VOID *a,
+                                             FFTZ_VOID *b, FFTZ_INTP n)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    DOUBLE *ptr_out = (DOUBLE *)out;
-    const DOUBLE *ptr_a = (const DOUBLE *)a;
-    const DOUBLE *ptr_b = (const DOUBLE *)b;
-    INTP N = n / NUM_SETS_512_D;
-    INTP remaining_sets = n % NUM_SETS_512_D;
-    INTP count;
+    FFTZ_DOUBLE *ptr_out = (FFTZ_DOUBLE *)out;
+    const FFTZ_DOUBLE *ptr_a = (const FFTZ_DOUBLE *)a;
+    const FFTZ_DOUBLE *ptr_b = (const FFTZ_DOUBLE *)b;
+    FFTZ_INTP N = n / NUM_SETS_512_D;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_512_D;
+    FFTZ_INTP count;
 
     for (count = 0; count < N; count++)
     {
@@ -248,25 +251,26 @@ static VOID complex_mul_fp64_avx512_fwd(VOID *out, VOID *a, VOID *b, INTP n)
     // tail cases
     if (remaining_sets & NUM_SETS_C_D)
     {
-        DOUBLE a_re = ptr_a[0];
-        DOUBLE a_im = ptr_a[1];
-        DOUBLE b_re = ptr_b[0];
-        DOUBLE b_im = -ptr_b[1];
+        FFTZ_DOUBLE a_re = ptr_a[0];
+        FFTZ_DOUBLE a_im = ptr_a[1];
+        FFTZ_DOUBLE b_re = ptr_b[0];
+        FFTZ_DOUBLE b_im = -ptr_b[1];
 
         ptr_out[0] = (a_re * b_re) - (a_im * b_im);
         ptr_out[1] = (a_re * b_im) + (a_im * b_re);
     }
 }
 
-static VOID complex_mul_fp64_avx512_bwd(VOID *out, VOID *a, VOID *b, INTP n)
+static FFTZ_VOID complex_mul_fp64_avx512_bwd(FFTZ_VOID *out, FFTZ_VOID *a,
+                                             FFTZ_VOID *b, FFTZ_INTP n)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    DOUBLE *ptr_out = (DOUBLE *)out;
-    const DOUBLE *ptr_a = (const DOUBLE *)a;
-    const DOUBLE *ptr_b = (const DOUBLE *)b;
-    INTP N = n / NUM_SETS_512_D;
-    INTP remaining_sets = n % NUM_SETS_512_D;
-    INTP count;
+    FFTZ_DOUBLE *ptr_out = (FFTZ_DOUBLE *)out;
+    const FFTZ_DOUBLE *ptr_a = (const FFTZ_DOUBLE *)a;
+    const FFTZ_DOUBLE *ptr_b = (const FFTZ_DOUBLE *)b;
+    FFTZ_INTP N = n / NUM_SETS_512_D;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_512_D;
+    FFTZ_INTP count;
 
     for (count = 0; count < N; count++)
     {
@@ -311,18 +315,18 @@ static VOID complex_mul_fp64_avx512_bwd(VOID *out, VOID *a, VOID *b, INTP n)
     // tail cases
     if (remaining_sets & NUM_SETS_C_D)
     {
-        DOUBLE a_re = ptr_a[0];
-        DOUBLE a_im = ptr_a[1];
-        DOUBLE b_re = ptr_b[0];
-        DOUBLE b_im = ptr_b[1];
+        FFTZ_DOUBLE a_re = ptr_a[0];
+        FFTZ_DOUBLE a_im = ptr_a[1];
+        FFTZ_DOUBLE b_re = ptr_b[0];
+        FFTZ_DOUBLE b_im = ptr_b[1];
 
         ptr_out[0] = (a_re * b_re) - (a_im * b_im);
         ptr_out[1] = (a_re * b_im) + (a_im * b_re);
     }
 }
 
-elementwise_mul_ register_elementwise_mul_avx512(UINT8 precision,
-                                                 UINT8 direction)
+elementwise_mul_ register_elementwise_mul_avx512(FFTZ_UINT8 precision,
+                                                 FFTZ_UINT8 direction)
 {
     if (direction == FORWARD_FFT_DIR)
     {

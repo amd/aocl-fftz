@@ -20,28 +20,31 @@
  * - For other dims:    (ni - 1) * stride_i
  * Strides are chosen based on FFT direction (forward or backward).
  */
-UINTP calculate_max_buffer_size(aoclfftz_solution_t *sol)
+FFTZ_UINTP calculate_max_buffer_size(aoclfftz_solution_t *sol)
 {
-    UINTP max_size = 1;
+    FFTZ_UINTP max_size = 1;
 
     // Compute max buffer size for ND real FFT using half-complex for first dim
     // Uses output stride for forward, input stride for backward
-    UINT8 is_forward = (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR);
-    INTP dim0_size = sol->decomp_scheme->dims[0].n / 2 + 1;
-    INTP dim0_stride = is_forward ? sol->decomp_scheme->dims[0].out_stride
+    FFTZ_UINT8 is_forward =
+        (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR);
+    FFTZ_INTP dim0_size = sol->decomp_scheme->dims[0].n / 2 + 1;
+    FFTZ_INTP dim0_stride = is_forward ? sol->decomp_scheme->dims[0].out_stride
                                   : sol->decomp_scheme->dims[0].in_stride;
     max_size += ((dim0_size - 1) * dim0_stride);
-    for (INT32 i = 1; i < sol->decomp_scheme->dim_rank; i++)
+    for (FFTZ_INT32 i = 1; i < sol->decomp_scheme->dim_rank; i++)
     {
-        INTP dimi_size = sol->decomp_scheme->dims[i].n;
-        INTP dimi_stride = is_forward ? sol->decomp_scheme->dims[i].out_stride
-                                      : sol->decomp_scheme->dims[i].in_stride;
+        FFTZ_INTP dimi_size = sol->decomp_scheme->dims[i].n;
+        FFTZ_INTP dimi_stride =
+            is_forward ? sol->decomp_scheme->dims[i].out_stride
+                       : sol->decomp_scheme->dims[i].in_stride;
         max_size += ((dimi_size - 1) * dimi_stride);
     }
     return max_size;
 }
 
-aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank)
+aoclfftz_decomp_scheme_t *alloc_decomp_scheme(FFTZ_INT32 vec_rank,
+                                              FFTZ_INT32 dim_rank)
 {
     aoclfftz_decomp_scheme_t *decomp_scheme = NULL;
 
@@ -77,10 +80,10 @@ aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank)
     }
 }
 
-aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
+aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
 {
     aoclfftz_solution_t *sol = NULL;
-    UINT32 alloc_bytes = sizeof(aoclfftz_solution_t) +
+    FFTZ_UINT32 alloc_bytes = sizeof(aoclfftz_solution_t) +
         sizeof(aoclfftz_generic_solver_t) +
         sizeof(kernel_info_t) +
         sizeof(kernel_info_t) +
@@ -107,11 +110,11 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
     ALLOC_ALIGN_UNINIT(sol, aoclfftz_solution_t, alloc_bytes);
     if (sol)
     {
-        sol->solver = (aoclfftz_generic_solver_t*)((UINT8*)sol + sizeof(aoclfftz_solution_t));
-        sol->solver->kernel_c2c = (kernel_info_t*)((UINT8*)sol->solver + sizeof(aoclfftz_generic_solver_t));
-        sol->solver->kernel_c2c_r = (kernel_info_t*)((UINT8*)sol->solver->kernel_c2c + sizeof(kernel_info_t));
-        sol->solver->kernel_r2hc = (kernel_info_t*)((UINT8*)sol->solver->kernel_c2c_r + sizeof(kernel_info_t));
-        sol->solver->kernel_r2hcf = (kernel_info_t*)((UINT8*)sol->solver->kernel_r2hc + sizeof(kernel_info_t));
+        sol->solver = (aoclfftz_generic_solver_t*)((FFTZ_UINT8*)sol + sizeof(aoclfftz_solution_t));
+        sol->solver->kernel_c2c = (kernel_info_t*)((FFTZ_UINT8*)sol->solver + sizeof(aoclfftz_generic_solver_t));
+        sol->solver->kernel_c2c_r = (kernel_info_t*)((FFTZ_UINT8*)sol->solver->kernel_c2c + sizeof(kernel_info_t));
+        sol->solver->kernel_r2hc = (kernel_info_t*)((FFTZ_UINT8*)sol->solver->kernel_c2c_r + sizeof(kernel_info_t));
+        sol->solver->kernel_r2hcf = (kernel_info_t*)((FFTZ_UINT8*)sol->solver->kernel_r2hc + sizeof(kernel_info_t));
 
         sol->solver->solver_type = SOLVER_NULL;
         sol->solver->execute_solver = NULL;
@@ -129,21 +132,21 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->solver->kernel_r2hcf->sets = 1;
         sol->solver->destroy_solver = NULL;
 
-        sol->decomp_scheme = (aoclfftz_decomp_scheme_t*)((UINT8*)sol->solver->kernel_r2hcf + sizeof(kernel_info_t));
-        sol->strides_grp = (aoclfftz_strides_grp_t*)((UINT8*)sol->decomp_scheme + sizeof(aoclfftz_decomp_scheme_t));
-        sol->strides_grp->strides = (aoclfftz_strides_t*)((UINT8*)sol->strides_grp + sizeof(aoclfftz_strides_grp_t));
-        sol->strides_grp->strides_c2c = (aoclfftz_strides_t*)((UINT8*)sol->strides_grp->strides + sizeof(aoclfftz_strides_t));
-        sol->strides_grp->strides_r2hc = (aoclfftz_strides_t*)((UINT8*)sol->strides_grp->strides_c2c + sizeof(aoclfftz_strides_t));
-        sol->strides_grp->strides_r2hcf = (aoclfftz_strides_t*)((UINT8*)sol->strides_grp->strides_r2hc + sizeof(aoclfftz_strides_t));
+        sol->decomp_scheme = (aoclfftz_decomp_scheme_t*)((FFTZ_UINT8*)sol->solver->kernel_r2hcf + sizeof(kernel_info_t));
+        sol->strides_grp = (aoclfftz_strides_grp_t*)((FFTZ_UINT8*)sol->decomp_scheme + sizeof(aoclfftz_decomp_scheme_t));
+        sol->strides_grp->strides = (aoclfftz_strides_t*)((FFTZ_UINT8*)sol->strides_grp + sizeof(aoclfftz_strides_grp_t));
+        sol->strides_grp->strides_c2c = (aoclfftz_strides_t*)((FFTZ_UINT8*)sol->strides_grp->strides + sizeof(aoclfftz_strides_t));
+        sol->strides_grp->strides_r2hc = (aoclfftz_strides_t*)((FFTZ_UINT8*)sol->strides_grp->strides_c2c + sizeof(aoclfftz_strides_t));
+        sol->strides_grp->strides_r2hcf = (aoclfftz_strides_t*)((FFTZ_UINT8*)sol->strides_grp->strides_r2hc + sizeof(aoclfftz_strides_t));
 
-        sol->dft_bufs = (aoclfftz_dft_bufs_t*)((UINT8*)sol->strides_grp->strides_r2hcf + sizeof(aoclfftz_strides_t));
-        sol->dft_bufs->bluestein = (aoclfftz_bluestein_t*)((UINT8*)sol->dft_bufs + sizeof(aoclfftz_dft_bufs_t));
-        sol->dft_bufs->buffered = (aoclfftz_buffered_t*)((UINT8*)sol->dft_bufs->bluestein + sizeof(aoclfftz_bluestein_t));
-        sol->dft_bufs->sr = (aoclfftz_sr_t*)((UINT8*)sol->dft_bufs->buffered + sizeof(aoclfftz_buffered_t));
-        sol->dft_bufs->transpose = (aoclfftz_transpose_t*)((UINT8*)sol->dft_bufs->sr + sizeof(aoclfftz_sr_t));
-        sol->dft_bufs->transpose->aux_mem = (aoclfftz_transpose_aux_mem_t*)((UINT8*)sol->dft_bufs->transpose + sizeof(aoclfftz_transpose_t));
+        sol->dft_bufs = (aoclfftz_dft_bufs_t*)((FFTZ_UINT8*)sol->strides_grp->strides_r2hcf + sizeof(aoclfftz_strides_t));
+        sol->dft_bufs->bluestein = (aoclfftz_bluestein_t*)((FFTZ_UINT8*)sol->dft_bufs + sizeof(aoclfftz_dft_bufs_t));
+        sol->dft_bufs->buffered = (aoclfftz_buffered_t*)((FFTZ_UINT8*)sol->dft_bufs->bluestein + sizeof(aoclfftz_bluestein_t));
+        sol->dft_bufs->sr = (aoclfftz_sr_t*)((FFTZ_UINT8*)sol->dft_bufs->buffered + sizeof(aoclfftz_buffered_t));
+        sol->dft_bufs->transpose = (aoclfftz_transpose_t*)((FFTZ_UINT8*)sol->dft_bufs->sr + sizeof(aoclfftz_sr_t));
+        sol->dft_bufs->transpose->aux_mem = (aoclfftz_transpose_aux_mem_t*)((FFTZ_UINT8*)sol->dft_bufs->transpose + sizeof(aoclfftz_transpose_t));
 
-        sol->twiddle = (aoclfftz_twiddle_t*)((UINT8*)sol->dft_bufs->transpose->aux_mem + sizeof(aoclfftz_transpose_aux_mem_t));
+        sol->twiddle = (aoclfftz_twiddle_t*)((FFTZ_UINT8*)sol->dft_bufs->transpose->aux_mem + sizeof(aoclfftz_transpose_aux_mem_t));
 
         /* Initialize SR struct fields */
         sol->dft_bufs->sr->odd1_sol = NULL;
@@ -244,18 +247,20 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
 
 // Allocates memory for the input and output stride arrays within the
 // provided strides structure if they are not already allocated.
-INT32 alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix)
+FFTZ_INT32 alloc_stride_arrays(aoclfftz_strides_t *strides, FFTZ_INTP radix)
 {
     if (strides->in_strides == NULL)
     {
-        ALLOC_ALIGN_UNINIT(strides->in_strides, INTP, radix * sizeof(INTP));
+        ALLOC_ALIGN_UNINIT(strides->in_strides, FFTZ_INTP,
+                           radix * sizeof(FFTZ_INTP));
         if (strides->in_strides == NULL)
         {
             AOCLFFTZ_ERROR("alloc_stride_arrays (in_strides) failed: %s",
                            get_status_string(AOCLFFTZ_MEMORY_FAILURE));
             return AOCLFFTZ_MEMORY_FAILURE;
         }
-        ALLOC_ALIGN_UNINIT(strides->out_strides, INTP, radix * sizeof(INTP));
+        ALLOC_ALIGN_UNINIT(strides->out_strides, FFTZ_INTP,
+                           radix * sizeof(FFTZ_INTP));
         if (strides->out_strides == NULL)
         {
             FREE_ALIGN_ALLOCATED_MEM(strides->in_strides);
@@ -269,16 +274,17 @@ INT32 alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix)
 
 // Allocates (if not already allocated) and fills stride arrays with a
 // uniform element-stride pattern: strides[i] = i * stride * DATA_STRIDE.
-INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides, INTP radix,
-                                   INTP in_stride, INTP out_stride)
+FFTZ_INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides,
+                                        FFTZ_INTP radix, FFTZ_INTP in_stride,
+                                        FFTZ_INTP out_stride)
 {
-    INT32 ret = alloc_stride_arrays(strides, radix);
+    FFTZ_INT32 ret = alloc_stride_arrays(strides, radix);
     if (ret != AOCLFFTZ_SUCCESS)
     {
         return ret;
     }
 
-    for (INTP i = 0; i < radix; i++)
+    for (FFTZ_INTP i = 0; i < radix; i++)
     {
         strides->in_strides[i]  = i * in_stride * DATA_STRIDE;
         strides->out_strides[i] = i * out_stride * DATA_STRIDE;
@@ -287,7 +293,7 @@ INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides, INTP radix,
 }
 
 // Allocate n placeholders for next solution
-aoclfftz_solution_t **alloc_sol_array(INT32 n)
+aoclfftz_solution_t **alloc_sol_array(FFTZ_INT32 n)
 {
     aoclfftz_solution_t **sol = NULL;
     if (n > 0)
@@ -300,7 +306,7 @@ aoclfftz_solution_t **alloc_sol_array(INT32 n)
                            get_status_string(AOCLFFTZ_MEMORY_FAILURE));
             return NULL;
         }
-        for (INT32 i = 0; i < n; i++)
+        for (FFTZ_INT32 i = 0; i < n; i++)
         {
             sol[i] = NULL;
         }
@@ -308,7 +314,7 @@ aoclfftz_solution_t **alloc_sol_array(INT32 n)
     return sol;
 }
 
-aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
+aoclfftz_selector_t *alloc_selector(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank,
                                     kernel_tables_t *kernel_tables)
 {
     aoclfftz_selector_t *selector = NULL;
@@ -368,8 +374,8 @@ aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
  * @return AOCLFFTZ_SUCCESS on success, or AOCLFFTZ_MEMORY_FAILURE if any
  *         allocation fails.
  */
-INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein,
-                              INTP bs_buf_size, INT32 num_bs_buf)
+FFTZ_INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein,
+                              FFTZ_INTP bs_buf_size, FFTZ_INT32 num_bs_buf)
 {
     // A non-MT plan still consumes one slot, so clamp to at least one.
     if (num_bs_buf < 1)
@@ -377,32 +383,32 @@ INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein,
         num_bs_buf = 1;
     }
 
-    INTP pool_size = bs_buf_size * (INTP)num_bs_buf;
+    FFTZ_INTP pool_size = bs_buf_size * (FFTZ_INTP)num_bs_buf;
 
     bluestein->B = NULL;
     bluestein->B_out = NULL;
     bluestein->in = NULL;
     bluestein->out = NULL;
 
-    ALLOC_ALIGN_UNINIT(bluestein->B, VOID, bs_buf_size);
+    ALLOC_ALIGN_UNINIT(bluestein->B, FFTZ_VOID, bs_buf_size);
     if (bluestein->B == NULL)
     {
         goto exit_alloc_bluestein_buffers;
     }
 
-    ALLOC_ALIGN_UNINIT(bluestein->B_out, VOID, bs_buf_size);
+    ALLOC_ALIGN_UNINIT(bluestein->B_out, FFTZ_VOID, bs_buf_size);
     if (bluestein->B_out == NULL)
     {
         goto exit_alloc_bluestein_buffers;
     }
 
-    ALLOC_ALIGN_UNINIT(bluestein->in, VOID, pool_size);
+    ALLOC_ALIGN_UNINIT(bluestein->in, FFTZ_VOID, pool_size);
     if (bluestein->in == NULL)
     {
         goto exit_alloc_bluestein_buffers;
     }
 
-    ALLOC_ALIGN_UNINIT(bluestein->out, VOID, pool_size);
+    ALLOC_ALIGN_UNINIT(bluestein->out, FFTZ_VOID, pool_size);
     if (bluestein->out == NULL)
     {
         goto exit_alloc_bluestein_buffers;
@@ -421,11 +427,11 @@ exit_alloc_bluestein_buffers:
     return AOCLFFTZ_MEMORY_FAILURE;
 }
 
-VOID *alloc_twiddle_buffer(UINTP size, UINT32 dt_prec)
+FFTZ_VOID *alloc_twiddle_buffer(FFTZ_UINTP size, FFTZ_UINT32 dt_prec)
 {
-    UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
-    VOID *buffer = NULL;
-    ALLOC_ALIGN_UNINIT(buffer, VOID, DATA_STRIDE * size * dt_bytes);
+    FFTZ_UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
+    FFTZ_VOID *buffer = NULL;
+    ALLOC_ALIGN_UNINIT(buffer, FFTZ_VOID, DATA_STRIDE * size * dt_bytes);
     return buffer;
 }
 
@@ -433,7 +439,8 @@ VOID *alloc_twiddle_buffer(UINTP size, UINT32 dt_prec)
  * Allocates ct_buffer for complex NDIM (see ndim_solver_dft.c).
  * Uses num_ct_buf if set by parent (e.g. REAL_NDIM); otherwise one slot.
  */
-INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
+FFTZ_INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution,
+                             FFTZ_VOID **buffer_ptr)
 {
     AOCLFFTZ_LOG(INFO, global_logger_mode,
                  "Allocating ct_buffer for complex NDIM");
@@ -446,20 +453,20 @@ INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
     // this can be optimized by :
     //      1. making the buffer unit strided even if input is strided
 
-    INT32 dim_rank = solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 dim_rank = solution->decomp_scheme->dim_rank;
     aoclfftz_dim_t_64_ *dims = solution->decomp_scheme->dims;
 
-    UINTP buffer_length = 1;
-    UINTP buffer_size = 0;
+    FFTZ_UINTP buffer_length = 1;
+    FFTZ_UINTP buffer_size = 0;
 
-    UINT32 dt_bytes = SOL_DT_SIZE(solution);
+    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(solution);
 
     // Approach: if the problem is ND where N>2, then create ct_buffer of (N-1)D
     // by removing the smallest dim for. e.g. problem size of 30x40x50 ->
     // ct_buffer of 40x50 for multi-threaded problems, this 2D buffer will be
     // created per thread.
-    INTP min_dim_size = dims[0].n;
-    for (INT32 i = 0; i < dim_rank; i++)
+    FFTZ_INTP min_dim_size = dims[0].n;
+    for (FFTZ_INT32 i = 0; i < dim_rank; i++)
     {
         buffer_length += ((dims[i].n - 1) * (dims[i].out_stride));
         if (dims[i].n < min_dim_size)
@@ -467,13 +474,13 @@ INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
             min_dim_size = dims[i].n;
         }
     }
-    INT32 n_threads = solution->decomp_scheme->thread_info->avl_threads;
+    FFTZ_INT32 n_threads = solution->decomp_scheme->thread_info->avl_threads;
     if (solution->decomp_scheme->dim_rank > 2)
     {
         buffer_length = buffer_length / min_dim_size;
     }
     buffer_size = GET_PADDED_SIZE(buffer_length * DATA_STRIDE * dt_bytes);
-    ALLOC_ALIGN_UNINIT(*buffer_ptr, VOID,
+    ALLOC_ALIGN_UNINIT(*buffer_ptr, FFTZ_VOID,
             buffer_size * solution->dft_bufs->num_ct_buf * n_threads);
     if (*buffer_ptr == NULL)
     {
@@ -489,7 +496,7 @@ INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
     return AOCLFFTZ_SUCCESS;
 }
 
-VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme)
+FFTZ_VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
     if (decomp_scheme != NULL)
     {
@@ -503,7 +510,7 @@ VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme)
     return;
 }
 
-VOID destroy_transpose(aoclfftz_transpose_t* transpose)
+FFTZ_VOID destroy_transpose(aoclfftz_transpose_t* transpose)
 {
     if (transpose)
     {
@@ -514,7 +521,7 @@ VOID destroy_transpose(aoclfftz_transpose_t* transpose)
     }
 }
 
-VOID destroy_bluestein(aoclfftz_bluestein_t* bluestein)
+FFTZ_VOID destroy_bluestein(aoclfftz_bluestein_t* bluestein)
 {
     // Only the originating struct owns B / B_out / in / out (bs_buf_allocated
     // is set by alloc_bluestein_buffers). Deep-copied solutions and the inner
@@ -529,7 +536,7 @@ VOID destroy_bluestein(aoclfftz_bluestein_t* bluestein)
     }
 }
 
-VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp)
+FFTZ_VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp)
 {
     FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides->in_strides);
     FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides->out_strides);
@@ -541,12 +548,12 @@ VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp)
     FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hcf->out_strides);
 }
 
-VOID destroy_solution(aoclfftz_solution_t* sol)
+FFTZ_VOID destroy_solution(aoclfftz_solution_t* sol)
 {
     if (sol != NULL)
     {
-        INT32 solver_type = sol->solver->solver_type;
-        INT32 n_sols = sol->decomp_scheme->thread_info->n_threads;
+        FFTZ_INT32 solver_type = sol->solver->solver_type;
+        FFTZ_INT32 n_sols = sol->decomp_scheme->thread_info->n_threads;
         n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
                   (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
         destroy_decomp_scheme(sol->decomp_scheme);
@@ -602,17 +609,18 @@ VOID destroy_solution(aoclfftz_solution_t* sol)
     return;
 }
 
-VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
+FFTZ_VOID destroy_solutions(aoclfftz_solution_t **sol, FFTZ_INT32 n)
 {
     if (sol != NULL)
     {
-        for (INT32 i = 0; i < n; i++)
+        for (FFTZ_INT32 i = 0; i < n; i++)
         {
             aoclfftz_solution_t *cur_sol = sol[i];
             if (cur_sol != NULL)
             {
-                INT32 solver_type = cur_sol->solver->solver_type;
-                INT32 n_sols = cur_sol->decomp_scheme->thread_info->n_threads;
+                FFTZ_INT32 solver_type = cur_sol->solver->solver_type;
+                FFTZ_INT32 n_sols =
+                    cur_sol->decomp_scheme->thread_info->n_threads;
                 // All other solvers (CT, SR, BLUESTEIN, NDIM, etc.) use next_sol[0] only
                 n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
                           (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
@@ -672,7 +680,7 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
 //       selectors, and since temporary selectors are expected to be allocated
 //       using `alloc_selector_without_scratch_space`, this function does not
 //       free the scratch space.
-VOID destroy_selector_without_solution(aoclfftz_selector_t *sel)
+FFTZ_VOID destroy_selector_without_solution(aoclfftz_selector_t *sel)
 {
     if (sel != NULL)
     {
@@ -683,7 +691,7 @@ VOID destroy_selector_without_solution(aoclfftz_selector_t *sel)
     return;
 }
 
-VOID destroy_selector(aoclfftz_selector_t *sel)
+FFTZ_VOID destroy_selector(aoclfftz_selector_t *sel)
 {
     if (sel != NULL)
     {

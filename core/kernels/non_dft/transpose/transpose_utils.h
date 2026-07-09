@@ -28,7 +28,7 @@
     (((i) * (row_stride)) + ((j) * (column_stride)))
 
 #define TRANSPOSE_KERNEL_ARGS                                                  \
-    VOID *in_ptr, VOID *out_ptr, aoclfftz_dim_t_64_ row_metadata,              \
+    FFTZ_VOID *in_ptr, FFTZ_VOID *out_ptr, aoclfftz_dim_t_64_ row_metadata, \
     aoclfftz_dim_t_64_ column_metadata, aoclfftz_transpose_aux_mem_t *aux_mem
 
 // Assume that all the elements of the matrix are given numbers. such that
@@ -75,7 +75,7 @@
 #define TRANSPOSE_LAST_ROWCOL(TYPE, matrix, cols, leading_dim, i, j,           \
                               in_top_right)                                    \
     {                                                                          \
-        for (INTP it = 0; it < cols - 1; it++)                                 \
+        for (FFTZ_INTP it = 0; it < cols - 1; it++) \
         {                                                                      \
             TYPE temp = matrix[LINEAR_IDX_2D(i + it, j + cols - 1,             \
                                              UNIT_STRIDE, leading_dim)];       \
@@ -88,7 +88,7 @@
         }                                                                      \
         if (in_top_right)                                                      \
         {                                                                      \
-            for (INTP it = 0; it <= cols - 1; it++)                            \
+            for (FFTZ_INTP it = 0; it <= cols - 1; it++) \
             {                                                                  \
                 TYPE temp = matrix[LINEAR_IDX_2D(i + cols - 1, j + it,         \
                                                  UNIT_STRIDE, leading_dim)];   \

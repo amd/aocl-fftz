@@ -16,7 +16,7 @@
 
 #include "test/bench/aoclfftz_bench.h"
 
-INT32 run_bench_on_sanity_mode(aoclfftz_bench_params_t *params);
+FFTZ_INT32 run_bench_on_sanity_mode(aoclfftz_bench_params_t *params);
 
 #endif // SANITY_H
 

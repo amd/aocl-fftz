@@ -20,8 +20,10 @@
 #define AOCLFFTZ_FIXED_SELECTOR_MODE
 //#define AOCLFFTZ_AUTO_SELECTOR_MODE
 
-typedef enum {
-    AOCLFFTZ_FIXED_SELECTOR, // Fixed decision logic + Fused Twiddle and DFT kernels
+typedef enum
+{
+    AOCLFFTZ_FIXED_SELECTOR, // Fixed decision logic + Fused Twiddle and DFT
+                             // kernels
     AOCLFFTZ_AUTO_SELECTOR,  // Auto tuner mode
     AOCLFFTZ_SELECTOR_MODELS // Total selector models
 } selector_model_t;
@@ -67,7 +69,7 @@ typedef struct aoclfftz_selector
 {                                                                              \
     sel_obj->solution->decomp_scheme->vec_rank = problem->vec_rank;            \
     sel_obj->solution->decomp_scheme->dim_rank = dim_rank;                     \
-    INT32 cnt, idx = 0;                                                        \
+    FFTZ_INT32 cnt, idx = 0; \
     for (cnt = 0; cnt < problem->dim_rank; cnt++)                              \
     {                                                                          \
         if (problem->dims[cnt].n != 1)                                         \
@@ -152,15 +154,19 @@ typedef struct aoclfftz_selector
 
 /*
  * @brief Check if the Root problem is a Direct Problem or not.
- * If a problem is not direct, it will be a multi stage with atleast one CT Problem.
+ * If a problem is not direct, it will be a multi stage with atleast one CT
+ * Problem.
  *
  * `sol` can be any solution in the hierarchy of solutions.
  *
  * NOTE:
  * Reasoning:
- * * In a generic solution plan, `TW` is `NULL` for all solutions before first CT. Hence `TW == NULL` ensures current solution isn't after a CT.
- * * `sol->next_sol == NULL` checks if the solution is the last one in the hierarchy.
- * * When both are true, it checks that we have walked the entire solution hierarchy and found no CT solution.
+ * * In a generic solution plan, `TW` is `NULL` for all solutions before first
+ * CT. Hence `TW == NULL` ensures current solution isn't after a CT.
+ * * `sol->next_sol == NULL` checks if the solution is the last one in the
+ * hierarchy.
+ * * When both are true, it checks that we have walked the entire solution
+ * hierarchy and found no CT solution.
  * * This is only possible for a Direct only porblem.
  *
  * @param sol Pointer to the solution structure.
@@ -175,7 +181,7 @@ typedef struct aoclfftz_selector
  */
 #define SWAP_BUFFERS(buf1, buf2)                                               \
 {                                                                              \
-    VOID *temp_buffer_for_swap = buf1;                                         \
+    FFTZ_VOID *temp_buffer_for_swap = buf1; \
     buf1 = buf2;                                                               \
     buf2 = temp_buffer_for_swap;                                               \
 }
@@ -197,8 +203,8 @@ typedef struct aoclfftz_selector
     }                                                                          \
     else                                                                       \
     {                                                                          \
-        INT32 dim_rank_counter = 0;                                            \
-        for (INT32 i = 0; i < dim_rank; i++)                                   \
+        FFTZ_INT32 dim_rank_counter = 0; \
+        for (FFTZ_INT32 i = 0; i < dim_rank; i++) \
         {                                                                      \
             if (dims[i].n != 1)                                                \
             {                                                                  \
@@ -210,75 +216,77 @@ typedef struct aoclfftz_selector
 }
 
 // Function declarations
-INT32 copy_decomp_scheme(
+FFTZ_INT32 copy_decomp_scheme(
     aoclfftz_decomp_scheme_t *to_ds,
     aoclfftz_decomp_scheme_t *from_ds);
-INT32 copy_solution_obj(aoclfftz_solution_t *to_sol_obj,
+FFTZ_INT32 copy_solution_obj(aoclfftz_solution_t *to_sol_obj,
                         aoclfftz_solution_t *from_sol_obj);
 // maps both in & out pointers to out pointer
 // incase of out-of-place problems, except the first DFT, other DFTs happen
 // in-place ie., in the output buffer.
-INT32 copy_solution_obj_out_p(aoclfftz_solution_t *to_sol_obj,
+FFTZ_INT32 copy_solution_obj_out_p(aoclfftz_solution_t *to_sol_obj,
                              aoclfftz_solution_t *from_sol_obj);
 // Copy strides from one solution to another
 // except for the BATCHED_CT_L1_DIRECT solver
-INT32 copy_strides(aoclfftz_solution_t *to_sol_obj,
+FFTZ_INT32 copy_strides(aoclfftz_solution_t *to_sol_obj,
                    aoclfftz_solution_t *from_sol_obj);
 // Copy strides from one solution to another for the BATCHED_CT_L1_DIRECT solver
-INT32 copy_strides_batched_ct_l1_direct(
+FFTZ_INT32 copy_strides_batched_ct_l1_direct(
     aoclfftz_solution_t *to_sol_obj,
     aoclfftz_solution_t *from_sol_obj);
 // copy all contents except dims & vecs
 // necessary in ND setup where dim_rank & vec_rank will differ for the
 // sub-problem
-VOID copy_solution_obj_wo_dims(aoclfftz_solution_t *to_sol_obj,
+FFTZ_VOID copy_solution_obj_wo_dims(aoclfftz_solution_t *to_sol_obj,
                                aoclfftz_solution_t *from_sol_obj);
-VOID swap_real_ct_solutions(aoclfftz_selector_t *sel);
-INT32 register_solvers_kernels(kernel_tables_t *kernel_tables, INT32 dt,
-                               INT32 dir, INT32 is_real, INT32 cpu_flags);
-INT32 selector_driver_dft_(aoclfftz_selector_t *sel);
-INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
+FFTZ_VOID swap_real_ct_solutions(aoclfftz_selector_t *sel);
+FFTZ_INT32 register_solvers_kernels(kernel_tables_t *kernel_tables,
+                                    FFTZ_INT32 dt, FFTZ_INT32 dir,
+                                    FFTZ_INT32 is_real, FFTZ_INT32 cpu_flags);
+FFTZ_INT32 selector_driver_dft_(aoclfftz_selector_t *sel);
+FFTZ_INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
                             aoclfftz_realhelper_t *realhelper);
-INT32 selector_model_dft_(aoclfftz_selector_t *sel);
-INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
+FFTZ_INT32 selector_model_dft_(aoclfftz_selector_t *sel);
+FFTZ_INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
                            aoclfftz_realhelper_t *realhelper);
-VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *sol);
-VOID setup_twiddle_buffer_real(aoclfftz_solution_t *sol);
-VOID *setup_dft_f(aoclfftz_prob_desc_f *problem);
-VOID *setup_dft_d(aoclfftz_prob_desc_d *problem);
-VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem);
-VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem);
-INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_permuted_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel);
-INT32 selector_sizeone_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_transpose(aoclfftz_selector_t *sel);
-INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *sol);
+FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *sol);
+FFTZ_VOID *setup_dft_f(aoclfftz_prob_desc_f *problem);
+FFTZ_VOID *setup_dft_d(aoclfftz_prob_desc_d *problem);
+FFTZ_VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem);
+FFTZ_VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem);
+FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_permuted_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel);
+FFTZ_INT32 selector_sizeone_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_transpose(aoclfftz_selector_t *sel);
+FFTZ_INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 
-INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                            aoclfftz_realhelper_t *realhelper);
-INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                              aoclfftz_realhelper_t *realhelper);
-INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                              aoclfftz_realhelper_t *realhelper);
-INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                        aoclfftz_realhelper_t *realhelper);
-INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                          aoclfftz_realhelper_t *realhelper);
-VOID destroy_handle(VOID *handle);
-VOID fuse_vecs(aoclfftz_solution_t *sol, INT32 is_FFT_ker_supported);
-INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);
-INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table,
-                               INT32 is_innermost_dim);
-DOUBLE get_kernel_weightage(INTP radix, kernel_t *kertab,
+FFTZ_VOID destroy_handle(FFTZ_VOID *handle);
+FFTZ_VOID fuse_vecs(aoclfftz_solution_t *sol, FFTZ_INT32 is_FFT_ker_supported);
+FFTZ_INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);
+FFTZ_INT32 check_FFT_kernel_support(FFTZ_INTP n, kernel_t *kernels_table,
+                               FFTZ_INT32 is_innermost_dim);
+FFTZ_DOUBLE get_kernel_weightage(FFTZ_INTP radix, kernel_t *kertab,
                             aoclfftz_solution_t *sol);
-UINT8 should_use_colmajor_batched_solver(aoclfftz_solution_t *solution,
-                                         kernel_t *kertab, INT32 avl_threads);
-UINT8 check_col_major(aoclfftz_decomp_scheme_t *decomp_scheme);
+FFTZ_UINT8 should_use_colmajor_batched_solver(aoclfftz_solution_t *solution,
+                                              kernel_t *kertab,
+                                              FFTZ_INT32 avl_threads);
+FFTZ_UINT8 check_col_major(aoclfftz_decomp_scheme_t *decomp_scheme);
 
 #endif // AOCLFFTZ_SELECTOR_H

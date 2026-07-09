@@ -23,19 +23,19 @@
  #include <cpuid.h>
 #endif
 
-cpuid_result_t cpuid(UINT32 leaf, UINT32 subleaf)
+cpuid_result_t cpuid(FFTZ_UINT32 leaf, FFTZ_UINT32 subleaf)
 {
     cpuid_result_t r;
 
 #if defined(_WINDOWS)
-    INT32 regs[4];
-    __cpuidex(regs, (INT32)leaf, (INT32)subleaf);
-    r.eax = (UINT32)regs[0];
-    r.ebx = (UINT32)regs[1];
-    r.ecx = (UINT32)regs[2];
-    r.edx = (UINT32)regs[3];
+    FFTZ_INT32 regs[4];
+    __cpuidex(regs, (FFTZ_INT32)leaf, (FFTZ_INT32)subleaf);
+    r.eax = (FFTZ_UINT32)regs[0];
+    r.ebx = (FFTZ_UINT32)regs[1];
+    r.ecx = (FFTZ_UINT32)regs[2];
+    r.edx = (FFTZ_UINT32)regs[3];
 #else
-    UINT32 eax, ebx, ecx, edx;
+    FFTZ_UINT32 eax, ebx, ecx, edx;
     __asm__ __volatile__("cpuid"
                          : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
                          : "a"(leaf), "c"(subleaf));
@@ -47,7 +47,7 @@ cpuid_result_t cpuid(UINT32 leaf, UINT32 subleaf)
     return r;
 }
 
-VOID initialize_cpuid_cache(UINT32 *max_cpuid_leaf,
+FFTZ_VOID initialize_cpuid_cache(FFTZ_UINT32 *max_cpuid_leaf,
                             cpuid_result_t *cpuid_leaf1,
                             cpuid_result_t *cpuid_leaf7)
 {
@@ -77,20 +77,20 @@ VOID initialize_cpuid_cache(UINT32 *max_cpuid_leaf,
 
 // XGETBV helpers
 
-UINT64 get_xcr0(VOID)
+FFTZ_UINT64 get_xcr0(FFTZ_VOID)
 {
 #if defined(_WINDOWS)
     return _xgetbv(0);
 #else
-    UINT32 eax, edx;
+    FFTZ_UINT32 eax, edx;
     __asm__ __volatile__(".byte 0x0f, 0x01, 0xd0"
                          : "=a"(eax), "=d"(edx)
                          : "c"(0));
-    return ((UINT64)edx << 32) | (UINT64)eax;
+    return ((FFTZ_UINT64)edx << 32) | (FFTZ_UINT64)eax;
 #endif
 }
 
-INT32 is_xgetbv_supported(cpuid_result_t cpuid_leaf1)
+FFTZ_INT32 is_xgetbv_supported(cpuid_result_t cpuid_leaf1)
 {
     // CPUID.(EAX=1):ECX.OSXSAVE[bit 27]
     return (cpuid_leaf1.ecx & (1u << 27)) != 0;
@@ -100,13 +100,13 @@ INT32 is_xgetbv_supported(cpuid_result_t cpuid_leaf1)
 /* CPU Feature Detection                                                     */
 /* ------------------------------------------------------------------------- */
 
-INT32 has_avx(cpuid_result_t cpuid_leaf1)
+FFTZ_INT32 has_avx(cpuid_result_t cpuid_leaf1)
 {
     // CPUID.(EAX=1):ECX.AVX[bit 28]
     return (cpuid_leaf1.ecx & (1u << 28)) != 0;
 }
 
-INT32 has_avx2(UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
+FFTZ_INT32 has_avx2(FFTZ_UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
 {
     if (max_cpuid_leaf < 7u)
     {
@@ -116,7 +116,7 @@ INT32 has_avx2(UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
     return (cpuid_leaf7.ebx & (1u << 5)) != 0;
 }
 
-INT32 has_avx512f(UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
+FFTZ_INT32 has_avx512f(FFTZ_UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
 {
     if (max_cpuid_leaf < 7u)
     {
@@ -126,7 +126,7 @@ INT32 has_avx512f(UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
     return (cpuid_leaf7.ebx & (1u << 16)) != 0;
 }
 
-INT32 has_avx512dq(UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
+FFTZ_INT32 has_avx512dq(FFTZ_UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
 {
     if (max_cpuid_leaf < 7u)
     {
@@ -136,7 +136,7 @@ INT32 has_avx512dq(UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
     return (cpuid_leaf7.ebx & (1u << 17)) != 0;
 }
 
-INT32 has_avx512cd(UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
+FFTZ_INT32 has_avx512cd(FFTZ_UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
 {
     if (max_cpuid_leaf < 7u)
     {
@@ -146,7 +146,7 @@ INT32 has_avx512cd(UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
     return (cpuid_leaf7.ebx & (1u << 28)) != 0;
 }
 
-INT32 has_avx512bw(UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
+FFTZ_INT32 has_avx512bw(FFTZ_UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
 {
     if (max_cpuid_leaf < 7u)
     {
@@ -156,7 +156,7 @@ INT32 has_avx512bw(UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
     return (cpuid_leaf7.ebx & (1u << 30)) != 0;
 }
 
-INT32 has_avx512vl(UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
+FFTZ_INT32 has_avx512vl(FFTZ_UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
 {
     if (max_cpuid_leaf < 7u)
     {
@@ -166,7 +166,7 @@ INT32 has_avx512vl(UINT32 max_cpuid_leaf, cpuid_result_t cpuid_leaf7)
     return (cpuid_leaf7.ebx & (1u << 31)) != 0;
 }
 
-INT32 has_fma(cpuid_result_t cpuid_leaf1)
+FFTZ_INT32 has_fma(cpuid_result_t cpuid_leaf1)
 {
     // CPUID.(EAX=1):ECX.FMA[bit 12]
     return (cpuid_leaf1.ecx & (1u << 12)) != 0;
@@ -176,7 +176,7 @@ INT32 has_fma(cpuid_result_t cpuid_leaf1)
 /* OS support checks                                                         */
 /* ------------------------------------------------------------------------- */
 
-INT32 has_avx_support(cpuid_result_t cpuid_leaf1)
+FFTZ_INT32 has_avx_support(cpuid_result_t cpuid_leaf1)
 {
     if (!is_xgetbv_supported(cpuid_leaf1))
     {
@@ -184,13 +184,13 @@ INT32 has_avx_support(cpuid_result_t cpuid_leaf1)
     }
 
     // Check XCR0 bits: bit 1: XMM state; bit 2: YMM state
-    UINT64 xcr0 = get_xcr0();
-    const UINT64 mask = (1uLL << 1) | (1uLL << 2);
+    FFTZ_UINT64 xcr0 = get_xcr0();
+    const FFTZ_UINT64 mask = (1uLL << 1) | (1uLL << 2);
 
     return (xcr0 & mask) == mask;
 }
 
-INT32 has_avx512_support(cpuid_result_t cpuid_leaf1)
+FFTZ_INT32 has_avx512_support(cpuid_result_t cpuid_leaf1)
 {
     if (!is_xgetbv_supported(cpuid_leaf1))
     {
@@ -204,8 +204,8 @@ INT32 has_avx512_support(cpuid_result_t cpuid_leaf1)
      * - ZMM_Hi256 (bit 6)
      * - Hi16_ZMM (bit 7)
      */
-    UINT64 xcr0 = get_xcr0();
-    const UINT64 mask = (1uLL << 1) | (1uLL << 2) |
+    FFTZ_UINT64 xcr0 = get_xcr0();
+    const FFTZ_UINT64 mask = (1uLL << 1) | (1uLL << 2) |
                         (1uLL << 5) | (1uLL << 6) | (1uLL << 7);
 
     return (xcr0 & mask) == mask;

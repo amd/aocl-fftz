@@ -59,10 +59,10 @@
  *      q       : square transpose
  *      r       : rectangular transpose
  * -----------------------------------------------------------------------------
- *      FLOAT                   : FLOAT values
- *      DOUBLE                  : DOUBLE values
- *      aoclfftz_complex_f_t    : Complex(FLOAT) values
- *      aoclfftz_complex_d_t    : Complex(DOUBLE) values
+ *      FFTZ_FLOAT                   : FFTZ_FLOAT values
+ *      FFTZ_DOUBLE                  : FFTZ_DOUBLE values
+ *      aoclfftz_complex_f_t    : Complex(FFTZ_FLOAT) values
+ *      aoclfftz_complex_d_t    : Complex(FFTZ_DOUBLE) values
  * -----------------------------------------------------------------------------
  *      c       : portable C code
  *      avx128  : avx128 intrinsic code
@@ -71,13 +71,13 @@
  * -----------------------------------------------------------------------------
  */
 
-#define TRANSPOSE_DT FLOAT
+#define TRANSPOSE_DT FFTZ_FLOAT
 #include "core/kernels/non_dft/transpose/c/transpose_square_inplace_generic.h"
 #include "core/kernels/non_dft/transpose/c/transpose_rectangle_inplace_generic.h"
 #include "core/kernels/non_dft/transpose/c/transpose_outofplace_generic.h"
 #undef TRANSPOSE_DT
 
-#define TRANSPOSE_DT DOUBLE
+#define TRANSPOSE_DT FFTZ_DOUBLE
 #include "core/kernels/non_dft/transpose/c/transpose_square_inplace_generic.h"
 #include "core/kernels/non_dft/transpose/c/transpose_rectangle_inplace_generic.h"
 #include "core/kernels/non_dft/transpose/c/transpose_outofplace_generic.h"

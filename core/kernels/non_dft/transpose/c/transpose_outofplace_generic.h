@@ -17,8 +17,8 @@
 // the required function declarations for the different supported datatypes
 
 // TRANSPOSE_DT is expected to be one of the following:
-//      FLOAT
-//      DOUBLE
+//      FFTZ_FLOAT
+//      FFTZ_DOUBLE
 //      aoclfftz_complex_f_t
 //      aoclfftz_complex_d_t
 #ifndef TRANSPOSE_DT
@@ -47,10 +47,10 @@
 //      q       : square transpose
 //      r       : rectangular transpose
 // -----------------------------------------------------------------------------
-//      FLOAT                   : FLOAT values
-//      DOUBLE                  : DOUBLE values
-//      aoclfftz_complex_f_t    : Complex(FLOAT) values
-//      aoclfftz_complex_d_t    : Complex(DOUBLE) values
+//      FFTZ_FLOAT                   : FFTZ_FLOAT values
+//      FFTZ_DOUBLE                  : FFTZ_DOUBLE values
+//      aoclfftz_complex_f_t    : Complex(FFTZ_FLOAT) values
+//      aoclfftz_complex_d_t    : Complex(FFTZ_DOUBLE) values
 // -----------------------------------------------------------------------------
 //      c       : portable C code
 //      avx128  : avx128 intrinsic code
@@ -60,8 +60,8 @@
 
 // All transpose kernels must take the same args given by TRANSPOSE_KERNEL_ARGS.
 // TRANSPOSE_KERNEL_ARGS expands to the following:
-//     VOID *in_ptr,
-//     VOID *out_ptr,
+//     FFTZ_VOID *in_ptr,
+//     FFTZ_VOID *out_ptr,
 //     aoclfftz_dim_t_64_ row_metadata,
 //     aoclfftz_dim_t_64_ column_metadata,
 //     aoclfftz_transpose_aux_mem_t *aux_mem
@@ -70,24 +70,24 @@
 // Declarations
 
 // iterative transpose for arbitrarily strided matrices
-VOID FUNC(tos_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
+FFTZ_VOID FUNC(tos_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
 
 // block based iterative transpose for
-VOID FUNC(tos_blocked, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
+FFTZ_VOID FUNC(tos_blocked, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
 
 #else
 // implementations
 
-VOID FUNC(tos_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
+FFTZ_VOID FUNC(tos_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
     TRANSPOSE_DT *in = (TRANSPOSE_DT *)in_ptr;
     TRANSPOSE_DT *out = (TRANSPOSE_DT *)out_ptr;
 
-    for (INTP i = 0; i < row_metadata.n; ++i)
+    for (FFTZ_INTP i = 0; i < row_metadata.n; ++i)
     {
-        for (INTP j = 0; j < column_metadata.n; ++j)
+        for (FFTZ_INTP j = 0; j < column_metadata.n; ++j)
         {
             out[LINEAR_IDX_2D(j, i, column_metadata.out_stride,
                               row_metadata.out_stride)] =
@@ -99,25 +99,25 @@ VOID FUNC(tos_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-VOID FUNC(tos_blocked, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
+FFTZ_VOID FUNC(tos_blocked, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
     TRANSPOSE_DT *in = (TRANSPOSE_DT *)in_ptr;
     TRANSPOSE_DT *out = (TRANSPOSE_DT *)out_ptr;
 
-    for (INTP col_block = 0; col_block < column_metadata.n;
+    for (FFTZ_INTP col_block = 0; col_block < column_metadata.n;
          col_block += CONCAT(BLOCK_DIM_, TRANSPOSE_DT))
     {
-        for (INTP row_block = 0; row_block < row_metadata.n;
+        for (FFTZ_INTP row_block = 0; row_block < row_metadata.n;
              row_block += CONCAT(BLOCK_DIM_, TRANSPOSE_DT))
         {
-            for (INTP i = row_block;
+            for (FFTZ_INTP i = row_block;
                  (i < row_block + CONCAT(BLOCK_DIM_, TRANSPOSE_DT)) &&
                  (i < row_metadata.n);
                  i++)
             {
-                for (INTP j = col_block;
+                for (FFTZ_INTP j = col_block;
                      (j < col_block + CONCAT(BLOCK_DIM_, TRANSPOSE_DT)) &&
                      (j < column_metadata.n);
                      j++)

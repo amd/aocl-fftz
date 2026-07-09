@@ -22,7 +22,7 @@
 #include "validate_problem.h"
 
 // Setup function for float LP64 based Single-threaded and multi-threaded FFT
-VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem)
+FFTZ_VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem)
 {
     SET_PROBLEM_LOGGER_MODE(problem);
     VALIDATE_PROBLEM_DESCRIPTOR(problem);
@@ -31,7 +31,7 @@ VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem)
 }
 
 // Setup function for double LP64 based Single-threaded and multi-threaded FFT
-VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem)
+FFTZ_VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem)
 {
     SET_PROBLEM_LOGGER_MODE(problem);
     VALIDATE_PROBLEM_DESCRIPTOR(problem);
@@ -40,7 +40,7 @@ VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem)
 }
 
 // Setup function for float ILP64 based Single-threaded and multi-threaded FFT
-VOID *aoclfftz_setup_f_64_(aoclfftz_prob_desc_f_64_ *problem)
+FFTZ_VOID *aoclfftz_setup_f_64_(aoclfftz_prob_desc_f_64_ *problem)
 {
     SET_PROBLEM_LOGGER_MODE(problem);
     VALIDATE_PROBLEM_DESCRIPTOR(problem);
@@ -50,7 +50,7 @@ VOID *aoclfftz_setup_f_64_(aoclfftz_prob_desc_f_64_ *problem)
 
 // Setup function for double ILP64 based Single-threaded and
 // multi-threaded FFT
-VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem)
+FFTZ_VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem)
 {
     SET_PROBLEM_LOGGER_MODE(problem);
     VALIDATE_PROBLEM_DESCRIPTOR(problem);
@@ -59,7 +59,7 @@ VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem)
 }
 
 // Execute function for Single-threaded and multi-threaded FFT
-aoclfftz_error_type aoclfftz_execute(VOID *handle)
+aoclfftz_error_type aoclfftz_execute(FFTZ_VOID *handle)
 {
     if (handle == NULL)
     {
@@ -71,7 +71,8 @@ aoclfftz_error_type aoclfftz_execute(VOID *handle)
 
 // Execute function for Single-threaded and multi-threaded FFT on different
 // input, output buffers using the same solution from the handle
-aoclfftz_error_type aoclfftz_execute_io(VOID *handle, VOID *in, VOID *out)
+aoclfftz_error_type aoclfftz_execute_io(FFTZ_VOID *handle, FFTZ_VOID *in,
+                                        FFTZ_VOID *out)
 {
     if ((handle == NULL) | (in == NULL) | (out == NULL))
     {
@@ -80,18 +81,17 @@ aoclfftz_error_type aoclfftz_execute_io(VOID *handle, VOID *in, VOID *out)
     // manipulate the in/out ptr in the structure based on direction
     aoclfftz_executor_t *executor_obj = (aoclfftz_executor_t *)handle;
     aoclfftz_solution_t *sol = executor_obj->solution;
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
     sol->decomp_scheme->in_real = in;
     sol->decomp_scheme->in_imag = MOVE_ADDR(in, dt_bytes);
     sol->decomp_scheme->out_real = out;
     sol->decomp_scheme->out_imag = MOVE_ADDR(out, dt_bytes);
 
-
-    // For 1D out-of-place problems, ct_buffer is NULL and ct_buf_real/imag point to
-    // user's output buffer. We must update these pointers to new buffers.
-    // For multi-dim or in-place problems, ct_buffer is internally allocated,
-    // so ct_buf_real/imag should NOT be changed.
+    // For 1D out-of-place problems, ct_buffer is NULL and ct_buf_real/imag
+    // point to user's output buffer. We must update these pointers to new
+    // buffers. For multi-dim or in-place problems, ct_buffer is internally
+    // allocated, so ct_buf_real/imag should NOT be changed.
     if (sol->dft_bufs != NULL && sol->dft_bufs->ct_buffer == NULL)
     {
         sol->dft_bufs->ct_buf_real = sol->decomp_scheme->out_real;
@@ -102,14 +102,14 @@ aoclfftz_error_type aoclfftz_execute_io(VOID *handle, VOID *in, VOID *out)
 }
 
 // Destroy function for Single-threaded and multi-threaded FFT
-VOID aoclfftz_destroy(VOID *handle)
+FFTZ_VOID aoclfftz_destroy(FFTZ_VOID *handle)
 {
     destroy_handle(handle);
     return;
 }
 
 // Function to return aocl-fftz library version string
-const CHAR *aoclfftz_version(VOID)
+const FFTZ_CHAR *aoclfftz_version(FFTZ_VOID)
 {
     return (AOCLFFTZ_LIBRARY_VERSION " " AOCL_BUILD_VERSION);
 }

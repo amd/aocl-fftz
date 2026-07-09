@@ -14,13 +14,13 @@
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
 
-INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
+FFTZ_INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
                         aoclfftz_solution_t *n_minus1_sol,
                         aoclfftz_solution_t *outer_dim_sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    INT32 ret = alloc_ndim_buffer(sol, &sol->dft_bufs->ct_buffer);
+    FFTZ_INT32 ret = alloc_ndim_buffer(sol, &sol->dft_bufs->ct_buffer);
     if (ret != SOLVER_SUCCESS)
     {
         AOCLFFTZ_ERROR("alloc_ndim_buffer failed: %s", get_status_string(ret));
@@ -28,7 +28,7 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     }
 
     copy_solution_obj_wo_dims(n_minus1_sol, sol);
-    INT32 dim_rank = sol->decomp_scheme->dim_rank;
+    FFTZ_INT32 dim_rank = sol->decomp_scheme->dim_rank;
 
     // NOTE: since "innermost" or "not-innermost" apply only to the leaf nodes
     // of the ND problem, we don't need to set the flags for the n-1 dimension.
@@ -36,7 +36,7 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     // setup ND - 1 solution
     n_minus1_sol->decomp_scheme->dim_rank = dim_rank - 1;
 
-    for (INT32 i = 0; i < dim_rank - 1; i++)
+    for (FFTZ_INT32 i = 0; i < dim_rank - 1; i++)
     {
         n_minus1_sol->decomp_scheme->dims[i].n = sol->decomp_scheme->dims[i].n;
         n_minus1_sol->decomp_scheme->dims[i].in_stride =
@@ -69,7 +69,7 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
 
     outer_dim_sol->decomp_scheme->vec_rank = dim_rank - 1;
 
-    for (INT32 i = 0; i < dim_rank - 1; i++)
+    for (FFTZ_INT32 i = 0; i < dim_rank - 1; i++)
     {
         outer_dim_sol->decomp_scheme->vecs[i].n =
                 sol->decomp_scheme->dims[i].n;
@@ -91,7 +91,7 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
-static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -132,7 +132,7 @@ static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
-dft_solver_ register_execute_ndim_solver(VOID)
+dft_solver_ register_execute_ndim_solver(FFTZ_VOID)
 {
     return execute_ndim_solver;
 }

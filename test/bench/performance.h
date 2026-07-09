@@ -22,20 +22,20 @@
 // Structures for test bench
 typedef struct perf_stats
 {
-    DOUBLE min_time;
-    DOUBLE avg_time;
-    DOUBLE avg_mflops;
-    DOUBLE max_mflops;
+    FFTZ_DOUBLE min_time;
+    FFTZ_DOUBLE avg_time;
+    FFTZ_DOUBLE avg_mflops;
+    FFTZ_DOUBLE max_mflops;
 } perf_stats_t;
 
 
-INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params);
-INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
-                                      VOID *handle, perf_stats_t *stats);
-INT32 calibrate_iterations(VOID *handle, DOUBLE min_bench_time,
+FFTZ_INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params);
+FFTZ_INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
+                                      FFTZ_VOID *handle, perf_stats_t *stats);
+FFTZ_INT32 calibrate_iterations(FFTZ_VOID *handle, FFTZ_DOUBLE min_bench_time,
                             aoclfftz_bench_params_t *params);
-VOID bench_sleep(INT64 nano_seconds);
-VOID print_perf_stats(perf_stats_t *stats);
-VOID calculate_and_print_scaling(perf_stats_t single, perf_stats_t multi);
+FFTZ_VOID bench_sleep(FFTZ_INT64 nano_seconds);
+FFTZ_VOID print_perf_stats(perf_stats_t *stats);
+FFTZ_VOID calculate_and_print_scaling(perf_stats_t single, perf_stats_t multi);
 
 #endif // PERFORMANCE_H

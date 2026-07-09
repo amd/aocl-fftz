@@ -3,7 +3,8 @@
 
 /** @file direct_solver_rdft_utils.c
  *
- *  @brief Direct Solver helper functions required for the setup of direct solver
+ *  @brief Direct Solver helper functions required for the setup of direct
+ * solver
  *
  *  @author Partiksha
  */
@@ -25,18 +26,18 @@
  * @param sol [in, out] The solution object containing problem details,
  *            including the output buffer to be modified.
  */
-VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t *sol)
+FFTZ_VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t *sol)
 {
-    UINTP transform_len = sol->decomp_scheme->dims[0].n;
-    UINTP num_batches = sol->decomp_scheme->vecs[0].n;
-    UINTP out_stride = sol->decomp_scheme->dims[0].out_stride;
-    UINTP v_out_stride = sol->decomp_scheme->vecs[0].out_stride * 2;
-    UINTP nyquist_im_offset =
+    FFTZ_UINTP transform_len = sol->decomp_scheme->dims[0].n;
+    FFTZ_UINTP num_batches = sol->decomp_scheme->vecs[0].n;
+    FFTZ_UINTP out_stride = sol->decomp_scheme->dims[0].out_stride;
+    FFTZ_UINTP v_out_stride = sol->decomp_scheme->vecs[0].out_stride * 2;
+    FFTZ_UINTP nyquist_im_offset =
         transform_len % 2 == 0 ? transform_len * out_stride + 1 : 1;
     if (DT_PRECISION_FLAG(sol->decomp_scheme->flags) == DT_FLOAT)
     {
-        FLOAT *out = (FLOAT *)sol->decomp_scheme->out_real;
-        for (UINTP b = 0; b < num_batches; b++)
+        FFTZ_FLOAT *out = (FFTZ_FLOAT *)sol->decomp_scheme->out_real;
+        for (FFTZ_UINTP b = 0; b < num_batches; b++)
         {
             out[1] = 0.0f;
             out[nyquist_im_offset] = 0.0f;
@@ -45,8 +46,8 @@ VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t *sol)
     }
     else
     {
-        DOUBLE *out = (DOUBLE *)sol->decomp_scheme->out_real;
-        for (UINTP b = 0; b < num_batches; b++)
+        FFTZ_DOUBLE *out = (FFTZ_DOUBLE *)sol->decomp_scheme->out_real;
+        for (FFTZ_UINTP b = 0; b < num_batches; b++)
         {
             out[1] = 0.0;
             out[nyquist_im_offset] = 0.0;
@@ -67,25 +68,25 @@ VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t *sol)
  * @param sol [in, out] The solution object containing problem details,
  *            including the output buffer to be modified.
  */
-VOID set_zero_for_dc_and_nyquist(aoclfftz_solution_t *sol)
+FFTZ_VOID set_zero_for_dc_and_nyquist(aoclfftz_solution_t *sol)
 {
     // For R2C (real forward) problems, set the imaginary part of first and
     // last points in half-complex buffer to 0.
-    INTP transform_len =
+    FFTZ_INTP transform_len =
         sol->decomp_scheme->dims[0].n * sol->decomp_scheme->vecs[0].n;
-    INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
-    INTP nyquist_im_offset =
+    FFTZ_INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
+    FFTZ_INTP nyquist_im_offset =
         transform_len % 2 == 0 ? transform_len * out_stride + 1 : 1;
 
     if (DT_PRECISION_FLAG(sol->decomp_scheme->flags) == DT_FLOAT)
     {
-        FLOAT *out = (FLOAT *)sol->decomp_scheme->out_real;
+        FFTZ_FLOAT *out = (FFTZ_FLOAT *)sol->decomp_scheme->out_real;
         out[1] = 0.0f;
         out[nyquist_im_offset] = 0.0f;
     }
     else
     {
-        DOUBLE *out = (DOUBLE *)sol->decomp_scheme->out_real;
+        FFTZ_DOUBLE *out = (FFTZ_DOUBLE *)sol->decomp_scheme->out_real;
         out[1] = 0.0;
         out[nyquist_im_offset] = 0.0;
     }
@@ -93,19 +94,20 @@ VOID set_zero_for_dc_and_nyquist(aoclfftz_solution_t *sol)
 
 // Configure and sets the count values for different kernel types
 // (c2c, r2hc, r2hcf) based on the problem parameters.
-VOID set_kernel_count_in_each_group(aoclfftz_solution_t *sol,
+FFTZ_VOID set_kernel_count_in_each_group(aoclfftz_solution_t *sol,
                     aoclfftz_realhelper_t *realhelper)
 {
-    UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
-    INTP radix = sol->decomp_scheme->dims[0].n;
-    INTP batch = sol->decomp_scheme->vecs[0].n;
+    FFTZ_UINT32 is_backward =
+        FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
+    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP batch = sol->decomp_scheme->vecs[0].n;
 
-    INTP num_groups = realhelper->problem_size / realhelper->freq_factor;
+    FFTZ_INTP num_groups = realhelper->problem_size / realhelper->freq_factor;
     num_groups = is_backward ? num_groups : num_groups / radix;
-    INTP prev_freq_factor= is_backward
+    FFTZ_INTP prev_freq_factor= is_backward
                            ? realhelper->freq_factor / radix
                            : realhelper->freq_factor;
-    UINT32 is_even = prev_freq_factor% 2 == 0;
+    FFTZ_UINT32 is_even = prev_freq_factor% 2 == 0;
 
     if (realhelper->is_CT)
     {
@@ -123,22 +125,23 @@ VOID set_kernel_count_in_each_group(aoclfftz_solution_t *sol,
 }
 
 // Calculates and configures the various element strides needed for CT sizes.
-static inline VOID set_ct_base_strides(aoclfftz_solution_t *sol,
+static inline FFTZ_VOID set_ct_base_strides(aoclfftz_solution_t *sol,
             aoclfftz_realhelper_t realhelper, base_strides_t *element_strides,
             base_strides_t *vector_strides, base_strides_t *c2c_stride)
 {
-    INTP batch = sol->decomp_scheme->vecs[0].n;
-    INTP radix = sol->decomp_scheme->dims[0].n;
-    UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
-    UINT32 is_first_stage = realhelper.stage == 0;
-    UINT32 is_last_stage = realhelper.is_last_stage;
-    INTP is_input_problem_buffer = is_backward && is_first_stage;
-    INTP is_output_problem_buffer = !is_backward && is_last_stage;
+    FFTZ_INTP batch = sol->decomp_scheme->vecs[0].n;
+    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
+    FFTZ_UINT32 is_backward =
+        FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
+    FFTZ_UINT32 is_first_stage = realhelper.stage == 0;
+    FFTZ_UINT32 is_last_stage = realhelper.is_last_stage;
+    FFTZ_INTP is_input_problem_buffer = is_backward && is_first_stage;
+    FFTZ_INTP is_output_problem_buffer = !is_backward && is_last_stage;
 
-    INTP freq_factor       = is_backward
+    FFTZ_INTP freq_factor       = is_backward
                            ? realhelper.freq_factor
                            : realhelper.freq_factor * radix;
-    INTP prev_freq_factor = freq_factor / radix;
+    FFTZ_INTP prev_freq_factor = freq_factor / radix;
 
     base_strides_t  org_stride = {1, 1};
     org_stride.in_stride = sol->decomp_scheme->dims[0].in_stride;
@@ -167,11 +170,12 @@ static inline VOID set_ct_base_strides(aoclfftz_solution_t *sol,
 }
 
 // Set base strides for direct problem size
-static inline VOID set_base_strides(aoclfftz_solution_t *sol,
+static inline FFTZ_VOID set_base_strides(aoclfftz_solution_t *sol,
                                     base_strides_t *element_strides,
                                     base_strides_t *vector_strides)
 {
-    UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
+    FFTZ_UINT32 is_backward =
+        FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
     element_strides->in_stride      = sol->decomp_scheme->dims[0].in_stride;
     element_strides->out_stride     = sol->decomp_scheme->dims[0].out_stride;
     vector_strides->in_stride  = is_backward ?
@@ -183,13 +187,13 @@ static inline VOID set_base_strides(aoclfftz_solution_t *sol,
 }
 
 // Set vector strides for different kernel types (c2c, r2hc, r2hcf)
-static inline VOID set_vector_strides_for_kernels(aoclfftz_solution_t *sol,
-                                                  base_strides_t vector_strides,
-                                                  base_strides_t c2c_strides,
-                                                  UINT8 use_asymmetric_kernel)
+static inline FFTZ_VOID set_vector_strides_for_kernels(
+    aoclfftz_solution_t *sol, base_strides_t vector_strides,
+    base_strides_t c2c_strides, FFTZ_UINT8 use_asymmetric_kernel)
 {
     aoclfftz_strides_grp_t *strides_grp = sol->strides_grp;
-    UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
+    FFTZ_UINT32 is_backward =
+        FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
 
     strides_grp->strides->v_in_stride =
         strides_grp->strides->v_in_h2_stride = vector_strides.in_stride;
@@ -229,15 +233,15 @@ static inline VOID set_vector_strides_for_kernels(aoclfftz_solution_t *sol,
 }
 
 // Determine complex and half-complex flags for kernel strides
-static inline VOID set_complex_format(aoclfftz_realhelper_t realhelper,
-                                      UINT32 is_backward,
-                                      UINT32 *input_adjust_to_full_complex,
-                                      UINT32 *output_adjust_to_full_complex,
-                                      UINT32 *compute_half_complex_input,
-                                      UINT32 *compute_half_complex_output)
+static inline FFTZ_VOID
+set_complex_format(aoclfftz_realhelper_t realhelper, FFTZ_UINT32 is_backward,
+                   FFTZ_UINT32 *input_adjust_to_full_complex,
+                   FFTZ_UINT32 *output_adjust_to_full_complex,
+                   FFTZ_UINT32 *compute_half_complex_input,
+                   FFTZ_UINT32 *compute_half_complex_output)
 {
-    UINT32 is_first_stage = realhelper.stage == 0;
-    UINT32 is_last_stage = realhelper.is_last_stage;
+    FFTZ_UINT32 is_first_stage = realhelper.stage == 0;
+    FFTZ_UINT32 is_last_stage = realhelper.is_last_stage;
     if (realhelper.is_CT)
     {
         *input_adjust_to_full_complex = is_backward ? is_first_stage : 0;
@@ -256,25 +260,26 @@ static inline VOID set_complex_format(aoclfftz_realhelper_t realhelper,
 }
 
 // Configure stride arrays for R2HC kernels
-static inline INT32 setup_r2hc_stride_arrays(aoclfftz_solution_t *sol,
+static inline FFTZ_INT32 setup_r2hc_stride_arrays(aoclfftz_solution_t *sol,
                                             aoclfftz_realhelper_t realhelper,
                                             base_strides_t element_strides)
 {
-    INTP radix = sol->decomp_scheme->dims[0].n;
-    UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
+    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
+    FFTZ_UINT32 is_backward =
+        FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
 
     // 1 if the stride values needs to be adjusted to full complex format
-    UINT32 input_adjust_to_full_complex = 0;
-    UINT32 output_adjust_to_full_complex = 0;
+    FFTZ_UINT32 input_adjust_to_full_complex = 0;
+    FFTZ_UINT32 output_adjust_to_full_complex = 0;
 
     // 1 for half-complex, 0 for real & complex data
-    UINT32 compute_half_complex_input, compute_half_complex_output;
+    FFTZ_UINT32 compute_half_complex_input, compute_half_complex_output;
 
     set_complex_format(realhelper, is_backward,
                 &input_adjust_to_full_complex, &output_adjust_to_full_complex,
                 &compute_half_complex_input, &compute_half_complex_output);
 
-    INT32 ret = alloc_stride_arrays(sol->strides_grp->strides_r2hc, radix);
+    FFTZ_INT32 ret = alloc_stride_arrays(sol->strides_grp->strides_r2hc, radix);
     if (ret != SOLVER_SUCCESS)
     {
         return ret;
@@ -289,29 +294,31 @@ static inline INT32 setup_r2hc_stride_arrays(aoclfftz_solution_t *sol,
 }
 
 // Configure stride arrays for R2HCF kernels
-static inline INT32 setup_r2hcf_stride_arrays(aoclfftz_solution_t *sol,
+static inline FFTZ_INT32 setup_r2hcf_stride_arrays(aoclfftz_solution_t *sol,
                                       aoclfftz_realhelper_t realhelper,
                                       base_strides_t element_strides)
 {
-    INTP radix = sol->decomp_scheme->dims[0].n;
-    UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
+    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
+    FFTZ_UINT32 is_backward =
+        FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
 
     // number of groups and no. of c2c kernel calls per group
-    INTP num_groups = NUM_RFFT_GROUPS(sol->solver);
-    INTP num_c2c_per_group = sol->solver->kernel_c2c->count / num_groups;
+    FFTZ_INTP num_groups = NUM_RFFT_GROUPS(sol->solver);
+    FFTZ_INTP num_c2c_per_group = sol->solver->kernel_c2c->count / num_groups;
 
     // 1 if the stride values needs to be adjusted to full complex format
-    UINT32 input_adjust_to_full_complex = 0;
-    UINT32 output_adjust_to_full_complex = 0;
+    FFTZ_UINT32 input_adjust_to_full_complex = 0;
+    FFTZ_UINT32 output_adjust_to_full_complex = 0;
 
     // 1 for half-complex, 0 for real & complex data
-    UINT32 compute_half_complex_input, compute_half_complex_output;
+    FFTZ_UINT32 compute_half_complex_input, compute_half_complex_output;
 
     set_complex_format(realhelper, is_backward,
                 &input_adjust_to_full_complex, &output_adjust_to_full_complex,
                 &compute_half_complex_input, &compute_half_complex_output);
 
-    INT32 ret = alloc_stride_arrays(sol->strides_grp->strides_r2hcf, radix * 2);
+    FFTZ_INT32 ret =
+        alloc_stride_arrays(sol->strides_grp->strides_r2hcf, radix * 2);
     if (ret != SOLVER_SUCCESS)
     {
         return ret;
@@ -335,14 +342,15 @@ static inline INT32 setup_r2hcf_stride_arrays(aoclfftz_solution_t *sol,
 }
 
 // Configure stride arrays for complex-to-complex (C2C) kernels
-static inline INT32 setup_c2c_stride_arrays(aoclfftz_solution_t *sol,
+static inline FFTZ_INT32 setup_c2c_stride_arrays(aoclfftz_solution_t *sol,
                                            aoclfftz_realhelper_t realhelper,
                                            base_strides_t element_strides,
                                            base_strides_t c2c_stride)
 {
-    UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
-    INTP radix = sol->decomp_scheme->dims[0].n;
-    INTP freq_factor = is_backward
+    FFTZ_UINT32 is_backward =
+        FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
+    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP freq_factor = is_backward
                       ? realhelper.freq_factor
                       : realhelper.freq_factor * radix;
 
@@ -355,21 +363,21 @@ static inline INT32 setup_c2c_stride_arrays(aoclfftz_solution_t *sol,
                                       : element_strides.out_stride * 2,
                           radix, 0, 0); /* half-complex flags are false */
 
-    INT32 ret = alloc_stride_arrays(sol->strides_grp->strides_c2c, radix);
+    FFTZ_INT32 ret = alloc_stride_arrays(sol->strides_grp->strides_c2c, radix);
     if (ret != SOLVER_SUCCESS)
     {
         return ret;
     }
     memcpy(sol->strides_grp->strides_c2c->in_strides,
-           sol->strides_grp->strides->in_strides, radix * sizeof(INTP));
+           sol->strides_grp->strides->in_strides, radix * sizeof(FFTZ_INTP));
     memcpy(sol->strides_grp->strides_c2c->out_strides,
-           sol->strides_grp->strides->out_strides, radix * sizeof(INTP));
+           sol->strides_grp->strides->out_strides, radix * sizeof(FFTZ_INTP));
 
     // set frequency strides and call to prepare strides once
-    INTP *target_stride_array = is_backward
+    FFTZ_INTP *target_stride_array = is_backward
                               ? sol->strides_grp->strides->in_strides
                               : sol->strides_grp->strides->out_strides;
-    INTP c2c_batch_stride   = is_backward
+    FFTZ_INTP c2c_batch_stride   = is_backward
                               ? c2c_stride.in_stride
                               : c2c_stride.out_stride;
     prepare_real_c2c_kernel_strides(target_stride_array, target_stride_array,
@@ -378,13 +386,13 @@ static inline INT32 setup_c2c_stride_arrays(aoclfftz_solution_t *sol,
 }
 
 // Allocate and set up stride arrays for different kernel types
-INT32 allocate_and_setup_stride(aoclfftz_solution_t *sol,
+FFTZ_INT32 allocate_and_setup_stride(aoclfftz_solution_t *sol,
                                aoclfftz_realhelper_t realhelper)
 {
-    INTP radix = sol->decomp_scheme->dims[0].n;
-    INTP num_groups = NUM_RFFT_GROUPS(sol->solver);
-    INTP num_c2c_per_group = sol->solver->kernel_c2c->count / num_groups;
-    UINT8 use_asymmetric_kernel = num_c2c_per_group >= num_groups;
+    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP num_groups = NUM_RFFT_GROUPS(sol->solver);
+    FFTZ_INTP num_c2c_per_group = sol->solver->kernel_c2c->count / num_groups;
+    FFTZ_UINT8 use_asymmetric_kernel = num_c2c_per_group >= num_groups;
     base_strides_t element_strides = {1, 1};      // Individual element access
     base_strides_t vector_strides = {1, 1};       // Vector/batch traversal
     base_strides_t c2c_strides = {1, 1};          // C2C kernel batch stepping
@@ -400,7 +408,7 @@ INT32 allocate_and_setup_stride(aoclfftz_solution_t *sol,
         set_base_strides(sol, &element_strides, &vector_strides);
     }
 
-    INT32 ret = alloc_stride_arrays(sol->strides_grp->strides, radix);
+    FFTZ_INT32 ret = alloc_stride_arrays(sol->strides_grp->strides, radix);
     if (ret != SOLVER_SUCCESS)
     {
         return ret;
@@ -460,16 +468,16 @@ INT32 allocate_and_setup_stride(aoclfftz_solution_t *sol,
  * |--------> direct   [aux1 -> out]
  * this example is for a 3 level CT problem
  */
-VOID update_ct_buffers(aoclfftz_solution_t *sol,
+FFTZ_VOID update_ct_buffers(aoclfftz_solution_t *sol,
                        aoclfftz_realhelper_t *realhelper)
 {
     if (!realhelper->is_CT)
         return;
 
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
-    VOID *in_real = NULL;
-    VOID *out_real = NULL;
+    FFTZ_VOID *in_real = NULL;
+    FFTZ_VOID *out_real = NULL;
 
     if (realhelper->stage & 0x1)
     {
@@ -501,41 +509,45 @@ VOID update_ct_buffers(aoclfftz_solution_t *sol,
  * Cost is measured in CPU cycles and considers the number of FMA, multiply,
  * add, move, permute and other operations.
  */
-VOID compute_cost(aoclfftz_solution_t *sol, cost_analysis_t *cost,
+FFTZ_VOID compute_cost(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                   const kernel_t *kernel_c2c, const kernel_t *kernel_r2hc,
                   const kernel_t *kernel_r2hcf)
 {
-    UINT32 is_backward = FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
-    UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    FFTZ_UINT32 is_backward =
+        FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR;
+    FFTZ_UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     if (GET_SELECTOR_MODE(sol->decomp_scheme->flags) != AOCLFFTZ_FIXED_SELECTOR)
     {
         return;
     }
 
     cost->time = 0;
-    INT64 c2c_cost = 0;
-    INT64 r2hc_cost = 0;
-    INT64 r2hcf_cost = 0;
+    FFTZ_INT64 c2c_cost = 0;
+    FFTZ_INT64 r2hc_cost = 0;
+    FFTZ_INT64 r2hcf_cost = 0;
 
     // Calculate C2C kernel cost
     if (sol->solver->kernel_c2c->count != 0)
     {
-        c2c_cost = compute_kernel_cost(kernel_c2c, precision, is_backward,
-                                       (INTP)sol->solver->kernel_c2c->count);
+        c2c_cost =
+            compute_kernel_cost(kernel_c2c, precision, is_backward,
+                                (FFTZ_INTP)sol->solver->kernel_c2c->count);
     }
     
     // Calculate R2HC kernel cost
     if (sol->solver->kernel_r2hc->count != 0)
-    {   
-        r2hc_cost = compute_kernel_cost(kernel_r2hc, precision, is_backward,
-                                        (INTP)sol->solver->kernel_r2hc->count);
+    {
+        r2hc_cost =
+            compute_kernel_cost(kernel_r2hc, precision, is_backward,
+                                (FFTZ_INTP)sol->solver->kernel_r2hc->count);
     }
 
     // Calculate R2HCF kernel cost
     if (sol->solver->kernel_r2hcf->count != 0)
-    {    
-        r2hcf_cost = compute_kernel_cost(kernel_r2hcf, precision, is_backward,
-                                         (INTP)sol->solver->kernel_r2hcf->count);
+    {
+        r2hcf_cost =
+            compute_kernel_cost(kernel_r2hcf, precision, is_backward,
+                                (FFTZ_INTP)sol->solver->kernel_r2hcf->count);
     }
 
     cost->ops = c2c_cost + r2hc_cost + r2hcf_cost;

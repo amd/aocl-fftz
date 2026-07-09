@@ -19,29 +19,29 @@
 
 /* ---------------- core wrapper macros ---------------- */
 #define GET_OPS_CNT_C2C_WRAPPER_DEFN(radix, isa)                               \
-    ops_cycles_t get_ops_cnt_fft##radix##isa##_wrapper(UINT8 precision,        \
-                                                       UINT8 direction)        \
+    ops_cycles_t get_ops_cnt_fft##radix##isa##_wrapper(FFTZ_UINT8 precision,   \
+                                                       FFTZ_UINT8 direction)   \
     {                                                                          \
         return get_ops_cnt_fft##radix##isa(precision, direction);              \
     }
 
 #define GET_OPS_CNT_REAL_WRAPPER_DEFN(kind, radix, isa)                        \
     ops_cycles_t get_ops_cnt_##kind##_rfft##radix##isa##_wrapper(              \
-        UINT8 precision, UINT8 direction)                                      \
+        FFTZ_UINT8 precision, FFTZ_UINT8 direction)                            \
     {                                                                          \
         return get_ops_cnt_##kind##_rfft##radix##isa(precision, direction);    \
     }
 
 #define REGISTER_KERNEL_C2C_WRAPPER_DEFN(radix, isa)                           \
-    kfft_ register_kernel_fft##radix##isa##_wrapper(UINT8 precision,           \
-                                                    UINT8 direction)           \
+    kfft_ register_kernel_fft##radix##isa##_wrapper(FFTZ_UINT8 precision,      \
+                                                    FFTZ_UINT8 direction)      \
     {                                                                          \
         return register_kernel_fft##radix##isa(precision, direction);          \
     }
 
 #define REGISTER_KERNEL_REAL_WRAPPER_DEFN(kind, radix, isa)                    \
-    kfft_ register_kernel_##kind##_rfft##radix##isa##_wrapper(UINT8 precision, \
-                                                              UINT8 direction) \
+    kfft_ register_kernel_##kind##_rfft##radix##isa##_wrapper(                 \
+        FFTZ_UINT8 precision, FFTZ_UINT8 direction)                            \
     {                                                                          \
         return register_kernel_##kind##_rfft##radix##isa(precision,            \
                                                          direction);           \
@@ -126,7 +126,7 @@ REGISTER_KERNEL_C2C_WRAPPER_ALL_RADICES_DEFN(c)
 /* ---------------- twiddle wrapper macros ---------------- */
 #define GET_OPS_CNT_TWID_WRAPPER_DEFN(kind, radix, isa)                        \
     ops_cycles_t get_ops_cnt_twid_##kind##_fft##radix##isa##_wrapper(          \
-        UINT8 prec, UINT8 dir)                                                 \
+        FFTZ_UINT8 prec, FFTZ_UINT8 dir)                                       \
     {                                                                          \
         return get_ops_cnt_twid_##kind##_fft##radix##isa(prec, dir);           \
     }
@@ -149,8 +149,8 @@ REGISTER_KERNEL_C2C_WRAPPER_ALL_RADICES_DEFN(c)
     GET_OPS_CNT_TWID_WRAPPER_DEFN(kind, 16, isa)
 
 #define REGISTER_KERNEL_TWID_WRAPPER_DEFN(kind, radix, isa)                    \
-    kfft_ register_kernel_twid_##kind##_fft##radix##isa##_wrapper(UINT8 prec,  \
-                                                                  UINT8 dir)   \
+    kfft_ register_kernel_twid_##kind##_fft##radix##isa##_wrapper(             \
+        FFTZ_UINT8 prec, FFTZ_UINT8 dir)                                       \
     {                                                                          \
         return register_kernel_twid_##kind##_fft##radix##isa(prec, dir);       \
     }
@@ -290,16 +290,22 @@ REGISTER_KERNEL_REAL_WRAPPER_ALL_RADICES_DEFN(r2hcf, avx512)
 #undef GET_OPS_CNT_REAL_WRAPPER_DEFN
 /* ---------------- kernels : permuted_copy_* ---------------- */
 
-VOID permuted_copy_c_fp32_wrapper(VOID *in, VOID *out, INTP n, INTP size,
-                                  INTP in_stride, INTP out_stride,
-                                  INTP v_in_stride, INTP v_out_stride)
+FFTZ_VOID permuted_copy_c_fp32_wrapper(FFTZ_VOID *in, FFTZ_VOID *out,
+                                       FFTZ_INTP n, FFTZ_INTP size,
+                                       FFTZ_INTP in_stride,
+                                       FFTZ_INTP out_stride,
+                                       FFTZ_INTP v_in_stride,
+                                       FFTZ_INTP v_out_stride)
 {
     permuted_copy_c_fp32(in, out, n, size, in_stride, out_stride, v_in_stride,
                          v_out_stride);
 }
-VOID permuted_copy_c_fp64_wrapper(VOID *in, VOID *out, INTP n, INTP size,
-                                  INTP in_stride, INTP out_stride,
-                                  INTP v_in_stride, INTP v_out_stride)
+FFTZ_VOID permuted_copy_c_fp64_wrapper(FFTZ_VOID *in, FFTZ_VOID *out,
+                                       FFTZ_INTP n, FFTZ_INTP size,
+                                       FFTZ_INTP in_stride,
+                                       FFTZ_INTP out_stride,
+                                       FFTZ_INTP v_in_stride,
+                                       FFTZ_INTP v_out_stride)
 {
     permuted_copy_c_fp64(in, out, n, size, in_stride, out_stride, v_in_stride,
                          v_out_stride);
@@ -307,69 +313,74 @@ VOID permuted_copy_c_fp64_wrapper(VOID *in, VOID *out, INTP n, INTP size,
 
 /* ---------------- memory allocators/destroys ---------------- */
 
-aoclfftz_decomp_scheme_t *alloc_decomp_scheme_wrapper(INT32 vec_rank,
-                                                      INT32 dim_rank)
+aoclfftz_decomp_scheme_t *alloc_decomp_scheme_wrapper(FFTZ_INT32 vec_rank,
+                                                      FFTZ_INT32 dim_rank)
 {
     return alloc_decomp_scheme(vec_rank, dim_rank);
 }
-aoclfftz_solution_t *alloc_solution_wrapper(INT32 vec_rank, INT32 dim_rank)
+aoclfftz_solution_t *alloc_solution_wrapper(FFTZ_INT32 vec_rank,
+                                            FFTZ_INT32 dim_rank)
 {
     return alloc_solution(vec_rank, dim_rank);
 }
-aoclfftz_selector_t *alloc_selector_wrapper(INT32 vec_rank, INT32 dim_rank,
+aoclfftz_selector_t *alloc_selector_wrapper(FFTZ_INT32 vec_rank,
+                                            FFTZ_INT32 dim_rank,
                                             kernel_tables_t *kernel_tables)
 {
     return alloc_selector(vec_rank, dim_rank, kernel_tables);
 }
-VOID *alloc_twiddle_buffer_wrapper(INTP size, UINT32 dt_prec)
+FFTZ_VOID *alloc_twiddle_buffer_wrapper(FFTZ_INTP size, FFTZ_UINT32 dt_prec)
 {
     return alloc_twiddle_buffer(size, dt_prec);
 }
 
-VOID destroy_selector_wrapper(aoclfftz_selector_t *sel)
+FFTZ_VOID destroy_selector_wrapper(aoclfftz_selector_t *sel)
 {
     destroy_selector(sel);
 }
-VOID destroy_solution_wrapper(aoclfftz_solution_t *sol)
+FFTZ_VOID destroy_solution_wrapper(aoclfftz_solution_t *sol)
 {
     destroy_solution(sol);
 }
-VOID destroy_decomp_scheme_wrapper(aoclfftz_decomp_scheme_t *decomp_scheme)
+FFTZ_VOID destroy_decomp_scheme_wrapper(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
     destroy_decomp_scheme(decomp_scheme);
 }
-VOID destroy_handle_wrapper(VOID *handle)
+FFTZ_VOID destroy_handle_wrapper(FFTZ_VOID *handle)
 {
     destroy_handle(handle);
 }
 
 /* ---------------- strides wrapper ---------------- */
-VOID populate_stride_array_wrapper(INTP *strides, INTP stride_val, INTP n,
-                                   UINT8 compute_half_complex,
-                                   UINT8 adjust_to_full_complex)
+FFTZ_VOID populate_stride_array_wrapper(FFTZ_INTP *strides,
+                                        FFTZ_INTP stride_val, FFTZ_INTP n,
+                                        FFTZ_UINT8 compute_half_complex,
+                                        FFTZ_UINT8 adjust_to_full_complex)
 {
     populate_stride_array(strides, stride_val, n, compute_half_complex,
                           adjust_to_full_complex);
 }
 
 /* ---------------- fused strides wrapper ---------------- */
-VOID prepare_fused_kernel_strides_wrapper(INTP *strides, INTP radix,
-                                          INTP offset)
+FFTZ_VOID prepare_fused_kernel_strides_wrapper(FFTZ_INTP *strides,
+                                               FFTZ_INTP radix,
+                                               FFTZ_INTP offset)
 {
     prepare_fused_kernel_strides(strides, radix, offset);
 }
 
 // Transpose wrappers
 #define TRANSPOSE_WRAPPER_DEFN(kernel_name, TYPE, isa)                         \
-    VOID CONCAT(FUNC(kernel_name, TYPE, isa), _wrapper)(TRANSPOSE_KERNEL_ARGS) \
+    FFTZ_VOID CONCAT(FUNC(kernel_name, TYPE, isa),                             \
+                     _wrapper)(TRANSPOSE_KERNEL_ARGS)                          \
     {                                                                          \
-        FUNC(kernel_name, TYPE, c)(in_ptr, out_ptr, row_metadata,              \
-                                   column_metadata, aux_mem);                  \
+        FUNC(kernel_name, TYPE, c)                                             \
+        (in_ptr, out_ptr, row_metadata, column_metadata, aux_mem);             \
     }
 
 #define TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(kernel_name, isa)                     \
-    TRANSPOSE_WRAPPER_DEFN(kernel_name, FLOAT, isa)                            \
-    TRANSPOSE_WRAPPER_DEFN(kernel_name, DOUBLE, isa)                           \
+    TRANSPOSE_WRAPPER_DEFN(kernel_name, FFTZ_FLOAT, isa)                       \
+    TRANSPOSE_WRAPPER_DEFN(kernel_name, FFTZ_DOUBLE, isa)                      \
     TRANSPOSE_WRAPPER_DEFN(kernel_name, aoclfftz_complex_f_t, isa)             \
     TRANSPOSE_WRAPPER_DEFN(kernel_name, aoclfftz_complex_d_t, isa)
 
@@ -391,14 +402,14 @@ TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tos_blocked, c)
 #endif
 
 // twiddle buffer setup wrappers
-EXPORT_SYM_DYN VOID compute_twiddle_buffer_float_wrapper(VOID *twiddle_buffer,
-                                                         INTP r, INTP m)
+EXPORT_SYM_DYN FFTZ_VOID compute_twiddle_buffer_float_wrapper(
+    FFTZ_VOID *twiddle_buffer, FFTZ_INTP r, FFTZ_INTP m)
 {
     compute_twiddle_buffer(twiddle_buffer, r, m, DT_FLOAT);
 }
 
-EXPORT_SYM_DYN VOID compute_twiddle_buffer_double_wrapper(VOID *twiddle_buffer,
-                                                          INTP r, INTP m)
+EXPORT_SYM_DYN FFTZ_VOID compute_twiddle_buffer_double_wrapper(
+    FFTZ_VOID *twiddle_buffer, FFTZ_INTP r, FFTZ_INTP m)
 {
     compute_twiddle_buffer(twiddle_buffer, r, m, DT_DOUBLE);
 }

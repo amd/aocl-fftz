@@ -24,14 +24,14 @@
  * @param sol      Current solution object
  * @param next_sol Next solver's solution object
  */
-static VOID setup_buffered_output_strides(aoclfftz_solution_t *sol,
+static FFTZ_VOID setup_buffered_output_strides(aoclfftz_solution_t *sol,
                                           aoclfftz_solution_t *next_sol)
 {
     sol->decomp_scheme->out_real = sol->dft_bufs->ct_buf_real;
     sol->decomp_scheme->out_imag = sol->dft_bufs->ct_buf_imag;
 
     // Calculate stride factor from batched vectors
-    INTP batched_stride_factor = 1;
+    FFTZ_INTP batched_stride_factor = 1;
     if (sol->decomp_scheme->batched_vecs)
     {
         batched_stride_factor = sol->decomp_scheme->batched_vecs[0].n *
@@ -50,7 +50,7 @@ static VOID setup_buffered_output_strides(aoclfftz_solution_t *sol,
         sol->decomp_scheme->vecs[0].out_stride;
 }
 
-INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
+FFTZ_INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
                             aoclfftz_solution_t *next_sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
@@ -68,21 +68,21 @@ INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
         return SOLVER_SUCCESS;
     }
 
-    INT32 dim_rank = sol->decomp_scheme->dim_rank;
-    INT32 vec_rank = sol->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sol->decomp_scheme->dim_rank;
+    FFTZ_INT32 vec_rank = sol->decomp_scheme->vec_rank;
     aoclfftz_dim_t_64_ *dims = sol->decomp_scheme->dims;
     aoclfftz_dim_t_64_ *vecs = sol->decomp_scheme->vecs;
 
-    UINTP buffer_length = 1;
-    UINTP buffer_size = 0;
+    FFTZ_UINTP buffer_length = 1;
+    FFTZ_UINTP buffer_size = 0;
 
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
-    for (INT32 i = 0; i < dim_rank; i++)
+    for (FFTZ_INT32 i = 0; i < dim_rank; i++)
     {
         buffer_length *= (dims[i].n);
     }
-    for (INT32 i = 0; i < vec_rank; i++)
+    for (FFTZ_INT32 i = 0; i < vec_rank; i++)
     {
         buffer_length *= (vecs[i].n);
     }
@@ -94,7 +94,7 @@ INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
     }
 
     buffer_size = GET_PADDED_SIZE(buffer_length * DATA_STRIDE * dt_bytes);
-    ALLOC_ALIGN_UNINIT(sol->dft_bufs->ct_buffer, VOID,
+    ALLOC_ALIGN_UNINIT(sol->dft_bufs->ct_buffer, FFTZ_VOID,
         buffer_size * sol->dft_bufs->num_ct_buf);
     if (sol->dft_bufs->ct_buffer == NULL)
     {
@@ -116,11 +116,11 @@ INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
-static INT32 execute_buffered_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_buffered_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    INT32 status = SOLVER_SUCCESS;
+    FFTZ_INT32 status = SOLVER_SUCCESS;
     aoclfftz_solution_t *next_sol = sol->next_sol[0];
 
     // Update sol and next_sol's output pointers to the buffer.
@@ -140,7 +140,7 @@ static INT32 execute_buffered_solver(aoclfftz_solution_t *sol)
     return status;
 }
 
-dft_solver_ register_execute_buffered_solver(VOID)
+dft_solver_ register_execute_buffered_solver(FFTZ_VOID)
 {
     return execute_buffered_solver;
 }

@@ -58,8 +58,8 @@
  */
 #define PRINT_CARRAY_FP32(arr, size)                                           \
 {                                                                              \
-    FLOAT *arr_f = (FLOAT *)arr;                                               \
-    for (INTP i = 0; i < size; ++i)                                            \
+    FFTZ_FLOAT *arr_f = (FFTZ_FLOAT *)arr; \
+    for (FFTZ_INTP i = 0; i < size; ++i) \
     {                                                                          \
         printf("%td: %12.6f + %12.6fj\n", i, arr_f[i * 2],                     \
                arr_f[i * 2 + 1]);                                              \
@@ -73,8 +73,8 @@
  */
 #define PRINT_CARRAY_FP64(arr, size)                                           \
 {                                                                              \
-    DOUBLE *arr_d = (DOUBLE *)arr;                                             \
-    for (INTP i = 0; i < size; ++i)                                            \
+    FFTZ_DOUBLE *arr_d = (FFTZ_DOUBLE *)arr; \
+    for (FFTZ_INTP i = 0; i < size; ++i) \
     {                                                                          \
         printf("%td: %20.14lf + %20.14lfj\n", i, arr_d[i * 2],                 \
                arr_d[i * 2 + 1]);                                              \

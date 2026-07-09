@@ -31,14 +31,18 @@ typedef struct aoclfftz_bench_error aoclfftz_bench_error_t;
 typedef struct aoclfftz_bench_sz_info aoclfftz_bench_sz_info_t;
 
 // Function pointer types
-typedef VOID (*dft_ref_) (aoclfftz_bench_params_t *params, VOID *in, VOID *out,
-                            INTP *in_idx_map, INTP *out_idx_map);
-typedef VOID *(*setup_problem_) (aoclfftz_bench_params_t *params);
-typedef VOID (*prepare_input_data_) (VOID *input, INTP n, INTP *idx_map,
-                                     INT32 input_type, INT32 data_stride);
-typedef INT32 (*compare_) (aoclfftz_bench_params_t *params, VOID *a, VOID *b,
-                           INTP batches, INTP n, INTP *a_map, INTP *b_map,
-                           INT32 data_stride);
+typedef FFTZ_VOID (*dft_ref_) (aoclfftz_bench_params_t *params, FFTZ_VOID *in,
+                               FFTZ_VOID *out, FFTZ_INTP *in_idx_map,
+                               FFTZ_INTP *out_idx_map);
+typedef FFTZ_VOID *(*setup_problem_) (aoclfftz_bench_params_t *params);
+typedef FFTZ_VOID (*prepare_input_data_) (FFTZ_VOID *input, FFTZ_INTP n,
+                                          FFTZ_INTP *idx_map,
+                                          FFTZ_INT32 input_type,
+                                          FFTZ_INT32 data_stride);
+typedef FFTZ_INT32 (*compare_) (aoclfftz_bench_params_t *params, FFTZ_VOID *a,
+                                FFTZ_VOID *b, FFTZ_INTP batches, FFTZ_INTP n,
+                                FFTZ_INTP *a_map, FFTZ_INTP *b_map,
+                                FFTZ_INT32 data_stride);
 
 // Enumerators for test bench
 typedef enum
@@ -115,24 +119,24 @@ typedef enum
 
 typedef struct aoclfftz_bench_sz_info
 {
-    INTP n; // product of all dims->n
-    INTP n_in; // n for C2C problems; n/2+1 on first dim for C2R
-    INTP n_out; // n for C2C problems; n/2+1 on first dim for R2C
-    INTP batches;
-    UINTP input_size;
-    UINTP output_size;
-    UINTP input_bytes;
-    UINTP output_bytes;
-    INT32 in_data_stride; // 1 for C2C, 1 for R2C, 2 for C2R
-    INT32 out_data_stride; // 1 for C2C, 2 for R2C, 1 for C2R
-    INT32 dt_bytes; // sizeof(FLOAT) or sizeof(DOUBLE)
+    FFTZ_INTP n; // product of all dims->n
+    FFTZ_INTP n_in; // n for C2C problems; n/2+1 on first dim for C2R
+    FFTZ_INTP n_out; // n for C2C problems; n/2+1 on first dim for R2C
+    FFTZ_INTP batches;
+    FFTZ_UINTP input_size;
+    FFTZ_UINTP output_size;
+    FFTZ_UINTP input_bytes;
+    FFTZ_UINTP output_bytes;
+    FFTZ_INT32 in_data_stride; // 1 for C2C, 1 for R2C, 2 for C2R
+    FFTZ_INT32 out_data_stride; // 1 for C2C, 2 for R2C, 1 for C2R
+    FFTZ_INT32 dt_bytes; // sizeof(FFTZ_FLOAT) or sizeof(FFTZ_DOUBLE)
 } aoclfftz_bench_sz_info_t;
 
 // Structures for test bench
 typedef struct aoclfftz_bench_params
 {
-    VOID *in;
-    VOID *out;
+    FFTZ_VOID *in;
+    FFTZ_VOID *out;
     aoclfftz_bench_type_t bench_type;
     aoclfftz_bench_precision_t precision;
     aoclfftz_bench_data_model_t data_model;
@@ -140,23 +144,23 @@ typedef struct aoclfftz_bench_params
     aoclfftz_bench_order_t order;
     aoclfftz_bench_res_placement_t res_placement;
     aoclfftz_bench_direction_t dir;
-    INT32 dim_rank;
-    INT32 vec_rank;
+    FFTZ_INT32 dim_rank;
+    FFTZ_INT32 vec_rank;
     aoclfftz_dim_t_64_ *dims;
     aoclfftz_dim_t_64_ *vecs;
-    INT32 num_iterations;
-    INT32 seed;
-    UCHAR use_random_seed;
-    INT32 opt_level;
-    DOUBLE tolerance;
-    INT32 logger_mode;
-    INT32 num_threads;
-    UINT32 dynamic_load_model;
-    UCHAR selector_time;
-    DOUBLE min_bench_time;
-    INT32 measure_stats;
-    INT32 bit_reproducibility;
-    UINT32 aligned_alloc;
+    FFTZ_INT32 num_iterations;
+    FFTZ_INT32 seed;
+    FFTZ_UCHAR use_random_seed;
+    FFTZ_INT32 opt_level;
+    FFTZ_DOUBLE tolerance;
+    FFTZ_INT32 logger_mode;
+    FFTZ_INT32 num_threads;
+    FFTZ_UINT32 dynamic_load_model;
+    FFTZ_UCHAR selector_time;
+    FFTZ_DOUBLE min_bench_time;
+    FFTZ_INT32 measure_stats;
+    FFTZ_INT32 bit_reproducibility;
+    FFTZ_UINT32 aligned_alloc;
     aoclfftz_bench_sz_info_t sz_info;
     dft_ref_ dft_ref;
     setup_problem_ setup_problem;
@@ -166,10 +170,10 @@ typedef struct aoclfftz_bench_params
 
 typedef struct aoclfftz_bench_error
 {
-    DOUBLE max_abs_err;
-    DOUBLE max_mag;
-    INTP *max_err_coords;
-    INTP *first_err_coords;
+    FFTZ_DOUBLE max_abs_err;
+    FFTZ_DOUBLE max_mag;
+    FFTZ_INTP *max_err_coords;
+    FFTZ_INTP *first_err_coords;
 } aoclfftz_bench_error_t;
 
 #endif // AOCLFFTZ_BENCH_H

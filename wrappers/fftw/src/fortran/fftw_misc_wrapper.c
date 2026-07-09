@@ -21,22 +21,22 @@ void dfftwf_cleanup_(void)
     fftwf_cleanup();
 }
 
-VOID dfftw_plan_with_nthreads_(INT32 *nthreads)
+FFTZ_VOID dfftw_plan_with_nthreads_(FFTZ_INT32 *nthreads)
 {
     fftw_plan_with_nthreads(*nthreads);
 }
 
-VOID dfftwf_plan_with_nthreads_(INT32 *nthreads)
+FFTZ_VOID dfftwf_plan_with_nthreads_(FFTZ_INT32 *nthreads)
 {
     fftwf_plan_with_nthreads(*nthreads);
 }
 
-VOID dfftw_init_threads_(INT32 *ret)
+FFTZ_VOID dfftw_init_threads_(FFTZ_INT32 *ret)
 {
     *ret = fftw_init_threads();
 }
 
-VOID dfftwf_init_threads_(INT32 *ret)
+FFTZ_VOID dfftwf_init_threads_(FFTZ_INT32 *ret)
 {
     *ret = fftwf_init_threads();
 }

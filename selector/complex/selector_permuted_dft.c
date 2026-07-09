@@ -13,7 +13,7 @@
 
 #include "selector/selector.h"
 
-INT32 selector_permuted_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
+FFTZ_INT32 selector_permuted_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     return SELECTOR_SUCCESS;
 }

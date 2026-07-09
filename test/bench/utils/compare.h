@@ -48,7 +48,7 @@
  */
 #define INCREMENT_ND_COUNTER(cur_dims, max_dims, rank)                         \
     {                                                                          \
-        for (INT32 i = 0; i < rank; i++)                                       \
+        for (FFTZ_INT32 i = 0; i < rank; i++) \
         {                                                                      \
             if (++cur_dims[i] < max_dims[i].n) {                               \
                 break;                                                         \
@@ -63,7 +63,7 @@
  */
 #define RESET_ND_COUNTER(cur_dims, rank)                                       \
     {                                                                          \
-        for (INT32 i = 0; i < rank; i++)                                       \
+        for (FFTZ_INT32 i = 0; i < rank; i++) \
         {                                                                      \
             cur_dims[i] = 0;                                                   \
         }                                                                      \
@@ -75,7 +75,7 @@
  */
 #define COPY_ND_COORDS(dst, src, rank)                                         \
     {                                                                          \
-        for (INTP i = 0; i < rank; i++)                                        \
+        for (FFTZ_INTP i = 0; i < rank; i++) \
         {                                                                      \
             dst[i] = src[i];                                                   \
         }                                                                      \
@@ -89,7 +89,7 @@
     {                                                                          \
         /* vecs */                                                             \
         fprintf(stderr, "[");                                                  \
-        for (INT32 j = vec_rank - 1; j >= 0; j--)                              \
+        for (FFTZ_INT32 j = vec_rank - 1; j >= 0; j--) \
         {                                                                      \
             if (j < vec_rank - 1)                                              \
                 fprintf(stderr, ",");                                          \
@@ -97,7 +97,7 @@
         }                                                                      \
         fprintf(stderr, "]v[");                                                \
         /* dims */                                                             \
-        for (INT32 j = dim_rank - 1; j >= 0; j--)                              \
+        for (FFTZ_INT32 j = dim_rank - 1; j >= 0; j--) \
         {                                                                      \
             if (j < dim_rank - 1)                                              \
                 fprintf(stderr, ",");                                          \
@@ -114,7 +114,7 @@
     {                                                                          \
         /* vecs */                                                             \
         fprintf(out_file, "[");                                                \
-        for (INT32 j = vec_rank - 1; j >= 0; j--)                              \
+        for (FFTZ_INT32 j = vec_rank - 1; j >= 0; j--) \
         {                                                                      \
             if (j < vec_rank - 1)                                              \
                 fprintf(out_file, ",");                                        \
@@ -122,7 +122,7 @@
         }                                                                      \
         fprintf(out_file, "]v[");                                              \
         /* dims */                                                             \
-        for (INT32 j = dim_rank - 1; j >= 0; j--)                              \
+        for (FFTZ_INT32 j = dim_rank - 1; j >= 0; j--) \
         {                                                                      \
             if (j < dim_rank - 1)                                              \
                 fprintf(out_file, ",");                                        \
@@ -132,9 +132,13 @@
     }
 
 
-INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *a_map, INTP *b_map, INT32 data_stride);
-INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *a_map, INTP *b_map, INT32 data_stride);
+FFTZ_INT32 compare_f(aoclfftz_bench_params_t *params, FFTZ_VOID *a,
+                     FFTZ_VOID *b, FFTZ_INTP batches, FFTZ_INTP n,
+                     FFTZ_INTP *a_map, FFTZ_INTP *b_map,
+                     FFTZ_INT32 data_stride);
+FFTZ_INT32 compare_d(aoclfftz_bench_params_t *params, FFTZ_VOID *a,
+                     FFTZ_VOID *b, FFTZ_INTP batches, FFTZ_INTP n,
+                     FFTZ_INTP *a_map, FFTZ_INTP *b_map,
+                     FFTZ_INT32 data_stride);
 
 #endif // COMPARE_H

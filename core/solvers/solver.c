@@ -24,7 +24,7 @@ dft_solver_ solvers_table[NUM_SOLVERS_END] = { 0x0, };
 // point, so it runs once per setup rather than once per process. The
 // writes are idempotent (same pointers every time), which makes
 // concurrent setup calls benign even though they technically race.
-INT32 register_solvers(VOID)
+FFTZ_INT32 register_solvers(FFTZ_VOID)
 {
     // Real solvers
     solvers_table[SOLVER_REAL_DIRECT] = register_execute_real_direct_solver();
@@ -71,7 +71,7 @@ INT32 register_solvers(VOID)
     return SOLVER_SUCCESS;
 }
 
-INT32 is_solver_registered(aoclfftz_solver_type solver_type)
+FFTZ_INT32 is_solver_registered(aoclfftz_solver_type solver_type)
 {
     if (solvers_table[solver_type] == NULL)
     {
@@ -80,7 +80,7 @@ INT32 is_solver_registered(aoclfftz_solver_type solver_type)
     return SOLVER_SUCCESS;
 }
 
-INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj)
+FFTZ_INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj)
 {
     if (is_solver_registered(solver_obj->solver_type) != SOLVER_SUCCESS)
     {
@@ -91,17 +91,17 @@ INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj)
     return SOLVER_SUCCESS;
 }
 
-INT64 compute_kernel_cost(const kernel_t *ker, UINT8 precision,
-                          UINT8 direction, INTP batch)
+FFTZ_INT64 compute_kernel_cost(const kernel_t *ker, FFTZ_UINT8 precision,
+                          FFTZ_UINT8 direction, FFTZ_INTP batch)
 {
     ops_cycles_t oc = ker->k_ops_cnt(precision, direction);
-    INT64 ops = (oc.fma   * AMD_ZEN_FP_FMA_CYCLES) +
+    FFTZ_INT64 ops = (oc.fma   * AMD_ZEN_FP_FMA_CYCLES) +
                 (oc.mul   * AMD_ZEN_FP_MUL_CYCLES) +
                 (oc.add   * AMD_ZEN_FP_ADD_CYCLES) +
                 (oc.move  * AMD_ZEN_FP_MOVE_CYCLES) +
                 (oc.perm  * AMD_ZEN_FP_PERM_CYCLES) +
                 (oc.other * AMD_ZEN_FP_OTHER_CYCLES);
-    UINT8 sets = ker->sets[precision - 2];
+    FFTZ_UINT8 sets = ker->sets[precision - 2];
     if (batch >= sets)
     {
         ops = (ops + sets - 1) / sets;

@@ -28,12 +28,16 @@ typedef enum
 } twiddle_status;
 
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
-VOID compute_twiddle_buffer(VOID *twiddle_buffer, INTP radix, INTP n_tw_batches,
-                            UINT32 dt_prec);
-VOID compute_twiddle_buffer_real(VOID *twiddle_buffer, INTP radix,
-                                 INTP num_c2c_per_group, INTP num_groups,
-                                 INTP freq_factor, UINT8 dir, UINT32 dt_prec);
-VOID compute_sr_twiddle_buffer(VOID *twiddle_buffer, INTP n, UINT32 dt_prec);
+FFTZ_VOID compute_twiddle_buffer(FFTZ_VOID *twiddle_buffer, FFTZ_INTP radix,
+                                 FFTZ_INTP n_tw_batches, FFTZ_UINT32 dt_prec);
+FFTZ_VOID compute_twiddle_buffer_real(FFTZ_VOID *twiddle_buffer,
+                                      FFTZ_INTP radix,
+                                      FFTZ_INTP num_c2c_per_group,
+                                      FFTZ_INTP num_groups,
+                                      FFTZ_INTP freq_factor, FFTZ_UINT8 dir,
+                                      FFTZ_UINT32 dt_prec);
+FFTZ_VOID compute_sr_twiddle_buffer(FFTZ_VOID *twiddle_buffer, FFTZ_INTP n,
+                                    FFTZ_UINT32 dt_prec);
 #endif
 
 #endif // TWIDDLE_H

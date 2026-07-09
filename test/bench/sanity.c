@@ -16,19 +16,19 @@
 #include "utils/utils.h"
 
 
-INT32 run_bench_on_sanity_mode(aoclfftz_bench_params_t *params)
+FFTZ_INT32 run_bench_on_sanity_mode(aoclfftz_bench_params_t *params)
 {
     AOCLFFTZ_LOG(TRACE, params->logger_mode, "ENTER");
     aoclfftz_bench_status_t bench_status = BENCH_SUCCESS;
     // Initialize FFT plan for testing
-    VOID *handle = params->setup_problem(params);
+    FFTZ_VOID *handle = params->setup_problem(params);
     if (handle == NULL)
     {
         bench_status = SETUP_FAILURE;
         HANDLE_BENCH_STATUS(bench_status);
         goto exit_sanity_mode;
     }
-    for (INT32 i = 0; i < params->num_iterations; i++)
+    for (FFTZ_INT32 i = 0; i < params->num_iterations; i++)
     {
         aoclfftz_error_type execute_status = aoclfftz_execute(handle);
         if (AOCLFFTZ_SUCCESS != execute_status)

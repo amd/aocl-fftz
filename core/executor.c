@@ -14,21 +14,21 @@
 
 #include "core/executor.h"
 
-static INT32 execute_dft(aoclfftz_executor_t *executor_obj)
+static FFTZ_INT32 execute_dft(aoclfftz_executor_t *executor_obj)
 {
     aoclfftz_solution_t *sol = executor_obj->solution;
 
 #ifdef MULTI_THREADING
-    INT32 threads = sol->decomp_scheme->thread_info->pthr_fft->num_threads;
+    FFTZ_INT32 threads = sol->decomp_scheme->thread_info->pthr_fft->num_threads;
 
     if (threads > 1)
     {
         // Retrieve max nested levels from master application
-        UINT32 cur_max_levels = omp_get_max_active_levels();
+        FFTZ_UINT32 cur_max_levels = omp_get_max_active_levels();
 
         // Set maximum nested levels to 3 as it is needed by real solutions
         omp_set_max_active_levels(3);
-        INT32 ret = sol->solver->execute_solver(sol);
+        FFTZ_INT32 ret = sol->solver->execute_solver(sol);
 
         // Restore max nested levels to original state
         omp_set_max_active_levels(cur_max_levels);
@@ -41,7 +41,7 @@ static INT32 execute_dft(aoclfftz_executor_t *executor_obj)
     }
 }
 
-execute_ register_execute_dft(VOID)
+execute_ register_execute_dft(FFTZ_VOID)
 {
     return execute_dft;
 }

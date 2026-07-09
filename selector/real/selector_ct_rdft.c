@@ -17,7 +17,7 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                        aoclfftz_realhelper_t *realhelper)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
@@ -39,16 +39,16 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 
     realhelper->is_CT = 1;
 
-    INTP n = sel->solution->decomp_scheme->dims[0].n;
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 stats_mode =
+    FFTZ_INTP n = sel->solution->decomp_scheme->dims[0].n;
+    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 stats_mode =
         sel->solution->decomp_scheme->cntrl_params->measure_stats;
-    UINT32 radix_r = 0;
-    UINT32 radix_m = 0;
-    UINT32 is_backward =
+    FFTZ_UINT32 radix_r = 0;
+    FFTZ_UINT32 radix_m = 0;
+    FFTZ_UINT32 is_backward =
         FFT_DIR(sel->solution->decomp_scheme->flags) == BACKWARD_FFT_DIR;
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     if (vec_rank != 1 || dim_rank != 1)
     {
@@ -108,11 +108,11 @@ INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 
     // Flag to store whether the previous solution is selected
     // based on minimum ops cost
-    UINT8 is_previous_solution_selected = 0;
+    FFTZ_UINT8 is_previous_solution_selected = 0;
 
-    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
+    for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
-        radix_r = (INTP)kertab[i].radix;
+        radix_r = (FFTZ_INTP)kertab[i].radix;
 
         if (radix_r == 0) // End of suitable kernels in the list
         {

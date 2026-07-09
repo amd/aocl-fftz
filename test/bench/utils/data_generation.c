@@ -20,19 +20,20 @@
 #include "test/bench/utils/bench_utils.h"
 
 /**
- * @brief Prepare FLOAT input data of size `n * stride`.
+ * @brief Prepare FFTZ_FLOAT input data of size `n * stride`.
  *
  * @param input array to store input data
  * @param n input size
  * @param idx_map index map of size n, specify NULL to disable mapping
  * @param input_type type of input data : RANDOM, IMPULSE or SIGNAL
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
-                          INT32 data_stride)
+FFTZ_VOID prepare_input_data_f(FFTZ_VOID *input, FFTZ_INTP n,
+                               FFTZ_INTP *idx_map, FFTZ_INT32 input_type,
+                               FFTZ_INT32 data_stride)
 {
-    FLOAT *input_f = (FLOAT *)input;
-    INTP idx = 0;
+    FFTZ_FLOAT *input_f = (FFTZ_FLOAT *)input;
+    FFTZ_INTP idx = 0;
     // random input
     // range: [-10.0, 10.0)
     if (input_type == RANDOM_INPUT)
@@ -41,7 +42,7 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
         {
             for (idx = 0; idx < n * data_stride; ++idx)
             {
-                input_f[idx] = (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
+                input_f[idx] = (20.0f / (FFTZ_FLOAT)RAND_MAX) * rand() - 10.0f;
             }
         }
         else
@@ -50,7 +51,7 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
             {
                 input_f[idx_map[idx / data_stride] * data_stride +
                         (idx % data_stride)] =
-                    (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
+                    (20.0f / (FFTZ_FLOAT)RAND_MAX) * rand() - 10.0f;
             }
         }
     }
@@ -70,26 +71,26 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
         for (int i = 0; i < data_stride; i++)
         {
             input_f[(idx * data_stride) + i] =
-                (20.0f / (FLOAT)RAND_MAX) * rand() - 10.0f;
+                (20.0f / (FFTZ_FLOAT)RAND_MAX) * rand() - 10.0f;
         }
     }
     // sinusoidal signal input
     else if (input_type == SINUSOIDAL_SIGNAL_INPUT)
     {
         // Sine wave cycles
-        INTP half_size = n >= 2 ? (n / 2) : 1;
-        INTP cycles = (rand() % half_size) + 2;
-        FLOAT size = BENCH_2_PI * cycles;
+        FFTZ_INTP half_size = n >= 2 ? (n / 2) : 1;
+        FFTZ_INTP cycles = (rand() % half_size) + 2;
+        FFTZ_FLOAT size = BENCH_2_PI * cycles;
         // Shift the origin of the wave from 0 to a positive integer `shift`,
         // shift range: [0, n)
-        INTP shift = rand() % n;
+        FFTZ_INTP shift = rand() % n;
         // scale the amplitude of the wave by `scale` times,
         // scale range: [0.0, 5.0)
-        FLOAT scale = ((FLOAT)rand() / (FLOAT)RAND_MAX) * 5.0f;
+        FFTZ_FLOAT scale = ((FFTZ_FLOAT)rand() / (FFTZ_FLOAT)RAND_MAX) * 5.0f;
         memset(input_f, 0, n * data_stride);
         if (idx_map == NULL)
         {
-            for (INTP i = 0; i < n; i++)
+            for (FFTZ_INTP i = 0; i < n; i++)
             {
                 input_f[((i + shift) % n) * data_stride] =
                     sinf((i * size) / n) * scale;
@@ -97,7 +98,7 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
         }
         else
         {
-            for (INTP i = 0; i < n; i++)
+            for (FFTZ_INTP i = 0; i < n; i++)
             {
                 input_f[idx_map[(i + shift) % n] * data_stride] =
                     sinf((i * size) / n) * scale;
@@ -107,19 +108,20 @@ VOID prepare_input_data_f(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
 }
 
 /**
- * @brief Prepare DOUBLE input data of size `n * stride`.
+ * @brief Prepare FFTZ_DOUBLE input data of size `n * stride`.
  *
  * @param input array to store input data
  * @param n input size
  * @param idx_map index map of size n, specify NULL to disable mapping
  * @param input_type type of input data : RANDOM, IMPULSE or SIGNAL
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
-                          INT32 data_stride)
+FFTZ_VOID prepare_input_data_d(FFTZ_VOID *input, FFTZ_INTP n,
+                               FFTZ_INTP *idx_map, FFTZ_INT32 input_type,
+                               FFTZ_INT32 data_stride)
 {
-    DOUBLE *input_d = (DOUBLE *)input;
-    INTP idx = 0;
+    FFTZ_DOUBLE *input_d = (FFTZ_DOUBLE *)input;
+    FFTZ_INTP idx = 0;
     // random input
     // range: [-10.0, 10.0)
     if (input_type == RANDOM_INPUT)
@@ -164,30 +166,30 @@ VOID prepare_input_data_d(VOID *input, INTP n, INTP *idx_map, INT32 input_type,
     else if (input_type == SINUSOIDAL_SIGNAL_INPUT)
     {
         // Sine wave cycles
-        INTP half_size = n >= 2 ? (n / 2) : 1;
-        INTP cycles = (rand() % half_size) + 2;
-        DOUBLE size = BENCH_2_PI * cycles;
+        FFTZ_INTP half_size = n >= 2 ? (n / 2) : 1;
+        FFTZ_INTP cycles = (rand() % half_size) + 2;
+        FFTZ_DOUBLE size = BENCH_2_PI * cycles;
         // Shift the origin of the wave from 0 to a positive integer `shift`,
         // shift range: [0, n)
-        INTP shift = rand() % n;
+        FFTZ_INTP shift = rand() % n;
         // scale the amplitude of the wave by `scale` times,
         // scale range: [0.0, 5.0)
-        DOUBLE scale = ((DOUBLE)rand() / RAND_MAX) * 5.0;
+        FFTZ_DOUBLE scale = ((FFTZ_DOUBLE)rand() / RAND_MAX) * 5.0;
         memset(input_d, 0, n * data_stride);
         if (idx_map == NULL)
         {
-            for (INTP i = 0; i < n; i++)
+            for (FFTZ_INTP i = 0; i < n; i++)
             {
                 input_d[((i + shift) % n) * data_stride] =
-                    cos((DOUBLE)(i * size) / n) * scale;
+                    cos((FFTZ_DOUBLE)(i * size) / n) * scale;
             }
         }
         else
         {
-            for (INTP i = 0; i < n; i++)
+            for (FFTZ_INTP i = 0; i < n; i++)
             {
                 input_d[idx_map[(i + shift) % n] * data_stride] =
-                    cos((DOUBLE)(i * size) / n) * scale;
+                    cos((FFTZ_DOUBLE)(i * size) / n) * scale;
             }
         }
     }

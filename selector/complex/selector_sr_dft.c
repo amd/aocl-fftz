@@ -16,7 +16,7 @@
 #include "utils/utils.h"
 #include "core/common/twiddle.h"
 
-INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
+FFTZ_INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -34,13 +34,13 @@ INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     aoclfftz_solution_t *org_sol = NULL;
 
-    INTP n = sel->solution->decomp_scheme->dims[0].n;
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INTP n = sel->solution->decomp_scheme->dims[0].n;
+    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    INTP n_even = n / 2;
-    INTP n_odd = n / 4;
+    FFTZ_INTP n_even = n / 2;
+    FFTZ_INTP n_odd = n / 4;
 
     org_sol = alloc_solution(vec_rank, dim_rank);
     if (org_sol == NULL)
@@ -83,15 +83,18 @@ INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     /* Allocate input copy buffer for in-place transforms */
     if (!IS_OUT_OF_PLACE(org_sol->decomp_scheme->flags))
     {
-        INTP in_stride = org_sol->decomp_scheme->dims[0].in_stride;
-        UINT32 precision = DT_PRECISION_FLAG(org_sol->decomp_scheme->flags);
-        UINT32 dt_bytes = DT_PRECISION_BYTES(precision);
-        INTP elem_size = DATA_STRIDE * dt_bytes; /* Complex: 2 * sizeof(type) */
+        FFTZ_INTP in_stride = org_sol->decomp_scheme->dims[0].in_stride;
+        FFTZ_UINT32 precision = DT_PRECISION_FLAG(
+            org_sol->decomp_scheme->flags);
+        FFTZ_UINT32 dt_bytes = DT_PRECISION_BYTES(precision);
+        /* Complex: 2 * sizeof(type) */
+        FFTZ_INTP elem_size = DATA_STRIDE * dt_bytes;
 
-        INTP sr_input_copy_size = strided_buffer_size(n, in_stride, elem_size);
+        FFTZ_INTP sr_input_copy_size = strided_buffer_size(n, in_stride,
+                                                           elem_size);
         sel->solution->dft_bufs->sr->input_copy_size = sr_input_copy_size;
 
-        ALLOC_ALIGN_UNINIT(sel->solution->dft_bufs->sr->input_copy, VOID,
+        ALLOC_ALIGN_UNINIT(sel->solution->dft_bufs->sr->input_copy, FFTZ_VOID,
                            sr_input_copy_size);
         if (sel->solution->dft_bufs->sr->input_copy == NULL)
         {

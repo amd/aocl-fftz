@@ -85,12 +85,15 @@ typedef enum
 */
 typedef struct aoclfftz_flags
 {
-    UINT8 fft_type;             /**< Complex(0) or Real(1) >*/
-    UINT8 fft_direction;        /**< Forward(0) or Backward(1) >*/
-    UINT8 storage_order;        /**< In-order(0) or Out-of-order(1)>*/
-    UINT8 fft_placement;        /**< In-place(0) or Out-of-place(1) */
-    UINT8 transpose_mode;       /**< fft(0) or standalone transpose(1) (Not supported, must be default value `0`)*/
-    UINT8 bit_reproducibility;  /**< Disable(0) or Enable(1) the bit reproducibility mode*/
+    FFTZ_UINT8 fft_type; /**< Complex(0) or Real(1) > */
+    FFTZ_UINT8 fft_direction; /**< Forward(0) or Backward(1) > */
+    FFTZ_UINT8 storage_order; /**< In-order(0) or Out-of-order(1)> */
+    FFTZ_UINT8 fft_placement; /**< In-place(0) or Out-of-place(1) */
+    /** fft(0) or standalone transpose(1) (Not supported, must be default value
+     * `0`) */
+    FFTZ_UINT8 transpose_mode;
+    /** Disable(0) or Enable(1) the bit reproducibility mode */
+    FFTZ_UINT8 bit_reproducibility;
 } aoclfftz_flags_t;
 
 /**
@@ -99,9 +102,9 @@ typedef struct aoclfftz_flags
  */
 typedef struct aoclfftz_dim
 {
-    INT32 n;            /**< Dimension length */
-    INT32 in_stride;    /**< Stride for input buffer */
-    INT32 out_stride;   /**< Stride for output buffer */
+    FFTZ_INT32 n; /**< Dimension length */
+    FFTZ_INT32 in_stride; /**< Stride for input buffer */
+    FFTZ_INT32 out_stride; /**< Stride for output buffer */
 } aoclfftz_dim_t;
 
 /**
@@ -110,9 +113,9 @@ typedef struct aoclfftz_dim
  */
 typedef struct aoclfftz_dim_64_
 {
-    INTP n;            /**< Dimension length */
-    INTP in_stride;    /**< Stride for input buffer */
-    INTP out_stride;   /**< Stride for output buffer */
+    FFTZ_INTP n; /**< Dimension length */
+    FFTZ_INTP in_stride; /**< Stride for input buffer */
+    FFTZ_INTP out_stride; /**< Stride for output buffer */
 } aoclfftz_dim_t_64_;
 
 /**
@@ -121,13 +124,14 @@ typedef struct aoclfftz_dim_64_
  */
 typedef struct aoclfftz_smp_pfft
 {
-    INT32 num_threads;         /**< Number of max threads granted for use.\n
-    * `num_threads` must be greater than 0. */
-    UINT32 dynamic_load_model; /**< Specifies the model for determining the number of threads.
+    /** Number of max threads granted for use.\n
+     * `num_threads` must be greater than 0. */
+    FFTZ_INT32 num_threads;
+    /** Specifies the model for determining the number of threads.
      * - 0: Use `num_threads` as the maximum number of threads.
      * - 1: Dynamically determine the number of threads (currently configured to
-     *      take upto the max system threads)
-     */
+     *      take upto the max system threads) */
+    FFTZ_UINT32 dynamic_load_model;
 } aoclfftz_smp_pfft_t;
 
 /**
@@ -136,19 +140,23 @@ typedef struct aoclfftz_smp_pfft
  */
 typedef struct aoclfftz_cntrl_params
 {
-    INT32 opt_level;        /**< Set Optimization level with following values\n
-    * Levels:
-    * - 0 - non-SIMD algorithmic optimizations
-    * - 1 - AVX128 optimizations
-    * - 2 - AVX256 optimizations
-    * - 3 - AVX512 optimizations */
-    INT32 opt_off;                         /**< Turn off all optimizations */
-    aoclfftz_logger_mode logger_mode;      /**< Set Logger mode with following values.\n
-    * - @ref AOCLFFTZ_LOG_NONE - Disable all logging
-    * - @ref AOCLFFTZ_LOG_INFO - Detailed debugging logs
-    * - @ref AOCLFFTZ_LOG_TRACE - Logging with complete execution trace
-    * - @ref AOCLFFTZ_LOG_DEBUG - Most detailed logging, with debug logs */
-    INT32 measure_stats;    /**< Enable/Disable measure stats (Not supported, must be default value `0`) */
+    /** Set Optimization level with following values\n
+     * Levels:
+     * - 0 - non-SIMD algorithmic optimizations
+     * - 1 - AVX128 optimizations
+     * - 2 - AVX256 optimizations
+     * - 3 - AVX512 optimizations */
+    FFTZ_INT32 opt_level;
+    FFTZ_INT32 opt_off; /**< Turn off all optimizations */
+    /** Set Logger mode with following values.\n
+     * - @ref AOCLFFTZ_LOG_NONE - Disable all logging
+     * - @ref AOCLFFTZ_LOG_INFO - Detailed debugging logs
+     * - @ref AOCLFFTZ_LOG_TRACE - Logging with complete execution trace
+     * - @ref AOCLFFTZ_LOG_DEBUG - Most detailed logging, with debug logs */
+    aoclfftz_logger_mode logger_mode;
+    /** Enable/Disable measure stats (Not supported, must be default value `0`)
+     */
+    FFTZ_INT32 measure_stats;
 } aoclfftz_cntrl_params_t;
 
 /**
@@ -160,16 +168,29 @@ typedef struct aoclfftz_cntrl_params
  */
 typedef struct
 {
-    FLOAT *in;              /**< input buffer: Points to signal points for forward FFT and frequency points for backward FFT */
-    FLOAT *out;             /**< output buffer: Points frequency points for forward FFT and signal points for backward FFT */
-    INT32 vec_rank;         /**< `vec_rank` is the number of batch/vector dimensions. length of `vecs` array(must be >= 1). */
-    INT32 dim_rank;         /**< `dim_rank` is the number of signal/frequency dimensions. length of `dims` array(must be >= 1). */
-    aoclfftz_dim_t *dims;   /**< Multi-dimensional tensor dimensions for LP64 */
-    aoclfftz_dim_t *vecs;   /**< Vector tensor dimensions for LP64 */
-    aoclfftz_flags_t flags; /**< Struct for configuration flags to control critical FFT execution parameters like -\n
-                                 `fft_type`, `fft_direction`, `storage_order`, `fft_placement`, `transpose_mode`. */
-    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP FFT computation */
-    aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
+    /** input buffer: Points to signal points for forward FFT and frequency
+     * points for backward FFT */
+    FFTZ_FLOAT *in;
+    /** output buffer: Points frequency points for forward FFT and signal points
+     * for backward FFT */
+    FFTZ_FLOAT *out;
+    /** `vec_rank` is the number of batch/vector dimensions. length of `vecs`
+     * array(must be >= 1). */
+    FFTZ_INT32 vec_rank;
+    /** `dim_rank` is the number of signal/frequency dimensions. length of
+     * `dims` array(must be >= 1). */
+    FFTZ_INT32 dim_rank;
+    aoclfftz_dim_t *dims; /**< Multi-dimensional tensor dimensions for LP64 */
+    aoclfftz_dim_t *vecs; /**< Vector tensor dimensions for LP64 */
+    /** Struct for configuration flags to control critical FFT execution
+     * parameters like -\n
+     * `fft_type`, `fft_direction`, `storage_order`, `fft_placement`,
+     * `transpose_mode`. */
+    aoclfftz_flags_t flags;
+    /** Struct for parallel SMP FFT computation */
+    aoclfftz_smp_pfft_t pthr_fft;
+    /** Struct for optimizations, logs, stat params */
+    aoclfftz_cntrl_params_t cntrl_params;
 } aoclfftz_prob_desc_f;
 
 /**
@@ -181,16 +202,29 @@ typedef struct
  */
 typedef struct
 {
-    DOUBLE *in;             /**< input buffer: Points to signal points for forward FFT and frequency points for backward FFT */
-    DOUBLE *out;            /**< output buffer: Points frequency points for forward FFT and signal points for backward FFT */
-    INT32 vec_rank;         /**< `vec_rank` is the number of batch/vector dimensions. length of `vecs` array(must be >= 1). */
-    INT32 dim_rank;         /**< `dim_rank` is the number of signal/frequency dimensions. length of `dims` array(must be >= 1). */
-    aoclfftz_dim_t *dims;   /**< Multi-dimensional tensor dimensions for LP64 */
-    aoclfftz_dim_t *vecs;   /**< Vector tensor dimensions for LP64 */
-    aoclfftz_flags_t flags; /**< Struct for configuration flags to control critical FFT execution parameters like -\n
-                                 `fft_type`, `fft_direction`, `storage_order`, `fft_placement`, `transpose_mode`. */
-    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP FFT computation */
-    aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
+    /** input buffer: Points to signal points for forward FFT and frequency
+     * points for backward FFT */
+    FFTZ_DOUBLE *in;
+    /** output buffer: Points frequency points for forward FFT and signal points
+     * for backward FFT */
+    FFTZ_DOUBLE *out;
+    /** `vec_rank` is the number of batch/vector dimensions. length of `vecs`
+     * array(must be >= 1). */
+    FFTZ_INT32 vec_rank;
+    /** `dim_rank` is the number of signal/frequency dimensions. length of
+     * `dims` array(must be >= 1). */
+    FFTZ_INT32 dim_rank;
+    aoclfftz_dim_t *dims; /**< Multi-dimensional tensor dimensions for LP64 */
+    aoclfftz_dim_t *vecs; /**< Vector tensor dimensions for LP64 */
+    /** Struct for configuration flags to control critical FFT execution
+     * parameters like -\n
+     * `fft_type`, `fft_direction`, `storage_order`, `fft_placement`,
+     * `transpose_mode`. */
+    aoclfftz_flags_t flags;
+    /** Struct for parallel SMP FFT computation */
+    aoclfftz_smp_pfft_t pthr_fft;
+    /** Struct for optimizations, logs, stat params */
+    aoclfftz_cntrl_params_t cntrl_params;
 } aoclfftz_prob_desc_d;
 
 /**
@@ -202,16 +236,30 @@ typedef struct
  */
 typedef struct
 {
-    FLOAT *in;                  /**< input buffer: Points to signal points for forward FFT and frequency points for backward FFT */
-    FLOAT *out;                 /**< output buffer: Points to frequency points for forward FFT and signal points for backward FFT */
-    INT32 vec_rank;             /**< `vec_rank` is the number of batch/vector dimensions. length of `vecs` array(must be >= 1). */
-    INT32 dim_rank;             /**< `dim_rank` is the number of signal/frequency dimensions. length of `dims` array(must be >= 1). */
-    aoclfftz_dim_t_64_ *dims;   /**< Multi-dimensional tensor dimensions for ILP64 */
-    aoclfftz_dim_t_64_ *vecs;   /**< Vector tensor dimensions for ILP64 */
-    aoclfftz_flags_t flags;     /**< Struct for configuration flags to control critical FFT execution parameters like -\n
-                                    * `fft_type`, `fft_direction`, `storage_order`, `fft_placement`, `transpose_mode`. */
-    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP FFT computation */
-    aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
+    /** input buffer: Points to signal points for forward FFT and frequency
+     * points for backward FFT */
+    FFTZ_FLOAT *in;
+    /** output buffer: Points to frequency points for forward FFT and signal
+     * points for backward FFT */
+    FFTZ_FLOAT *out;
+    /** `vec_rank` is the number of batch/vector dimensions. length of `vecs`
+     * array(must be >= 1). */
+    FFTZ_INT32 vec_rank;
+    /** `dim_rank` is the number of signal/frequency dimensions. length of
+     * `dims` array(must be >= 1). */
+    FFTZ_INT32 dim_rank;
+    /** Multi-dimensional tensor dimensions for ILP64 */
+    aoclfftz_dim_t_64_ *dims;
+    aoclfftz_dim_t_64_ *vecs; /**< Vector tensor dimensions for ILP64 */
+    /** Struct for configuration flags to control critical FFT execution
+     * parameters like -\n
+     * `fft_type`, `fft_direction`, `storage_order`, `fft_placement`,
+     * `transpose_mode`. */
+    aoclfftz_flags_t flags;
+    /** Struct for parallel SMP FFT computation */
+    aoclfftz_smp_pfft_t pthr_fft;
+    /** Struct for optimizations, logs, stat params */
+    aoclfftz_cntrl_params_t cntrl_params;
 } aoclfftz_prob_desc_f_64_;
 
 /**
@@ -223,16 +271,30 @@ typedef struct
  */
 typedef struct
 {
-    DOUBLE *in;                 /**< input buffer: Points to signal points for forward FFT and frequency points for backward FFT */
-    DOUBLE *out;                /**< output buffer: Points to frequency points for forward FFT and signal points for backward FFT */
-    INT32 vec_rank;             /**< `vec_rank` is the number of batch/vector dimensions. length of `vecs` array(must be >= 1). */
-    INT32 dim_rank;             /**< `dim_rank` is the number of signal/frequency dimensions. length of `dims` array(must be >= 1). */
-    aoclfftz_dim_t_64_ *dims;   /**< Multi-dimensional tensor dimensions for ILP64 */
-    aoclfftz_dim_t_64_ *vecs;   /**< Vector tensor dimensions for ILP64 */
-    aoclfftz_flags_t flags;     /**< Struct for configuration flags to control critical FFT execution parameters like - \n
-                                    * `fft_type`, `fft_direction`, `storage_order`, `fft_placement`, `transpose_mode`. */
-    aoclfftz_smp_pfft_t pthr_fft;         /**< Struct for parallel SMP FFT computation */
-    aoclfftz_cntrl_params_t cntrl_params; /**< Struct for optimizations, logs, stat params */
+    /** input buffer: Points to signal points for forward FFT and frequency
+     * points for backward FFT */
+    FFTZ_DOUBLE *in;
+    /** output buffer: Points to frequency points for forward FFT and signal
+     * points for backward FFT */
+    FFTZ_DOUBLE *out;
+    /** `vec_rank` is the number of batch/vector dimensions. length of `vecs`
+     * array(must be >= 1). */
+    FFTZ_INT32 vec_rank;
+    /** `dim_rank` is the number of signal/frequency dimensions. length of
+     * `dims` array(must be >= 1). */
+    FFTZ_INT32 dim_rank;
+    /** Multi-dimensional tensor dimensions for ILP64 */
+    aoclfftz_dim_t_64_ *dims;
+    aoclfftz_dim_t_64_ *vecs; /**< Vector tensor dimensions for ILP64 */
+    /** Struct for configuration flags to control critical FFT execution
+     * parameters like - \n
+     * `fft_type`, `fft_direction`, `storage_order`, `fft_placement`,
+     * `transpose_mode`. */
+    aoclfftz_flags_t flags;
+    /** Struct for parallel SMP FFT computation */
+    aoclfftz_smp_pfft_t pthr_fft;
+    /** Struct for optimizations, logs, stat params */
+    aoclfftz_cntrl_params_t cntrl_params;
 } aoclfftz_prob_desc_d_64_;
 
 /* Single-threaded and multi-threaded FFT unified APIs */
@@ -241,7 +303,7 @@ typedef struct
  * .. _aoclfftz_setup_f:
  * @endrst
  * @ingroup APIs
- * @brief Generates a solution handle for a given problem of type FLOAT on LP64 systems.
+ * @brief Generates a solution handle for a given problem of type FFTZ_FLOAT on LP64 systems.
  *
  * This API validates the problem descriptor and generates a solution handle
  * for the given input problem.
@@ -255,18 +317,18 @@ typedef struct
  * This generated handle is passed to the execute APIs to perform FFT
  * computation and should be destroyed by @ref aoclfftz_destroy.
  *
- * @param problem FLOAT LP64 problem descriptor object.
+ * @param problem FFTZ_FLOAT LP64 problem descriptor object.
  * @return
  * | Result                                 | Description |
  * |:---------------------------------------|:-------------------------------------------------------------------------------------|
  * | Opaque pointer to FFT solution handle  |  Setup succeeded with a valid solution for execution of the given problem (SUCCESS)  |
  * | NULL                                   |  Setup failed (FAIL)                                                                 |
  */
-EXPORT_SYM_DYN VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem);
+EXPORT_SYM_DYN FFTZ_VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem);
 
 /**
  * @ingroup APIs
- * @brief Generates a solution handle for a given problem of type DOUBLE on LP64 systems.
+ * @brief Generates a solution handle for a given problem of type FFTZ_DOUBLE on LP64 systems.
  *
  * This API validates the problem descriptor and generates a solution handle
  * for the given input problem.
@@ -280,18 +342,18 @@ EXPORT_SYM_DYN VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem);
  * This generated handle is passed to the execute APIs to perform FFT
  * computation and should be destroyed by @ref aoclfftz_destroy.
  *
- * @param problem DOUBLE LP64 problem descriptor object
+ * @param problem FFTZ_DOUBLE LP64 problem descriptor object
  * @return
  * | Result                                 | Description |
  * |:---------------------------------------|:-------------------------------------------------------------------------------------|
  * | Opaque pointer to FFT solution handle  |  Setup succeeded with a valid solution for execution of the given problem (SUCCESS)  |
  * | NULL                                   |  Setup failed (FAIL)                                                                 |
  */
-EXPORT_SYM_DYN VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem);
+EXPORT_SYM_DYN FFTZ_VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem);
 
 /**
  * @ingroup APIs
- * @brief Generates a solution handle for a given problem of type FLOAT on ILP64 systems.
+ * @brief Generates a solution handle for a given problem of type FFTZ_FLOAT on ILP64 systems.
  *
  * This API validates the problem descriptor and generates a solution handle
  * for the given input problem.
@@ -305,18 +367,19 @@ EXPORT_SYM_DYN VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem);
  * This generated handle is passed to the execute APIs to perform FFT
  * computation and should be destroyed by @ref aoclfftz_destroy.
  *
- * @param problem FLOAT ILP64 problem descriptor object
+ * @param problem FFTZ_FLOAT ILP64 problem descriptor object
  * @return
  * | Result                                 | Description |
  * |:---------------------------------------|:-------------------------------------------------------------------------------------|
  * | Opaque pointer to FFT solution handle  |  Setup succeeded with a valid solution for execution of the given problem (SUCCESS)  |
  * | NULL                                   |  Setup failed (FAIL)                                                                 |
  */
-EXPORT_SYM_DYN VOID *aoclfftz_setup_f_64_(aoclfftz_prob_desc_f_64_ *problem);
+EXPORT_SYM_DYN FFTZ_VOID *aoclfftz_setup_f_64_(
+    aoclfftz_prob_desc_f_64_ *problem);
 
 /**
  * @ingroup APIs
- * @brief Generates a solution handle for a given problem of type DOUBLE on ILP64 systems.
+ * @brief Generates a solution handle for a given problem of type FFTZ_DOUBLE on ILP64 systems.
  *
  * This API validates the problem descriptor and generates a solution handle
  * for the given input problem.
@@ -330,14 +393,15 @@ EXPORT_SYM_DYN VOID *aoclfftz_setup_f_64_(aoclfftz_prob_desc_f_64_ *problem);
  * This generated handle is passed to the execute APIs to perform FFT
  * computation and should be destroyed by @ref aoclfftz_destroy.
  *
- * @param problem DOUBLE ILP64 problem descriptor object
+ * @param problem FFTZ_DOUBLE ILP64 problem descriptor object
  * @return
  * | Result                                 | Description |
  * |:---------------------------------------|:-------------------------------------------------------------------------------------|
  * | Opaque pointer to FFT solution handle  |  Setup succeeded with a valid solution for execution of the given problem (SUCCESS)  |
  * | NULL                                   |  Setup failed (FAIL)                                                                 |
  */
-EXPORT_SYM_DYN VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem);
+EXPORT_SYM_DYN FFTZ_VOID *aoclfftz_setup_d_64_(
+    aoclfftz_prob_desc_d_64_ *problem);
 
 /**
  * @ingroup APIs
@@ -355,7 +419,7 @@ EXPORT_SYM_DYN VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem);
  * | @ref AOCLFFTZ_SUCCESS              |  SUCCESS    |
  * | @ref AOCLFFTZ_EXECUTION_FAILURE    |  FAIL       |
  */
-EXPORT_SYM_DYN aoclfftz_error_type aoclfftz_execute(VOID *handle);
+EXPORT_SYM_DYN aoclfftz_error_type aoclfftz_execute(FFTZ_VOID *handle);
 
 /**
  * @ingroup APIs
@@ -381,7 +445,7 @@ EXPORT_SYM_DYN aoclfftz_error_type aoclfftz_execute(VOID *handle);
  * | @ref AOCLFFTZ_SUCCESS              |  SUCCESS    |
  * | @ref AOCLFFTZ_EXECUTION_FAILURE    |  FAIL       |
  */
-EXPORT_SYM_DYN aoclfftz_error_type aoclfftz_execute_io(VOID *handle, VOID *in, VOID *out);
+EXPORT_SYM_DYN aoclfftz_error_type aoclfftz_execute_io(FFTZ_VOID *handle, FFTZ_VOID *in, FFTZ_VOID *out);
 
 /**
  * @ingroup APIs
@@ -396,7 +460,7 @@ EXPORT_SYM_DYN aoclfftz_error_type aoclfftz_execute_io(VOID *handle, VOID *in, V
  * @param handle solution handle
  *
  */
-EXPORT_SYM_DYN VOID aoclfftz_destroy(VOID *handle);
+EXPORT_SYM_DYN FFTZ_VOID aoclfftz_destroy(FFTZ_VOID *handle);
 
 /**
  * @ingroup APIs
@@ -404,7 +468,7 @@ EXPORT_SYM_DYN VOID aoclfftz_destroy(VOID *handle);
  *
  * @return `AOCL-FFTZ` library version string
  */
-EXPORT_SYM_DYN const CHAR *aoclfftz_version(VOID);
+EXPORT_SYM_DYN const FFTZ_CHAR *aoclfftz_version(FFTZ_VOID);
 
 #ifdef __cplusplus
 }

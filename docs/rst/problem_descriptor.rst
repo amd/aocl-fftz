@@ -24,10 +24,10 @@ The main structure for the problem descriptor is as follows:
 
     typedef struct
     {
-        FLOAT *in;
-        FLOAT *out;
-        INT32 vec_rank;
-        INT32 dim_rank;
+        FFTZ_FLOAT *in;
+        FFTZ_FLOAT *out;
+        FFTZ_INT32 vec_rank;
+        FFTZ_INT32 dim_rank;
         aoclfftz_dim_t *dims;
         aoclfftz_dim_t *vecs;
         aoclfftz_flags_t flags;

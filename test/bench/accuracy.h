@@ -21,12 +21,14 @@
 #include "test/bench/bench_problem.h"
 #include "utils/allocator.h"
 
-INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params);
-INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                         INTP *out_idx_map, VOID * handle, VOID *input_buffer);
-INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
-                                 INTP *in_idx_map, INTP *out_idx_map,
-                                 VOID * handle, VOID *input_buffer);
-INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                         INTP *out_idx_map, VOID * handle, VOID *input_buffer);
+FFTZ_INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params);
+FFTZ_INT32 run_linearity_test(aoclfftz_bench_params_t *params,
+                              FFTZ_INTP *in_idx_map, FFTZ_INTP *out_idx_map,
+                              FFTZ_VOID * handle, FFTZ_VOID *input_buffer);
+FFTZ_INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
+                                 FFTZ_INTP *in_idx_map, FFTZ_INTP *out_idx_map,
+                                 FFTZ_VOID * handle, FFTZ_VOID *input_buffer);
+FFTZ_INT32 run_timeshift_test(aoclfftz_bench_params_t *params,
+                              FFTZ_INTP *in_idx_map, FFTZ_INTP *out_idx_map,
+                              FFTZ_VOID * handle, FFTZ_VOID *input_buffer);
 #endif // ACCURACY_H

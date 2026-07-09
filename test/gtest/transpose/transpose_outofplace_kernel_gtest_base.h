@@ -30,25 +30,27 @@ template <class T>
 class AoclfftzOutOfPlaceTransposeTestBase
     : public ::testing::TestWithParam<
                                 std::tuple<
-                                    std::tuple<INTP, INTP>, /* rows, cols */
-                                    INTP,                   /* in stride */
-                                    INTP,                   /* out stride */
-                                    INT32>>                 /* kernel index */
+                                    /* rows, cols */
+                                    std::tuple<FFTZ_INTP, FFTZ_INTP>,
+                                    FFTZ_INTP,                   /* in stride */
+                                    FFTZ_INTP,  /* out stride */
+                                    FFTZ_INT32>>  /* kernel index */
 {
   protected:
-    INTP rows;
-    INTP cols;
-    INTP in_stride;
-    INTP out_stride;
+    FFTZ_INTP rows;
+    FFTZ_INTP cols;
+    FFTZ_INTP in_stride;
+    FFTZ_INTP out_stride;
     aoclfftz_transpose_kernel kernel;
 
-    void expect_matrix_equal(T *in, T *out, INTP rows, INTP cols, INTP stride)
+    void expect_matrix_equal(T *in, T *out, FFTZ_INTP rows, FFTZ_INTP cols,
+                             FFTZ_INTP stride)
     {
-        INTP leading_dim = cols * stride;
+        FFTZ_INTP leading_dim = cols * stride;
 
-        for (INTP i = 0; i < rows; ++i)
+        for (FFTZ_INTP i = 0; i < rows; ++i)
         {
-            for (INTP j = 0; j < cols; ++j)
+            for (FFTZ_INTP j = 0; j < cols; ++j)
             {
                 // since this is checking an out of place transpose, we don't
                 // have to check if the elements in the stride area are equal or
@@ -76,8 +78,8 @@ class AoclfftzOutOfPlaceTransposeTestBase
         aoclfftz_transpose_kernel *kernel_table = get_transpose_kernels_c<T>();
         kernel = kernel_table[kernel_idx];
 
-        INTP in_size = in_stride * cols * rows;
-        INTP out_size = out_stride * cols * rows;
+        FFTZ_INTP in_size = in_stride * cols * rows;
+        FFTZ_INTP out_size = out_stride * cols * rows;
 
         T* in = (T*) calloc(in_size, sizeof(T));
         T* out_ref = (T*) calloc(out_size, sizeof(T));
@@ -101,7 +103,8 @@ class AoclfftzOutOfPlaceTransposeTestBase
         col_m.out_stride = out_stride;
 
         // transpose using kernel
-        kernel((VOID *)in, (VOID *)out_ker, row_m, col_m, NULL /* aux-mem */);
+        kernel((FFTZ_VOID *)in, (FFTZ_VOID *)out_ker, row_m, col_m,
+               NULL /* aux-mem */);
 
         // check if matrices are equal
         expect_matrix_equal(out_ref, out_ker, cols, rows, out_stride);
@@ -113,29 +116,29 @@ class AoclfftzOutOfPlaceTransposeTestBase
 };
 
 /**
- * @brief A derived class from AoclfftzOutOfPlaceTransposeTestBase for FLOAT
- * type
+ * @brief A derived class from AoclfftzOutOfPlaceTransposeTestBase for
+ * FFTZ_FLOAT type
  *
  */
 
 class AoclfftzOutOfPlaceTransposeKernelTestF32
-    : public AoclfftzOutOfPlaceTransposeTestBase<FLOAT>
-{
-};
-
-/**
- * @brief A derived class from AoclfftzOutOfPlaceTransposeTestBase for DOUBLE
- * type
- *
- */
-class AoclfftzOutOfPlaceTransposeKernelTestF64
-    : public AoclfftzOutOfPlaceTransposeTestBase<DOUBLE>
+    : public AoclfftzOutOfPlaceTransposeTestBase<FFTZ_FLOAT>
 {
 };
 
 /**
  * @brief A derived class from AoclfftzOutOfPlaceTransposeTestBase for
- * Complex(FLOAT) type
+ * FFTZ_DOUBLE type
+ *
+ */
+class AoclfftzOutOfPlaceTransposeKernelTestF64
+    : public AoclfftzOutOfPlaceTransposeTestBase<FFTZ_DOUBLE>
+{
+};
+
+/**
+ * @brief A derived class from AoclfftzOutOfPlaceTransposeTestBase for
+ * Complex(FFTZ_FLOAT) type
  *
  */
 
@@ -146,7 +149,7 @@ class AoclfftzOutOfPlaceTransposeKernelTestF32C
 
 /**
  * @brief A derived class from AoclfftzOutOfPlaceTransposeTestBase for
- * Complex(DOUBLE) type
+ * Complex(FFTZ_DOUBLE) type
  *
  */
 class AoclfftzOutOfPlaceTransposeKernelTestF64C

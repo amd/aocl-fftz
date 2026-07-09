@@ -17,8 +17,9 @@
                              done_flag)                                        \
     do                                                                         \
     {                                                                          \
-        UINT8 carry = 1;                                                       \
-        for (INT32 dim_idx = dim_rank - 1; dim_idx >= 0 && carry; dim_idx--)   \
+        FFTZ_UINT8 carry = 1; \
+        for (FFTZ_INT32 dim_idx = dim_rank - 1; dim_idx >= 0 && carry;         \
+             dim_idx--)                                                        \
         {                                                                      \
             indices_arr[dim_idx]++;                                            \
             if (dim_idx == 0)                                                  \
@@ -58,18 +59,22 @@
         dt_t *in_t = (dt_t *)in;                                               \
         dt_t *out_t = (dt_t *)out;                                             \
         /* Extract dimension information */                                    \
-        INTP dim0 = dims[0].n;       /* Last dimension (memory) */             \
-        INTP dim0_hc = dim0 / 2 + 1; /* Half-complex size */                   \
+        FFTZ_INTP dim0 = dims[0].n;       /* Last dimension (memory) */ \
+        FFTZ_INTP dim0_hc = dim0 / 2 + 1; /* Half-complex size */ \
                                                                                \
         /* Allocate arrays for dimension sizes and strides */                  \
-        INTP *dim_sizes = NULL;                                                \
-        INTP *strides_full = NULL;                                             \
-        INTP *strides_hc = NULL;                                               \
-        INTP *copy_indices = NULL;                                             \
-        ALLOC_UNALIGN_UNINIT(dim_sizes, INTP, dim_rank * sizeof(INTP))         \
-        ALLOC_UNALIGN_UNINIT(strides_full, INTP, dim_rank * sizeof(INTP))      \
-        ALLOC_UNALIGN_UNINIT(strides_hc, INTP, dim_rank * sizeof(INTP))        \
-        ALLOC_UNALIGN_UNINIT(copy_indices, INTP, dim_rank * sizeof(INTP))      \
+        FFTZ_INTP *dim_sizes = NULL; \
+        FFTZ_INTP *strides_full = NULL; \
+        FFTZ_INTP *strides_hc = NULL; \
+        FFTZ_INTP *copy_indices = NULL; \
+        ALLOC_UNALIGN_UNINIT(dim_sizes, FFTZ_INTP,                             \
+            dim_rank * sizeof(FFTZ_INTP))                                      \
+        ALLOC_UNALIGN_UNINIT(strides_full, FFTZ_INTP,                          \
+            dim_rank * sizeof(FFTZ_INTP))                                      \
+        ALLOC_UNALIGN_UNINIT(strides_hc, FFTZ_INTP,                            \
+            dim_rank * sizeof(FFTZ_INTP))                                      \
+        ALLOC_UNALIGN_UNINIT(copy_indices, FFTZ_INTP,                          \
+            dim_rank * sizeof(FFTZ_INTP))                                      \
         if (!dim_sizes || !strides_full || !strides_hc || !copy_indices)       \
         {                                                                      \
             printf("ERROR: Failed to allocate memory for dimension arrays\n"); \
@@ -81,16 +86,17 @@
         }                                                                      \
                                                                                \
         /* Calculate strides and total sizes for full and half-complex */      \
-        INTP stride_full = 1;                                                  \
-        INTP stride_hc = 1;                                                    \
-        INTP n_full = 1;                                                       \
-        INTP n_hc = 1;                                                         \
+        FFTZ_INTP stride_full = 1; \
+        FFTZ_INTP stride_hc = 1; \
+        FFTZ_INTP n_full = 1; \
+        FFTZ_INTP n_hc = 1; \
                                                                                \
         /* Build dimension sizes and strides (innermost to outermost) */       \
-        for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)                 \
+        for (FFTZ_INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++) \
         {                                                                      \
-            INTP dim_size = (dim_idx == 0) ? dim0 : dims[dim_idx].n;           \
-            INTP dim_size_hc = (dim_idx == 0) ? dim0_hc : dims[dim_idx].n;     \
+            FFTZ_INTP dim_size = (dim_idx == 0) ? dim0 : dims[dim_idx].n; \
+            FFTZ_INTP dim_size_hc =                                            \
+                (dim_idx == 0) ? dim0_hc : dims[dim_idx].n;                    \
                                                                                \
             dim_sizes[dim_idx] = dim_size;                                     \
             strides_full[dim_idx] = stride_full;                               \
@@ -103,39 +109,39 @@
         }                                                                      \
                                                                                \
         /* Process each batch */                                               \
-        for (INTP batch_idx = 0; batch_idx < batches; batch_idx++)             \
+        for (FFTZ_INTP batch_idx = 0; batch_idx < batches; batch_idx++) \
         {                                                                      \
-            INTP in_base = batch_idx * n_hc;                                   \
-            INTP out_base = batch_idx * n_full;                                \
+            FFTZ_INTP in_base = batch_idx * n_hc; \
+            FFTZ_INTP out_base = batch_idx * n_full; \
                                                                                \
             /* Step 1: Copy stored half-complex data to output */              \
-            for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)             \
+            for (FFTZ_INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++) \
             {                                                                  \
                 copy_indices[dim_idx] = 0;                                     \
             }                                                                  \
                                                                                \
-            UINT8 done_copying = 0;                                            \
+            FFTZ_UINT8 done_copying = 0; \
             while (!done_copying)                                              \
             {                                                                  \
                 /* Compute HC linear index */                                  \
-                INTP hc_idx = 0;                                               \
-                for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)         \
+                FFTZ_INTP hc_idx = 0; \
+                for (FFTZ_INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++) \
                 {                                                              \
                     hc_idx += copy_indices[dim_idx] * strides_hc[dim_idx];     \
                 }                                                              \
                                                                                \
                 /* Compute Full linear index (same multi-indices) */           \
-                INTP full_idx = 0;                                             \
-                for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)         \
+                FFTZ_INTP full_idx = 0; \
+                for (FFTZ_INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++) \
                 {                                                              \
                     full_idx +=                                                \
                         copy_indices[dim_idx] * strides_full[dim_idx];         \
                 }                                                              \
                                                                                \
                 /* Copy real and imaginary parts */                            \
-                INTP src_idx = map ? map[in_base + hc_idx] * DATA_STRIDE       \
+                FFTZ_INTP src_idx = map ? map[in_base + hc_idx] * DATA_STRIDE \
                                    : (in_base + hc_idx) * DATA_STRIDE;         \
-                INTP dst_idx = (out_base + full_idx) * DATA_STRIDE;            \
+                FFTZ_INTP dst_idx = (out_base + full_idx) * DATA_STRIDE; \
                 out_t[dst_idx] = in_t[src_idx];                                \
                 out_t[dst_idx + 1] = in_t[src_idx + 1];                        \
                                                                                \
@@ -147,11 +153,12 @@
             /* Step 2: Fill missing region via Hermitian symmetry */           \
             if (dim0_hc < dim0)                                                \
             {                                                                  \
-                INTP *indices = NULL;                                          \
-                INTP *mirror_indices = NULL;                                   \
-                ALLOC_UNALIGN_UNINIT(indices, INTP, dim_rank * sizeof(INTP))   \
-                ALLOC_UNALIGN_UNINIT(mirror_indices, INTP,                     \
-                                     dim_rank * sizeof(INTP))                  \
+                FFTZ_INTP *indices = NULL; \
+                FFTZ_INTP *mirror_indices = NULL; \
+                ALLOC_UNALIGN_UNINIT(indices, FFTZ_INTP,                       \
+                    dim_rank * sizeof(FFTZ_INTP))                             \
+                ALLOC_UNALIGN_UNINIT(mirror_indices, FFTZ_INTP, \
+                                     dim_rank * sizeof(FFTZ_INTP)) \
                 if (!indices || !mirror_indices)                               \
                 {                                                              \
                     printf("ERROR: Failed to allocate memory for indices and " \
@@ -166,24 +173,26 @@
                 }                                                              \
                                                                                \
                 /* Start at first missing index (dim0_hc onwards in dim0) */   \
-                for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)         \
+                for (FFTZ_INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++) \
                 {                                                              \
                     indices[dim_idx] = (dim_idx == 0) ? dim0_hc : 0;           \
                 }                                                              \
                                                                                \
-                UINT8 done = 0;                                                \
+                FFTZ_UINT8 done = 0; \
                 while (!done)                                                  \
                 {                                                              \
                     /* Compute missing position linear index */                \
-                    INTP miss_idx = 0;                                         \
-                    for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)     \
+                    FFTZ_INTP miss_idx = 0; \
+                    for (FFTZ_INT32 dim_idx = 0; dim_idx < dim_rank;           \
+                         dim_idx++)                                            \
                     {                                                          \
                         miss_idx +=                                            \
                             indices[dim_idx] * strides_full[dim_idx];          \
                     }                                                          \
                                                                                \
                     /* Hermitian mirror: F[i] = conj(F[-i mod N]) */           \
-                    for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)     \
+                    for (FFTZ_INT32 dim_idx = 0; dim_idx < dim_rank;           \
+                         dim_idx++)                                            \
                     {                                                          \
                         mirror_indices[dim_idx] =                              \
                             (dim_sizes[dim_idx] - indices[dim_idx]) %          \
@@ -191,16 +200,17 @@
                     }                                                          \
                                                                                \
                     /* Compute mirror linear index */                          \
-                    INTP mirr_idx = 0;                                         \
-                    for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)     \
+                    FFTZ_INTP mirr_idx = 0; \
+                    for (FFTZ_INT32 dim_idx = 0; dim_idx < dim_rank;           \
+                         dim_idx++)                                            \
                     {                                                          \
                         mirr_idx +=                                            \
                             mirror_indices[dim_idx] * strides_full[dim_idx];   \
                     }                                                          \
                                                                                \
                     /* Set conjugate: real stays same, imaginary negated */    \
-                    INTP dst_idx = (out_base + miss_idx) * DATA_STRIDE;        \
-                    INTP src_idx = (out_base + mirr_idx) * DATA_STRIDE;        \
+                    FFTZ_INTP dst_idx = (out_base + miss_idx) * DATA_STRIDE; \
+                    FFTZ_INTP src_idx = (out_base + mirr_idx) * DATA_STRIDE; \
                     out_t[dst_idx] = out_t[src_idx];                           \
                     out_t[dst_idx + 1] = -out_t[src_idx + 1];                  \
                                                                                \
@@ -225,13 +235,13 @@
     do                                                                         \
     {                                                                          \
         dt_t *buffer_t = (dt_t *)buffer;                                       \
-        for (INTP b = 0; b < batches; b++)                                     \
+        for (FFTZ_INTP b = 0; b < batches; b++) \
         {                                                                      \
             buffer_t[map[b * n] * DATA_STRIDE + 1] = 0.0;                      \
-            for (INTP i = 1, j = n - 1; i <= (n - 1) / 2; i++, j--)            \
+            for (FFTZ_INTP i = 1, j = n - 1; i <= (n - 1) / 2; i++, j--) \
             {                                                                  \
-                INTP src_idx = map[b * n + i] * DATA_STRIDE;                   \
-                INTP dst_idx = map[b * n + j] * DATA_STRIDE;                   \
+                FFTZ_INTP src_idx = map[b * n + i] * DATA_STRIDE; \
+                FFTZ_INTP dst_idx = map[b * n + j] * DATA_STRIDE; \
                 buffer_t[dst_idx] = buffer_t[src_idx];                         \
                 buffer_t[dst_idx + 1] = -buffer_t[src_idx + 1];                \
             }                                                                  \
@@ -248,12 +258,12 @@
         if (dt_t == FLOAT_P)                                                   \
         {                                                                      \
             convert_complex_to_half_complex_impl(buffer, n, batches, map,      \
-                                                 FLOAT);                       \
+                                                 FFTZ_FLOAT); \
         }                                                                      \
         else                                                                   \
         {                                                                      \
             convert_complex_to_half_complex_impl(buffer, n, batches, map,      \
-                                                 DOUBLE);                      \
+                                                 FFTZ_DOUBLE); \
         }                                                                      \
     } while (0)
 
@@ -263,11 +273,11 @@
     {                                                                          \
         dt_t *in_t = (dt_t *)in;                                               \
         dt_t *out_t = (dt_t *)out;                                             \
-        for (INTP b = 0; b < batches; b++)                                     \
+        for (FFTZ_INTP b = 0; b < batches; b++) \
         {                                                                      \
-            for (INTP i = 0; i < n; i++)                                       \
+            for (FFTZ_INTP i = 0; i < n; i++) \
             {                                                                  \
-                INTP idx = b * n + i;                                          \
+                FFTZ_INTP idx = b * n + i; \
                 out_t[idx * DATA_STRIDE] = in_t[map[idx]];                     \
                 out_t[idx * DATA_STRIDE + 1] = 0.0;                            \
             }                                                                  \
@@ -279,11 +289,13 @@
     {                                                                          \
         if (dt_t == FLOAT_P)                                                   \
         {                                                                      \
-            convert_real_to_complex_impl(out, in, n, batches, map, FLOAT);     \
+            convert_real_to_complex_impl(out, in, n, batches, map,            \
+                FFTZ_FLOAT);                                                   \
         }                                                                      \
         else                                                                   \
         {                                                                      \
-            convert_real_to_complex_impl(out, in, n, batches, map, DOUBLE);    \
+            convert_real_to_complex_impl(out, in, n, batches, map,            \
+                FFTZ_DOUBLE);                                                  \
         }                                                                      \
     } while (0)
 
@@ -299,16 +311,19 @@
         dt_t *out_buf = (dt_t *)out;                                           \
                                                                                \
         /* Allocate arrays */                                                  \
-        INTP *dim_sizes = NULL;                                                \
-        INTP *hc_strides = NULL;                                               \
-        INTP *cur_pos = NULL;                                                  \
-        INTP *conj_pos = NULL;                                                 \
-        UINT8 *has_nyquist = NULL;                                             \
-        ALLOC_UNALIGN_UNINIT(dim_sizes, INTP, dim_rank * sizeof(INTP))         \
-        ALLOC_UNALIGN_UNINIT(hc_strides, INTP, dim_rank * sizeof(INTP))        \
-        ALLOC_UNALIGN_UNINIT(cur_pos, INTP, dim_rank * sizeof(INTP))           \
-        ALLOC_UNALIGN_UNINIT(conj_pos, INTP, dim_rank * sizeof(INTP))          \
-        ALLOC_UNALIGN_UNINIT(has_nyquist, UINT8, dim_rank)                     \
+        FFTZ_INTP *dim_sizes = NULL; \
+        FFTZ_INTP *hc_strides = NULL; \
+        FFTZ_INTP *cur_pos = NULL; \
+        FFTZ_INTP *conj_pos = NULL; \
+        FFTZ_UINT8 *has_nyquist = NULL; \
+        ALLOC_UNALIGN_UNINIT(dim_sizes, FFTZ_INTP,                             \
+            dim_rank * sizeof(FFTZ_INTP))                                      \
+        ALLOC_UNALIGN_UNINIT(hc_strides, FFTZ_INTP,                            \
+            dim_rank * sizeof(FFTZ_INTP))                                      \
+        ALLOC_UNALIGN_UNINIT(cur_pos, FFTZ_INTP, dim_rank * sizeof(FFTZ_INTP)) \
+        ALLOC_UNALIGN_UNINIT(conj_pos, FFTZ_INTP,                              \
+            dim_rank * sizeof(FFTZ_INTP))                                      \
+        ALLOC_UNALIGN_UNINIT(has_nyquist, FFTZ_UINT8, dim_rank) \
                                                                                \
         if (!dim_sizes || !hc_strides || !cur_pos || !conj_pos || !has_nyquist)\
         {                                                                      \
@@ -322,10 +337,10 @@
         }                                                                      \
                                                                                \
         /* Setup: compute sizes, strides, and Nyquist flags */                 \
-        INTP total_hc_elements = 1;                                            \
-        INTP cumulative_stride = 1;                                            \
-        INTP hc_size = 0;                                                      \
-        for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)                 \
+        FFTZ_INTP total_hc_elements = 1; \
+        FFTZ_INTP cumulative_stride = 1; \
+        FFTZ_INTP hc_size = 0; \
+        for (FFTZ_INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++) \
         {                                                                      \
             dim_sizes[dim_idx] = dims[dim_idx].n;                              \
             hc_size = (dim_idx == 0) ? (dims[dim_idx].n / 2 + 1)               \
@@ -337,34 +352,34 @@
         }                                                                      \
                                                                                \
         /* Process each batch */                                               \
-        for (INTP batch_idx = 0; batch_idx < batches; batch_idx++)             \
+        for (FFTZ_INTP batch_idx = 0; batch_idx < batches; batch_idx++) \
         {                                                                      \
-            INTP batch_offset = batch_idx * total_hc_elements;                 \
+            FFTZ_INTP batch_offset = batch_idx * total_hc_elements; \
                                                                                \
             /*                                                                 \
              * PART 1: Set imag=0 at real positions (DC/Nyquist combos)        \
              * Bitmask enumerates all 2^dim_rank combinations:                 \
              *   bit=0 -> DC (index 0), bit=1 -> Nyquist (index N/2)           \
              */                                                                \
-            INTP n_masks = 1 << dim_rank;                                      \
-            for (INTP mask = 0; mask < n_masks; mask++)                        \
+            FFTZ_INTP n_masks = 1 << dim_rank; \
+            for (FFTZ_INTP mask = 0; mask < n_masks; mask++) \
             {                                                                  \
-                UINT8 is_valid = 1;                                            \
-                INTP linear_idx = 0;                                           \
-                for (INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++)         \
+                FFTZ_UINT8 is_valid = 1; \
+                FFTZ_INTP linear_idx = 0; \
+                for (FFTZ_INT32 dim_idx = 0; dim_idx < dim_rank; dim_idx++) \
                 {                                                              \
-                    UINT8 use_nyq = (mask >> dim_idx) & 1;                     \
+                    FFTZ_UINT8 use_nyq = (mask >> dim_idx) & 1; \
                     if (use_nyq && !has_nyquist[dim_idx])                      \
                     {                                                          \
                         is_valid = 0;                                          \
                         break;                                                 \
                     }                                                          \
-                    INTP pos = use_nyq ? (dim_sizes[dim_idx] / 2) : 0;         \
+                    FFTZ_INTP pos = use_nyq ? (dim_sizes[dim_idx] / 2) : 0; \
                     linear_idx += pos * hc_strides[dim_idx];                   \
                 }                                                              \
                 if (is_valid)                                                  \
                 {                                                              \
-                    INTP idx = map[batch_offset + linear_idx];                 \
+                    FFTZ_INTP idx = map[batch_offset + linear_idx]; \
                     out_buf[idx * DATA_STRIDE + 1] = (dt_t)0.0;                \
                 }                                                              \
             }                                                                  \
@@ -374,10 +389,10 @@
              * For each fixed column (DC/Nyquist in dim0), iterate             \
              * through dims 1..N-1 and apply: conj_pos = conj(cur_pos)         \
              */                                                                \
-            INT32 n_fixed_cols = 1 + (has_nyquist[0] ? 1 : 0);                 \
-            for (INT32 col_iter = 0; col_iter < n_fixed_cols; col_iter++)      \
+            FFTZ_INT32 n_fixed_cols = 1 + (has_nyquist[0] ? 1 : 0); \
+            for (FFTZ_INT32 col_iter = 0; col_iter < n_fixed_cols; col_iter++) \
             {                                                                  \
-                INTP col_idx = (col_iter == 0) ? 0 : (dim_sizes[0] / 2);       \
+                FFTZ_INTP col_idx = (col_iter == 0) ? 0 : (dim_sizes[0] / 2); \
                 cur_pos[0] = col_idx;                                          \
                 conj_pos[0] = col_idx;                                         \
                                                                                \
@@ -388,21 +403,22 @@
                 }                                                              \
                                                                                \
                 /* Reset position for dims 1..N-1 */                           \
-                for (INT32 dim_idx = 1; dim_idx < dim_rank; dim_idx++)         \
+                for (FFTZ_INT32 dim_idx = 1; dim_idx < dim_rank; dim_idx++) \
                 {                                                              \
                     cur_pos[dim_idx] = 0;                                      \
                 }                                                              \
                                                                                \
-                UINT8 is_done = 0;                                             \
+                FFTZ_UINT8 is_done = 0; \
                 while (!is_done)                                               \
                 {                                                              \
                     /* Skip if position is real (all dims at DC/Nyquist) */    \
-                    UINT8 is_real_pos = 1;                                     \
-                    for (INT32 dim_idx = 1; dim_idx < dim_rank; dim_idx++)     \
+                    FFTZ_UINT8 is_real_pos = 1; \
+                    for (FFTZ_INT32 dim_idx = 1; dim_idx < dim_rank;           \
+                         dim_idx++)                                            \
                     {                                                          \
-                        INTP p = cur_pos[dim_idx];                             \
-                        UINT8 at_dc = (p == 0);                                \
-                        UINT8 at_nyq = has_nyquist[dim_idx] &&                 \
+                        FFTZ_INTP p = cur_pos[dim_idx]; \
+                        FFTZ_UINT8 at_dc = (p == 0); \
+                        FFTZ_UINT8 at_nyq = has_nyquist[dim_idx] && \
                                        (p == dim_sizes[dim_idx] / 2);          \
                         if (!at_dc && !at_nyq)                                 \
                         {                                                      \
@@ -414,15 +430,17 @@
                     if (!is_real_pos)                                          \
                     {                                                          \
                         /* Compute linear index for current position */        \
-                        INTP cur_idx = cur_pos[0] * hc_strides[0];             \
-                        for (INT32 dim_idx = 1; dim_idx < dim_rank; dim_idx++) \
+                        FFTZ_INTP cur_idx = cur_pos[0] * hc_strides[0]; \
+                        for (FFTZ_INT32 dim_idx = 1; dim_idx < dim_rank;       \
+                             dim_idx++)                                        \
                         {                                                      \
                             cur_idx += cur_pos[dim_idx] * hc_strides[dim_idx]; \
                         }                                                      \
                                                                                \
                         /* Compute conjugate position: (N - k) % N */          \
-                        INTP conj_idx = conj_pos[0] * hc_strides[0];           \
-                        for (INT32 dim_idx = 1; dim_idx < dim_rank; dim_idx++) \
+                        FFTZ_INTP conj_idx = conj_pos[0] * hc_strides[0]; \
+                        for (FFTZ_INT32 dim_idx = 1; dim_idx < dim_rank;       \
+                             dim_idx++)                                        \
                         {                                                      \
                             conj_pos[dim_idx] = (dim_sizes[dim_idx] -          \
                                                  cur_pos[dim_idx]) %           \
@@ -436,8 +454,8 @@
                          */                                                    \
                         if (cur_idx < conj_idx)                                \
                         {                                                      \
-                            INTP src_idx = map[batch_offset + cur_idx];        \
-                            INTP dst_idx = map[batch_offset + conj_idx];       \
+                            FFTZ_INTP src_idx = map[batch_offset + cur_idx]; \
+                            FFTZ_INTP dst_idx = map[batch_offset + conj_idx]; \
                             out_buf[dst_idx * DATA_STRIDE] =                   \
                                 out_buf[src_idx * DATA_STRIDE];                \
                             out_buf[dst_idx * DATA_STRIDE + 1] =               \
@@ -446,9 +464,9 @@
                     }                                                          \
                                                                                \
                     /* Odometer-style increment for dims 1..N-1 */             \
-                    UINT8 carry_flag = 1;                                      \
-                    for (INT32 dim_idx = 1; dim_idx < dim_rank && carry_flag;  \
-                         dim_idx++)                                            \
+                    FFTZ_UINT8 carry_flag = 1; \
+                    for (FFTZ_INT32 dim_idx = 1;                               \
+                         dim_idx < dim_rank && carry_flag; dim_idx++)          \
                     {                                                          \
                         cur_pos[dim_idx]++;                                    \
                         if (cur_pos[dim_idx] >= dim_sizes[dim_idx])            \
@@ -483,12 +501,12 @@
         if (dt_t == FLOAT_P)                                                   \
         {                                                                      \
             make_hc_as_hermitian_symmetric_impl(out, dims, dim_rank, batches,  \
-                                                map, FLOAT);                   \
+                                                map, FFTZ_FLOAT); \
         }                                                                      \
         else                                                                   \
         {                                                                      \
             make_hc_as_hermitian_symmetric_impl(out, dims, dim_rank, batches,  \
-                                                map, DOUBLE);                  \
+                                                map, FFTZ_DOUBLE); \
         }                                                                      \
     } while (0)
 
@@ -502,11 +520,11 @@
         if (dt_t == FLOAT_P)                                                   \
         {                                                                      \
             convert_half_complex_to_complex_impl(out, in, dims, dim_rank,      \
-                                                 batches, map, FLOAT);         \
+                                                 batches, map, FFTZ_FLOAT); \
         }                                                                      \
         else                                                                   \
         {                                                                      \
             convert_half_complex_to_complex_impl(out, in, dims, dim_rank,      \
-                                                 batches, map, DOUBLE);        \
+                                                 batches, map, FFTZ_DOUBLE); \
         }                                                                      \
     } while (0)

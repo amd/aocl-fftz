@@ -25,25 +25,27 @@
 {                                                                              \
     if (!flags.fft_type)                                                       \
     {   /* Validate C2C dims */                                                \
-        for (INT32 i = 0; i < dim_rank; i++)                                   \
+        for (FFTZ_INT32 i = 0; i < dim_rank; i++) \
         {                                                                      \
             if (dims[i].in_stride != dims[i].out_stride)                       \
             {                                                                  \
                 AOCLFFTZ_ERROR("For dimension[%d]:  "                          \
                     "in_stride (%d) != out_stride (%d)",                       \
-                    i, (INT32)dims[i].in_stride, (INT32)dims[i].out_stride);   \
+                    i, (FFTZ_INT32)dims[i].in_stride,                          \
+                    (FFTZ_INT32)dims[i].out_stride);                           \
                 errno = AOCLFFTZ_INVALID_INPUT;                                \
                 goto validation_exit;                                          \
             }                                                                  \
         }                                                                      \
         /* Validate C2C vecs */                                                \
-        for (INT32 i = 0; i < vec_rank; i++)                                   \
+        for (FFTZ_INT32 i = 0; i < vec_rank; i++) \
         {                                                                      \
             if (vecs[i].in_stride != vecs[i].out_stride)                       \
             {                                                                  \
                 AOCLFFTZ_ERROR("For vecs[%d]:  "                               \
                     "in_stride (%d) != out_stride (%d)",                       \
-                    i, (INT32)vecs[i].in_stride, (INT32)vecs[i].out_stride);   \
+                    i, (FFTZ_INT32)vecs[i].in_stride,                          \
+                    (FFTZ_INT32)vecs[i].out_stride);                           \
                 errno = AOCLFFTZ_INVALID_INPUT;                                \
                 goto validation_exit;                                          \
             }                                                                  \
@@ -51,14 +53,15 @@
     }                                                                          \
     else                                                                       \
     {                                                                          \
-        INTP in_scale = (flags.fft_direction == FORWARD_FFT_DIR) ? 2 : 1;      \
-        INTP out_scale = (flags.fft_direction == BACKWARD_FFT_DIR) ? 2 : 1;    \
+        FFTZ_INTP in_scale = (flags.fft_direction == FORWARD_FFT_DIR) ? 2 : 1; \
+        FFTZ_INTP out_scale =                                                  \
+            (flags.fft_direction == BACKWARD_FFT_DIR) ? 2 : 1;                 \
         /* Validate R2C/C2R dims */                                            \
         /* For R2C, in_stride should be the double of out_stride */            \
         /* (or vice versa for C2R) except for dims[0] for which in_stride */   \
         /* and out_stride can either be equal or in_stride can be double of */ \
         /* out_stride (or vice versa  for C2R)*/                               \
-        for (INT32 i = 0; i < dim_rank; i++)                                   \
+        for (FFTZ_INT32 i = 0; i < dim_rank; i++) \
         {                                                                      \
             if ((dims[i].in_stride * out_scale !=                              \
                       dims[i].out_stride * in_scale))                          \
@@ -72,14 +75,14 @@
                             AOCLFFTZ_ERROR("For dimension[%d]: "               \
                                 "Strides should either be equal or"            \
                                 "in_stride should be equal to out_stride * %d",\
-                                i, (INT32)in_scale);                           \
+                                i, (FFTZ_INT32)in_scale); \
                         }                                                      \
                         else /* flags.fft_direction == BACKWARD_FFT_DIR */     \
                         {                                                      \
                             AOCLFFTZ_ERROR("For dimension[%d]: "               \
                                 "Strides should either be equal or"            \
                                 "out_stride should be equal to in_stride * %d",\
-                                i, (INT32)in_scale);                           \
+                                i, (FFTZ_INT32)in_scale); \
                         }                                                      \
                         errno = AOCLFFTZ_INVALID_INPUT;                        \
                         goto validation_exit;                                  \
@@ -91,9 +94,9 @@
                         "in_stride != out_stride * %d\n"                       \
                         "        Possible dims in_stride "                     \
                         "and dims out_stride values are %d, %d",               \
-                        i, (INT32)in_scale,                                    \
-                        (INT32)(dims[i].out_stride * in_scale),                \
-                        (INT32)(dims[i].out_stride));                          \
+                        i, (FFTZ_INT32)in_scale, \
+                        (FFTZ_INT32)(dims[i].out_stride * in_scale), \
+                        (FFTZ_INT32)(dims[i].out_stride)); \
                     errno = AOCLFFTZ_INVALID_INPUT;                            \
                     goto validation_exit;                                      \
                 }                                                              \
@@ -103,16 +106,16 @@
                         "in_stride * %d != out_stride\n"                       \
                         "        Possible dims in_stride "                     \
                         "and dims out_stride values are %d, %d",               \
-                        i, (INT32)out_scale,                                   \
-                        (INT32)(dims[i].in_stride),                            \
-                        (INT32)(dims[i].in_stride * out_scale));               \
+                        i, (FFTZ_INT32)out_scale, \
+                        (FFTZ_INT32)(dims[i].in_stride), \
+                        (FFTZ_INT32)(dims[i].in_stride * out_scale)); \
                     errno = AOCLFFTZ_INVALID_INPUT;                            \
                     goto validation_exit;                                      \
                 }                                                              \
             }                                                                  \
         }                                                                      \
         /* Validate R2C/C2R vecs */                                            \
-        for (INT32 i = 0; i < vec_rank; i++)                                   \
+        for (FFTZ_INT32 i = 0; i < vec_rank; i++) \
         {                                                                      \
             /* For R2C, in_stride should be the double of out_stride */        \
             /* (or vice versa for C2R) except when vec_rank is 1 and */        \
@@ -127,9 +130,9 @@
                         "in_stride != out_stride * %d\n"                       \
                         "        Possible vecs in_stride "                     \
                         "and vecs out_stride values are %d, %d",               \
-                        i, (INT32)in_scale,                                    \
-                        (INT32)(vecs[i].out_stride * in_scale),                \
-                        (INT32)(vecs[i].out_stride));                          \
+                        i, (FFTZ_INT32)in_scale, \
+                        (FFTZ_INT32)(vecs[i].out_stride * in_scale), \
+                        (FFTZ_INT32)(vecs[i].out_stride)); \
                 }                                                              \
                 else                                                           \
                 {                                                              \
@@ -137,9 +140,9 @@
                         "in_stride * %d != out_stride\n"                       \
                         "        Possible vecs in_stride "                     \
                         "and vecs out_stride values are %d, %d",               \
-                        i, (INT32)out_scale,                                   \
-                        (INT32)(vecs[i].in_stride),                            \
-                        (INT32)(vecs[i].in_stride * out_scale));               \
+                        i, (FFTZ_INT32)out_scale, \
+                        (FFTZ_INT32)(vecs[i].in_stride), \
+                        (FFTZ_INT32)(vecs[i].in_stride * out_scale)); \
                 }                                                              \
                 errno = AOCLFFTZ_INVALID_INPUT;                                \
                 goto validation_exit;                                          \
@@ -166,7 +169,7 @@
     }                                                                          \
 }
 
-static inline INT32 validate_flags(aoclfftz_flags_t *flags)
+static inline FFTZ_INT32 validate_flags(aoclfftz_flags_t *flags)
 {
     if (flags->fft_type > 1)
     {
@@ -214,7 +217,7 @@ static inline INT32 validate_flags(aoclfftz_flags_t *flags)
         errno = AOCLFFTZ_INVALID_INPUT;                                        \
         goto validation_exit;                                                  \
     }                                                                          \
-    for (INT32 i = 0; i < dim_rank; i++)                                       \
+    for (FFTZ_INT32 i = 0; i < dim_rank; i++) \
     {                                                                          \
         if (dims[i].n <= 0)                                                    \
         {                                                                      \
@@ -248,7 +251,7 @@ static inline INT32 validate_flags(aoclfftz_flags_t *flags)
         errno = AOCLFFTZ_INVALID_INPUT;                                        \
         goto validation_exit;                                                  \
     }                                                                          \
-    for (INT32 i = 0; i < vec_rank; i++)                                       \
+    for (FFTZ_INT32 i = 0; i < vec_rank; i++) \
     {                                                                          \
         if (vecs[i].n <= 0)                                                    \
         {                                                                      \
@@ -273,10 +276,10 @@ static inline INT32 validate_flags(aoclfftz_flags_t *flags)
     }                                                                          \
 }
 
-static inline INT32 sanitize_threads(INT32 num_threads)
+static inline FFTZ_INT32 sanitize_threads(FFTZ_INT32 num_threads)
 {
 #ifdef MULTI_THREADING
-    INT32 max_threads = omp_get_num_procs();
+    FFTZ_INT32 max_threads = omp_get_num_procs();
     if (num_threads < 1)
     {
         AOCLFFTZ_LOG(INFO, global_logger_mode, "Requested num_threads value "
@@ -303,7 +306,8 @@ static inline INT32 sanitize_threads(INT32 num_threads)
     return num_threads;
 }
 
-static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
+static inline FFTZ_INT32 validate_control_params(
+    aoclfftz_cntrl_params_t *cntrl_p)
 {
     if (cntrl_p->logger_mode < 0 || cntrl_p->logger_mode > 3)
     {
@@ -336,7 +340,7 @@ static inline INT32 validate_control_params(aoclfftz_cntrl_params_t *cntrl_p)
 
 #define VALIDATE_PROBLEM_DESCRIPTOR(problem)                                   \
 {                                                                              \
-    INT32 ret = AOCLFFTZ_SUCCESS;                                              \
+    FFTZ_INT32 ret = AOCLFFTZ_SUCCESS; \
     if (problem == NULL)                                                       \
     {                                                                          \
         ret = AOCLFFTZ_INVALID_INPUT;                                          \

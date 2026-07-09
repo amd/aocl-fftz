@@ -23,13 +23,13 @@
  *
  */
 auto name_generator =
-    [](const ::testing::TestParamInfo<
-        std::tuple<std::tuple<INTP, INTP>, INTP, INT32>> &info)
+    [](const ::testing::TestParamInfo< std::tuple<std::tuple<FFTZ_INTP,
+       FFTZ_INTP>, FFTZ_INTP, FFTZ_INT32>> &info)
 {
-    INTP rows = std::get<0>(std::get<0>(info.param));
-    INTP cols = std::get<1>(std::get<0>(info.param));
-    INTP stride = std::get<1>(info.param);
-    INT32 kernel_idx = std::get<2>(info.param);
+    FFTZ_INTP rows = std::get<0>(std::get<0>(info.param));
+    FFTZ_INTP cols = std::get<1>(std::get<0>(info.param));
+    FFTZ_INTP stride = std::get<1>(info.param);
+    FFTZ_INT32 kernel_idx = std::get<2>(info.param);
     std::string kernel_name = transpose_kernel_names_table[kernel_idx];
 
     std::string test_name = std::to_string(rows) + "x" + std::to_string(cols);
@@ -59,7 +59,7 @@ TEST_P(AoclfftzInplaceTransposeKernelTestDoubleComplex,
     test_kernel();
 }
 
-std::vector<std::tuple<INTP, INTP>> square_dims = {
+std::vector<std::tuple<FFTZ_INTP, FFTZ_INTP>> square_dims = {
     {1, 1}, {2, 2}, {13, 13}, {56, 56}, {64, 64}, {360, 360}, {512, 512}};
 
 // Unit strided, square, inplace matrix transpose
@@ -104,7 +104,7 @@ INSTANTIATE_TEST_SUITE_P(
                        ),
     name_generator);
 
-std::vector<INTP> strides = {3, 8, 35, 102};
+std::vector<FFTZ_INTP> strides = {3, 8, 35, 102};
 
 // Arbitrarily (General) strided, square, inplace matrix transpose
 // -----------------------------------------------------------------------------
@@ -144,7 +144,7 @@ INSTANTIATE_TEST_SUITE_P(
                        ),
     name_generator);
 
-std::vector<std::tuple<INTP, INTP>> rect_dims = {
+std::vector<std::tuple<FFTZ_INTP, FFTZ_INTP>> rect_dims = {
     {10, 40}, {82, 69}, {341, 3}, {16, 1024}};
 
 // Unit strided, rectangle, inplace matrix transpose

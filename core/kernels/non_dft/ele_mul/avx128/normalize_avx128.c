@@ -15,14 +15,15 @@
 #include "core/kernels/kernel.h"
 #include "core/kernels/simd_includes/simd_common.h"
 
-static VOID normalize_fp32_avx128(VOID *data, INTP n, DOUBLE factor)
+static FFTZ_VOID normalize_fp32_avx128(FFTZ_VOID *data, FFTZ_INTP n,
+                                       FFTZ_DOUBLE factor)
 {
-    FLOAT *ptr_data = (FLOAT *)data;
-    INTP N = n / NUM_SETS_128_S;
-    INTP remaining_sets = n % NUM_SETS_128_S;
-    INTP count;
+    FFTZ_FLOAT *ptr_data = (FFTZ_FLOAT *)data;
+    FFTZ_INTP N = n / NUM_SETS_128_S;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_128_S;
+    FFTZ_INTP count;
 
-    __m128 vfactor = _mm_set1_ps((FLOAT)factor);
+    __m128 vfactor = _mm_set1_ps((FFTZ_FLOAT)factor);
 
     for (count = 0; count < N; count++)
     {
@@ -35,16 +36,17 @@ static VOID normalize_fp32_avx128(VOID *data, INTP n, DOUBLE factor)
     // tail cases
     if (remaining_sets & NUM_SETS_C_S)
     {
-        const FLOAT factor_f = (FLOAT)factor;
+        const FFTZ_FLOAT factor_f = (FFTZ_FLOAT)factor;
         ptr_data[0] *= factor_f;
         ptr_data[1] *= factor_f;
     }
 }
 
-static VOID normalize_fp64_avx128(VOID *data, INTP n, DOUBLE factor)
+static FFTZ_VOID normalize_fp64_avx128(FFTZ_VOID *data, FFTZ_INTP n,
+                                       FFTZ_DOUBLE factor)
 {
-    DOUBLE *ptr_data = (DOUBLE *)data;
-    INTP count;
+    FFTZ_DOUBLE *ptr_data = (FFTZ_DOUBLE *)data;
+    FFTZ_INTP count;
 
     __m128d vfactor = _mm_set1_pd(factor);
 
@@ -58,7 +60,7 @@ static VOID normalize_fp64_avx128(VOID *data, INTP n, DOUBLE factor)
     }
 }
 
-normalize_ register_normalize_avx128(UINT8 precision)
+normalize_ register_normalize_avx128(FFTZ_UINT8 precision)
 {
     if (precision == DT_FLOAT)
     {

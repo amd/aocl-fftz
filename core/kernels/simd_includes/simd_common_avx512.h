@@ -551,7 +551,7 @@ static const union data_union_512
 #define ITW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
                          load_multi_cols, is_contiguous)                       \
 {                                                                              \
-    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512d twv;                                                               \
     if ((load_multi_cols)) {                                                   \
         twv = _mm512_loadu_pd((twbuf) + addr);                                 \
@@ -571,7 +571,7 @@ static const union data_union_512
 #define TW_GATHER_512_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
                         load_multi_cols, is_contiguous)                        \
 {                                                                              \
-    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512d twv;                                                               \
     if ((load_multi_cols)) {                                                   \
         twv = _mm512_loadu_pd((twbuf) + addr);                                 \
@@ -591,7 +591,7 @@ static const union data_union_512
 #define ITW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
                          load_multi_cols, is_contiguous)                       \
 {                                                                              \
-    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512 twv;                                                                \
     if ((load_multi_cols)) {                                                   \
         twv = _mm512_loadu_ps((twbuf) + addr);                                 \
@@ -612,7 +612,7 @@ static const union data_union_512
 #define TW_GATHER_512_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
                         load_multi_cols, is_contiguous)                        \
 {                                                                              \
-    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512 twv;                                                                \
     if ((load_multi_cols)) {                                                   \
         twv = _mm512_loadu_ps((twbuf) + addr);                                 \
@@ -695,14 +695,14 @@ static const union data_union_512
 #define PRELOADED_GATHER_NOTW_512_D(gbase, stride, offset, gdest, twv,         \
                                     is_contiguous)                             \
 {                                                                              \
-    (VOID)twv;                                                                 \
+    (FFTZ_VOID)twv;                                                            \
     GATHER4_512_D((gbase) + (stride), offset, (gdest), is_contiguous);         \
 }
 
 #define PRELOADED_SCATTER_NOTW_512_D(sbase, stride, offset, ssrc, twv,         \
                                      is_contiguous)                            \
 {                                                                              \
-    (VOID)twv;                                                                 \
+    (FFTZ_VOID)twv;                                                            \
     SCATTER4_512_D((sbase) + (stride), offset, (ssrc), is_contiguous);         \
 }
 
@@ -733,7 +733,7 @@ static const union data_union_512
 #define TW_SCATTER_512_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,     \
                          lmc, is_contiguous)                                   \
 {                                                                              \
-    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512d twv;                                                               \
     if ((lmc))                                                                 \
     {                                                                          \
@@ -753,7 +753,7 @@ static const union data_union_512
 #define ITW_SCATTER_512_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,    \
                           lmc, is_contiguous)                                  \
 {                                                                              \
-    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512d twv;                                                               \
     if ((lmc))                                                                 \
     {                                                                          \
@@ -773,7 +773,7 @@ static const union data_union_512
 #define TW_SCATTER_512_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,     \
                          lmc, is_contiguous)                                   \
 {                                                                              \
-    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512 twv;                                                                \
     if ((lmc))                                                                 \
     {                                                                          \
@@ -794,7 +794,7 @@ static const union data_union_512
 #define ITW_SCATTER_512_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,    \
                           lmc, is_contiguous)                                  \
 {                                                                              \
-    const UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));                  \
+    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m512 twv;                                                                \
     if ((lmc))                                                                 \
     {                                                                          \
@@ -819,14 +819,14 @@ static const union data_union_512
 #define PRELOADED_GATHER_NOTW_512_D(gbase, stride, offset, gdest, twv,         \
                                     is_contiguous)                             \
 {                                                                              \
-    (VOID)twv;                                                                 \
+    (FFTZ_VOID)twv;                                                            \
     GATHER4_512_D((gbase) + (stride), offset, (gdest), is_contiguous);         \
 }
 
 #define PRELOADED_SCATTER_NOTW_512_D(sbase, stride, offset, ssrc, twv,         \
                                      is_contiguous)                            \
 {                                                                              \
-    (VOID)twv;                                                                 \
+    (FFTZ_VOID)twv;                                                            \
     SCATTER4_512_D((sbase) + (stride), offset, (ssrc), is_contiguous);         \
 }
 

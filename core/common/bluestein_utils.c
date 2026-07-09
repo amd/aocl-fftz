@@ -19,13 +19,14 @@
 #include "core/common/bluestein_utils.h"
 #include "core/kernels/kernel.h"
 
-VOID bluestein_copy_data(VOID *src, VOID *dst, INTP n, INTP src_stride,
-                         INTP dst_stride, UINT8 dt_prec, UINT32 dt_bytes)
+FFTZ_VOID bluestein_copy_data(FFTZ_VOID *src, FFTZ_VOID *dst, FFTZ_INTP n,
+                              FFTZ_INTP src_stride, FFTZ_INTP dst_stride,
+                              FFTZ_UINT8 dt_prec, FFTZ_UINT32 dt_bytes)
 {
     if (src_stride > 1 || dst_stride > 1)
     {
-        INTP scaled_src_stride = src_stride * DATA_STRIDE;
-        INTP scaled_dst_stride = dst_stride * DATA_STRIDE;
+        FFTZ_INTP scaled_src_stride = src_stride * DATA_STRIDE;
+        FFTZ_INTP scaled_dst_stride = dst_stride * DATA_STRIDE;
         if (dt_prec == DT_FLOAT)
         {
             permuted_copy_c_fp32(src, dst, 1, n, scaled_src_stride,
@@ -47,8 +48,8 @@ VOID bluestein_copy_data(VOID *src, VOID *dst, INTP n, INTP src_stride,
  * Supported prime factors for efficient FFT computation.
  * These correspond to available prime radix kernels in the library.
  */
-static const UINT32 AOCLFFTZ_SUPPORTED_PRIMES[] = {2, 3, 5, 7, 11, 13};
-static const UINT32 AOCLFFTZ_NUM_SUPPORTED_PRIMES =
+static const FFTZ_UINT32 AOCLFFTZ_SUPPORTED_PRIMES[] = {2, 3, 5, 7, 11, 13};
+static const FFTZ_UINT32 AOCLFFTZ_NUM_SUPPORTED_PRIMES =
     sizeof(AOCLFFTZ_SUPPORTED_PRIMES) / sizeof(AOCLFFTZ_SUPPORTED_PRIMES[0]);
 
 /**
@@ -58,19 +59,19 @@ static const UINT32 AOCLFFTZ_NUM_SUPPORTED_PRIMES =
  * using only the supported prime factors.
  *
  * @param[in] n Original input length
- * @return INTP Extended length m suitable for FFT convolution
+ * @return FFTZ_INTP Extended length m suitable for FFT convolution
  */
-INTP get_extended_length(INTP n)
+FFTZ_INTP get_extended_length(FFTZ_INTP n)
 {
-    INTP min_length;
+    FFTZ_INTP min_length;
 
     for (min_length = (2 * n) - 1;; min_length++)
     {
-        INTP quo = min_length;
+        FFTZ_INTP quo = min_length;
 
-        for (UINT32 i = 0; i < AOCLFFTZ_NUM_SUPPORTED_PRIMES; i++)
+        for (FFTZ_UINT32 i = 0; i < AOCLFFTZ_NUM_SUPPORTED_PRIMES; i++)
         {
-            UINT32 prime = AOCLFFTZ_SUPPORTED_PRIMES[i];
+            FFTZ_UINT32 prime = AOCLFFTZ_SUPPORTED_PRIMES[i];
             while (quo % prime == 0)
             {
                 quo /= prime;
@@ -107,27 +108,27 @@ INTP get_extended_length(INTP n)
  *
  * @param[in,out] sol Solution descriptor containing output buffer and metadata
  * @param[in]     m   Extended length (>= 2n-1) for FFT convolution
- * @return INT32 BLUESTEIN_SUCCESS on success
+ * @return FFTZ_INT32 BLUESTEIN_SUCCESS on success
  */
-INT32 compute_chirp_sequence(aoclfftz_solution_t *sol, INTP m)
+FFTZ_INT32 compute_chirp_sequence(aoclfftz_solution_t *sol, FFTZ_INTP m)
 {
-    UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    INTP n = sol->decomp_scheme->dims[0].n;
-    INTP n2 = n * 2;
+    FFTZ_UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    FFTZ_INTP n = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP n2 = n * 2;
 
     if (precision == DT_FLOAT)
     {
-        FLOAT *B = (FLOAT *)sol->dft_bufs->bluestein->B;
+        FFTZ_FLOAT *B = (FFTZ_FLOAT *)sol->dft_bufs->bluestein->B;
 
-        for (INTP i = 0; i < n; i++)
+        for (FFTZ_INTP i = 0; i < n; i++)
         {
-            INTP sq_idx_mod = (i * i) % n2;
-            FLOAT angle = (AOCLFFTZ_2_PIf * sq_idx_mod) / n2;
-            FLOAT re = cosf(angle);
-            FLOAT im = sinf(angle);
+            FFTZ_INTP sq_idx_mod = (i * i) % n2;
+            FFTZ_FLOAT angle = (AOCLFFTZ_2_PIf * sq_idx_mod) / n2;
+            FFTZ_FLOAT re = cosf(angle);
+            FFTZ_FLOAT im = sinf(angle);
 
-            INTP idx        = i * DATA_STRIDE;
-            INTP mirror_idx = (m - i) * DATA_STRIDE;
+            FFTZ_INTP idx        = i * DATA_STRIDE;
+            FFTZ_INTP mirror_idx = (m - i) * DATA_STRIDE;
 
             B[idx]     = re;
             B[idx + 1] = im;
@@ -139,26 +140,26 @@ INT32 compute_chirp_sequence(aoclfftz_solution_t *sol, INTP m)
             }
         }
 
-        INTP pad_count = m - n2 + 1;
+        FFTZ_INTP pad_count = m - n2 + 1;
         if (pad_count > 0)
         {
             memset(B + n * DATA_STRIDE, 0,
-                   pad_count * DATA_STRIDE * sizeof(FLOAT));
+                   pad_count * DATA_STRIDE * sizeof(FFTZ_FLOAT));
         }
     }
     else
     {
-        DOUBLE *B = (DOUBLE *)sol->dft_bufs->bluestein->B;
+        FFTZ_DOUBLE *B = (FFTZ_DOUBLE *)sol->dft_bufs->bluestein->B;
 
-        for (INTP i = 0; i < n; i++)
+        for (FFTZ_INTP i = 0; i < n; i++)
         {
-            INTP sq_idx_mod = (i * i) % n2;
-            DOUBLE angle = (AOCLFFTZ_2_PI * sq_idx_mod) / n2;
-            DOUBLE re = cos(angle);
-            DOUBLE im = sin(angle);
+            FFTZ_INTP sq_idx_mod = (i * i) % n2;
+            FFTZ_DOUBLE angle = (AOCLFFTZ_2_PI * sq_idx_mod) / n2;
+            FFTZ_DOUBLE re = cos(angle);
+            FFTZ_DOUBLE im = sin(angle);
 
-            INTP idx        = i * DATA_STRIDE;
-            INTP mirror_idx = (m - i) * DATA_STRIDE;
+            FFTZ_INTP idx        = i * DATA_STRIDE;
+            FFTZ_INTP mirror_idx = (m - i) * DATA_STRIDE;
 
             B[idx]     = re;
             B[idx + 1] = im;
@@ -170,11 +171,11 @@ INT32 compute_chirp_sequence(aoclfftz_solution_t *sol, INTP m)
             }
         }
 
-        INTP pad_count = m - n2 + 1;
+        FFTZ_INTP pad_count = m - n2 + 1;
         if (pad_count > 0)
         {
             memset(B + n * DATA_STRIDE, 0,
-                   pad_count * DATA_STRIDE * sizeof(DOUBLE));
+                   pad_count * DATA_STRIDE * sizeof(FFTZ_DOUBLE));
         }
     }
 

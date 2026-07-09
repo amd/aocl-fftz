@@ -20,7 +20,7 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {
                                                 {5,  13, 44, 96,  46, 39},
                                                 {11, 24, 72, 107, 65, 92}};
 
-static const FLOAT twiddle_buf_fp32[5][16] __attribute__((aligned(64))) = {
+static const FFTZ_FLOAT twiddle_buf_fp32[5][16] __attribute__((aligned(64))) = {
     {
         1.0f,
         0.0f,
@@ -145,7 +145,7 @@ static const FLOAT twiddle_buf_fp32[5][16] __attribute__((aligned(64))) = {
     }                                                                          \
 }
 
-ops_cycles_t get_ops_cnt_fft48avx512(UINT8 precision, UINT8 direction)
+ops_cycles_t get_ops_cnt_fft48avx512(FFTZ_UINT8 precision, FFTZ_UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -158,29 +158,31 @@ ops_cycles_t get_ops_cnt_fft48avx512(UINT8 precision, UINT8 direction)
 }
 
 // Radix-48 FFT kernel using 6x8 decomposition
-static VOID fft48avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                            VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                            VOID *twd, UINT8 flag)
+static FFTZ_VOID fft48avx512fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                                 FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                                 FFTZ_INTP n, aoclfftz_strides_t *strides,
+                                 FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    
-    const FLOAT CRTM_6[2] = {0.500000000000000000000000000000000000000000000f,
-                             0.866025403784438646763723170752936183471402627f};
-    const FLOAT CRTM_8[2] = {1.0f,
+
+    const FFTZ_FLOAT CRTM_6[2] = {
+        0.500000000000000000000000000000000000000000000f,
+        0.866025403784438646763723170752936183471402627f};
+    const FFTZ_FLOAT CRTM_8[2] = {1.0f,
                              0.707106781186547524400844362104849039284835938f};
 
-    FLOAT * in_r = (FLOAT *)in_real;
-    FLOAT * out_r = (FLOAT *)out_real;
+    FFTZ_FLOAT * in_r = (FFTZ_FLOAT *)in_real;
+    FFTZ_FLOAT * out_r = (FFTZ_FLOAT *)out_real;
 
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
 
     __m512 v_R6_C1 = _mm512_set1_ps(CRTM_6[0]);
     __m512 v_R6_C2 = _mm512_set1_ps(CRTM_6[1]);
@@ -218,26 +220,26 @@ static VOID fft48avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     __m512 twd5_re = _mm512_moveldup_ps(twd5);
     __m512 twd5_im = _mm512_movehdup_ps(twd5);
 
-    INTP group_stride = in_strides[1];
-    UINT8 is_contiguous_group_in = (group_stride == DATA_STRIDE);
-    INTP out_group_stride = out_strides[1];
-    UINT8 is_contiguous_group_out = (out_group_stride == DATA_STRIDE);
+    FFTZ_INTP group_stride = in_strides[1];
+    FFTZ_UINT8 is_contiguous_group_in = (group_stride == DATA_STRIDE);
+    FFTZ_INTP out_group_stride = out_strides[1];
+    FFTZ_UINT8 is_contiguous_group_out = (out_group_stride == DATA_STRIDE);
 
-    INTP in_off8 = in_strides[8];
-    INTP in_off16 = in_strides[16];
-    INTP in_off24 = in_strides[24];
-    INTP in_off32 = in_strides[32];
-    INTP in_off40 = in_strides[40];
+    FFTZ_INTP in_off8 = in_strides[8];
+    FFTZ_INTP in_off16 = in_strides[16];
+    FFTZ_INTP in_off24 = in_strides[24];
+    FFTZ_INTP in_off32 = in_strides[32];
+    FFTZ_INTP in_off40 = in_strides[40];
 
-    INTP out_off6 = out_strides[6];
-    INTP out_off12 = out_strides[12];
-    INTP out_off18 = out_strides[18];
-    INTP out_off24 = out_strides[24];
-    INTP out_off30 = out_strides[30];
-    INTP out_off36 = out_strides[36];
-    INTP out_off42 = out_strides[42];
+    FFTZ_INTP out_off6 = out_strides[6];
+    FFTZ_INTP out_off12 = out_strides[12];
+    FFTZ_INTP out_off18 = out_strides[18];
+    FFTZ_INTP out_off24 = out_strides[24];
+    FFTZ_INTP out_off30 = out_strides[30];
+    FFTZ_INTP out_off36 = out_strides[36];
+    FFTZ_INTP out_off42 = out_strides[42];
 
-    for (INTP i = 0; i < n; i++)
+    for (FFTZ_INTP i = 0; i < n; i++)
     {
         __m512 v_in0, v_in1, v_in2, v_in3, v_in4, v_in5;
         __m512 v_cv1, v_cv2, v_cv3, v_cv4, v_cv5, v_cv6;
@@ -389,7 +391,8 @@ static VOID fft48avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-/* Branch-free conjugate for FP64 kernel: [0] = identity, [1] = conjugate (flip sign of imag). */
+/* Branch-free conjugate for FP64 kernel: [0] = identity, [1] = conjugate (flip
+ * sign of imag). */
 static const union data_union_512 _conj_512_d_fp48[2] = {
     {.u = { 0x00000000, 0x00000000, 0x00000000, 0x00000000,
             0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -402,207 +405,161 @@ static const union data_union_512 _conj_512_d_fp48[2] = {
 };
 #define CONJ_512_D_48(x, flag) _mm512_xor_pd(_conj_512_d_fp48[flag].d, (x))
 
-static const DOUBLE twiddle_buf_fp64[11][8] __attribute__((aligned(64))) = {
-    {
-        1.0,
-        0.0,
-        0.99144486137381041114455752692856287127773827444810,
-        -0.13052619222005159154840622789548901019374070481173,
-        0.96592582628906828674974319972889736763390483900840,
-        -0.25881904510252076234889883762404832834906890131993,
-        0.92387953251128675612818318939678828682241662586364,
-        -0.38268343236508977172845998403039886676134456248563
-    },
-    {
-        1.0,
-        0.0,
-        0.96592582628906828674974319972889736763390483900840,
-        -0.25881904510252076234889883762404832834906890131993,
-        0.86602540378443864676372317075293618347140262690519,
-        -0.50000000000000000000000000000000000000000000000000,
-        0.70710678118654752440084436210484903928483593768847,
-        -0.70710678118654752440084436210484903928483593768847
-    },
-    {
-        1.0,
-        0.0,
-        0.92387953251128675612818318939678828682241662586364,
-        -0.38268343236508977172845998403039886676134456248563,
-        0.70710678118654752440084436210484903928483593768847,
-        -0.70710678118654752440084436210484903928483593768847,
-        0.38268343236508977172845998403039886676134456248563,
-        -0.92387953251128675612818318939678828682241662586364
-    },
-    
-    {
-        1.0,
-        0.0,
-        0.86602540378443864676372317075293618347140262690519,
-        -0.50000000000000000000000000000000000000000000000000,
-        0.50000000000000000000000000000000000000000000000000,
-        -0.86602540378443864676372317075293618347140262690519,
-        0.0,
-        -1.0
-    },
-    {
-        1.0,
-        0.0,
-        0.79335334029123516457977696150129927662867592105191,
-        -0.60876142900872063941609754289816400451639371196248,
-        0.25881904510252076234889883762404832834906890131993,
-        -0.96592582628906828674974319972889736763390483900840,
-        -0.38268343236508977172845998403039886676134456248563,
-        -0.92387953251128675612818318939678828682241662586364
-    },
-    {
-        1.0,
-        0.0,
-        0.70710678118654752440084436210484903928483593768847,
-        -0.70710678118654752440084436210484903928483593768847,
-        0.0,
-        -1.0,
-        -0.70710678118654752440084436210484903928483593768847,
-        -0.70710678118654752440084436210484903928483593768847
-    },
-    {
-        1.0,
-        0.0,
-        0.60876142900872063941609754289816400451639371196248,
-        -0.79335334029123516457977696150129927662867592105191,
-        -0.25881904510252076234889883762404832834906890131993,
-        -0.96592582628906828674974319972889736763390483900840,
-        -0.92387953251128675612818318939678828682241662586364,
-        -0.38268343236508977172845998403039886676134456248563
-    },
-    
-    {
-        1.0,
-        0.0,
-        0.50000000000000000000000000000000000000000000000000,
-        -0.86602540378443864676372317075293618347140262690519,
-        -0.50000000000000000000000000000000000000000000000000,
-        -0.86602540378443864676372317075293618347140262690519,
-        -1.0,
-        0.0
-    },
-    {
-        1.0,
-        0.0,
-        0.38268343236508977172845998403039886676134456248563,
-        -0.92387953251128675612818318939678828682241662586364,
-        -0.70710678118654752440084436210484903928483593768847,
-        -0.70710678118654752440084436210484903928483593768847,
-        -0.92387953251128675612818318939678828682241662586364,
-        0.38268343236508977172845998403039886676134456248563
-    },
-    {
-        1.0,
-        0.0,
-        0.25881904510252076234889883762404832834906890131993,
-        -0.96592582628906828674974319972889736763390483900840,
-        -0.86602540378443864676372317075293618347140262690519,
-        -0.50000000000000000000000000000000000000000000000000,
-        -0.70710678118654752440084436210484903928483593768847,
-        0.70710678118654752440084436210484903928483593768847
-    },
-    {
-        1.0,
-        0.0,
-        0.13052619222005159154840622789548901019374070481173,
-        -0.99144486137381041114455752692856287127773827444810,
-        -0.96592582628906828674974319972889736763390483900840,
-        -0.25881904510252076234889883762404832834906890131993,
-        -0.38268343236508977172845998403039886676134456248563,
-        0.92387953251128675612818318939678828682241662586364}
-};
+static const FFTZ_DOUBLE twiddle_buf_fp64[11][8]
+    __attribute__((aligned(64))) = {
+        {1.0, 0.0, 0.99144486137381041114455752692856287127773827444810,
+         -0.13052619222005159154840622789548901019374070481173,
+         0.96592582628906828674974319972889736763390483900840,
+         -0.25881904510252076234889883762404832834906890131993,
+         0.92387953251128675612818318939678828682241662586364,
+         -0.38268343236508977172845998403039886676134456248563},
+        {1.0, 0.0, 0.96592582628906828674974319972889736763390483900840,
+         -0.25881904510252076234889883762404832834906890131993,
+         0.86602540378443864676372317075293618347140262690519,
+         -0.50000000000000000000000000000000000000000000000000,
+         0.70710678118654752440084436210484903928483593768847,
+         -0.70710678118654752440084436210484903928483593768847},
+        {1.0, 0.0, 0.92387953251128675612818318939678828682241662586364,
+         -0.38268343236508977172845998403039886676134456248563,
+         0.70710678118654752440084436210484903928483593768847,
+         -0.70710678118654752440084436210484903928483593768847,
+         0.38268343236508977172845998403039886676134456248563,
+         -0.92387953251128675612818318939678828682241662586364},
+
+        {1.0, 0.0, 0.86602540378443864676372317075293618347140262690519,
+         -0.50000000000000000000000000000000000000000000000000,
+         0.50000000000000000000000000000000000000000000000000,
+         -0.86602540378443864676372317075293618347140262690519, 0.0, -1.0},
+        {1.0, 0.0, 0.79335334029123516457977696150129927662867592105191,
+         -0.60876142900872063941609754289816400451639371196248,
+         0.25881904510252076234889883762404832834906890131993,
+         -0.96592582628906828674974319972889736763390483900840,
+         -0.38268343236508977172845998403039886676134456248563,
+         -0.92387953251128675612818318939678828682241662586364},
+        {1.0, 0.0, 0.70710678118654752440084436210484903928483593768847,
+         -0.70710678118654752440084436210484903928483593768847, 0.0, -1.0,
+         -0.70710678118654752440084436210484903928483593768847,
+         -0.70710678118654752440084436210484903928483593768847},
+        {1.0, 0.0, 0.60876142900872063941609754289816400451639371196248,
+         -0.79335334029123516457977696150129927662867592105191,
+         -0.25881904510252076234889883762404832834906890131993,
+         -0.96592582628906828674974319972889736763390483900840,
+         -0.92387953251128675612818318939678828682241662586364,
+         -0.38268343236508977172845998403039886676134456248563},
+
+        {1.0, 0.0, 0.50000000000000000000000000000000000000000000000000,
+         -0.86602540378443864676372317075293618347140262690519,
+         -0.50000000000000000000000000000000000000000000000000,
+         -0.86602540378443864676372317075293618347140262690519, -1.0, 0.0},
+        {1.0, 0.0, 0.38268343236508977172845998403039886676134456248563,
+         -0.92387953251128675612818318939678828682241662586364,
+         -0.70710678118654752440084436210484903928483593768847,
+         -0.70710678118654752440084436210484903928483593768847,
+         -0.92387953251128675612818318939678828682241662586364,
+         0.38268343236508977172845998403039886676134456248563},
+        {1.0, 0.0, 0.25881904510252076234889883762404832834906890131993,
+         -0.96592582628906828674974319972889736763390483900840,
+         -0.86602540378443864676372317075293618347140262690519,
+         -0.50000000000000000000000000000000000000000000000000,
+         -0.70710678118654752440084436210484903928483593768847,
+         0.70710678118654752440084436210484903928483593768847},
+        {1.0, 0.0, 0.13052619222005159154840622789548901019374070481173,
+         -0.99144486137381041114455752692856287127773827444810,
+         -0.96592582628906828674974319972889736763390483900840,
+         -0.25881904510252076234889883762404832834906890131993,
+         -0.38268343236508977172845998403039886676134456248563,
+         0.92387953251128675612818318939678828682241662586364}};
 
 // Radix-48 FFT kernel using 12x4 decomposition (AVX-512 double precision)
-static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag,
-                            VOID *out_real, VOID *out_imag,
-                            INTP n, aoclfftz_strides_t *strides,
-                            VOID *twd, UINT8 flag)
+static FFTZ_VOID fft48avx512fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                            FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                            FFTZ_INTP n, aoclfftz_strides_t *strides,
+                            FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
     
-    const DOUBLE CRTM_12[3] = {
+    const FFTZ_DOUBLE CRTM_12[3] = {
         0.86602540378443864676372317075293618347140262700000,
         0.50000000000000000000000000000000000000000000000000,
         1.00000000000000000000000000000000000000000000000000
     };
 
-    DOUBLE *in_r = (DOUBLE *)in_real;
-    DOUBLE *out_r = (DOUBLE *)out_real;
+    FFTZ_DOUBLE *in_r = (FFTZ_DOUBLE *)in_real;
+    FFTZ_DOUBLE *out_r = (FFTZ_DOUBLE *)out_real;
 
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
 
     __m512d v_C1 = _mm512_set1_pd(CRTM_12[0]);
     __m512d v_C2 = _mm512_set1_pd(CRTM_12[1]);
 
     __m512d v_sign_conj = _mm512_xor_pd(_neg_512_d[flag].d, _conj_512_d.d);
 
-    __m512d v_C4_conj = _mm512_xor_pd(_mm512_set1_pd(CRTM_12[0]), _conj_512_d.d);
+    __m512d v_C4_conj =
+        _mm512_xor_pd(_mm512_set1_pd(CRTM_12[0]), _conj_512_d.d);
     v_C4_conj = _mm512_xor_pd(v_C4_conj, _neg_512_d[flag].d);
-    __m512d v_C5_conj = _mm512_xor_pd(_mm512_set1_pd(CRTM_12[1]), _conj_512_d.d);
+    __m512d v_C5_conj =
+        _mm512_xor_pd(_mm512_set1_pd(CRTM_12[1]), _conj_512_d.d);
     v_C5_conj = _mm512_xor_pd(v_C5_conj, _neg_512_d[flag].d);
         
-    INTP group_stride = in_strides[1];
-    UINT8 is_contiguous_group_in = group_stride == DATA_STRIDE;
-    INTP out_group_stride = out_strides[1];
-    UINT8 is_contiguous_group_out = out_group_stride == DATA_STRIDE;
+    FFTZ_INTP group_stride = in_strides[1];
+    FFTZ_UINT8 is_contiguous_group_in = group_stride == DATA_STRIDE;
+    FFTZ_INTP out_group_stride = out_strides[1];
+    FFTZ_UINT8 is_contiguous_group_out = out_group_stride == DATA_STRIDE;
 
-    __m512d twd1_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 0]), flag);
+    __m512d twd1_r_ = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[0]), flag);
     __m512d twd1_real = _mm512_movedup_pd(twd1_r_);
     __m512d twd1_imag = _mm512_unpackhi_pd(twd1_r_, twd1_r_);
 
-    __m512d twd2_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 1]), flag);
+    __m512d twd2_r_ = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[1]), flag);
     __m512d twd2_real = _mm512_movedup_pd(twd2_r_);
     __m512d twd2_imag = _mm512_unpackhi_pd(twd2_r_, twd2_r_);
 
-    __m512d twd3_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 2]), flag);
+    __m512d twd3_r_ = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[2]), flag);
     __m512d twd3_real = _mm512_movedup_pd(twd3_r_);
     __m512d twd3_imag = _mm512_unpackhi_pd(twd3_r_, twd3_r_);
 
-    __m512d twd4_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 3]), flag);
+    __m512d twd4_r_ = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[3]), flag);
     __m512d twd4_real = _mm512_movedup_pd(twd4_r_);
     __m512d twd4_imag = _mm512_unpackhi_pd(twd4_r_, twd4_r_);
 
-    __m512d twd5_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 4]), flag);
+    __m512d twd5_r_ = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[4]), flag);
     __m512d twd5_real = _mm512_movedup_pd(twd5_r_);
     __m512d twd5_imag = _mm512_unpackhi_pd(twd5_r_, twd5_r_);
 
-    __m512d twd6_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 5]), flag);
+    __m512d twd6_r_ = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[5]), flag);
     __m512d twd6_real = _mm512_movedup_pd(twd6_r_);
     __m512d twd6_imag = _mm512_unpackhi_pd(twd6_r_, twd6_r_);
 
-    __m512d twd7_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 6]), flag);
+    __m512d twd7_r_ = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[6]), flag);
     __m512d twd7_real = _mm512_movedup_pd(twd7_r_);
     __m512d twd7_imag = _mm512_unpackhi_pd(twd7_r_, twd7_r_);
 
-    __m512d twd8_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 7]), flag);
+    __m512d twd8_r_ = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[7]), flag);
     __m512d twd8_real = _mm512_movedup_pd(twd8_r_);
     __m512d twd8_imag = _mm512_unpackhi_pd(twd8_r_, twd8_r_);
 
-    __m512d twd9_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 8]), flag);
+    __m512d twd9_r_ = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[8]), flag);
     __m512d twd9_real = _mm512_movedup_pd(twd9_r_);
     __m512d twd9_imag = _mm512_unpackhi_pd(twd9_r_, twd9_r_);
 
-    __m512d twd10_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 9]), flag);
+    __m512d twd10_r_ = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[9]), flag);
     __m512d twd10_real = _mm512_movedup_pd(twd10_r_);
     __m512d twd10_imag = _mm512_unpackhi_pd(twd10_r_, twd10_r_);
 
-    __m512d twd11_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[10]), flag);
+    __m512d twd11_r_ =
+        CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[10]), flag);
     __m512d twd11_real = _mm512_movedup_pd(twd11_r_);
     __m512d twd11_imag = _mm512_unpackhi_pd(twd11_r_, twd11_r_);
 
-    for (INTP i = 0; i < n; i++)
+    for (FFTZ_INTP i = 0; i < n; i++)
     {
         __m512d v_in[12] __attribute__((aligned(64)));
         __m512d v_av1, v_av2, v_av3, v_av4, v_av5, v_av6;
@@ -718,14 +675,17 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag,
         v_in[8] = _mm512_add_pd(v_cv1, v_tv2);
         
         __m512d sw1 = SWAP_RI_512_D(v_in[1]);
-        v_in[1] = _mm512_fmaddsub_pd(v_in[1], twd1_real, _mm512_mul_pd(sw1, twd1_imag));
-        
+        v_in[1] = _mm512_fmaddsub_pd(v_in[1], twd1_real,
+                                     _mm512_mul_pd(sw1, twd1_imag));
+
         __m512d sw2 = SWAP_RI_512_D(v_in[2]);
-        v_in[2] = _mm512_fmaddsub_pd(v_in[2], twd2_real, _mm512_mul_pd(sw2, twd2_imag));
-        
+        v_in[2] = _mm512_fmaddsub_pd(v_in[2], twd2_real,
+                                     _mm512_mul_pd(sw2, twd2_imag));
+
         __m512d sw3 = SWAP_RI_512_D(v_in[3]);
-        v_in[3] = _mm512_fmaddsub_pd(v_in[3], twd3_real, _mm512_mul_pd(sw3, twd3_imag));
-        
+        v_in[3] = _mm512_fmaddsub_pd(v_in[3], twd3_real,
+                                     _mm512_mul_pd(sw3, twd3_imag));
+
         __m512d t_b0, t_b1, t_b2, t_b3;
         __m512d ab_02, ab_13, cd_02, cd_13;
 
@@ -762,17 +722,21 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag,
                        is_contiguous_group_out);
         
         __m512d sw4 = SWAP_RI_512_D(v_in[4]);
-        v_in[4] = _mm512_fmaddsub_pd(v_in[4], twd4_real, _mm512_mul_pd(sw4, twd4_imag));
-        
+        v_in[4] = _mm512_fmaddsub_pd(v_in[4], twd4_real,
+                                     _mm512_mul_pd(sw4, twd4_imag));
+
         __m512d sw5 = SWAP_RI_512_D(v_in[5]);
-        v_in[5] = _mm512_fmaddsub_pd(v_in[5], twd5_real, _mm512_mul_pd(sw5, twd5_imag));
-        
+        v_in[5] = _mm512_fmaddsub_pd(v_in[5], twd5_real,
+                                     _mm512_mul_pd(sw5, twd5_imag));
+
         __m512d sw6 = SWAP_RI_512_D(v_in[6]);
-        v_in[6] = _mm512_fmaddsub_pd(v_in[6], twd6_real, _mm512_mul_pd(sw6, twd6_imag));
-        
+        v_in[6] = _mm512_fmaddsub_pd(v_in[6], twd6_real,
+                                     _mm512_mul_pd(sw6, twd6_imag));
+
         __m512d sw7 = SWAP_RI_512_D(v_in[7]);
-        v_in[7] = _mm512_fmaddsub_pd(v_in[7], twd7_real, _mm512_mul_pd(sw7, twd7_imag));
-        
+        v_in[7] = _mm512_fmaddsub_pd(v_in[7], twd7_real,
+                                     _mm512_mul_pd(sw7, twd7_imag));
+
         ab_02 = _mm512_shuffle_f64x2(v_in[4], v_in[5], 0x88);
         ab_13 = _mm512_shuffle_f64x2(v_in[4], v_in[5], 0xDD);
         cd_02 = _mm512_shuffle_f64x2(v_in[6], v_in[7], 0x88);
@@ -804,17 +768,21 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag,
                        is_contiguous_group_out);
         
         __m512d sw8 = SWAP_RI_512_D(v_in[8]);
-        v_in[8] = _mm512_fmaddsub_pd(v_in[8], twd8_real, _mm512_mul_pd(sw8, twd8_imag));
-        
+        v_in[8] = _mm512_fmaddsub_pd(v_in[8], twd8_real,
+                                     _mm512_mul_pd(sw8, twd8_imag));
+
         __m512d sw9 = SWAP_RI_512_D(v_in[9]);
-        v_in[9] = _mm512_fmaddsub_pd(v_in[9], twd9_real, _mm512_mul_pd(sw9, twd9_imag));
-        
+        v_in[9] = _mm512_fmaddsub_pd(v_in[9], twd9_real,
+                                     _mm512_mul_pd(sw9, twd9_imag));
+
         __m512d sw10 = SWAP_RI_512_D(v_in[10]);
-        v_in[10] = _mm512_fmaddsub_pd(v_in[10], twd10_real, _mm512_mul_pd(sw10, twd10_imag));
-        
+        v_in[10] = _mm512_fmaddsub_pd(v_in[10], twd10_real,
+                                      _mm512_mul_pd(sw10, twd10_imag));
+
         __m512d sw11 = SWAP_RI_512_D(v_in[11]);
-        v_in[11] = _mm512_fmaddsub_pd(v_in[11], twd11_real, _mm512_mul_pd(sw11, twd11_imag));
-        
+        v_in[11] = _mm512_fmaddsub_pd(v_in[11], twd11_real,
+                                      _mm512_mul_pd(sw11, twd11_imag));
+
         ab_02 = _mm512_shuffle_f64x2(v_in[8], v_in[9], 0x88);
         ab_13 = _mm512_shuffle_f64x2(v_in[8], v_in[9], 0xDD);
         cd_02 = _mm512_shuffle_f64x2(v_in[10], v_in[11], 0x88);
@@ -855,7 +823,8 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-kfft_ register_kernel_fft48avx512(UINT8 precision, UINT8 direction /* unused */)
+kfft_ register_kernel_fft48avx512(FFTZ_UINT8 precision,
+                                  FFTZ_UINT8 direction /* unused */)
 {
     if (precision == DT_FLOAT)
     {

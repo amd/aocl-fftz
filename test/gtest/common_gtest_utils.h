@@ -41,13 +41,13 @@ extern "C"
 // Enum to specify input value generation strategy
 enum class InputValueStrategy
 {
-    FULL_ZERO,            // Full zero values
-    MID_RANGE,            // Values in range [-10.0, 10.0)
-    NEAR_EDGE,            // Near-edge values
-    SPECIAL_VALUES,       // (NaN, Inf, MAX, MIN) - for robustness testing
-    SPECIAL_EXCEPT_NAN,   // (Inf, MAX, MIN) - for robustness testing, but not NaN
-    TINY_VALUES_ONLY,     // Subnormal and small normal values
-    LARGE_VALUES_ONLY     // Only large values (close to but not exceeding MAX)
+    FULL_ZERO,          // Full zero values
+    MID_RANGE,          // Values in range [-10.0, 10.0)
+    NEAR_EDGE,          // Near-edge values
+    SPECIAL_VALUES,     // (NaN, Inf, MAX, MIN) - for robustness testing
+    SPECIAL_EXCEPT_NAN, // (Inf, MAX, MIN) - for robustness testing, but not NaN
+    TINY_VALUES_ONLY,   // Subnormal and small normal values
+    LARGE_VALUES_ONLY   // Only large values (close to but not exceeding MAX)
 };
 
 /**
@@ -55,10 +55,10 @@ enum class InputValueStrategy
  */
 typedef struct
 {
-    UINTP nan_count;      /**< Count of NaN values */
-    UINTP inf_count;      /**< Count of Infinity values (both +Inf and -Inf) */
-    UINTP zero_count;     /**< Count of zero values (both +0 and -0) */
-    UINTP nonzero_count;  /**< Count of non-zero finite values */
+    FFTZ_UINTP nan_count;      /**< Count of NaN values */
+    FFTZ_UINTP inf_count;  /**< Count of Infinity values (both +Inf and -Inf) */
+    FFTZ_UINTP zero_count;     /**< Count of zero values (both +0 and -0) */
+    FFTZ_UINTP nonzero_count;  /**< Count of non-zero finite values */
 } output_validation_stats;
 
 /**
@@ -68,14 +68,15 @@ typedef struct
  * @param category input category to pick the type of value
  * @return T return a tiny value
  */
-template <class T> T get_subnormal_and_near_underflow_value(INT32 category)
+template <class T> T get_subnormal_and_near_underflow_value(FFTZ_INT32 category)
 {
-    if (typeid(T) == typeid(DOUBLE))
+    if (typeid(T) == typeid(FFTZ_DOUBLE))
     {
         // DBL_MIN = 2.23e-308
-        const DOUBLE normalised_random = DBL_MIN * (1 + (rand() % 1000));
+        const FFTZ_DOUBLE normalised_random = DBL_MIN * (1 + (rand() % 1000));
         // DBL_TRUE_MIN = 4.94e-324
-        const DOUBLE subnormal_random = DBL_TRUE_MIN * (1 + (rand() % 1000));
+        const FFTZ_DOUBLE subnormal_random = DBL_TRUE_MIN * (
+            1 + (rand() % 1000));
 
         switch (category % TINY_VALUES_ONLY_COUNT)
         {
@@ -97,12 +98,13 @@ template <class T> T get_subnormal_and_near_underflow_value(INT32 category)
             return -DBL_MIN;
         }
     }
-    else if (typeid(T) == typeid(FLOAT))
+    else if (typeid(T) == typeid(FFTZ_FLOAT))
     {
         // FLT_MIN = 1.18e-38
-        const FLOAT normalised_random = FLT_MIN * (1 + (rand() % 1000));
+        const FFTZ_FLOAT normalised_random = FLT_MIN * (1 + (rand() % 1000));
         // FLT_TRUE_MIN = 1.40e-45
-        const FLOAT subnormal_random = FLT_TRUE_MIN * (1 + (rand() % 1000));
+        const FFTZ_FLOAT subnormal_random = FLT_TRUE_MIN * (
+            1 + (rand() % 1000));
 
         switch (category % TINY_VALUES_ONLY_COUNT)
         {
@@ -135,13 +137,14 @@ template <class T> T get_subnormal_and_near_underflow_value(INT32 category)
  * @param in_size size of input array to scale values appropriately
  * @return T return a large value
  */
-template <class T> T get_near_overflow_value(INT32 category, INT32 in_size)
+template <class T> T get_near_overflow_value(FFTZ_INT32 category,
+                                             FFTZ_INT32 in_size)
 {
-    if (typeid(T) == typeid(DOUBLE))
+    if (typeid(T) == typeid(FFTZ_DOUBLE))
     {
         // DBL_MAX = 1.80e+308
         // Scale by input size to prevent overflow during FFT operations
-        const DOUBLE large_value = DBL_MAX / (in_size + (rand() % 1000));
+        const FFTZ_DOUBLE large_value = DBL_MAX / (in_size + (rand() % 1000));
 
         switch (category % LARGE_VALUES_ONLY_COUNT)
         {
@@ -151,11 +154,11 @@ template <class T> T get_near_overflow_value(INT32 category, INT32 in_size)
             return -large_value;
         }
     }
-    else if (typeid(T) == typeid(FLOAT))
+    else if (typeid(T) == typeid(FFTZ_FLOAT))
     {
         // FLT_MAX = 3.40e+38
         // Scale by input size to prevent overflow during FFT operations
-        const FLOAT large_value = FLT_MAX / (in_size + (rand() % 1000));
+        const FFTZ_FLOAT large_value = FLT_MAX / (in_size + (rand() % 1000));
 
         switch (category % LARGE_VALUES_ONLY_COUNT)
         {
@@ -179,7 +182,8 @@ template <class T> T get_near_overflow_value(INT32 category, INT32 in_size)
  * @param in_size size of input array to scale values appropriately
  * @return T return a near-edge value
  */
-template <class T> T get_near_edge_value(INT32 category, INT32 in_size)
+template <class T> T get_near_edge_value(FFTZ_INT32 category,
+                                         FFTZ_INT32 in_size)
 {
     // Mix of tiny and large values - reuse existing functions
     // 50% tiny values, 50% large values
@@ -206,9 +210,9 @@ template <class T> T get_near_edge_value(INT32 category, INT32 in_size)
  * @param category input category to pick the type of value
  * @return T return the normal or special value
  */
-template <class T> T get_fp_special_value(INT32 category)
+template <class T> T get_fp_special_value(FFTZ_INT32 category)
 {
-    if (typeid(T) == typeid(DOUBLE))
+    if (typeid(T) == typeid(FFTZ_DOUBLE))
     {
         // Multiply by 2 to get 50% special values and 50% random values
         switch (category % (NUM_FP_SPECIAL_VALUE_CASES * 2))
@@ -239,7 +243,7 @@ template <class T> T get_fp_special_value(INT32 category)
             return ((rand() % 20000) / 1000.0) - 10.0;
         }
     }
-    else if (typeid(T) == typeid(FLOAT))
+    else if (typeid(T) == typeid(FFTZ_FLOAT))
     {
         // Multiply by 2 to get 50% special values and 50% random values
         switch (category % (NUM_FP_SPECIAL_VALUE_CASES * 2))
@@ -275,14 +279,16 @@ template <class T> T get_fp_special_value(INT32 category)
 
 /**
  * @brief Generate test values based on specified strategy
- * 
- * 
- * @tparam T data type (FLOAT or DOUBLE)
+ *
+ *
+ * @tparam T data type (FFTZ_FLOAT or FFTZ_DOUBLE)
  * @param strategy the input value generation strategy to use
- * @param in_size size of input array, used to scale large values to prevent overflow
+ * @param in_size size of input array, used to scale large values to prevent
+ * overflow
  * @return T generated value according to the specified strategy
  */
-template <class T> T get_value_based_on_strategy(InputValueStrategy strategy, INT32 in_size)
+template <class T>
+T get_value_based_on_strategy(InputValueStrategy strategy, FFTZ_INT32 in_size)
 {
     switch (strategy)
     {
@@ -329,11 +335,12 @@ template <class T> T get_value_based_on_strategy(InputValueStrategy strategy, IN
  * @param size number of elements to check
  * @return output_validation_stats structure containing all counts
  */
-template <class T> output_validation_stats validate_output_array(T* data, UINTP size)
+template <class T>
+output_validation_stats validate_output_array(T *data, FFTZ_UINTP size)
 {
     output_validation_stats stats = {0, 0, 0, 0};
     
-    for (UINTP i = 0; i < size; i++)
+    for (FFTZ_UINTP i = 0; i < size; i++)
     {
         if (std::isnan(data[i]))
         {

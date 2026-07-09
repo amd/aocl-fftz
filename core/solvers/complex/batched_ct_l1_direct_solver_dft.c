@@ -26,9 +26,11 @@
 #include "core/solvers/solver.h"
 #include "core/common/memory_manager.h"
 
-static INT32 fill_direct_strides(aoclfftz_strides_t *strides, INTP radix,
-                          INTP dim_in_stride, INTP dim_out_stride,
-                          INTP vec_in_stride, INTP vec_out_stride)
+static FFTZ_INT32 fill_direct_strides(aoclfftz_strides_t *strides,
+                                      FFTZ_INTP radix, FFTZ_INTP dim_in_stride,
+                                      FFTZ_INTP dim_out_stride,
+                                      FFTZ_INTP vec_in_stride,
+                                      FFTZ_INTP vec_out_stride)
 {
     // Free any pre-existing arrays: solution objects can be reused across
     // different ND dimensions, so the radix (and thus array size) may differ.
@@ -37,7 +39,7 @@ static INT32 fill_direct_strides(aoclfftz_strides_t *strides, INTP radix,
     strides->in_strides = NULL;
     strides->out_strides = NULL;
 
-    INT32 ret = alloc_and_fill_stride_arrays(strides, radix,
+    FFTZ_INT32 ret = alloc_and_fill_stride_arrays(strides, radix,
                                              dim_in_stride, dim_out_stride);
     if (ret != SOLVER_SUCCESS)
     {
@@ -51,29 +53,30 @@ static INT32 fill_direct_strides(aoclfftz_strides_t *strides, INTP radix,
     return SOLVER_SUCCESS;
 }
 
-INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
+FFTZ_INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
                                          kernel_t *ker_m, kernel_t *ker_r,
-                                         INTP radix_r, INTP radix_m)
+                                         FFTZ_INTP radix_r, FFTZ_INTP radix_m)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    INTP n = sol->decomp_scheme->dims[0].n;
-    INTP in_stride  = sol->decomp_scheme->dims[0].in_stride;
-    INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
-    INT32 ret = SOLVER_SUCCESS;
+    FFTZ_INTP n = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP in_stride  = sol->decomp_scheme->dims[0].in_stride;
+    FFTZ_INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
+    FFTZ_INT32 ret = SOLVER_SUCCESS;
 
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
-    INTP buffer_out_stride = 1;
+    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_INTP buffer_out_stride = 1;
 
     // Allocate a private scratch buffer when no parent buffer exists or
     // when the parent's is BUFFERED.
     // Otherwise reuse the parent ND buffer already pointed to by ct_buf_real.
-    // TODO: In all cases, we should use the parent ND buffer instead of allocating a new one.
+    // TODO: In all cases, we should use the parent ND buffer instead of
+    // allocating a new one.
     if (sol->dft_bufs->ct_buf_real == NULL ||
         sol->decomp_scheme->out_real == sol->dft_bufs->ct_buf_real)
     {
-        INTP ct_buf_size = GET_PADDED_SIZE(n * DATA_STRIDE * dt_bytes);
-        ALLOC_ALIGN_UNINIT(sol->dft_bufs->ct_buffer, VOID, ct_buf_size);
+        FFTZ_INTP ct_buf_size = GET_PADDED_SIZE(n * DATA_STRIDE * dt_bytes);
+        ALLOC_ALIGN_UNINIT(sol->dft_bufs->ct_buffer, FFTZ_VOID, ct_buf_size);
         if (sol->dft_bufs->ct_buffer == NULL)
         {
             ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -90,7 +93,7 @@ INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
         ker_m->kfft[FORWARD_FFT_DIR];
     sol->solver->kernel_c2c->kfft[BACKWARD_FFT_DIR] =
         ker_m->kfft[BACKWARD_FFT_DIR];
-    sol->solver->kernel_c2c->count = (UINTP)radix_r;
+    sol->solver->kernel_c2c->count = (FFTZ_UINTP)radix_r;
 
     {
         aoclfftz_strides_t *strides_m = sol->strides_grp->strides;
@@ -108,7 +111,7 @@ INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
         ker_r->kfft[FORWARD_FFT_DIR];
     sol->solver->kernel_c2c_r->kfft[BACKWARD_FFT_DIR] =
         ker_r->kfft[BACKWARD_FFT_DIR];
-    sol->solver->kernel_c2c_r->count = (UINTP)radix_m;
+    sol->solver->kernel_c2c_r->count = (FFTZ_UINTP)radix_m;
 
     {
         aoclfftz_strides_t *strides_r = sol->strides_grp->strides_c2c;
@@ -135,37 +138,37 @@ exit_setup:
     return ret;
 }
 
-static INT32 execute_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
-    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
 
     kfft_ kfft_m = sol->solver->kernel_c2c->kfft[direction];
     aoclfftz_strides_t *strides_m = sol->strides_grp->strides;
-    INTP vecs_m = (INTP)sol->solver->kernel_c2c->count;
+    FFTZ_INTP vecs_m = (FFTZ_INTP)sol->solver->kernel_c2c->count;
 
     kfft_ kfft_r = sol->solver->kernel_c2c_r->kfft[direction];
     aoclfftz_strides_t *strides_r = sol->strides_grp->strides_c2c;
     aoclfftz_twiddle_t *twiddle_r = sol->twiddle;
-    INTP vecs_r = (INTP)sol->solver->kernel_c2c_r->count;
+    FFTZ_INTP vecs_r = (FFTZ_INTP)sol->solver->kernel_c2c_r->count;
 
-    INTP v_in_stride = sol->decomp_scheme->vecs[0].in_stride *
+    FFTZ_INTP v_in_stride = sol->decomp_scheme->vecs[0].in_stride *
                        DATA_STRIDE * dt_bytes;
-    INTP v_out_stride = sol->decomp_scheme->vecs[0].out_stride *
+    FFTZ_INTP v_out_stride = sol->decomp_scheme->vecs[0].out_stride *
                         DATA_STRIDE * dt_bytes;
 
-    VOID *in_real  = sol->decomp_scheme->in_real;
-    VOID *in_imag  = sol->decomp_scheme->in_imag;
-    VOID *out_real = sol->decomp_scheme->out_real;
-    VOID *out_imag = sol->decomp_scheme->out_imag;
-    VOID *ct_buf_real = sol->dft_bufs->ct_buf_real;
-    VOID *ct_buf_imag = sol->dft_bufs->ct_buf_imag;
+    FFTZ_VOID *in_real  = sol->decomp_scheme->in_real;
+    FFTZ_VOID *in_imag  = sol->decomp_scheme->in_imag;
+    FFTZ_VOID *out_real = sol->decomp_scheme->out_real;
+    FFTZ_VOID *out_imag = sol->decomp_scheme->out_imag;
+    FFTZ_VOID *ct_buf_real = sol->dft_bufs->ct_buf_real;
+    FFTZ_VOID *ct_buf_imag = sol->dft_bufs->ct_buf_imag;
 
-    INTP batches = sol->decomp_scheme->vecs[0].n;
+    FFTZ_INTP batches = sol->decomp_scheme->vecs[0].n;
 
-    for (INTP b = 0; b < batches; b++)
+    for (FFTZ_INTP b = 0; b < batches; b++)
     {
         kfft_m(in_real, in_imag, ct_buf_real, ct_buf_imag,
                vecs_m, strides_m, NULL, direction);
@@ -183,7 +186,7 @@ static INT32 execute_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
-dft_solver_ register_execute_batched_ct_l1_direct_solver(VOID)
+dft_solver_ register_execute_batched_ct_l1_direct_solver(FFTZ_VOID)
 {
     return execute_batched_ct_l1_direct_solver;
 }

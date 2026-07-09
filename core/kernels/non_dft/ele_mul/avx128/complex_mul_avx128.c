@@ -17,15 +17,16 @@
 #include "core/kernels/kernel.h"
 #include "core/kernels/simd_includes/simd_common.h"
 
-static VOID complex_mul_fp32_avx128_fwd(VOID *out, VOID *a, VOID *b, INTP n)
+static FFTZ_VOID complex_mul_fp32_avx128_fwd(FFTZ_VOID *out, FFTZ_VOID *a,
+                                             FFTZ_VOID *b, FFTZ_INTP n)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    FLOAT *ptr_out = (FLOAT *)out;
-    const FLOAT *ptr_a = (const FLOAT *)a;
-    const FLOAT *ptr_b = (const FLOAT *)b;
-    INTP N = n / NUM_SETS_128_S;
-    INTP remaining_sets = n % NUM_SETS_128_S;
-    INTP count;
+    FFTZ_FLOAT *ptr_out = (FFTZ_FLOAT *)out;
+    const FFTZ_FLOAT *ptr_a = (const FFTZ_FLOAT *)a;
+    const FFTZ_FLOAT *ptr_b = (const FFTZ_FLOAT *)b;
+    FFTZ_INTP N = n / NUM_SETS_128_S;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_128_S;
+    FFTZ_INTP count;
 
     for (count = 0; count < N; count++)
     {
@@ -52,25 +53,26 @@ static VOID complex_mul_fp32_avx128_fwd(VOID *out, VOID *a, VOID *b, INTP n)
     // tail cases
     if (remaining_sets & NUM_SETS_C_S)
     {
-        FLOAT a_re = ptr_a[0];
-        FLOAT a_im = ptr_a[1];
-        FLOAT b_re = ptr_b[0];
-        FLOAT b_im = -ptr_b[1];
+        FFTZ_FLOAT a_re = ptr_a[0];
+        FFTZ_FLOAT a_im = ptr_a[1];
+        FFTZ_FLOAT b_re = ptr_b[0];
+        FFTZ_FLOAT b_im = -ptr_b[1];
 
         ptr_out[0] = (a_re * b_re) - (a_im * b_im);
         ptr_out[1] = (a_re * b_im) + (a_im * b_re);
     }
 }
 
-static VOID complex_mul_fp32_avx128_bwd(VOID *out, VOID *a, VOID *b, INTP n)
+static FFTZ_VOID complex_mul_fp32_avx128_bwd(FFTZ_VOID *out, FFTZ_VOID *a,
+                                             FFTZ_VOID *b, FFTZ_INTP n)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    FLOAT *ptr_out = (FLOAT *)out;
-    const FLOAT *ptr_a = (const FLOAT *)a;
-    const FLOAT *ptr_b = (const FLOAT *)b;
-    INTP N = n / NUM_SETS_128_S;
-    INTP remaining_sets = n % NUM_SETS_128_S;
-    INTP count;
+    FFTZ_FLOAT *ptr_out = (FFTZ_FLOAT *)out;
+    const FFTZ_FLOAT *ptr_a = (const FFTZ_FLOAT *)a;
+    const FFTZ_FLOAT *ptr_b = (const FFTZ_FLOAT *)b;
+    FFTZ_INTP N = n / NUM_SETS_128_S;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_128_S;
+    FFTZ_INTP count;
 
     for (count = 0; count < N; count++)
     {
@@ -95,23 +97,24 @@ static VOID complex_mul_fp32_avx128_bwd(VOID *out, VOID *a, VOID *b, INTP n)
     // tail cases
     if (remaining_sets & NUM_SETS_C_S)
     {
-        FLOAT a_re = ptr_a[0];
-        FLOAT a_im = ptr_a[1];
-        FLOAT b_re = ptr_b[0];
-        FLOAT b_im = ptr_b[1];
+        FFTZ_FLOAT a_re = ptr_a[0];
+        FFTZ_FLOAT a_im = ptr_a[1];
+        FFTZ_FLOAT b_re = ptr_b[0];
+        FFTZ_FLOAT b_im = ptr_b[1];
 
         ptr_out[0] = (a_re * b_re) - (a_im * b_im);
         ptr_out[1] = (a_re * b_im) + (a_im * b_re);
     }
 }
 
-static VOID complex_mul_fp64_avx128_fwd(VOID *out, VOID *a, VOID *b, INTP n)
+static FFTZ_VOID complex_mul_fp64_avx128_fwd(FFTZ_VOID *out, FFTZ_VOID *a,
+                                             FFTZ_VOID *b, FFTZ_INTP n)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    DOUBLE *ptr_out = (DOUBLE *)out;
-    const DOUBLE *ptr_a = (const DOUBLE *)a;
-    const DOUBLE *ptr_b = (const DOUBLE *)b;
-    INTP count;
+    FFTZ_DOUBLE *ptr_out = (FFTZ_DOUBLE *)out;
+    const FFTZ_DOUBLE *ptr_a = (const FFTZ_DOUBLE *)a;
+    const FFTZ_DOUBLE *ptr_b = (const FFTZ_DOUBLE *)b;
+    FFTZ_INTP count;
 
     for (count = 0; count < n; count++)
     {
@@ -137,13 +140,14 @@ static VOID complex_mul_fp64_avx128_fwd(VOID *out, VOID *a, VOID *b, INTP n)
     }
 }
 
-static VOID complex_mul_fp64_avx128_bwd(VOID *out, VOID *a, VOID *b, INTP n)
+static FFTZ_VOID complex_mul_fp64_avx128_bwd(FFTZ_VOID *out, FFTZ_VOID *a,
+                                             FFTZ_VOID *b, FFTZ_INTP n)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    DOUBLE *ptr_out = (DOUBLE *)out;
-    const DOUBLE *ptr_a = (const DOUBLE *)a;
-    const DOUBLE *ptr_b = (const DOUBLE *)b;
-    INTP count;
+    FFTZ_DOUBLE *ptr_out = (FFTZ_DOUBLE *)out;
+    const FFTZ_DOUBLE *ptr_a = (const FFTZ_DOUBLE *)a;
+    const FFTZ_DOUBLE *ptr_b = (const FFTZ_DOUBLE *)b;
+    FFTZ_INTP count;
 
     for (count = 0; count < n; count++)
     {
@@ -167,8 +171,8 @@ static VOID complex_mul_fp64_avx128_bwd(VOID *out, VOID *a, VOID *b, INTP n)
     }
 }
 
-elementwise_mul_ register_elementwise_mul_avx128(UINT8 precision,
-                                                 UINT8 direction)
+elementwise_mul_ register_elementwise_mul_avx128(FFTZ_UINT8 precision,
+                                                 FFTZ_UINT8 direction)
 {
     if (direction == FORWARD_FFT_DIR)
     {

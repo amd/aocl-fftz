@@ -27,21 +27,22 @@
 template <class T>
 class AoclfftzInplaceTransposeTestBase
     : public ::testing::TestWithParam<
-          std::tuple<std::tuple<INTP, INTP>, /* rows, cols */
-                     INTP,                   /* stride */
-                     INT32>>                 /* kernel index */
+          std::tuple<std::tuple<FFTZ_INTP, FFTZ_INTP>, /* rows, cols */
+                     FFTZ_INTP,                   /* stride */
+                     FFTZ_INT32>>                 /* kernel index */
 {
   protected:
-    INTP rows;
-    INTP cols;
-    INTP stride;
+    FFTZ_INTP rows;
+    FFTZ_INTP cols;
+    FFTZ_INTP stride;
     aoclfftz_transpose_kernel kernel;
 
-    VOID expect_matrix_equal(T* in, T* out, INTP rows, INTP cols, INTP stride)
+    FFTZ_VOID expect_matrix_equal(T* in, T* out, FFTZ_INTP rows, FFTZ_INTP cols,
+                                  FFTZ_INTP stride)
     {
-        // iterating over the entire matrix helps ensure that the elements that are
-        // skipped during strided access have not been modified
-        for (INTP i = 0; i < rows * cols * stride; ++i)
+        // iterating over the entire matrix helps ensure that the elements that
+        // are skipped during strided access have not been modified
+        for (FFTZ_INTP i = 0; i < rows * cols * stride; ++i)
         {
             EXPECT_EQ(data_equal(in[i], out[i]), true)
                 << "Mismatch " << compare_data_string(in[i], out[i])
@@ -49,16 +50,16 @@ class AoclfftzInplaceTransposeTestBase
         }
     }
 
-    VOID test_kernel()
+    FFTZ_VOID test_kernel()
     {
         rows = std::get<0>(std::get<0>(GetParam()));
         cols = std::get<1>(std::get<0>(GetParam()));
         stride = std::get<1>(GetParam());
-        INT32 kernel_idx = std::get<2>(GetParam());
+        FFTZ_INT32 kernel_idx = std::get<2>(GetParam());
         aoclfftz_transpose_kernel *kernel_table = get_transpose_kernels_c<T>();
         kernel = kernel_table[kernel_idx];
 
-        INTP n_elems = rows * cols * stride;
+        FFTZ_INTP n_elems = rows * cols * stride;
 
         T *in, *out;
         ALLOC_UNALIGN_INIT(in, T, n_elems * sizeof(T));
@@ -66,7 +67,8 @@ class AoclfftzInplaceTransposeTestBase
 
         aoclfftz_transpose_aux_mem_t aux_mem;
         aux_mem.size = rows * cols;
-        ALLOC_UNALIGN_INIT(aux_mem.data, UINT8, aux_mem.size * sizeof(UINT8));
+        ALLOC_UNALIGN_INIT(aux_mem.data, FFTZ_UINT8,
+                           aux_mem.size * sizeof(FFTZ_UINT8));
 
         // initialize the input matrix
         matrix_init(in, rows, cols, stride);
@@ -86,7 +88,7 @@ class AoclfftzInplaceTransposeTestBase
         col_m.out_stride = stride;
 
         // transpose using kernel
-        kernel((VOID *)in, (VOID *)in, row_m, col_m, &aux_mem);
+        kernel((FFTZ_VOID *)in, (FFTZ_VOID *)in, row_m, col_m, &aux_mem);
 
         // check if matrices are equal (rows and cols are interchanged because
         // this is a post transpose comparison)
@@ -99,27 +101,29 @@ class AoclfftzInplaceTransposeTestBase
 };
 
 /**
- * @brief A derived class from AoclfftzInplaceTransposeTestBase for FLOAT type
+ * @brief A derived class from AoclfftzInplaceTransposeTestBase for FFTZ_FLOAT
+ * type
  *
  */
 
 class AoclfftzInplaceTransposeKernelTestFloat
-    : public AoclfftzInplaceTransposeTestBase<FLOAT>
+    : public AoclfftzInplaceTransposeTestBase<FFTZ_FLOAT>
 {
 };
 
 /**
- * @brief A derived class from AoclfftzInplaceTransposeTestBase for DOUBLE type
+ * @brief A derived class from AoclfftzInplaceTransposeTestBase for FFTZ_DOUBLE
+ * type
  *
  */
 class AoclfftzInplaceTransposeKernelTestDouble
-    : public AoclfftzInplaceTransposeTestBase<DOUBLE>
+    : public AoclfftzInplaceTransposeTestBase<FFTZ_DOUBLE>
 {
 };
 
 /**
  * @brief A derived class from AoclfftzInplaceTransposeTestBase for
- * Complex(FLOAT) type
+ * Complex(FFTZ_FLOAT) type
  *
  */
 
@@ -130,7 +134,7 @@ class AoclfftzInplaceTransposeKernelTestFloatComplex
 
 /**
  * @brief A derived class from AoclfftzInplaceTransposeTestBase for
- * Complex(DOUBLE) type
+ * Complex(FFTZ_DOUBLE) type
  *
  */
 class AoclfftzInplaceTransposeKernelTestDoubleComplex

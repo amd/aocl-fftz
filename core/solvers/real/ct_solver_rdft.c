@@ -13,14 +13,16 @@
 
 #include "core/common/memory_manager.h"
 
-INT32 setup_real_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
-                           aoclfftz_solution_t *sol_m, UINT32 radix_r,
-                           UINT32 radix_m, aoclfftz_realhelper_t *realhelper)
+FFTZ_INT32 setup_real_ct_solver(aoclfftz_solution_t *sol,
+                                aoclfftz_solution_t *sol_r,
+                                aoclfftz_solution_t *sol_m, FFTZ_UINT32 radix_r,
+                                FFTZ_UINT32 radix_m,
+                                aoclfftz_realhelper_t *realhelper)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     // Setup radix-m sub-problem
-    INT32 ret = copy_solution_obj(sol_m, sol);
+    FFTZ_INT32 ret = copy_solution_obj(sol_m, sol);
     if (ret != AOCLFFTZ_SUCCESS)
     {
         AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
@@ -43,11 +45,11 @@ INT32 setup_real_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
     return SOLVER_SUCCESS;
 }
 
-static INT32 execute_real_ct_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_real_ct_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    INT32 ret = SOLVER_SUCCESS;
+    FFTZ_INT32 ret = SOLVER_SUCCESS;
 
     // Execute the next direct solution
     // NOTE: The CT problem is executed in the execute_real_direct_solver,
@@ -58,7 +60,7 @@ static INT32 execute_real_ct_solver(aoclfftz_solution_t *sol)
     return ret;
 }
 
-dft_solver_ register_execute_real_ct_solver(VOID)
+dft_solver_ register_execute_real_ct_solver(FFTZ_VOID)
 {
     return execute_real_ct_solver;
 }

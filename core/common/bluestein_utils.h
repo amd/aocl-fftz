@@ -26,8 +26,8 @@ typedef enum
 } bluestein_status;
 
 // Core utility functions
-INTP get_extended_length(INTP n);
-INT32 compute_chirp_sequence(aoclfftz_solution_t *sol, INTP m);
+FFTZ_INTP get_extended_length(FFTZ_INTP n);
+FFTZ_INT32 compute_chirp_sequence(aoclfftz_solution_t *sol, FFTZ_INTP m);
 
 /**
  * Copies `n` complex elements between Bluestein I/O buffers.
@@ -36,7 +36,8 @@ INT32 compute_chirp_sequence(aoclfftz_solution_t *sol, INTP m);
  * stride-aware permuted_copy_c_* kernel; otherwise falls back to a single
  * memcpy. Shared by both the ST and MT Bluestein execute paths.
  */
-VOID bluestein_copy_data(VOID *src, VOID *dst, INTP n, INTP src_stride,
-                         INTP dst_stride, UINT8 dt_prec, UINT32 dt_bytes);
+FFTZ_VOID bluestein_copy_data(FFTZ_VOID *src, FFTZ_VOID *dst, FFTZ_INTP n,
+                              FFTZ_INTP src_stride, FFTZ_INTP dst_stride,
+                              FFTZ_UINT8 dt_prec, FFTZ_UINT32 dt_bytes);
 
 #endif // BLUESTEIN_UTILS_H

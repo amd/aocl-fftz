@@ -47,41 +47,43 @@ extern "C"
 /**
  * @brief Base class for the AOCLFFTZ Kernel Tests
  *
- * @tparam T type of the input / output. (Supported types: FLOAT, DOUBLE)
+ * @tparam T type of the input / output. (Supported types: FFTZ_FLOAT,
+ * FFTZ_DOUBLE)
  */
 // clang-format off
 template <class T>
 class AoclfftzKernelTestBase
     : public ::testing::TestWithParam<std::tuple<aoclfftz_kernel_test_params_t,
-                                      std::tuple<INTP, INTP, INTP, UINT8,
-                                      UINT8, UINT8>>>
+                                      std::tuple<FFTZ_INTP, FFTZ_INTP,
+                                      FFTZ_INTP, FFTZ_UINT8, FFTZ_UINT8,
+                                      FFTZ_UINT8>>>
 // clang-format on
 {
   protected:
     bool is_complex;          // true for complex-fft and false for real-fft
-    UINT8 data_stride;        // 1 for real-fft and 2 for complex-fft
+    FFTZ_UINT8 data_stride;        // 1 for real-fft and 2 for complex-fft
     bool use_special;         // whether to use special inputs or not
-    UINT32 radix;             // radix of the FFT kernel
-    INTP length;              // no. of points in the data or data length
-    INTP input_length;        // length with input strides
-    INTP output_length;       // length with output strides
+    FFTZ_UINT32 radix;             // radix of the FFT kernel
+    FFTZ_INTP length;              // no. of points in the data or data length
+    FFTZ_INTP input_length;        // length with input strides
+    FFTZ_INTP output_length;       // length with output strides
     kfft_ fft_kernel;         // pointer to the kernel function
     kfft_ fft_reverse_kernel; // pointer to the kernel function in reverse
                               // direction
-    INTP in_stride;           // input stride value
-    INTP out_stride;          // output stride value
-    UINT8 kernel_type;        // kernel type
-    UINT8 is_bwd;             // direction, 1 -> BWD, 0 -> FWD
-    UINT8 is_out_of_place;    // result placement, 0 -> inplace, 1 -> outplace
-    INTP offset;              // no. of sets (1 offset size = radix)
-    UINT32 random_seed;       // seed value of random number generator
-    INTP in_stride_w_ds;      // in stride value multiplied with data_stride
-    INTP out_stride_w_ds;     // out stride value multiplied with data_stride
+    FFTZ_INTP in_stride;           // input stride value
+    FFTZ_INTP out_stride;          // output stride value
+    FFTZ_UINT8 kernel_type;        // kernel type
+    FFTZ_UINT8 is_bwd;             // direction, 1 -> BWD, 0 -> FWD
+    FFTZ_UINT8 is_out_of_place; // result placement, 0 -> inplace, 1 -> outplace
+    FFTZ_INTP offset;              // no. of sets (1 offset size = radix)
+    FFTZ_UINT32 random_seed;       // seed value of random number generator
+    FFTZ_INTP in_stride_w_ds;  // in stride value multiplied with data_stride
+    FFTZ_INTP out_stride_w_ds; // out stride value multiplied with data_stride
     T tolerance; // precision tolerance for output comparison
-    INT8 buf_size_multiplier; // factor for scaled input,
+    FFTZ_INT8 buf_size_multiplier; // factor for scaled input,
                               // 1 -> R2HC Kernels, 2 -> R2HCF Kernels
 
-    VOID SetUp() override
+    FFTZ_VOID SetUp() override
     {
         length = 0;
         // using the microseconds of current time as seed so the different
@@ -101,7 +103,7 @@ class AoclfftzKernelTestBase
      * sub-normals values will be used in input data (default: false)
      *
      */
-    VOID run_twiddle_kernel_test()
+    FFTZ_VOID run_twiddle_kernel_test()
     {
         auto param      = std::get<0>(GetParam());
         auto io_param   = std::get<1>(GetParam());
@@ -110,7 +112,7 @@ class AoclfftzKernelTestBase
         offset          = std::get<2>(io_param);
         is_bwd          = std::get<3>(io_param);
         is_out_of_place = std::get<4>(io_param);
-        UINT8 load_multi_cols_param = std::get<5>(io_param);
+        FFTZ_UINT8 load_multi_cols_param = std::get<5>(io_param);
         radix           = std::get<0>(param);
         kernel_type     = std::get<1>(param);
 
@@ -122,11 +124,11 @@ class AoclfftzKernelTestBase
         T *twk_in = nullptr;
         T *k_out = nullptr;
         T *twk_out = nullptr;
-        VOID *twiddle_buffer = nullptr;
+        FFTZ_VOID *twiddle_buffer = nullptr;
         aoclfftz_strides_t k_stride;
         k_stride.in_strides = nullptr;
         k_stride.out_strides = nullptr;
-        INT32 error = 0;
+        FFTZ_INT32 error = 0;
         T *k_in_r = nullptr;
         T *k_in_i = nullptr;
         T *k_out_r = nullptr;
@@ -224,7 +226,8 @@ class AoclfftzKernelTestBase
         }
 
         // prepare the strides for the regular kernel
-        ALLOC_ALIGN_UNINIT(k_stride.in_strides, INTP, radix * sizeof(INTP));
+        ALLOC_ALIGN_UNINIT(k_stride.in_strides, FFTZ_INTP,
+                           radix * sizeof(FFTZ_INTP));
         if (k_stride.in_strides == nullptr)
         {
             CLEANUP_CODE;
@@ -235,8 +238,8 @@ class AoclfftzKernelTestBase
 
         if (is_out_of_place)
         {
-            ALLOC_ALIGN_UNINIT(k_stride.out_strides, INTP,
-                               radix * sizeof(INTP));
+            ALLOC_ALIGN_UNINIT(k_stride.out_strides, FFTZ_INTP,
+                               radix * sizeof(FFTZ_INTP));
             if (k_stride.out_strides == nullptr)
             {
                 CLEANUP_CODE;
@@ -267,7 +270,7 @@ class AoclfftzKernelTestBase
         twk_out_i = twk_out + 1;
 
         // setup the twiddle buffer
-        ALLOC_ALIGN_INIT(twiddle_buffer, UINT8,
+        ALLOC_ALIGN_INIT(twiddle_buffer, FFTZ_UINT8,
                          data_stride * sizeof(T) * offset * radix);
 
         if (twiddle_buffer == nullptr)
@@ -288,8 +291,8 @@ class AoclfftzKernelTestBase
             compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, 1);
             // Replicate the first column's twiddles to all other columns
             T *tw_ptr = (T *)twiddle_buffer;
-            INTP twiddle_set_size = data_stride * radix;
-            for (INTP col = 1; col < offset; col++)
+            FFTZ_INTP twiddle_set_size = data_stride * radix;
+            for (FFTZ_INTP col = 1; col < offset; col++)
             {
                 memcpy(tw_ptr + col * twiddle_set_size,
                        tw_ptr,
@@ -350,7 +353,7 @@ class AoclfftzKernelTestBase
      * sub-normals values will be used in input data (default: false)
      *
      */
-    VOID run_kernel_test(bool special = false)
+    FFTZ_VOID run_kernel_test(bool special = false)
     {
         use_special     = special;
         auto param      = std::get<0>(GetParam());
@@ -360,7 +363,8 @@ class AoclfftzKernelTestBase
         offset          = std::get<2>(io_param);
         is_bwd          = std::get<3>(io_param);
         is_out_of_place = std::get<4>(io_param);
-        // UINT8 load_multi_cols = std::get<5>(io_param);  // unused in non-twiddle tests
+        // FFTZ_UINT8 load_multi_cols = std::get<5>(io_param);  // unused in
+        // non-twiddle tests
         radix           = std::get<0>(param);
         kernel_type     = std::get<1>(param);
 
@@ -439,7 +443,7 @@ class AoclfftzKernelTestBase
                 "Memory allocation failed for random input preparation");
             return input;
         }
-        for (INTP idx = 0; idx < input_length * data_stride; ++idx)
+        for (FFTZ_INTP idx = 0; idx < input_length * data_stride; ++idx)
         {
             // range: [-10.0, 10.0) with 3 decimal precision
             // generate an integer in the range [0, 19999]
@@ -468,7 +472,8 @@ class AoclfftzKernelTestBase
                 "Memory allocation failed for special input preparation");
             return input;
         }
-        for (INTP idx = 0; idx < input_length * data_stride; idx += in_stride)
+        for (FFTZ_INTP idx = 0; idx < input_length * data_stride;
+             idx += in_stride)
         {
             input[idx] = get_fp_special_value<T>(rand());
         }
@@ -484,13 +489,13 @@ class AoclfftzKernelTestBase
      * used instead of output-length and output-stride
      * @return T calculated error value
      */
-    T get_error(T *a, T *b, INTP _length, bool use_input_params = false)
+    T get_error(T *a, T *b, FFTZ_INTP _length, bool use_input_params = false)
     {
         T max_e       = 0.0;
         T max_mag     = 0.0;
-        INT32 _stride = use_input_params ? in_stride : out_stride;
+        FFTZ_INT32 _stride = use_input_params ? in_stride : out_stride;
         _stride *= data_stride;
-        for (INTP idx = 0; idx < _length; idx += _stride)
+        for (FFTZ_INTP idx = 0; idx < _length; idx += _stride)
         {
             T e;
             T mag;
@@ -535,17 +540,17 @@ class AoclfftzKernelTestBase
     * used instead of output-length and output-stride
     * @return T calculated error value
     */
-    bool is_error_safe(T *a, T *b, INTP _length, T tolerance,
+    bool is_error_safe(T *a, T *b, FFTZ_INTP _length, T tolerance,
                        bool use_input_params = false)
     {
         T max_e = 0.0;
         T max_mag = 0.0;
-        INT32 _stride = use_input_params ? in_stride : out_stride;
+        FFTZ_INT32 _stride = use_input_params ? in_stride : out_stride;
         _stride *= data_stride;
 
         bool passed_checks = true;
         // check if there are any NaNs or Infs in the buffers
-        for (INTP idx = 0; idx < _length; idx += _stride)
+        for (FFTZ_INTP idx = 0; idx < _length; idx += _stride)
         {
             if (std::isnan(a[idx]) || std::isinf(a[idx]) ||
                 std::isnan(a[idx + 1]) || std::isinf(a[idx + 1]))
@@ -566,7 +571,7 @@ class AoclfftzKernelTestBase
         if (!passed_checks)
         {
             // dump the buffers one by one to stderr
-            for (INTP idx = 0; idx < _length; idx += _stride)
+            for (FFTZ_INTP idx = 0; idx < _length; idx += _stride)
             {
                 GTEST_LOG_(INFO) << a[idx] << ", " << a[idx + 1] << " | "
                                  << b[idx] << ", " << b[idx + 1];
@@ -575,7 +580,7 @@ class AoclfftzKernelTestBase
             return false;
         }
 
-        for (INTP idx = 0; idx < _length; idx += _stride)
+        for (FFTZ_INTP idx = 0; idx < _length; idx += _stride)
         {
             T e;
             T mag;
@@ -614,24 +619,24 @@ class AoclfftzKernelTestBase
      * @param r size of a set (radix)
      * @param n no. of sets
      * @param s stride
-     * @return VOID
+     * @return FFTZ_VOID
      */
-    VOID convert_halfcomplex_to_fullcomplex(T *out, T *in, INTP r, INTP n,
-                                            INTP s)
+    FFTZ_VOID convert_halfcomplex_to_fullcomplex(T *out, T *in, FFTZ_INTP r,
+                                                 FFTZ_INTP n, FFTZ_INTP s)
     {
-        for (INTP b = 0; b < n; b++)
+        for (FFTZ_INTP b = 0; b < n; b++)
         {
-            INTP half_idx = b * r;
-            INTP full_idx = half_idx * 2;
+            FFTZ_INTP half_idx = b * r;
+            FFTZ_INTP full_idx = half_idx * 2;
             // introduce imaginary part for the first half-complex point
             out[full_idx * s]     = in[half_idx * s];
             out[full_idx * s + 1] = 0.0;
             // copy the complex points in-order first and then fill its
             // conjugates in reverse order
-            for (INTP i = (r - 1) / 2 - 1; i >= 0 ; i--)
+            for (FFTZ_INTP i = (r - 1) / 2 - 1; i >= 0 ; i--)
             {
-                INTP j1 = (i * 2) + 2;
-                INTP j2 = ((r - i) * 2) - 2;
+                FFTZ_INTP j1 = (i * 2) + 2;
+                FFTZ_INTP j2 = ((r - i) * 2) - 2;
                 out[(full_idx + j1) * s] = in[(half_idx + j1) * s - 1];
                 out[(full_idx + j1) * s + 1] = in[(half_idx + j1) * s];
                 out[(full_idx + j2) * s] = in[(half_idx + j1) * s - 1];
@@ -659,23 +664,23 @@ class AoclfftzKernelTestBase
      * @param r size of a set (radix)
      * @param n no. of sets
      * @param s stride
-     * @return VOID
+     * @return FFTZ_VOID
      */
-    VOID convert_fullcomplex_to_halfcomplex(T *out, T *in, INTP r, INTP n,
-                                            INTP s)
+    FFTZ_VOID convert_fullcomplex_to_halfcomplex(T *out, T *in, FFTZ_INTP r,
+                                                 FFTZ_INTP n, FFTZ_INTP s)
     {
-        for (INTP b = 0; b < n; b++)
+        for (FFTZ_INTP b = 0; b < n; b++)
         {
-            INTP half_idx = b * r;
-            INTP full_idx = half_idx * 2;
+            FFTZ_INTP half_idx = b * r;
+            FFTZ_INTP full_idx = half_idx * 2;
             // copy the real part of first complex point and skip the imag part
             // since it is zero
             out[half_idx * s] = in[full_idx * s];
             // copy the complex points from half-complex to full-complex buffer
             // and skip its conjugates
-            for (INTP i = 0; i < (r - 1) / 2; i++)
+            for (FFTZ_INTP i = 0; i < (r - 1) / 2; i++)
             {
-                INTP j = (i + 1) * 2;
+                FFTZ_INTP j = (i + 1) * 2;
                 out[(half_idx + j) * s - 1] = in[(full_idx + j) * s];
                 out[(half_idx + j) * s] = in[(full_idx + j) * s + 1];
             }
@@ -716,20 +721,22 @@ class AoclfftzKernelTestBase
      * standard_dft_data -> P1, 0,  P1, 0,  P1, 0,  P1, 0,  P1, 0,  P1, 0
      * shifted_dft_data  -> 0,  P2, 0,  P2, 0,  P2, 0,  P2, 0,  P2, 0,  P2
      */
-    VOID split_r2hcf_data(aocl_fftz_test_input input_type, T *data,
-                        T *standard_dft_data, T *shifted_dft_data,
-                        INT8 is_half_complex, INTP *strides, INTP v_stride)
+    FFTZ_VOID split_r2hcf_data(aocl_fftz_test_input input_type, T *data,
+                               T *standard_dft_data, T *shifted_dft_data,
+                               FFTZ_INT8 is_half_complex, FFTZ_INTP *strides,
+                               FFTZ_INTP v_stride)
     {
         if (is_half_complex)
         {
-            for (INTP i = 0; i < offset; i++)
+            for (FFTZ_INTP i = 0; i < offset; i++)
             {
-                INTP is_shifted_data = 0;
-                for (INTP j = 0; j < radix * buf_size_multiplier;)
+                FFTZ_INTP is_shifted_data = 0;
+                for (FFTZ_INTP j = 0; j < radix * buf_size_multiplier;)
                 {
                     if (!j)
                     {
-                        // first element within one offset (is_shifted_data is always 0 here)
+                        // first element within one offset (is_shifted_data is
+                        // always 0 here)
                         standard_dft_data[strides[j]] = data[strides[j]];
                         is_shifted_data = 1;
                         j++;
@@ -770,9 +777,9 @@ class AoclfftzKernelTestBase
         else
         {
             // input is real for forward FFT
-            for (INTP i = 0; i < offset; i++)
+            for (FFTZ_INTP i = 0; i < offset; i++)
             {
-                for (INTP j = 0; j<radix * buf_size_multiplier;
+                for (FFTZ_INTP j = 0; j<radix * buf_size_multiplier;
                      j += buf_size_multiplier)
                 {
                     standard_dft_data[strides[j]] = data[strides[j]];
@@ -798,20 +805,22 @@ class AoclfftzKernelTestBase
      *                data_full
      * @param v_stride vector stride
      */
-    VOID combine_data_for_r2hcf(aocl_fftz_test_input input_type, T *data,
-                        T *standard_dft_data, T *shifted_dft_data,
-                        INT8 is_half_complex, INTP *strides, INTP v_stride)
+    FFTZ_VOID combine_data_for_r2hcf(aocl_fftz_test_input input_type, T *data,
+                                     T *standard_dft_data, T *shifted_dft_data,
+                                     FFTZ_INT8 is_half_complex,
+                                     FFTZ_INTP *strides, FFTZ_INTP v_stride)
     {
         if (is_half_complex)
         {
-            for (INTP i = 0; i < offset; i++)
+            for (FFTZ_INTP i = 0; i < offset; i++)
             {
                 bool is_shifted_data = false;
-                for (INTP j = 0; j < radix * buf_size_multiplier;)
+                for (FFTZ_INTP j = 0; j < radix * buf_size_multiplier;)
                 {
                     if (!j)
                     {
-                        // first element within one offset (is_shifted_data is always false here)
+                        // first element within one offset (is_shifted_data is
+                        // always false here)
                         data[strides[j]] = standard_dft_data[strides[j]];
                         is_shifted_data = true;
                         j++;
@@ -852,9 +861,9 @@ class AoclfftzKernelTestBase
         else
         {
             // input is real for forward FFT
-            for (INTP i = 0; i < offset; i++)
+            for (FFTZ_INTP i = 0; i < offset; i++)
             {
-                for (INTP j = 0; j < radix * buf_size_multiplier;
+                for (FFTZ_INTP j = 0; j < radix * buf_size_multiplier;
                      j += buf_size_multiplier)
                 {
                     data[strides[j]] = standard_dft_data[strides[j]];
@@ -879,9 +888,11 @@ class AoclfftzKernelTestBase
      * @param is_half_complex 1 -> half complex format | 0 -> real
      * @param k_in_size size of input array
      */
-    VOID convert_to_fullcomplex(aocl_fftz_test_input input_type, T* data,
-                                T *data_full, INTP stride, INTP pass_radix,
-                                INTP is_half_complex, INTP k_in_size)
+    FFTZ_VOID convert_to_fullcomplex(aocl_fftz_test_input input_type, T *data,
+                                     T *data_full, FFTZ_INTP stride,
+                                     FFTZ_INTP pass_radix,
+                                     FFTZ_INTP is_half_complex,
+                                     FFTZ_INTP k_in_size)
     {
         if (is_half_complex)
         {
@@ -890,7 +901,7 @@ class AoclfftzKernelTestBase
         }
         else
         {
-            for (INTP i = 0; i < k_in_size; i++)
+            for (FFTZ_INTP i = 0; i < k_in_size; i++)
             {
                 data_full[i * 2] = data[i]; // interleaved format
             }
@@ -909,9 +920,9 @@ class AoclfftzKernelTestBase
      * @param is_standard_dft 1 -> Input type standard_dft_data |
      *                        0 -> Input type shifted_dft_data
      */
-    VOID calculate_dft(aocl_fftz_test_input input_type,
+    FFTZ_VOID calculate_dft(aocl_fftz_test_input input_type,
                        aoclfftz_strides_t kernel_stride,
-                       T *in_full, T *out_full, INTP fc_out_size,
+                       T *in_full, T *out_full, FFTZ_INTP fc_out_size,
                        bool is_standard_dft)
     {
         T *out_ref = NULL;
@@ -932,22 +943,22 @@ class AoclfftzKernelTestBase
         }
 
         T e[2]    = {0.0, 0.0};
-        INTP sign = is_bwd ? 1.0 : -1.0;
+        FFTZ_INTP sign = is_bwd ? 1.0 : -1.0;
 
-        INTP in_start  = 0;
-        INTP out_start = 0;
+        FFTZ_INTP in_start  = 0;
+        FFTZ_INTP out_start = 0;
         // FIXME: remove this memset
         memset(out_ref, 0, fc_out_size * sizeof(T));
-        for (INTP b = 0; b < offset; b++)
+        for (FFTZ_INTP b = 0; b < offset; b++)
         {
             // iterate over output points
-            for (INTP k = 0; k < radix; k++)
+            for (FFTZ_INTP k = 0; k < radix; k++)
             {
-                INTP out_idx = out_start + kernel_stride.out_strides[k];
+                FFTZ_INTP out_idx = out_start + kernel_stride.out_strides[k];
                 // iterate over input points
-                for (INTP i = 0; i < radix; i++)
+                for (FFTZ_INTP i = 0; i < radix; i++)
                 {
-                    INTP in_idx = in_start + kernel_stride.in_strides[i];
+                    FFTZ_INTP in_idx = in_start + kernel_stride.in_strides[i];
                     T angle     = 0.0;
                     if (!is_standard_dft)
                     {
@@ -994,9 +1005,9 @@ class AoclfftzKernelTestBase
      *
      * @param input_type test input type
      */
-    VOID run_dft_reference_test_complex(aocl_fftz_test_input input_type);
-    VOID run_dft_reference_test_real(aocl_fftz_test_input input_type);
-    VOID run_dft_reference_test(aocl_fftz_test_input input_type)
+    FFTZ_VOID run_dft_reference_test_complex(aocl_fftz_test_input input_type);
+    FFTZ_VOID run_dft_reference_test_real(aocl_fftz_test_input input_type);
+    FFTZ_VOID run_dft_reference_test(aocl_fftz_test_input input_type)
     {
         if (is_complex)
         {
@@ -1010,11 +1021,11 @@ class AoclfftzKernelTestBase
 };
 
 /**
- * @brief A derived class from AoclfftzKernelTestBase for FLOAT type
+ * @brief A derived class from AoclfftzKernelTestBase for FFTZ_FLOAT type
  *
  */
 
-class AoclfftzKernelTestFloat : public AoclfftzKernelTestBase<FLOAT>
+class AoclfftzKernelTestFloat : public AoclfftzKernelTestBase<FFTZ_FLOAT>
 {
   public:
     AoclfftzKernelTestFloat()
@@ -1027,10 +1038,10 @@ class AoclfftzKernelTestFloat : public AoclfftzKernelTestBase<FLOAT>
 };
 
 /**
- * @brief A derived class from AoclfftzKernelTestBase for DOUBLE type
+ * @brief A derived class from AoclfftzKernelTestBase for FFTZ_DOUBLE type
  *
  */
-class AoclfftzKernelTestDouble : public AoclfftzKernelTestBase<DOUBLE>
+class AoclfftzKernelTestDouble : public AoclfftzKernelTestBase<FFTZ_DOUBLE>
 {
   public:
     AoclfftzKernelTestDouble()
@@ -1043,10 +1054,10 @@ class AoclfftzKernelTestDouble : public AoclfftzKernelTestBase<DOUBLE>
 };
 
 /**
- * @brief A derived class from AoclfftzTwiddleKernelTestBase for FLOAT type
+ * @brief A derived class from AoclfftzTwiddleKernelTestBase for FFTZ_FLOAT type
  *
  */
-class AoclfftzTwiddleKernelTestFloat : public AoclfftzKernelTestBase<FLOAT>
+class AoclfftzTwiddleKernelTestFloat : public AoclfftzKernelTestBase<FFTZ_FLOAT>
 {
   public:
     AoclfftzTwiddleKernelTestFloat()
@@ -1059,10 +1070,12 @@ class AoclfftzTwiddleKernelTestFloat : public AoclfftzKernelTestBase<FLOAT>
 };
 
 /**
- * @brief A derived class from AoclfftzTwiddleKernelTestBase for DOUBLE type
+ * @brief A derived class from AoclfftzTwiddleKernelTestBase for FFTZ_DOUBLE
+ * type
  *
  */
-class AoclfftzTwiddleKernelTestDouble : public AoclfftzKernelTestBase<DOUBLE>
+class AoclfftzTwiddleKernelTestDouble
+    : public AoclfftzKernelTestBase<FFTZ_DOUBLE>
 {
   public:
     AoclfftzTwiddleKernelTestDouble()
@@ -1075,11 +1088,11 @@ class AoclfftzTwiddleKernelTestDouble : public AoclfftzKernelTestBase<DOUBLE>
 };
 
 /**
- * @brief A derived class from AoclfftzKernelTestBase for FLOAT type
+ * @brief A derived class from AoclfftzKernelTestBase for FFTZ_FLOAT type
  *
  */
 
-class AoclfftzKernelTestFloatReal : public AoclfftzKernelTestBase<FLOAT>
+class AoclfftzKernelTestFloatReal : public AoclfftzKernelTestBase<FFTZ_FLOAT>
 {
   public:
     AoclfftzKernelTestFloatReal()
@@ -1092,10 +1105,10 @@ class AoclfftzKernelTestFloatReal : public AoclfftzKernelTestBase<FLOAT>
 };
 
 /**
- * @brief A derived class from AoclfftzKernelTestBase for DOUBLE type
+ * @brief A derived class from AoclfftzKernelTestBase for FFTZ_DOUBLE type
  *
  */
-class AoclfftzKernelTestDoubleReal : public AoclfftzKernelTestBase<DOUBLE>
+class AoclfftzKernelTestDoubleReal : public AoclfftzKernelTestBase<FFTZ_DOUBLE>
 {
   public:
     AoclfftzKernelTestDoubleReal()
@@ -1108,11 +1121,11 @@ class AoclfftzKernelTestDoubleReal : public AoclfftzKernelTestBase<DOUBLE>
 };
 
 /**
- * @brief A derived class from AoclfftzKernelTestBase for FLOAT type
+ * @brief A derived class from AoclfftzKernelTestBase for FFTZ_FLOAT type
  *
  */
 
-class AoclfftzKernelTestFloatFused : public AoclfftzKernelTestBase<FLOAT>
+class AoclfftzKernelTestFloatFused : public AoclfftzKernelTestBase<FFTZ_FLOAT>
 {
   public:
     AoclfftzKernelTestFloatFused()
@@ -1125,10 +1138,10 @@ class AoclfftzKernelTestFloatFused : public AoclfftzKernelTestBase<FLOAT>
 };
 
 /**
- * @brief A derived class from AoclfftzKernelTestBase for DOUBLE type
+ * @brief A derived class from AoclfftzKernelTestBase for FFTZ_DOUBLE type
  *
  */
-class AoclfftzKernelTestDoubleFused : public AoclfftzKernelTestBase<DOUBLE>
+class AoclfftzKernelTestDoubleFused : public AoclfftzKernelTestBase<FFTZ_DOUBLE>
 {
   public:
     AoclfftzKernelTestDoubleFused()

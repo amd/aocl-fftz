@@ -23,7 +23,8 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS][NUM_FFT_DIRS] =
                                                      {{0, 0, 2, 14, 2, 1},
                                                       {0, 0, 4, 14, 2, 1}}};
 
-ops_cycles_t get_ops_cnt_r2hcf_rfft2avx128(UINT8 precision, UINT8 direction)
+ops_cycles_t get_ops_cnt_r2hcf_rfft2avx128(FFTZ_UINT8 precision,
+                                           FFTZ_UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -49,25 +50,28 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft2avx128(UINT8 precision, UINT8 direction)
     }
 }
 
-static VOID r2hcf_rfft2avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
-                                       VOID *out_real, VOID *out_imag, INTP n,
-                                       aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
+static FFTZ_VOID r2hcf_rfft2avx128_fp32_fwd(FFTZ_VOID *in_real,
+                                            FFTZ_VOID *in_imag,
+                                            FFTZ_VOID *out_real,
+                                            FFTZ_VOID *out_imag, FFTZ_INTP n,
+                                            aoclfftz_strides_t *strides,
+                                            FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
-    FLOAT *in = (FLOAT *)in_real;
-    FLOAT *out = (FLOAT *)out_real;
+    FFTZ_FLOAT *in = (FFTZ_FLOAT *)in_real;
+    FFTZ_FLOAT *out = (FFTZ_FLOAT *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
 
-    INTP cnt;
-    FLOAT *curr_in, *curr_out;
-    INTP N = n / NUM_SETS_REAL_128_S;
+    FFTZ_INTP cnt;
+    FFTZ_FLOAT *curr_in, *curr_out;
+    FFTZ_INTP N = n / NUM_SETS_REAL_128_S;
 
     for (cnt = 0; cnt < N; cnt++)
     {
@@ -156,7 +160,7 @@ static VOID r2hcf_rfft2avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
     if (n & 1)
     {
         /* Standard DFT */
-        FLOAT av_in0, av_in1;
+        FFTZ_FLOAT av_in0, av_in1;
         av_in0 = *in;
         av_in1 = in[in_strides[2]];
 
@@ -164,7 +168,7 @@ static VOID r2hcf_rfft2avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
         out[out_strides[3]] = av_in0 - av_in1;
 
         /* Shifted DFT */
-        FLOAT bv_in0, bv_in1;
+        FFTZ_FLOAT bv_in0, bv_in1;
         bv_in0 = in[in_strides[1]];
         bv_in1 = in[in_strides[3]];
 
@@ -173,25 +177,28 @@ static VOID r2hcf_rfft2avx128_fp32_fwd(VOID *in_real, VOID *in_imag,
     }
 }
 
-static VOID r2hcf_rfft2avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
-                                       VOID *out_real, VOID *out_imag, INTP n,
-                                       aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
+static FFTZ_VOID r2hcf_rfft2avx128_fp32_bwd(FFTZ_VOID *in_real,
+                                            FFTZ_VOID *in_imag,
+                                            FFTZ_VOID *out_real,
+                                            FFTZ_VOID *out_imag, FFTZ_INTP n,
+                                            aoclfftz_strides_t *strides,
+                                            FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
-    FLOAT *in = (FLOAT *)in_real;
-    FLOAT *out = (FLOAT *)out_real;
+    FFTZ_FLOAT *in = (FFTZ_FLOAT *)in_real;
+    FFTZ_FLOAT *out = (FFTZ_FLOAT *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
 
-    INTP cnt;
-    FLOAT *curr_in, *curr_out;
-    INTP N = n / NUM_SETS_REAL_128_S;
+    FFTZ_INTP cnt;
+    FFTZ_FLOAT *curr_in, *curr_out;
+    FFTZ_INTP N = n / NUM_SETS_REAL_128_S;
 
     for (cnt = 0; cnt < N; cnt++)
     {
@@ -282,7 +289,7 @@ static VOID r2hcf_rfft2avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
     if (n & 1)
     {
         /* Standard DFT */
-        FLOAT av_in0, av_in1;
+        FFTZ_FLOAT av_in0, av_in1;
         av_in0 = *in;
         av_in1 = in[in_strides[3]];
 
@@ -290,7 +297,7 @@ static VOID r2hcf_rfft2avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
         out[out_strides[2]] = av_in0 - av_in1;
 
         /* Shifted DFT */
-        FLOAT bv_in0, bv_in1;
+        FFTZ_FLOAT bv_in0, bv_in1;
         bv_in0 = in[in_strides[1]];
         bv_in1 = in[in_strides[2]];
 
@@ -299,25 +306,28 @@ static VOID r2hcf_rfft2avx128_fp32_bwd(VOID *in_real, VOID *in_imag,
     }
 }
 
-static VOID r2hcf_rfft2avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
-                                       VOID *out_real, VOID *out_imag, INTP n,
-                                       aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
+static FFTZ_VOID r2hcf_rfft2avx128_fp64_fwd(FFTZ_VOID *in_real,
+                                            FFTZ_VOID *in_imag,
+                                            FFTZ_VOID *out_real,
+                                            FFTZ_VOID *out_imag, FFTZ_INTP n,
+                                            aoclfftz_strides_t *strides,
+                                            FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
-    DOUBLE *in = (DOUBLE *)in_real;
-    DOUBLE *out = (DOUBLE *)out_real;
+    FFTZ_DOUBLE *in = (FFTZ_DOUBLE *)in_real;
+    FFTZ_DOUBLE *out = (FFTZ_DOUBLE *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
 
-    INTP cnt;
-    DOUBLE *curr_in, *curr_out;
-    INTP N = n / NUM_SETS_REAL_128_D;
+    FFTZ_INTP cnt;
+    FFTZ_DOUBLE *curr_in, *curr_out;
+    FFTZ_INTP N = n / NUM_SETS_REAL_128_D;
 
     for (cnt = 0; cnt < N; cnt++)
     {
@@ -364,7 +374,7 @@ static VOID r2hcf_rfft2avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
     if (n & 1)
     {
         /* Standard DFT */
-        DOUBLE av_in0, av_in1;
+        FFTZ_DOUBLE av_in0, av_in1;
         av_in0 = *in;
         av_in1 = in[in_strides[2]];
 
@@ -372,7 +382,7 @@ static VOID r2hcf_rfft2avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
         out[out_strides[3]] = av_in0 - av_in1;
 
         /* Shifted DFT */
-        DOUBLE bv_in0, bv_in1;
+        FFTZ_DOUBLE bv_in0, bv_in1;
         bv_in0 = in[in_strides[1]];
         bv_in1 = in[in_strides[3]];
 
@@ -381,25 +391,28 @@ static VOID r2hcf_rfft2avx128_fp64_fwd(VOID *in_real, VOID *in_imag,
     }
 }
 
-static VOID r2hcf_rfft2avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
-                                       VOID *out_real, VOID *out_imag, INTP n,
-                                       aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
+static FFTZ_VOID r2hcf_rfft2avx128_fp64_bwd(FFTZ_VOID *in_real,
+                                            FFTZ_VOID *in_imag,
+                                            FFTZ_VOID *out_real,
+                                            FFTZ_VOID *out_imag, FFTZ_INTP n,
+                                            aoclfftz_strides_t *strides,
+                                            FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
-    DOUBLE *in = (DOUBLE *)in_real;
-    DOUBLE *out = (DOUBLE *)out_real;
+    FFTZ_DOUBLE *in = (FFTZ_DOUBLE *)in_real;
+    FFTZ_DOUBLE *out = (FFTZ_DOUBLE *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
 
-    INTP cnt;
-    DOUBLE *curr_in, *curr_out;
-    INTP N = n / NUM_SETS_REAL_128_D;
+    FFTZ_INTP cnt;
+    FFTZ_DOUBLE *curr_in, *curr_out;
+    FFTZ_INTP N = n / NUM_SETS_REAL_128_D;
 
     for (cnt = 0; cnt < N; cnt++)
     {
@@ -447,7 +460,7 @@ static VOID r2hcf_rfft2avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
     if (n & 1)
     {
         /* Standard DFT */
-        DOUBLE av_in0, av_in1;
+        FFTZ_DOUBLE av_in0, av_in1;
         av_in0 = *in;
         av_in1 = in[in_strides[3]];
 
@@ -455,7 +468,7 @@ static VOID r2hcf_rfft2avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
         out[out_strides[2]] = av_in0 - av_in1;
 
         /* Shifted DFT */
-        DOUBLE bv_in0, bv_in1;
+        FFTZ_DOUBLE bv_in0, bv_in1;
         bv_in0 = in[in_strides[1]];
         bv_in1 = in[in_strides[2]];
 
@@ -464,7 +477,8 @@ static VOID r2hcf_rfft2avx128_fp64_bwd(VOID *in_real, VOID *in_imag,
     }
 }
 
-kfft_ register_kernel_r2hcf_rfft2avx128(UINT8 precision, UINT8 direction)
+kfft_ register_kernel_r2hcf_rfft2avx128(FFTZ_UINT8 precision,
+                                        FFTZ_UINT8 direction)
 {
     if (direction == FORWARD_FFT_DIR)
     {

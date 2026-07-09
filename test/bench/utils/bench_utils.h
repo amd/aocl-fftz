@@ -71,7 +71,7 @@
  */
 #define ALLOC_AND_COPY_PARAMS(dst, src)                                        \
     {                                                                          \
-        UINT32 is_align = src->aligned_alloc;                                  \
+        FFTZ_UINT32 is_align = src->aligned_alloc; \
         ALLOC_UNINIT(dst, aoclfftz_bench_params_t,                             \
                         sizeof(aoclfftz_bench_params_t), is_align);            \
         if (dst != NULL) {                                                     \
@@ -97,8 +97,8 @@
 
 #define VALIDATE_AND_GET_DOUBLE(str, result, ret, min_val, max_val)            \
     {                                                                          \
-        INT32 length = 0;                                                      \
-        DOUBLE temp = 0.0;                                                     \
+        FFTZ_INT32 length = 0; \
+        FFTZ_DOUBLE temp = 0.0; \
         result = atof(str);                                                    \
         ret = SSCANF(str, "%lf %n", &temp, &length) != 1;                      \
         ret |= strlen(str) != length;                                          \
@@ -169,7 +169,7 @@
     {                                                                          \
         AOCLFFTZ_LOG(INFO, params->logger_mode,                                \
                                "dim_rank      : %d", params->dim_rank);        \
-        for (INT32 i = 0; i < params->dim_rank; i++)                           \
+        for (FFTZ_INT32 i = 0; i < params->dim_rank; i++) \
         {                                                                      \
             AOCLFFTZ_LOG(                                                      \
                 INFO, params->logger_mode, "    dims[%d]   : %td:%td:%td", i,  \
@@ -178,7 +178,7 @@
         }                                                                      \
         AOCLFFTZ_LOG(INFO, params->logger_mode,                                \
                                "vec_rank      : %d", params->vec_rank);        \
-        for (INT32 i = 0; i < params->vec_rank; i++)                           \
+        for (FFTZ_INT32 i = 0; i < params->vec_rank; i++) \
         {                                                                      \
             AOCLFFTZ_LOG(                                                      \
                 INFO, params->logger_mode, "    vecs[%d]   : %td:%td:%td", i,  \
@@ -187,7 +187,7 @@
         }                                                                      \
         AOCLFFTZ_LOG(                                                          \
             INFO, params->logger_mode, "precision     : %s",                   \
-            params->precision == FLOAT_P ? "FLOAT" : "DOUBLE");                \
+            params->precision == FLOAT_P ? "FFTZ_FLOAT" : "FFTZ_DOUBLE"); \
         AOCLFFTZ_LOG(                                                          \
             INFO, params->logger_mode, "data_model    : %s",                   \
             params->data_model == ILP64 ? "ILP64" : "LP64");                   \

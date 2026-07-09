@@ -22,17 +22,18 @@
 // Function pointers to communicate the exact selector model for executing the
 // problem.
 // Not thread-safe
-typedef INT32(*selector_model_func_)(aoclfftz_selector_t*);
-typedef INT32 (*selector_model_rdft_func_)(aoclfftz_selector_t *,
+typedef FFTZ_INT32(*selector_model_func_)(aoclfftz_selector_t*);
+typedef FFTZ_INT32 (*selector_model_rdft_func_)(aoclfftz_selector_t *,
                                            aoclfftz_realhelper_t *);
 selector_model_func_ sel_fp = NULL;
 selector_model_rdft_func_ sel_rdft_fp = NULL;
 
 // Register all applicable solvers and kernels into the respective tables.
-INT32 register_solvers_kernels(kernel_tables_t *kernel_tables, INT32 dt,
-                               INT32 dir, INT32 is_real, INT32 cpu_flags)
+FFTZ_INT32 register_solvers_kernels(kernel_tables_t *kernel_tables,
+                                    FFTZ_INT32 dt, FFTZ_INT32 dir,
+                                    FFTZ_INT32 is_real, FFTZ_INT32 cpu_flags)
 {
-    INT32 ret = SELECTOR_SUCCESS;
+    FFTZ_INT32 ret = SELECTOR_SUCCESS;
 
     // Register Solvers
     ret = register_solvers();
@@ -83,10 +84,11 @@ INT32 register_solvers_kernels(kernel_tables_t *kernel_tables, INT32 dt,
     return ret;
 }
 
-INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table, INT32 is_innermost_dim)
+FFTZ_INT32 check_FFT_kernel_support(FFTZ_INTP n, kernel_t *kernels_table,
+                                    FFTZ_INT32 is_innermost_dim)
 {
-    INT32 is_supported = 0;
-    INTP num_kernels_to_check = NUM_KERNELS_IN_EACH_CATEGORY;
+    FFTZ_INT32 is_supported = 0;
+    FFTZ_INTP num_kernels_to_check = NUM_KERNELS_IN_EACH_CATEGORY;
 
     // The "special" (large) kernels are not well suited to run for problems
     // whose strides are large. This is typically the case for non-innermost
@@ -98,7 +100,7 @@ INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table, INT32 is_innermo
     }
 
     // It is enough to check for the existence of a suitable C kernel
-    for (INTP i = 0; i < num_kernels_to_check; i++)
+    for (FFTZ_INTP i = 0; i < num_kernels_to_check; i++)
     {
         if (kernels_table[i].radix == 0)
         {
@@ -116,43 +118,45 @@ INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table, INT32 is_innermo
 
 // Column-major iff multiple batches exist and vec-stride < dim-stride
 // for both input and output.
-UINT8 check_col_major(aoclfftz_decomp_scheme_t *decomp_scheme)
+FFTZ_UINT8 check_col_major(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
-    UINT8 is_col_major = (decomp_scheme->vecs[0].in_stride <
+    FFTZ_UINT8 is_col_major = (decomp_scheme->vecs[0].in_stride <
         decomp_scheme->dims[0].in_stride) &&
         (decomp_scheme->vecs[0].out_stride < decomp_scheme->dims[0].out_stride)
         && (decomp_scheme->vecs[0].n > 1);
     return is_col_major;
 }
 
-static INT32 is_split_radix_applicable(aoclfftz_decomp_scheme_t *decomp_scheme)
+static FFTZ_INT32
+is_split_radix_applicable(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
-    INTP n = decomp_scheme->dims[0].n;
-    UINT8 is_col_major = check_col_major(decomp_scheme);
-    // Split-radix is applicable for complex, 1D, row-major, non-batched transforms,
-    // innermost dimension where the problem size is a power of 2,
+    FFTZ_INTP n = decomp_scheme->dims[0].n;
+    FFTZ_UINT8 is_col_major = check_col_major(decomp_scheme);
+    // Split-radix is applicable for complex, 1D, row-major, non-batched
+    // transforms, innermost dimension where the problem size is a power of 2,
     // >= 4096, and single-threaded only.
     // TODO: Replace the hardcoded threshold value (4096)
 
-    return (!IS_REAL(decomp_scheme->flags) && (n >= 4096) && ((n & (n - 1)) == 0)
-            && (decomp_scheme->vec_rank == 1) && (decomp_scheme->dim_rank == 1)
-            && (decomp_scheme->batched_vecs == NULL) && (!is_col_major)
-            && !IS_NOT_INNERMOST_DIM(decomp_scheme->flags)
-            && (decomp_scheme->thread_info->pthr_fft->num_threads == 1));
+    return (!IS_REAL(decomp_scheme->flags) && (n >= 4096) &&
+            ((n & (n - 1)) == 0) && (decomp_scheme->vec_rank == 1) &&
+            (decomp_scheme->dim_rank == 1) &&
+            (decomp_scheme->batched_vecs == NULL) && (!is_col_major) &&
+            !IS_NOT_INNERMOST_DIM(decomp_scheme->flags) &&
+            (decomp_scheme->thread_info->pthr_fft->num_threads == 1));
 }
 
-INTP check_CT_solvability(INTP n, kernel_t *kertab)
+FFTZ_INTP check_CT_solvability(FFTZ_INTP n, kernel_t *kertab)
 {
     // It is enough to check for the existence of a suitable C kernel
-    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
+    for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
-        UINT32 radix = kertab[i].radix;
+        FFTZ_UINT32 radix = kertab[i].radix;
         if (radix == 0) // End of suitable kernels in the list
         {
             break;
         }
         // Check if this radix can factorize the problem
-        if ((n % (INTP)radix) == 0)
+        if ((n % (FFTZ_INTP)radix) == 0)
         {
             return 1;
         }
@@ -160,14 +164,15 @@ INTP check_CT_solvability(INTP n, kernel_t *kertab)
     return 0;
 }
 
-INT32 check_prime_solvability_bluestein(aoclfftz_decomp_scheme_t *decomp_scheme,
-                                        INT32 is_FFT_ker_supported,
-                                        kernel_t *kertab)
+FFTZ_INT32
+check_prime_solvability_bluestein(aoclfftz_decomp_scheme_t *decomp_scheme,
+                                  FFTZ_INT32 is_FFT_ker_supported,
+                                  kernel_t *kertab)
 {
-    INTP n = decomp_scheme->dims[0].n;
-    INTP batch = decomp_scheme->vecs[0].n;
-    INT32 dim_rank = decomp_scheme->dim_rank;
-    INT32 vec_rank = decomp_scheme->vec_rank;
+    FFTZ_INTP n = decomp_scheme->dims[0].n;
+    FFTZ_INTP batch = decomp_scheme->vecs[0].n;
+    FFTZ_INT32 dim_rank = decomp_scheme->dim_rank;
+    FFTZ_INT32 vec_rank = decomp_scheme->vec_rank;
 
     if (n == 1 || dim_rank != 1 || vec_rank != 1 || batch != 1)
     {
@@ -176,7 +181,7 @@ INT32 check_prime_solvability_bluestein(aoclfftz_decomp_scheme_t *decomp_scheme,
 
     // n is solvable by bluestein solver if is not solvable by direct
     // and CT solvers
-    INT32 is_solvable_by_CT = check_CT_solvability(n, kertab);
+    FFTZ_INT32 is_solvable_by_CT = check_CT_solvability(n, kertab);
     if (is_FFT_ker_supported == 0 && is_solvable_by_CT == 0)
     {
         return 1;
@@ -185,9 +190,9 @@ INT32 check_prime_solvability_bluestein(aoclfftz_decomp_scheme_t *decomp_scheme,
     return 0;
 }
 
-INT32 is_prime(INT32 n)
+FFTZ_INT32 is_prime(FFTZ_INT32 n)
 {
-    for (INT32 i = 2; i * i <= n; i++)
+    for (FFTZ_INT32 i = 2; i * i <= n; i++)
     {
         if (n % i == 0)
         {
@@ -200,14 +205,14 @@ INT32 is_prime(INT32 n)
 
 // Check if the input problem contains a prime factor that requires a
 // bluestein solver to solve.
-INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme)
+FFTZ_INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
-    INT32 dim_rank = decomp_scheme->dim_rank;
-    for (INT32 i = 0; i < dim_rank; i++)
+    FFTZ_INT32 dim_rank = decomp_scheme->dim_rank;
+    for (FFTZ_INT32 i = 0; i < dim_rank; i++)
     {
-        INTP n = decomp_scheme->dims[i].n;
+        FFTZ_INTP n = decomp_scheme->dims[i].n;
         // Check for prime factors greater than 13 in (n)
-        for (INT32 i = 17; i <= n; i++)
+        for (FFTZ_INT32 i = 17; i <= n; i++)
         {
             if (n % i == 0 && is_prime(i))
             {
@@ -221,12 +226,13 @@ INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme)
 
 // Check whether n can be factored as radix_r * radix_m where radix_r
 // has twiddle kernel support and radix_m has plain FFT kernel support.
-INT32 check_batched_ct_l1_direct_solvability(INTP n, kernel_t *kertab_twid,
-                                   kernel_t *kertab_dft)
+FFTZ_INT32 check_batched_ct_l1_direct_solvability(FFTZ_INTP n,
+                                                  kernel_t *kertab_twid,
+                                                  kernel_t *kertab_dft)
 {
-    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
+    for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
-        INTP radix_r = (INTP)kertab_twid[i].radix;
+        FFTZ_INTP radix_r = (FFTZ_INTP)kertab_twid[i].radix;
 
         if (radix_r == 0) // End of suitable kernels in the list
         {
@@ -250,24 +256,25 @@ INT32 check_batched_ct_l1_direct_solvability(INTP n, kernel_t *kertab_twid,
 // Fixed decision logic and CPI based selector mode execution for the
 // input problem based on the applicable tables of solvers and kernels
 // wherein the successive stage dfts are fused with twiddle multiplications
-INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
+FFTZ_INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
 {
     aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
     kernel_t *kertab = sel->kernel_tables->kt_dft;
-    INT32 ret = SELECTOR_FAILURE;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 avl_threads =
+        sel->solution->decomp_scheme->thread_info->avl_threads;
 
-    INT32 is_FFT_ker_supported = check_FFT_kernel_support(
+    FFTZ_INT32 is_FFT_ker_supported = check_FFT_kernel_support(
         sel->solution->decomp_scheme->dims[0].n, kertab,
         !IS_NOT_INNERMOST_DIM(sel->solution->decomp_scheme->flags));
 
-    INT32 is_solvable_by_bluestein = check_prime_solvability_bluestein(
+    FFTZ_INT32 is_solvable_by_bluestein = check_prime_solvability_bluestein(
         sel->solution->decomp_scheme, is_FFT_ker_supported, kertab);
-    INT32 level1_cond1 = 0;
-    INT32 level1_cond2 = 0;
-    INT32 level2_cond = 0;
-    INT32 standalone_transpose_cond = 0;
+    FFTZ_INT32 level1_cond1 = 0;
+    FFTZ_INT32 level1_cond2 = 0;
+    FFTZ_INT32 level2_cond = 0;
+    FFTZ_INT32 standalone_transpose_cond = 0;
 
     SET_SELECTOR_MODE(sel->solution->decomp_scheme->flags,
                       AOCLFFTZ_FIXED_SELECTOR);
@@ -294,7 +301,8 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     // level1_cond2 = !(IS_OUT_OF_PLACE(sel->solution->decomp_scheme->flags));
     // level1_cond2 &= ((sel->solution->decomp_scheme->dims[0].n >
     //                   MAX_GUARANTEED_CACHEABLE_SIZE) &&
-    //                  (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags) ==
+    //                  (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags)
+    //                  ==
     //                   AOCLFFTZ_AUTO_SELECTOR));
     level1_cond2 = IS_BUFFERED(sel->solution->decomp_scheme->flags);
     // SOLVER_PERM_KER
@@ -303,7 +311,8 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     level2_cond = is_FFT_ker_supported;
     // SOLVER_SR
     aoclfftz_cntrl_params_t *cp = sel->solution->decomp_scheme->cntrl_params;
-    INT32 is_scalar_only = (cp != NULL) && (cp->opt_level == optlevel_scalar);
+    FFTZ_INT32 is_scalar_only =
+        (cp != NULL) && (cp->opt_level == optlevel_scalar);
     level2_cond |=
         ((is_scalar_only
          && is_split_radix_applicable(sel->solution->decomp_scheme)) << 1);
@@ -315,12 +324,12 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
         GET_STANDALONE_TRANSPOSE(sel->solution->decomp_scheme->flags);
 
     // SOLVER_BATCHED_CT_L1_DIRECT
-    INT32 is_batched_ct_l1_direct = check_batched_ct_l1_direct_solvability(
+    FFTZ_INT32 is_batched_ct_l1_direct = check_batched_ct_l1_direct_solvability(
         sel->solution->decomp_scheme->dims[0].n,
         sel->kernel_tables->kt_twid_dft,
         sel->kernel_tables->kt_dft);
 
-    UINT8 is_col_major = check_col_major(sel->solution->decomp_scheme);
+    FFTZ_UINT8 is_col_major = check_col_major(sel->solution->decomp_scheme);
 
     /** Level 1 decisions : Solvers **/
     // Buffered FFT Solver
@@ -527,29 +536,29 @@ INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
 // Fixed decision logic and CPI based selector mode execution for the
 // real input problem based on the applicable tables
 // of real solvers and real kernels
-INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
+FFTZ_INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
                                 aoclfftz_realhelper_t *realhelper)
 {
     aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
 
     //All the CT sub-problems will use fused twiddle dft kernels
     kernel_t *kertab = sel->kernel_tables->kt_rdft;
-    INT32 ret = SELECTOR_FAILURE;
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 avl_threads =
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 avl_threads =
             sel->solution->decomp_scheme->thread_info->avl_threads;
 
-    INT32 is_FFT_ker_supported = check_FFT_kernel_support(
+    FFTZ_INT32 is_FFT_ker_supported = check_FFT_kernel_support(
         sel->solution->decomp_scheme->dims[0].n, kertab,
         !IS_NOT_INNERMOST_DIM(sel->solution->decomp_scheme->flags));
 
-    INT32 is_solvable_by_bluestein =
+    FFTZ_INT32 is_solvable_by_bluestein =
             check_prime_solvability_bluestein(sel->solution->decomp_scheme,
                                               is_FFT_ker_supported, kertab);
-    INT32 level1_cond1 = 0;
-    INT32 level1_cond2 = 0;
-    INT32 level2_cond = 0;
+    FFTZ_INT32 level1_cond1 = 0;
+    FFTZ_INT32 level1_cond2 = 0;
+    FFTZ_INT32 level2_cond = 0;
 
     SET_SELECTOR_MODE(sel->solution->decomp_scheme->flags,
                       AOCLFFTZ_FIXED_SELECTOR);
@@ -576,8 +585,9 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     level1_cond1 |= (is_solvable_by_bluestein << 2);
     // SOLVER_BUFFERED
     // Buffered solver will be used for all CT problems as of now
-    level1_cond2 = !realhelper->is_buffered_invoked && !is_FFT_ker_supported &&
-                   sel->solution->decomp_scheme->dims[0].n != 1 /* non-size-one */;
+    level1_cond2 =
+        !realhelper->is_buffered_invoked && !is_FFT_ker_supported &&
+        sel->solution->decomp_scheme->dims[0].n != 1 /* non-size-one */;
     // SOLVER_PERM_KER
     level1_cond2 |= (IS_OUT_OF_ORDER(sel->solution->decomp_scheme->flags) << 1);
     // SOLVER_DIRECT
@@ -704,14 +714,14 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     return ret;
 }
 
-INT32 selector_autotuner_mode_dft_(aoclfftz_selector_t* sel)
+FFTZ_INT32 selector_autotuner_mode_dft_(aoclfftz_selector_t* sel)
 {
     AOCLFFTZ_LOG(INFO, global_logger_mode,
         "Autotuner selector is not yet available for evaluation");
     return SELECTOR_FAILURE;
 }
 
-INT32 selector_autotuner_mode_rdft_(aoclfftz_selector_t* sel)
+FFTZ_INT32 selector_autotuner_mode_rdft_(aoclfftz_selector_t* sel)
 {
     AOCLFFTZ_LOG(INFO, global_logger_mode,
         "Autotuner selector for RealFFT is not yet available for evaluation");
@@ -723,9 +733,9 @@ INT32 selector_autotuner_mode_rdft_(aoclfftz_selector_t* sel)
 // and performance.
 // Also provides a cleaner approach to init and handle various related
 // solvers and kernel tables
-INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
+FFTZ_INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
 {
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     // if bit reproducibility is requested, directly take its associated
     // code path and return
@@ -736,10 +746,10 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
     }
 
     aoclfftz_selector_t *sel_models[AOCLFFTZ_SELECTOR_MODELS] = { 0x0, };
-    UINT32 best_model_id = 0;
+    FFTZ_UINT32 best_model_id = 0;
     cost_analysis_t best_cost = {INT64_MAX, INT64_MAX};
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
 
     // FIXED SELECTOR BASED MODEL : start
     // Allocate selector object
@@ -850,7 +860,8 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
     // AUTO TUNED SELECTOR BASED MODEL : end
 
     // Compare and find the best performant model for the input problem
-    for (UINT32 model_id = 0; model_id < AOCLFFTZ_SELECTOR_MODELS; model_id++)
+    for (FFTZ_UINT32 model_id = 0; model_id < AOCLFFTZ_SELECTOR_MODELS;
+         model_id++)
     {
         if (sel_models[model_id] != NULL)
         {
@@ -870,7 +881,8 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
 
     // Destroy and Free unnecessary objects
     destroy_solution(org_sol);
-    for (UINT32 model_id = 0; model_id < AOCLFFTZ_SELECTOR_MODELS; model_id++)
+    for (FFTZ_UINT32 model_id = 0; model_id < AOCLFFTZ_SELECTOR_MODELS;
+         model_id++)
     {
         if (model_id != best_model_id)
         {
@@ -890,7 +902,7 @@ INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
 // Specific Selector model function that invokes the internal recursive
 // selector function pointer passing the selector object along.
 // Common function for both single-precision and double-precision
-INT32 selector_model_dft_(aoclfftz_selector_t *sel)
+FFTZ_INT32 selector_model_dft_(aoclfftz_selector_t *sel)
 {
     return sel_fp(sel);
 }
@@ -900,10 +912,10 @@ INT32 selector_model_dft_(aoclfftz_selector_t *sel)
 // and performance for real-fft problems.
 // Also provides a cleaner approach to init and handle various related
 // solvers and kernel tables
-INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
+FFTZ_INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
                             aoclfftz_realhelper_t *realhelper)
 {
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     // if bit reproducibility is requested, directly take its associated
     // code path and return
@@ -920,10 +932,10 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
     }
 
     aoclfftz_selector_t *sel_models[AOCLFFTZ_SELECTOR_MODELS] = { 0x0, };
-    UINT32 best_model_id = 0;
+    FFTZ_UINT32 best_model_id = 0;
     cost_analysis_t best_cost = {INT64_MAX, INT64_MAX};
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
 
     // FIXED SELECTOR BASED MODEL : start
     // Allocate selector object
@@ -1027,7 +1039,8 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
     // AUTO TUNED SELECTOR BASED MODEL : end
 
     // Compare and find the best performant model for the input problem
-    for (UINT32 model_id = 0; model_id < AOCLFFTZ_SELECTOR_MODELS; model_id++)
+    for (FFTZ_UINT32 model_id = 0; model_id < AOCLFFTZ_SELECTOR_MODELS;
+         model_id++)
     {
         if (sel_models[model_id] != NULL)
         {
@@ -1046,7 +1059,8 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
 
     // Destroy and Free unnecessary objects
     destroy_solution(org_sol);
-    for (UINT32 model_id = 0; model_id < AOCLFFTZ_SELECTOR_MODELS; model_id++)
+    for (FFTZ_UINT32 model_id = 0; model_id < AOCLFFTZ_SELECTOR_MODELS;
+         model_id++)
     {
         if (model_id != best_model_id)
             destroy_selector(sel_models[model_id]);
@@ -1060,10 +1074,10 @@ INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
 // Specific Selector model function that invokes the internal recursive
 // selector function pointer (for real-fft) passing the selector object along.
 // Common function for both single-precision and double-precision
-INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
+FFTZ_INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
                            aoclfftz_realhelper_t *realhelper)
 {
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     ret = sel_rdft_fp(sel, realhelper);
 
@@ -1071,14 +1085,15 @@ INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
 }
 
 #ifdef MULTI_THREADING
-static INT32 post_process_solution(aoclfftz_solution_t *sol, INT32 *ct_slots,
-                                   INT32 *aux_buf_slots);
+static FFTZ_INT32 post_process_solution(aoclfftz_solution_t *sol,
+                                        FFTZ_INT32 *ct_slots,
+                                        FFTZ_INT32 *aux_buf_slots);
 #endif
-static INT32 setup_chirp_fft(aoclfftz_solution_t *sol);
+static FFTZ_INT32 setup_chirp_fft(aoclfftz_solution_t *sol);
 
-static inline INT32 prepare_and_setup_dft(aoclfftz_selector_t *sel_obj)
+static inline FFTZ_INT32 prepare_and_setup_dft(aoclfftz_selector_t *sel_obj)
 {
-    INT32 ret;
+    FFTZ_INT32 ret;
     sel_obj->execute = register_execute_dft();
     if (IS_REAL(sel_obj->solution->decomp_scheme->flags))
     {
@@ -1139,17 +1154,17 @@ exit_prepare_and_setup_dft:
 
 // Selector interface function that performs setup for finding solution for a
 // single-precision LP64 problem
-VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
+FFTZ_VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
 {
-    INT32 ret = 0;
-    INT32 cpu_flags = 0;
+    FFTZ_INT32 ret = 0;
+    FFTZ_INT32 cpu_flags = 0;
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
     aoclfftz_flags_t flags = problem->flags;
     aoclfftz_selector_t *sel_obj = NULL;
 
     // shrink dim_rank
     // used in n dim case where size one problems are removed
-    INT32 dim_rank = 1;
+    FFTZ_INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
@@ -1210,17 +1225,17 @@ exit_setup_dft_f:
 
 // Selector interface function that performs setup for finding solution for a
 // double-precision LP64 problem
-VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
+FFTZ_VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
 {
-    INT32 ret = 0;
-    INT32 cpu_flags = 0;
+    FFTZ_INT32 ret = 0;
+    FFTZ_INT32 cpu_flags = 0;
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
     aoclfftz_flags_t flags = problem->flags;
     aoclfftz_selector_t *sel_obj = NULL;
 
     // shrink dim_rank
     // used in n dim case where size one problems are removed
-    INT32 dim_rank = 1;
+    FFTZ_INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
@@ -1243,7 +1258,8 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
                                          cntrl_params.opt_level);
 
     // Register solvers and kernels for solving the problem based on
-    // input problem datatype, CPU opt level and dynamic dispatcher FMV selection
+    // input problem datatype, CPU opt level and dynamic dispatcher FMV
+    // selection
     ret = register_solvers_kernels(sel_obj->kernel_tables, DT_DOUBLE,
                                    flags.fft_direction, flags.fft_type,
                                    cpu_flags);
@@ -1277,17 +1293,17 @@ exit_setup_dft_d:
 
 // Selector interface function that performs setup for finding solution for a
 // single-precision ILP64 problem
-VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
+FFTZ_VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
 {
-    INT32 ret = 0;
-    INT32 cpu_flags = 0;
+    FFTZ_INT32 ret = 0;
+    FFTZ_INT32 cpu_flags = 0;
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
     aoclfftz_flags_t flags = problem->flags;
     aoclfftz_selector_t *sel_obj = NULL;
 
     // shrink dim_rank
     // used in n dim case where size one problems are removed
-    INT32 dim_rank = 1;
+    FFTZ_INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
@@ -1344,17 +1360,17 @@ exit_setup_dft_f_64_:
 
 // Selector interface function that performs setup for finding solution for a
 // double-precision ILP64 problem
-VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
+FFTZ_VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
 {
-    INT32 ret = 0;
-    INT32 cpu_flags = 0;
+    FFTZ_INT32 ret = 0;
+    FFTZ_INT32 cpu_flags = 0;
     aoclfftz_cntrl_params_t cntrl_params = problem->cntrl_params;
     aoclfftz_flags_t flags = problem->flags;
     aoclfftz_selector_t *sel_obj = NULL;
 
     // shrink dim_rank
     // used in n dim case where size one problems are removed
-    INT32 dim_rank = 1;
+    FFTZ_INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
     kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
@@ -1409,25 +1425,25 @@ exit_setup_dft_d_64_:
     return NULL;
 }
 
-VOID destroy_handle(VOID *handle)
+FFTZ_VOID destroy_handle(FFTZ_VOID *handle)
 {
     destroy_selector((aoclfftz_selector_t *)handle);
 }
 
-VOID fuse_vecs(aoclfftz_solution_t *sol, INT32 is_FFT_ker_supported)
+FFTZ_VOID fuse_vecs(aoclfftz_solution_t *sol, FFTZ_INT32 is_FFT_ker_supported)
 {
-    INT32 last_fused_idx = 0, is_fusable = 0, fused_rank = 0;
-    INTP fused_size = sol->decomp_scheme->vecs[0].n;
-    INT32 vec_rank = sol->decomp_scheme->vec_rank;
+    FFTZ_INT32 last_fused_idx = 0, is_fusable = 0, fused_rank = 0;
+    FFTZ_INTP fused_size = sol->decomp_scheme->vecs[0].n;
+    FFTZ_INT32 vec_rank = sol->decomp_scheme->vec_rank;
     aoclfftz_dim_t_64_ *vecs = sol->decomp_scheme->vecs;
-    for (INT32 i = 1; i < vec_rank; i++)
+    for (FFTZ_INT32 i = 1; i < vec_rank; i++)
     {
         // expected stride is the regular stride we obtain by n * stride of
         // prev dim
-        INTP expected_in_stride = vecs[i-1].n * vecs[i-1].in_stride;
-        INTP expected_out_stride = vecs[i-1].n * vecs[i-1].out_stride;
-        INTP actual_in_stride = vecs[i].in_stride;
-        INTP actual_out_stride = vecs[i].out_stride;
+        FFTZ_INTP expected_in_stride = vecs[i-1].n * vecs[i-1].in_stride;
+        FFTZ_INTP expected_out_stride = vecs[i-1].n * vecs[i-1].out_stride;
+        FFTZ_INTP actual_in_stride = vecs[i].in_stride;
+        FFTZ_INTP actual_out_stride = vecs[i].out_stride;
         // Do not fuse the first vector to enable memory-efficient batch
         // processing for NDim problems where the outerdimension is CT.
         // ie., problems like AxBxC that decomposes to BxCvA and A is CT,
@@ -1467,11 +1483,11 @@ VOID fuse_vecs(aoclfftz_solution_t *sol, INT32 is_FFT_ker_supported)
     sol->decomp_scheme->vec_rank = fused_rank + 1;
 }
 
-VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
+FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
 {
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
     aoclfftz_solution_t *curr = solution;
-    UINT32 dt_prec = DT_PRECISION_FLAG(solution->decomp_scheme->flags);
+    FFTZ_UINT32 dt_prec = DT_PRECISION_FLAG(solution->decomp_scheme->flags);
     aoclfftz_solution_t *nd_sol = NULL;
     do // for ND support
     {
@@ -1484,11 +1500,11 @@ VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
         {
             if (curr->solver->solver_type == SOLVER_CT)
             {
-                INTP r = curr->next_sol[0]->decomp_scheme->dims[0].n;
-                INTP m =
+                FFTZ_INTP r = curr->next_sol[0]->decomp_scheme->dims[0].n;
+                FFTZ_INTP m =
                     curr->next_sol[0]->next_sol[0]->decomp_scheme->dims[0].n;
 
-                VOID *TW = alloc_twiddle_buffer(r * m, dt_prec);
+                FFTZ_VOID *TW = alloc_twiddle_buffer(r * m, dt_prec);
                 if (TW != NULL)
                 {
                     compute_twiddle_buffer(TW, r, m, dt_prec);
@@ -1499,12 +1515,14 @@ VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
             }
             else if (curr->solver->solver_type == SOLVER_SR)
             {
-                INTP n = curr->decomp_scheme->dims[0].n;
-                // Number of twiddle pairs(W^k, W^(3k)) for the split-radix twiddle multiplication
-                INTP sr_tw_pairs = n / 4;
+                FFTZ_INTP n = curr->decomp_scheme->dims[0].n;
+                // Number of twiddle pairs(W^k, W^(3k)) for the split-radix
+                // twiddle multiplication
+                FFTZ_INTP sr_tw_pairs = n / 4;
 
-                // Allocate twiddle buffer for split-radix: N/4 complex pairs (W^k and W^(3k))
-                VOID *TW = alloc_twiddle_buffer(sr_tw_pairs * 2, dt_prec);
+                // Allocate twiddle buffer for split-radix: N/4 complex pairs
+                // (W^k and W^(3k))
+                FFTZ_VOID *TW = alloc_twiddle_buffer(sr_tw_pairs * 2, dt_prec);
                 if (TW != NULL)
                 {
                     compute_sr_twiddle_buffer(TW, n, dt_prec);
@@ -1514,8 +1532,9 @@ VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
                 }
 
                 // Recursively set up twiddles for ALL 3 sub-problems
-                // Note: next_sol[0] (even) will be handled by the loop continuation
-                // So we only need to explicitly recurse for odd1 and odd3 from dft_bufs
+                // Note: next_sol[0] (even) will be handled by the loop
+                // continuation So we only need to explicitly recurse for odd1
+                // and odd3 from dft_bufs
                 if (curr->dft_bufs && curr->dft_bufs->sr->odd1_sol
                     && curr->dft_bufs->sr->odd3_sol)
                 {
@@ -1525,10 +1544,10 @@ VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
             }
             else if (curr->solver->solver_type == SOLVER_BATCHED_CT_L1_DIRECT)
             {
-                INTP r = (INTP)curr->solver->kernel_c2c->count;
-                INTP m = (INTP)curr->solver->kernel_c2c_r->count;
+                FFTZ_INTP r = (FFTZ_INTP)curr->solver->kernel_c2c->count;
+                FFTZ_INTP m = (FFTZ_INTP)curr->solver->kernel_c2c_r->count;
 
-                VOID *TW = alloc_twiddle_buffer(r * m, dt_prec);
+                FFTZ_VOID *TW = alloc_twiddle_buffer(r * m, dt_prec);
                 if (TW != NULL)
                 {
                     compute_twiddle_buffer(TW, r, m, dt_prec);
@@ -1548,14 +1567,14 @@ VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
 #endif
 }
 
-VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
+FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
 {
     if (solution == NULL)
     {
         return;
     }
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
-    UINT32 dt_prec = DT_PRECISION_FLAG(solution->decomp_scheme->flags);
+    FFTZ_UINT32 dt_prec = DT_PRECISION_FLAG(solution->decomp_scheme->flags);
     if (FFT_DIR(solution->decomp_scheme->flags) == FORWARD_FFT_DIR)
     {
         // aoclfftz_solution_t *curr = solution;
@@ -1579,17 +1598,18 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                 {
                     return;
                 }
-                INTP radix = curr->decomp_scheme->dims[0].n;
-                INTP num_groups = NUM_RFFT_GROUPS(curr->solver);
-                INTP num_c2c_per_group = curr->solver->kernel_c2c->count / num_groups;
-                INTP tw_buf_size =
+                FFTZ_INTP radix = curr->decomp_scheme->dims[0].n;
+                FFTZ_INTP num_groups = NUM_RFFT_GROUPS(curr->solver);
+                FFTZ_INTP num_c2c_per_group =
+                    curr->solver->kernel_c2c->count / num_groups;
+                FFTZ_INTP tw_buf_size =
                     radix * num_c2c_per_group * DATA_STRIDE;
                 // Allocate Twiddle buffer to store twiddle values for every
                 // radix-n c2c kernel of a group
-                VOID *TW = alloc_twiddle_buffer(tw_buf_size, dt_prec);
+                FFTZ_VOID *TW = alloc_twiddle_buffer(tw_buf_size, dt_prec);
                 if (TW != NULL)
                 {
-                    INTP p = (curr->decomp_scheme->vecs[0].n *
+                    FFTZ_INTP p = (curr->decomp_scheme->vecs[0].n *
                               curr->decomp_scheme->dims[0].n) /
                              num_groups;
                     compute_twiddle_buffer_real(TW, radix, num_c2c_per_group,
@@ -1613,18 +1633,18 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                 (prev->solver->solver_type == SOLVER_REAL_DIRECT ||
                  prev->solver->solver_type == SOLVER_REAL_MT_DIRECT))
             {
-                INTP radix = prev->decomp_scheme->dims[0].n;
-                INTP num_groups = NUM_RFFT_GROUPS(prev->solver);
+                FFTZ_INTP radix = prev->decomp_scheme->dims[0].n;
+                FFTZ_INTP num_groups = NUM_RFFT_GROUPS(prev->solver);
                 // No. of c2c kernels per group that require twiddle computation
-                INTP num_c2c_per_group =
+                FFTZ_INTP num_c2c_per_group =
                     prev->solver->kernel_c2c->count / num_groups;
-                INTP tw_buf_sz = radix * num_c2c_per_group * DATA_STRIDE;
+                FFTZ_INTP tw_buf_sz = radix * num_c2c_per_group * DATA_STRIDE;
                 // Allocate Twiddle buffer to store twiddle factors for every
                 // radix-n c2c kernel of a group
-                VOID *TW = alloc_twiddle_buffer(tw_buf_sz, dt_prec);
+                FFTZ_VOID *TW = alloc_twiddle_buffer(tw_buf_sz, dt_prec);
                 if (TW != NULL)
                 {
-                    INTP p = (prev->decomp_scheme->vecs[0].n *
+                    FFTZ_INTP p = (prev->decomp_scheme->vecs[0].n *
                               prev->decomp_scheme->dims[0].n) /
                              num_groups;
                     compute_twiddle_buffer_real(TW, radix,
@@ -1646,9 +1666,10 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
 
 #ifdef MULTI_THREADING
 
-/* Configures static aux_buffer_1/2 routing through BUFFERED -> DIRECT -> CT chain.
- * aux_buffer_1 and aux_buffer_2 are spaced by aux_buf_size_per_thread (64-byte aligned) so MT
- * deep-copies get non-overlapping cache lines per thread.
+/* Configures static aux_buffer_1/2 routing through BUFFERED -> DIRECT -> CT
+ * chain. aux_buffer_1 and aux_buffer_2 are spaced by aux_buf_size_per_thread
+ * (64-byte aligned) so MT deep-copies get non-overlapping cache lines per
+ * thread.
  *
  * Solver chain of CT problem after buffered sol
  * ... -> buffered -> direct -> CT -> direct -> ... -> CT -> direct
@@ -1668,7 +1689,7 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
  * move the sol pointer to buffered_solver and modify the input & output
  * address of buffered struct to point the updated problem input & output
  */
-static INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
+static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -1677,9 +1698,10 @@ static INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
         AOCLFFTZ_ERROR("sol is NULL");
         return SOLVER_FAILURE;
     }
-    INT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_INT32 dt_bytes = SOL_DT_SIZE(sol);
 
-    // Find the buffered solver in the chain (sol may be REAL_BUFFERED or REAL_NDIM)
+    // Find the buffered solver in the chain (sol may be REAL_BUFFERED or
+    // REAL_NDIM)
     aoclfftz_solution_t *cur_sol = sol;
     while ((cur_sol != NULL) &&
            (cur_sol->solver->solver_type != SOLVER_REAL_BUFFERED))
@@ -1713,9 +1735,10 @@ static INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
             GET_PADDED_SIZE(buffered_sol->decomp_scheme->dims[0].n * dt_bytes);
     }
 
-    // Get aux buffers (per-thread region base; pool slots use aux_buf_size_per_thread)
-    VOID *aux_in = buffered_sol->dft_bufs->buffered->aux_buffer_1;
-    VOID *aux_out = buffered_sol->dft_bufs->buffered->aux_buffer_2;
+    // Get aux buffers (per-thread region base; pool slots use
+    // aux_buf_size_per_thread)
+    FFTZ_VOID *aux_in = buffered_sol->dft_bufs->buffered->aux_buffer_1;
+    FFTZ_VOID *aux_out = buffered_sol->dft_bufs->buffered->aux_buffer_2;
 
     // Update ct_buf_real_in pointer for C2R out-of-place problems
     buffered_sol->dft_bufs->ct_buf_real_in = aux_in;
@@ -1804,10 +1827,11 @@ static INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
  * @param aux_buf_base Linear slot into REAL_BUFFERED stretched aux pool
  *                (stride aux_buf_size_per_thread per slot, 64-byte aligned;
  *                 n_slots = n_threads * outer_buf_cnt).
- * @param aux_bufs Output: REAL_BUFFERED slot demand for this subtree (max/aggregate).
+ * @param aux_bufs Output: REAL_BUFFERED slot demand for this subtree
+ * (max/aggregate).
  * @param aux_ndim_pool_slot_idx For MT duplicate subtrees (post_process thread
- *                i>0), REAL_NDIM multi-slot aux_buffer_1 is offset by this index
- *                into the pool; pass 0 for template / thread-0 trees. Under nested
+ *                i>0), REAL_NDIM multi-slot aux_buffer_1 is offset by this
+ * index into the pool; pass 0 for template / thread-0 trees. Under nested
  *                REAL_MT_BATCHED, use parent_slot * n_threads + inner index.
  * @param bs_slot_idx Index into the Bluestein in/out pool for this concurrent
  *                execution. Always compounds across MT_BATCHED levels
@@ -1823,22 +1847,22 @@ static INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
  *         allocation failure (partial allocations are freed before returning).
  */
 aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
-                                             INT32 ct_base,
-                                             INT32 *ct_bufs,
-                                             INT32 aux_buf_base,
-                                             INT32 *aux_bufs,
-                                             INT32 aux_ndim_pool_slot_idx,
-                                             INT32 bs_slot_idx)
+                                             FFTZ_INT32 ct_base,
+                                             FFTZ_INT32 *ct_bufs,
+                                             FFTZ_INT32 aux_buf_base,
+                                             FFTZ_INT32 *aux_bufs,
+                                             FFTZ_INT32 aux_ndim_pool_slot_idx,
+                                             FFTZ_INT32 bs_slot_idx)
 {
     if (!src)
     {
         return NULL;
     }
 
-    INT32 ret = AOCLFFTZ_SUCCESS;
+    FFTZ_INT32 ret = AOCLFFTZ_SUCCESS;
     // Copy the solution object and its strides
-    INT32 vec_rank = src->decomp_scheme->vec_rank;
-    INT32 dim_rank = src->decomp_scheme->dim_rank;
+    FFTZ_INT32 vec_rank = src->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = src->decomp_scheme->dim_rank;
     aoclfftz_solution_t *dst = alloc_solution(vec_rank, dim_rank);
     if (!dst)
     {
@@ -1878,12 +1902,12 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
     }
     dst->dft_bufs->nd_sol = NULL;
 
-    // BATCHED_CT_L1_DIRECT with its own allocation gets a fresh buffer per copy.
-    // Other nodes are offset into the shared ct_buffer by ct_base.
+    // BATCHED_CT_L1_DIRECT with its own allocation gets a fresh buffer per
+    // copy. Other nodes are offset into the shared ct_buffer by ct_base.
     if (src->solver->solver_type == SOLVER_BATCHED_CT_L1_DIRECT &&
         src->dft_bufs->ct_buf_allocated)
     {
-        ALLOC_ALIGN_UNINIT(dst->dft_bufs->ct_buffer, VOID,
+        ALLOC_ALIGN_UNINIT(dst->dft_bufs->ct_buffer, FFTZ_VOID,
                            src->dft_bufs->ct_buf_size);
         if (!dst->dft_bufs->ct_buffer)
         {
@@ -1894,7 +1918,7 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
         }
         dst->dft_bufs->ct_buf_allocated = 1;
         dst->dft_bufs->ct_buf_real = dst->dft_bufs->ct_buffer;
-        UINT32 dt_bytes = SOL_DT_SIZE(dst);
+        FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(dst);
         dst->dft_bufs->ct_buf_imag =
             MOVE_ADDR(dst->dft_bufs->ct_buffer, dt_bytes);
     }
@@ -1908,15 +1932,15 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
 
     if (src->solver->solver_type == SOLVER_REAL_BUFFERED)
     {
-        INT32 dt_bytes = SOL_DT_SIZE(dst);
-        INTP aux_buf_size_per_thread =
+        FFTZ_INT32 dt_bytes = SOL_DT_SIZE(dst);
+        FFTZ_INTP aux_buf_size_per_thread =
                 src->dft_bufs->buffered->aux_buf_size_per_thread;
         if (aux_buf_size_per_thread == 0)
         {
-            INTP n = dst->decomp_scheme->dims[0].n;
+            FFTZ_INTP n = dst->decomp_scheme->dims[0].n;
             aux_buf_size_per_thread = GET_PADDED_SIZE(n * dt_bytes);
         }
-        INTP aux_buf_offset = aux_buf_base * aux_buf_size_per_thread;
+        FFTZ_INTP aux_buf_offset = aux_buf_base * aux_buf_size_per_thread;
         dst->dft_bufs->buffered->aux_buffer_1 =
             MOVE_ADDR(src->dft_bufs->buffered->aux_buffer_1, aux_buf_offset);
         dst->dft_bufs->buffered->aux_buffer_2 =
@@ -1933,8 +1957,8 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
         aux_ndim_pool_slot_idx > 0 &&
         aux_ndim_pool_slot_idx < dst->decomp_scheme->outer_buf_cnt)
     {
-        VOID *base = src->dft_bufs->buffered->aux_buffer_1;
-        INTP offset = aux_ndim_pool_slot_idx *
+        FFTZ_VOID *base = src->dft_bufs->buffered->aux_buffer_1;
+        FFTZ_INTP offset = aux_ndim_pool_slot_idx *
                        src->dft_bufs->buffered->aux_buf_size_per_thread;
         dst->dft_bufs->buffered->aux_buffer_1 = MOVE_ADDR(base, offset);
     }
@@ -1942,8 +1966,8 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
     if (src->solver->solver_type == SOLVER_NDIM ||
         src->solver->solver_type == SOLVER_REAL_NDIM)
     {
-        INT32 nd_ct_bufs = 0, ns_ct_bufs = 0;
-        INT32 nd_aux_bufs = 0, ns_aux_bufs = 0;
+        FFTZ_INT32 nd_ct_bufs = 0, ns_ct_bufs = 0;
+        FFTZ_INT32 nd_aux_bufs = 0, ns_aux_bufs = 0;
         dst->dft_bufs->nd_sol = deep_copy_solution_tree(
                             src->dft_bufs->nd_sol, ct_base, &nd_ct_bufs,
                             aux_buf_base, &nd_aux_bufs,
@@ -1958,8 +1982,8 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
         if (!dst->next_sol)
         {
             ret = AOCLFFTZ_MEMORY_FAILURE;
-            AOCLFFTZ_ERROR(
-                "deep_copy_solution_tree failed, alloc_sol_array failed (NDIM)");
+            AOCLFFTZ_ERROR("deep_copy_solution_tree failed, alloc_sol_array "
+                           "failed (NDIM)");
             goto exit_deep_copy;
         }
         dst->next_sol[0] = deep_copy_solution_tree(
@@ -1985,8 +2009,8 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
 
     if (src->solver->solver_type == SOLVER_SR)
     {
-        INT32 even_ct_bufs = 0, odd1_ct_bufs = 0, odd3_ct_bufs = 0;
-        INT32 even_aux_buff = 0, odd1_aux_buff = 0, odd3_aux_buff = 0;
+        FFTZ_INT32 even_ct_bufs = 0, odd1_ct_bufs = 0, odd3_ct_bufs = 0;
+        FFTZ_INT32 even_aux_buff = 0, odd1_aux_buff = 0, odd3_aux_buff = 0;
         dst->next_sol = alloc_sol_array(1);
         if (!dst->next_sol)
         {
@@ -2026,7 +2050,7 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
 
         if (ct_bufs)
         {
-            INT32 max = even_ct_bufs;
+            FFTZ_INT32 max = even_ct_bufs;
             if (odd1_ct_bufs > max)
             {
                 max = odd1_ct_bufs;
@@ -2039,7 +2063,7 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
         }
         if (aux_bufs)
         {
-            INT32 max = even_aux_buff;
+            FFTZ_INT32 max = even_aux_buff;
             if (odd1_aux_buff > max)
             {
                 max = odd1_aux_buff;
@@ -2053,14 +2077,15 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
         return dst;
     }
 
-    INT32 is_mt = (src->solver->solver_type == SOLVER_MT_BATCHED ||
+    FFTZ_INT32 is_mt = (src->solver->solver_type == SOLVER_MT_BATCHED ||
                    src->solver->solver_type == SOLVER_REAL_MT_BATCHED);
-    INT32 is_real_mt = (src->solver->solver_type == SOLVER_REAL_MT_BATCHED);
-    INT32 ns_ct_bufs = 0;
-    INT32 ns_aux_bufs = 0;
+    FFTZ_INT32 is_real_mt =
+        (src->solver->solver_type == SOLVER_REAL_MT_BATCHED);
+    FFTZ_INT32 ns_ct_bufs = 0;
+    FFTZ_INT32 ns_aux_bufs = 0;
     if (src->next_sol)
     {
-        INT32 n = is_mt ? src->decomp_scheme->thread_info->n_threads : 1;
+        FFTZ_INT32 n = is_mt ? src->decomp_scheme->thread_info->n_threads : 1;
         dst->next_sol = alloc_sol_array(n);
         if (!dst->next_sol)
         {
@@ -2072,16 +2097,16 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
 
         // Copy thread 0 first; per_thread_ct_bufs drives the ct_base stride
         // for threads 1..N. When n == 1, the loop is skipped entirely.
-        INT32 per_thread_ct_bufs = 0;
-        INT32 per_thread_aux_buff = 0;
-        INT32 child_ndim_slot0 = is_real_mt
+        FFTZ_INT32 per_thread_ct_bufs = 0;
+        FFTZ_INT32 per_thread_aux_buff = 0;
+        FFTZ_INT32 child_ndim_slot0 = is_real_mt
                                ? aux_ndim_pool_slot_idx * n
                                : aux_ndim_pool_slot_idx;
         // bs_slot_idx compounds at every MT_BATCHED level (real or not) so the
         // cumulative index over all nested MT levels enumerates 0..prod(n)-1,
         // exactly matching the Bluestein node's num_bs_buf (= product of the
         // MT thread counts captured at setup time).
-        INT32 child_bs_slot0 = bs_slot_idx * n;
+        FFTZ_INT32 child_bs_slot0 = bs_slot_idx * n;
         dst->next_sol[0] = deep_copy_solution_tree(
             src->next_sol[0], ct_base, &per_thread_ct_bufs,
             aux_buf_base, &per_thread_aux_buff,
@@ -2092,12 +2117,12 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
             goto exit_deep_copy;
         }
 
-        for (INT32 i = 1; i < n; i++)
+        for (FFTZ_INT32 i = 1; i < n; i++)
         {
-            INT32 child_ndim_slot_i = is_real_mt
+            FFTZ_INT32 child_ndim_slot_i = is_real_mt
                                     ? aux_ndim_pool_slot_idx * n + i
                                     : aux_ndim_pool_slot_idx;
-            INT32 child_bs_slot_i = bs_slot_idx * n + i;
+            FFTZ_INT32 child_bs_slot_i = bs_slot_idx * n + i;
             dst->next_sol[i] = deep_copy_solution_tree(
                 src->next_sol[0],
                 ct_base + i * per_thread_ct_bufs, NULL,
@@ -2119,7 +2144,7 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
         dst->next_sol = NULL;
     }
 
-    INT32 aux_buff_idx = 0;
+    FFTZ_INT32 aux_buff_idx = 0;
     if (src->solver->solver_type == SOLVER_REAL_BUFFERED)
     {
         aux_buff_idx++;
@@ -2131,7 +2156,7 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
     }
 
     /* ---- Nodes that consume a ct_buf slot ---- */
-    INT32 node_ct_bufs = 0;
+    FFTZ_INT32 node_ct_bufs = 0;
     if (src->solver->solver_type == SOLVER_BUFFERED ||
         (src->solver->solver_type == SOLVER_BATCHED_CT_L1_DIRECT &&
          !src->dft_bufs->ct_buf_allocated))
@@ -2159,21 +2184,22 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
     {
         aoclfftz_bluestein_t *src_bs = src->dft_bufs->bluestein;
         aoclfftz_bluestein_t *dst_bs = dst->dft_bufs->bluestein;
-        INTP   bs_buf_size = src_bs->bs_buf_size;
-        INT32  slot        = bs_slot_idx % src_bs->num_bs_buf;
-        INTP   slot_offset = (INTP)slot * bs_buf_size;
-        UINT32 dt_bytes    = SOL_DT_SIZE(dst);
+        FFTZ_INTP   bs_buf_size = src_bs->bs_buf_size;
+        FFTZ_INT32  slot        = bs_slot_idx % src_bs->num_bs_buf;
+        FFTZ_INTP   slot_offset = (FFTZ_INTP)slot * bs_buf_size;
+        FFTZ_UINT32 dt_bytes    = SOL_DT_SIZE(dst);
 
-        VOID *thr_in  = MOVE_ADDR(src_bs->in,  slot_offset);
-        VOID *thr_out = MOVE_ADDR(src_bs->out, slot_offset);
+        FFTZ_VOID *thr_in  = MOVE_ADDR(src_bs->in,  slot_offset);
+        FFTZ_VOID *thr_out = MOVE_ADDR(src_bs->out, slot_offset);
 
         dst_bs->in  = thr_in;
         dst_bs->out = thr_out;
 
         dst->next_sol[0]->decomp_scheme->in_real  = thr_in;
-        dst->next_sol[0]->decomp_scheme->in_imag  = MOVE_ADDR(thr_in,  dt_bytes);
+        dst->next_sol[0]->decomp_scheme->in_imag = MOVE_ADDR(thr_in, dt_bytes);
         dst->next_sol[0]->decomp_scheme->out_real = thr_out;
-        dst->next_sol[0]->decomp_scheme->out_imag = MOVE_ADDR(thr_out, dt_bytes);
+        dst->next_sol[0]->decomp_scheme->out_imag =
+            MOVE_ADDR(thr_out, dt_bytes);
     }
 
 exit_deep_copy:
@@ -2208,32 +2234,34 @@ exit_deep_copy:
  *
  * @param sol      Root of the solution (sub-)tree to process.
  * @param ct_slots Output: number of ct_buf slots consumed by this subtree.
- * @param aux_buf_slots Output: REAL_BUFFERED aux slot demand (same max rules as ct).
- *                 May be NULL if the caller does not need the count.
+ * @param aux_buf_slots Output: REAL_BUFFERED aux slot demand (same max rules as
+ * ct). May be NULL if the caller does not need the count.
  * @return         AOCLFFTZ_SUCCESS (0) on success, AOCLFFTZ_MEMORY_FAILURE
  * if any deep_copy_solution_tree call fails.
  */
-static INT32 post_process_solution(aoclfftz_solution_t *sol, INT32 *ct_slots, INT32 *aux_buf_slots)
+static FFTZ_INT32 post_process_solution(aoclfftz_solution_t *sol,
+                                        FFTZ_INT32 *ct_slots,
+                                        FFTZ_INT32 *aux_buf_slots)
 {
-    INT32 total_count = 0;
-    INT32 total_aux_buff = 0;
+    FFTZ_INT32 total_count = 0;
+    FFTZ_INT32 total_aux_buff = 0;
 
     while (sol != NULL)
     {
         if ((sol->solver->solver_type == SOLVER_MT_BATCHED) ||
             (sol->solver->solver_type == SOLVER_REAL_MT_BATCHED))
         {
-            INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
+            FFTZ_INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
 
-            INT32 per_thread_ct_bufs = 0;
-            INT32 per_thread_aux_buff = 0;
-            if (post_process_solution(sol->next_sol[0], &per_thread_ct_bufs, &per_thread_aux_buff) !=
-                SELECTOR_SUCCESS)
+            FFTZ_INT32 per_thread_ct_bufs = 0;
+            FFTZ_INT32 per_thread_aux_buff = 0;
+            if (post_process_solution(sol->next_sol[0], &per_thread_ct_bufs,
+                                      &per_thread_aux_buff) != SELECTOR_SUCCESS)
             {
                 return AOCLFFTZ_MEMORY_FAILURE;
             }
 
-            for (INT32 i = 1; i < n_threads; i++)
+            for (FFTZ_INT32 i = 1; i < n_threads; i++)
             {
                 // Pass i as both the REAL_NDIM aux pool slot and the initial
                 // Bluestein pool slot. deep_copy compounds bs_slot_idx at every
@@ -2253,12 +2281,12 @@ static INT32 post_process_solution(aoclfftz_solution_t *sol, INT32 *ct_slots, IN
                 // MT is the only slot-multiplying boundary; the preceding
                 // chain (BUFFERED etc.) runs sequentially BEFORE the MT
                 // fires, so take max instead of summing.
-                INT32 mt_count = n_threads * per_thread_ct_bufs;
+                FFTZ_INT32 mt_count = n_threads * per_thread_ct_bufs;
                 *ct_slots = total_count > mt_count ? total_count : mt_count;
             }
             if (aux_buf_slots)
             {
-                INT32 mt_aux_buff = n_threads * per_thread_aux_buff;
+                FFTZ_INT32 mt_aux_buff = n_threads * per_thread_aux_buff;
                 *aux_buf_slots = total_aux_buff > mt_aux_buff ? total_aux_buff
                                                                : mt_aux_buff;
             }
@@ -2268,15 +2296,15 @@ static INT32 post_process_solution(aoclfftz_solution_t *sol, INT32 *ct_slots, IN
         if ((sol->solver->solver_type == SOLVER_NDIM) ||
             (sol->solver->solver_type == SOLVER_REAL_NDIM))
         {
-            INT32 nd_count = 0, ns_count = 0;
-            INT32 nd_aux_bufs = 0, ns_aux_bufs = 0;
-            if (post_process_solution(sol->dft_bufs->nd_sol, &nd_count, &nd_aux_bufs) !=
-                SELECTOR_SUCCESS)
+            FFTZ_INT32 nd_count = 0, ns_count = 0;
+            FFTZ_INT32 nd_aux_bufs = 0, ns_aux_bufs = 0;
+            if (post_process_solution(sol->dft_bufs->nd_sol, &nd_count,
+                                      &nd_aux_bufs) != SELECTOR_SUCCESS)
             {
                 return AOCLFFTZ_MEMORY_FAILURE;
             }
-            if (post_process_solution(sol->next_sol[0], &ns_count, &ns_aux_bufs) !=
-                SELECTOR_SUCCESS)
+            if (post_process_solution(sol->next_sol[0], &ns_count,
+                                      &ns_aux_bufs) != SELECTOR_SUCCESS)
             {
                 return AOCLFFTZ_MEMORY_FAILURE;
             }
@@ -2285,14 +2313,14 @@ static INT32 post_process_solution(aoclfftz_solution_t *sol, INT32 *ct_slots, IN
                 // NDIM's two branches run sequentially within a thread and
                 // share the ct_buf slice; combine with the preceding chain
                 // by taking the max, not summing.
-                INT32 branch_max =
+                FFTZ_INT32 branch_max =
                     nd_count > ns_count ? nd_count : ns_count;
                 *ct_slots =
                     total_count > branch_max ? total_count : branch_max;
             }
             if (aux_buf_slots)
             {
-                INT32 branch_max = nd_aux_bufs > ns_aux_bufs ? nd_aux_bufs
+                FFTZ_INT32 branch_max = nd_aux_bufs > ns_aux_bufs ? nd_aux_bufs
                                                              : ns_aux_bufs;
                 *aux_buf_slots = total_aux_buff > branch_max ? total_aux_buff
                                                               : branch_max;
@@ -2302,31 +2330,31 @@ static INT32 post_process_solution(aoclfftz_solution_t *sol, INT32 *ct_slots, IN
 
         if (sol->solver->solver_type == SOLVER_SR)
         {
-            INT32 even_count = 0;
-            INT32 even_aux_buff = 0;
-            if (post_process_solution(sol->next_sol[0], &even_count, &even_aux_buff) !=
-                SELECTOR_SUCCESS)
+            FFTZ_INT32 even_count = 0;
+            FFTZ_INT32 even_aux_buff = 0;
+            if (post_process_solution(sol->next_sol[0], &even_count,
+                                      &even_aux_buff) != SELECTOR_SUCCESS)
             {
                 return AOCLFFTZ_MEMORY_FAILURE;
             }
 
-            INT32 odd1_count = 0;
-            INT32 odd1_aux_buff = 0;
+            FFTZ_INT32 odd1_count = 0;
+            FFTZ_INT32 odd1_aux_buff = 0;
             if (post_process_solution(sol->dft_bufs->sr->odd1_sol,
                     &odd1_count, &odd1_aux_buff) != SELECTOR_SUCCESS)
             {
                 return AOCLFFTZ_MEMORY_FAILURE;
             }
 
-            INT32 odd3_count = 0;
-            INT32 odd3_aux_buff = 0;
+            FFTZ_INT32 odd3_count = 0;
+            FFTZ_INT32 odd3_aux_buff = 0;
             if (post_process_solution(sol->dft_bufs->sr->odd3_sol,
                     &odd3_count, &odd3_aux_buff) != SELECTOR_SUCCESS)
             {
                 return AOCLFFTZ_MEMORY_FAILURE;
             }
 
-            INT32 node_count = even_count;
+            FFTZ_INT32 node_count = even_count;
             if (odd1_count > node_count)
             {
                 node_count = odd1_count;
@@ -2336,7 +2364,7 @@ static INT32 post_process_solution(aoclfftz_solution_t *sol, INT32 *ct_slots, IN
                 node_count = odd3_count;
             }
 
-            INT32 node_aux_buff = even_aux_buff;
+            FFTZ_INT32 node_aux_buff = even_aux_buff;
             if (odd1_aux_buff > node_aux_buff)
             {
                 node_aux_buff = odd1_aux_buff;
@@ -2357,7 +2385,8 @@ static INT32 post_process_solution(aoclfftz_solution_t *sol, INT32 *ct_slots, IN
 
             if (aux_buf_slots)
             {
-                *aux_buf_slots = total_aux_buff > node_aux_buff ? total_aux_buff : node_aux_buff;
+                *aux_buf_slots = total_aux_buff > node_aux_buff ? total_aux_buff
+                                                                : node_aux_buff;
             }
             return SELECTOR_SUCCESS;
         }
@@ -2427,14 +2456,14 @@ static INT32 post_process_solution(aoclfftz_solution_t *sol, INT32 *ct_slots, IN
  * @return    SELECTOR_SUCCESS on success, AOCLFFTZ_SETUP_FAILURE if
  *            compute_chirp_fft fails.
  */
-static INT32 setup_chirp_fft(aoclfftz_solution_t *sol)
+static FFTZ_INT32 setup_chirp_fft(aoclfftz_solution_t *sol)
 {
     while (sol != NULL)
     {
         if (sol->solver->solver_type == SOLVER_BLUESTEIN ||
             sol->solver->solver_type == SOLVER_MT_BLUESTEIN)
         {
-            INT32 ret = compute_chirp_fft(sol, sol->next_sol[0]);
+            FFTZ_INT32 ret = compute_chirp_fft(sol, sol->next_sol[0]);
             if (ret != SOLVER_SUCCESS)
             {
                 AOCLFFTZ_ERROR(
@@ -2449,7 +2478,7 @@ static INT32 setup_chirp_fft(aoclfftz_solution_t *sol)
         if ((sol->solver->solver_type == SOLVER_NDIM) ||
             (sol->solver->solver_type == SOLVER_REAL_NDIM))
         {
-            INT32 ret = setup_chirp_fft(sol->dft_bufs->nd_sol);
+            FFTZ_INT32 ret = setup_chirp_fft(sol->dft_bufs->nd_sol);
             if (ret != SELECTOR_SUCCESS)
             {
                 return ret;
@@ -2471,27 +2500,30 @@ static INT32 setup_chirp_fft(aoclfftz_solution_t *sol)
  * @brief Check if col-major processing MT batched solver should be used based
  * on workload and stride heuristics
  *
- * This function implements a heuristic to choose between row-major and col-major
- * processing for multi-threaded batched solvers by analyzing workload distribution
- * and memory access patterns to avoid performance degradation from false sharing.
+ * This function implements a heuristic to choose between row-major and
+ * col-major processing for multi-threaded batched solvers by analyzing workload
+ * distribution and memory access patterns to avoid performance degradation from
+ * false sharing.
  *
  * @param solution Pointer to the solution object
  * @param kertab Kernel table
  * @param avl_threads Available threads count
- * @return UINT8 1 if col-major should be used, 0 otherwise
+ * @return FFTZ_UINT8 1 if col-major should be used, 0 otherwise
  */
-UINT8 should_use_colmajor_batched_solver(aoclfftz_solution_t *solution,
+FFTZ_UINT8 should_use_colmajor_batched_solver(aoclfftz_solution_t *solution,
                                                 kernel_t *kertab,
-                                                INT32 avl_threads)
+                                                FFTZ_INT32 avl_threads)
 {
-    INTP radix = solution->decomp_scheme->dims[0].n;
-    DOUBLE kernel_weightage = get_kernel_weightage(radix, kertab, solution);
+    FFTZ_INTP radix = solution->decomp_scheme->dims[0].n;
+    FFTZ_DOUBLE kernel_weightage =
+        get_kernel_weightage(radix, kertab, solution);
     // Compute workload distribution across available threads
-    // Formula: (batch_count * CT vector_size * computational_intensity of the kernel) / thread_count
-    DOUBLE workload_per_thread =
-        (DOUBLE)(solution->decomp_scheme->batched_vecs[0].n *
+    // Formula: (batch_count * CT vector_size * computational_intensity of the
+    // kernel) / thread_count
+    FFTZ_DOUBLE workload_per_thread =
+        (FFTZ_DOUBLE)(solution->decomp_scheme->batched_vecs[0].n *
                  solution->decomp_scheme->vecs[0].n * kernel_weightage) /
-        (DOUBLE)(avl_threads);
+        (FFTZ_DOUBLE)(avl_threads);
 
     return (workload_per_thread > MIN_OPCNT_PER_THREAD &&
             solution->decomp_scheme->dims[0].in_stride >=
@@ -2506,23 +2538,24 @@ UINT8 should_use_colmajor_batched_solver(aoclfftz_solution_t *solution,
  * @param kertab Pointer to the kernel table containing available kernels
  * @param sol Pointer to the solution object
  *
- * @return DOUBLE Computed weightage value based on operation cycles, scaled by
- * 1/KERNEL_WEIGHTAGE_SCALE_FACTOR. Returns 1.0 if no matching kernel radix is found.
+ * @return FFTZ_DOUBLE Computed weightage value based on operation cycles,
+ * scaled by 1/KERNEL_WEIGHTAGE_SCALE_FACTOR. Returns 1.0 if no matching kernel
+ * radix is found.
  *
  */
-DOUBLE get_kernel_weightage(INTP radix, kernel_t *kertab,
+FFTZ_DOUBLE get_kernel_weightage(FFTZ_INTP radix, kernel_t *kertab,
                             aoclfftz_solution_t *sol)
 {
-    DOUBLE weightage = 1.0;
-    UINT8 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_DOUBLE weightage = 1.0;
+    FFTZ_UINT8 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
     ops_cycles_t ops_cycles = {0};
-    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
+    for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
-        if ((INTP)kertab[i].radix == radix)
+        if ((FFTZ_INTP)kertab[i].radix == radix)
         {
             ops_cycles = kertab[i].k_ops_cnt(precision, direction);
-            weightage = (DOUBLE)((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
+            weightage = (FFTZ_DOUBLE)((ops_cycles.fma * AMD_ZEN_FP_FMA_CYCLES) +
                                  (ops_cycles.mul * AMD_ZEN_FP_MUL_CYCLES) +
                                  (ops_cycles.add * AMD_ZEN_FP_ADD_CYCLES)) /
                         KERNEL_WEIGHTAGE_SCALE_FACTOR;

@@ -15,7 +15,7 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
+FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -29,14 +29,14 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     aoclfftz_selector_t *cur_sel = NULL;
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
+    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
                        measure_stats;
     aoclfftz_solution_t *sol = sel->solution;
-    INT32 rnk = 0;
-    INTP batch_size = 1;
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 rnk = 0;
+    FFTZ_INTP batch_size = 1;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (cur_sel == NULL)
@@ -45,7 +45,7 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_batched_dft;
     }
 
-    UINT8 is_col_major = check_col_major(sol->decomp_scheme);
+    FFTZ_UINT8 is_col_major = check_col_major(sol->decomp_scheme);
     // Bluestein problems are excluded from the batched direct optimization
     // because the memory layout of bluestein buffer allocated is always row
     // major
@@ -78,7 +78,7 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
             {
                 // remove vecs[0] from batched solver
                 sol->decomp_scheme->vec_rank -= 1;
-                for (INT32 i = 0; i < sol->decomp_scheme->vec_rank; i++)
+                for (FFTZ_INT32 i = 0; i < sol->decomp_scheme->vec_rank; i++)
                 {
                     vecs[i].n = vecs[i + 1].n;
                     vecs[i].in_stride = vecs[i + 1].in_stride;
@@ -96,13 +96,14 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_batched_dft;
     }
 
-    INT32 n_threads = 1;
+    FFTZ_INT32 n_threads = 1;
 #ifdef MULTI_THREADING
     // TODO: Multi-threaded parallelism has been applied only to the inner most
     // dimension of a Multi-Dimensional batched problem, need to support other
     // dimensions later with CPUPL-6843
-    INT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
-    INT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
+    FFTZ_INT32 avl_threads =
+        sel->solution->decomp_scheme->thread_info->avl_threads;
+    FFTZ_INT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
     if (sol->decomp_scheme->batched_vecs)
     {
         // Avoid nested parallelism: use 1 thread if inner_batch is small,

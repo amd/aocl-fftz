@@ -52,20 +52,21 @@
  */
 
 template <class T>
-VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_complex(
+FFTZ_VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_complex(
     aocl_fftz_test_input input_type)
 {
     // k_out_size : size of output buffer for kernel(half/full complex form)
-    INTP k_out_size = radix * out_stride * data_stride * offset;
+    FFTZ_INTP k_out_size = radix * out_stride * data_stride * offset;
 
     /* fc_out_size : size of output buffer for full complex form
      * For complex -> fc_out_size == k_out_size
      */
-    INTP fc_out_size = radix * out_stride * offset * 2;
+    FFTZ_INTP fc_out_size = radix * out_stride * offset * 2;
 
     T    *out      = NULL;
-    VOID *twid     = NULL; // For twiddle kernels, this need to be updated with pre-computed twiddle values
-    
+    FFTZ_VOID *twid = NULL; // For twiddle kernels, this need to be updated with
+                            // pre-computed twiddle values
+
     aoclfftz_strides_t kernel_stride;
     kernel_stride.in_strides  = NULL;
     kernel_stride.out_strides = NULL;
@@ -93,8 +94,10 @@ VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_complex(
     }
 
     // prepare local strides for FFT kernel
-    ALLOC_ALIGN_UNINIT(kernel_stride.in_strides, INTP, radix * sizeof(INTP));
-    ALLOC_ALIGN_UNINIT(kernel_stride.out_strides, INTP, radix * sizeof(INTP));
+    ALLOC_ALIGN_UNINIT(kernel_stride.in_strides, FFTZ_INTP,
+                       radix * sizeof(FFTZ_INTP));
+    ALLOC_ALIGN_UNINIT(kernel_stride.out_strides, FFTZ_INTP,
+                       radix * sizeof(FFTZ_INTP));
 
     if (kernel_stride.in_strides == nullptr ||
         kernel_stride.out_strides == nullptr)
@@ -135,26 +138,27 @@ VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_complex(
  * @param input_type test input type
  */
 template <class T>
-VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_real(
+FFTZ_VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_real(
     aocl_fftz_test_input input_type)
 {
     // k_in_size : size of input buffer for kernel(half/full complex form)
-    INTP k_in_size = radix * in_stride * data_stride * buf_size_multiplier
+    FFTZ_INTP k_in_size = radix * in_stride * data_stride * buf_size_multiplier
                      * offset;
 
     // k_out_size : size of output buffer for kernel(half/full complex form)
-    INTP k_out_size = radix * out_stride * data_stride * buf_size_multiplier
-                      * offset;
+    FFTZ_INTP k_out_size =
+        radix * out_stride * data_stride * buf_size_multiplier * offset;
 
     /* fc_in_size : size of input buffer for full complex form
      * For real    -> fc_in_size == k_in_size * 2
      */
-    INTP fc_in_size = radix * in_stride * offset * buf_size_multiplier * 2;
+    FFTZ_INTP fc_in_size = radix * in_stride * offset * buf_size_multiplier * 2;
 
     /* fc_out_size : size of output buffer for full complex form
      * For real    -> fc_out_size == k_out_size * 2
      */
-    INTP fc_out_size = radix * out_stride * offset * buf_size_multiplier * 2;
+    FFTZ_INTP fc_out_size =
+        radix * out_stride * offset * buf_size_multiplier * 2;
 
     T    *in                      = NULL;
     T    *in_full                 = NULL;
@@ -168,7 +172,8 @@ VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_real(
     T    *in_shifted_dft          = NULL;
     T    *out_standard_dft        = NULL;
     T    *out_shifted_dft         = NULL;
-    VOID *twid                    = NULL; // For twiddle kernels, this need to be updated with pre-computed twiddle values
+    FFTZ_VOID *twid = NULL; // For twiddle kernels, this need to be updated with
+                            // pre-computed twiddle values
 
     aoclfftz_strides_t kernel_stride;
     kernel_stride.in_strides  = NULL;
@@ -211,10 +216,10 @@ VOID AoclfftzKernelTestBase<T>::run_dft_reference_test_real(
     }
 
     // prepare local strides for FFT kernel
-    ALLOC_ALIGN_UNINIT(kernel_stride.in_strides, INTP,
-                       buf_size_multiplier * radix * sizeof(INTP));
-    ALLOC_ALIGN_UNINIT(kernel_stride.out_strides, INTP,
-                       buf_size_multiplier * radix * sizeof(INTP));
+    ALLOC_ALIGN_UNINIT(kernel_stride.in_strides, FFTZ_INTP,
+                       buf_size_multiplier * radix * sizeof(FFTZ_INTP));
+    ALLOC_ALIGN_UNINIT(kernel_stride.out_strides, FFTZ_INTP,
+                       buf_size_multiplier * radix * sizeof(FFTZ_INTP));
 
     if (kernel_stride.in_strides == nullptr ||
         kernel_stride.out_strides == nullptr)

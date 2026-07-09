@@ -14,7 +14,7 @@
 
 #include "core/solvers/solver.h"
 
-INT32 setup_batched_solver(aoclfftz_solution_t *sol)
+FFTZ_INT32 setup_batched_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -30,18 +30,18 @@ INT32 setup_batched_solver(aoclfftz_solution_t *sol)
 }
 
 // Recursively solves batched FFT by handling the innermost dimension first.
-INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
-                              aoclfftz_solution_t *next_sol, INTP vec_rank)
+FFTZ_INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
+                              aoclfftz_solution_t *next_sol, FFTZ_INTP vec_rank)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    INT32 status = SOLVER_SUCCESS;
-    INTP rnk_offset;
-    INTP v_in_stride;
-    INTP v_out_stride;
+    FFTZ_INT32 status = SOLVER_SUCCESS;
+    FFTZ_INTP rnk_offset;
+    FFTZ_INTP v_in_stride;
+    FFTZ_INTP v_out_stride;
 
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
     v_in_stride = sol->decomp_scheme->vecs[vec_rank - 1].in_stride *
                   DATA_STRIDE * dt_bytes;
@@ -51,14 +51,14 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
     if (vec_rank == 1)
     {
         // save pointer to reset it after all executions
-        VOID *in_real = next_sol->decomp_scheme->in_real;
-        VOID *in_imag = next_sol->decomp_scheme->in_imag;
-        VOID *out_real = next_sol->decomp_scheme->out_real;
-        VOID *out_imag = next_sol->decomp_scheme->out_imag;
+        FFTZ_VOID *in_real = next_sol->decomp_scheme->in_real;
+        FFTZ_VOID *in_imag = next_sol->decomp_scheme->in_imag;
+        FFTZ_VOID *out_real = next_sol->decomp_scheme->out_real;
+        FFTZ_VOID *out_imag = next_sol->decomp_scheme->out_imag;
 
         // For innermost vector rank, execute the solver
-        INTP batches = sol->decomp_scheme->vecs[0].n;
-        for (INTP b = 0; b < batches; b++)
+        FFTZ_INTP batches = sol->decomp_scheme->vecs[0].n;
+        for (FFTZ_INTP b = 0; b < batches; b++)
         {
             status = next_sol->solver->execute_solver(next_sol);
             if (status != SOLVER_SUCCESS)
@@ -85,10 +85,10 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
     else
     {
         // save pointer to reset it after all executions
-        VOID *in_real = next_sol->decomp_scheme->in_real;
-        VOID *in_imag = next_sol->decomp_scheme->in_imag;
-        VOID *out_real = next_sol->decomp_scheme->out_real;
-        VOID *out_imag = next_sol->decomp_scheme->out_imag;
+        FFTZ_VOID *in_real = next_sol->decomp_scheme->in_real;
+        FFTZ_VOID *in_imag = next_sol->decomp_scheme->in_imag;
+        FFTZ_VOID *out_real = next_sol->decomp_scheme->out_real;
+        FFTZ_VOID *out_imag = next_sol->decomp_scheme->out_imag;
 
         for (rnk_offset = 0;
              rnk_offset < sol->decomp_scheme->vecs[vec_rank - 1].n;
@@ -96,10 +96,10 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
         {
             // save pointer to restore it below since
             // they will be moved while execution
-            VOID *in_real = next_sol->decomp_scheme->in_real;
-            VOID *in_imag = next_sol->decomp_scheme->in_imag;
-            VOID *out_real = next_sol->decomp_scheme->out_real;
-            VOID *out_imag = next_sol->decomp_scheme->out_imag;
+            FFTZ_VOID *in_real = next_sol->decomp_scheme->in_real;
+            FFTZ_VOID *in_imag = next_sol->decomp_scheme->in_imag;
+            FFTZ_VOID *out_real = next_sol->decomp_scheme->out_real;
+            FFTZ_VOID *out_imag = next_sol->decomp_scheme->out_imag;
             //recursive call to solve the inner batches
             status = execute_batched_solver_internal(sol, next_sol,
                                                      vec_rank - 1);
@@ -110,13 +110,13 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
 
             // Adjust pointers for the next iteration
             next_sol->decomp_scheme->in_real =
-                (VOID *)((CHAR *)in_real + v_in_stride);
+                (FFTZ_VOID *)((FFTZ_CHAR *)in_real + v_in_stride);
             next_sol->decomp_scheme->in_imag =
-                (VOID *)((CHAR *)in_imag + v_in_stride);
+                (FFTZ_VOID *)((FFTZ_CHAR *)in_imag + v_in_stride);
             next_sol->decomp_scheme->out_real =
-                (VOID *)((CHAR *)out_real + v_out_stride);
+                (FFTZ_VOID *)((FFTZ_CHAR *)out_real + v_out_stride);
             next_sol->decomp_scheme->out_imag =
-                (VOID *)((CHAR *)out_imag + v_out_stride);
+                (FFTZ_VOID *)((FFTZ_CHAR *)out_imag + v_out_stride);
         }
 
         // reset pointers to enable multiple executions
@@ -139,12 +139,12 @@ INT32 execute_batched_solver_internal(aoclfftz_solution_t *sol,
  * sol->decomp_scheme->vecs[rnk].out_stride gives the offset at which
  * output buffer starts for the current rank/position in the vector array.
  */
-static INT32 execute_batched_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_batched_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    INT32 status = SOLVER_SUCCESS;
+    FFTZ_INT32 status = SOLVER_SUCCESS;
     aoclfftz_solution_t *next_sol = sol->next_sol[0];
 
     next_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
@@ -161,7 +161,7 @@ static INT32 execute_batched_solver(aoclfftz_solution_t *sol)
     return status;
 }
 
-dft_solver_ register_execute_batched_solver(VOID)
+dft_solver_ register_execute_batched_solver(FFTZ_VOID)
 {
     return execute_batched_solver;
 }
