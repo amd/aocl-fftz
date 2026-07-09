@@ -4,52 +4,39 @@
 /** @file mt_bluestein_solver_dft.c
  *
  *  @brief Multi threaded Bluestein FFT solver that parallelises the
- *  ele_mul / normalize steps across the available kernel thread budget
+ *  pre_mul, mul, and post_mul steps across the available kernel thread budget
  *
  *  This file contains the functions that setup and execute the solver.
  *
  *  @author Jeevanantham N
  */
 
-#include "core/common/bluestein_utils.h"
 #include "core/common/memory_manager.h"
+#include "core/kernels/kernel.h"
 #include "utils/utils.h"
 
 /**
- * @brief Returns thread tid's contiguous [start, size) slice of num_items
- * items, split into blocks of `align` items shared evenly across the workers.
+ * @brief Returns thread tid's contiguous [start, start + size) slice of n
+ * complex elements, split as evenly as possible across n_threads workers.
  *
- * align > 1 keeps every slice start on an `align`-item (64-byte) boundary for
- * aligned SIMD; align == 1 is a plain even split. The last working thread
- * absorbs the partial trailing block.
+ * When n does not divide evenly, the first (n % n_threads) threads each take
+ * one extra element (e.g. n=10, n_threads=3 -> chunks of 4, 3, and 3).
  *
- * @param[in]  tid                Thread index in [0, n_threads).
- * @param[in]  blocks_per_thread  Blocks per thread (num_blocks / n_threads).
- * @param[in]  extra_blocks       Leftover blocks (num_blocks % n_threads), one
- *                                per thread for the first extra_blocks threads.
- * @param[in]  align              Block size: 1 or MIN_ALIGNMENT/elem_bytes.
- * @param[in]  num_items          Total items to split (clamps trailing block).
- * @param[out] start              First item index owned by tid.
- * @param[out] size               Item count owned by tid (0 if none).
+ * @param[in]  tid        Thread index in [0, n_threads).
+ * @param[in]  n          Total complex elements to split.
+ * @param[in]  n_threads  Number of workers.
+ * @param[out] start      First element index owned by tid.
+ * @param[out] size       Element count owned by tid (0 if none).
  */
-static inline FFTZ_VOID chunk_range(FFTZ_INT32 tid, FFTZ_INTP blocks_per_thread,
-                                    FFTZ_INTP extra_blocks, FFTZ_INTP align,
-                                    FFTZ_INTP num_items, FFTZ_INTP *start,
-                                    FFTZ_INTP *size)
+static inline FFTZ_VOID thread_elem_range(FFTZ_INT32 tid, FFTZ_INTP n,
+                                          FFTZ_INT32 n_threads, FFTZ_INTP *start,
+                                          FFTZ_INTP *size)
 {
-    // Block index range owned by this thread.
-    FFTZ_INTP block_begin =
-        tid * blocks_per_thread + (tid < extra_blocks ? tid : extra_blocks);
-    FFTZ_INTP block_end = (tid + 1) * blocks_per_thread
-                     + (tid + 1 < extra_blocks ? tid + 1 : extra_blocks);
+    FFTZ_INTP elems_per_thread = n / n_threads;
+    FFTZ_INTP extra_elems = n % n_threads;
 
-    // Convert block range to item range.
-    FFTZ_INTP elem_begin = block_begin * align;
-    FFTZ_INTP elem_end = block_end * align;
-
-    // Clamp to num_items and emit [start, size).
-    *start = elem_begin < num_items ? elem_begin : num_items;
-    *size = (elem_end < num_items ? elem_end : num_items) - (*start);
+    *start = tid * elems_per_thread + (tid < extra_elems ? tid : extra_elems);
+    *size = elems_per_thread + (tid < extra_elems ? 1 : 0);
 }
 
 /**
@@ -61,6 +48,8 @@ static inline FFTZ_VOID chunk_range(FFTZ_INT32 tid, FFTZ_INTP blocks_per_thread,
  * @param[in]  a          First operand buffer.
  * @param[in]  b          Second operand buffer.
  * @param[in]  n          Number of complex elements to process.
+ * @param[in]  start_idx  Logical element index offset (used by strided variants).
+ * @param[in]  stride     Stride in complex elements (used by strided variants).
  * @param[in]  n_threads  Number of OpenMP workers to dispatch.
  * @param[in]  elem_bytes Byte stride per complex element
  *                        (DATA_STRIDE * dt_bytes).
@@ -68,60 +57,131 @@ static inline FFTZ_VOID chunk_range(FFTZ_INT32 tid, FFTZ_INTP blocks_per_thread,
 static inline FFTZ_VOID mt_ele_mul_dispatch(elementwise_mul_ kernel,
                                             FFTZ_VOID *out, FFTZ_VOID *a,
                                             FFTZ_VOID *b, FFTZ_INTP n,
+                                            FFTZ_INTP start_idx,
+                                            FFTZ_INTP stride,
                                             FFTZ_INT32 n_threads,
                                             FFTZ_INTP elem_bytes)
 {
-    FFTZ_INTP elems_per_thread = n / n_threads;
-    FFTZ_INTP extra_elems = n % n_threads;
     #pragma omp parallel for num_threads(n_threads) schedule(static)
     for (FFTZ_INT32 tid = 0; tid < n_threads; tid++)
     {
         FFTZ_INTP start_elem, num_elems;
-        chunk_range(tid, elems_per_thread, extra_elems, 1, n, &start_elem,
-                    &num_elems);
+        thread_elem_range(tid, n, n_threads, &start_elem, &num_elems);
         if (num_elems <= 0)
         {
             continue;
         }
         FFTZ_INTP thread_offset = start_elem * elem_bytes;
         kernel(MOVE_ADDR(out, thread_offset), MOVE_ADDR(a, thread_offset),
-               MOVE_ADDR(b, thread_offset), num_elems);
+               MOVE_ADDR(b, thread_offset), num_elems,
+               start_idx + start_elem, stride);
     }
 }
 
 /**
- * @brief Parallel in-place normalization split across n_threads workers.
+ * @brief Elementwise multiply (out = a .* b) with strided first operand,
+ * split into static contiguous chunks across n_threads workers.
  *
- * @param[in]     kernel     Scales data in place by a factor.
- * @param[in,out] data       Buffer to normalize.
- * @param[in]     n          Number of complex elements in data.
- * @param[in]     factor     Scaling factor (typically 1.0 / m).
- * @param[in]     n_threads  Number of OpenMP workers to dispatch.
- * @param[in]     elem_bytes Byte stride per complex element
- *                           (DATA_STRIDE * dt_bytes).
+ * Used by pre_mul when caller input is strided (in_stride > 1). Each thread
+ * gets a contiguous slice of @p out and @p b; @p a stays at the caller base
+ * and the thread's element start index is passed into the strided-in kernel.
+ *
+ * @param[in]  kernel     Elementwise multiplication kernel 
+ *                        (strided-in variant).
+ * @param[out] out        Destination buffer (out = a .* b), chunked by thread.
+ * @param[in]  a          Strided first operand, shared base across all
+ *                        workers.
+ * @param[in]  b          Second operand buffer, chunked by thread.
+ * @param[in]  n          Number of complex elements to process.
+ * @param[in]  in_stride  Stride in complex elements between successive @p a
+ *                        samples.
+ * @param[in]  n_threads  Number of OpenMP workers to dispatch.
+ * @param[in]  elem_bytes Byte stride per complex element
+ *                        (DATA_STRIDE * dt_bytes).
  */
-static inline FFTZ_VOID mt_normalize_dispatch(normalize_ kernel,
-                                              FFTZ_VOID *data, FFTZ_INTP n,
-                                              FFTZ_DOUBLE factor,
-                                              FFTZ_INT32 n_threads,
-                                              FFTZ_INTP elem_bytes)
+static inline FFTZ_VOID
+mt_ele_mul_strided_in_dispatch(elementwise_mul_ kernel, FFTZ_VOID *out,
+                               FFTZ_VOID *a, FFTZ_VOID *b, FFTZ_INTP n,
+                               FFTZ_INTP in_stride, FFTZ_INT32 n_threads,
+                               FFTZ_INTP elem_bytes)
 {
-    // 64-byte-aligned block split so the kernel can use aligned load/store.
-    FFTZ_INTP align = MIN_ALIGNMENT / elem_bytes;
-    FFTZ_INTP num_blocks = (n + align - 1) / align;
-    FFTZ_INTP blocks_per_thread = num_blocks / n_threads;
-    FFTZ_INTP extra_blocks = num_blocks % n_threads;
-    #pragma omp parallel for num_threads(n_threads) schedule(static)
+#pragma omp parallel for num_threads(n_threads) schedule(static)
     for (FFTZ_INT32 tid = 0; tid < n_threads; tid++)
     {
         FFTZ_INTP start_elem, num_elems;
-        chunk_range(tid, blocks_per_thread, extra_blocks, align, n,
-                    &start_elem, &num_elems);
+        thread_elem_range(tid, n, n_threads, &start_elem, &num_elems);
         if (num_elems <= 0)
         {
             continue;
         }
-        kernel(MOVE_ADDR(data, start_elem * elem_bytes), num_elems, factor);
+        FFTZ_INTP thread_offset = start_elem * elem_bytes;
+        kernel(MOVE_ADDR(out, thread_offset), a, MOVE_ADDR(b, thread_offset),
+               num_elems, start_elem, in_stride);
+    }
+}
+
+/**
+ * @brief Parallel Bluestein pre_mul: routes to contiguous or strided-in
+ * elementwise dispatch based on @p in_stride.
+ *
+ * @param[in]  kernel     pre_mul kernel (contiguous or strided-in).
+ * @param[out] out        Bluestein workspace output (contiguous).
+ * @param[in]  a          Caller input buffer.
+ * @param[in]  b          Chirp sequence B.
+ * @param[in]  n          Original problem length.
+ * @param[in]  in_stride  Caller input stride in complex elements.
+ * @param[in]  n_threads  OpenMP worker count.
+ * @param[in]  elem_bytes Byte stride per complex element.
+ */
+static inline FFTZ_VOID
+mt_pre_mul_dispatch(elementwise_mul_ kernel, FFTZ_VOID *out, FFTZ_VOID *a,
+                    FFTZ_VOID *b, FFTZ_INTP n, FFTZ_INTP in_stride,
+                    FFTZ_INT32 n_threads, FFTZ_INTP elem_bytes)
+{
+    if (in_stride == 1)
+    {
+        mt_ele_mul_dispatch(kernel, out, a, b, n, 0, 1, n_threads, elem_bytes);
+    }
+    else
+    {
+        mt_ele_mul_strided_in_dispatch(kernel, out, a, b, n, in_stride,
+                                       n_threads, elem_bytes);
+    }
+}
+
+/**
+ * @brief Parallel Bluestein post_mul: normalize and apply chirp into caller
+ * output, split into static contiguous chunks across n_threads workers.
+ *
+ * @param[in]  kernel     post_mul kernel.
+ * @param[out] out        Caller output buffer (strided when out_stride > 1).
+ * @param[in]  a          Bluestein workspace after inverse FFT.
+ * @param[in]  b          chirp buffer (B).
+ * @param[in]  n          Original problem length.
+ * @param[in]  factor     Normalization factor (1/m).
+ * @param[in]  out_stride Caller output stride in complex elements.
+ * @param[in]  n_threads  OpenMP worker count.
+ * @param[in]  elem_bytes Byte stride per complex element.
+ */
+static inline FFTZ_VOID
+mt_post_mul_dispatch(elementwise_mul_fused_norm_ kernel, FFTZ_VOID *out,
+                     FFTZ_VOID *a, FFTZ_VOID *b, FFTZ_INTP n,
+                     FFTZ_DOUBLE factor, FFTZ_INTP out_stride,
+                     FFTZ_INT32 n_threads, FFTZ_INTP elem_bytes)
+{
+#pragma omp parallel for num_threads(n_threads) schedule(static)
+    for (FFTZ_INT32 tid = 0; tid < n_threads; tid++)
+    {
+        FFTZ_INTP start_elem, num_elems;
+        thread_elem_range(tid, n, n_threads, &start_elem, &num_elems);
+        if (num_elems <= 0)
+        {
+            continue;
+        }
+        FFTZ_INTP in_offset = start_elem * elem_bytes;
+        FFTZ_INTP out_offset = start_elem * out_stride * elem_bytes;
+        kernel(MOVE_ADDR(out, out_offset), MOVE_ADDR(a, in_offset),
+               MOVE_ADDR(b, in_offset), num_elems, factor, out_stride);
     }
 }
 
@@ -129,8 +189,9 @@ static inline FFTZ_VOID mt_normalize_dispatch(normalize_ kernel,
  * @brief Sets up the MT Bluestein solver with extended length buffers.
  *
  * Initializes the next solution object with extended length m, allocates
- * the internal buffers, and snapshots avl_threads into thread_info->n_threads
- * as the per-invocation kernel thread budget for ele_mul / normalize dispatch.
+ * the internal buffers (B and B_out), and snapshots avl_threads into
+ * thread_info->n_threads as the per-invocation kernel thread budget for
+ * ele_mul dispatch.
  *
  * @param[in,out] sol      Current solution object
  * @param[out]    next_sol Next solution to configure
@@ -162,10 +223,7 @@ FFTZ_INT32 setup_mt_bluestein_solver(aoclfftz_solution_t *sol,
 
     FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
-    // in/out form a pool of active_threads per-thread slots (one
-    // per concurrent Bluestein invocation), each padded to MIN_ALIGNMENT
-    // (64 B) so every slot base is 64-byte aligned for aligned SIMD
-    // load/store in normalize.
+    // Byte size of m complex elements, padded to 64-byte alignment.
     FFTZ_INTP bs_buf_size = GET_PADDED_SIZE(
         (FFTZ_INTP)m * DATA_STRIDE * dt_bytes);
     ret = alloc_bluestein_buffers(sol->dft_bufs->bluestein, bs_buf_size);
@@ -191,17 +249,18 @@ FFTZ_INT32 setup_mt_bluestein_solver(aoclfftz_solution_t *sol,
  * @brief Executes the Bluestein FFT algorithm with parallel kernel dispatch.
  *
  * Algorithm Overview:
- * 1. Multiply input by chirp sequence B_inv (pre-processing)
+ * 1. Multiply input by chirp sequence B (pre-processing)
  * 2. Zero-pad the multiplied input to extended length m
  * 3. Perform forward FFT on the padded sequence
  * 4. Multiply with pre-computed FFT of chirp sequence B
  * 5. Perform inverse FFT
- * 6. Normalize and multiply by B_inv (post-processing)
+ * 6. Post-process: fused normalize + chirp multiply with B
  *
- * The ele_mul / normalize steps are chunked across thread_info->n_threads via
+ * The pre_mul, mul, and post_mul steps are chunked across thread_info->n_threads via
  * the mt_*_dispatch helpers; the inner FFT(m) subtree threads independently.
  *
  * @param[in,out] sol Solution object containing problem configuration
+ * @param[in,out] ctx Per-call execution context
  * @return FFTZ_INT32 SOLVER_SUCCESS on success, SOLVER_FAILURE on error
  */
 static FFTZ_INT32 execute_mt_bluestein_solver(aoclfftz_solution_t *sol,
@@ -244,8 +303,6 @@ static FFTZ_INT32 execute_mt_bluestein_solver(aoclfftz_solution_t *sol,
 
     FFTZ_INTP n = sol->decomp_scheme->dims[0].n;      // Original length
     FFTZ_INTP m = next_sol->decomp_scheme->dims[0].n; // Extended length
-    FFTZ_INTP in_stride = sol->decomp_scheme->dims[0].in_stride;
-    FFTZ_INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
     FFTZ_INT32 status = SOLVER_SUCCESS;
 
     FFTZ_VOID *bs_in_real  = bs_ctx.in_real;
@@ -256,16 +313,14 @@ static FFTZ_INT32 execute_mt_bluestein_solver(aoclfftz_solution_t *sol,
     FFTZ_VOID *cur_out = ctx->out_real;
 
     //=========================================================================
-    // Step 1: Copy input and apply chirp pre-processing
+    // Step 1: Gather input and apply chirp pre-processing
     //=========================================================================
-    bluestein_copy_data(cur_in, bs_in_real, n, in_stride, 1, dt_prec, dt_bytes);
+    mt_pre_mul_dispatch(bluestein->pre_mul[dir], bs_in_real, cur_in, bluestein->B,
+                        n, sol->decomp_scheme->dims[0].in_stride, n_threads,
+                        elem_bytes);
 
     // Zero-pad the input from index n to m-1
     memset(MOVE_ADDR(bs_in_real, n * elem_bytes), 0, (m - n) * elem_bytes);
-
-    // Multiply input by chirp sequence B (or its conjugate)
-    mt_ele_mul_dispatch(bluestein->ele_mul[dir], bs_in_real, bs_in_real,
-                        bluestein->B, n, n_threads, elem_bytes);
 
     //=========================================================================
     // Step 2: Convolution via FFT
@@ -283,8 +338,8 @@ static FFTZ_INT32 execute_mt_bluestein_solver(aoclfftz_solution_t *sol,
     }
 
     // 2b. Pointwise multiplication: A_out × B_out (with conjugate for inverse)
-    mt_ele_mul_dispatch(bluestein->ele_mul[!dir], bs_out_real, bs_out_real,
-                        bluestein->B_out, m, n_threads, elem_bytes);
+    mt_ele_mul_dispatch(bluestein->mul[!dir], bs_out_real, bs_out_real,
+                        bluestein->B_out, m, 0, 1, n_threads, elem_bytes);
 
     // 2c. Inverse FFT of the product.
     bs_ctx.in_real     = bs_out_real;
@@ -301,27 +356,12 @@ static FFTZ_INT32 execute_mt_bluestein_solver(aoclfftz_solution_t *sol,
     }
 
     //=========================================================================
-    // Step 3: Post-processing - 1/N scaling and apply final chirp
-    // multiplication
+    // Step 3: fused normalize+chirp multiply.
     //=========================================================================
-    mt_normalize_dispatch(bluestein->normalize, bs_in_real, n, (1.0 / m),
-                          n_threads, elem_bytes);
-
-    // Apply final chirp multiplication and copy with stride optimization
-    if (out_stride == 1)
-    {
-        // Optimization: multiply directly to output for unit stride
-        mt_ele_mul_dispatch(bluestein->ele_mul[dir], cur_out, bs_in_real,
-                            bluestein->B, n, n_threads, elem_bytes);
-    }
-    else
-    {
-        // For non-unit stride: multiply in-place then copy with stride
-        mt_ele_mul_dispatch(bluestein->ele_mul[dir], bs_in_real, bs_in_real,
-                            bluestein->B, n, n_threads, elem_bytes);
-        bluestein_copy_data(bs_in_real, cur_out, n, 1, out_stride,
-                            dt_prec, dt_bytes);
-    }
+    mt_post_mul_dispatch(bluestein->post_mul[dir], cur_out, bs_in_real,
+                         bluestein->B, n, 1.0 / (FFTZ_DOUBLE)m,
+                         sol->decomp_scheme->dims[0].out_stride, n_threads,
+                         elem_bytes);
 
 exit_mt_bluestein_solver:
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");

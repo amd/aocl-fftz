@@ -48,9 +48,7 @@ FFTZ_INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
 
     FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
-    // bs_buf_size is the padded byte size of one per-call bs_in/out_base slot;
-    // Padded to MIN_ALIGNMENT (64 B) so every slot base is 64-byte aligned for
-    // aligned SIMD load/store in normalize.
+    // Byte size of m complex elements, padded to 64-byte alignment.
     FFTZ_INTP bs_buf_size =
         GET_PADDED_SIZE((FFTZ_INTP)m * DATA_STRIDE * dt_bytes);
     ret = alloc_bluestein_buffers(sol->dft_bufs->bluestein, bs_buf_size);
@@ -111,12 +109,12 @@ FFTZ_INT32 compute_chirp_fft(aoclfftz_solution_t *sol,
  * @brief Executes the Bluestein FFT algorithm.
  *
  * Algorithm Overview:
- * 1. Multiply input by chirp sequence B_inv (pre-processing)
+ * 1. Multiply input by chirp sequence B (pre-processing)
  * 2. Zero-pad the multiplied input to extended length m
  * 3. Perform forward FFT on the padded sequence
  * 4. Multiply with computed FFT of chirp sequence B
  * 5. Perform inverse FFT
- * 6. Normalize and multiply by B_inv (post-processing)
+ * 6. Post-process: fused normalize + chirp multiply with B
  *
  * @param[in,out] sol Solution object containing problem configuration
  * @param[in,out] ctx Per-call execution context
@@ -159,8 +157,6 @@ static FFTZ_INT32 execute_bluestein_solver(aoclfftz_solution_t *sol,
 
     FFTZ_INTP n = sol->decomp_scheme->dims[0].n;      // Original length
     FFTZ_INTP m = next_sol->decomp_scheme->dims[0].n; // Extended length
-    FFTZ_INTP in_stride = sol->decomp_scheme->dims[0].in_stride;
-    FFTZ_INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
     FFTZ_INT32 status = SOLVER_SUCCESS;
 
     FFTZ_VOID *bs_in_real  = bs_ctx.in_real;
@@ -171,16 +167,14 @@ static FFTZ_INT32 execute_bluestein_solver(aoclfftz_solution_t *sol,
     FFTZ_VOID *cur_out = ctx->out_real;
 
     //=========================================================================
-    // Step 1: Copy input and apply chirp pre-processing
+    // Step 1: Gather input and apply chirp pre-processing
     //=========================================================================
-    bluestein_copy_data(cur_in, bs_in_real, n, in_stride, 1, dt_prec, dt_bytes);
+    bluestein->pre_mul[dir](bs_in_real, cur_in, bluestein->B, n, 0,
+                            sol->decomp_scheme->dims[0].in_stride);
 
     // Zero-pad the input from index n to m-1
     memset(MOVE_ADDR(bs_in_real, n * DATA_STRIDE * dt_bytes), 0,
            (m - n) * DATA_STRIDE * dt_bytes);
-
-    // Multiply input by chirp sequence B (or its conjugate)
-    bluestein->ele_mul[dir](bs_in_real, bs_in_real, bluestein->B, n);
 
     //=========================================================================
     // Step 2: Convolution via FFT
@@ -198,7 +192,7 @@ static FFTZ_INT32 execute_bluestein_solver(aoclfftz_solution_t *sol,
 
     // FFT of chirp sequence B (B_out) is computed during plan setup
     // 2b. Pointwise multiplication: A_out × B_out (with conjugate for inverse)
-    bluestein->ele_mul[!dir](bs_out_real, bs_out_real, bluestein->B_out, m);
+    bluestein->mul[!dir](bs_out_real, bs_out_real, bluestein->B_out, m, 0, 1);
 
     // 2c. Inverse FFT of the product
     bs_ctx.in_real     = bs_out_real;
@@ -215,24 +209,11 @@ static FFTZ_INT32 execute_bluestein_solver(aoclfftz_solution_t *sol,
     }
 
     //=========================================================================
-    // Step 3: Post-processing - 1/N scaling and apply final chirp
-    // multiplication
+    // Step 3: fused normalize+chirp multiply.
     //=========================================================================
-    bluestein->normalize(bs_in_real, n, (1.0 / m));
-
-    // Apply final chirp multiplication and copy with stride optimization
-    if (out_stride == 1)
-    {
-        // Optimization: multiply directly to output for unit stride
-        bluestein->ele_mul[dir](cur_out, bs_in_real, bluestein->B, n);
-    }
-    else
-    {
-        // For non-unit stride: multiply in-place then copy with stride
-        bluestein->ele_mul[dir](bs_in_real, bs_in_real, bluestein->B, n);
-        bluestein_copy_data(bs_in_real, cur_out, n, 1, out_stride,
-                            dt_prec, dt_bytes);
-    }
+    bluestein->post_mul[dir](cur_out, bs_in_real, bluestein->B, n,
+                             1.0 / (FFTZ_DOUBLE)m,
+                             sol->decomp_scheme->dims[0].out_stride);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return status;

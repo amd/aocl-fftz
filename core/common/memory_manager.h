@@ -20,18 +20,13 @@
 
 
 /**
- * Allocates the shared chirp buffers (B, B_out) and the per-thread in/out
- * pool for a Bluestein node.
+ * Allocates shared, 64-byte-aligned chirp buffers B and B_out for one
+ * Bluestein node. Also stores @p bs_buf_size as the per-thread slot size
+ * in the bs_in/bs_out scratch pool.
  *
- * @param bluestein    Bluestein metadata struct (must be non-NULL).
- * @param bs_buf_size  Bytes consumed by a single thread's in (or out) buffer,
- *                     i.e. m * DATA_STRIDE * dt_bytes for extended length m,
- *                     padded to MIN_ALIGNMENT (64 B) so each per-thread slot
- *                     base stays 64-byte aligned for aligned SIMD load/store.
- * @param num_bs_buf   Number of concurrent threads that may invoke this
- *                     Bluestein node (taken from dft_bufs->active_threads_at_level at
- *                     setup time; minimum 1). bs_[in/out]_base are each allocated
- *                     as num_bs_buf * bs_buf_size bytes.
+ * @param bluestein   Bluestein metadata struct (must be non-NULL).
+ * @param bs_buf_size Padded byte size of one m-length complex buffer (B,
+ *                    B_out, and each per-thread scratch slot).
  */
 FFTZ_INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein,
                                    FFTZ_INTP bs_buf_size);

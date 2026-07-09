@@ -216,12 +216,20 @@ FFTZ_INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->dft_bufs->bluestein->B_out;
     to_sol_obj->dft_bufs->bluestein->bs_buf_size =
         from_sol_obj->dft_bufs->bluestein->bs_buf_size;
-    to_sol_obj->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR] =
-        from_sol_obj->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR];
-    to_sol_obj->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] =
-        from_sol_obj->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR];
-    to_sol_obj->dft_bufs->bluestein->normalize =
-        from_sol_obj->dft_bufs->bluestein->normalize;
+    to_sol_obj->dft_bufs->bluestein->bs_dim_offset =
+        from_sol_obj->dft_bufs->bluestein->bs_dim_offset;
+    to_sol_obj->dft_bufs->bluestein->pre_mul[FORWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->pre_mul[FORWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->pre_mul[BACKWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->pre_mul[BACKWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->mul[FORWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->mul[FORWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->mul[BACKWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->mul[BACKWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->post_mul[FORWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->post_mul[FORWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR];
     to_sol_obj->dft_bufs->buffered->aux_buffer_1 =
         from_sol_obj->dft_bufs->buffered->aux_buffer_1;
     to_sol_obj->dft_bufs->buffered->aux_buffer_2 =
@@ -686,12 +694,20 @@ FFTZ_VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->dft_bufs->bluestein->B_out;
     to_sol_obj->dft_bufs->bluestein->bs_buf_size =
         from_sol_obj->dft_bufs->bluestein->bs_buf_size;
-    to_sol_obj->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR] =
-        from_sol_obj->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR];
-    to_sol_obj->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] =
-        from_sol_obj->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR];
-    to_sol_obj->dft_bufs->bluestein->normalize =
-        from_sol_obj->dft_bufs->bluestein->normalize;
+    to_sol_obj->dft_bufs->bluestein->bs_dim_offset =
+        from_sol_obj->dft_bufs->bluestein->bs_dim_offset;
+    to_sol_obj->dft_bufs->bluestein->pre_mul[FORWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->pre_mul[FORWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->pre_mul[BACKWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->pre_mul[BACKWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->mul[FORWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->mul[FORWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->mul[BACKWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->mul[BACKWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->post_mul[FORWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->post_mul[FORWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR];
     to_sol_obj->dft_bufs->buffered->aux_buffer_1 =
         from_sol_obj->dft_bufs->buffered->aux_buffer_1;
     to_sol_obj->dft_bufs->buffered->aux_buffer_2 =

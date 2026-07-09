@@ -175,9 +175,12 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
         sol->dft_bufs->bluestein->B_out = NULL;
         sol->dft_bufs->bluestein->bs_buf_size = 0;
         sol->dft_bufs->bluestein->bs_dim_offset = 0;
-        sol->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR]  = NULL;
-        sol->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] = NULL;
-        sol->dft_bufs->bluestein->normalize = NULL;
+        sol->dft_bufs->bluestein->pre_mul[FORWARD_FFT_DIR]  = NULL;
+        sol->dft_bufs->bluestein->pre_mul[BACKWARD_FFT_DIR] = NULL;
+        sol->dft_bufs->bluestein->mul[FORWARD_FFT_DIR]  = NULL;
+        sol->dft_bufs->bluestein->mul[BACKWARD_FFT_DIR] = NULL;
+        sol->dft_bufs->bluestein->post_mul[FORWARD_FFT_DIR]  = NULL;
+        sol->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR] = NULL;
         sol->dft_bufs->buffered->aux_buffer_1 = NULL;
         sol->dft_bufs->buffered->aux_buffer_2 = NULL;
         sol->dft_bufs->buffered->is_aux_buffer_allocated = 0;
@@ -318,7 +321,20 @@ aoclfftz_selector_t *alloc_selector(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank,
                 kernel_tables->ele_mul[FORWARD_FFT_DIR];
             selector->kernel_tables->ele_mul[BACKWARD_FFT_DIR] =
                 kernel_tables->ele_mul[BACKWARD_FFT_DIR];
-            selector->kernel_tables->normalize = kernel_tables->normalize;
+            selector->kernel_tables
+                ->ele_mul_strided_in[FORWARD_FFT_DIR] =
+                kernel_tables->ele_mul_strided_in[FORWARD_FFT_DIR];
+            selector->kernel_tables
+                ->ele_mul_strided_in[BACKWARD_FFT_DIR] =
+                kernel_tables->ele_mul_strided_in[BACKWARD_FFT_DIR];
+            selector->kernel_tables->ele_mul_fused_norm[FORWARD_FFT_DIR] =
+                kernel_tables->ele_mul_fused_norm[FORWARD_FFT_DIR];
+            selector->kernel_tables->ele_mul_fused_norm[BACKWARD_FFT_DIR] =
+                kernel_tables->ele_mul_fused_norm[BACKWARD_FFT_DIR];
+            selector->kernel_tables->ele_mul_fused_norm_strided_out[FORWARD_FFT_DIR] =
+                kernel_tables->ele_mul_fused_norm_strided_out[FORWARD_FFT_DIR];
+            selector->kernel_tables->ele_mul_fused_norm_strided_out[BACKWARD_FFT_DIR] =
+                kernel_tables->ele_mul_fused_norm_strided_out[BACKWARD_FFT_DIR];
         }
 
         return selector;

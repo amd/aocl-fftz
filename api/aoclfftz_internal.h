@@ -365,21 +365,23 @@ typedef struct aoclfftz_twiddle
 } aoclfftz_twiddle_t;
 
 // Function pointer for elementwise multiplication kernels.
-// Two direction-specialized variants are stored in ele_mul[NUM_FFT_DIRS]:
-// ele_mul[FORWARD_FFT_DIR] computes a .* conj(b), ele_mul[BACKWARD_FFT_DIR]
-// computes a .* b. Selection happens at the call site, not inside the kernel.
-typedef FFTZ_VOID (*elementwise_mul_)(FFTZ_VOID *out, FFTZ_VOID *a,
-                                      FFTZ_VOID *b, FFTZ_INTP n);
+// Two direction-specialized variants are stored in mul[NUM_FFT_DIRS]:
+// mul[FORWARD_FFT_DIR] computes a .* conj(b), mul[BACKWARD_FFT_DIR]
+// computes a .* b. start_idx and stride are used by strided variants.
+typedef FFTZ_VOID (*elementwise_mul_)(FFTZ_VOID *out, FFTZ_VOID *a, 
+                                      FFTZ_VOID *b, FFTZ_INTP n,
+                                      FFTZ_INTP start_idx, FFTZ_INTP stride);
 
-// Function pointer for in-place complex buffer normalization kernels.
-// data[i] *= factor for i in [0, n) complex elements (factor is real and is
-// applied uniformly to real and imaginary parts)
-typedef FFTZ_VOID (*normalize_)(FFTZ_VOID *data, FFTZ_INTP n,
-                                FFTZ_DOUBLE factor);
+// out[i*out_stride] = factor * (a[i] (*) B[i]) where factor = 1/m (used for
+// normalisation)
+typedef FFTZ_VOID (*elementwise_mul_fused_norm_)(FFTZ_VOID *out, FFTZ_VOID *a,
+                                                 FFTZ_VOID *b, FFTZ_INTP n,
+                                                 FFTZ_DOUBLE factor,
+                                                 FFTZ_INTP out_stride);
 
 // Holds the Bluestein chirp sequence B and its FFT B_out (computed once
-// during plan setup), and the elementwise-multiply / normalize kernels
-// selected by the selector.
+// during plan setup), plus elementwise-multiply/fused_norm_multiply kernels
+// bound at plan setup.
 //
 // B/B_out are allocated (non-NULL) only on the owning node and are read at
 // execution time.
@@ -387,11 +389,14 @@ typedef struct aoclfftz_bluestein
 {
     FFTZ_VOID *B;
     FFTZ_VOID *B_out;
-    elementwise_mul_ ele_mul[NUM_FFT_DIRS];
-    normalize_ normalize;
-    FFTZ_INTP bs_buf_size;       // bytes per per-thread in/out slot
-    FFTZ_INTP bs_dim_offset;     // Per-dimension byte offset into the shared
-                                 // bs_in/bs_out pool.
+    // Step 1: input × chirp (B). Unit or strided-in ele_mul, bound at setup.
+    elementwise_mul_ pre_mul[NUM_FFT_DIRS];
+    // Step 2b: FFT result × chirp FFT (B_out). Unit-stride ele_mul.
+    elementwise_mul_ mul[NUM_FFT_DIRS];
+    // Step 3: (1/m) * output * chirp (post_mul[] on B);
+    elementwise_mul_fused_norm_ post_mul[NUM_FFT_DIRS];
+    FFTZ_INTP bs_buf_size;           // bytes per per-call bs_in/out scratch slot
+    FFTZ_INTP bs_dim_offset;         // byte offset of this dim in bs scratch pool
 } aoclfftz_bluestein_t;
 
 typedef struct aoclfftz_buffered

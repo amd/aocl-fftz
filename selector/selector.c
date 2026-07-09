@@ -73,10 +73,34 @@ FFTZ_INT32 register_solvers_kernels(kernel_tables_t *kernel_tables,
         register_elementwise_mul_kernel(cpu_flags, dt, FORWARD_FFT_DIR);
     kernel_tables->ele_mul[BACKWARD_FFT_DIR] =
         register_elementwise_mul_kernel(cpu_flags, dt, BACKWARD_FFT_DIR);
-    kernel_tables->normalize = register_normalize_kernel(cpu_flags, dt);
+    kernel_tables->ele_mul_strided_in[FORWARD_FFT_DIR] =
+        register_elementwise_mul_strided_in_kernel(cpu_flags, dt,
+                                                   FORWARD_FFT_DIR);
+    kernel_tables->ele_mul_strided_in[BACKWARD_FFT_DIR] =
+        register_elementwise_mul_strided_in_kernel(cpu_flags, dt,
+                                                   BACKWARD_FFT_DIR);
+    kernel_tables->ele_mul_fused_norm[FORWARD_FFT_DIR] =
+        register_elementwise_mul_fused_norm_kernel(cpu_flags, dt, FORWARD_FFT_DIR);
+    kernel_tables->ele_mul_fused_norm[BACKWARD_FFT_DIR] =
+        register_elementwise_mul_fused_norm_kernel(cpu_flags, dt, BACKWARD_FFT_DIR);
+    kernel_tables->ele_mul_fused_norm_strided_out[FORWARD_FFT_DIR] =
+        register_elementwise_mul_fused_norm_strided_out_kernel(
+            cpu_flags, dt, FORWARD_FFT_DIR);
+    kernel_tables->ele_mul_fused_norm_strided_out[BACKWARD_FFT_DIR] =
+        register_elementwise_mul_fused_norm_strided_out_kernel(
+            cpu_flags, dt, BACKWARD_FFT_DIR);
     if (kernel_tables->ele_mul[FORWARD_FFT_DIR] == NULL ||
         kernel_tables->ele_mul[BACKWARD_FFT_DIR] == NULL ||
-        kernel_tables->normalize == NULL)
+        kernel_tables->ele_mul_strided_in[FORWARD_FFT_DIR] ==
+            NULL ||
+        kernel_tables->ele_mul_strided_in[BACKWARD_FFT_DIR] ==
+            NULL ||
+        kernel_tables->ele_mul_fused_norm[FORWARD_FFT_DIR] == NULL ||
+        kernel_tables->ele_mul_fused_norm[BACKWARD_FFT_DIR] == NULL ||
+        kernel_tables->ele_mul_fused_norm_strided_out[FORWARD_FFT_DIR] ==
+            NULL ||
+        kernel_tables->ele_mul_fused_norm_strided_out[BACKWARD_FFT_DIR] ==
+            NULL)
     {
         return SELECTOR_FAILURE;
     }
@@ -414,8 +438,9 @@ FFTZ_INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     }
     // Large Primes - Bluestein FFT Solver. Pick the MT variant whenever this
     // node still has > 1 available thread (avl_threads already reflects any
-    // parent MT_BATCHED slicing). MT_BLUESTEIN parallelizes the
-    // ele_mul / normalize kernels across that per-node thread budget.
+    // parent MT_BATCHED slicing). MT_BLUESTEIN parallelizes the Bluestein
+    // elementwise steps (pre_mul, mul, post_mul) across that per-node thread
+    // budget.
     // SOLVER_BLUESTEIN is the single-thread fallback when only one is left.
     if (level1_cond1 & 0x4)
     {
@@ -1226,8 +1251,12 @@ FFTZ_VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
     kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
     kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {0};
-    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft, {NULL},
-                                     NULL};
+    kernel_tables_t kertab_tables = {
+        kt_dft, kt_twid_dft,
+        kt_rdft, {NULL, NULL}, /* ele_mul[NUM_FFT_DIRS] */
+        {NULL, NULL},          /* ele_mul_strided_in[NUM_FFT_DIRS] */
+        {NULL, NULL},          /* ele_mul_fused_norm[NUM_FFT_DIRS] */
+        {NULL, NULL}};         /* ele_mul_fused_norm_strided_out[NUM_FFT_DIRS] */
 
     // allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables, NULL);
@@ -1297,8 +1326,12 @@ FFTZ_VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
     kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
     kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {0};
-    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft, {NULL},
-                                     NULL};
+    kernel_tables_t kertab_tables = {
+        kt_dft, kt_twid_dft,
+        kt_rdft, {NULL, NULL}, /* ele_mul[NUM_FFT_DIRS] */
+        {NULL, NULL},          /* ele_mul_strided_in[NUM_FFT_DIRS] */
+        {NULL, NULL},          /* ele_mul_fused_norm[NUM_FFT_DIRS] */
+        {NULL, NULL}};         /* ele_mul_fused_norm_strided_out[NUM_FFT_DIRS] */
 
     // allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables, NULL);
@@ -1365,8 +1398,12 @@ FFTZ_VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
     kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
     kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {0};
-    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft, {NULL},
-                                     NULL};
+    kernel_tables_t kertab_tables = {
+        kt_dft, kt_twid_dft,
+        kt_rdft, {NULL, NULL}, /* ele_mul[NUM_FFT_DIRS] */
+        {NULL, NULL},          /* ele_mul_strided_in[NUM_FFT_DIRS] */
+        {NULL, NULL},          /* ele_mul_fused_norm[NUM_FFT_DIRS] */
+        {NULL, NULL}};         /* ele_mul_fused_norm_strided_out[NUM_FFT_DIRS] */
 
     // allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables, NULL);
@@ -1432,8 +1469,12 @@ FFTZ_VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
     kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
     kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {0};
-    kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft, {NULL},
-                                     NULL};
+    kernel_tables_t kertab_tables = {
+        kt_dft, kt_twid_dft,
+        kt_rdft, {NULL, NULL}, /* ele_mul[NUM_FFT_DIRS] */
+        {NULL, NULL},          /* ele_mul_strided_in[NUM_FFT_DIRS] */
+        {NULL, NULL},          /* ele_mul_fused_norm[NUM_FFT_DIRS] */
+        {NULL, NULL}};         /* ele_mul_fused_norm_strided_out[NUM_FFT_DIRS] */
 
     // allocate selector object
     sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables, NULL);
