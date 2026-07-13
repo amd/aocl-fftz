@@ -55,7 +55,8 @@ FFTZ_INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
         }
         FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
         ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_1, FFTZ_VOID,
-            sol->decomp_scheme->outer_buf_cnt * padded_aux_buf_size);
+            sol->decomp_scheme->thread_info->active_threads *
+            padded_aux_buf_size);
         if (sol->dft_bufs->buffered->aux_buffer_1 == NULL)
         {
             AOCLFFTZ_ERROR("allocate aux buffer failed: %s",

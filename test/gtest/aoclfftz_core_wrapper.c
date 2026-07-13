@@ -315,11 +315,6 @@ FFTZ_VOID permuted_copy_c_fp64_wrapper(FFTZ_VOID *in, FFTZ_VOID *out,
 
 /* ---------------- memory allocators/destroys ---------------- */
 
-aoclfftz_decomp_scheme_t *alloc_decomp_scheme_wrapper(FFTZ_INT32 vec_rank,
-                                                      FFTZ_INT32 dim_rank)
-{
-    return alloc_decomp_scheme(vec_rank, dim_rank);
-}
 aoclfftz_solution_t *alloc_solution_wrapper(FFTZ_INT32 vec_rank,
                                             FFTZ_INT32 dim_rank)
 {

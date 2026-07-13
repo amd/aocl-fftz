@@ -94,12 +94,13 @@ FFTZ_INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
     }
 
     buffer_size = GET_PADDED_SIZE(buffer_length * DATA_STRIDE * dt_bytes);
+    FFTZ_INT32 active_threads = sol->decomp_scheme->thread_info->active_threads;
     ALLOC_ALIGN_UNINIT(sol->dft_bufs->ct_buffer, FFTZ_VOID,
-        buffer_size * sol->dft_bufs->num_ct_buf);
+        buffer_size * active_threads);
     if (sol->dft_bufs->ct_buffer == NULL)
     {
         AOCLFFTZ_ERROR("Failed to allocate ct_buffer of size %ld",
-                       (long)(buffer_size * sol->dft_bufs->num_ct_buf));
+                       (long)(buffer_size * active_threads));
         return SOLVER_FAILURE;
     }
 

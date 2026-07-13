@@ -1740,9 +1740,6 @@ static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
     FFTZ_VOID *aux_in = buffered_sol->dft_bufs->buffered->aux_buffer_1;
     FFTZ_VOID *aux_out = buffered_sol->dft_bufs->buffered->aux_buffer_2;
 
-    // Update ct_buf_real_in pointer for C2R out-of-place problems
-    buffered_sol->dft_bufs->ct_buf_real_in = aux_in;
-
     // Move to the first direct solution of CT problem
     cur_sol = buffered_sol->next_sol[0];
 
@@ -1826,7 +1823,7 @@ static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
  *                May be NULL if the caller does not need the count.
  * @param aux_buf_base Linear slot into REAL_BUFFERED stretched aux pool
  *                (stride aux_buf_size_per_thread per slot, 64-byte aligned;
- *                 n_slots = n_threads * outer_buf_cnt).
+ *                 n_slots = active_threads).
  * @param aux_bufs Output: REAL_BUFFERED slot demand for this subtree
  * (max/aggregate).
  * @param aux_ndim_pool_slot_idx For MT duplicate subtrees (post_process thread
@@ -1955,7 +1952,8 @@ aoclfftz_solution_t *deep_copy_solution_tree(aoclfftz_solution_t *src,
         src->dft_bufs->buffered->aux_buffer_1 != NULL &&
         src->dft_bufs->buffered->aux_buf_size_per_thread > 0 &&
         aux_ndim_pool_slot_idx > 0 &&
-        aux_ndim_pool_slot_idx < dst->decomp_scheme->outer_buf_cnt)
+        aux_ndim_pool_slot_idx <
+            dst->decomp_scheme->thread_info->active_threads)
     {
         FFTZ_VOID *base = src->dft_bufs->buffered->aux_buffer_1;
         FFTZ_INTP offset = aux_ndim_pool_slot_idx *

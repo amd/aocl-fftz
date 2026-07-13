@@ -202,10 +202,11 @@ typedef struct kernel_info
 // solution of given problem
 typedef struct thread_info
 {
-    aoclfftz_smp_pfft_t *pthr_fft; // Thread information from problem descriptor
-    // Available number of threads at any point of execution
-    FFTZ_INT32 avl_threads;
-    FFTZ_INT32 n_threads; // Number of threads assigned to a particular solver
+    aoclfftz_smp_pfft_t *pthr_fft;  // Thread information from problem descriptor
+    FFTZ_INT32 avl_threads;         // Available number of threads at any point of execution
+    FFTZ_INT32 active_threads;      // number of threads active at this node (product of the
+                                    // threads spawned by each MT_BATCHED level above it)
+    FFTZ_INT32 n_threads;           // Number of threads assigned to a particular solver
 } thread_info_t;
 
 // Solver execute template function pointer
@@ -244,11 +245,6 @@ typedef struct aoclfftz_decomp_scheme
     FFTZ_VOID *out_imag;
     aoclfftz_cntrl_params_t *cntrl_params;
     thread_info_t *thread_info;
-    // Count of parallel "outer" workers for REAL_NDIM (by default 1).
-    // When >1,
-    // 1. setup_real_ndim_solver allocates aux_buffer_1 for all outer threads.
-    // 2. selector_ndim_rdft allocates ct_buffer for all outer threads.
-    FFTZ_UINT32 outer_buf_cnt;
     // Application side flag bits
     //   bit 0: (0) in-place / (1) out-of-place
     //   bit 1: (0) in-order / (1) out-of-order
@@ -430,16 +426,7 @@ typedef struct aoclfftz_dft_bufs
     FFTZ_VOID *ct_buffer; // auxiliary buffer for CT problems
     FFTZ_VOID *ct_buf_real; // real part of ct_buffer
     FFTZ_VOID *ct_buf_imag; // imaginary part of ct_buffer
-    FFTZ_VOID *ct_buf_real_in; /* update `ct_buf_real_in` pointers used to store
-                             the modified input in the    first CT stage for C2R
-                             out-of-place CT problems.    use the auxiliary
-                             buffer which is not used for computation in that
-                             stage    to store the modified input.
-                           */
     FFTZ_INTP ct_buf_size; // 64-byte aligned size per ct_buf / thread slot
-    FFTZ_INT32 num_ct_buf; // number of ct_buffer allocated in total. It should
-                           // be equal to the number of threads assigned to the
-                           // first CT stage in the solution.
     FFTZ_UINT32 ct_buf_allocated; // to know that the solution originally
                                   // allocated the buffer and is responsible for
                                   // freeing it in the end.

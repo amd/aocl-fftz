@@ -23,8 +23,10 @@ FFTZ_INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
 
     FFTZ_INT32 dt_bytes = SOL_DT_SIZE(sol);
     FFTZ_INTP n = sol->decomp_scheme->dims[0].n;
-    FFTZ_INTP num_slots = sol->decomp_scheme->outer_buf_cnt
-                   * sol->decomp_scheme->thread_info->n_threads;
+
+    // FUTURE: if buffered MT is added, update active_threads = active_threads * n_threads.
+    FFTZ_INTP num_slots =
+        (FFTZ_INTP)sol->decomp_scheme->thread_info->active_threads;
 
     FFTZ_INTP aux_buf_size = GET_PADDED_SIZE(n * dt_bytes);
 
@@ -46,7 +48,6 @@ FFTZ_INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
 
     sol->dft_bufs->buffered->aux_buf_size_per_thread = aux_buf_size;
     sol->dft_bufs->buffered->is_aux_buffer_allocated = 1;
-    sol->dft_bufs->ct_buf_real_in = sol->dft_bufs->buffered->aux_buffer_1;
 
 #ifdef AOCL_ENABLE_LOG
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");

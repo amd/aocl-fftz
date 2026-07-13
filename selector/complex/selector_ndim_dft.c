@@ -52,15 +52,6 @@ FFTZ_INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_nd_dft;
     }
 
-    // Propagate num_ct_buf to (N-1)D so inner NDIM nodes allocate enough slots
-    // when under REAL_NDIM with MT (e.g. 5v30x60x2 -n 30).
-    if (sel->solution->dft_bufs->num_ct_buf > 1 &&
-        n_minus1_sel->solution->dft_bufs)
-    {
-        n_minus1_sel->solution->dft_bufs->num_ct_buf =
-            sel->solution->dft_bufs->num_ct_buf;
-    }
-
     // Invoke selector for solving ND-1 sub-problem
     ret = selector_model_dft_(n_minus1_sel);
     if (ret != SELECTOR_SUCCESS)

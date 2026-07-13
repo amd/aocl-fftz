@@ -48,13 +48,15 @@ FFTZ_INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
 
     FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
-    // in/out form a pool of num_ct_buf per-thread slots (one per concurrent
-    // Bluestein invocation), each padded to MIN_ALIGNMENT (64 B) so every slot
-    // base is 64-byte aligned for aligned SIMD load/store in normalize.
+    // in/out form a pool of active_threads per-thread slots (one
+    // per concurrent Bluestein invocation), each padded to MIN_ALIGNMENT
+    // (64 B) so every slot base is 64-byte aligned for aligned SIMD
+    // load/store in normalize.
     FFTZ_INTP bs_buf_size =
         GET_PADDED_SIZE((FFTZ_INTP)m * DATA_STRIDE * dt_bytes);
+    FFTZ_INT32 active_threads = sol->decomp_scheme->thread_info->active_threads;
     ret = alloc_bluestein_buffers(sol->dft_bufs->bluestein,
-                                  bs_buf_size, sol->dft_bufs->num_ct_buf);
+                                  bs_buf_size, active_threads);
     if (ret != AOCLFFTZ_SUCCESS)
     {
         return ret;

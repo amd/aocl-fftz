@@ -43,43 +43,6 @@ FFTZ_UINTP calculate_max_buffer_size(aoclfftz_solution_t *sol)
     return max_size;
 }
 
-aoclfftz_decomp_scheme_t *alloc_decomp_scheme(FFTZ_INT32 vec_rank,
-                                              FFTZ_INT32 dim_rank)
-{
-    aoclfftz_decomp_scheme_t *decomp_scheme = NULL;
-
-    ALLOC_ALIGN_UNINIT(decomp_scheme, aoclfftz_decomp_scheme_t,
-                       sizeof(aoclfftz_decomp_scheme_t));
-    if (decomp_scheme)
-    {
-        ALLOC_ALIGN_UNINIT(decomp_scheme->dims, aoclfftz_dim_t_64_,
-                           dim_rank * sizeof(aoclfftz_dim_t_64_));
-        ALLOC_ALIGN_UNINIT(decomp_scheme->vecs, aoclfftz_dim_t_64_,
-                           vec_rank * sizeof(aoclfftz_dim_t_64_));
-        ALLOC_ALIGN_UNINIT(decomp_scheme->cntrl_params, aoclfftz_cntrl_params_t,
-                           sizeof(aoclfftz_cntrl_params_t));
-        ALLOC_ALIGN_UNINIT(decomp_scheme->thread_info, thread_info_t,
-                           sizeof(thread_info_t));
-        ALLOC_ALIGN_UNINIT(decomp_scheme->thread_info->pthr_fft,
-                           aoclfftz_smp_pfft_t, sizeof(aoclfftz_smp_pfft_t));
-        decomp_scheme->batched_vecs = NULL;
-        if (decomp_scheme->dims == NULL || decomp_scheme->vecs == NULL ||
-            decomp_scheme->cntrl_params == NULL ||
-            decomp_scheme->thread_info == NULL ||
-            decomp_scheme->thread_info->pthr_fft == NULL)
-        {
-            destroy_decomp_scheme(decomp_scheme);
-            FREE_ALIGN_ALLOCATED_MEM(decomp_scheme);
-            return NULL;
-        }
-        return decomp_scheme;
-    }
-    else
-    {
-        return NULL;
-    }
-}
-
 aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
 {
     aoclfftz_solution_t *sol = NULL;
@@ -176,6 +139,7 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
             return NULL;
         }
 
+        sol->decomp_scheme->thread_info->active_threads = 1;
         sol->next_sol = NULL;
         sol->decomp_scheme->batched_vecs = NULL;
         sol->dft_bufs->nd_sol = NULL;
@@ -222,7 +186,6 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
         sol->dft_bufs->buffered->is_aux_buffer_allocated = 0;
         sol->dft_bufs->buffered->aux_buf_size_per_thread = 0;
         sol->dft_bufs->buffered->out_ptr = NULL;
-        sol->decomp_scheme->outer_buf_cnt = 1;
         sol->dft_bufs->transpose->row_info = (aoclfftz_dim_t_64_){0};
         sol->dft_bufs->transpose->col_info = (aoclfftz_dim_t_64_){0};
         sol->dft_bufs->transpose->aux_mem->size = 0;
@@ -231,7 +194,6 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
         sol->dft_bufs->ct_buf_real = NULL;
         sol->dft_bufs->ct_buf_imag = NULL;
         sol->dft_bufs->ct_buf_size = 0;
-        sol->dft_bufs->num_ct_buf = 1;
         sol->dft_bufs->ct_buf_allocated = 0;
         sol->solver->kernel_c2c->count = 0;
         sol->solver->kernel_c2c_r->count = 0;
@@ -437,7 +399,8 @@ FFTZ_VOID *alloc_twiddle_buffer(FFTZ_UINTP size, FFTZ_UINT32 dt_prec)
 
 /**
  * Allocates ct_buffer for complex NDIM (see ndim_solver_dft.c).
- * Uses num_ct_buf if set by parent (e.g. REAL_NDIM); otherwise one slot.
+ * Uses active_threads if set by parent (e.g. REAL_NDIM);
+ * otherwise one slot.
  */
 FFTZ_INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution,
                              FFTZ_VOID **buffer_ptr)
@@ -480,8 +443,10 @@ FFTZ_INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution,
         buffer_length = buffer_length / min_dim_size;
     }
     buffer_size = GET_PADDED_SIZE(buffer_length * DATA_STRIDE * dt_bytes);
+    FFTZ_INT32 active_threads =
+        solution->decomp_scheme->thread_info->active_threads;
     ALLOC_ALIGN_UNINIT(*buffer_ptr, FFTZ_VOID,
-            buffer_size * solution->dft_bufs->num_ct_buf * n_threads);
+            buffer_size * active_threads * n_threads);
     if (*buffer_ptr == NULL)
     {
         AOCLFFTZ_ERROR("alloc_ndim_buffer (ct_buffer) failed: %s",

@@ -253,9 +253,6 @@ EXPORT_SYM_DYN FFTZ_VOID permuted_copy_c_fp64_wrapper(
 
 /* ---------------- memory allocators/destroys ---------------- */
 
-EXPORT_SYM_DYN
-aoclfftz_decomp_scheme_t *alloc_decomp_scheme_wrapper(FFTZ_INT32 vec_rank,
-                                                      FFTZ_INT32 dim_rank);
 EXPORT_SYM_DYN aoclfftz_solution_t *alloc_solution_wrapper(FFTZ_INT32 vec_rank,
                                                            FFTZ_INT32 dim_rank);
 EXPORT_SYM_DYN

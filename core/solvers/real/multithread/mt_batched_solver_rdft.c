@@ -30,17 +30,7 @@ FFTZ_INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
     // used by the child threads in the next level
     FFTZ_INT32 num_threads_used = sol->decomp_scheme->thread_info->n_threads;
     next_sol->decomp_scheme->thread_info->avl_threads /= num_threads_used;
-    next_sol->decomp_scheme->thread_info->n_threads = num_threads_used;
-
-    // Save the number of threads used for the outer level
-    // to calculate the size of aux_buffer_1 and ct_buffer.
-    // So that, REAL_NDIM solvers can be executed in parallel
-    // for batched real nd problems.
-    if (next_sol->decomp_scheme->outer_buf_cnt == 1 &&
-        next_sol->decomp_scheme->dim_rank > 1)
-    {
-        next_sol->decomp_scheme->outer_buf_cnt = num_threads_used;
-    }
+    next_sol->decomp_scheme->thread_info->active_threads *= num_threads_used;
     // Strides are prepared based on real points, so adjust them (scale by 2)
     // for complex points (i.e. R2C output and C2R input)
     // Scale ALL vector strides, not just vecs[0], to handle vec_rank > 1 cases

@@ -122,7 +122,7 @@ typedef struct aoclfftz_selector
     sel_obj->solution->decomp_scheme->thread_info->avl_threads =               \
     sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads;      \
     sel_obj->solution->decomp_scheme->thread_info->n_threads = 1;              \
-    sel_obj->solution->decomp_scheme->outer_buf_cnt = 1;                       \
+    sel_obj->solution->decomp_scheme->thread_info->active_threads = 1;         \
     sel_obj->solution->decomp_scheme->flags =                                  \
         (problem->flags.fft_placement       << 0) |                            \
         (problem->flags.storage_order       << 1) |                            \

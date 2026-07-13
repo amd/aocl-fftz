@@ -19,8 +19,6 @@
 #include "selector/selector.h"
 
 
-aoclfftz_decomp_scheme_t *alloc_decomp_scheme(FFTZ_INT32 vec_rank,
-                                              FFTZ_INT32 dim_rank);
 /**
  * Allocates the shared chirp buffers (B, B_out) and the per-thread in/out
  * pool for a Bluestein node.
@@ -31,9 +29,10 @@ aoclfftz_decomp_scheme_t *alloc_decomp_scheme(FFTZ_INT32 vec_rank,
  *                     padded to MIN_ALIGNMENT (64 B) so each per-thread slot
  *                     base stays 64-byte aligned for aligned SIMD load/store.
  * @param num_bs_buf   Number of concurrent threads that may invoke this
- *                     Bluestein node (snapshot of dft_bufs->num_ct_buf at
- *                     setup time; minimum 1). in and out are each allocated
- *                     as num_bs_buf * bs_buf_size contiguous bytes.
+ *                     Bluestein node (snapshot of
+ *                     thread_info->active_threads at setup time;
+ *                     minimum 1). in and out are each allocated as
+ *                     num_bs_buf * bs_buf_size contiguous bytes.
  *
  * On success bs_buf_allocated is set to 1 on this struct only; deep copies
  * that re-point to the same B/B_out/in/out keep bs_buf_allocated = 0 to
