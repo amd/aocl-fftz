@@ -105,10 +105,14 @@ FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         goto exit_ct_dft;
     }
     org_sol->next_sol = NULL;
+    ret = SELECTOR_FAILURE;
 
     // Flag to store whether the previous solution is selected
     // based on minimum ops cost
     FFTZ_UINT8 is_previous_solution_selected = 0;
+
+    // Flag to track whether any registered kernel could factorize n.
+    FFTZ_UINT8 has_factorizing_kernel = 0;
 
     for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
@@ -124,6 +128,8 @@ FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         {
             continue;
         }
+
+        has_factorizing_kernel = 1;
 
         // choose the other radix m
         radix_m = n / radix_r;
@@ -275,6 +281,16 @@ FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         {
             // capture stats
         }
+    }
+
+    // if n could not be factorized by any registered kernel, then
+    // it belongs to a Bluestein sub-problem.
+    if (!has_factorizing_kernel)
+    {
+        AOCLFFTZ_ERROR("SELECTOR_FAILURE : "
+                       "Multiples of Large Prime RealFFT is not "
+                       "supported");
+        ret = SELECTOR_FAILURE;
     }
 
 exit_ct_dft:
