@@ -12,10 +12,10 @@
  *  recursion.
  *
  *  Data layout in sol->:
- *    kfft_m    = sol->solver->kernel_c2c->kfft
+ *    kfft_m    = sol->solver->kernel_c2c->kfft[dir]
  *    vecs_m    = sol->solver->kernel_c2c->count
  *    strides_m = sol->strides_grp->strides
- *    kfft_r    = sol->solver->kernel_c2c_r->kfft
+ *    kfft_r    = sol->solver->kernel_c2c_r->kfft[dir]
  *    vecs_r    = sol->solver->kernel_c2c_r->count
  *    strides_r = sol->strides_grp->strides_c2c
  *    twiddle_r = sol->twiddle
@@ -44,8 +44,10 @@ static INT32 fill_direct_strides(aoclfftz_strides_t *strides, INTP radix,
         return ret;
     }
 
-    strides->v_in_stride  = vec_in_stride  * DATA_STRIDE;
-    strides->v_out_stride = vec_out_stride * DATA_STRIDE;
+    strides->v_in_h2_stride = strides->v_in_stride =
+        vec_in_stride * DATA_STRIDE;
+    strides->v_out_h2_stride = strides->v_out_stride =
+        vec_out_stride * DATA_STRIDE;
     return SOLVER_SUCCESS;
 }
 
@@ -84,7 +86,10 @@ INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
             MOVE_ADDR(sol->dft_bufs->ct_buffer, dt_bytes);
     }
 
-    sol->solver->kernel_c2c->kfft  = ker_m->kfft;
+    sol->solver->kernel_c2c->kfft[FORWARD_FFT_DIR] =
+        ker_m->kfft[FORWARD_FFT_DIR];
+    sol->solver->kernel_c2c->kfft[BACKWARD_FFT_DIR] =
+        ker_m->kfft[BACKWARD_FFT_DIR];
     sol->solver->kernel_c2c->count = (UINTP)radix_r;
 
     {
@@ -99,7 +104,10 @@ INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
         }
     }
 
-    sol->solver->kernel_c2c_r->kfft  = ker_r->kfft;
+    sol->solver->kernel_c2c_r->kfft[FORWARD_FFT_DIR] =
+        ker_r->kfft[FORWARD_FFT_DIR];
+    sol->solver->kernel_c2c_r->kfft[BACKWARD_FFT_DIR] =
+        ker_r->kfft[BACKWARD_FFT_DIR];
     sol->solver->kernel_c2c_r->count = (UINTP)radix_m;
 
     {
@@ -131,17 +139,17 @@ static INT32 execute_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    kfft_ kfft_m = sol->solver->kernel_c2c->kfft;
+    UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+
+    kfft_ kfft_m = sol->solver->kernel_c2c->kfft[direction];
     aoclfftz_strides_t *strides_m = sol->strides_grp->strides;
     INTP vecs_m = (INTP)sol->solver->kernel_c2c->count;
 
-    kfft_ kfft_r = sol->solver->kernel_c2c_r->kfft;
+    kfft_ kfft_r = sol->solver->kernel_c2c_r->kfft[direction];
     aoclfftz_strides_t *strides_r = sol->strides_grp->strides_c2c;
     aoclfftz_twiddle_t *twiddle_r = sol->twiddle;
     INTP vecs_r = (INTP)sol->solver->kernel_c2c_r->count;
-
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
-    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
 
     INTP v_in_stride = sol->decomp_scheme->vecs[0].in_stride *
                        DATA_STRIDE * dt_bytes;

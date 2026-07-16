@@ -113,9 +113,11 @@ INT32 register_kernels_real(
                     {
                         kertab[offset].radix =
                             static_kernel_table[rkvar][i][kcat].radix;
-                        kertab[offset].kfft =
-                            static_kernel_table[rkvar][i][kcat]
-                                .k_register_kernel(dt, dir);
+                        kfft_ kfft = static_kernel_table[rkvar][i][kcat]
+                                         .k_register_kernel(dt, dir);
+                        // Real kernels are bidirectional; alias both slots.
+                        kertab[offset].kfft[FORWARD_FFT_DIR] = kfft;
+                        kertab[offset].kfft[BACKWARD_FFT_DIR] = kfft;
                         kertab[offset].k_ops_cnt =
                             static_kernel_table[rkvar][i][kcat].k_ops_cnt;
                         if (rkvar == C2C_KERNEL) // c2c variant
@@ -147,6 +149,8 @@ INT32 register_kernels_complex(
     kernel_t kertab[NUM_KERNELS_IN_TABLE_COMPLEX],
     kernel_fp_list_t static_kernel_table[NUM_KERNELS_IN_EACH_CATEGORY]
                                         [NUM_KERNEL_CATEGORIES],
+    kernel_fp_list_t static_kernel_table_bwd[NUM_KERNELS_IN_EACH_CATEGORY]
+                                            [NUM_KERNEL_CATEGORIES],
     INT32 dt, INT32 dir, INT32 cpu_flags)
 {
     INTP kcat_register_available[NUM_KERNEL_CATEGORIES] =
@@ -167,9 +171,25 @@ INT32 register_kernels_complex(
             {
                 if (static_kernel_table[i][kcat].k_register_kernel != NULL)
                 {
+                    // static_kernel_table may contain bidrectional kernels (for
+                    // standard kernels) or forward-specialized kernels (for
+                    // twiddle kernels).
                     kertab[offset].radix = static_kernel_table[i][kcat].radix;
-                    kertab[offset].kfft =
+                    kfft_ kfft_fwd =
                         static_kernel_table[i][kcat].k_register_kernel(dt, dir);
+                    kertab[offset].kfft[FORWARD_FFT_DIR] = kfft_fwd;
+                    // Backward slot: use the bwd-specialized pointer when
+                    // available; otherwise alias the forward slot.
+                    kfft_ kfft_bwd = kfft_fwd;
+                    if (static_kernel_table_bwd != NULL &&
+                        static_kernel_table_bwd[i][kcat].k_register_kernel !=
+                            NULL)
+                    {
+                        kfft_bwd =
+                            static_kernel_table_bwd[i][kcat].k_register_kernel(
+                                dt, dir);
+                    }
+                    kertab[offset].kfft[BACKWARD_FFT_DIR] = kfft_bwd;
                     kertab[offset].k_ops_cnt =
                         static_kernel_table[i][kcat].k_ops_cnt;
                     kertab[offset].sets[DT_FLOAT - 2] = sets_complex_s[kcat];

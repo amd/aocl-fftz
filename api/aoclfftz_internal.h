@@ -116,7 +116,8 @@
 // Number of higher radix kernels (radix > 16, e.g., radix 48)
 #define NUMBER_OF_HIGHER_RADIX_KERNELS 2
 // Total number of kernels in each category
-#define NUM_KERNELS_IN_EACH_CATEGORY (NUM_STANDARD_KERNELS + NUMBER_OF_HIGHER_RADIX_KERNELS)
+#define NUM_KERNELS_IN_EACH_CATEGORY                                           \
+  (NUM_STANDARD_KERNELS + NUMBER_OF_HIGHER_RADIX_KERNELS)
 
 #define NUM_KERNELS_IN_EACH_DFT_VARIANT                                        \
     (NUM_KERNELS_IN_EACH_CATEGORY * NUM_KERNEL_CATEGORIES)
@@ -152,7 +153,7 @@
  * OR: Number of groups = (Total points in problem) / (product of radices till
  *       current stage) = product of radices after current stage
  */
-#define NUM_RFFT_GROUPS(solver)                                                 \
+#define NUM_RFFT_GROUPS(solver)                                                \
     (solver)->kernel_r2hcf->count + (solver)->kernel_r2hc->count
 
 // Forward declarations
@@ -174,11 +175,11 @@ typedef struct cost_analysis
 } cost_analysis_t;
 
 // Kernel template function pointer for performing FFT
-typedef VOID (*kfft_) (VOID *in_real, VOID *in_imag,
-                       VOID *out_real, VOID *out_imag,
-                       INTP n,
-                       aoclfftz_strides_t *strides,
-                       VOID *twd, UINT8 flag);
+typedef VOID (*kfft_)(VOID *in_real, VOID *in_imag,
+                      VOID *out_real, VOID *out_imag,
+                      INTP n,
+                      aoclfftz_strides_t *strides,
+                      VOID *twd, UINT8 flag);
 
 // Kernel information data structure holds the kernel function pointer and the
 // number of sets it can process in parallel based on the kernel type(C/SIMD).
@@ -187,9 +188,10 @@ typedef VOID (*kfft_) (VOID *in_real, VOID *in_imag,
 // assign number of threads accordingly.
 typedef struct kernel_info
 {
-    kfft_ kfft;
+    kfft_ kfft[NUM_FFT_DIRS]; // contains kernel function pointers for forward
+                              // and backward directions
     UINTP count; // used for Real FFT solvers: at any time, r2hc->count + 2 * r2hcf->count + 2 * c2c->count = vecs->n
-    UINT8 sets;
+    UINT8 sets; // number of sets processable in parallel by kernel type (C/AVX-variants)
 } kernel_info_t;
 
 // Thread information structure holds the threading related information for the
@@ -386,6 +388,8 @@ typedef struct aoclfftz_strides
     INTP *out_strides;
     INTP v_in_stride;
     INTP v_out_stride;
+    INTP v_in_h2_stride;
+    INTP v_out_h2_stride;
 } aoclfftz_strides_t;
 
 typedef struct aoclfftz_strides_grp
@@ -394,12 +398,6 @@ typedef struct aoclfftz_strides_grp
     aoclfftz_strides_t* strides_c2c;    // for real C2C Kernels
     aoclfftz_strides_t* strides_r2hc;   // for real R2HC Kernels
     aoclfftz_strides_t* strides_r2hcf;  // for real R2HC-Fused Kernels
-    aoclfftz_strides_t* strides_c2r_ct_op; /* used for real C2R out-of-place CT problems;
-                                              to avoid modifying the input buffer of the first CT stage,
-                                              conjugated values are stored in the auxiliary buffer,
-                                              `strides_c2r_ct_op` will hold input strides as same as strides_c2c
-                                              and output strides as unit-strides to align with auxiliary buffer.
-                                            */
 } aoclfftz_strides_grp_t;
 
 /////////////////////////// STRIDE RELATED : END //////////////////////////////
@@ -424,9 +422,9 @@ typedef struct aoclfftz_dft_bufs
     INT32 num_ct_buf; // number of ct_buffer allocated in total. It should be
                       // equal to the number of threads assigned to the first CT
                       // stage in the solution.
-    UINT32 ct_buf_allocated;  // to know that the solution originally allocated
-                              // the buffer and is responsible for freeing it in
-                              // the end.
+    UINT32 ct_buf_allocated; // to know that the solution originally allocated
+                             // the buffer and is responsible for freeing it in
+                             // the end.
 } aoclfftz_dft_bufs_t;
 /////////////////////////// BUFS RELATED : END ////////////////////////////////
 

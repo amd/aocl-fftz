@@ -137,13 +137,16 @@ INT32 setup_real_sizeone_solver(aoclfftz_solution_t *sol)
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    strides->v_in_stride = sol->decomp_scheme->vecs[0].in_stride;
-    strides->v_out_stride = sol->decomp_scheme->vecs[0].out_stride;
+    strides->v_in_h2_stride = strides->v_in_stride =
+        sol->decomp_scheme->vecs[0].in_stride;
+    strides->v_out_h2_stride = strides->v_out_stride =
+        sol->decomp_scheme->vecs[0].out_stride;
 
     UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    sol->solver->kernel_c2c->kfft = (dt_prec == DT_FLOAT)
-                                        ? execute_real_float_kernel
-                                        : execute_real_double_kernel;
+    kfft_ kernel = (dt_prec == DT_FLOAT) ? execute_real_float_kernel
+                                         : execute_real_double_kernel;
+    sol->solver->kernel_c2c->kfft[FORWARD_FFT_DIR] = kernel;
+    sol->solver->kernel_c2c->kfft[BACKWARD_FFT_DIR] = kernel;
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
@@ -166,7 +169,10 @@ static INT32 execute_real_sizeone_solver_internal(aoclfftz_solution_t *sol,
 
     if (vec_rank == 1)
     {
-        kfft_ execute_innermost_batch = sol->solver->kernel_c2c->kfft;
+        // size-one kernel is bidirectional,
+        // so both kfft[FORWARD_FFT_DIR] and kfft[BACKWARD_FFT_DIR] point to the same kernel
+        kfft_ execute_innermost_batch =
+            sol->solver->kernel_c2c->kfft[FORWARD_FFT_DIR];
         aoclfftz_strides_t *strides = sol->strides_grp->strides;
         execute_innermost_batch(
             sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,

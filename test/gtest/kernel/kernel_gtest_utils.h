@@ -64,6 +64,31 @@ kfft_ get_kernel(const wrapper_kernel_fp_list *kernel_table, const INT32 dir,
     return nullptr;
 }
 
+#define REGISTER_TWID_KERNEL_CASE(radix, isa)                                  \
+    case radix:                                                                \
+        return (dir)                                                           \
+                   ? register_kernel_twid_bwd_fft##radix##isa##_wrapper(prec,  \
+                                                                        dir)   \
+                   : register_kernel_twid_fwd_fft##radix##isa##_wrapper(prec,  \
+                                                                        dir);
+
+#define REGISTER_TWID_KERNEL_CASES(isa)                                        \
+    REGISTER_TWID_KERNEL_CASE(2, isa)                                          \
+    REGISTER_TWID_KERNEL_CASE(3, isa)                                          \
+    REGISTER_TWID_KERNEL_CASE(4, isa)                                          \
+    REGISTER_TWID_KERNEL_CASE(5, isa)                                          \
+    REGISTER_TWID_KERNEL_CASE(6, isa)                                          \
+    REGISTER_TWID_KERNEL_CASE(7, isa)                                          \
+    REGISTER_TWID_KERNEL_CASE(8, isa)                                          \
+    REGISTER_TWID_KERNEL_CASE(9, isa)                                          \
+    REGISTER_TWID_KERNEL_CASE(10, isa)                                         \
+    REGISTER_TWID_KERNEL_CASE(11, isa)                                         \
+    REGISTER_TWID_KERNEL_CASE(12, isa)                                         \
+    REGISTER_TWID_KERNEL_CASE(13, isa)                                         \
+    REGISTER_TWID_KERNEL_CASE(14, isa)                                         \
+    REGISTER_TWID_KERNEL_CASE(15, isa)                                         \
+    REGISTER_TWID_KERNEL_CASE(16, isa)
+
 /**
  * @brief Get the twiddle kernel pointer for the given radix
  *
@@ -75,10 +100,9 @@ kfft_ get_kernel(const wrapper_kernel_fp_list *kernel_table, const INT32 dir,
  */
 template <class T>
 kfft_ get_twiddle_kernel(const UINT32 radix, const INT32 dir,
-                            const UINT8 kernel_type)
+                         const UINT8 kernel_type)
 {
     UINT8 prec;
-
     if (typeid(T) == typeid(float))
     {
         prec = DT_FLOAT;
@@ -93,36 +117,7 @@ kfft_ get_twiddle_kernel(const UINT32 radix, const INT32 dir,
     case aocl_fftz_kernel_type::C2C_TWID_C:
         switch (radix)
         {
-        case 2:
-            return register_kernel_twid_fft2c_wrapper(prec, dir);
-        case 3:
-            return register_kernel_twid_fft3c_wrapper(prec, dir);
-        case 4:
-            return register_kernel_twid_fft4c_wrapper(prec, dir);
-        case 5:
-            return register_kernel_twid_fft5c_wrapper(prec, dir);
-        case 6:
-            return register_kernel_twid_fft6c_wrapper(prec, dir);
-        case 7:
-            return register_kernel_twid_fft7c_wrapper(prec, dir);
-        case 8:
-            return register_kernel_twid_fft8c_wrapper(prec, dir);
-        case 9:
-            return register_kernel_twid_fft9c_wrapper(prec, dir);
-        case 10:
-            return register_kernel_twid_fft10c_wrapper(prec, dir);
-        case 11:
-            return register_kernel_twid_fft11c_wrapper(prec, dir);
-        case 12:
-            return register_kernel_twid_fft12c_wrapper(prec, dir);
-        case 13:
-            return register_kernel_twid_fft13c_wrapper(prec, dir);
-        case 14:
-            return register_kernel_twid_fft14c_wrapper(prec, dir);
-        case 15:
-            return register_kernel_twid_fft15c_wrapper(prec, dir);
-        case 16:
-            return register_kernel_twid_fft16c_wrapper(prec, dir);
+            REGISTER_TWID_KERNEL_CASES(c)
         }
         break;
 
@@ -130,36 +125,7 @@ kfft_ get_twiddle_kernel(const UINT32 radix, const INT32 dir,
     case aocl_fftz_kernel_type::C2C_TWID_AVX128:
         switch (radix)
         {
-        case 2:
-            return register_kernel_twid_fft2avx128_wrapper(prec, dir);
-        case 3:
-            return register_kernel_twid_fft3avx128_wrapper(prec, dir);
-        case 4:
-            return register_kernel_twid_fft4avx128_wrapper(prec, dir);
-        case 5:
-            return register_kernel_twid_fft5avx128_wrapper(prec, dir);
-        case 6:
-            return register_kernel_twid_fft6avx128_wrapper(prec, dir);
-        case 7:
-            return register_kernel_twid_fft7avx128_wrapper(prec, dir);
-        case 8:
-            return register_kernel_twid_fft8avx128_wrapper(prec, dir);
-        case 9:
-            return register_kernel_twid_fft9avx128_wrapper(prec, dir);
-        case 10:
-            return register_kernel_twid_fft10avx128_wrapper(prec, dir);
-        case 11:
-            return register_kernel_twid_fft11avx128_wrapper(prec, dir);
-        case 12:
-            return register_kernel_twid_fft12avx128_wrapper(prec, dir);
-        case 13:
-            return register_kernel_twid_fft13avx128_wrapper(prec, dir);
-        case 14:
-            return register_kernel_twid_fft14avx128_wrapper(prec, dir);
-        case 15:
-            return register_kernel_twid_fft15avx128_wrapper(prec, dir);
-        case 16:
-            return register_kernel_twid_fft16avx128_wrapper(prec, dir);
+            REGISTER_TWID_KERNEL_CASES(avx128)
         }
         break;
 #endif
@@ -167,36 +133,7 @@ kfft_ get_twiddle_kernel(const UINT32 radix, const INT32 dir,
     case aocl_fftz_kernel_type::C2C_TWID_AVX256:
         switch (radix)
         {
-        case 2:
-            return register_kernel_twid_fft2avx256_wrapper(prec, dir);
-        case 3:
-            return register_kernel_twid_fft3avx256_wrapper(prec, dir);
-        case 4:
-            return register_kernel_twid_fft4avx256_wrapper(prec, dir);
-        case 5:
-            return register_kernel_twid_fft5avx256_wrapper(prec, dir);
-        case 6:
-            return register_kernel_twid_fft6avx256_wrapper(prec, dir);
-        case 7:
-            return register_kernel_twid_fft7avx256_wrapper(prec, dir);
-        case 8:
-            return register_kernel_twid_fft8avx256_wrapper(prec, dir);
-        case 9:
-            return register_kernel_twid_fft9avx256_wrapper(prec, dir);
-        case 10:
-            return register_kernel_twid_fft10avx256_wrapper(prec, dir);
-        case 11:
-            return register_kernel_twid_fft11avx256_wrapper(prec, dir);
-        case 12:
-            return register_kernel_twid_fft12avx256_wrapper(prec, dir);
-        case 13:
-            return register_kernel_twid_fft13avx256_wrapper(prec, dir);
-        case 14:
-            return register_kernel_twid_fft14avx256_wrapper(prec, dir);
-        case 15:
-            return register_kernel_twid_fft15avx256_wrapper(prec, dir);
-        case 16:
-            return register_kernel_twid_fft16avx256_wrapper(prec, dir);
+            REGISTER_TWID_KERNEL_CASES(avx256)
         }
         break;
 #endif
@@ -204,36 +141,7 @@ kfft_ get_twiddle_kernel(const UINT32 radix, const INT32 dir,
     case aocl_fftz_kernel_type::C2C_TWID_AVX512:
         switch (radix)
         {
-        case 2:
-            return register_kernel_twid_fft2avx512_wrapper(prec, dir);
-        case 3:
-            return register_kernel_twid_fft3avx512_wrapper(prec, dir);
-        case 4:
-            return register_kernel_twid_fft4avx512_wrapper(prec, dir);
-        case 5:
-            return register_kernel_twid_fft5avx512_wrapper(prec, dir);
-        case 6:
-            return register_kernel_twid_fft6avx512_wrapper(prec, dir);
-        case 7:
-            return register_kernel_twid_fft7avx512_wrapper(prec, dir);
-        case 8:
-            return register_kernel_twid_fft8avx512_wrapper(prec, dir);
-        case 9:
-            return register_kernel_twid_fft9avx512_wrapper(prec, dir);
-        case 10:
-            return register_kernel_twid_fft10avx512_wrapper(prec, dir);
-        case 11:
-            return register_kernel_twid_fft11avx512_wrapper(prec, dir);
-        case 12:
-            return register_kernel_twid_fft12avx512_wrapper(prec, dir);
-        case 13:
-            return register_kernel_twid_fft13avx512_wrapper(prec, dir);
-        case 14:
-            return register_kernel_twid_fft14avx512_wrapper(prec, dir);
-        case 15:
-            return register_kernel_twid_fft15avx512_wrapper(prec, dir);
-        case 16:
-            return register_kernel_twid_fft16avx512_wrapper(prec, dir);
+            REGISTER_TWID_KERNEL_CASES(avx512)
         }
         break;
 #endif
@@ -241,9 +149,12 @@ kfft_ get_twiddle_kernel(const UINT32 radix, const INT32 dir,
     return nullptr;
 }
 
+#undef REGISTER_TWID_KERNEL_CASES
+#undef REGISTER_TWID_KERNEL_CASE
+
 /**
  * @brief Run the twiddle multiplication without transpose
- * 
+ *
  * @tparam T data type (float or double)
  * @param in_real input real buffer
  * @param in_imag input imaginary buffer
@@ -267,7 +178,7 @@ INT32 gtest_twiddle_multiplier_no_transpose(T *in_real, T *in_imag, INTP radix,
     for (INTP r = 1; r < radix; r++)
     {
         INTP in_index = r * in_stride + v_in_stride;
-        INTP tw_in_index =  DATA_STRIDE * (r * sets + 1);
+        INTP tw_in_index = DATA_STRIDE * (r * sets + 1);
 
         for (INTP s = 1; s < sets; s++)
         {

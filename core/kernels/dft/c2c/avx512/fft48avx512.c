@@ -122,9 +122,9 @@ static const FLOAT twiddle_buf_fp32[5][16] __attribute__((aligned(64))) = {
  * Cast is excluded as it will be a compile time operation.
  */
 // Cost: {fma: 0, mul: 0, add: 0, move: 6, perm: 0, other: 2}
-#define SCATTER6_512_S(base, offset, src)                                      \
+#define SCATTER6_512_S(base, offset, src, is_contiguous)                       \
 {                                                                              \
-    if (offset == 2)                                                           \
+    if (is_contiguous)                                                         \
     {                                                                          \
         _mm256_storeu_ps(base, _mm512_castps512_ps256(src));                   \
         __m128 lane2 = _mm512_extractf32x4_ps(src, 2);                         \
@@ -219,7 +219,9 @@ static VOID fft48avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     __m512 twd5_im = _mm512_movehdup_ps(twd5);
 
     INTP group_stride = in_strides[1];
+    UINT8 is_contiguous_group_in = (group_stride == DATA_STRIDE);
     INTP out_group_stride = out_strides[1];
+    UINT8 is_contiguous_group_out = (out_group_stride == DATA_STRIDE);
 
     INTP in_off8 = in_strides[8];
     INTP in_off16 = in_strides[16];
@@ -243,12 +245,18 @@ static VOID fft48avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         __m512 v_tv1, v_tv2, v_tv3;
         __m512 v_out0, v_out1, v_out2, v_out3, v_out4, v_out5;
 
-        GATHER8_512_S(in_r, group_stride, v_in0);
-        GATHER8_512_S(in_r + in_off8, group_stride, v_in1);
-        GATHER8_512_S(in_r + in_off16, group_stride, v_in2);
-        GATHER8_512_S(in_r + in_off24, group_stride, v_in3);
-        GATHER8_512_S(in_r + in_off32, group_stride, v_in4);
-        GATHER8_512_S(in_r + in_off40, group_stride, v_in5);
+        GATHER8_512_S(in_r, group_stride, v_in0,
+                      is_contiguous_group_in);
+        GATHER8_512_S(in_r + in_off8, group_stride, v_in1,
+                      is_contiguous_group_in);
+        GATHER8_512_S(in_r + in_off16, group_stride, v_in2,
+                      is_contiguous_group_in);
+        GATHER8_512_S(in_r + in_off24, group_stride, v_in3,
+                      is_contiguous_group_in);
+        GATHER8_512_S(in_r + in_off32, group_stride, v_in4,
+                      is_contiguous_group_in);
+        GATHER8_512_S(in_r + in_off40, group_stride, v_in5,
+                      is_contiguous_group_in);
 
         v_cv1 = _mm512_add_ps(v_in0, v_in3);
         v_cv2 = _mm512_add_ps(v_in2, v_in4);
@@ -354,14 +362,22 @@ static VOID fft48avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         __m512 r8_out5 = _mm512_sub_ps(r8_av3, r8_av1);
         __m512 r8_out3 = _mm512_add_ps(r8_av3, r8_av1);
 
-        SCATTER6_512_S(out_r, out_group_stride, r8_out0);
-        SCATTER6_512_S(out_r + out_off6,  out_group_stride, r8_out1);
-        SCATTER6_512_S(out_r + out_off12, out_group_stride, r8_out2);
-        SCATTER6_512_S(out_r + out_off18, out_group_stride, r8_out3);
-        SCATTER6_512_S(out_r + out_off24, out_group_stride, r8_out4);
-        SCATTER6_512_S(out_r + out_off30, out_group_stride, r8_out5);
-        SCATTER6_512_S(out_r + out_off36, out_group_stride, r8_out6);
-        SCATTER6_512_S(out_r + out_off42, out_group_stride, r8_out7);
+        SCATTER6_512_S(out_r, out_group_stride, r8_out0,
+                       is_contiguous_group_out);
+        SCATTER6_512_S(out_r + out_off6, out_group_stride, r8_out1,
+                       is_contiguous_group_out);
+        SCATTER6_512_S(out_r + out_off12, out_group_stride, r8_out2,
+                       is_contiguous_group_out);
+        SCATTER6_512_S(out_r + out_off18, out_group_stride, r8_out3,
+                       is_contiguous_group_out);
+        SCATTER6_512_S(out_r + out_off24, out_group_stride, r8_out4,
+                       is_contiguous_group_out);
+        SCATTER6_512_S(out_r + out_off30, out_group_stride, r8_out5,
+                       is_contiguous_group_out);
+        SCATTER6_512_S(out_r + out_off36, out_group_stride, r8_out6,
+                       is_contiguous_group_out);
+        SCATTER6_512_S(out_r + out_off42, out_group_stride, r8_out7,
+                       is_contiguous_group_out);
 
         in_r += v_in_stride;
         out_r += v_out_stride;
@@ -538,7 +554,9 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag,
     v_C5_conj = _mm512_xor_pd(v_C5_conj, _neg_512_d[flag].d);
         
     INTP group_stride = in_strides[1];
+    UINT8 is_contiguous_group_in = group_stride == DATA_STRIDE;
     INTP out_group_stride = out_strides[1];
+    UINT8 is_contiguous_group_out = out_group_stride == DATA_STRIDE;
 
     __m512d twd1_r_  = CONJ_512_D_48(_mm512_load_pd(twiddle_buf_fp64[ 0]), flag);
     __m512d twd1_real = _mm512_movedup_pd(twd1_r_);
@@ -592,18 +610,30 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag,
         __m512d v_cv1, v_cv2, v_cv3, v_cv4, v_cv5, v_cv6, v_cv7, v_cv8;
         __m512d v_tv1, v_tv2, v_tv3, v_tv5;
         
-        GATHER4_512_D(in_r                  , group_stride, v_in[0]);
-        GATHER4_512_D(in_r + in_strides[4]  , group_stride, v_in[1]);
-        GATHER4_512_D(in_r + in_strides[8]  , group_stride, v_in[2]);
-        GATHER4_512_D(in_r + in_strides[12] , group_stride, v_in[3]);
-        GATHER4_512_D(in_r + in_strides[16] , group_stride, v_in[4]);
-        GATHER4_512_D(in_r + in_strides[20] , group_stride, v_in[5]);
-        GATHER4_512_D(in_r + in_strides[24] , group_stride, v_in[6]);
-        GATHER4_512_D(in_r + in_strides[28] , group_stride, v_in[7]);
-        GATHER4_512_D(in_r + in_strides[32] , group_stride, v_in[8]);
-        GATHER4_512_D(in_r + in_strides[36] , group_stride, v_in[9]);
-        GATHER4_512_D(in_r + in_strides[40] , group_stride, v_in[10]);
-        GATHER4_512_D(in_r + in_strides[44] , group_stride, v_in[11]);
+        GATHER4_512_D(in_r                  , group_stride, v_in[0],
+                      is_contiguous_group_in);
+        GATHER4_512_D(in_r + in_strides[4]  , group_stride, v_in[1],
+                      is_contiguous_group_in);
+        GATHER4_512_D(in_r + in_strides[8]  , group_stride, v_in[2],
+                      is_contiguous_group_in);
+        GATHER4_512_D(in_r + in_strides[12] , group_stride, v_in[3],
+                      is_contiguous_group_in);
+        GATHER4_512_D(in_r + in_strides[16] , group_stride, v_in[4],
+                      is_contiguous_group_in);
+        GATHER4_512_D(in_r + in_strides[20] , group_stride, v_in[5],
+                      is_contiguous_group_in);
+        GATHER4_512_D(in_r + in_strides[24] , group_stride, v_in[6],
+                      is_contiguous_group_in);
+        GATHER4_512_D(in_r + in_strides[28] , group_stride, v_in[7],
+                      is_contiguous_group_in);
+        GATHER4_512_D(in_r + in_strides[32] , group_stride, v_in[8],
+                      is_contiguous_group_in);
+        GATHER4_512_D(in_r + in_strides[36] , group_stride, v_in[9],
+                      is_contiguous_group_in);
+        GATHER4_512_D(in_r + in_strides[40] , group_stride, v_in[10],
+                      is_contiguous_group_in);
+        GATHER4_512_D(in_r + in_strides[44] , group_stride, v_in[11],
+                      is_contiguous_group_in);
 
         v_av1 = _mm512_add_pd(v_in[0], v_in[6]);
         v_av2 = _mm512_add_pd(v_in[2], v_in[4]);
@@ -722,10 +752,14 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag,
         r4_out1 = _mm512_add_pd(r4_av2, r4_av1);
         r4_out3 = _mm512_sub_pd(r4_av2, r4_av1);
 
-        SCATTER4_512_D(out_r, out_group_stride, r4_out0);
-        SCATTER4_512_D(out_r + out_strides[12], out_group_stride, r4_out1);
-        SCATTER4_512_D(out_r + out_strides[24], out_group_stride, r4_out2);
-        SCATTER4_512_D(out_r + out_strides[36], out_group_stride, r4_out3);
+        SCATTER4_512_D(out_r, out_group_stride, r4_out0,
+                       is_contiguous_group_out);
+        SCATTER4_512_D(out_r + out_strides[12], out_group_stride, r4_out1,
+                       is_contiguous_group_out);
+        SCATTER4_512_D(out_r + out_strides[24], out_group_stride, r4_out2,
+                       is_contiguous_group_out);
+        SCATTER4_512_D(out_r + out_strides[36], out_group_stride, r4_out3,
+                       is_contiguous_group_out);
         
         __m512d sw4 = SWAP_RI_512_D(v_in[4]);
         v_in[4] = _mm512_fmaddsub_pd(v_in[4], twd4_real, _mm512_mul_pd(sw4, twd4_imag));
@@ -760,10 +794,14 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag,
         r4_out1 = _mm512_add_pd(r4_av2, r4_av1);
         r4_out3 = _mm512_sub_pd(r4_av2, r4_av1);
 
-        SCATTER4_512_D(out_r + out_strides[4], out_group_stride, r4_out0);
-        SCATTER4_512_D(out_r + out_strides[16], out_group_stride, r4_out3);
-        SCATTER4_512_D(out_r + out_strides[28], out_group_stride, r4_out2);
-        SCATTER4_512_D(out_r + out_strides[40], out_group_stride, r4_out1);
+        SCATTER4_512_D(out_r + out_strides[4], out_group_stride, r4_out0,
+                       is_contiguous_group_out);
+        SCATTER4_512_D(out_r + out_strides[16], out_group_stride, r4_out3,
+                       is_contiguous_group_out);
+        SCATTER4_512_D(out_r + out_strides[28], out_group_stride, r4_out2,
+                       is_contiguous_group_out);
+        SCATTER4_512_D(out_r + out_strides[40], out_group_stride, r4_out1,
+                       is_contiguous_group_out);
         
         __m512d sw8 = SWAP_RI_512_D(v_in[8]);
         v_in[8] = _mm512_fmaddsub_pd(v_in[8], twd8_real, _mm512_mul_pd(sw8, twd8_imag));
@@ -798,10 +836,14 @@ static VOID fft48avx512fp64(VOID *in_real, VOID *in_imag,
         r4_out1 = _mm512_add_pd(r4_av2, r4_av1);
         r4_out3 = _mm512_sub_pd(r4_av2, r4_av1);
 
-        SCATTER4_512_D(out_r + out_strides[8], out_group_stride, r4_out0);
-        SCATTER4_512_D(out_r + out_strides[20], out_group_stride, r4_out1);
-        SCATTER4_512_D(out_r + out_strides[32], out_group_stride, r4_out2);
-        SCATTER4_512_D(out_r + out_strides[44], out_group_stride, r4_out3);
+        SCATTER4_512_D(out_r + out_strides[8], out_group_stride, r4_out0,
+                       is_contiguous_group_out);
+        SCATTER4_512_D(out_r + out_strides[20], out_group_stride, r4_out1,
+                       is_contiguous_group_out);
+        SCATTER4_512_D(out_r + out_strides[32], out_group_stride, r4_out2,
+                       is_contiguous_group_out);
+        SCATTER4_512_D(out_r + out_strides[44], out_group_stride, r4_out3,
+                       is_contiguous_group_out);
 
         in_r += v_in_stride;
         out_r += v_out_stride;

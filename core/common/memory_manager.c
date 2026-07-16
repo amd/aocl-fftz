@@ -1,7 +1,7 @@
 // Copyright Advanced Micro Devices, Inc.
 // SPDX-License-Identifier: BSD-3-Clause
 
-/** @file memory_manager.h
+/** @file memory_manager.c
  *
  *  @brief Declares memory allocation and management functions of AOCL-FFTZ.
  *
@@ -115,10 +115,14 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
 
         sol->solver->solver_type = SOLVER_NULL;
         sol->solver->execute_solver = NULL;
-        sol->solver->kernel_c2c->kfft = NULL;
-        sol->solver->kernel_c2c_r->kfft = NULL;
-        sol->solver->kernel_r2hc->kfft = NULL;
-        sol->solver->kernel_r2hcf->kfft = NULL;
+        sol->solver->kernel_c2c->kfft[FORWARD_FFT_DIR] = NULL;
+        sol->solver->kernel_c2c->kfft[BACKWARD_FFT_DIR] = NULL;
+        sol->solver->kernel_c2c_r->kfft[FORWARD_FFT_DIR] = NULL;
+        sol->solver->kernel_c2c_r->kfft[BACKWARD_FFT_DIR] = NULL;
+        sol->solver->kernel_r2hc->kfft[FORWARD_FFT_DIR] = NULL;
+        sol->solver->kernel_r2hc->kfft[BACKWARD_FFT_DIR] = NULL;
+        sol->solver->kernel_r2hcf->kfft[FORWARD_FFT_DIR] = NULL;
+        sol->solver->kernel_r2hcf->kfft[BACKWARD_FFT_DIR] = NULL;
         sol->solver->kernel_c2c->sets = 1;
         sol->solver->kernel_c2c_r->sets = 1;
         sol->solver->kernel_r2hc->sets = 1;
@@ -176,19 +180,26 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->strides_grp->strides->out_strides = NULL;
         sol->strides_grp->strides->v_in_stride = 0;
         sol->strides_grp->strides->v_out_stride = 0;
+        sol->strides_grp->strides->v_in_h2_stride = 0;
+        sol->strides_grp->strides->v_out_h2_stride = 0;
         sol->strides_grp->strides_c2c->in_strides = NULL;
         sol->strides_grp->strides_c2c->out_strides = NULL;
         sol->strides_grp->strides_c2c->v_in_stride = 0;
         sol->strides_grp->strides_c2c->v_out_stride = 0;
+        sol->strides_grp->strides_c2c->v_in_h2_stride = 0;
+        sol->strides_grp->strides_c2c->v_out_h2_stride = 0;
         sol->strides_grp->strides_r2hc->in_strides = NULL;
         sol->strides_grp->strides_r2hc->out_strides = NULL;
         sol->strides_grp->strides_r2hc->v_in_stride = 0;
         sol->strides_grp->strides_r2hc->v_out_stride = 0;
+        sol->strides_grp->strides_r2hc->v_in_h2_stride = 0;
+        sol->strides_grp->strides_r2hc->v_out_h2_stride = 0;
         sol->strides_grp->strides_r2hcf->in_strides = NULL;
         sol->strides_grp->strides_r2hcf->out_strides = NULL;
         sol->strides_grp->strides_r2hcf->v_in_stride = 0;
         sol->strides_grp->strides_r2hcf->v_out_stride = 0;
-        sol->strides_grp->strides_c2r_ct_op = NULL;
+        sol->strides_grp->strides_r2hcf->v_in_h2_stride = 0;
+        sol->strides_grp->strides_r2hcf->v_out_h2_stride = 0;
         sol->twiddle->load_multi_cols = 1; // true by default
         sol->twiddle->cols = 0;
         sol->twiddle->TW = NULL;
@@ -216,7 +227,6 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
         sol->dft_bufs->ct_buffer = NULL;
         sol->dft_bufs->ct_buf_real = NULL;
         sol->dft_bufs->ct_buf_imag = NULL;
-        sol->dft_bufs->ct_buf_real_in = NULL;
         sol->dft_bufs->ct_buf_size = 0;
         sol->dft_bufs->num_ct_buf = 1;
         sol->dft_bufs->ct_buf_allocated = 0;
@@ -234,13 +244,27 @@ aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank)
 
 // Allocates memory for the input and output stride arrays within the
 // provided strides structure if they are not already allocated.
-VOID alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix)
+INT32 alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix)
 {
     if (strides->in_strides == NULL)
     {
         ALLOC_ALIGN_UNINIT(strides->in_strides, INTP, radix * sizeof(INTP));
+        if (strides->in_strides == NULL)
+        {
+            AOCLFFTZ_ERROR("alloc_stride_arrays (in_strides) failed: %s",
+                           get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+            return AOCLFFTZ_MEMORY_FAILURE;
+        }
         ALLOC_ALIGN_UNINIT(strides->out_strides, INTP, radix * sizeof(INTP));
+        if (strides->out_strides == NULL)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(strides->in_strides);
+            AOCLFFTZ_ERROR("alloc_stride_arrays (out_strides) failed: %s",
+                           get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+            return AOCLFFTZ_MEMORY_FAILURE;
+        }
     }
+    return AOCLFFTZ_SUCCESS;
 }
 
 // Allocates (if not already allocated) and fills stride arrays with a
@@ -248,10 +272,10 @@ VOID alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix)
 INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides, INTP radix,
                                    INTP in_stride, INTP out_stride)
 {
-    alloc_stride_arrays(strides, radix);
-    if (strides->in_strides == NULL || strides->out_strides == NULL)
+    INT32 ret = alloc_stride_arrays(strides, radix);
+    if (ret != AOCLFFTZ_SUCCESS)
     {
-        return AOCLFFTZ_MEMORY_FAILURE;
+        return ret;
     }
 
     for (INTP i = 0; i < radix; i++)
@@ -259,7 +283,7 @@ INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides, INTP radix,
         strides->in_strides[i]  = i * in_stride * DATA_STRIDE;
         strides->out_strides[i] = i * out_stride * DATA_STRIDE;
     }
-    return SOLVER_SUCCESS;
+    return AOCLFFTZ_SUCCESS;
 }
 
 // Allocate n placeholders for next solution
@@ -270,6 +294,12 @@ aoclfftz_solution_t **alloc_sol_array(INT32 n)
     {
         ALLOC_ALIGN_UNINIT(sol, aoclfftz_solution_t*,
                         n * sizeof(aoclfftz_solution_t*));
+        if (sol == NULL)
+        {
+            AOCLFFTZ_ERROR("alloc_sol_array failed: %s",
+                           get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+            return NULL;
+        }
         for (INT32 i = 0; i < n; i++)
         {
             sol[i] = NULL;
@@ -403,11 +433,14 @@ VOID *alloc_twiddle_buffer(UINTP size, UINT32 dt_prec)
  * Allocates ct_buffer for complex NDIM (see ndim_solver_dft.c).
  * Uses num_ct_buf if set by parent (e.g. REAL_NDIM); otherwise one slot.
  */
-VOID alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
+INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
 {
+    AOCLFFTZ_LOG(INFO, global_logger_mode,
+                 "Allocating ct_buffer for complex NDIM");
+
     if (solution->dft_bufs->ct_buffer)
     {
-        return;
+        return AOCLFFTZ_SUCCESS;
     }
     // allocate buffer for the entire problem
     // this can be optimized by :
@@ -442,11 +475,18 @@ VOID alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr)
     buffer_size = GET_PADDED_SIZE(buffer_length * DATA_STRIDE * dt_bytes);
     ALLOC_ALIGN_UNINIT(*buffer_ptr, VOID,
             buffer_size * solution->dft_bufs->num_ct_buf * n_threads);
+    if (*buffer_ptr == NULL)
+    {
+        AOCLFFTZ_ERROR("alloc_ndim_buffer (ct_buffer) failed: %s",
+                       get_status_string(AOCLFFTZ_MEMORY_FAILURE));
+        return AOCLFFTZ_MEMORY_FAILURE;
+    }
 
     solution->dft_bufs->ct_buf_size = buffer_size;
     solution->dft_bufs->ct_buf_real = *buffer_ptr;
     solution->dft_bufs->ct_buf_imag = MOVE_ADDR(*buffer_ptr, dt_bytes);
     solution->dft_bufs->ct_buf_allocated = 1;
+    return AOCLFFTZ_SUCCESS;
 }
 
 VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme)
@@ -499,12 +539,6 @@ VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp)
     FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hc->out_strides);
     FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hcf->in_strides);
     FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hcf->out_strides);
-    if (strides_grp->strides_c2r_ct_op != NULL)
-    {
-        FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2r_ct_op->in_strides);
-        FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2r_ct_op->out_strides);
-        FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_c2r_ct_op);
-    }
 }
 
 VOID destroy_solution(aoclfftz_solution_t* sol)
@@ -603,7 +637,7 @@ VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n)
                 if (i == 0 && solver_type == SOLVER_REAL_NDIM)
                 {
                     // SOLVER_REAL_NDIM: Only has aux_buffer_1 for inplace/C2R cases
-                    if (cur_sol->dft_bufs && cur_sol->dft_bufs->buffered &&
+                    if (cur_sol->dft_bufs->buffered &&
                         cur_sol->dft_bufs->buffered->aux_buffer_1)
                     {
                         FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_1);

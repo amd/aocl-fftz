@@ -158,7 +158,7 @@ INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
 exit_sr_dft:
     /* Clean up SR input copy buffer if allocated */
-    if (sel->solution && sel->solution->dft_bufs)
+    if (sel->solution->dft_bufs)
     {
         FREE_ALIGN_ALLOCATED_MEM(sel->solution->dft_bufs->sr->input_copy);
         sel->solution->dft_bufs->sr->input_copy = NULL;

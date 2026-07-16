@@ -91,37 +91,53 @@ static kernel_fp_list_t kernels_c2c[NUM_KERNELS_IN_EACH_CATEGORY]
     {KREG(fft, 48)}, // radix 48
 };
 
-// Twiddle C2C kernel table
-// Since this table is used only within the scope of this file, we prefer
-// creating it here. There is no reason for this table to be defined in a
-// header.
-static kernel_fp_list_t kernels_twid_c2c[NUM_KERNELS_IN_EACH_CATEGORY]
-                                        [NUM_KERNEL_CATEGORIES] =
+
+// Direction-specific twiddle C2C kernel table (forward)
+static kernel_fp_list_t kernels_twid_c2c_fwd[NUM_KERNELS_IN_EACH_CATEGORY]
+                                            [NUM_KERNEL_CATEGORIES] =
 {
-    {KREG(twid_fft, 2)},  // radix  2
-    {KREG(twid_fft, 3)},  // radix  3
-    {KREG(twid_fft, 4)},  // radix  4
-    {KREG(twid_fft, 5)},  // radix  5
-    {KREG(twid_fft, 6)},  // radix  6
-    {KREG(twid_fft, 7)},  // radix  7
-    {KREG(twid_fft, 8)},  // radix  8
-    {KREG(twid_fft, 9)},  // radix  9
-    {KREG(twid_fft, 10)}, // radix 10
-    {KREG(twid_fft, 11)}, // radix 11
-    {KREG(twid_fft, 12)}, // radix 12
-    {KREG(twid_fft, 13)}, // radix 13
-    {KREG(twid_fft, 14)}, // radix 14
-    {KREG(twid_fft, 15)}, // radix 15
-    {KREG(twid_fft, 16)}, // radix 16
+    {KREG(twid_fwd_fft, 2)},  // radix  2
+    {KREG(twid_fwd_fft, 3)},  // radix  3
+    {KREG(twid_fwd_fft, 4)},  // radix  4
+    {KREG(twid_fwd_fft, 5)},  // radix  5
+    {KREG(twid_fwd_fft, 6)},  // radix  6
+    {KREG(twid_fwd_fft, 7)},  // radix  7
+    {KREG(twid_fwd_fft, 8)},  // radix  8
+    {KREG(twid_fwd_fft, 9)},  // radix  9
+    {KREG(twid_fwd_fft, 10)}, // radix 10
+    {KREG(twid_fwd_fft, 11)}, // radix 11
+    {KREG(twid_fwd_fft, 12)}, // radix 12
+    {KREG(twid_fwd_fft, 13)}, // radix 13
+    {KREG(twid_fwd_fft, 14)}, // radix 14
+    {KREG(twid_fwd_fft, 15)}, // radix 15
+    {KREG(twid_fwd_fft, 16)}, // radix 16
 };
 
-// Real FFT kernels + C2C kernels table
-// Since this table is used only within the scope of this file, we prefer
-// creating it here. There is no reason for this table to be defined in a
-// header.
-static kernel_fp_list_t kernels_real[NUM_REAL_KERNELS_VARIANTS]
-                                    [NUM_KERNELS_IN_EACH_CATEGORY]
-                                    [NUM_KERNEL_CATEGORIES] =
+// Direction-specific twiddle C2C kernel table (backward)
+static kernel_fp_list_t kernels_twid_c2c_bwd[NUM_KERNELS_IN_EACH_CATEGORY]
+                                            [NUM_KERNEL_CATEGORIES] =
+{
+    {KREG(twid_bwd_fft, 2)},  // radix  2
+    {KREG(twid_bwd_fft, 3)},  // radix  3
+    {KREG(twid_bwd_fft, 4)},  // radix  4
+    {KREG(twid_bwd_fft, 5)},  // radix  5
+    {KREG(twid_bwd_fft, 6)},  // radix  6
+    {KREG(twid_bwd_fft, 7)},  // radix  7
+    {KREG(twid_bwd_fft, 8)},  // radix  8
+    {KREG(twid_bwd_fft, 9)},  // radix  9
+    {KREG(twid_bwd_fft, 10)}, // radix 10
+    {KREG(twid_bwd_fft, 11)}, // radix 11
+    {KREG(twid_bwd_fft, 12)}, // radix 12
+    {KREG(twid_bwd_fft, 13)}, // radix 13
+    {KREG(twid_bwd_fft, 14)}, // radix 14
+    {KREG(twid_bwd_fft, 15)}, // radix 15
+    {KREG(twid_bwd_fft, 16)}, // radix 16
+};
+
+// Real FFT kernels + fused R2C twiddle kernels (forward real)
+static kernel_fp_list_t kernels_twid_real_r2c[NUM_REAL_KERNELS_VARIANTS]
+                                             [NUM_KERNELS_IN_EACH_CATEGORY]
+                                             [NUM_KERNEL_CATEGORIES] =
 {
     {
         {KREG(r2hc_rfft, 2)},  // radix  2
@@ -158,31 +174,28 @@ static kernel_fp_list_t kernels_real[NUM_REAL_KERNELS_VARIANTS]
         {KREG(r2hcf_rfft, 16)}, // radix 16
     },
     {
-        {KREG(fft, 2)},  // radix  2
-        {KREG(fft, 3)},  // radix  3
-        {KREG(fft, 4)},  // radix  4
-        {KREG(fft, 5)},  // radix  5
-        {KREG(fft, 6)},  // radix  6
-        {KREG(fft, 7)},  // radix  7
-        {KREG(fft, 8)},  // radix  8
-        {KREG(fft, 9)},  // radix  9
-        {KREG(fft, 10)}, // radix 10
-        {KREG(fft, 11)}, // radix 11
-        {KREG(fft, 12)}, // radix 12
-        //{KREG(fft, 13)}, // radix 13
-        {KREG(fft, 14)}, // radix 14
-        {KREG(fft, 15)}, // radix 15
-        {KREG(fft, 16)}, // radix 16
+        {KREG(twid_r2c_fft, 2)},  // radix  2
+        {KREG(twid_r2c_fft, 3)},  // radix  3
+        {KREG(twid_r2c_fft, 4)},  // radix  4
+        {KREG(twid_r2c_fft, 5)},  // radix  5
+        {KREG(twid_r2c_fft, 6)},  // radix  6
+        {KREG(twid_r2c_fft, 7)},  // radix  7
+        {KREG(twid_r2c_fft, 8)},  // radix  8
+        {KREG(twid_r2c_fft, 9)},  // radix  9
+        {KREG(twid_r2c_fft, 10)}, // radix 10
+        {KREG(twid_r2c_fft, 11)}, // radix 11
+        {KREG(twid_r2c_fft, 12)}, // radix 12
+        //{KREG(twid_r2c_fft, 13)}, // radix 13
+        {KREG(twid_r2c_fft, 14)}, // radix 14
+        {KREG(twid_r2c_fft, 15)}, // radix 15
+        {KREG(twid_r2c_fft, 16)}, // radix 16
     }
 };
 
-// Real FFT kernels + Twiddle C2C kernels table
-// Since this table is used only within the scope of this file, we prefer
-// creating it here. There is no reason for this table to be defined in a
-// header.
-static kernel_fp_list_t kernels_twid_real[NUM_REAL_KERNELS_VARIANTS]
-                                         [NUM_KERNELS_IN_EACH_CATEGORY]
-                                         [NUM_KERNEL_CATEGORIES] =
+// Real FFT kernels for backward (C2R) - uses plain C2C kernels in third slot
+static kernel_fp_list_t kernels_twid_real_c2r[NUM_REAL_KERNELS_VARIANTS]
+                                             [NUM_KERNELS_IN_EACH_CATEGORY]
+                                             [NUM_KERNEL_CATEGORIES] =
 {
     {
         {KREG(r2hc_rfft, 2)},  // radix  2
@@ -219,21 +232,21 @@ static kernel_fp_list_t kernels_twid_real[NUM_REAL_KERNELS_VARIANTS]
         {KREG(r2hcf_rfft, 16)}, // radix 16
     },
     {
-        {KREG(twid_fft, 2)},  // radix  2
-        {KREG(twid_fft, 3)},  // radix  3
-        {KREG(twid_fft, 4)},  // radix  4
-        {KREG(twid_fft, 5)},  // radix  5
-        {KREG(twid_fft, 6)},  // radix  6
-        {KREG(twid_fft, 7)},  // radix  7
-        {KREG(twid_fft, 8)},  // radix  8
-        {KREG(twid_fft, 9)},  // radix  9
-        {KREG(twid_fft, 10)}, // radix 10
-        {KREG(twid_fft, 11)}, // radix 11
-        {KREG(twid_fft, 12)}, // radix 12
-        //{KREG(twid_fft, 13)}, // radix 13
-        {KREG(twid_fft, 14)}, // radix 14
-        {KREG(twid_fft, 15)}, // radix 15
-        {KREG(twid_fft, 16)}, // radix 16
+        {KREG(twid_c2r_fft, 2)},  // radix  2
+        {KREG(twid_c2r_fft, 3)},  // radix  3
+        {KREG(twid_c2r_fft, 4)},  // radix  4
+        {KREG(twid_c2r_fft, 5)},  // radix  5
+        {KREG(twid_c2r_fft, 6)},  // radix  6
+        {KREG(twid_c2r_fft, 7)},  // radix  7
+        {KREG(twid_c2r_fft, 8)},  // radix  8
+        {KREG(twid_c2r_fft, 9)},  // radix  9
+        {KREG(twid_c2r_fft, 10)}, // radix 10
+        {KREG(twid_c2r_fft, 11)}, // radix 11
+        {KREG(twid_c2r_fft, 12)}, // radix 12
+        //{KREG(twid_c2r_fft, 13)}, // radix 13
+        {KREG(twid_c2r_fft, 14)}, // radix 14
+        {KREG(twid_c2r_fft, 15)}, // radix 15
+        {KREG(twid_c2r_fft, 16)}, // radix 16
     }
 };
 

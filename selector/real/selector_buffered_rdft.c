@@ -74,6 +74,12 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     }
 
     sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
+    if (sel->solution->next_sol == NULL)
+    {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
+        AOCLFFTZ_ERROR("alloc_sol_array failed: %s", get_status_string(ret));
+        goto exit_batched_dft;
+    }
     sel->solution->next_sol[0] = cur_sel->solution;
 
     // Set the out_ptr to last direct solution's output

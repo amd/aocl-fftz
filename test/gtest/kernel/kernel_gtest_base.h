@@ -253,6 +253,8 @@ class AoclfftzKernelTestBase
 
         k_stride.v_in_stride  = in_stride_w_ds * radix;
         k_stride.v_out_stride = out_stride_w_ds * radix;
+        k_stride.v_in_h2_stride = k_stride.v_in_stride;
+        k_stride.v_out_h2_stride = k_stride.v_out_stride;
 
         k_in_r  = k_in;
         k_in_i  = k_in + 1;
@@ -925,6 +927,8 @@ class AoclfftzKernelTestBase
                                          * buf_size_multiplier * 2;
             kernel_stride.v_out_stride = out_stride * radix
                                          * buf_size_multiplier * 2;
+            kernel_stride.v_in_h2_stride = kernel_stride.v_in_stride;
+            kernel_stride.v_out_h2_stride = kernel_stride.v_out_stride;
         }
 
         T e[2]    = {0.0, 0.0};

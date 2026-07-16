@@ -43,23 +43,30 @@ INT32 register_solvers_kernels(kernel_tables_t *kernel_tables, INT32 dt,
     // Register Kernels
     if (is_real)
     {
-        // Register standard kernels for C2R (real-backward) since the twiddle
-        // kernels are not supported
-        if (dir == BACKWARD_FFT_DIR)
+        if (dir == FORWARD_FFT_DIR)
         {
             ret |= register_kernels_real(kernel_tables->kt_rdft,
-                                         kernels_real, dt, dir, cpu_flags);
+                                         kernels_twid_real_r2c, dt, dir,
+                                         cpu_flags);
         }
-        else
+        else // BACKWARD_FFT_DIR
         {
             ret |= register_kernels_real(kernel_tables->kt_rdft,
-                                         kernels_twid_real, dt, dir, cpu_flags);
+                                         kernels_twid_real_c2r, dt, dir,
+                                         cpu_flags);
         }
     }
-    ret |= register_kernels_complex(kernel_tables->kt_dft, kernels_c2c, dt,
-                                    dir, cpu_flags);
+    // Standared C2C kernels (kernels_c2c) are bidirectional,
+    // both kfft[FORWARD_FFT_DIR] and kfft[BACKWARD_FFT_DIR] point to
+    // kernels_c2c
+    ret |= register_kernels_complex(kernel_tables->kt_dft, kernels_c2c, NULL,
+                                    dt, dir, cpu_flags);
+    // Twiddle C2C kernels are direction specific,
+    // kfft[FORWARD_FFT_DIR] points to kernels_twid_c2c_fwd and
+    // kfft[BACKWARD_FFT_DIR] points to kernels_twid_c2c_bwd
     ret |= register_kernels_complex(kernel_tables->kt_twid_dft,
-                                    kernels_twid_c2c, dt, dir, cpu_flags);
+                                    kernels_twid_c2c_fwd,
+                                    kernels_twid_c2c_bwd, dt, dir, cpu_flags);
 
     kernel_tables->ele_mul[FORWARD_FFT_DIR] =
         register_elementwise_mul_kernel(cpu_flags, dt, FORWARD_FFT_DIR);
@@ -107,14 +114,14 @@ INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table, INT32 is_innermo
     return is_supported;
 }
 
-// Check if the problem is col-major or row-major.
-// col-major: vec-strides < elemental-strides
-// row-major: elemental-strides < vec-strides
+// Column-major iff multiple batches exist and vec-stride < dim-stride
+// for both input and output.
 UINT8 check_col_major(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
     UINT8 is_col_major = (decomp_scheme->vecs[0].in_stride <
         decomp_scheme->dims[0].in_stride) &&
-       (decomp_scheme->vecs[0].out_stride < decomp_scheme->dims[0].out_stride);
+        (decomp_scheme->vecs[0].out_stride < decomp_scheme->dims[0].out_stride)
+        && (decomp_scheme->vecs[0].n > 1);
     return is_col_major;
 }
 
@@ -666,11 +673,11 @@ INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
         {
             if (avl_threads == 1)
             {
-                solver_obj->solver_type = SOLVER_REAL_DIRECT_TWIDDLE;
+                solver_obj->solver_type = SOLVER_REAL_DIRECT;
             }
             else
             {
-                solver_obj->solver_type = SOLVER_REAL_MT_DIRECT_TWIDDLE;
+                solver_obj->solver_type = SOLVER_REAL_MT_DIRECT;
             }
         }
 
@@ -1145,9 +1152,9 @@ VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
-    kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
+    kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
+    kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {0};
     kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft, {NULL},
                                      NULL};
 
@@ -1216,9 +1223,9 @@ VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
-    kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
+    kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
+    kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {0};
     kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft, {NULL},
                                      NULL};
 
@@ -1283,9 +1290,9 @@ VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
-    kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
+    kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
+    kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {0};
     kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft, {NULL},
                                      NULL};
 
@@ -1350,9 +1357,9 @@ VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     INT32 dim_rank = 1;
     SHRINK_DIM_RANK(problem->dims, problem->dim_rank, dim_rank);
 
-    kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
-    kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {{0x0}};
+    kernel_t kt_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
+    kernel_t kt_twid_dft[MAX_NUM_KERNELS_IN_TABLE] = {0};
+    kernel_t kt_rdft[MAX_NUM_KERNELS_IN_TABLE] = {0};
     kernel_tables_t kertab_tables = {kt_dft, kt_twid_dft, kt_rdft, {NULL},
                                      NULL};
 
@@ -1563,9 +1570,7 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                 while (
                     curr != NULL &&
                     curr->solver->solver_type != SOLVER_REAL_DIRECT &&
-                    curr->solver->solver_type != SOLVER_REAL_DIRECT_TWIDDLE &&
-                    curr->solver->solver_type != SOLVER_REAL_MT_DIRECT &&
-                    curr->solver->solver_type != SOLVER_REAL_MT_DIRECT_TWIDDLE)
+                    curr->solver->solver_type != SOLVER_REAL_MT_DIRECT)
                 {
                     curr->twiddle->TW = prev->twiddle->TW;
                     curr = curr->next_sol[0];
@@ -1606,9 +1611,7 @@ VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
         {
             if (curr->solver->solver_type == SOLVER_REAL_CT &&
                 (prev->solver->solver_type == SOLVER_REAL_DIRECT ||
-                 prev->solver->solver_type == SOLVER_REAL_DIRECT_TWIDDLE ||
-                 prev->solver->solver_type == SOLVER_REAL_MT_DIRECT ||
-                 prev->solver->solver_type == SOLVER_REAL_MT_DIRECT_TWIDDLE))
+                 prev->solver->solver_type == SOLVER_REAL_MT_DIRECT))
             {
                 INTP radix = prev->decomp_scheme->dims[0].n;
                 INTP num_groups = NUM_RFFT_GROUPS(prev->solver);
@@ -1738,9 +1741,7 @@ static INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
         cur_sol->decomp_scheme->out_imag = MOVE_ADDR(aux_out, dt_bytes);
         // Swap aux buffers after every direct solution
         if (cur_sol->solver->solver_type == SOLVER_REAL_DIRECT ||
-            cur_sol->solver->solver_type == SOLVER_REAL_DIRECT_TWIDDLE ||
-            cur_sol->solver->solver_type == SOLVER_REAL_MT_DIRECT ||
-            cur_sol->solver->solver_type == SOLVER_REAL_MT_DIRECT_TWIDDLE)
+            cur_sol->solver->solver_type == SOLVER_REAL_MT_DIRECT)
         {
             SWAP_BUFFERS(aux_in, aux_out);
         }
@@ -1749,7 +1750,7 @@ static INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
 
     if (cur_sol == NULL)
     {
-        AOCLFFTZ_ERROR("Unexpected NULL in chain after CT solutions");
+        AOCLFFTZ_ERROR("Invalid solution chain: CT solution node not found");
         return SOLVER_FAILURE;
     }
 
@@ -1758,6 +1759,11 @@ static INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
     cur_sol->decomp_scheme->in_imag = MOVE_ADDR(aux_in, dt_bytes);
 
     // Update last direct solution's input
+    if (cur_sol->next_sol == NULL || cur_sol->next_sol[0] == NULL)
+    {
+        AOCLFFTZ_ERROR("Invalid solution chain: direct solution node not found");
+        return SOLVER_FAILURE;
+    }
     cur_sol = cur_sol->next_sol[0];
     cur_sol->decomp_scheme->in_real = aux_in;
     cur_sol->decomp_scheme->in_imag = MOVE_ADDR(aux_in, dt_bytes);

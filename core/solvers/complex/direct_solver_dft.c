@@ -42,16 +42,16 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
     if (sol->decomp_scheme->batched_vecs != NULL)
     {
-        strides->v_in_stride =
+        strides->v_in_h2_stride = strides->v_in_stride =
             sol->decomp_scheme->batched_vecs[0].in_stride * DATA_STRIDE;
-        strides->v_out_stride =
+        strides->v_out_h2_stride = strides->v_out_stride =
             sol->decomp_scheme->batched_vecs[0].out_stride * DATA_STRIDE;
     }
     else
     {
-        strides->v_in_stride =
+        strides->v_in_h2_stride = strides->v_in_stride =
             sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
-        strides->v_out_stride =
+        strides->v_out_h2_stride = strides->v_out_stride =
             sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
     }
 
@@ -73,9 +73,10 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         getTime(startTime);
 
         // execute the direct kernel
-        kernel->kfft(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
-                     sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
-                     batch, strides, sol->twiddle, direction);
+        kfft_ kfft = sol->solver->kernel_c2c->kfft[direction];
+        kfft(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
+             sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag, batch,
+             strides, sol->twiddle, direction);
 
         getTime(endTime);
         cost->time = diffTime(clkTick, startTime, endTime);
@@ -93,14 +94,13 @@ static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    kfft_ kernel = sol->solver->kernel_c2c->kfft;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
     UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
 
-    // execute the direct kernel
-    kernel(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
-           sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
-           sol->decomp_scheme->vecs[0].n, strides, sol->twiddle, direction);
+    kfft_ kfft = sol->solver->kernel_c2c->kfft[direction];
+    kfft(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
+         sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
+         sol->decomp_scheme->vecs[0].n, strides, sol->twiddle, direction);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
@@ -127,9 +127,9 @@ static INT32 execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    kfft_ kernel = sol->solver->kernel_c2c->kfft;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
     UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    kfft_ kernel = sol->solver->kernel_c2c->kfft[direction];
 
     VOID *in_real = sol->decomp_scheme->in_real;
     VOID *in_imag = sol->decomp_scheme->in_imag;
