@@ -283,6 +283,161 @@
 }
 
 /**
+ * @brief H2 reverse-contiguous gather/scatter helpers.
+ *
+ * H2 (the conjugate/mirror half of a Hermitian-symmetric r2c/c2r spectrum)
+ * is naturally indexed in decreasing memory order, so a unit-stride H2 run
+ * has `offset == -DATA_STRIDE` instead of `+DATA_STRIDE`. In that case the
+ * points are still one contiguous block in memory, just traversed
+ * backwards, so each macro below issues a single wide load/store over that
+ * block and then permutes lanes to swap the memory (descending) order back
+ * to the ascending point order the registers must hold. Any other offset
+ * falls back to the existing strided gather/scatter macro with
+ * `is_contiguous` forced to 0.
+ */
+
+/**
+ * @brief Load two H2 32-bit single precision complex points into a 128-bit
+ * register, restoring ascending point order.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 1, other: 0}
+#define GATHER2_H2_128_S(base, offset, dest)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        dest = _mm_permute_ps(_mm_loadu_ps((base) + (offset)), 0x4E);          \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        GATHER2_128_S(base, offset, dest, 0);                                  \
+    }                                                                          \
+}
+
+/**
+ * @brief Store two H2 32-bit single precision complex points from a 128-bit
+ * register, writing them back in descending (reverse-contiguous) order.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 1, other: 0}
+#define SCATTER2_H2_128_S(base, offset, src)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        _mm_storeu_ps((base) + (offset), _mm_permute_ps(src, 0x4E));           \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        SCATTER2_128_S(base, offset, src, 0);                                  \
+    }                                                                          \
+}
+
+/**
+ * @brief Load one H2 64-bit double precision complex point into a 128-bit
+ * register.
+ *
+ * A single point has no lane order to reverse, so this is simply an alias
+ * for the plain (non-H2) 128-bit double offset load.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+#define GATHER_H2_128_D(base, offset, dest)                                    \
+    LD_128_OFFSET_D(base, offset, dest, 0)
+
+/**
+ * @brief Store one H2 64-bit double precision complex point from a 128-bit
+ * register.
+ *
+ * A single point has no lane order to reverse, so this is simply an alias
+ * for the plain (non-H2) 128-bit double offset store.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+#define SCATTER_H2_128_D(base, offset, src)                                    \
+    ST_128_OFFSET_D(base, offset, src, 0)
+
+/**
+ * @brief Load four H2 32-bit single precision complex points into a 256-bit
+ * register, restoring ascending point order.
+ *
+ * The reverse-contiguous run starts 3 points below `base`, so it is loaded
+ * from `base + 3 * offset`. The two 128-bit lanes are swapped
+ * (permute2f128) and then the two points within each lane are swapped
+ * (permute) to turn the descending memory order into ascending point order.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 2, other: 0}
+#define GATHER4_H2_256_S(base, offset, dest)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        const __m256 _load = _mm256_loadu_ps((base) + 3 * (offset));           \
+        const __m256 _tmp = _mm256_permute2f128_ps(                            \
+            _load, _load, 0x01);                                               \
+        dest = _mm256_permute_ps(_tmp, 0x4E);                                  \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        GATHER4_256_S(base, offset, dest, 0);                                  \
+    }                                                                          \
+}
+
+/**
+ * @brief Store four H2 32-bit single precision complex points from a
+ * 256-bit register, writing them back in descending (reverse-contiguous)
+ * order starting at `base + 3 * offset`.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 2, other: 0}
+#define SCATTER4_H2_256_S(base, offset, src)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        const __m256 _tmp = _mm256_permute2f128_ps(src, src, 0x01);            \
+        _mm256_storeu_ps((base) + 3 * (offset),                                \
+                         _mm256_permute_ps(_tmp, 0x4E));                       \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        SCATTER4_256_S(base, offset, src, 0);                                  \
+    }                                                                          \
+}
+
+/**
+ * @brief Load two H2 64-bit double precision complex points into a 256-bit
+ * register, restoring ascending point order.
+ *
+ * The two points form one contiguous 256-bit run; a single lane swap
+ * (permute2f128_pd) is enough to turn descending memory order into
+ * ascending point order.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 1, other: 0}
+#define GATHER2_H2_256_D(base, offset, dest)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        const __m256d _tmp = _mm256_loadu_pd((base) + (offset));               \
+        dest = _mm256_permute2f128_pd(_tmp, _tmp, 0x01);                       \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        GATHER2_256_D(base, offset, dest, 0);                                  \
+    }                                                                          \
+}
+
+/**
+ * @brief Store two H2 64-bit double precision complex points from a 256-bit
+ * register, writing them back in descending (reverse-contiguous) order.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 1, other: 0}
+#define SCATTER2_H2_256_D(base, offset, src)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        _mm256_storeu_pd((base) + (offset),                                    \
+                         _mm256_permute2f128_pd(src, src, 0x01));              \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        SCATTER2_256_D(base, offset, src, 0);                                  \
+    }                                                                          \
+}
+
+/**
  * @brief Store two 256-bit double-precision vectors that hold two consecutive
  * complex output points (src0, src1), each laid out as one complex (128-bit)
  * lane per set across NUM_SETS_256_D sets, into contiguous output memory.
@@ -1182,6 +1337,37 @@ static const union data_union_256 _neg_256_d[2] = {
     LD_LOW_128_S((gbase) + starr[(stidx)], gdest);                             \
 }
 
+/**
+ * @brief H2 (conjugate-half) counterparts of GATHER_NOTW_* above.
+ * Same signature-compatible, twiddle-ignoring interface, but route through
+ * the reverse-contiguous H2 gather primitives defined earlier in this file.
+ */
+#define GATHER_NOTW_H2_128_D(gbase, starr, stidx, offset, gdest, twbuf, lmc,   \
+                             is_contiguous)                                    \
+    GATHER_H2_128_D((gbase) + starr[(stidx)], offset, gdest)
+
+#define GATHER_NOTW_H2_256_D(gbase, starr, stidx, offset, gdest, twbuf, lmc,   \
+                             is_contiguous)                                    \
+    GATHER2_H2_256_D((gbase) + starr[(stidx)], offset, gdest)
+
+#define GATHER_NOTW_H2_256_S(gbase, starr, stidx, offset, gdest, twbuf, lmc,   \
+                             is_contiguous)                                    \
+    GATHER4_H2_256_S((gbase) + starr[(stidx)], offset, gdest)
+
+#define GATHER_NOTW_H2_128_S(gbase, starr, stidx, offset, gdest, twbuf, lmc,   \
+                             is_contiguous)                                    \
+    GATHER2_H2_128_S((gbase) + starr[(stidx)], offset, gdest)
+
+/**
+ * @brief H2 low-lane leftover-point gather. A single leftover point has no
+ * lane order to reverse, so this aliases directly to
+ * GATHER_NOTW_LOW_128_S.
+ */
+#define GATHER_NOTW_H2_LOW_128_S(gbase, starr, stidx, gdest, twbuf, lmc,       \
+                                 is_contiguous)                                \
+    GATHER_NOTW_LOW_128_S(gbase, starr, stidx, gdest, twbuf, lmc,              \
+                          is_contiguous)
+
 #define SCATTER_NOTW_128_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,      \
                            is_contiguous)                                      \
     ST_128_OFFSET_D((sbase) + starr[(stidx)], offset, ssrc, is_contiguous)
@@ -1204,6 +1390,38 @@ static const union data_union_256 _neg_256_d[2] = {
     (FFTZ_VOID)is_contiguous;                                                  \
     ST_LOW_128_S((sbase) + starr[(stidx)], ssrc);                              \
 }
+
+/**
+ * @brief H2 (conjugate-half) counterparts of SCATTER_NOTW_* above.
+ * Same signature-compatible, twiddle-ignoring interface, but route through
+ * the reverse-contiguous H2 scatter primitives defined earlier in this
+ * file.
+ */
+#define SCATTER_NOTW_H2_128_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,   \
+                              is_contiguous)                                   \
+    SCATTER_H2_128_D((sbase) + starr[(stidx)], offset, ssrc)
+
+#define SCATTER_NOTW_H2_256_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,   \
+                              is_contiguous)                                   \
+    SCATTER2_H2_256_D((sbase) + starr[(stidx)], offset, ssrc)
+
+#define SCATTER_NOTW_H2_256_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,   \
+                              is_contiguous)                                   \
+    SCATTER4_H2_256_S((sbase) + starr[(stidx)], offset, ssrc)
+
+#define SCATTER_NOTW_H2_128_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,   \
+                              is_contiguous)                                   \
+    SCATTER2_H2_128_S((sbase) + starr[(stidx)], offset, ssrc)
+
+/**
+ * @brief H2 low-lane leftover-point scatter. A single leftover point has no
+ * lane order to reverse, so this aliases directly to
+ * SCATTER_NOTW_LOW_128_S.
+ */
+#define SCATTER_NOTW_H2_LOW_128_S(sbase, starr, stidx, ssrc, twbuf, lmc,       \
+                                  is_contiguous)                               \
+    SCATTER_NOTW_LOW_128_S(sbase, starr, stidx, ssrc, twbuf, lmc,              \
+                           is_contiguous)
 
 /*****************************************************************************
  * TW_SCATTER / ITW_SCATTER -- twiddle multiply then store.

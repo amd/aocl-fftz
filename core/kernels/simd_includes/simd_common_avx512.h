@@ -358,6 +358,105 @@ static const union data_union_512
 }
 
 /**
+ * @brief H2 reverse-contiguous gather/scatter helpers.
+ *
+ * H2 (the conjugate/mirror half of a Hermitian-symmetric r2c/c2r spectrum)
+ * is naturally indexed in decreasing memory order, so a unit-stride H2 run
+ * has `offset == -DATA_STRIDE` instead of `+DATA_STRIDE`. In that case the
+ * points are still one contiguous block in memory, just traversed
+ * backwards, so each macro below issues a single wide load/store over that
+ * block and then reverses lanes to restore ascending point order. Any other
+ * offset falls back to the existing strided gather/scatter macro with
+ * `is_contiguous` forced to 0.
+ */
+
+/**
+ * @brief Load eight H2 32-bit single precision complex points into a
+ * 512-bit register, restoring ascending point order.
+ *
+ * The reverse-contiguous run starts 7 points below `base`. The load is
+ * reinterpreted as eight 64-bit (complex) lanes and fully reversed with
+ * `_mm512_permutexvar_pd` to turn descending memory order into ascending
+ * point order.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 1, other: 0}
+#define GATHER8_H2_512_S(base, offset, dest)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        const __m512i _idx = _mm512_set_epi64(0, 1, 2, 3, 4, 5, 6, 7);         \
+        dest = _mm512_castpd_ps(_mm512_permutexvar_pd(                         \
+            _idx, _mm512_castps_pd(_mm512_loadu_ps((base) + 7 * (offset)))));  \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        GATHER8_512_S(base, offset, dest, 0);                                  \
+    }                                                                          \
+}
+
+/**
+ * @brief Store eight H2 32-bit single precision complex points from a
+ * 512-bit register, writing them back in descending (reverse-contiguous)
+ * order starting at `base + 7 * offset`.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 1, other: 0}
+#define SCATTER8_H2_512_S(base, offset, src)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        const __m512i _idx = _mm512_set_epi64(0, 1, 2, 3, 4, 5, 6, 7);         \
+        _mm512_storeu_ps((base) + 7 * (offset),                                \
+                         _mm512_castpd_ps(_mm512_permutexvar_pd(               \
+                             _idx, _mm512_castps_pd(src))));                   \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        SCATTER8_512_S(base, offset, src, 0);                                  \
+    }                                                                          \
+}
+
+/**
+ * @brief Load four H2 64-bit double precision complex points into a
+ * 512-bit register, restoring ascending point order.
+ *
+ * The reverse-contiguous run starts 3 points below `base`. Reversing the
+ * four 128-bit lanes (`_mm512_shuffle_f64x2`, control 0x1B) turns
+ * descending memory order into ascending point order.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 1, other: 0}
+#define GATHER4_H2_512_D(base, offset, dest)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        const __m512d _tmp = _mm512_loadu_pd((base) + 3 * (offset));           \
+        dest = _mm512_shuffle_f64x2(_tmp, _tmp, 0x1B);                         \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        GATHER4_512_D(base, offset, dest, 0);                                  \
+    }                                                                          \
+}
+
+/**
+ * @brief Store four H2 64-bit double precision complex points from a
+ * 512-bit register, writing them back in descending (reverse-contiguous)
+ * order starting at `base + 3 * offset`.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 1, other: 0}
+#define SCATTER4_H2_512_D(base, offset, src)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        _mm512_storeu_pd((base) + 3 * (offset),                                \
+                         _mm512_shuffle_f64x2(src, src, 0x1B));                \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        SCATTER4_512_D(base, offset, src, 0);                                  \
+    }                                                                          \
+}
+
+/**
  * @brief Store four 512-bit double-precision vectors that hold four consecutive
  * complex output points (src0..src3), each laid out as one complex (128-bit)
  * lane per set across NUM_SETS_512_D sets, into contiguous output memory.
@@ -732,6 +831,28 @@ static const union data_union_512
 #define SCATTER_NOTW_512_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,      \
                            is_contiguous)                                      \
     SCATTER4_512_D((sbase) + starr[(stidx)], offset, ssrc, is_contiguous)
+
+/**
+ * @brief H2 (conjugate-half) counterparts of GATHER_NOTW_512_* /
+ * SCATTER_NOTW_512_* above. Same signature-compatible, twiddle-ignoring
+ * interface, but route through the reverse-contiguous H2 gather/scatter
+ * primitives defined earlier in this file.
+ */
+#define GATHER_NOTW_H2_512_S(gbase, starr, stidx, offset, gdest, twbuf, lmc,   \
+                             is_contiguous)                                    \
+    GATHER8_H2_512_S((gbase) + starr[(stidx)], offset, gdest)
+
+#define GATHER_NOTW_H2_512_D(gbase, starr, stidx, offset, gdest, twbuf, lmc,   \
+                             is_contiguous)                                    \
+    GATHER4_H2_512_D((gbase) + starr[(stidx)], offset, gdest)
+
+#define SCATTER_NOTW_H2_512_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,   \
+                              is_contiguous)                                   \
+    SCATTER8_H2_512_S((sbase) + starr[(stidx)], offset, ssrc)
+
+#define SCATTER_NOTW_H2_512_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,   \
+                              is_contiguous)                                   \
+    SCATTER4_H2_512_D((sbase) + starr[(stidx)], offset, ssrc)
 
 /*****************************************************************************
  * TW_SCATTER / ITW_SCATTER -- 512-bit variants

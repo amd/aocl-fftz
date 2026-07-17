@@ -41,6 +41,14 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 36, 48, 80, 63, 28},
 #define STORE_OUT_256_D SCATTER_NOTW_256_D
 #define STORE_OUT_128_D SCATTER_NOTW_128_D
 
+#define STORE_OUT_H2_S SCATTER_NOTW_H2_S
+#define STORE_OUT_H2_256_S SCATTER_NOTW_H2_256_S
+#define STORE_OUT_H2_128_S SCATTER_NOTW_H2_128_S
+#define STORE_OUT_H2_64_S SCATTER_NOTW_H2_LOW_128_S
+#define STORE_OUT_H2_D SCATTER_NOTW_H2_D
+#define STORE_OUT_H2_256_D SCATTER_NOTW_H2_256_D
+#define STORE_OUT_H2_128_D SCATTER_NOTW_H2_128_D
+
 #define OUT_H2_S(val) CONJ_S(val)
 #define OUT_H2_256_S(val) CONJ_256_S(val)
 #define OUT_H2_128_S(val) CONJ_128_S(val)
@@ -55,6 +63,14 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 36, 48, 80, 63, 28},
 
 #undef KERNEL_DIRECTION_FWD
 #undef KERNEL_VARIANT_R2C
+
+#undef STORE_OUT_H2_128_D
+#undef STORE_OUT_H2_256_D
+#undef STORE_OUT_H2_D
+#undef STORE_OUT_H2_64_S
+#undef STORE_OUT_H2_128_S
+#undef STORE_OUT_H2_256_S
+#undef STORE_OUT_H2_S
 
 #undef STORE_OUT_128_D
 #undef STORE_OUT_256_D

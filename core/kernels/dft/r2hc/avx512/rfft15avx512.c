@@ -95,6 +95,8 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 #endif
     FFTZ_INTP v_in_stride = strides->v_in_stride;
     FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_UINT8 is_contiguous_in = (v_in_stride == 1);
+    FFTZ_UINT8 is_contiguous_out = (v_out_stride == 1);
 
     FFTZ_INTP cnt;
     FFTZ_FLOAT *curr_in, *curr_out;
@@ -128,16 +130,16 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 1: X(0)
         curr_in = in + in_strides[0];
-        LDR_512_S(curr_in, v_in_stride, v_in0);
+        LDR_512_S(curr_in, v_in_stride, v_in0, is_contiguous_in);
         // Input point 3: X(2)
         curr_in = in + in_strides[2];
-        LDR_512_S(curr_in, v_in_stride, v_in1);
+        LDR_512_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 8: X(7)
         curr_in = in + in_strides[7];
-        LDR_512_S(curr_in, v_in_stride, v_in2);
+        LDR_512_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 13: X(12)
         curr_in = in + in_strides[12];
-        LDR_512_S(curr_in, v_in_stride, v_in3);
+        LDR_512_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_add_ps(v_in1, v_in2);
         v_s1 = _mm512_sub_ps(v_in1, v_in2);
@@ -146,13 +148,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 9: X(8)
         curr_in = in + in_strides[8];
-        LDR_512_S(curr_in, v_in_stride, v_in1);
+        LDR_512_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 14: X(13)
         curr_in = in + in_strides[13];
-        LDR_512_S(curr_in, v_in_stride, v_in2);
+        LDR_512_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 4: X(3)
         curr_in = in + in_strides[3];
-        LDR_512_S(curr_in, v_in_stride, v_in3);
+        LDR_512_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_add_ps(v_in1, v_in2);
         v_s4 = _mm512_sub_ps(v_in2, v_in1);
@@ -166,13 +168,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 2: X(1)
         curr_in = in + in_strides[1];
-        LDR_512_S(curr_in, v_in_stride, v_in1);
+        LDR_512_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 12: X(11)
         curr_in = in + in_strides[11];
-        LDR_512_S(curr_in, v_in_stride, v_in2);
+        LDR_512_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 7: X(6)
         curr_in = in + in_strides[6];
-        LDR_512_S(curr_in, v_in_stride, v_in3);
+        LDR_512_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_add_ps(v_in1, v_in2);
         v_s1 = _mm512_sub_ps(v_in2, v_in1);
@@ -181,13 +183,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 5: X(4)
         curr_in = in + in_strides[4];
-        LDR_512_S(curr_in, v_in_stride, v_in1);
+        LDR_512_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 15: X(14)
         curr_in = in + in_strides[14];
-        LDR_512_S(curr_in, v_in_stride, v_in2);
+        LDR_512_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 10: X(9)
         curr_in = in + in_strides[9];
-        LDR_512_S(curr_in, v_in_stride, v_in3);
+        LDR_512_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_add_ps(v_in1, v_in2);
         v_s4 = _mm512_sub_ps(v_in2, v_in1);
@@ -201,10 +203,10 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 6: X(5)
         curr_in = in + in_strides[5];
-        LDR_512_S(curr_in, v_in_stride, v_in1);
+        LDR_512_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 11: X(10)
         curr_in = in + in_strides[10];
-        LDR_512_S(curr_in, v_in_stride, v_in2);
+        LDR_512_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_s0 = _mm512_add_ps(v_in1, v_in2);
         v_t0 = _mm512_mul_ps(v_CRTM_15_6, _mm512_sub_ps(v_in2, v_in1));
@@ -221,7 +223,7 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Output point 1: X(0)
         v_out0 = _mm512_add_ps(v_s9, v_s13);
-        STR_512_S(curr_out, v_out_stride, v_out0);
+        STR_512_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
 
         // Output point 3: X(2)
         v_out5 = _mm512_add_ps(v_s15, v_t1);
@@ -333,16 +335,16 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 1: X(0)
         curr_in = in + in_strides[0];
-        LDR_256_S(curr_in, v_in_stride, v_in0);
+        LDR_256_S(curr_in, v_in_stride, v_in0, is_contiguous_in);
         // Input point 3: X(2)
         curr_in = in + in_strides[2];
-        LDR_256_S(curr_in, v_in_stride, v_in1);
+        LDR_256_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 8: X(7)
         curr_in = in + in_strides[7];
-        LDR_256_S(curr_in, v_in_stride, v_in2);
+        LDR_256_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 13: X(12)
         curr_in = in + in_strides[12];
-        LDR_256_S(curr_in, v_in_stride, v_in3);
+        LDR_256_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_add_ps(v_in1, v_in2);
         v_s1 = _mm256_sub_ps(v_in1, v_in2);
@@ -351,13 +353,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 9: X(8)
         curr_in = in + in_strides[8];
-        LDR_256_S(curr_in, v_in_stride, v_in1);
+        LDR_256_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 14: X(13)
         curr_in = in + in_strides[13];
-        LDR_256_S(curr_in, v_in_stride, v_in2);
+        LDR_256_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 4: X(3)
         curr_in = in + in_strides[3];
-        LDR_256_S(curr_in, v_in_stride, v_in3);
+        LDR_256_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_add_ps(v_in1, v_in2);
         v_s4 = _mm256_sub_ps(v_in2, v_in1);
@@ -371,13 +373,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 2: X(1)
         curr_in = in + in_strides[1];
-        LDR_256_S(curr_in, v_in_stride, v_in1);
+        LDR_256_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 12: X(11)
         curr_in = in + in_strides[11];
-        LDR_256_S(curr_in, v_in_stride, v_in2);
+        LDR_256_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 7: X(6)
         curr_in = in + in_strides[6];
-        LDR_256_S(curr_in, v_in_stride, v_in3);
+        LDR_256_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_add_ps(v_in1, v_in2);
         v_s1 = _mm256_sub_ps(v_in2, v_in1);
@@ -386,13 +388,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 5: X(4)
         curr_in = in + in_strides[4];
-        LDR_256_S(curr_in, v_in_stride, v_in1);
+        LDR_256_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 15: X(14)
         curr_in = in + in_strides[14];
-        LDR_256_S(curr_in, v_in_stride, v_in2);
+        LDR_256_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 10: X(9)
         curr_in = in + in_strides[9];
-        LDR_256_S(curr_in, v_in_stride, v_in3);
+        LDR_256_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_add_ps(v_in1, v_in2);
         v_s4 = _mm256_sub_ps(v_in2, v_in1);
@@ -406,10 +408,10 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 6: X(5)
         curr_in = in + in_strides[5];
-        LDR_256_S(curr_in, v_in_stride, v_in1);
+        LDR_256_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 11: X(10)
         curr_in = in + in_strides[10];
-        LDR_256_S(curr_in, v_in_stride, v_in2);
+        LDR_256_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_s0 = _mm256_add_ps(v_in1, v_in2);
         v_t0 = _mm256_mul_ps(v256_CRTM_15_6, _mm256_sub_ps(v_in2, v_in1));
@@ -426,7 +428,7 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Output point 1: X(0)
         v_out0 = _mm256_add_ps(v_s9, v_s13);
-        STR_256_S(curr_out, v_out_stride, v_out0);
+        STR_256_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
 
         // Output point 3: X(2)
         v_out5 = _mm256_add_ps(v_s15, v_t1);
@@ -538,16 +540,16 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 1: X(0)
         curr_in = in + in_strides[0];
-        LDR_128_S(curr_in, v_in_stride, v_in0);
+        LDR_128_S(curr_in, v_in_stride, v_in0, is_contiguous_in);
         // Input point 3: X(2)
         curr_in = in + in_strides[2];
-        LDR_128_S(curr_in, v_in_stride, v_in1);
+        LDR_128_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 8: X(7)
         curr_in = in + in_strides[7];
-        LDR_128_S(curr_in, v_in_stride, v_in2);
+        LDR_128_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 13: X(12)
         curr_in = in + in_strides[12];
-        LDR_128_S(curr_in, v_in_stride, v_in3);
+        LDR_128_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_add_ps(v_in1, v_in2);
         v_s1 = _mm_sub_ps(v_in1, v_in2);
@@ -556,13 +558,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 9: X(8)
         curr_in = in + in_strides[8];
-        LDR_128_S(curr_in, v_in_stride, v_in1);
+        LDR_128_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 14: X(13)
         curr_in = in + in_strides[13];
-        LDR_128_S(curr_in, v_in_stride, v_in2);
+        LDR_128_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 4: X(3)
         curr_in = in + in_strides[3];
-        LDR_128_S(curr_in, v_in_stride, v_in3);
+        LDR_128_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_add_ps(v_in1, v_in2);
         v_s4 = _mm_sub_ps(v_in2, v_in1);
@@ -576,13 +578,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 2: X(1)
         curr_in = in + in_strides[1];
-        LDR_128_S(curr_in, v_in_stride, v_in1);
+        LDR_128_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 12: X(11)
         curr_in = in + in_strides[11];
-        LDR_128_S(curr_in, v_in_stride, v_in2);
+        LDR_128_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 7: X(6)
         curr_in = in + in_strides[6];
-        LDR_128_S(curr_in, v_in_stride, v_in3);
+        LDR_128_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_add_ps(v_in1, v_in2);
         v_s1 = _mm_sub_ps(v_in2, v_in1);
@@ -591,13 +593,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 5: X(4)
         curr_in = in + in_strides[4];
-        LDR_128_S(curr_in, v_in_stride, v_in1);
+        LDR_128_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 15: X(14)
         curr_in = in + in_strides[14];
-        LDR_128_S(curr_in, v_in_stride, v_in2);
+        LDR_128_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 10: X(9)
         curr_in = in + in_strides[9];
-        LDR_128_S(curr_in, v_in_stride, v_in3);
+        LDR_128_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_add_ps(v_in1, v_in2);
         v_s4 = _mm_sub_ps(v_in2, v_in1);
@@ -611,10 +613,10 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Input point 6: X(5)
         curr_in = in + in_strides[5];
-        LDR_128_S(curr_in, v_in_stride, v_in1);
+        LDR_128_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 11: X(10)
         curr_in = in + in_strides[10];
-        LDR_128_S(curr_in, v_in_stride, v_in2);
+        LDR_128_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_s0 = _mm_add_ps(v_in1, v_in2);
         v_t0 = _mm_mul_ps(v128_CRTM_15_6, _mm_sub_ps(v_in2, v_in1));
@@ -631,7 +633,7 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_fwd(FFTZ_VOID *in_real,
 
         // Output point 1: X(0)
         v_out0 = _mm_add_ps(v_s9, v_s13);
-        STR_128_S(curr_out, v_out_stride, v_out0);
+        STR_128_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
 
         // Output point 3: X(2)
         v_out5 = _mm_add_ps(v_s15, v_t1);
@@ -1083,6 +1085,8 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 #endif
     FFTZ_INTP v_in_stride = strides->v_in_stride;
     FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_UINT8 is_contiguous_in = (v_in_stride == 1);
+    FFTZ_UINT8 is_contiguous_out = (v_out_stride == 1);
 
     FFTZ_INTP cnt;
     FFTZ_FLOAT *curr_in, *curr_out;
@@ -1117,16 +1121,16 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 1: X(0)
         curr_in = in + in_strides[0];
-        LDR_512_S(curr_in, v_in_stride, v_in0);
+        LDR_512_S(curr_in, v_in_stride, v_in0, is_contiguous_in);
         // Input point 4: X(3)
         curr_in = in + in_strides[3];
-        LDR_512_S(curr_in, v_in_stride, v_in1);
+        LDR_512_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 14: X(13)
         curr_in = in + in_strides[13];
-        LDR_512_S(curr_in, v_in_stride, v_in2);
+        LDR_512_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 6: X(5)
         curr_in = in + in_strides[5];
-        LDR_512_S(curr_in, v_in_stride, v_in3);
+        LDR_512_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_add_ps(v_in1, v_in2);
         v_s1 = _mm512_sub_ps(v_in1, v_in2);
@@ -1135,13 +1139,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 5: X(4)
         curr_in = in + in_strides[4];
-        LDR_512_S(curr_in, v_in_stride, v_in1);
+        LDR_512_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 15: X(14)
         curr_in = in + in_strides[14];
-        LDR_512_S(curr_in, v_in_stride, v_in2);
+        LDR_512_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 7: X(6)
         curr_in = in + in_strides[6];
-        LDR_512_S(curr_in, v_in_stride, v_in3);
+        LDR_512_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_add_ps(v_in1, v_in2);
         v_s4 = _mm512_sub_ps(v_in1, v_in2);
@@ -1150,13 +1154,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 2: X(1)
         curr_in = in + in_strides[1];
-        LDR_512_S(curr_in, v_in_stride, v_in1);
+        LDR_512_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 8: X(7)
         curr_in = in + in_strides[7];
-        LDR_512_S(curr_in, v_in_stride, v_in2);
+        LDR_512_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 12: X(11)
         curr_in = in + in_strides[11];
-        LDR_512_S(curr_in, v_in_stride, v_in3);
+        LDR_512_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_add_ps(v_in1, v_in2);
         v_s7 = _mm512_sub_ps(v_in2, v_in1);
@@ -1165,13 +1169,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 3: X(2)
         curr_in = in + in_strides[2];
-        LDR_512_S(curr_in, v_in_stride, v_in1);
+        LDR_512_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 9: X(8)
         curr_in = in + in_strides[8];
-        LDR_512_S(curr_in, v_in_stride, v_in2);
+        LDR_512_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 13: X(12)
         curr_in = in + in_strides[12];
-        LDR_512_S(curr_in, v_in_stride, v_in3);
+        LDR_512_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_sub_ps(v_in1, v_in2);
         v_s10 = _mm512_add_ps(v_in2, v_in1);
@@ -1180,10 +1184,10 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 10: X(9)
         curr_in = in + in_strides[9];
-        LDR_512_S(curr_in, v_in_stride, v_in1);
+        LDR_512_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 11: X(10)
         curr_in = in + in_strides[10];
-        LDR_512_S(curr_in, v_in_stride, v_in2);
+        LDR_512_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_s13 = _mm512_add_ps(v_in0, _mm512_mul_ps(v_CRTM_15_5, v_in1));
         v_s14 = _mm512_sub_ps(v_in0, v_in1);
@@ -1193,7 +1197,7 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Output point 1: X(0)
         v_out0 = _mm512_add_ps(v_s13, _mm512_mul_ps(v_CRTM_15_5, v_s15));
-        STR_512_S(curr_out, v_out_stride, v_out0);
+        STR_512_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
 
         v_s17 = _mm512_add_ps(_mm512_mul_ps(v_CRTM_15_3, v_s11),
                               _mm512_mul_ps(v_CRTM_15_4, v_s5));
@@ -1202,12 +1206,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 2: X(1)
         v_out3 = _mm512_sub_ps(v_s18, v_s17);
         curr_out = out + out_strides[3];
-        STR_512_S(curr_out, v_out_stride, v_out3);
+        STR_512_S(curr_out, v_out_stride, v_out3, is_contiguous_out);
 
         // Output point 7: X(6)
         v_out12 = _mm512_add_ps(v_s18, v_s17);
         curr_out = out + out_strides[12];
-        STR_512_S(curr_out, v_out_stride, v_out12);
+        STR_512_S(curr_out, v_out_stride, v_out12, is_contiguous_out);
 
         v_s19 = _mm512_sub_ps(v_s16, v_t0);
         v_s20 = _mm512_sub_ps(_mm512_mul_ps(v_CRTM_15_4, v_s11),
@@ -1216,12 +1220,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 4: X(3)
         v_out6 = _mm512_sub_ps(v_s19, v_s20);
         curr_out = out + out_strides[6];
-        STR_512_S(curr_out, v_out_stride, v_out6);
+        STR_512_S(curr_out, v_out_stride, v_out6, is_contiguous_out);
 
         // Output point 5: X(4)
         v_out9 = _mm512_add_ps(v_s19, v_s20);
         curr_out = out + out_strides[9];
-        STR_512_S(curr_out, v_out_stride, v_out9);
+        STR_512_S(curr_out, v_out_stride, v_out9, is_contiguous_out);
 
         v_t1 = _mm512_mul_ps(v_CRTM_15_1, _mm512_sub_ps(v_s9, v_s3));
         v_t2 = _mm512_mul_ps(v_CRTM_15_9, _mm512_add_ps(v_s4, v_s10));
@@ -1233,12 +1237,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 3: X(2)
         v_out5 = _mm512_add_ps(v_s40, v_t4);
         curr_out = out + out_strides[5];
-        STR_512_S(curr_out, v_out_stride, v_out5);
+        STR_512_S(curr_out, v_out_stride, v_out5, is_contiguous_out);
 
         // Output point 6: X(5)
         v_out10 = _mm512_sub_ps(v_s40, v_t4);
         curr_out = out + out_strides[10];
-        STR_512_S(curr_out, v_out_stride, v_out10);
+        STR_512_S(curr_out, v_out_stride, v_out10, is_contiguous_out);
 
         v_s23 = _mm512_sub_ps(v_s14, _mm512_mul_ps(v_CRTM_15_2, v_s21));
         v_t5 = _mm512_mul_ps(v_CRTM_15_10,
@@ -1259,12 +1263,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 1: X(0)
         v_out1 = _mm512_add_ps(v_s28, v_s31);
         curr_out = out + out_strides[1];
-        STR_512_S(curr_out, v_out_stride, v_out1);
+        STR_512_S(curr_out, v_out_stride, v_out1, is_contiguous_out);
 
         // Output point 3: X(2)
         v_out4 = _mm512_sub_ps(v_s28, v_s31);
         curr_out = out + out_strides[4];
-        STR_512_S(curr_out, v_out_stride, v_out4);
+        STR_512_S(curr_out, v_out_stride, v_out4, is_contiguous_out);
 
         v_s33 = _mm512_add_ps(v_s24, v_s27);
         v_s34 = _mm512_add_ps(_mm512_mul_ps(v_CRTM_15_8, v_s7),
@@ -1276,12 +1280,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 4: X(3)
         v_out7 = _mm512_add_ps(v_s33, v_s36);
         curr_out = out + out_strides[7];
-        STR_512_S(curr_out, v_out_stride, v_out7);
+        STR_512_S(curr_out, v_out_stride, v_out7, is_contiguous_out);
 
         // Output point 7: X(6)
         v_out13 = _mm512_sub_ps(v_s33, v_s36);
         curr_out = out + out_strides[13];
-        STR_512_S(curr_out, v_out_stride, v_out13);
+        STR_512_S(curr_out, v_out_stride, v_out13, is_contiguous_out);
 
         v_s37 = _mm512_sub_ps(v_s25, v_s26);
         v_s38 = _mm512_sub_ps(v_s35, v_s34);
@@ -1289,24 +1293,24 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 2: X(1)
         v_out2 = _mm512_add_ps(v_s37, v_s38);
         curr_out = out + out_strides[2];
-        STR_512_S(curr_out, v_out_stride, v_out2);
+        STR_512_S(curr_out, v_out_stride, v_out2, is_contiguous_out);
 
         // Output point 5: X(4)
         v_out8 = _mm512_sub_ps(v_s37, v_s38);
         curr_out = out + out_strides[8];
-        STR_512_S(curr_out, v_out_stride, v_out8);
+        STR_512_S(curr_out, v_out_stride, v_out8, is_contiguous_out);
 
         v_s39 = _mm512_add_ps(v_s25, v_s26);
 
         // Output point 6: X(5)
         v_out11 = _mm512_sub_ps(v_s39, v_s32);
         curr_out = out + out_strides[11];
-        STR_512_S(curr_out, v_out_stride, v_out11);
+        STR_512_S(curr_out, v_out_stride, v_out11, is_contiguous_out);
 
         // Output point 8: X(7)
         v_out14 = _mm512_add_ps(v_s39, v_s32);
         curr_out = out + out_strides[14];
-        STR_512_S(curr_out, v_out_stride, v_out14);
+        STR_512_S(curr_out, v_out_stride, v_out14, is_contiguous_out);
 
         in = in + (v_in_stride << 4);
         out = out + (v_out_stride << 4);
@@ -1340,16 +1344,16 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 1: X(0)
         curr_in = in + in_strides[0];
-        LDR_256_S(curr_in, v_in_stride, v_in0);
+        LDR_256_S(curr_in, v_in_stride, v_in0, is_contiguous_in);
         // Input point 4: X(3)
         curr_in = in + in_strides[3];
-        LDR_256_S(curr_in, v_in_stride, v_in1);
+        LDR_256_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 14: X(13)
         curr_in = in + in_strides[13];
-        LDR_256_S(curr_in, v_in_stride, v_in2);
+        LDR_256_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 6: X(5)
         curr_in = in + in_strides[5];
-        LDR_256_S(curr_in, v_in_stride, v_in3);
+        LDR_256_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_add_ps(v_in1, v_in2);
         v_s1 = _mm256_sub_ps(v_in1, v_in2);
@@ -1358,13 +1362,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 5: X(4)
         curr_in = in + in_strides[4];
-        LDR_256_S(curr_in, v_in_stride, v_in1);
+        LDR_256_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 15: X(14)
         curr_in = in + in_strides[14];
-        LDR_256_S(curr_in, v_in_stride, v_in2);
+        LDR_256_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 7: X(6)
         curr_in = in + in_strides[6];
-        LDR_256_S(curr_in, v_in_stride, v_in3);
+        LDR_256_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_add_ps(v_in1, v_in2);
         v_s4 = _mm256_sub_ps(v_in1, v_in2);
@@ -1373,13 +1377,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 2: X(1)
         curr_in = in + in_strides[1];
-        LDR_256_S(curr_in, v_in_stride, v_in1);
+        LDR_256_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 8: X(7)
         curr_in = in + in_strides[7];
-        LDR_256_S(curr_in, v_in_stride, v_in2);
+        LDR_256_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 12: X(11)
         curr_in = in + in_strides[11];
-        LDR_256_S(curr_in, v_in_stride, v_in3);
+        LDR_256_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_add_ps(v_in1, v_in2);
         v_s7 = _mm256_sub_ps(v_in2, v_in1);
@@ -1388,13 +1392,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 3: X(2)
         curr_in = in + in_strides[2];
-        LDR_256_S(curr_in, v_in_stride, v_in1);
+        LDR_256_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 9: X(8)
         curr_in = in + in_strides[8];
-        LDR_256_S(curr_in, v_in_stride, v_in2);
+        LDR_256_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 13: X(12)
         curr_in = in + in_strides[12];
-        LDR_256_S(curr_in, v_in_stride, v_in3);
+        LDR_256_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_sub_ps(v_in1, v_in2);
         v_s10 = _mm256_add_ps(v_in2, v_in1);
@@ -1403,10 +1407,10 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 10: X(9)
         curr_in = in + in_strides[9];
-        LDR_256_S(curr_in, v_in_stride, v_in1);
+        LDR_256_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 11: X(10)
         curr_in = in + in_strides[10];
-        LDR_256_S(curr_in, v_in_stride, v_in2);
+        LDR_256_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_s13 = _mm256_add_ps(v_in0, _mm256_mul_ps(v256_CRTM_15_5, v_in1));
         v_s14 = _mm256_sub_ps(v_in0, v_in1);
@@ -1416,7 +1420,7 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Output point 1: X(0)
         v_out0 = _mm256_add_ps(v_s13, _mm256_mul_ps(v256_CRTM_15_5, v_s15));
-        STR_256_S(curr_out, v_out_stride, v_out0);
+        STR_256_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
 
         v_s17 = _mm256_add_ps(_mm256_mul_ps(v256_CRTM_15_3, v_s11),
                               _mm256_mul_ps(v256_CRTM_15_4, v_s5));
@@ -1425,12 +1429,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 2: X(1)
         v_out3 = _mm256_sub_ps(v_s18, v_s17);
         curr_out = out + out_strides[3];
-        STR_256_S(curr_out, v_out_stride, v_out3);
+        STR_256_S(curr_out, v_out_stride, v_out3, is_contiguous_out);
 
         // Output point 7: X(6)
         v_out12 = _mm256_add_ps(v_s18, v_s17);
         curr_out = out + out_strides[12];
-        STR_256_S(curr_out, v_out_stride, v_out12);
+        STR_256_S(curr_out, v_out_stride, v_out12, is_contiguous_out);
 
         v_s19 = _mm256_sub_ps(v_s16, v_t0);
         v_s20 = _mm256_sub_ps(_mm256_mul_ps(v256_CRTM_15_4, v_s11),
@@ -1439,12 +1443,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 4: X(3)
         v_out6 = _mm256_sub_ps(v_s19, v_s20);
         curr_out = out + out_strides[6];
-        STR_256_S(curr_out, v_out_stride, v_out6);
+        STR_256_S(curr_out, v_out_stride, v_out6, is_contiguous_out);
 
         // Output point 5: X(4)
         v_out9 = _mm256_add_ps(v_s19, v_s20);
         curr_out = out + out_strides[9];
-        STR_256_S(curr_out, v_out_stride, v_out9);
+        STR_256_S(curr_out, v_out_stride, v_out9, is_contiguous_out);
 
         v_t1 = _mm256_mul_ps(v256_CRTM_15_1, _mm256_sub_ps(v_s9, v_s3));
         v_t2 = _mm256_mul_ps(v256_CRTM_15_9, _mm256_add_ps(v_s4, v_s10));
@@ -1456,12 +1460,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 3: X(2)
         v_out5 = _mm256_add_ps(v_s40, v_t4);
         curr_out = out + out_strides[5];
-        STR_256_S(curr_out, v_out_stride, v_out5);
+        STR_256_S(curr_out, v_out_stride, v_out5, is_contiguous_out);
 
         // Output point 6: X(5)
         v_out10 = _mm256_sub_ps(v_s40, v_t4);
         curr_out = out + out_strides[10];
-        STR_256_S(curr_out, v_out_stride, v_out10);
+        STR_256_S(curr_out, v_out_stride, v_out10, is_contiguous_out);
 
         v_s23 = _mm256_sub_ps(v_s14, _mm256_mul_ps(v256_CRTM_15_2, v_s21));
         v_t5 = _mm256_mul_ps(v256_CRTM_15_10,
@@ -1482,12 +1486,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 1: X(0)
         v_out1 = _mm256_add_ps(v_s28, v_s31);
         curr_out = out + out_strides[1];
-        STR_256_S(curr_out, v_out_stride, v_out1);
+        STR_256_S(curr_out, v_out_stride, v_out1, is_contiguous_out);
 
         // Output point 3: X(2)
         v_out4 = _mm256_sub_ps(v_s28, v_s31);
         curr_out = out + out_strides[4];
-        STR_256_S(curr_out, v_out_stride, v_out4);
+        STR_256_S(curr_out, v_out_stride, v_out4, is_contiguous_out);
 
         v_s33 = _mm256_add_ps(v_s24, v_s27);
         v_s34 = _mm256_add_ps(_mm256_mul_ps(v256_CRTM_15_8, v_s7),
@@ -1499,12 +1503,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 4: X(3)
         v_out7 = _mm256_add_ps(v_s33, v_s36);
         curr_out = out + out_strides[7];
-        STR_256_S(curr_out, v_out_stride, v_out7);
+        STR_256_S(curr_out, v_out_stride, v_out7, is_contiguous_out);
 
         // Output point 7: X(6)
         v_out13 = _mm256_sub_ps(v_s33, v_s36);
         curr_out = out + out_strides[13];
-        STR_256_S(curr_out, v_out_stride, v_out13);
+        STR_256_S(curr_out, v_out_stride, v_out13, is_contiguous_out);
 
         v_s37 = _mm256_sub_ps(v_s25, v_s26);
         v_s38 = _mm256_sub_ps(v_s35, v_s34);
@@ -1512,24 +1516,24 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 2: X(1)
         v_out2 = _mm256_add_ps(v_s37, v_s38);
         curr_out = out + out_strides[2];
-        STR_256_S(curr_out, v_out_stride, v_out2);
+        STR_256_S(curr_out, v_out_stride, v_out2, is_contiguous_out);
 
         // Output point 5: X(4)
         v_out8 = _mm256_sub_ps(v_s37, v_s38);
         curr_out = out + out_strides[8];
-        STR_256_S(curr_out, v_out_stride, v_out8);
+        STR_256_S(curr_out, v_out_stride, v_out8, is_contiguous_out);
 
         v_s39 = _mm256_add_ps(v_s25, v_s26);
 
         // Output point 6: X(5)
         v_out11 = _mm256_sub_ps(v_s39, v_s32);
         curr_out = out + out_strides[11];
-        STR_256_S(curr_out, v_out_stride, v_out11);
+        STR_256_S(curr_out, v_out_stride, v_out11, is_contiguous_out);
 
         // Output point 8: X(7)
         v_out14 = _mm256_add_ps(v_s39, v_s32);
         curr_out = out + out_strides[14];
-        STR_256_S(curr_out, v_out_stride, v_out14);
+        STR_256_S(curr_out, v_out_stride, v_out14, is_contiguous_out);
 
         in = in + (v_in_stride << 3);
         out = out + (v_out_stride << 3);
@@ -1563,16 +1567,16 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 1: X(0)
         curr_in = in + in_strides[0];
-        LDR_128_S(curr_in, v_in_stride, v_in0);
+        LDR_128_S(curr_in, v_in_stride, v_in0, is_contiguous_in);
         // Input point 4: X(3)
         curr_in = in + in_strides[3];
-        LDR_128_S(curr_in, v_in_stride, v_in1);
+        LDR_128_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 14: X(13)
         curr_in = in + in_strides[13];
-        LDR_128_S(curr_in, v_in_stride, v_in2);
+        LDR_128_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 6: X(5)
         curr_in = in + in_strides[5];
-        LDR_128_S(curr_in, v_in_stride, v_in3);
+        LDR_128_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_add_ps(v_in1, v_in2);
         v_s1 = _mm_sub_ps(v_in1, v_in2);
@@ -1581,13 +1585,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 5: X(4)
         curr_in = in + in_strides[4];
-        LDR_128_S(curr_in, v_in_stride, v_in1);
+        LDR_128_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 15: X(14)
         curr_in = in + in_strides[14];
-        LDR_128_S(curr_in, v_in_stride, v_in2);
+        LDR_128_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 7: X(6)
         curr_in = in + in_strides[6];
-        LDR_128_S(curr_in, v_in_stride, v_in3);
+        LDR_128_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_add_ps(v_in1, v_in2);
         v_s4 = _mm_sub_ps(v_in1, v_in2);
@@ -1596,13 +1600,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 2: X(1)
         curr_in = in + in_strides[1];
-        LDR_128_S(curr_in, v_in_stride, v_in1);
+        LDR_128_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 8: X(7)
         curr_in = in + in_strides[7];
-        LDR_128_S(curr_in, v_in_stride, v_in2);
+        LDR_128_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 12: X(11)
         curr_in = in + in_strides[11];
-        LDR_128_S(curr_in, v_in_stride, v_in3);
+        LDR_128_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_add_ps(v_in1, v_in2);
         v_s7 = _mm_sub_ps(v_in2, v_in1);
@@ -1611,13 +1615,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 3: X(2)
         curr_in = in + in_strides[2];
-        LDR_128_S(curr_in, v_in_stride, v_in1);
+        LDR_128_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 9: X(8)
         curr_in = in + in_strides[8];
-        LDR_128_S(curr_in, v_in_stride, v_in2);
+        LDR_128_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 13: X(12)
         curr_in = in + in_strides[12];
-        LDR_128_S(curr_in, v_in_stride, v_in3);
+        LDR_128_S(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_sub_ps(v_in1, v_in2);
         v_s10 = _mm_add_ps(v_in2, v_in1);
@@ -1626,10 +1630,10 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Input point 10: X(9)
         curr_in = in + in_strides[9];
-        LDR_128_S(curr_in, v_in_stride, v_in1);
+        LDR_128_S(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 11: X(10)
         curr_in = in + in_strides[10];
-        LDR_128_S(curr_in, v_in_stride, v_in2);
+        LDR_128_S(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_s13 = _mm_add_ps(v_in0, _mm_mul_ps(v128_CRTM_15_5, v_in1));
         v_s14 = _mm_sub_ps(v_in0, v_in1);
@@ -1639,7 +1643,7 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
 
         // Output point 1: X(0)
         v_out0 = _mm_add_ps(v_s13, _mm_mul_ps(v128_CRTM_15_5, v_s15));
-        STR_128_S(curr_out, v_out_stride, v_out0);
+        STR_128_S(curr_out, v_out_stride, v_out0, is_contiguous_out);
 
         v_s17 = _mm_add_ps(_mm_mul_ps(v128_CRTM_15_3, v_s11),
                            _mm_mul_ps(v128_CRTM_15_4, v_s5));
@@ -1648,12 +1652,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 2: X(1)
         v_out3 = _mm_sub_ps(v_s18, v_s17);
         curr_out = out + out_strides[3];
-        STR_128_S(curr_out, v_out_stride, v_out3);
+        STR_128_S(curr_out, v_out_stride, v_out3, is_contiguous_out);
 
         // Output point 7: X(6)
         v_out12 = _mm_add_ps(v_s18, v_s17);
         curr_out = out + out_strides[12];
-        STR_128_S(curr_out, v_out_stride, v_out12);
+        STR_128_S(curr_out, v_out_stride, v_out12, is_contiguous_out);
 
         v_s19 = _mm_sub_ps(v_s16, v_t0);
         v_s20 = _mm_sub_ps(_mm_mul_ps(v128_CRTM_15_4, v_s11),
@@ -1662,12 +1666,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 4: X(3)
         v_out6 = _mm_sub_ps(v_s19, v_s20);
         curr_out = out + out_strides[6];
-        STR_128_S(curr_out, v_out_stride, v_out6);
+        STR_128_S(curr_out, v_out_stride, v_out6, is_contiguous_out);
 
         // Output point 5: X(4)
         v_out9 = _mm_add_ps(v_s19, v_s20);
         curr_out = out + out_strides[9];
-        STR_128_S(curr_out, v_out_stride, v_out9);
+        STR_128_S(curr_out, v_out_stride, v_out9, is_contiguous_out);
 
         v_t1 = _mm_mul_ps(v128_CRTM_15_1, _mm_sub_ps(v_s9, v_s3));
         v_t2 = _mm_mul_ps(v128_CRTM_15_9, _mm_add_ps(v_s4, v_s10));
@@ -1679,12 +1683,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 3: X(2)
         v_out5 = _mm_add_ps(v_s40, v_t4);
         curr_out = out + out_strides[5];
-        STR_128_S(curr_out, v_out_stride, v_out5);
+        STR_128_S(curr_out, v_out_stride, v_out5, is_contiguous_out);
 
         // Output point 6: X(5)
         v_out10 = _mm_sub_ps(v_s40, v_t4);
         curr_out = out + out_strides[10];
-        STR_128_S(curr_out, v_out_stride, v_out10);
+        STR_128_S(curr_out, v_out_stride, v_out10, is_contiguous_out);
 
         v_s23 = _mm_sub_ps(v_s14, _mm_mul_ps(v128_CRTM_15_2, v_s21));
         v_t5 = _mm_mul_ps(v128_CRTM_15_10,
@@ -1705,12 +1709,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 1: X(0)
         v_out1 = _mm_add_ps(v_s28, v_s31);
         curr_out = out + out_strides[1];
-        STR_128_S(curr_out, v_out_stride, v_out1);
+        STR_128_S(curr_out, v_out_stride, v_out1, is_contiguous_out);
 
         // Output point 3: X(2)
         v_out4 = _mm_sub_ps(v_s28, v_s31);
         curr_out = out + out_strides[4];
-        STR_128_S(curr_out, v_out_stride, v_out4);
+        STR_128_S(curr_out, v_out_stride, v_out4, is_contiguous_out);
 
         v_s33 = _mm_add_ps(v_s24, v_s27);
         v_s34 = _mm_add_ps(_mm_mul_ps(v128_CRTM_15_8, v_s7),
@@ -1722,12 +1726,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 4: X(3)
         v_out7 = _mm_add_ps(v_s33, v_s36);
         curr_out = out + out_strides[7];
-        STR_128_S(curr_out, v_out_stride, v_out7);
+        STR_128_S(curr_out, v_out_stride, v_out7, is_contiguous_out);
 
         // Output point 7: X(6)
         v_out13 = _mm_sub_ps(v_s33, v_s36);
         curr_out = out + out_strides[13];
-        STR_128_S(curr_out, v_out_stride, v_out13);
+        STR_128_S(curr_out, v_out_stride, v_out13, is_contiguous_out);
 
         v_s37 = _mm_sub_ps(v_s25, v_s26);
         v_s38 = _mm_sub_ps(v_s35, v_s34);
@@ -1735,24 +1739,24 @@ static FFTZ_VOID r2hc_rfft15avx512_fp32_bwd(FFTZ_VOID *in_real,
         // Output point 2: X(1)
         v_out2 = _mm_add_ps(v_s37, v_s38);
         curr_out = out + out_strides[2];
-        STR_128_S(curr_out, v_out_stride, v_out2);
+        STR_128_S(curr_out, v_out_stride, v_out2, is_contiguous_out);
 
         // Output point 5: X(4)
         v_out8 = _mm_sub_ps(v_s37, v_s38);
         curr_out = out + out_strides[8];
-        STR_128_S(curr_out, v_out_stride, v_out8);
+        STR_128_S(curr_out, v_out_stride, v_out8, is_contiguous_out);
 
         v_s39 = _mm_add_ps(v_s25, v_s26);
 
         // Output point 6: X(5)
         v_out11 = _mm_sub_ps(v_s39, v_s32);
         curr_out = out + out_strides[11];
-        STR_128_S(curr_out, v_out_stride, v_out11);
+        STR_128_S(curr_out, v_out_stride, v_out11, is_contiguous_out);
 
         // Output point 8: X(7)
         v_out14 = _mm_add_ps(v_s39, v_s32);
         curr_out = out + out_strides[14];
-        STR_128_S(curr_out, v_out_stride, v_out14);
+        STR_128_S(curr_out, v_out_stride, v_out14, is_contiguous_out);
 
         in = in + (v_in_stride << 2);
         out = out + (v_out_stride << 2);
@@ -2141,6 +2145,8 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 #endif
     FFTZ_INTP v_in_stride = strides->v_in_stride;
     FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_UINT8 is_contiguous_in = (v_in_stride == 1);
+    FFTZ_UINT8 is_contiguous_out = (v_out_stride == 1);
 
     FFTZ_INTP cnt;
     FFTZ_DOUBLE *curr_in, *curr_out;
@@ -2174,16 +2180,16 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 1: X(0)
         curr_in = in + in_strides[0];
-        LDR_512_D(curr_in, v_in_stride, v_in0);
+        LDR_512_D(curr_in, v_in_stride, v_in0, is_contiguous_in);
         // Input point 3: X(2)
         curr_in = in + in_strides[2];
-        LDR_512_D(curr_in, v_in_stride, v_in1);
+        LDR_512_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 8: X(7)
         curr_in = in + in_strides[7];
-        LDR_512_D(curr_in, v_in_stride, v_in2);
+        LDR_512_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 13: X(12)
         curr_in = in + in_strides[12];
-        LDR_512_D(curr_in, v_in_stride, v_in3);
+        LDR_512_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_add_pd(v_in1, v_in2);
         v_s1 = _mm512_sub_pd(v_in1, v_in2);
@@ -2192,13 +2198,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 9: X(8)
         curr_in = in + in_strides[8];
-        LDR_512_D(curr_in, v_in_stride, v_in1);
+        LDR_512_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 14: X(13)
         curr_in = in + in_strides[13];
-        LDR_512_D(curr_in, v_in_stride, v_in2);
+        LDR_512_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 4: X(3)
         curr_in = in + in_strides[3];
-        LDR_512_D(curr_in, v_in_stride, v_in3);
+        LDR_512_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_add_pd(v_in1, v_in2);
         v_s4 = _mm512_sub_pd(v_in2, v_in1);
@@ -2212,13 +2218,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 2: X(1)
         curr_in = in + in_strides[1];
-        LDR_512_D(curr_in, v_in_stride, v_in1);
+        LDR_512_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 12: X(11)
         curr_in = in + in_strides[11];
-        LDR_512_D(curr_in, v_in_stride, v_in2);
+        LDR_512_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 7: X(6)
         curr_in = in + in_strides[6];
-        LDR_512_D(curr_in, v_in_stride, v_in3);
+        LDR_512_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_add_pd(v_in1, v_in2);
         v_s1 = _mm512_sub_pd(v_in2, v_in1);
@@ -2227,13 +2233,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 5: X(4)
         curr_in = in + in_strides[4];
-        LDR_512_D(curr_in, v_in_stride, v_in1);
+        LDR_512_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 15: X(14)
         curr_in = in + in_strides[14];
-        LDR_512_D(curr_in, v_in_stride, v_in2);
+        LDR_512_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 10: X(9)
         curr_in = in + in_strides[9];
-        LDR_512_D(curr_in, v_in_stride, v_in3);
+        LDR_512_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_add_pd(v_in1, v_in2);
         v_s4 = _mm512_sub_pd(v_in2, v_in1);
@@ -2247,10 +2253,10 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 6: X(5)
         curr_in = in + in_strides[5];
-        LDR_512_D(curr_in, v_in_stride, v_in1);
+        LDR_512_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 11: X(10)
         curr_in = in + in_strides[10];
-        LDR_512_D(curr_in, v_in_stride, v_in2);
+        LDR_512_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_s0 = _mm512_add_pd(v_in1, v_in2);
         v_t0 = _mm512_mul_pd(v_CRTM_15_6, _mm512_sub_pd(v_in2, v_in1));
@@ -2267,7 +2273,7 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Output point 1: X(0)
         v_out0 = _mm512_add_pd(v_s9, v_s13);
-        STR_512_D(curr_out, v_out_stride, v_out0);
+        STR_512_D(curr_out, v_out_stride, v_out0, is_contiguous_out);
 
         // Output point 3: X(2)
         v_out5 = _mm512_add_pd(v_s15, v_t1);
@@ -2379,16 +2385,16 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 1: X(0)
         curr_in = in + in_strides[0];
-        LDR_256_D(curr_in, v_in_stride, v_in0);
+        LDR_256_D(curr_in, v_in_stride, v_in0, is_contiguous_in);
         // Input point 3: X(2)
         curr_in = in + in_strides[2];
-        LDR_256_D(curr_in, v_in_stride, v_in1);
+        LDR_256_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 8: X(7)
         curr_in = in + in_strides[7];
-        LDR_256_D(curr_in, v_in_stride, v_in2);
+        LDR_256_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 13: X(12)
         curr_in = in + in_strides[12];
-        LDR_256_D(curr_in, v_in_stride, v_in3);
+        LDR_256_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_add_pd(v_in1, v_in2);
         v_s1 = _mm256_sub_pd(v_in1, v_in2);
@@ -2397,13 +2403,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 9: X(8)
         curr_in = in + in_strides[8];
-        LDR_256_D(curr_in, v_in_stride, v_in1);
+        LDR_256_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 14: X(13)
         curr_in = in + in_strides[13];
-        LDR_256_D(curr_in, v_in_stride, v_in2);
+        LDR_256_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 4: X(3)
         curr_in = in + in_strides[3];
-        LDR_256_D(curr_in, v_in_stride, v_in3);
+        LDR_256_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_add_pd(v_in1, v_in2);
         v_s4 = _mm256_sub_pd(v_in2, v_in1);
@@ -2417,13 +2423,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 2: X(1)
         curr_in = in + in_strides[1];
-        LDR_256_D(curr_in, v_in_stride, v_in1);
+        LDR_256_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 12: X(11)
         curr_in = in + in_strides[11];
-        LDR_256_D(curr_in, v_in_stride, v_in2);
+        LDR_256_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 7: X(6)
         curr_in = in + in_strides[6];
-        LDR_256_D(curr_in, v_in_stride, v_in3);
+        LDR_256_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_add_pd(v_in1, v_in2);
         v_s1 = _mm256_sub_pd(v_in2, v_in1);
@@ -2432,13 +2438,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 5: X(4)
         curr_in = in + in_strides[4];
-        LDR_256_D(curr_in, v_in_stride, v_in1);
+        LDR_256_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 15: X(14)
         curr_in = in + in_strides[14];
-        LDR_256_D(curr_in, v_in_stride, v_in2);
+        LDR_256_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 10: X(9)
         curr_in = in + in_strides[9];
-        LDR_256_D(curr_in, v_in_stride, v_in3);
+        LDR_256_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_add_pd(v_in1, v_in2);
         v_s4 = _mm256_sub_pd(v_in2, v_in1);
@@ -2452,10 +2458,10 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 6: X(5)
         curr_in = in + in_strides[5];
-        LDR_256_D(curr_in, v_in_stride, v_in1);
+        LDR_256_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 11: X(10)
         curr_in = in + in_strides[10];
-        LDR_256_D(curr_in, v_in_stride, v_in2);
+        LDR_256_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_s0 = _mm256_add_pd(v_in1, v_in2);
         v_t0 = _mm256_mul_pd(v256_CRTM_15_6, _mm256_sub_pd(v_in2, v_in1));
@@ -2472,7 +2478,7 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Output point 1: X(0)
         v_out0 = _mm256_add_pd(v_s9, v_s13);
-        STR_256_D(curr_out, v_out_stride, v_out0);
+        STR_256_D(curr_out, v_out_stride, v_out0, is_contiguous_out);
 
         // Output point 3: X(2)
         v_out5 = _mm256_add_pd(v_s15, v_t1);
@@ -2584,16 +2590,16 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 1: X(0)
         curr_in = in + in_strides[0];
-        LDR_128_D(curr_in, v_in_stride, v_in0);
+        LDR_128_D(curr_in, v_in_stride, v_in0, is_contiguous_in);
         // Input point 3: X(2)
         curr_in = in + in_strides[2];
-        LDR_128_D(curr_in, v_in_stride, v_in1);
+        LDR_128_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 8: X(7)
         curr_in = in + in_strides[7];
-        LDR_128_D(curr_in, v_in_stride, v_in2);
+        LDR_128_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 13: X(12)
         curr_in = in + in_strides[12];
-        LDR_128_D(curr_in, v_in_stride, v_in3);
+        LDR_128_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_add_pd(v_in1, v_in2);
         v_s1 = _mm_sub_pd(v_in1, v_in2);
@@ -2602,13 +2608,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 9: X(8)
         curr_in = in + in_strides[8];
-        LDR_128_D(curr_in, v_in_stride, v_in1);
+        LDR_128_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 14: X(13)
         curr_in = in + in_strides[13];
-        LDR_128_D(curr_in, v_in_stride, v_in2);
+        LDR_128_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 4: X(3)
         curr_in = in + in_strides[3];
-        LDR_128_D(curr_in, v_in_stride, v_in3);
+        LDR_128_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_add_pd(v_in1, v_in2);
         v_s4 = _mm_sub_pd(v_in2, v_in1);
@@ -2622,13 +2628,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 2: X(1)
         curr_in = in + in_strides[1];
-        LDR_128_D(curr_in, v_in_stride, v_in1);
+        LDR_128_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 12: X(11)
         curr_in = in + in_strides[11];
-        LDR_128_D(curr_in, v_in_stride, v_in2);
+        LDR_128_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 7: X(6)
         curr_in = in + in_strides[6];
-        LDR_128_D(curr_in, v_in_stride, v_in3);
+        LDR_128_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_add_pd(v_in1, v_in2);
         v_s1 = _mm_sub_pd(v_in2, v_in1);
@@ -2637,13 +2643,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 5: X(4)
         curr_in = in + in_strides[4];
-        LDR_128_D(curr_in, v_in_stride, v_in1);
+        LDR_128_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 15: X(14)
         curr_in = in + in_strides[14];
-        LDR_128_D(curr_in, v_in_stride, v_in2);
+        LDR_128_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 10: X(9)
         curr_in = in + in_strides[9];
-        LDR_128_D(curr_in, v_in_stride, v_in3);
+        LDR_128_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_add_pd(v_in1, v_in2);
         v_s4 = _mm_sub_pd(v_in2, v_in1);
@@ -2657,10 +2663,10 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Input point 6: X(5)
         curr_in = in + in_strides[5];
-        LDR_128_D(curr_in, v_in_stride, v_in1);
+        LDR_128_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 11: X(10)
         curr_in = in + in_strides[10];
-        LDR_128_D(curr_in, v_in_stride, v_in2);
+        LDR_128_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_s0 = _mm_add_pd(v_in1, v_in2);
         v_t0 = _mm_mul_pd(v128_CRTM_15_6, _mm_sub_pd(v_in2, v_in1));
@@ -2677,7 +2683,7 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_fwd(FFTZ_VOID *in_real,
 
         // Output point 1: X(0)
         v_out0 = _mm_add_pd(v_s9, v_s13);
-        STR_128_D(curr_out, v_out_stride, v_out0);
+        STR_128_D(curr_out, v_out_stride, v_out0, is_contiguous_out);
 
         // Output point 3: X(2)
         v_out5 = _mm_add_pd(v_s15, v_t1);
@@ -2924,6 +2930,8 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 #endif
     FFTZ_INTP v_in_stride = strides->v_in_stride;
     FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_UINT8 is_contiguous_in = (v_in_stride == 1);
+    FFTZ_UINT8 is_contiguous_out = (v_out_stride == 1);
 
     FFTZ_INTP cnt;
     FFTZ_DOUBLE *curr_in, *curr_out;
@@ -2958,16 +2966,16 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 1: X(0)
         curr_in = in + in_strides[0];
-        LDR_512_D(curr_in, v_in_stride, v_in0);
+        LDR_512_D(curr_in, v_in_stride, v_in0, is_contiguous_in);
         // Input point 4: X(3)
         curr_in = in + in_strides[3];
-        LDR_512_D(curr_in, v_in_stride, v_in1);
+        LDR_512_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 14: X(13)
         curr_in = in + in_strides[13];
-        LDR_512_D(curr_in, v_in_stride, v_in2);
+        LDR_512_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 6: X(5)
         curr_in = in + in_strides[5];
-        LDR_512_D(curr_in, v_in_stride, v_in3);
+        LDR_512_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_add_pd(v_in1, v_in2);
         v_s1 = _mm512_sub_pd(v_in1, v_in2);
@@ -2976,13 +2984,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 5: X(4)
         curr_in = in + in_strides[4];
-        LDR_512_D(curr_in, v_in_stride, v_in1);
+        LDR_512_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 15: X(14)
         curr_in = in + in_strides[14];
-        LDR_512_D(curr_in, v_in_stride, v_in2);
+        LDR_512_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 7: X(6)
         curr_in = in + in_strides[6];
-        LDR_512_D(curr_in, v_in_stride, v_in3);
+        LDR_512_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_add_pd(v_in1, v_in2);
         v_s4 = _mm512_sub_pd(v_in1, v_in2);
@@ -2991,13 +2999,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 2: X(1)
         curr_in = in + in_strides[1];
-        LDR_512_D(curr_in, v_in_stride, v_in1);
+        LDR_512_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 8: X(7)
         curr_in = in + in_strides[7];
-        LDR_512_D(curr_in, v_in_stride, v_in2);
+        LDR_512_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 12: X(11)
         curr_in = in + in_strides[11];
-        LDR_512_D(curr_in, v_in_stride, v_in3);
+        LDR_512_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_add_pd(v_in1, v_in2);
         v_s7 = _mm512_sub_pd(v_in2, v_in1);
@@ -3006,13 +3014,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 3: X(2)
         curr_in = in + in_strides[2];
-        LDR_512_D(curr_in, v_in_stride, v_in1);
+        LDR_512_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 9: X(8)
         curr_in = in + in_strides[8];
-        LDR_512_D(curr_in, v_in_stride, v_in2);
+        LDR_512_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 13: X(12)
         curr_in = in + in_strides[12];
-        LDR_512_D(curr_in, v_in_stride, v_in3);
+        LDR_512_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm512_sub_pd(v_in1, v_in2);
         v_s10 = _mm512_add_pd(v_in2, v_in1);
@@ -3021,10 +3029,10 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 10: X(9)
         curr_in = in + in_strides[9];
-        LDR_512_D(curr_in, v_in_stride, v_in1);
+        LDR_512_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 11: X(10)
         curr_in = in + in_strides[10];
-        LDR_512_D(curr_in, v_in_stride, v_in2);
+        LDR_512_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_s13 = _mm512_add_pd(v_in0, _mm512_mul_pd(v_CRTM_15_5, v_in1));
         v_s14 = _mm512_sub_pd(v_in0, v_in1);
@@ -3034,7 +3042,7 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Output point 1: X(0)
         v_out0 = _mm512_add_pd(v_s13, _mm512_mul_pd(v_CRTM_15_5, v_s15));
-        STR_512_D(curr_out, v_out_stride, v_out0);
+        STR_512_D(curr_out, v_out_stride, v_out0, is_contiguous_out);
 
         v_s17 = _mm512_add_pd(_mm512_mul_pd(v_CRTM_15_3, v_s11),
                               _mm512_mul_pd(v_CRTM_15_4, v_s5));
@@ -3043,12 +3051,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 2: X(1)
         v_out3 = _mm512_sub_pd(v_s18, v_s17);
         curr_out = out + out_strides[3];
-        STR_512_D(curr_out, v_out_stride, v_out3);
+        STR_512_D(curr_out, v_out_stride, v_out3, is_contiguous_out);
 
         // Output point 7: X(6)
         v_out12 = _mm512_add_pd(v_s18, v_s17);
         curr_out = out + out_strides[12];
-        STR_512_D(curr_out, v_out_stride, v_out12);
+        STR_512_D(curr_out, v_out_stride, v_out12, is_contiguous_out);
 
         v_s19 = _mm512_sub_pd(v_s16, v_t0);
         v_s20 = _mm512_sub_pd(_mm512_mul_pd(v_CRTM_15_4, v_s11),
@@ -3057,12 +3065,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 4: X(3)
         v_out6 = _mm512_sub_pd(v_s19, v_s20);
         curr_out = out + out_strides[6];
-        STR_512_D(curr_out, v_out_stride, v_out6);
+        STR_512_D(curr_out, v_out_stride, v_out6, is_contiguous_out);
 
         // Output point 5: X(4)
         v_out9 = _mm512_add_pd(v_s19, v_s20);
         curr_out = out + out_strides[9];
-        STR_512_D(curr_out, v_out_stride, v_out9);
+        STR_512_D(curr_out, v_out_stride, v_out9, is_contiguous_out);
 
         v_t1 = _mm512_mul_pd(v_CRTM_15_1, _mm512_sub_pd(v_s9, v_s3));
         v_t2 = _mm512_mul_pd(v_CRTM_15_9, _mm512_add_pd(v_s4, v_s10));
@@ -3074,12 +3082,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 3: X(2)
         v_out5 = _mm512_add_pd(v_s40, v_t4);
         curr_out = out + out_strides[5];
-        STR_512_D(curr_out, v_out_stride, v_out5);
+        STR_512_D(curr_out, v_out_stride, v_out5, is_contiguous_out);
 
         // Output point 6: X(5)
         v_out10 = _mm512_sub_pd(v_s40, v_t4);
         curr_out = out + out_strides[10];
-        STR_512_D(curr_out, v_out_stride, v_out10);
+        STR_512_D(curr_out, v_out_stride, v_out10, is_contiguous_out);
 
         v_s23 = _mm512_sub_pd(v_s14, _mm512_mul_pd(v_CRTM_15_2, v_s21));
         v_t5 = _mm512_mul_pd(v_CRTM_15_10,
@@ -3100,12 +3108,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 1: X(0)
         v_out1 = _mm512_add_pd(v_s28, v_s31);
         curr_out = out + out_strides[1];
-        STR_512_D(curr_out, v_out_stride, v_out1);
+        STR_512_D(curr_out, v_out_stride, v_out1, is_contiguous_out);
 
         // Output point 3: X(2)
         v_out4 = _mm512_sub_pd(v_s28, v_s31);
         curr_out = out + out_strides[4];
-        STR_512_D(curr_out, v_out_stride, v_out4);
+        STR_512_D(curr_out, v_out_stride, v_out4, is_contiguous_out);
 
         v_s33 = _mm512_add_pd(v_s24, v_s27);
         v_s34 = _mm512_add_pd(_mm512_mul_pd(v_CRTM_15_8, v_s7),
@@ -3117,12 +3125,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 4: X(3)
         v_out7 = _mm512_add_pd(v_s33, v_s36);
         curr_out = out + out_strides[7];
-        STR_512_D(curr_out, v_out_stride, v_out7);
+        STR_512_D(curr_out, v_out_stride, v_out7, is_contiguous_out);
 
         // Output point 7: X(6)
         v_out13 = _mm512_sub_pd(v_s33, v_s36);
         curr_out = out + out_strides[13];
-        STR_512_D(curr_out, v_out_stride, v_out13);
+        STR_512_D(curr_out, v_out_stride, v_out13, is_contiguous_out);
 
         v_s37 = _mm512_sub_pd(v_s25, v_s26);
         v_s38 = _mm512_sub_pd(v_s35, v_s34);
@@ -3130,24 +3138,24 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 2: X(1)
         v_out2 = _mm512_add_pd(v_s37, v_s38);
         curr_out = out + out_strides[2];
-        STR_512_D(curr_out, v_out_stride, v_out2);
+        STR_512_D(curr_out, v_out_stride, v_out2, is_contiguous_out);
 
         // Output point 5: X(4)
         v_out8 = _mm512_sub_pd(v_s37, v_s38);
         curr_out = out + out_strides[8];
-        STR_512_D(curr_out, v_out_stride, v_out8);
+        STR_512_D(curr_out, v_out_stride, v_out8, is_contiguous_out);
 
         v_s39 = _mm512_add_pd(v_s25, v_s26);
 
         // Output point 6: X(5)
         v_out11 = _mm512_sub_pd(v_s39, v_s32);
         curr_out = out + out_strides[11];
-        STR_512_D(curr_out, v_out_stride, v_out11);
+        STR_512_D(curr_out, v_out_stride, v_out11, is_contiguous_out);
 
         // Output point 8: X(7)
         v_out14 = _mm512_add_pd(v_s39, v_s32);
         curr_out = out + out_strides[14];
-        STR_512_D(curr_out, v_out_stride, v_out14);
+        STR_512_D(curr_out, v_out_stride, v_out14, is_contiguous_out);
 
         in = in + (v_in_stride << 3);
         out = out + (v_out_stride << 3);
@@ -3181,16 +3189,16 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 1: X(0)
         curr_in = in + in_strides[0];
-        LDR_256_D(curr_in, v_in_stride, v_in0);
+        LDR_256_D(curr_in, v_in_stride, v_in0, is_contiguous_in);
         // Input point 4: X(3)
         curr_in = in + in_strides[3];
-        LDR_256_D(curr_in, v_in_stride, v_in1);
+        LDR_256_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 14: X(13)
         curr_in = in + in_strides[13];
-        LDR_256_D(curr_in, v_in_stride, v_in2);
+        LDR_256_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 6: X(5)
         curr_in = in + in_strides[5];
-        LDR_256_D(curr_in, v_in_stride, v_in3);
+        LDR_256_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_add_pd(v_in1, v_in2);
         v_s1 = _mm256_sub_pd(v_in1, v_in2);
@@ -3199,13 +3207,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 5: X(4)
         curr_in = in + in_strides[4];
-        LDR_256_D(curr_in, v_in_stride, v_in1);
+        LDR_256_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 15: X(14)
         curr_in = in + in_strides[14];
-        LDR_256_D(curr_in, v_in_stride, v_in2);
+        LDR_256_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 7: X(6)
         curr_in = in + in_strides[6];
-        LDR_256_D(curr_in, v_in_stride, v_in3);
+        LDR_256_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_add_pd(v_in1, v_in2);
         v_s4 = _mm256_sub_pd(v_in1, v_in2);
@@ -3214,13 +3222,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 2: X(1)
         curr_in = in + in_strides[1];
-        LDR_256_D(curr_in, v_in_stride, v_in1);
+        LDR_256_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 8: X(7)
         curr_in = in + in_strides[7];
-        LDR_256_D(curr_in, v_in_stride, v_in2);
+        LDR_256_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 12: X(11)
         curr_in = in + in_strides[11];
-        LDR_256_D(curr_in, v_in_stride, v_in3);
+        LDR_256_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_add_pd(v_in1, v_in2);
         v_s7 = _mm256_sub_pd(v_in2, v_in1);
@@ -3229,13 +3237,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 3: X(2)
         curr_in = in + in_strides[2];
-        LDR_256_D(curr_in, v_in_stride, v_in1);
+        LDR_256_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 9: X(8)
         curr_in = in + in_strides[8];
-        LDR_256_D(curr_in, v_in_stride, v_in2);
+        LDR_256_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 13: X(12)
         curr_in = in + in_strides[12];
-        LDR_256_D(curr_in, v_in_stride, v_in3);
+        LDR_256_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm256_sub_pd(v_in1, v_in2);
         v_s10 = _mm256_add_pd(v_in2, v_in1);
@@ -3244,10 +3252,10 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 10: X(9)
         curr_in = in + in_strides[9];
-        LDR_256_D(curr_in, v_in_stride, v_in1);
+        LDR_256_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 11: X(10)
         curr_in = in + in_strides[10];
-        LDR_256_D(curr_in, v_in_stride, v_in2);
+        LDR_256_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_s13 = _mm256_add_pd(v_in0, _mm256_mul_pd(v256_CRTM_15_5, v_in1));
         v_s14 = _mm256_sub_pd(v_in0, v_in1);
@@ -3257,7 +3265,7 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Output point 1: X(0)
         v_out0 = _mm256_add_pd(v_s13, _mm256_mul_pd(v256_CRTM_15_5, v_s15));
-        STR_256_D(curr_out, v_out_stride, v_out0);
+        STR_256_D(curr_out, v_out_stride, v_out0, is_contiguous_out);
 
         v_s17 = _mm256_add_pd(_mm256_mul_pd(v256_CRTM_15_3, v_s11),
                               _mm256_mul_pd(v256_CRTM_15_4, v_s5));
@@ -3266,12 +3274,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 2: X(1)
         v_out3 = _mm256_sub_pd(v_s18, v_s17);
         curr_out = out + out_strides[3];
-        STR_256_D(curr_out, v_out_stride, v_out3);
+        STR_256_D(curr_out, v_out_stride, v_out3, is_contiguous_out);
 
         // Output point 7: X(6)
         v_out12 = _mm256_add_pd(v_s18, v_s17);
         curr_out = out + out_strides[12];
-        STR_256_D(curr_out, v_out_stride, v_out12);
+        STR_256_D(curr_out, v_out_stride, v_out12, is_contiguous_out);
 
         v_s19 = _mm256_sub_pd(v_s16, v_t0);
         v_s20 = _mm256_sub_pd(_mm256_mul_pd(v256_CRTM_15_4, v_s11),
@@ -3280,12 +3288,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 4: X(3)
         v_out6 = _mm256_sub_pd(v_s19, v_s20);
         curr_out = out + out_strides[6];
-        STR_256_D(curr_out, v_out_stride, v_out6);
+        STR_256_D(curr_out, v_out_stride, v_out6, is_contiguous_out);
 
         // Output point 5: X(4)
         v_out9 = _mm256_add_pd(v_s19, v_s20);
         curr_out = out + out_strides[9];
-        STR_256_D(curr_out, v_out_stride, v_out9);
+        STR_256_D(curr_out, v_out_stride, v_out9, is_contiguous_out);
 
         v_t1 = _mm256_mul_pd(v256_CRTM_15_1, _mm256_sub_pd(v_s9, v_s3));
         v_t2 = _mm256_mul_pd(v256_CRTM_15_9, _mm256_add_pd(v_s4, v_s10));
@@ -3297,12 +3305,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 3: X(2)
         v_out5 = _mm256_add_pd(v_s40, v_t4);
         curr_out = out + out_strides[5];
-        STR_256_D(curr_out, v_out_stride, v_out5);
+        STR_256_D(curr_out, v_out_stride, v_out5, is_contiguous_out);
 
         // Output point 6: X(5)
         v_out10 = _mm256_sub_pd(v_s40, v_t4);
         curr_out = out + out_strides[10];
-        STR_256_D(curr_out, v_out_stride, v_out10);
+        STR_256_D(curr_out, v_out_stride, v_out10, is_contiguous_out);
 
         v_s23 = _mm256_sub_pd(v_s14, _mm256_mul_pd(v256_CRTM_15_2, v_s21));
         v_t5 = _mm256_mul_pd(v256_CRTM_15_10,
@@ -3323,12 +3331,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 1: X(0)
         v_out1 = _mm256_add_pd(v_s28, v_s31);
         curr_out = out + out_strides[1];
-        STR_256_D(curr_out, v_out_stride, v_out1);
+        STR_256_D(curr_out, v_out_stride, v_out1, is_contiguous_out);
 
         // Output point 3: X(2)
         v_out4 = _mm256_sub_pd(v_s28, v_s31);
         curr_out = out + out_strides[4];
-        STR_256_D(curr_out, v_out_stride, v_out4);
+        STR_256_D(curr_out, v_out_stride, v_out4, is_contiguous_out);
 
         v_s33 = _mm256_add_pd(v_s24, v_s27);
         v_s34 = _mm256_add_pd(_mm256_mul_pd(v256_CRTM_15_8, v_s7),
@@ -3340,12 +3348,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 4: X(3)
         v_out7 = _mm256_add_pd(v_s33, v_s36);
         curr_out = out + out_strides[7];
-        STR_256_D(curr_out, v_out_stride, v_out7);
+        STR_256_D(curr_out, v_out_stride, v_out7, is_contiguous_out);
 
         // Output point 7: X(6)
         v_out13 = _mm256_sub_pd(v_s33, v_s36);
         curr_out = out + out_strides[13];
-        STR_256_D(curr_out, v_out_stride, v_out13);
+        STR_256_D(curr_out, v_out_stride, v_out13, is_contiguous_out);
 
         v_s37 = _mm256_sub_pd(v_s25, v_s26);
         v_s38 = _mm256_sub_pd(v_s35, v_s34);
@@ -3353,24 +3361,24 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 2: X(1)
         v_out2 = _mm256_add_pd(v_s37, v_s38);
         curr_out = out + out_strides[2];
-        STR_256_D(curr_out, v_out_stride, v_out2);
+        STR_256_D(curr_out, v_out_stride, v_out2, is_contiguous_out);
 
         // Output point 5: X(4)
         v_out8 = _mm256_sub_pd(v_s37, v_s38);
         curr_out = out + out_strides[8];
-        STR_256_D(curr_out, v_out_stride, v_out8);
+        STR_256_D(curr_out, v_out_stride, v_out8, is_contiguous_out);
 
         v_s39 = _mm256_add_pd(v_s25, v_s26);
 
         // Output point 6: X(5)
         v_out11 = _mm256_sub_pd(v_s39, v_s32);
         curr_out = out + out_strides[11];
-        STR_256_D(curr_out, v_out_stride, v_out11);
+        STR_256_D(curr_out, v_out_stride, v_out11, is_contiguous_out);
 
         // Output point 8: X(7)
         v_out14 = _mm256_add_pd(v_s39, v_s32);
         curr_out = out + out_strides[14];
-        STR_256_D(curr_out, v_out_stride, v_out14);
+        STR_256_D(curr_out, v_out_stride, v_out14, is_contiguous_out);
 
         in = in + (v_in_stride << 2);
         out = out + (v_out_stride << 2);
@@ -3404,16 +3412,16 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 1: X(0)
         curr_in = in + in_strides[0];
-        LDR_128_D(curr_in, v_in_stride, v_in0);
+        LDR_128_D(curr_in, v_in_stride, v_in0, is_contiguous_in);
         // Input point 4: X(3)
         curr_in = in + in_strides[3];
-        LDR_128_D(curr_in, v_in_stride, v_in1);
+        LDR_128_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 14: X(13)
         curr_in = in + in_strides[13];
-        LDR_128_D(curr_in, v_in_stride, v_in2);
+        LDR_128_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 6: X(5)
         curr_in = in + in_strides[5];
-        LDR_128_D(curr_in, v_in_stride, v_in3);
+        LDR_128_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_add_pd(v_in1, v_in2);
         v_s1 = _mm_sub_pd(v_in1, v_in2);
@@ -3422,13 +3430,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 5: X(4)
         curr_in = in + in_strides[4];
-        LDR_128_D(curr_in, v_in_stride, v_in1);
+        LDR_128_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 15: X(14)
         curr_in = in + in_strides[14];
-        LDR_128_D(curr_in, v_in_stride, v_in2);
+        LDR_128_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 7: X(6)
         curr_in = in + in_strides[6];
-        LDR_128_D(curr_in, v_in_stride, v_in3);
+        LDR_128_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_add_pd(v_in1, v_in2);
         v_s4 = _mm_sub_pd(v_in1, v_in2);
@@ -3437,13 +3445,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 2: X(1)
         curr_in = in + in_strides[1];
-        LDR_128_D(curr_in, v_in_stride, v_in1);
+        LDR_128_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 8: X(7)
         curr_in = in + in_strides[7];
-        LDR_128_D(curr_in, v_in_stride, v_in2);
+        LDR_128_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 12: X(11)
         curr_in = in + in_strides[11];
-        LDR_128_D(curr_in, v_in_stride, v_in3);
+        LDR_128_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_add_pd(v_in1, v_in2);
         v_s7 = _mm_sub_pd(v_in2, v_in1);
@@ -3452,13 +3460,13 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 3: X(2)
         curr_in = in + in_strides[2];
-        LDR_128_D(curr_in, v_in_stride, v_in1);
+        LDR_128_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 9: X(8)
         curr_in = in + in_strides[8];
-        LDR_128_D(curr_in, v_in_stride, v_in2);
+        LDR_128_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
         // Input point 13: X(12)
         curr_in = in + in_strides[12];
-        LDR_128_D(curr_in, v_in_stride, v_in3);
+        LDR_128_D(curr_in, v_in_stride, v_in3, is_contiguous_in);
 
         v_s0 = _mm_sub_pd(v_in1, v_in2);
         v_s10 = _mm_add_pd(v_in2, v_in1);
@@ -3467,10 +3475,10 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Input point 10: X(9)
         curr_in = in + in_strides[9];
-        LDR_128_D(curr_in, v_in_stride, v_in1);
+        LDR_128_D(curr_in, v_in_stride, v_in1, is_contiguous_in);
         // Input point 11: X(10)
         curr_in = in + in_strides[10];
-        LDR_128_D(curr_in, v_in_stride, v_in2);
+        LDR_128_D(curr_in, v_in_stride, v_in2, is_contiguous_in);
 
         v_s13 = _mm_add_pd(v_in0, _mm_mul_pd(v128_CRTM_15_5, v_in1));
         v_s14 = _mm_sub_pd(v_in0, v_in1);
@@ -3480,7 +3488,7 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
 
         // Output point 1: X(0)
         v_out0 = _mm_add_pd(v_s13, _mm_mul_pd(v128_CRTM_15_5, v_s15));
-        STR_128_D(curr_out, v_out_stride, v_out0);
+        STR_128_D(curr_out, v_out_stride, v_out0, is_contiguous_out);
 
         v_s17 = _mm_add_pd(_mm_mul_pd(v128_CRTM_15_3, v_s11),
                            _mm_mul_pd(v128_CRTM_15_4, v_s5));
@@ -3489,12 +3497,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 2: X(1)
         v_out3 = _mm_sub_pd(v_s18, v_s17);
         curr_out = out + out_strides[3];
-        STR_128_D(curr_out, v_out_stride, v_out3);
+        STR_128_D(curr_out, v_out_stride, v_out3, is_contiguous_out);
 
         // Output point 7: X(6)
         v_out12 = _mm_add_pd(v_s18, v_s17);
         curr_out = out + out_strides[12];
-        STR_128_D(curr_out, v_out_stride, v_out12);
+        STR_128_D(curr_out, v_out_stride, v_out12, is_contiguous_out);
 
         v_s19 = _mm_sub_pd(v_s16, v_t0);
         v_s20 = _mm_sub_pd(_mm_mul_pd(v128_CRTM_15_4, v_s11),
@@ -3503,12 +3511,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 4: X(3)
         v_out6 = _mm_sub_pd(v_s19, v_s20);
         curr_out = out + out_strides[6];
-        STR_128_D(curr_out, v_out_stride, v_out6);
+        STR_128_D(curr_out, v_out_stride, v_out6, is_contiguous_out);
 
         // Output point 5: X(4)
         v_out9 = _mm_add_pd(v_s19, v_s20);
         curr_out = out + out_strides[9];
-        STR_128_D(curr_out, v_out_stride, v_out9);
+        STR_128_D(curr_out, v_out_stride, v_out9, is_contiguous_out);
 
         v_t1 = _mm_mul_pd(v128_CRTM_15_1, _mm_sub_pd(v_s9, v_s3));
         v_t2 = _mm_mul_pd(v128_CRTM_15_9, _mm_add_pd(v_s4, v_s10));
@@ -3520,12 +3528,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 3: X(2)
         v_out5 = _mm_add_pd(v_s40, v_t4);
         curr_out = out + out_strides[5];
-        STR_128_D(curr_out, v_out_stride, v_out5);
+        STR_128_D(curr_out, v_out_stride, v_out5, is_contiguous_out);
 
         // Output point 6: X(5)
         v_out10 = _mm_sub_pd(v_s40, v_t4);
         curr_out = out + out_strides[10];
-        STR_128_D(curr_out, v_out_stride, v_out10);
+        STR_128_D(curr_out, v_out_stride, v_out10, is_contiguous_out);
 
         v_s23 = _mm_sub_pd(v_s14, _mm_mul_pd(v128_CRTM_15_2, v_s21));
         v_t5 = _mm_mul_pd(v128_CRTM_15_10,
@@ -3546,12 +3554,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 1: X(0)
         v_out1 = _mm_add_pd(v_s28, v_s31);
         curr_out = out + out_strides[1];
-        STR_128_D(curr_out, v_out_stride, v_out1);
+        STR_128_D(curr_out, v_out_stride, v_out1, is_contiguous_out);
 
         // Output point 3: X(2)
         v_out4 = _mm_sub_pd(v_s28, v_s31);
         curr_out = out + out_strides[4];
-        STR_128_D(curr_out, v_out_stride, v_out4);
+        STR_128_D(curr_out, v_out_stride, v_out4, is_contiguous_out);
 
         v_s33 = _mm_add_pd(v_s24, v_s27);
         v_s34 = _mm_add_pd(_mm_mul_pd(v128_CRTM_15_8, v_s7),
@@ -3563,12 +3571,12 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 4: X(3)
         v_out7 = _mm_add_pd(v_s33, v_s36);
         curr_out = out + out_strides[7];
-        STR_128_D(curr_out, v_out_stride, v_out7);
+        STR_128_D(curr_out, v_out_stride, v_out7, is_contiguous_out);
 
         // Output point 7: X(6)
         v_out13 = _mm_sub_pd(v_s33, v_s36);
         curr_out = out + out_strides[13];
-        STR_128_D(curr_out, v_out_stride, v_out13);
+        STR_128_D(curr_out, v_out_stride, v_out13, is_contiguous_out);
 
         v_s37 = _mm_sub_pd(v_s25, v_s26);
         v_s38 = _mm_sub_pd(v_s35, v_s34);
@@ -3576,24 +3584,24 @@ static FFTZ_VOID r2hc_rfft15avx512_fp64_bwd(FFTZ_VOID *in_real,
         // Output point 2: X(1)
         v_out2 = _mm_add_pd(v_s37, v_s38);
         curr_out = out + out_strides[2];
-        STR_128_D(curr_out, v_out_stride, v_out2);
+        STR_128_D(curr_out, v_out_stride, v_out2, is_contiguous_out);
 
         // Output point 5: X(4)
         v_out8 = _mm_sub_pd(v_s37, v_s38);
         curr_out = out + out_strides[8];
-        STR_128_D(curr_out, v_out_stride, v_out8);
+        STR_128_D(curr_out, v_out_stride, v_out8, is_contiguous_out);
 
         v_s39 = _mm_add_pd(v_s25, v_s26);
 
         // Output point 6: X(5)
         v_out11 = _mm_sub_pd(v_s39, v_s32);
         curr_out = out + out_strides[11];
-        STR_128_D(curr_out, v_out_stride, v_out11);
+        STR_128_D(curr_out, v_out_stride, v_out11, is_contiguous_out);
 
         // Output point 8: X(7)
         v_out14 = _mm_add_pd(v_s39, v_s32);
         curr_out = out + out_strides[14];
-        STR_128_D(curr_out, v_out_stride, v_out14);
+        STR_128_D(curr_out, v_out_stride, v_out14, is_contiguous_out);
 
         in = in + (v_in_stride << 1);
         out = out + (v_out_stride << 1);

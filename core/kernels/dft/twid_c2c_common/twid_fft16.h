@@ -36,9 +36,9 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     FFTZ_FLOAT *in_r = (FFTZ_FLOAT *)in_real;
     FFTZ_FLOAT *out_r = (FFTZ_FLOAT *)out_real;
 #if defined(KERNEL_VARIANT_C2R)
-    FFTZ_FLOAT *in_h2_r = in_r;
+    FFTZ_FLOAT *in_h2_r = (FFTZ_FLOAT *)in_real;
 #elif defined(KERNEL_VARIANT_R2C)
-    FFTZ_FLOAT *out_h2_r = out_r;
+    FFTZ_FLOAT *out_h2_r = (FFTZ_FLOAT *)out_real;
 #endif
 
 #ifdef VOLATILE_STRIDE_ARRAY
@@ -121,28 +121,28 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         LOAD_IN_S(in_r, in_strides, 7, v_in_stride, v_in7, tw_ptr,
                   load_multi_cols, is_contiguous_in);
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_S(in_h2_r, in_strides, 8, v_in_h2_stride, v_in8, tw_ptr,
+        LOAD_IN_H2_S(in_h2_r, in_strides, 8, v_in_h2_stride, v_in8, tw_ptr,
                   load_multi_cols, 0);
         v_in8 = IN_H2_S(v_in8);
-        LOAD_IN_S(in_h2_r, in_strides, 9, v_in_h2_stride, v_in9, tw_ptr,
+        LOAD_IN_H2_S(in_h2_r, in_strides, 9, v_in_h2_stride, v_in9, tw_ptr,
                   load_multi_cols, 0);
         v_in9 = IN_H2_S(v_in9);
-        LOAD_IN_S(in_h2_r, in_strides, 10, v_in_h2_stride, v_in10, tw_ptr,
+        LOAD_IN_H2_S(in_h2_r, in_strides, 10, v_in_h2_stride, v_in10, tw_ptr,
                   load_multi_cols, 0);
         v_in10 = IN_H2_S(v_in10);
-        LOAD_IN_S(in_h2_r, in_strides, 11, v_in_h2_stride, v_in11, tw_ptr,
+        LOAD_IN_H2_S(in_h2_r, in_strides, 11, v_in_h2_stride, v_in11, tw_ptr,
                   load_multi_cols, 0);
         v_in11 = IN_H2_S(v_in11);
-        LOAD_IN_S(in_h2_r, in_strides, 12, v_in_h2_stride, v_in12, tw_ptr,
+        LOAD_IN_H2_S(in_h2_r, in_strides, 12, v_in_h2_stride, v_in12, tw_ptr,
                   load_multi_cols, 0);
         v_in12 = IN_H2_S(v_in12);
-        LOAD_IN_S(in_h2_r, in_strides, 13, v_in_h2_stride, v_in13, tw_ptr,
+        LOAD_IN_H2_S(in_h2_r, in_strides, 13, v_in_h2_stride, v_in13, tw_ptr,
                   load_multi_cols, 0);
         v_in13 = IN_H2_S(v_in13);
-        LOAD_IN_S(in_h2_r, in_strides, 14, v_in_h2_stride, v_in14, tw_ptr,
+        LOAD_IN_H2_S(in_h2_r, in_strides, 14, v_in_h2_stride, v_in14, tw_ptr,
                   load_multi_cols, 0);
         v_in14 = IN_H2_S(v_in14);
-        LOAD_IN_S(in_h2_r, in_strides, 15, v_in_h2_stride, v_in15, tw_ptr,
+        LOAD_IN_H2_S(in_h2_r, in_strides, 15, v_in_h2_stride, v_in15, tw_ptr,
                   load_multi_cols, 0);
         v_in15 = IN_H2_S(v_in15);
 #else
@@ -306,29 +306,29 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                     load_multi_cols, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out8 = OUT_H2_S(v_out8);
-        STORE_OUT_S(out_h2_r, out_strides, 8, v_out_h2_stride, v_out8, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_S(out_h2_r, out_strides, 8, v_out_h2_stride, v_out8,
+                       tw_ptr, load_multi_cols, 0);
         v_out9 = OUT_H2_S(v_out9);
-        STORE_OUT_S(out_h2_r, out_strides, 9, v_out_h2_stride, v_out9, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_S(out_h2_r, out_strides, 9, v_out_h2_stride, v_out9,
+                       tw_ptr, load_multi_cols, 0);
         v_out10 = OUT_H2_S(v_out10);
-        STORE_OUT_S(out_h2_r, out_strides, 10, v_out_h2_stride, v_out10, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_S(out_h2_r, out_strides, 10, v_out_h2_stride, v_out10,
+                       tw_ptr, load_multi_cols, 0);
         v_out11 = OUT_H2_S(v_out11);
-        STORE_OUT_S(out_h2_r, out_strides, 11, v_out_h2_stride, v_out11, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_S(out_h2_r, out_strides, 11, v_out_h2_stride, v_out11,
+                       tw_ptr, load_multi_cols, 0);
         v_out12 = OUT_H2_S(v_out12);
-        STORE_OUT_S(out_h2_r, out_strides, 12, v_out_h2_stride, v_out12, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_S(out_h2_r, out_strides, 12, v_out_h2_stride, v_out12,
+                       tw_ptr, load_multi_cols, 0);
         v_out13 = OUT_H2_S(v_out13);
-        STORE_OUT_S(out_h2_r, out_strides, 13, v_out_h2_stride, v_out13, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_S(out_h2_r, out_strides, 13, v_out_h2_stride, v_out13,
+                       tw_ptr, load_multi_cols, 0);
         v_out14 = OUT_H2_S(v_out14);
-        STORE_OUT_S(out_h2_r, out_strides, 14, v_out_h2_stride, v_out14, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_S(out_h2_r, out_strides, 14, v_out_h2_stride, v_out14,
+                       tw_ptr, load_multi_cols, 0);
         v_out15 = OUT_H2_S(v_out15);
-        STORE_OUT_S(out_h2_r, out_strides, 15, v_out_h2_stride, v_out15, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_S(out_h2_r, out_strides, 15, v_out_h2_stride, v_out15,
+                       tw_ptr, load_multi_cols, 0);
 #else
         STORE_OUT_S(out_r, out_strides, 8, v_out_stride, v_out8, tw_ptr,
                     load_multi_cols, is_contiguous_out);
@@ -410,29 +410,29 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         LOAD_IN_256_S(in_r, in_strides, 7, v_in_stride, v_in7, tw_ptr,
                       load_multi_cols, is_contiguous_in);
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_256_S(in_h2_r, in_strides, 8, v_in_h2_stride, v_in8, tw_ptr,
+        LOAD_IN_H2_256_S(in_h2_r, in_strides, 8, v_in_h2_stride, v_in8, tw_ptr,
                       load_multi_cols, 0);
         v_in8 = IN_H2_256_S(v_in8);
-        LOAD_IN_256_S(in_h2_r, in_strides, 9, v_in_h2_stride, v_in9, tw_ptr,
+        LOAD_IN_H2_256_S(in_h2_r, in_strides, 9, v_in_h2_stride, v_in9, tw_ptr,
                       load_multi_cols, 0);
         v_in9 = IN_H2_256_S(v_in9);
-        LOAD_IN_256_S(in_h2_r, in_strides, 10, v_in_h2_stride, v_in10, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_256_S(in_h2_r, in_strides, 10, v_in_h2_stride, v_in10,
+                         tw_ptr, load_multi_cols, 0);
         v_in10 = IN_H2_256_S(v_in10);
-        LOAD_IN_256_S(in_h2_r, in_strides, 11, v_in_h2_stride, v_in11, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_256_S(in_h2_r, in_strides, 11, v_in_h2_stride, v_in11,
+                         tw_ptr, load_multi_cols, 0);
         v_in11 = IN_H2_256_S(v_in11);
-        LOAD_IN_256_S(in_h2_r, in_strides, 12, v_in_h2_stride, v_in12, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_256_S(in_h2_r, in_strides, 12, v_in_h2_stride, v_in12,
+                         tw_ptr, load_multi_cols, 0);
         v_in12 = IN_H2_256_S(v_in12);
-        LOAD_IN_256_S(in_h2_r, in_strides, 13, v_in_h2_stride, v_in13, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_256_S(in_h2_r, in_strides, 13, v_in_h2_stride, v_in13,
+                         tw_ptr, load_multi_cols, 0);
         v_in13 = IN_H2_256_S(v_in13);
-        LOAD_IN_256_S(in_h2_r, in_strides, 14, v_in_h2_stride, v_in14, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_256_S(in_h2_r, in_strides, 14, v_in_h2_stride, v_in14,
+                         tw_ptr, load_multi_cols, 0);
         v_in14 = IN_H2_256_S(v_in14);
-        LOAD_IN_256_S(in_h2_r, in_strides, 15, v_in_h2_stride, v_in15, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_256_S(in_h2_r, in_strides, 15, v_in_h2_stride, v_in15,
+                         tw_ptr, load_multi_cols, 0);
         v_in15 = IN_H2_256_S(v_in15);
 #else
         LOAD_IN_256_S(in_r, in_strides, 8, v_in_stride, v_in8, tw_ptr,
@@ -596,28 +596,28 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                         load_multi_cols, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out8 = OUT_H2_256_S(v_out8);
-        STORE_OUT_256_S(out_h2_r, out_strides, 8, v_out_h2_stride, v_out8,
+        STORE_OUT_H2_256_S(out_h2_r, out_strides, 8, v_out_h2_stride, v_out8,
                         tw_ptr, load_multi_cols, 0);
         v_out9 = OUT_H2_256_S(v_out9);
-        STORE_OUT_256_S(out_h2_r, out_strides, 9, v_out_h2_stride, v_out9,
+        STORE_OUT_H2_256_S(out_h2_r, out_strides, 9, v_out_h2_stride, v_out9,
                         tw_ptr, load_multi_cols, 0);
         v_out10 = OUT_H2_256_S(v_out10);
-        STORE_OUT_256_S(out_h2_r, out_strides, 10, v_out_h2_stride, v_out10,
+        STORE_OUT_H2_256_S(out_h2_r, out_strides, 10, v_out_h2_stride, v_out10,
                         tw_ptr, load_multi_cols, 0);
         v_out11 = OUT_H2_256_S(v_out11);
-        STORE_OUT_256_S(out_h2_r, out_strides, 11, v_out_h2_stride, v_out11,
+        STORE_OUT_H2_256_S(out_h2_r, out_strides, 11, v_out_h2_stride, v_out11,
                         tw_ptr, load_multi_cols, 0);
         v_out12 = OUT_H2_256_S(v_out12);
-        STORE_OUT_256_S(out_h2_r, out_strides, 12, v_out_h2_stride, v_out12,
+        STORE_OUT_H2_256_S(out_h2_r, out_strides, 12, v_out_h2_stride, v_out12,
                         tw_ptr, load_multi_cols, 0);
         v_out13 = OUT_H2_256_S(v_out13);
-        STORE_OUT_256_S(out_h2_r, out_strides, 13, v_out_h2_stride, v_out13,
+        STORE_OUT_H2_256_S(out_h2_r, out_strides, 13, v_out_h2_stride, v_out13,
                         tw_ptr, load_multi_cols, 0);
         v_out14 = OUT_H2_256_S(v_out14);
-        STORE_OUT_256_S(out_h2_r, out_strides, 14, v_out_h2_stride, v_out14,
+        STORE_OUT_H2_256_S(out_h2_r, out_strides, 14, v_out_h2_stride, v_out14,
                         tw_ptr, load_multi_cols, 0);
         v_out15 = OUT_H2_256_S(v_out15);
-        STORE_OUT_256_S(out_h2_r, out_strides, 15, v_out_h2_stride, v_out15,
+        STORE_OUT_H2_256_S(out_h2_r, out_strides, 15, v_out_h2_stride, v_out15,
                         tw_ptr, load_multi_cols, 0);
 #else
         STORE_OUT_256_S(out_r, out_strides, 8, v_out_stride, v_out8, tw_ptr,
@@ -705,29 +705,29 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         LOAD_IN_128_S(in_r, in_strides, 7, v_in_stride, v_in7, tw_ptr,
                       load_multi_cols, is_contiguous_in);
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_128_S(in_h2_r, in_strides, 8, v_in_h2_stride, v_in8, tw_ptr,
+        LOAD_IN_H2_128_S(in_h2_r, in_strides, 8, v_in_h2_stride, v_in8, tw_ptr,
                       load_multi_cols, 0);
         v_in8 = IN_H2_128_S(v_in8);
-        LOAD_IN_128_S(in_h2_r, in_strides, 9, v_in_h2_stride, v_in9, tw_ptr,
+        LOAD_IN_H2_128_S(in_h2_r, in_strides, 9, v_in_h2_stride, v_in9, tw_ptr,
                       load_multi_cols, 0);
         v_in9 = IN_H2_128_S(v_in9);
-        LOAD_IN_128_S(in_h2_r, in_strides, 10, v_in_h2_stride, v_in10, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_128_S(in_h2_r, in_strides, 10, v_in_h2_stride, v_in10,
+                         tw_ptr, load_multi_cols, 0);
         v_in10 = IN_H2_128_S(v_in10);
-        LOAD_IN_128_S(in_h2_r, in_strides, 11, v_in_h2_stride, v_in11, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_128_S(in_h2_r, in_strides, 11, v_in_h2_stride, v_in11,
+                         tw_ptr, load_multi_cols, 0);
         v_in11 = IN_H2_128_S(v_in11);
-        LOAD_IN_128_S(in_h2_r, in_strides, 12, v_in_h2_stride, v_in12, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_128_S(in_h2_r, in_strides, 12, v_in_h2_stride, v_in12,
+                         tw_ptr, load_multi_cols, 0);
         v_in12 = IN_H2_128_S(v_in12);
-        LOAD_IN_128_S(in_h2_r, in_strides, 13, v_in_h2_stride, v_in13, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_128_S(in_h2_r, in_strides, 13, v_in_h2_stride, v_in13,
+                         tw_ptr, load_multi_cols, 0);
         v_in13 = IN_H2_128_S(v_in13);
-        LOAD_IN_128_S(in_h2_r, in_strides, 14, v_in_h2_stride, v_in14, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_128_S(in_h2_r, in_strides, 14, v_in_h2_stride, v_in14,
+                         tw_ptr, load_multi_cols, 0);
         v_in14 = IN_H2_128_S(v_in14);
-        LOAD_IN_128_S(in_h2_r, in_strides, 15, v_in_h2_stride, v_in15, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_128_S(in_h2_r, in_strides, 15, v_in_h2_stride, v_in15,
+                         tw_ptr, load_multi_cols, 0);
         v_in15 = IN_H2_128_S(v_in15);
 #else
         LOAD_IN_128_S(in_r, in_strides, 8, v_in_stride, v_in8, tw_ptr,
@@ -891,28 +891,28 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                         load_multi_cols, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out8 = OUT_H2_128_S(v_out8);
-        STORE_OUT_128_S(out_h2_r, out_strides, 8, v_out_h2_stride, v_out8,
+        STORE_OUT_H2_128_S(out_h2_r, out_strides, 8, v_out_h2_stride, v_out8,
                         tw_ptr, load_multi_cols, 0);
         v_out9 = OUT_H2_128_S(v_out9);
-        STORE_OUT_128_S(out_h2_r, out_strides, 9, v_out_h2_stride, v_out9,
+        STORE_OUT_H2_128_S(out_h2_r, out_strides, 9, v_out_h2_stride, v_out9,
                         tw_ptr, load_multi_cols, 0);
         v_out10 = OUT_H2_128_S(v_out10);
-        STORE_OUT_128_S(out_h2_r, out_strides, 10, v_out_h2_stride, v_out10,
+        STORE_OUT_H2_128_S(out_h2_r, out_strides, 10, v_out_h2_stride, v_out10,
                         tw_ptr, load_multi_cols, 0);
         v_out11 = OUT_H2_128_S(v_out11);
-        STORE_OUT_128_S(out_h2_r, out_strides, 11, v_out_h2_stride, v_out11,
+        STORE_OUT_H2_128_S(out_h2_r, out_strides, 11, v_out_h2_stride, v_out11,
                         tw_ptr, load_multi_cols, 0);
         v_out12 = OUT_H2_128_S(v_out12);
-        STORE_OUT_128_S(out_h2_r, out_strides, 12, v_out_h2_stride, v_out12,
+        STORE_OUT_H2_128_S(out_h2_r, out_strides, 12, v_out_h2_stride, v_out12,
                         tw_ptr, load_multi_cols, 0);
         v_out13 = OUT_H2_128_S(v_out13);
-        STORE_OUT_128_S(out_h2_r, out_strides, 13, v_out_h2_stride, v_out13,
+        STORE_OUT_H2_128_S(out_h2_r, out_strides, 13, v_out_h2_stride, v_out13,
                         tw_ptr, load_multi_cols, 0);
         v_out14 = OUT_H2_128_S(v_out14);
-        STORE_OUT_128_S(out_h2_r, out_strides, 14, v_out_h2_stride, v_out14,
+        STORE_OUT_H2_128_S(out_h2_r, out_strides, 14, v_out_h2_stride, v_out14,
                         tw_ptr, load_multi_cols, 0);
         v_out15 = OUT_H2_128_S(v_out15);
-        STORE_OUT_128_S(out_h2_r, out_strides, 15, v_out_h2_stride, v_out15,
+        STORE_OUT_H2_128_S(out_h2_r, out_strides, 15, v_out_h2_stride, v_out15,
                         tw_ptr, load_multi_cols, 0);
 #else
         STORE_OUT_128_S(out_r, out_strides, 8, v_out_stride, v_out8, tw_ptr,
@@ -1009,27 +1009,29 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         LOAD_IN_64_S(in_r, in_strides, 7, v_in7, tw_ptr, load_multi_cols,
                      is_contiguous_in);
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_64_S(in_h2_r, in_strides, 8, v_in8, tw_ptr, load_multi_cols, 0);
+        LOAD_IN_H2_64_S(in_h2_r, in_strides, 8, v_in8, tw_ptr, load_multi_cols,
+                        0);
         v_in8 = IN_H2_128_S(v_in8);
-        LOAD_IN_64_S(in_h2_r, in_strides, 9, v_in9, tw_ptr, load_multi_cols, 0);
+        LOAD_IN_H2_64_S(in_h2_r, in_strides, 9, v_in9, tw_ptr, load_multi_cols,
+                        0);
         v_in9 = IN_H2_128_S(v_in9);
-        LOAD_IN_64_S(in_h2_r, in_strides, 10, v_in10, tw_ptr, load_multi_cols,
-                     0);
+        LOAD_IN_H2_64_S(in_h2_r, in_strides, 10, v_in10, tw_ptr,
+                        load_multi_cols, 0);
         v_in10 = IN_H2_128_S(v_in10);
-        LOAD_IN_64_S(in_h2_r, in_strides, 11, v_in11, tw_ptr, load_multi_cols,
-                     0);
+        LOAD_IN_H2_64_S(in_h2_r, in_strides, 11, v_in11, tw_ptr,
+                        load_multi_cols, 0);
         v_in11 = IN_H2_128_S(v_in11);
-        LOAD_IN_64_S(in_h2_r, in_strides, 12, v_in12, tw_ptr, load_multi_cols,
-                     0);
+        LOAD_IN_H2_64_S(in_h2_r, in_strides, 12, v_in12, tw_ptr,
+                        load_multi_cols, 0);
         v_in12 = IN_H2_128_S(v_in12);
-        LOAD_IN_64_S(in_h2_r, in_strides, 13, v_in13, tw_ptr, load_multi_cols,
-                     0);
+        LOAD_IN_H2_64_S(in_h2_r, in_strides, 13, v_in13, tw_ptr,
+                        load_multi_cols, 0);
         v_in13 = IN_H2_128_S(v_in13);
-        LOAD_IN_64_S(in_h2_r, in_strides, 14, v_in14, tw_ptr, load_multi_cols,
-                     0);
+        LOAD_IN_H2_64_S(in_h2_r, in_strides, 14, v_in14, tw_ptr,
+                        load_multi_cols, 0);
         v_in14 = IN_H2_128_S(v_in14);
-        LOAD_IN_64_S(in_h2_r, in_strides, 15, v_in15, tw_ptr, load_multi_cols,
-                     0);
+        LOAD_IN_H2_64_S(in_h2_r, in_strides, 15, v_in15, tw_ptr,
+                        load_multi_cols, 0);
         v_in15 = IN_H2_128_S(v_in15);
 #else
         LOAD_IN_64_S(in_r, in_strides, 8, v_in8, tw_ptr, load_multi_cols,
@@ -1193,28 +1195,28 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                        is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out8 = OUT_H2_128_S(v_out8);
-        STORE_OUT_64_S(out_h2_r, out_strides, 8, v_out8, tw_ptr,
+        STORE_OUT_H2_64_S(out_h2_r, out_strides, 8, v_out8, tw_ptr,
                        load_multi_cols, 0);
         v_out9 = OUT_H2_128_S(v_out9);
-        STORE_OUT_64_S(out_h2_r, out_strides, 9, v_out9, tw_ptr,
+        STORE_OUT_H2_64_S(out_h2_r, out_strides, 9, v_out9, tw_ptr,
                        load_multi_cols, 0);
         v_out10 = OUT_H2_128_S(v_out10);
-        STORE_OUT_64_S(out_h2_r, out_strides, 10, v_out10, tw_ptr,
+        STORE_OUT_H2_64_S(out_h2_r, out_strides, 10, v_out10, tw_ptr,
                        load_multi_cols, 0);
         v_out11 = OUT_H2_128_S(v_out11);
-        STORE_OUT_64_S(out_h2_r, out_strides, 11, v_out11, tw_ptr,
+        STORE_OUT_H2_64_S(out_h2_r, out_strides, 11, v_out11, tw_ptr,
                        load_multi_cols, 0);
         v_out12 = OUT_H2_128_S(v_out12);
-        STORE_OUT_64_S(out_h2_r, out_strides, 12, v_out12, tw_ptr,
+        STORE_OUT_H2_64_S(out_h2_r, out_strides, 12, v_out12, tw_ptr,
                        load_multi_cols, 0);
         v_out13 = OUT_H2_128_S(v_out13);
-        STORE_OUT_64_S(out_h2_r, out_strides, 13, v_out13, tw_ptr,
+        STORE_OUT_H2_64_S(out_h2_r, out_strides, 13, v_out13, tw_ptr,
                        load_multi_cols, 0);
         v_out14 = OUT_H2_128_S(v_out14);
-        STORE_OUT_64_S(out_h2_r, out_strides, 14, v_out14, tw_ptr,
+        STORE_OUT_H2_64_S(out_h2_r, out_strides, 14, v_out14, tw_ptr,
                        load_multi_cols, 0);
         v_out15 = OUT_H2_128_S(v_out15);
-        STORE_OUT_64_S(out_h2_r, out_strides, 15, v_out15, tw_ptr,
+        STORE_OUT_H2_64_S(out_h2_r, out_strides, 15, v_out15, tw_ptr,
                        load_multi_cols, 0);
 #else
         STORE_OUT_64_S(out_r, out_strides, 8, v_out8, tw_ptr, load_multi_cols,
@@ -1256,9 +1258,9 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     FFTZ_DOUBLE *in_r = (FFTZ_DOUBLE *)in_real;
     FFTZ_DOUBLE *out_r = (FFTZ_DOUBLE *)out_real;
 #if defined(KERNEL_VARIANT_C2R)
-    FFTZ_DOUBLE *in_h2_r = in_r;
+    FFTZ_DOUBLE *in_h2_r = (FFTZ_DOUBLE *)in_real;
 #elif defined(KERNEL_VARIANT_R2C)
-    FFTZ_DOUBLE *out_h2_r = out_r;
+    FFTZ_DOUBLE *out_h2_r = (FFTZ_DOUBLE *)out_real;
 #endif
 
 #ifdef VOLATILE_STRIDE_ARRAY
@@ -1343,28 +1345,28 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         LOAD_IN_D(in_r, in_strides, 7, v_in_stride, v_in7, tw_ptr,
                   load_multi_cols, is_contiguous_in);
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_D(in_h2_r, in_strides, 8, v_in_h2_stride, v_in8, tw_ptr,
+        LOAD_IN_H2_D(in_h2_r, in_strides, 8, v_in_h2_stride, v_in8, tw_ptr,
                   load_multi_cols, 0);
         v_in8 = IN_H2_D(v_in8);
-        LOAD_IN_D(in_h2_r, in_strides, 9, v_in_h2_stride, v_in9, tw_ptr,
+        LOAD_IN_H2_D(in_h2_r, in_strides, 9, v_in_h2_stride, v_in9, tw_ptr,
                   load_multi_cols, 0);
         v_in9 = IN_H2_D(v_in9);
-        LOAD_IN_D(in_h2_r, in_strides, 10, v_in_h2_stride, v_in10, tw_ptr,
+        LOAD_IN_H2_D(in_h2_r, in_strides, 10, v_in_h2_stride, v_in10, tw_ptr,
                   load_multi_cols, 0);
         v_in10 = IN_H2_D(v_in10);
-        LOAD_IN_D(in_h2_r, in_strides, 11, v_in_h2_stride, v_in11, tw_ptr,
+        LOAD_IN_H2_D(in_h2_r, in_strides, 11, v_in_h2_stride, v_in11, tw_ptr,
                   load_multi_cols, 0);
         v_in11 = IN_H2_D(v_in11);
-        LOAD_IN_D(in_h2_r, in_strides, 12, v_in_h2_stride, v_in12, tw_ptr,
+        LOAD_IN_H2_D(in_h2_r, in_strides, 12, v_in_h2_stride, v_in12, tw_ptr,
                   load_multi_cols, 0);
         v_in12 = IN_H2_D(v_in12);
-        LOAD_IN_D(in_h2_r, in_strides, 13, v_in_h2_stride, v_in13, tw_ptr,
+        LOAD_IN_H2_D(in_h2_r, in_strides, 13, v_in_h2_stride, v_in13, tw_ptr,
                   load_multi_cols, 0);
         v_in13 = IN_H2_D(v_in13);
-        LOAD_IN_D(in_h2_r, in_strides, 14, v_in_h2_stride, v_in14, tw_ptr,
+        LOAD_IN_H2_D(in_h2_r, in_strides, 14, v_in_h2_stride, v_in14, tw_ptr,
                   load_multi_cols, 0);
         v_in14 = IN_H2_D(v_in14);
-        LOAD_IN_D(in_h2_r, in_strides, 15, v_in_h2_stride, v_in15, tw_ptr,
+        LOAD_IN_H2_D(in_h2_r, in_strides, 15, v_in_h2_stride, v_in15, tw_ptr,
                   load_multi_cols, 0);
         v_in15 = IN_H2_D(v_in15);
 #else
@@ -1527,29 +1529,29 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                     load_multi_cols, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out8 = OUT_H2_D(v_out8);
-        STORE_OUT_D(out_h2_r, out_strides, 8, v_out_h2_stride, v_out8, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_D(out_h2_r, out_strides, 8, v_out_h2_stride, v_out8,
+                       tw_ptr, load_multi_cols, 0);
         v_out9 = OUT_H2_D(v_out9);
-        STORE_OUT_D(out_h2_r, out_strides, 9, v_out_h2_stride, v_out9, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_D(out_h2_r, out_strides, 9, v_out_h2_stride, v_out9,
+                       tw_ptr, load_multi_cols, 0);
         v_out10 = OUT_H2_D(v_out10);
-        STORE_OUT_D(out_h2_r, out_strides, 10, v_out_h2_stride, v_out10, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_D(out_h2_r, out_strides, 10, v_out_h2_stride, v_out10,
+                       tw_ptr, load_multi_cols, 0);
         v_out11 = OUT_H2_D(v_out11);
-        STORE_OUT_D(out_h2_r, out_strides, 11, v_out_h2_stride, v_out11, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_D(out_h2_r, out_strides, 11, v_out_h2_stride, v_out11,
+                       tw_ptr, load_multi_cols, 0);
         v_out12 = OUT_H2_D(v_out12);
-        STORE_OUT_D(out_h2_r, out_strides, 12, v_out_h2_stride, v_out12, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_D(out_h2_r, out_strides, 12, v_out_h2_stride, v_out12,
+                       tw_ptr, load_multi_cols, 0);
         v_out13 = OUT_H2_D(v_out13);
-        STORE_OUT_D(out_h2_r, out_strides, 13, v_out_h2_stride, v_out13, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_D(out_h2_r, out_strides, 13, v_out_h2_stride, v_out13,
+                       tw_ptr, load_multi_cols, 0);
         v_out14 = OUT_H2_D(v_out14);
-        STORE_OUT_D(out_h2_r, out_strides, 14, v_out_h2_stride, v_out14, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_D(out_h2_r, out_strides, 14, v_out_h2_stride, v_out14,
+                       tw_ptr, load_multi_cols, 0);
         v_out15 = OUT_H2_D(v_out15);
-        STORE_OUT_D(out_h2_r, out_strides, 15, v_out_h2_stride, v_out15, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_D(out_h2_r, out_strides, 15, v_out_h2_stride, v_out15,
+                       tw_ptr, load_multi_cols, 0);
 #else
         STORE_OUT_D(out_r, out_strides, 8, v_out_stride, v_out8, tw_ptr,
                     load_multi_cols, is_contiguous_out);
@@ -1632,29 +1634,29 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         LOAD_IN_256_D(in_r, in_strides, 7, v_in_stride, v_in7, tw_ptr,
                       load_multi_cols, is_contiguous_in);
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_256_D(in_h2_r, in_strides, 8, v_in_h2_stride, v_in8, tw_ptr,
+        LOAD_IN_H2_256_D(in_h2_r, in_strides, 8, v_in_h2_stride, v_in8, tw_ptr,
                       load_multi_cols, 0);
         v_in8 = IN_H2_256_D(v_in8);
-        LOAD_IN_256_D(in_h2_r, in_strides, 9, v_in_h2_stride, v_in9, tw_ptr,
+        LOAD_IN_H2_256_D(in_h2_r, in_strides, 9, v_in_h2_stride, v_in9, tw_ptr,
                       load_multi_cols, 0);
         v_in9 = IN_H2_256_D(v_in9);
-        LOAD_IN_256_D(in_h2_r, in_strides, 10, v_in_h2_stride, v_in10, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_256_D(in_h2_r, in_strides, 10, v_in_h2_stride, v_in10,
+                         tw_ptr, load_multi_cols, 0);
         v_in10 = IN_H2_256_D(v_in10);
-        LOAD_IN_256_D(in_h2_r, in_strides, 11, v_in_h2_stride, v_in11, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_256_D(in_h2_r, in_strides, 11, v_in_h2_stride, v_in11,
+                         tw_ptr, load_multi_cols, 0);
         v_in11 = IN_H2_256_D(v_in11);
-        LOAD_IN_256_D(in_h2_r, in_strides, 12, v_in_h2_stride, v_in12, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_256_D(in_h2_r, in_strides, 12, v_in_h2_stride, v_in12,
+                         tw_ptr, load_multi_cols, 0);
         v_in12 = IN_H2_256_D(v_in12);
-        LOAD_IN_256_D(in_h2_r, in_strides, 13, v_in_h2_stride, v_in13, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_256_D(in_h2_r, in_strides, 13, v_in_h2_stride, v_in13,
+                         tw_ptr, load_multi_cols, 0);
         v_in13 = IN_H2_256_D(v_in13);
-        LOAD_IN_256_D(in_h2_r, in_strides, 14, v_in_h2_stride, v_in14, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_256_D(in_h2_r, in_strides, 14, v_in_h2_stride, v_in14,
+                         tw_ptr, load_multi_cols, 0);
         v_in14 = IN_H2_256_D(v_in14);
-        LOAD_IN_256_D(in_h2_r, in_strides, 15, v_in_h2_stride, v_in15, tw_ptr,
-                      load_multi_cols, 0);
+        LOAD_IN_H2_256_D(in_h2_r, in_strides, 15, v_in_h2_stride, v_in15,
+                         tw_ptr, load_multi_cols, 0);
         v_in15 = IN_H2_256_D(v_in15);
 #else
         LOAD_IN_256_D(in_r, in_strides, 8, v_in_stride, v_in8, tw_ptr,
@@ -1819,28 +1821,28 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                         load_multi_cols, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out8 = OUT_H2_256_D(v_out8);
-        STORE_OUT_256_D(out_h2_r, out_strides, 8, v_out_h2_stride, v_out8,
+        STORE_OUT_H2_256_D(out_h2_r, out_strides, 8, v_out_h2_stride, v_out8,
                         tw_ptr, load_multi_cols, 0);
         v_out9 = OUT_H2_256_D(v_out9);
-        STORE_OUT_256_D(out_h2_r, out_strides, 9, v_out_h2_stride, v_out9,
+        STORE_OUT_H2_256_D(out_h2_r, out_strides, 9, v_out_h2_stride, v_out9,
                         tw_ptr, load_multi_cols, 0);
         v_out10 = OUT_H2_256_D(v_out10);
-        STORE_OUT_256_D(out_h2_r, out_strides, 10, v_out_h2_stride, v_out10,
+        STORE_OUT_H2_256_D(out_h2_r, out_strides, 10, v_out_h2_stride, v_out10,
                         tw_ptr, load_multi_cols, 0);
         v_out11 = OUT_H2_256_D(v_out11);
-        STORE_OUT_256_D(out_h2_r, out_strides, 11, v_out_h2_stride, v_out11,
+        STORE_OUT_H2_256_D(out_h2_r, out_strides, 11, v_out_h2_stride, v_out11,
                         tw_ptr, load_multi_cols, 0);
         v_out12 = OUT_H2_256_D(v_out12);
-        STORE_OUT_256_D(out_h2_r, out_strides, 12, v_out_h2_stride, v_out12,
+        STORE_OUT_H2_256_D(out_h2_r, out_strides, 12, v_out_h2_stride, v_out12,
                         tw_ptr, load_multi_cols, 0);
         v_out13 = OUT_H2_256_D(v_out13);
-        STORE_OUT_256_D(out_h2_r, out_strides, 13, v_out_h2_stride, v_out13,
+        STORE_OUT_H2_256_D(out_h2_r, out_strides, 13, v_out_h2_stride, v_out13,
                         tw_ptr, load_multi_cols, 0);
         v_out14 = OUT_H2_256_D(v_out14);
-        STORE_OUT_256_D(out_h2_r, out_strides, 14, v_out_h2_stride, v_out14,
+        STORE_OUT_H2_256_D(out_h2_r, out_strides, 14, v_out_h2_stride, v_out14,
                         tw_ptr, load_multi_cols, 0);
         v_out15 = OUT_H2_256_D(v_out15);
-        STORE_OUT_256_D(out_h2_r, out_strides, 15, v_out_h2_stride, v_out15,
+        STORE_OUT_H2_256_D(out_h2_r, out_strides, 15, v_out_h2_stride, v_out15,
                         tw_ptr, load_multi_cols, 0);
 #else
         STORE_OUT_256_D(out_r, out_strides, 8, v_out_stride, v_out8, tw_ptr,
@@ -1932,28 +1934,28 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         LOAD_IN_128_D(in_r, in_strides, 7, 0, v_in7, tw_ptr, load_multi_cols,
                       is_contiguous_in);
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_128_D(in_h2_r, in_strides, 8, 0, v_in8, tw_ptr, load_multi_cols,
-                      0);
+        LOAD_IN_H2_128_D(in_h2_r, in_strides, 8, 0, v_in8, tw_ptr,
+                         load_multi_cols, 0);
         v_in8 = IN_H2_128_D(v_in8);
-        LOAD_IN_128_D(in_h2_r, in_strides, 9, 0, v_in9, tw_ptr, load_multi_cols,
-                      0);
+        LOAD_IN_H2_128_D(in_h2_r, in_strides, 9, 0, v_in9, tw_ptr,
+                         load_multi_cols, 0);
         v_in9 = IN_H2_128_D(v_in9);
-        LOAD_IN_128_D(in_h2_r, in_strides, 10, 0, v_in10, tw_ptr,
+        LOAD_IN_H2_128_D(in_h2_r, in_strides, 10, 0, v_in10, tw_ptr,
                       load_multi_cols, 0);
         v_in10 = IN_H2_128_D(v_in10);
-        LOAD_IN_128_D(in_h2_r, in_strides, 11, 0, v_in11, tw_ptr,
+        LOAD_IN_H2_128_D(in_h2_r, in_strides, 11, 0, v_in11, tw_ptr,
                       load_multi_cols, 0);
         v_in11 = IN_H2_128_D(v_in11);
-        LOAD_IN_128_D(in_h2_r, in_strides, 12, 0, v_in12, tw_ptr,
+        LOAD_IN_H2_128_D(in_h2_r, in_strides, 12, 0, v_in12, tw_ptr,
                       load_multi_cols, 0);
         v_in12 = IN_H2_128_D(v_in12);
-        LOAD_IN_128_D(in_h2_r, in_strides, 13, 0, v_in13, tw_ptr,
+        LOAD_IN_H2_128_D(in_h2_r, in_strides, 13, 0, v_in13, tw_ptr,
                       load_multi_cols, 0);
         v_in13 = IN_H2_128_D(v_in13);
-        LOAD_IN_128_D(in_h2_r, in_strides, 14, 0, v_in14, tw_ptr,
+        LOAD_IN_H2_128_D(in_h2_r, in_strides, 14, 0, v_in14, tw_ptr,
                       load_multi_cols, 0);
         v_in14 = IN_H2_128_D(v_in14);
-        LOAD_IN_128_D(in_h2_r, in_strides, 15, 0, v_in15, tw_ptr,
+        LOAD_IN_H2_128_D(in_h2_r, in_strides, 15, 0, v_in15, tw_ptr,
                       load_multi_cols, 0);
         v_in15 = IN_H2_128_D(v_in15);
 #else
@@ -2120,28 +2122,28 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                         load_multi_cols, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out8 = OUT_H2_128_D(v_out8);
-        STORE_OUT_128_D(out_h2_r, out_strides, 8, 0, v_out8, tw_ptr,
+        STORE_OUT_H2_128_D(out_h2_r, out_strides, 8, 0, v_out8, tw_ptr,
                         load_multi_cols, 0);
         v_out9 = OUT_H2_128_D(v_out9);
-        STORE_OUT_128_D(out_h2_r, out_strides, 9, 0, v_out9, tw_ptr,
+        STORE_OUT_H2_128_D(out_h2_r, out_strides, 9, 0, v_out9, tw_ptr,
                         load_multi_cols, 0);
         v_out10 = OUT_H2_128_D(v_out10);
-        STORE_OUT_128_D(out_h2_r, out_strides, 10, 0, v_out10, tw_ptr,
+        STORE_OUT_H2_128_D(out_h2_r, out_strides, 10, 0, v_out10, tw_ptr,
                         load_multi_cols, 0);
         v_out11 = OUT_H2_128_D(v_out11);
-        STORE_OUT_128_D(out_h2_r, out_strides, 11, 0, v_out11, tw_ptr,
+        STORE_OUT_H2_128_D(out_h2_r, out_strides, 11, 0, v_out11, tw_ptr,
                         load_multi_cols, 0);
         v_out12 = OUT_H2_128_D(v_out12);
-        STORE_OUT_128_D(out_h2_r, out_strides, 12, 0, v_out12, tw_ptr,
+        STORE_OUT_H2_128_D(out_h2_r, out_strides, 12, 0, v_out12, tw_ptr,
                         load_multi_cols, 0);
         v_out13 = OUT_H2_128_D(v_out13);
-        STORE_OUT_128_D(out_h2_r, out_strides, 13, 0, v_out13, tw_ptr,
+        STORE_OUT_H2_128_D(out_h2_r, out_strides, 13, 0, v_out13, tw_ptr,
                         load_multi_cols, 0);
         v_out14 = OUT_H2_128_D(v_out14);
-        STORE_OUT_128_D(out_h2_r, out_strides, 14, 0, v_out14, tw_ptr,
+        STORE_OUT_H2_128_D(out_h2_r, out_strides, 14, 0, v_out14, tw_ptr,
                         load_multi_cols, 0);
         v_out15 = OUT_H2_128_D(v_out15);
-        STORE_OUT_128_D(out_h2_r, out_strides, 15, 0, v_out15, tw_ptr,
+        STORE_OUT_H2_128_D(out_h2_r, out_strides, 15, 0, v_out15, tw_ptr,
                         load_multi_cols, 0);
 #else
         STORE_OUT_128_D(out_r, out_strides, 8, 0, v_out8, tw_ptr,

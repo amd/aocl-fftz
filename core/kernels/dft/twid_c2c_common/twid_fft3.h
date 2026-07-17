@@ -33,9 +33,9 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     FFTZ_FLOAT *in_r = (FFTZ_FLOAT *)in_real;
     FFTZ_FLOAT *out_r = (FFTZ_FLOAT *)out_real;
 #if defined(KERNEL_VARIANT_C2R)
-    FFTZ_FLOAT *in_h2_r = in_r;
+    FFTZ_FLOAT *in_h2_r = (FFTZ_FLOAT *)in_real;
 #elif defined(KERNEL_VARIANT_R2C)
-    FFTZ_FLOAT *out_h2_r = out_r;
+    FFTZ_FLOAT *out_h2_r = (FFTZ_FLOAT *)out_real;
 #endif
 
 #ifdef VOLATILE_STRIDE_ARRAY
@@ -82,7 +82,7 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         LOAD_IN_S(in_r, in_strides, 1, v_in_stride, v_in1, tw_ptr,
                   load_multi_cols, is_contiguous_in);
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_S(in_h2_r, in_strides, 2, v_in_h2_stride, v_in2, tw_ptr,
+        LOAD_IN_H2_S(in_h2_r, in_strides, 2, v_in_h2_stride, v_in2, tw_ptr,
                   load_multi_cols, 0);
         v_in2 = IN_H2_S(v_in2);
 #else
@@ -113,8 +113,8 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                     load_multi_cols, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out2 = OUT_H2_S(v_out2);
-        STORE_OUT_S(out_h2_r, out_strides, 2, v_out_h2_stride, v_out2, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_S(out_h2_r, out_strides, 2, v_out_h2_stride, v_out2,
+                       tw_ptr, load_multi_cols, 0);
 #else
         STORE_OUT_S(out_r, out_strides, 2, v_out_stride, v_out2, tw_ptr,
                     load_multi_cols, is_contiguous_out);
@@ -147,7 +147,7 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         LOAD_IN_256_S(in_r, in_strides, 1, v_in_stride, v_in1, tw_ptr,
                       load_multi_cols, is_contiguous_in);
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_256_S(in_h2_r, in_strides, 2, v_in_h2_stride, v_in2, tw_ptr,
+        LOAD_IN_H2_256_S(in_h2_r, in_strides, 2, v_in_h2_stride, v_in2, tw_ptr,
                       load_multi_cols, 0);
         v_in2 = IN_H2_256_S(v_in2);
 #else
@@ -178,7 +178,7 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                         load_multi_cols, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out2 = OUT_H2_256_S(v_out2);
-        STORE_OUT_256_S(out_h2_r, out_strides, 2, v_out_h2_stride, v_out2,
+        STORE_OUT_H2_256_S(out_h2_r, out_strides, 2, v_out_h2_stride, v_out2,
                         tw_ptr, load_multi_cols, 0);
 #else
         STORE_OUT_256_S(out_r, out_strides, 2, v_out_stride, v_out2, tw_ptr,
@@ -215,7 +215,7 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         LOAD_IN_128_S(in_r, in_strides, 1, v_in_stride, v_in1, tw_ptr,
                       load_multi_cols, is_contiguous_in);
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_128_S(in_h2_r, in_strides, 2, v_in_h2_stride, v_in2, tw_ptr,
+        LOAD_IN_H2_128_S(in_h2_r, in_strides, 2, v_in_h2_stride, v_in2, tw_ptr,
                       load_multi_cols, 0);
         v_in2 = IN_H2_128_S(v_in2);
 #else
@@ -246,7 +246,7 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                         load_multi_cols, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out2 = OUT_H2_128_S(v_out2);
-        STORE_OUT_128_S(out_h2_r, out_strides, 2, v_out_h2_stride, v_out2,
+        STORE_OUT_H2_128_S(out_h2_r, out_strides, 2, v_out_h2_stride, v_out2,
                         tw_ptr, load_multi_cols, 0);
 #else
         STORE_OUT_128_S(out_r, out_strides, 2, v_out_stride, v_out2, tw_ptr,
@@ -287,7 +287,8 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         LOAD_IN_64_S(in_r, in_strides, 1, v_in1, tw_ptr, load_multi_cols,
                      is_contiguous_in);
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_64_S(in_h2_r, in_strides, 2, v_in2, tw_ptr, load_multi_cols, 0);
+        LOAD_IN_H2_64_S(in_h2_r, in_strides, 2, v_in2, tw_ptr, load_multi_cols,
+                        0);
         v_in2 = IN_H2_128_S(v_in2);
 #else
         LOAD_IN_64_S(in_r, in_strides, 2, v_in2, tw_ptr, load_multi_cols,
@@ -317,7 +318,7 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                        is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out2 = OUT_H2_128_S(v_out2);
-        STORE_OUT_64_S(out_h2_r, out_strides, 2, v_out2, tw_ptr,
+        STORE_OUT_H2_64_S(out_h2_r, out_strides, 2, v_out2, tw_ptr,
                        load_multi_cols, 0);
 #else
         STORE_OUT_64_S(out_r, out_strides, 2, v_out2, tw_ptr, load_multi_cols,
@@ -342,9 +343,9 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     FFTZ_DOUBLE *in_r = (FFTZ_DOUBLE *)in_real;
     FFTZ_DOUBLE *out_r = (FFTZ_DOUBLE *)out_real;
 #if defined(KERNEL_VARIANT_C2R)
-    FFTZ_DOUBLE *in_h2_r = in_r;
+    FFTZ_DOUBLE *in_h2_r = (FFTZ_DOUBLE *)in_real;
 #elif defined(KERNEL_VARIANT_R2C)
-    FFTZ_DOUBLE *out_h2_r = out_r;
+    FFTZ_DOUBLE *out_h2_r = (FFTZ_DOUBLE *)out_real;
 #endif
 
 #ifdef VOLATILE_STRIDE_ARRAY
@@ -395,7 +396,7 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         LOAD_IN_D(in_r, in_strides, 1, v_in_stride, v_in1, tw_ptr,
                   load_multi_cols, is_contiguous_in);
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_D(in_h2_r, in_strides, 2, v_in_h2_stride, v_in2, tw_ptr,
+        LOAD_IN_H2_D(in_h2_r, in_strides, 2, v_in_h2_stride, v_in2, tw_ptr,
                   load_multi_cols, 0);
         v_in2 = IN_H2_D(v_in2);
 #else
@@ -424,8 +425,8 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                     load_multi_cols, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out2 = OUT_H2_D(v_out2);
-        STORE_OUT_D(out_h2_r, out_strides, 2, v_out_h2_stride, v_out2, tw_ptr,
-                    load_multi_cols, 0);
+        STORE_OUT_H2_D(out_h2_r, out_strides, 2, v_out_h2_stride, v_out2,
+                       tw_ptr, load_multi_cols, 0);
 #else
         STORE_OUT_D(out_r, out_strides, 2, v_out_stride, v_out2, tw_ptr,
                     load_multi_cols, is_contiguous_out);
@@ -462,7 +463,7 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         LOAD_IN_256_D(in_r, in_strides, 1, v_in_stride, v_in1, tw_ptr,
                       load_multi_cols, is_contiguous_in);
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_256_D(in_h2_r, in_strides, 2, v_in_h2_stride, v_in2, tw_ptr,
+        LOAD_IN_H2_256_D(in_h2_r, in_strides, 2, v_in_h2_stride, v_in2, tw_ptr,
                       load_multi_cols, 0);
         v_in2 = IN_H2_256_D(v_in2);
 #else
@@ -493,7 +494,7 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                         load_multi_cols, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out2 = OUT_H2_256_D(v_out2);
-        STORE_OUT_256_D(out_h2_r, out_strides, 2, v_out_h2_stride, v_out2,
+        STORE_OUT_H2_256_D(out_h2_r, out_strides, 2, v_out_h2_stride, v_out2,
                         tw_ptr, load_multi_cols, 0);
 #else
         STORE_OUT_256_D(out_r, out_strides, 2, v_out_stride, v_out2, tw_ptr,
@@ -534,8 +535,8 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         LOAD_IN_128_D(in_r, in_strides, 1, 0, v_in1, tw_ptr, load_multi_cols,
                       is_contiguous_in);
 #if defined(KERNEL_VARIANT_C2R)
-        LOAD_IN_128_D(in_h2_r, in_strides, 2, 0, v_in2, tw_ptr, load_multi_cols,
-                      0);
+        LOAD_IN_H2_128_D(in_h2_r, in_strides, 2, 0, v_in2, tw_ptr,
+                         load_multi_cols, 0);
         v_in2 = IN_H2_128_D(v_in2);
 #else
         LOAD_IN_128_D(in_r, in_strides, 2, 0, v_in2, tw_ptr, load_multi_cols,
@@ -565,7 +566,7 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
                         load_multi_cols, is_contiguous_out);
 #if defined(KERNEL_VARIANT_R2C)
         v_out2 = OUT_H2_128_D(v_out2);
-        STORE_OUT_128_D(out_h2_r, out_strides, 2, 0, v_out2, tw_ptr,
+        STORE_OUT_H2_128_D(out_h2_r, out_strides, 2, 0, v_out2, tw_ptr,
                         load_multi_cols, 0);
 #else
         STORE_OUT_128_D(out_r, out_strides, 2, 0, v_out2, tw_ptr,
