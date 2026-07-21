@@ -343,6 +343,10 @@ typedef struct aoclfftz_decomp_scheme
     //   floating point datatype precision
     //               (00) 8-bit / (01) 16-bit / (10) 32-bit / (11) 64-bit
     FFTZ_UINT32 flags;
+    // Real forward R2C post-process: precomputed DC/Nyquist imag slot indices.
+    FFTZ_INTP nyquist_im_offset_direct; // per transform; direct R2C zero
+    FFTZ_INTP nyquist_im_offset_ct;    // full output span; CT R2C last-stage
+                                        // zero.
 } aoclfftz_decomp_scheme_t;
 
 // TW Holds twiddle factors used by a specific kernel for the given problem

@@ -49,17 +49,34 @@ typedef enum
     SOLVER_MT_DIRECT_BATCHED_ROWMAJOR,
     SOLVER_MT_BATCHED,
     SOLVER_MT_BLUESTEIN,
-    SOLVER_REAL_DIRECT,
+    SOLVER_REAL_DIRECT_R2C,
+    SOLVER_REAL_DIRECT_R2C_BATCHED,
+    SOLVER_REAL_DIRECT_C2R,
+    SOLVER_REAL_DIRECT_CT_R2C,
+    SOLVER_REAL_DIRECT_CT_C2R,
     SOLVER_REAL_CT,
     SOLVER_REAL_NDIM,
     SOLVER_REAL_BUFFERED,
     SOLVER_REAL_BATCHED,
     SOLVER_REAL_PERM_KER,
     SOLVER_REAL_SIZEONE,
-    SOLVER_REAL_MT_DIRECT,
+    SOLVER_REAL_MT_DIRECT_R2C,
+    SOLVER_REAL_MT_DIRECT_R2C_BATCHED,
+    SOLVER_REAL_MT_DIRECT_C2R,
+    SOLVER_REAL_MT_DIRECT_CT_R2C,
+    SOLVER_REAL_MT_DIRECT_CT_C2R,
     SOLVER_REAL_MT_BATCHED,
     NUM_SOLVERS_END
 } aoclfftz_solver_type;
+
+static inline FFTZ_UINT8
+is_solver_real_direct_family(aoclfftz_solver_type solver_type)
+{
+    return (solver_type >= SOLVER_REAL_DIRECT_R2C &&
+            solver_type <= SOLVER_REAL_DIRECT_CT_C2R) ||
+           (solver_type >= SOLVER_REAL_MT_DIRECT_R2C &&
+            solver_type <= SOLVER_REAL_MT_DIRECT_CT_C2R);
+}
 
 FFTZ_INT32 register_solvers(FFTZ_VOID);
 FFTZ_INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj);
@@ -155,7 +172,11 @@ dft_solver_ register_execute_mt_batched_solver(FFTZ_VOID);
 dft_solver_ register_execute_mt_bluestein_solver(FFTZ_VOID);
 #endif
 
-dft_solver_ register_execute_real_direct_solver(FFTZ_VOID);
+dft_solver_ register_execute_real_direct_r2c(FFTZ_VOID);
+dft_solver_ register_execute_real_direct_r2c_batched(FFTZ_VOID);
+dft_solver_ register_execute_real_direct_c2r(FFTZ_VOID);
+dft_solver_ register_execute_real_direct_ct_r2c(FFTZ_VOID);
+dft_solver_ register_execute_real_direct_ct_c2r(FFTZ_VOID);
 dft_solver_ register_execute_real_batched_solver(FFTZ_VOID);
 dft_solver_ register_execute_real_buffered_solver(FFTZ_VOID);
 dft_solver_ register_execute_real_ct_solver(FFTZ_VOID);
@@ -163,7 +184,11 @@ dft_solver_ register_execute_real_ndim_solver(FFTZ_VOID);
 dft_solver_ register_execute_real_sizeone_solver(FFTZ_VOID);
 
 #ifdef MULTI_THREADING
-dft_solver_ register_execute_real_mt_direct_solver(FFTZ_VOID);
+dft_solver_ register_execute_real_mt_direct_r2c(FFTZ_VOID);
+dft_solver_ register_execute_real_mt_direct_r2c_batched(FFTZ_VOID);
+dft_solver_ register_execute_real_mt_direct_c2r(FFTZ_VOID);
+dft_solver_ register_execute_real_mt_direct_ct_r2c(FFTZ_VOID);
+dft_solver_ register_execute_real_mt_direct_ct_c2r(FFTZ_VOID);
 dft_solver_ register_execute_real_mt_batched_solver(FFTZ_VOID);
 #endif
 FFTZ_INT64 compute_kernel_cost(const kernel_t *ker, FFTZ_UINT8 precision,

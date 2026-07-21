@@ -15,6 +15,7 @@
 
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
+#include "core/solvers/real/direct_solver_rdft_utils.h"
 
 // to_ds, from_ds: short for to/from decomp_scheme
 FFTZ_INT32 copy_decomp_scheme( aoclfftz_decomp_scheme_t *to_ds,
@@ -201,6 +202,7 @@ FFTZ_INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
     to_sol_obj->decomp_scheme->thread_info->n_threads =
         from_sol_obj->decomp_scheme->thread_info->n_threads;
     to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;
+    setup_rdft_dc_nyquist_offsets_ds(to_sol_obj->decomp_scheme);
 
     // twiddle
     to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;
@@ -333,6 +335,7 @@ FFTZ_INT32 copy_solution_obj_out_p( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->decomp_scheme->out_real;
     to_sol_obj->decomp_scheme->out_imag =
         from_sol_obj->decomp_scheme->out_imag;
+    setup_rdft_dc_nyquist_offsets_ds(to_sol_obj->decomp_scheme);
     return AOCLFFTZ_SUCCESS;
 }
 
@@ -718,10 +721,8 @@ FFTZ_VOID swap_real_ct_solutions(aoclfftz_selector_t *sel)
     {
         /* swap first CT node */
         if (sel->solution->solver->solver_type == SOLVER_REAL_CT &&
-            (sel->solution->next_sol[0]->solver->solver_type ==
-                 SOLVER_REAL_DIRECT ||
-             sel->solution->next_sol[0]->solver->solver_type ==
-                 SOLVER_REAL_MT_DIRECT))
+            (is_solver_real_direct_family(
+                 sel->solution->next_sol[0]->solver->solver_type)))
         {
             sel->solution = curr->next_sol[0];
             curr->next_sol[0] = sel->solution->next_sol[0];
@@ -734,8 +735,7 @@ FFTZ_VOID swap_real_ct_solutions(aoclfftz_selector_t *sel)
         {
             next = curr->next_sol[0];
             if (curr->solver->solver_type == SOLVER_REAL_CT &&
-                (next->solver->solver_type == SOLVER_REAL_DIRECT ||
-                 next->solver->solver_type == SOLVER_REAL_MT_DIRECT))
+                is_solver_real_direct_family(next->solver->solver_type))
             {
                 prev->next_sol[0] = next;
                 curr->next_sol[0] = next->next_sol[0];

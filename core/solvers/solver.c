@@ -27,7 +27,16 @@ dft_solver_ solvers_table[NUM_SOLVERS_END] = { 0x0, };
 FFTZ_INT32 register_solvers(FFTZ_VOID)
 {
     // Real solvers
-    solvers_table[SOLVER_REAL_DIRECT] = register_execute_real_direct_solver();
+    solvers_table[SOLVER_REAL_DIRECT_R2C] =
+        register_execute_real_direct_r2c();
+    solvers_table[SOLVER_REAL_DIRECT_R2C_BATCHED] =
+        register_execute_real_direct_r2c_batched();
+    solvers_table[SOLVER_REAL_DIRECT_C2R] =
+        register_execute_real_direct_c2r();
+    solvers_table[SOLVER_REAL_DIRECT_CT_R2C] =
+        register_execute_real_direct_ct_r2c();
+    solvers_table[SOLVER_REAL_DIRECT_CT_C2R] =
+        register_execute_real_direct_ct_c2r();
     solvers_table[SOLVER_REAL_CT] = register_execute_real_ct_solver();
     solvers_table[SOLVER_REAL_BATCHED] = register_execute_real_batched_solver();
     solvers_table[SOLVER_REAL_BUFFERED] =
@@ -35,8 +44,16 @@ FFTZ_INT32 register_solvers(FFTZ_VOID)
     solvers_table[SOLVER_REAL_NDIM] = register_execute_real_ndim_solver();
     solvers_table[SOLVER_REAL_SIZEONE] = register_execute_real_sizeone_solver();
 #ifdef MULTI_THREADING
-    solvers_table[SOLVER_REAL_MT_DIRECT] =
-        register_execute_real_mt_direct_solver();
+    solvers_table[SOLVER_REAL_MT_DIRECT_R2C] =
+        register_execute_real_mt_direct_r2c();
+    solvers_table[SOLVER_REAL_MT_DIRECT_R2C_BATCHED] =
+        register_execute_real_mt_direct_r2c_batched();
+    solvers_table[SOLVER_REAL_MT_DIRECT_C2R] =
+        register_execute_real_mt_direct_c2r();
+    solvers_table[SOLVER_REAL_MT_DIRECT_CT_R2C] =
+        register_execute_real_mt_direct_ct_r2c();
+    solvers_table[SOLVER_REAL_MT_DIRECT_CT_C2R] =
+        register_execute_real_mt_direct_ct_c2r();
     solvers_table[SOLVER_REAL_MT_BATCHED] =
         register_execute_real_mt_batched_solver();
 #endif

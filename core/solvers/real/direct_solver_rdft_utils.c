@@ -13,6 +13,29 @@
 #include "core/common/strides.h"
 #include "core/solvers/real/direct_solver_rdft_utils.h"
 
+FFTZ_VOID setup_rdft_dc_nyquist_offsets_ds(aoclfftz_decomp_scheme_t *ds)
+{
+    if (FFT_DIR(ds->flags) != FORWARD_FFT_DIR)
+    {
+        return;
+    }
+
+    FFTZ_INTP transform_len = ds->dims[0].n;
+    FFTZ_INTP out_stride = ds->dims[0].out_stride;
+    FFTZ_INTP batch = ds->vecs[0].n;
+    FFTZ_INTP transform_len_total = transform_len * batch;
+
+    // R2C half-complex output stores Nyquist imag at index n*out_stride+1
+    // (interleaved real/imag) when n is even; for odd n it folds onto DC
+    // (offset 1). nyquist_im_offset_direct is per transform (direct R2C zero);
+    // nyquist_im_offset_ct spans the full batch (CT last-stage zero).
+    ds->nyquist_im_offset_direct =
+        transform_len % 2 == 0 ? transform_len * out_stride + 1 : 1;
+    ds->nyquist_im_offset_ct =
+        transform_len_total % 2 == 0 ? transform_len_total * out_stride + 1
+                                     : 1;
+}
+
 // Configure and sets the count values for different kernel types
 // (c2c, r2hc, r2hcf) based on the problem parameters.
 FFTZ_VOID set_kernel_count_in_each_group(aoclfftz_solution_t *sol,
@@ -366,6 +389,7 @@ FFTZ_INT32 allocate_and_setup_stride(aoclfftz_solution_t *sol,
 
     set_vector_strides_for_kernels(sol, vector_strides, c2c_strides,
                                    use_asymmetric_kernel);
+    setup_rdft_dc_nyquist_offsets_ds(sol->decomp_scheme);
     return SOLVER_SUCCESS;
 }
 

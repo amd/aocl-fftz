@@ -667,11 +667,11 @@ FFTZ_INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     {
         if (avl_threads == 1)
         {
-            solver_obj->solver_type = SOLVER_REAL_DIRECT;
+            solver_obj->solver_type = SOLVER_REAL_DIRECT_R2C;
         }
         else
         {
-            solver_obj->solver_type = SOLVER_REAL_MT_DIRECT;
+            solver_obj->solver_type = SOLVER_REAL_MT_DIRECT_R2C;
         }
 
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
@@ -1645,8 +1645,7 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                 // goto next direct node to setup twiddle buffer
                 while (
                     curr != NULL &&
-                    curr->solver->solver_type != SOLVER_REAL_DIRECT &&
-                    curr->solver->solver_type != SOLVER_REAL_MT_DIRECT)
+                    !is_solver_real_direct_family(curr->solver->solver_type))
                 {
                     curr->twiddle->TW = prev->twiddle->TW;
                     curr = curr->next_sol ? curr->next_sol[0] : NULL;
@@ -1725,10 +1724,8 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                     }
                     alloc_more = 0;
                     if (HAS_NEXT(curr) &&
-                        (curr->next_sol[0]->solver->solver_type ==
-                             SOLVER_REAL_DIRECT ||
-                         curr->next_sol[0]->solver->solver_type ==
-                             SOLVER_REAL_MT_DIRECT) &&
+                        is_solver_real_direct_family(
+                            curr->next_sol[0]->solver->solver_type) &&
                         curr->next_sol[0]->solver->kernel_c2c->count > 0)
                     {
                         prev = curr;
@@ -1747,8 +1744,7 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                           (solution->next_sol) ? solution->next_sol[0] : NULL)
         {
             if (curr->solver->solver_type == SOLVER_REAL_CT &&
-                (prev->solver->solver_type == SOLVER_REAL_DIRECT ||
-                prev->solver->solver_type == SOLVER_REAL_MT_DIRECT) &&
+                is_solver_real_direct_family(prev->solver->solver_type) &&
                 prev->twiddle->twiddle_buf_ptr == NULL)
             {
                 // SWAP tree: Direct(r) → CT. Allocate twiddle for Direct(r).
@@ -1790,8 +1786,8 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                 curr->twiddle->TW = prev->twiddle->TW;
             }
             else if (prev->solver->solver_type == SOLVER_REAL_CT &&
-                     (curr->solver->solver_type == SOLVER_REAL_DIRECT ||
-                      curr->solver->solver_type == SOLVER_REAL_MT_DIRECT) &&
+                     is_solver_real_direct_family(
+                         curr->solver->solver_type) &&
                      curr->solver->kernel_c2c->count > 0 &&
                      curr->twiddle->twiddle_buf_ptr == NULL)
             {
@@ -1842,10 +1838,8 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                     }
                     alloc_more = 0;
                     if (HAS_NEXT(curr) &&
-                        (curr->next_sol[0]->solver->solver_type ==
-                             SOLVER_REAL_DIRECT ||
-                         curr->next_sol[0]->solver->solver_type ==
-                             SOLVER_REAL_MT_DIRECT) &&
+                        is_solver_real_direct_family(
+                            curr->next_sol[0]->solver->solver_type) &&
                         curr->next_sol[0]->solver->kernel_c2c->count > 0)
                     {
                         prev = curr;
@@ -1969,8 +1963,7 @@ static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
     while (cur_sol != NULL)
     {
         FFTZ_UINT8 is_direct =
-            (cur_sol->solver->solver_type == SOLVER_REAL_DIRECT ||
-             cur_sol->solver->solver_type == SOLVER_REAL_MT_DIRECT);
+            is_solver_real_direct_family(cur_sol->solver->solver_type);
         FFTZ_UINT8 is_last =
             (cur_sol->next_sol == NULL || cur_sol->next_sol[0] == NULL);
 
@@ -2038,8 +2031,7 @@ static FFTZ_INT32 setup_buffered_chain_structure(aoclfftz_solution_t *sol)
         cur_sol->decomp_scheme->out_real = aux_out;
         cur_sol->decomp_scheme->out_imag = MOVE_ADDR(aux_out, dt_bytes);
         // Swap aux buffers after every direct solution
-        if (cur_sol->solver->solver_type == SOLVER_REAL_DIRECT ||
-            cur_sol->solver->solver_type == SOLVER_REAL_MT_DIRECT)
+        if (is_solver_real_direct_family(cur_sol->solver->solver_type))
         {
             SWAP_BUFFERS(aux_in, aux_out);
         }

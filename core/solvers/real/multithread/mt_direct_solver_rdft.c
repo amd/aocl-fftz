@@ -15,6 +15,18 @@
 #include "core/common/memory_manager.h"
 #include "core/solvers/real/direct_solver_rdft_utils.h"
 
+static FFTZ_INT32 execute_real_mt_direct_r2c(aoclfftz_solution_t *sol,
+                                             aoclfftz_mutable_ctx_t *ctx);
+static FFTZ_INT32
+execute_real_mt_direct_r2c_batched(aoclfftz_solution_t *sol,
+                                   aoclfftz_mutable_ctx_t *ctx);
+static FFTZ_INT32 execute_real_mt_direct_c2r(aoclfftz_solution_t *sol,
+                                             aoclfftz_mutable_ctx_t *ctx);
+static FFTZ_INT32 execute_real_mt_direct_ct_r2c(aoclfftz_solution_t *sol,
+                                                aoclfftz_mutable_ctx_t *ctx);
+static FFTZ_INT32 execute_real_mt_direct_ct_c2r(aoclfftz_solution_t *sol,
+                                                aoclfftz_mutable_ctx_t *ctx);
+
 /* This function will setup the direct solution with the required information
  *  to execute both direct problem and CT r subproblem for MT.
  *  Even for a CT problem, most of the kernel execution information is required
@@ -66,8 +78,9 @@ FFTZ_INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
     return status;
 }
 
-static inline FFTZ_VOID execute_real_mt_r2c_kernels(aoclfftz_solution_t *sol,
-                                                    FFTZ_INT32 n_threads_real)
+static inline FFTZ_VOID
+execute_real_mt_direct_kernels(aoclfftz_solution_t *sol,
+                               FFTZ_INT32 n_threads_real)
 {
     FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
@@ -460,35 +473,51 @@ static inline FFTZ_VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
     }
 }
 
-/* This function will execute the kernels for both real direct and CT problems.
-
-   For real direct problem, it will execute R2HC kernels.
-   For real CT problems, following steps will be performed:
-     1. Call R2HC/R2HCF kernels
-     2. Get the no. of groups and group size for C2C kernels
-     3. Update C2C kernel strides for each kernel within a group
-     4. Execute the fused C2C kernels (twiddle multiplication and the
-        half-point conjugation are handled internally by the kernel).
-*/
-static FFTZ_INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol,
-                                                aoclfftz_mutable_ctx_t *ctx)
+// Direct-only forward R2C for non-batched problems (vecs[0].n == 1).
+static FFTZ_INT32 execute_real_mt_direct_r2c(aoclfftz_solution_t *sol,
+                                             aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    FFTZ_INT32 ret = SOLVER_SUCCESS;
+    execute_real_mt_direct_kernels(sol,
+                                   sol->decomp_scheme->thread_info->n_threads);
+    set_zero_for_dc_and_nyquist(sol);
 
-    FFTZ_UINT8 is_direct_only_problem = IS_DIRECT_ONLY_PROBLEM(sol);
-    if (is_direct_only_problem)
-    {
-        execute_real_mt_r2c_kernels(sol,
-                                    sol->decomp_scheme->thread_info->n_threads);
-        if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
-        {
-            set_zero_for_dc_and_nyquist_batched(sol);
-        }
-        return ret;
-    }
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+    return SOLVER_SUCCESS;
+}
 
+// Direct-only forward R2C for batched problems (vecs[0].n > 1). Batched
+// variant is required as DC / Nyquist zeroing needs batch-aware handling.
+static FFTZ_INT32 execute_real_mt_direct_r2c_batched(aoclfftz_solution_t *sol,
+                                                     aoclfftz_mutable_ctx_t *ctx)
+{
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
+    execute_real_mt_direct_kernels(sol,
+                                   sol->decomp_scheme->thread_info->n_threads);
+    set_zero_for_dc_and_nyquist_batched(sol);
+
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+    return SOLVER_SUCCESS;
+}
+
+// Direct-only backward C2R
+static FFTZ_INT32 execute_real_mt_direct_c2r(aoclfftz_solution_t *sol,
+                                             aoclfftz_mutable_ctx_t *ctx)
+{
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
+    execute_real_mt_direct_kernels(sol,
+                                   sol->decomp_scheme->thread_info->n_threads);
+
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+    return SOLVER_SUCCESS;
+}
+
+// CT intra-stage: parallel R2HC/R2HCF and C2C within one CT stage.
+static FFTZ_VOID execute_real_mt_ct_intra_stage_kernels(aoclfftz_solution_t *sol)
+{
     FFTZ_INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
 
     // since r2hc perform computation on half points, their weightage in thread
@@ -512,7 +541,7 @@ static FFTZ_INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol,
         {
             #pragma omp section
             {
-                execute_real_mt_r2c_kernels(sol, n_threads_real);
+                execute_real_mt_direct_kernels(sol, n_threads_real);
             }
             #pragma omp section
             {
@@ -522,8 +551,20 @@ static FFTZ_INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol,
     }
     else
     {
-        execute_real_mt_r2c_kernels(sol, n_threads_real);
+        execute_real_mt_direct_kernels(sol, n_threads_real);
     }
+}
+
+// CT forward R2C stage (R2HC + R2HCF + C2C); zero DC/Nyquist on last stage
+// only.
+static FFTZ_INT32 execute_real_mt_direct_ct_r2c(aoclfftz_solution_t *sol,
+                                                aoclfftz_mutable_ctx_t *ctx)
+{
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
+    FFTZ_INT32 ret = SOLVER_SUCCESS;
+
+    execute_real_mt_ct_intra_stage_kernels(sol);
 
 #if REAL_FFT_EXECUTION_ORDER == REAL_FFT_ORDER_TRUE_RECURSION
     // Recurse-then-combine mode: the CT solver owns tree traversal, so the
@@ -532,16 +573,16 @@ static FFTZ_INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol,
     if (!HAS_NEXT(sol) &&
         FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
     {
-        set_zero_for_dc_and_nyquist(sol);
+        set_zero_for_dc_and_nyquist_ct(sol);
     }
 #else
     if (HAS_NEXT(sol))
     {
         ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0], ctx);
     }
-    else if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
+    else
     {
-        set_zero_for_dc_and_nyquist(sol);
+        set_zero_for_dc_and_nyquist_ct(sol);
     }
 #endif
 
@@ -549,7 +590,48 @@ static FFTZ_INT32 execute_real_mt_direct_solver(aoclfftz_solution_t *sol,
     return ret;
 }
 
-dft_solver_ register_execute_real_mt_direct_solver(FFTZ_VOID)
+// CT backward C2R stage (R2HC + R2HCF + C2C).
+static FFTZ_INT32 execute_real_mt_direct_ct_c2r(aoclfftz_solution_t *sol,
+                                                aoclfftz_mutable_ctx_t *ctx)
 {
-    return execute_real_mt_direct_solver;
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
+    FFTZ_INT32 ret = SOLVER_SUCCESS;
+
+    execute_real_mt_ct_intra_stage_kernels(sol);
+
+#if REAL_FFT_EXECUTION_ORDER != REAL_FFT_ORDER_TRUE_RECURSION
+    if (HAS_NEXT(sol))
+    {
+        ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0], ctx);
+    }
+#endif
+
+    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
+    return ret;
+}
+
+dft_solver_ register_execute_real_mt_direct_r2c(FFTZ_VOID)
+{
+    return execute_real_mt_direct_r2c;
+}
+
+dft_solver_ register_execute_real_mt_direct_r2c_batched(FFTZ_VOID)
+{
+    return execute_real_mt_direct_r2c_batched;
+}
+
+dft_solver_ register_execute_real_mt_direct_c2r(FFTZ_VOID)
+{
+    return execute_real_mt_direct_c2r;
+}
+
+dft_solver_ register_execute_real_mt_direct_ct_r2c(FFTZ_VOID)
+{
+    return execute_real_mt_direct_ct_r2c;
+}
+
+dft_solver_ register_execute_real_mt_direct_ct_c2r(FFTZ_VOID)
+{
+    return execute_real_mt_direct_ct_c2r;
 }

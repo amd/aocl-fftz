@@ -14,6 +14,7 @@
 
 #include "api/aoclfftz_internal.h"
 #include "core/kernels/kernel.h"
+#include "core/solvers/solver.h"
 
 /**
  * @brief Paired input and output stride values used for element-level access,
@@ -67,6 +68,20 @@ static inline FFTZ_VOID update_asymmetric_strides(FFTZ_INTP *strides,
     }
 }
 
+static inline FFTZ_VOID
+zero_rdft_dc_and_nyquist_fp32(FFTZ_FLOAT *out, FFTZ_INTP nyquist_im_offset)
+{
+    out[1] = 0.0f;
+    out[nyquist_im_offset] = 0.0f;
+}
+
+static inline FFTZ_VOID
+zero_rdft_dc_and_nyquist_fp64(FFTZ_DOUBLE *out, FFTZ_INTP nyquist_im_offset)
+{
+    out[1] = 0.0;
+    out[nyquist_im_offset] = 0.0;
+}
+
 /**
  * @brief Sets imaginary parts of DC and Nyquist frequencies to zero for
  * batched R2C transforms.
@@ -82,19 +97,16 @@ static inline FFTZ_VOID update_asymmetric_strides(FFTZ_INTP *strides,
  */
 static inline FFTZ_VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t *sol)
 {
-    FFTZ_UINTP transform_len = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP nyquist_im_offset = sol->decomp_scheme->nyquist_im_offset_direct;
+    FFTZ_INTP v_out_stride = sol->strides_grp->strides->v_out_stride;
     FFTZ_UINTP num_batches = sol->decomp_scheme->vecs[0].n;
-    FFTZ_UINTP out_stride = sol->decomp_scheme->dims[0].out_stride;
-    FFTZ_UINTP v_out_stride = sol->decomp_scheme->vecs[0].out_stride * 2;
-    FFTZ_UINTP nyquist_im_offset =
-        transform_len % 2 == 0 ? transform_len * out_stride + 1 : 1;
+
     if (DT_PRECISION_FLAG(sol->decomp_scheme->flags) == DT_FLOAT)
     {
         FFTZ_FLOAT *out = (FFTZ_FLOAT *)sol->decomp_scheme->out_real;
         for (FFTZ_UINTP b = 0; b < num_batches; b++)
         {
-            out[1] = 0.0f;
-            out[nyquist_im_offset] = 0.0f;
+            zero_rdft_dc_and_nyquist_fp32(out, nyquist_im_offset);
             out += v_out_stride;
         }
     }
@@ -103,16 +115,15 @@ static inline FFTZ_VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t 
         FFTZ_DOUBLE *out = (FFTZ_DOUBLE *)sol->decomp_scheme->out_real;
         for (FFTZ_UINTP b = 0; b < num_batches; b++)
         {
-            out[1] = 0.0;
-            out[nyquist_im_offset] = 0.0;
+            zero_rdft_dc_and_nyquist_fp64(out, nyquist_im_offset);
             out += v_out_stride;
         }
     }
 }
 
 /**
- * @brief Sets imaginary parts of DC and Nyquist frequencies to zero for R2C
- * transforms.
+ * @brief Sets imaginary parts of DC and Nyquist frequencies to zero for direct
+ * forward R2C transforms (batch == 1).
  *
  * For R2C (real forward) problems, this function sets the imaginary part of
  * the first complex number (DC component) and the complex number
@@ -124,28 +135,103 @@ static inline FFTZ_VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t 
  */
 static inline FFTZ_VOID set_zero_for_dc_and_nyquist(aoclfftz_solution_t *sol)
 {
-    // For R2C (real forward) problems, set the imaginary part of first and
-    // last points in half-complex buffer to 0.
-    FFTZ_INTP transform_len =
-        sol->decomp_scheme->dims[0].n * sol->decomp_scheme->vecs[0].n;
-    FFTZ_INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
-    FFTZ_INTP nyquist_im_offset =
-        transform_len % 2 == 0 ? transform_len * out_stride + 1 : 1;
+    FFTZ_INTP nyquist_im_offset = sol->decomp_scheme->nyquist_im_offset_direct;
 
     if (DT_PRECISION_FLAG(sol->decomp_scheme->flags) == DT_FLOAT)
     {
-        FFTZ_FLOAT *out = (FFTZ_FLOAT *)sol->decomp_scheme->out_real;
-        out[1] = 0.0f;
-        out[nyquist_im_offset] = 0.0f;
+        zero_rdft_dc_and_nyquist_fp32((FFTZ_FLOAT *)sol->decomp_scheme->out_real,
+                                      nyquist_im_offset);
     }
     else
     {
-        FFTZ_DOUBLE *out = (FFTZ_DOUBLE *)sol->decomp_scheme->out_real;
-        out[1] = 0.0;
-        out[nyquist_im_offset] = 0.0;
+        zero_rdft_dc_and_nyquist_fp64((FFTZ_DOUBLE *)sol->decomp_scheme->out_real,
+                                      nyquist_im_offset);
     }
 }
 
+/**
+ * @brief Sets imaginary parts of DC and Nyquist frequencies to zero for CT
+ * forward R2C on the last stage.
+ *
+ * For R2C (real forward) problems, this function sets the imaginary part of
+ * the first complex number (DC component) and the complex number
+ * corresponding to the Nyquist frequency to zero. This is a property of the
+ * discrete Fourier transform of a real-valued signal.
+ *
+ * @param sol [in, out] The solution object containing problem details,
+ *            including the output buffer to be modified.
+ */
+static inline FFTZ_VOID set_zero_for_dc_and_nyquist_ct(aoclfftz_solution_t *sol)
+{
+    FFTZ_INTP nyquist_im_offset = sol->decomp_scheme->nyquist_im_offset_ct;
+
+    if (DT_PRECISION_FLAG(sol->decomp_scheme->flags) == DT_FLOAT)
+    {
+        zero_rdft_dc_and_nyquist_fp32((FFTZ_FLOAT *)sol->decomp_scheme->out_real,
+                                      nyquist_im_offset);
+    }
+    else
+    {
+        zero_rdft_dc_and_nyquist_fp64((FFTZ_DOUBLE *)sol->decomp_scheme->out_real,
+                                      nyquist_im_offset);
+    }
+}
+
+static inline aoclfftz_solver_type
+select_real_direct_solver_type(aoclfftz_solution_t *sol, FFTZ_UINT8 is_ct)
+{
+    FFTZ_UINT32 is_forward =
+        FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR;
+
+    if (!is_ct)
+    {
+        if (is_forward)
+        {
+            if (sol->decomp_scheme->vecs[0].n > 1)
+            {
+                return SOLVER_REAL_DIRECT_R2C_BATCHED;
+            }
+            return SOLVER_REAL_DIRECT_R2C;
+        }
+        return SOLVER_REAL_DIRECT_C2R;
+    }
+
+    if (is_forward)
+    {
+        return SOLVER_REAL_DIRECT_CT_R2C;
+    }
+    return SOLVER_REAL_DIRECT_CT_C2R;
+}
+
+#ifdef MULTI_THREADING
+static inline aoclfftz_solver_type
+select_real_mt_direct_solver_type(aoclfftz_solution_t *sol, FFTZ_UINT8 is_ct)
+{
+    FFTZ_UINT32 is_forward =
+        FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR;
+
+    if (!is_ct)
+    {
+        if (is_forward)
+        {
+            if (sol->decomp_scheme->vecs[0].n > 1)
+            {
+                return SOLVER_REAL_MT_DIRECT_R2C_BATCHED;
+            }
+            return SOLVER_REAL_MT_DIRECT_R2C;
+        }
+        return SOLVER_REAL_MT_DIRECT_C2R;
+    }
+
+    if (is_forward)
+    {
+        return SOLVER_REAL_MT_DIRECT_CT_R2C;
+    }
+    return SOLVER_REAL_MT_DIRECT_CT_C2R;
+}
+#endif
+
+FFTZ_VOID setup_rdft_dc_nyquist_offsets_ds(aoclfftz_decomp_scheme_t *ds);
 FFTZ_VOID set_kernel_count_in_each_group(aoclfftz_solution_t *sol,
                              aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 allocate_and_setup_stride(aoclfftz_solution_t *sol,

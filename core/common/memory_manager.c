@@ -117,6 +117,8 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
         sol->dft_bufs->sr->input_copy = NULL;
         sol->dft_bufs->sr->input_copy_size = 0;
         sol->next_sol = NULL;
+        sol->decomp_scheme->nyquist_im_offset_direct = 1;
+        sol->decomp_scheme->nyquist_im_offset_ct = 1;
 
         ALLOC_ALIGN_UNINIT(sol->decomp_scheme->dims, aoclfftz_dim_t_64_,
             dim_rank * sizeof(aoclfftz_dim_t_64_));
@@ -138,7 +140,6 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
             FREE_ALIGN_ALLOCATED_MEM(sol);
             return NULL;
         }
-
         sol->decomp_scheme->thread_info->active_threads = 1;
         sol->next_sol = NULL;
         sol->decomp_scheme->batched_vecs = NULL;

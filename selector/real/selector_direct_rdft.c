@@ -15,6 +15,7 @@
 
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
+#include "core/solvers/real/direct_solver_rdft_utils.h"
 #include "utils/utils.h"
 
 FFTZ_INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
@@ -129,17 +130,38 @@ FFTZ_INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 if (num_threads == 1)
                 {
 #endif
-                    // call direct solver
-                    ret = setup_real_direct_solver(
-                        cur_sel->solution, cur_sel->cost_analysis, kernel_c2c,
-                        kernel_r2hc, kernel_r2hcf, realhelper);
+                    cur_sel->solution->solver->solver_type =
+                        select_real_direct_solver_type(cur_sel->solution,
+                                                       realhelper->is_CT);
+                    if (set_solver_fp(cur_sel->solution->solver) !=
+                        SOLVER_SUCCESS)
+                    {
+                        ret = SELECTOR_FAILURE;
+                    }
+                    else
+                    {
+                        ret = setup_real_direct_solver(
+                            cur_sel->solution, cur_sel->cost_analysis,
+                            kernel_c2c, kernel_r2hc, kernel_r2hcf, realhelper);
+                    }
 #ifdef MULTI_THREADING
                 }
                 else
                 {
-                    ret = setup_real_mt_direct_solver(
-                        cur_sel->solution, cur_sel->cost_analysis, kernel_c2c,
-                        kernel_r2hc, kernel_r2hcf, realhelper);
+                    cur_sel->solution->solver->solver_type =
+                        select_real_mt_direct_solver_type(cur_sel->solution,
+                                                          realhelper->is_CT);
+                    if (set_solver_fp(cur_sel->solution->solver) !=
+                        SOLVER_SUCCESS)
+                    {
+                        ret = SELECTOR_FAILURE;
+                    }
+                    else
+                    {
+                        ret = setup_real_mt_direct_solver(
+                            cur_sel->solution, cur_sel->cost_analysis, kernel_c2c,
+                            kernel_r2hc, kernel_r2hcf, realhelper);
+                    }
                 }
 #endif
                 if (SELECTOR_SUCCESS == ret)
