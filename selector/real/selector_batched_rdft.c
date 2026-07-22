@@ -37,7 +37,8 @@ FFTZ_INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     FFTZ_INTP batch_size = 1;
     FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                             sel->has_nested);
     if (cur_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -73,7 +74,8 @@ FFTZ_INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     else
     {
         ret = setup_real_mt_batched_solver(sel->solution, cur_sel->solution,
-                                           realhelper);
+                                           realhelper,
+                                           sel->has_nested);
     }
 #endif
     if (ret != SELECTOR_SUCCESS)

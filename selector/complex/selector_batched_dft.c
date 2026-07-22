@@ -38,7 +38,8 @@ FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     FFTZ_INTP batch_size = 1;
     FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                             sel->has_nested);
     if (cur_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -135,7 +136,8 @@ FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         sel->solution->solver->solver_type = SOLVER_MT_BATCHED;
         sel->solution->solver->execute_solver =
             register_execute_mt_batched_solver();
-        ret = setup_mt_batched_solver(cur_sel->solution, n_threads);
+        ret = setup_mt_batched_solver(cur_sel->solution, n_threads,
+                                      sel->has_nested);
     }
 #endif
 

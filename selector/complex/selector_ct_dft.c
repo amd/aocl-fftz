@@ -55,8 +55,10 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_ct_dft;
     }
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
-    cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                             sel->has_nested);
+    cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                               sel->has_nested);
 
     if (cur_sel == NULL || cur_sel_m == NULL)
     {
@@ -105,6 +107,13 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     // based on minimum ops cost
     FFTZ_UINT8 is_previous_solution_selected = 0;
 
+    // Radix candidates below are speculative: the losing ones are thrown away,
+    // so their sub-solvers must not leave the plan-wide nested-parallel flag
+    // set. Every candidate starts from the same baseline and only the winning
+    // candidate's contribution survives the loop.
+    FFTZ_UINT8 nested_on_entry = *(sel->has_nested);
+    FFTZ_UINT8 nested_selected = nested_on_entry;
+
     for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
         FFTZ_INTP radix_r = (FFTZ_INTP)kertab[i].radix;
@@ -129,8 +138,10 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         {
             destroy_selector(cur_sel);
             destroy_selector(cur_sel_m);
-            cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
-            cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+            cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                                     sel->has_nested);
+            cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                                       sel->has_nested);
             if (cur_sel == NULL || cur_sel_m == NULL)
             {
                 ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -138,6 +149,8 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
             }
             is_previous_solution_selected = 0;
         }
+
+        *(sel->has_nested) = nested_on_entry;
 
         ret = setup_ct_solver(org_sol, cur_sel->solution, cur_sel_m->solution,
                               radix_r, radix_m);
@@ -314,6 +327,7 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 cur_sel->solution->next_sol = NULL;
                 cur_sel_m->solution->next_sol = NULL;
                 is_previous_solution_selected = 1;
+                nested_selected = *(sel->has_nested);
             }
             else
             {
@@ -344,6 +358,8 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
             // capture stats
         }
     }
+
+    *(sel->has_nested) = nested_selected;
 
 exit_ct_dft:
     destroy_selector(cur_sel);

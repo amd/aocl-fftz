@@ -47,7 +47,8 @@ FFTZ_INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     FFTZ_UINT32 selector_mode = GET_SELECTOR_MODE(decomp_scheme->flags);
     FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                             sel->has_nested);
     if (cur_sel == NULL)
     {
         return SELECTOR_FAILURE;
@@ -100,7 +101,8 @@ FFTZ_INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                     // Call multi threaded direct solver
                     ret = setup_mt_direct_solver(cur_sel->solution,
                                                  cur_sel->cost_analysis,
-                                                 &kertab[kloc]);
+                                                 &kertab[kloc],
+                                                 sel->has_nested);
                 }
                 else
 #endif

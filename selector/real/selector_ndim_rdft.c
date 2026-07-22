@@ -39,9 +39,11 @@ FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         sel->solution->decomp_scheme->cntrl_params->measure_stats;
     FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    real_dim_sol = alloc_selector(dim_rank - 1, 1, sel->kernel_tables);
+    real_dim_sol = alloc_selector(dim_rank - 1, 1, sel->kernel_tables,
+                                  sel->has_nested);
 
-    complex_dims_sol = alloc_selector(1, dim_rank - 1, sel->kernel_tables);
+    complex_dims_sol = alloc_selector(1, dim_rank - 1, sel->kernel_tables,
+                                      sel->has_nested);
 
     if (complex_dims_sol == NULL || real_dim_sol == NULL)
     {

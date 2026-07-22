@@ -36,8 +36,10 @@ FFTZ_INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                        measure_stats;
     FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    n_minus1_sel = alloc_selector(1, dim_rank - 1, sel->kernel_tables);
-    outer_dim_sel = alloc_selector(dim_rank - 1, 1, sel->kernel_tables);
+    n_minus1_sel = alloc_selector(1, dim_rank - 1, sel->kernel_tables,
+                                  sel->has_nested);
+    outer_dim_sel = alloc_selector(dim_rank - 1, 1, sel->kernel_tables,
+                                   sel->has_nested);
 
     if (n_minus1_sel == NULL || outer_dim_sel == NULL)
     {

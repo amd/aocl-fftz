@@ -16,10 +16,16 @@
 #include "core/common/memory_manager.h"
 
 FFTZ_INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol,
-                                  cost_analysis_t *cost, kernel_t *kernel)
+                                  cost_analysis_t *cost, kernel_t *kernel,
+                                  FFTZ_UINT8 *has_nested)
 {
     aoclfftz_decomp_scheme_t *decomp_scheme = sol->decomp_scheme;
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
+    if (decomp_scheme->thread_info->active_threads != 1)
+    {
+        *has_nested = 1;
+    }
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
     FFTZ_INTP n = decomp_scheme->vecs[0].n;

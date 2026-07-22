@@ -47,10 +47,13 @@ FFTZ_INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
                                   const kernel_t *kernel_c2c,
                                   const kernel_t *kernel_r2hc,
                                   const kernel_t *kernel_r2hcf,
-                                  aoclfftz_realhelper_t *realhelper)
+                                  aoclfftz_realhelper_t *realhelper,
+                                  FFTZ_UINT8 *has_nested)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
     FFTZ_INT32 status = SOLVER_SUCCESS;
+
+    thread_info_t *thread_info = sol->decomp_scheme->thread_info;
 
     FFTZ_INT32 avl_threads = sol->decomp_scheme->thread_info->avl_threads;
 
@@ -67,6 +70,21 @@ FFTZ_INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
     FFTZ_INTP total_batches = r2hc_batches + r2hcf_batches + c2c_batches;
     sol->decomp_scheme->thread_info->n_threads = (avl_threads < total_batches)
                                                ? avl_threads : total_batches;
+
+    // Mirrors the C2C thread split in execute_real_mt_direct_solver: that
+    // function only takes the nested `parallel sections` + `parallel for` path
+    // when the C2C share of the thread budget rounds up to at least one thread.
+    // This has to sit below set_kernel_count_in_each_group, since the kernel
+    // counts and n_threads it reads are not populated before that call.
+    FFTZ_INTP n_threads_c2c =
+        (total_batches > 0)
+            ? ((FFTZ_INTP)sol->decomp_scheme->thread_info->n_threads *
+               (FFTZ_INTP)c2c_batches) / total_batches
+            : 0;
+    if (n_threads_c2c > 0 || thread_info->active_threads != 1)
+    {
+        *has_nested = 1;
+    }
 
     allocate_and_setup_stride(sol, *realhelper);
 

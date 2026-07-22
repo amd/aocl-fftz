@@ -138,10 +138,16 @@ static inline FFTZ_VOID mt_normalize_dispatch(normalize_ kernel,
  * @return FFTZ_INT32 SOLVER_SUCCESS on success, error code on failure
  */
 FFTZ_INT32 setup_mt_bluestein_solver(aoclfftz_solution_t *sol,
-                                aoclfftz_solution_t *next_sol, FFTZ_INTP m)
+                                aoclfftz_solution_t *next_sol, FFTZ_INTP m,
+                                FFTZ_UINT8 *has_nested)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    thread_info_t *thread_info = sol->decomp_scheme->thread_info;
+    if (thread_info->active_threads != 1)
+    {
+        *has_nested = 1;
+    }
 
     // Setup next_sol with extended length m
     FFTZ_INT32 ret = copy_solution_obj(next_sol, sol);

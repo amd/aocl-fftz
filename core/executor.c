@@ -20,9 +20,8 @@ static FFTZ_INT32 execute_dft(aoclfftz_executor_t *executor_obj,
     aoclfftz_solution_t *sol = executor_obj->solution;
 
 #ifdef MULTI_THREADING
-    FFTZ_INT32 threads = sol->decomp_scheme->thread_info->pthr_fft->num_threads;
 
-    if (threads > 1)
+    if (*executor_obj->has_nested)
     {
         // Retrieve max nested levels from master application
         FFTZ_UINT32 cur_max_levels = omp_get_max_active_levels();

@@ -15,10 +15,16 @@
 #include "core/solvers/solver.h"
 
 FFTZ_INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol,
-                                   FFTZ_INT32 num_threads_used)
+                                   FFTZ_INT32 num_threads_used,
+                                   FFTZ_UINT8 *has_nested)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    thread_info_t *thread_info = sol->decomp_scheme->thread_info;
+    if (thread_info->active_threads != 1)
+    {
+        *has_nested = 1;
+    }
 
     // Turn the vector problem into a single set/unit problem to find its
     // solution

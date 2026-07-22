@@ -41,9 +41,9 @@ FFTZ_INT32 alloc_stride_arrays(aoclfftz_strides_t *strides, FFTZ_INTP radix);
 FFTZ_INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides,
                                         FFTZ_INTP radix, FFTZ_INTP in_stride,
                                         FFTZ_INTP out_stride);
-
 aoclfftz_selector_t *alloc_selector(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank,
-                                    kernel_tables_t *kernel_tables);
+                                    kernel_tables_t *kernel_tables,
+                                    FFTZ_UINT8 *has_nested);
 
 FFTZ_VOID *alloc_twiddle_buffer(FFTZ_UINTP size, FFTZ_UINT32 dt_prec);
 FFTZ_INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution,

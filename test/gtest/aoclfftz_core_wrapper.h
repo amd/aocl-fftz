@@ -258,7 +258,8 @@ EXPORT_SYM_DYN aoclfftz_solution_t *alloc_solution_wrapper(FFTZ_INT32 vec_rank,
 EXPORT_SYM_DYN
 aoclfftz_selector_t *alloc_selector_wrapper(FFTZ_INT32 vec_rank,
                                             FFTZ_INT32 dim_rank,
-                                            kernel_tables_t *kernel_tables);
+                                            kernel_tables_t *kernel_tables,
+                                            FFTZ_UINT8 *has_nested);
 EXPORT_SYM_DYN FFTZ_VOID *
 alloc_twiddle_for_solution_wrapper(FFTZ_UINT8 rad_size, FFTZ_UINT8 dt_prec);
 EXPORT_SYM_DYN FFTZ_VOID destroy_selector_wrapper(aoclfftz_selector_t *sel);

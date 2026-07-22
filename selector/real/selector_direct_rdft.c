@@ -50,7 +50,8 @@ FFTZ_INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     kernel_t *kernel_r2hc = NULL;
     kernel_t *kernel_r2hcf = NULL;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                             sel->has_nested);
     if (cur_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -160,7 +161,8 @@ FFTZ_INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                     {
                         ret = setup_real_mt_direct_solver(
                             cur_sel->solution, cur_sel->cost_analysis, kernel_c2c,
-                            kernel_r2hc, kernel_r2hcf, realhelper);
+                            kernel_r2hc, kernel_r2hcf, realhelper,
+                            sel->has_nested);
                     }
                 }
 #endif

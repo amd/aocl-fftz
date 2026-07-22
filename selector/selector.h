@@ -37,12 +37,13 @@ typedef enum
 } aoclfftz_selector_status;
 
 // Selector data structure that is used to hold the solution and cost analysis
-// at each decomposition level for the associated sub-problem
+// at each decomposition level for the associated sub-problem.
 typedef struct aoclfftz_selector
 {
     aoclfftz_solution_t *solution;
     execute_ execute;
     aoclfftz_immutable_metadata_t *exec_metadata;
+    FFTZ_UINT8 *has_nested;
     cost_analysis_t *cost_analysis;
     kernel_tables_t *kernel_tables;
 } aoclfftz_selector_t;

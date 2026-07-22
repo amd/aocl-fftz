@@ -31,6 +31,7 @@ typedef struct aoclfftz_executor
     aoclfftz_solution_t *solution;
     execute_ execute;
     aoclfftz_immutable_metadata_t *exec_metadata;
+    FFTZ_UINT8 *has_nested;
     // cost_analysis_t *cost_analysis; // selector-only: unused in executor
     // kernel_tables_t *kernel_tables; // selector-only: unused in executor
 } aoclfftz_executor_t;

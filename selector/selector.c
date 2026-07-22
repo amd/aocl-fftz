@@ -738,7 +738,8 @@ FFTZ_INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
     // Allocate selector object
 #ifdef AOCLFFTZ_FIXED_SELECTOR_MODE
     sel_models[AOCLFFTZ_FIXED_SELECTOR] =
-        alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+        alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                       sel->has_nested);
     if (sel_models[AOCLFFTZ_FIXED_SELECTOR] != NULL)
     {
         ret = copy_decomp_scheme(
@@ -793,7 +794,8 @@ FFTZ_INT32 selector_driver_dft_(aoclfftz_selector_t* sel)
     // Allocate selector object
 #ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
     sel_models[AOCLFFTZ_AUTO_SELECTOR] =
-        alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+        alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                       sel->has_nested);
     if (sel_models[AOCLFFTZ_AUTO_SELECTOR] != NULL)
     {
         ret = copy_decomp_scheme(
@@ -924,7 +926,8 @@ FFTZ_INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
     // Allocate selector object
 #ifdef AOCLFFTZ_FIXED_SELECTOR_MODE
     sel_models[AOCLFFTZ_FIXED_SELECTOR] =
-        alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+        alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                       sel->has_nested);
     if (sel_models[AOCLFFTZ_FIXED_SELECTOR] != NULL)
     {
         ret = copy_decomp_scheme(
@@ -973,7 +976,8 @@ FFTZ_INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
     // Allocate selector object
 #ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
     sel_models[AOCLFFTZ_AUTO_SELECTOR] =
-        alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+        alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                       sel->has_nested);
     if (sel_models[AOCLFFTZ_AUTO_SELECTOR] != NULL)
     {
         ret = copy_decomp_scheme(
@@ -1081,6 +1085,15 @@ static inline FFTZ_INT32 prepare_and_setup_dft(aoclfftz_selector_t *sel_obj)
 {
     FFTZ_INT32 ret;
     sel_obj->execute = register_execute_dft();
+
+    ALLOC_ALIGN_INIT(sel_obj->has_nested, FFTZ_UINT8,
+                     sizeof(FFTZ_UINT8));
+    if (sel_obj->has_nested == NULL)
+    {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
+        goto exit_prepare_and_setup_dft;
+    }
+
     if (IS_REAL(sel_obj->solution->decomp_scheme->flags))
     {
         aoclfftz_realhelper_t *realhelper;
@@ -1126,7 +1139,6 @@ static inline FFTZ_INT32 prepare_and_setup_dft(aoclfftz_selector_t *sel_obj)
         ret = AOCLFFTZ_SETUP_FAILURE;
         goto exit_prepare_and_setup_dft;
     }
-
     ALLOC_ALIGN_UNINIT(sel_obj->exec_metadata,
                        aoclfftz_immutable_metadata_t,
                        sizeof(aoclfftz_immutable_metadata_t));
@@ -1218,7 +1230,7 @@ FFTZ_VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
                                      NULL};
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables, NULL);
     if (sel_obj == NULL)
     {
         AOCLFFTZ_ERROR("Setup failure with %s",
@@ -1263,7 +1275,7 @@ FFTZ_VOID *setup_dft_f(aoclfftz_prob_desc_f *problem)
     return sel_obj;
 
 exit_setup_dft_f:
-    destroy_selector(sel_obj);
+    destroy_handle(sel_obj);
     return NULL;
 }
 
@@ -1289,7 +1301,7 @@ FFTZ_VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
                                      NULL};
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables, NULL);
     if (sel_obj == NULL)
     {
         AOCLFFTZ_ERROR("Setup failure with %s",
@@ -1331,7 +1343,7 @@ FFTZ_VOID *setup_dft_d(aoclfftz_prob_desc_d *problem)
     return sel_obj;
 
 exit_setup_dft_d:
-    destroy_selector(sel_obj);
+    destroy_handle(sel_obj);
     return NULL;
 }
 
@@ -1357,7 +1369,7 @@ FFTZ_VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
                                      NULL};
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables, NULL);
     if (sel_obj == NULL)
     {
         AOCLFFTZ_ERROR("Setup failure with %s",
@@ -1398,7 +1410,7 @@ FFTZ_VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem)
     return sel_obj;
 
 exit_setup_dft_f_64_:
-    destroy_selector(sel_obj);
+    destroy_handle(sel_obj);
     return NULL;
 }
 
@@ -1424,7 +1436,7 @@ FFTZ_VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
                                      NULL};
 
     // allocate selector object
-    sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables);
+    sel_obj = alloc_selector(problem->vec_rank, dim_rank, &kertab_tables, NULL);
     if (sel_obj == NULL)
     {
         AOCLFFTZ_ERROR("Setup failure with %s",
@@ -1465,13 +1477,18 @@ FFTZ_VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem)
     return sel_obj;
 
 exit_setup_dft_d_64_:
-    destroy_selector(sel_obj);
+    destroy_handle(sel_obj);
     return NULL;
 }
 
 FFTZ_VOID destroy_handle(FFTZ_VOID *handle)
 {
-    destroy_selector((aoclfftz_selector_t *)handle);
+    aoclfftz_selector_t *sel = (aoclfftz_selector_t *)handle;
+    if (sel != NULL)
+    {
+        FREE_ALIGN_ALLOCATED_MEM(sel->has_nested);
+    }
+    destroy_selector(sel);
 }
 
 FFTZ_VOID fuse_vecs(aoclfftz_solution_t *sol, FFTZ_INT32 is_FFT_ker_supported)
@@ -2386,6 +2403,7 @@ static FFTZ_INT32 post_process_real_solution(aoclfftz_solution_t *sol,
 
     return SELECTOR_SUCCESS;
 }
+
 #endif /* MULTI_THREADING */
 
 

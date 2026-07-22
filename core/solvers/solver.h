@@ -112,11 +112,14 @@ FFTZ_INT32 setup_sr_solver(aoclfftz_solution_t *sol,
                            FFTZ_INTP n_odd);
 #ifdef MULTI_THREADING
 FFTZ_INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol,
-                                  cost_analysis_t *cost, kernel_t *kernel);
+                                  cost_analysis_t *cost, kernel_t *kernel,
+                                  FFTZ_UINT8 *has_nested);
 FFTZ_INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol,
-                              FFTZ_INT32 num_threads_used);
+                                   FFTZ_INT32 num_threads_used,
+                                   FFTZ_UINT8 *has_nested);
 FFTZ_INT32 setup_mt_bluestein_solver(aoclfftz_solution_t *sol,
-                                aoclfftz_solution_t *next_sol, FFTZ_INTP m);
+                                     aoclfftz_solution_t *next_sol,
+                                     FFTZ_INTP m, FFTZ_UINT8 *has_nested);
 #endif
 
 // RealFFT-Solvers
@@ -147,10 +150,12 @@ FFTZ_INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
                                   const kernel_t *kernel_c2c,
                                   const kernel_t *kernel_r2hc,
                                   const kernel_t *kernel_r2hcf,
-                                  aoclfftz_realhelper_t *realhelper);
+                                  aoclfftz_realhelper_t *realhelper,
+                                  FFTZ_UINT8 *has_nested);
 FFTZ_INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
                                    aoclfftz_solution_t *next_sol,
-                                   aoclfftz_realhelper_t *realhelper);
+                                   aoclfftz_realhelper_t *realhelper,
+                                   FFTZ_UINT8 *has_nested);
 #endif
 
 dft_solver_ register_execute_direct_solver(FFTZ_VOID);

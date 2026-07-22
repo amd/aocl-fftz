@@ -48,7 +48,8 @@ FFTZ_INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     // To hold the selector to perform FFT with extended length m
     aoclfftz_selector_t *next_sel = NULL;
-    next_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    next_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                              sel->has_nested);
     if (next_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -61,7 +62,8 @@ FFTZ_INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 #ifdef MULTI_THREADING
     if (sel->solution->solver->solver_type == SOLVER_MT_BLUESTEIN)
     {
-        ret = setup_mt_bluestein_solver(sel->solution, next_sel->solution, m);
+        ret = setup_mt_bluestein_solver(sel->solution, next_sel->solution, m,
+                                        sel->has_nested);
     }
     else
 #endif

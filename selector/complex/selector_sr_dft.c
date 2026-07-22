@@ -53,9 +53,12 @@ FFTZ_INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     /* Allocate 3 sub-selectors for even, odd1, and odd3 parts */
     /* nthreads is set to 0 for all recursive SR sub-problems. */
-    cur_sel_even = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
-    cur_sel_odd1 = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
-    cur_sel_odd3 = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel_even = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                                  sel->has_nested);
+    cur_sel_odd1 = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                                  sel->has_nested);
+    cur_sel_odd3 = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                                  sel->has_nested);
 
     if (cur_sel_even == NULL || cur_sel_odd1 == NULL || cur_sel_odd3 == NULL)
     {

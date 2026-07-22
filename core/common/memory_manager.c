@@ -275,7 +275,8 @@ aoclfftz_solution_t **alloc_sol_array(FFTZ_INT32 n)
 }
 
 aoclfftz_selector_t *alloc_selector(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank,
-                                    kernel_tables_t *kernel_tables)
+                                    kernel_tables_t *kernel_tables,
+                                    FFTZ_UINT8 *has_nested)
 {
     aoclfftz_selector_t *selector = NULL;
 
@@ -285,6 +286,7 @@ aoclfftz_selector_t *alloc_selector(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank,
     {
         selector->kernel_tables = NULL;
         selector->exec_metadata = NULL;
+        selector->has_nested = has_nested;
 
         selector->solution = alloc_solution(vec_rank, dim_rank);
         ALLOC_ALIGN_UNINIT(selector->cost_analysis, cost_analysis_t,

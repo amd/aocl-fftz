@@ -35,7 +35,8 @@ FFTZ_INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                             sel->has_nested);
     if (cur_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;

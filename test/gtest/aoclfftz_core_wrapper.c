@@ -322,9 +322,11 @@ aoclfftz_solution_t *alloc_solution_wrapper(FFTZ_INT32 vec_rank,
 }
 aoclfftz_selector_t *alloc_selector_wrapper(FFTZ_INT32 vec_rank,
                                             FFTZ_INT32 dim_rank,
-                                            kernel_tables_t *kernel_tables)
+                                            kernel_tables_t *kernel_tables,
+                                            FFTZ_UINT8 *has_nested)
 {
-    return alloc_selector(vec_rank, dim_rank, kernel_tables);
+    return alloc_selector(vec_rank, dim_rank, kernel_tables,
+                          has_nested);
 }
 FFTZ_VOID *alloc_twiddle_buffer_wrapper(FFTZ_INTP size, FFTZ_UINT32 dt_prec)
 {
