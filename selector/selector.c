@@ -665,30 +665,13 @@ FFTZ_INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     }
     else if (level2_cond & 0x1)
     {
-        // TODO: Enable twiddle kernels for C2R problems
-        // Twiddle kernels are not supported for C2R problems (BACKWARD_FFT_DIR)
-        // so using non-twiddle kernels + twiddle multiplier approach.
-        if (FFT_DIR(sel->solution->decomp_scheme->flags) == BACKWARD_FFT_DIR)
+        if (avl_threads == 1)
         {
-            if (avl_threads == 1)
-            {
-                solver_obj->solver_type = SOLVER_REAL_DIRECT;
-            }
-            else
-            {
-                solver_obj->solver_type = SOLVER_REAL_MT_DIRECT;
-            }
+            solver_obj->solver_type = SOLVER_REAL_DIRECT;
         }
         else
         {
-            if (avl_threads == 1)
-            {
-                solver_obj->solver_type = SOLVER_REAL_DIRECT;
-            }
-            else
-            {
-                solver_obj->solver_type = SOLVER_REAL_MT_DIRECT;
-            }
+            solver_obj->solver_type = SOLVER_REAL_MT_DIRECT;
         }
 
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
@@ -964,7 +947,6 @@ FFTZ_INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
         // Fixed decision logic and CPI based selector mode
         // ret = selector_fixed_mode_rdft_(
         //         sel_models[AOCLFFTZ_FIXED_SELECTOR]);
-        // TODO: Enable twiddle kernels for C2R problems
         sel_rdft_fp = selector_fixed_mode_rdft_;
         // Registering complex selector for real problems also since the real
         // selector will invoke complex selector internally for ND and
