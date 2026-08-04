@@ -617,9 +617,9 @@ public:
         FFTZ_VOID  *in;
         FFTZ_VOID  *out;
         FFTZ_INT32  iters;
-        bool   inplace;
+        FFTZ_UCHAR  inplace;
         FFTZ_INTP   buf_elems;
-        FFTZ_INT32  final_in_out; // out: where the chained result landed (0=in, 1=out)
+        FFTZ_UCHAR  result_buffer; // out: where the chained result landed (0=in, 1=out)
         FFTZ_INT32  ret;
     };
 
@@ -658,11 +658,16 @@ public:
         const FFTZ_INTP buf_elems = (FFTZ_INTP)(input_size / sizeof(DataType));
 
         auto build_args = [&](FFTZ_VOID *input, FFTZ_VOID *output) {
-            concurrent_args cargs;
-            cargs.handle = handle; cargs.in = input; cargs.out = output;
-            cargs.iters = iters; cargs.inplace = is_inplace;
-            cargs.buf_elems = buf_elems;
-            cargs.ret = AOCLFFTZ_EXECUTION_FAILURE;
+            concurrent_args cargs = {
+                handle,
+                input,
+                output,
+                iters,
+                is_inplace,
+                buf_elems,
+                0, // result_buffer; set by execute_io_loop.
+                AOCLFFTZ_EXECUTION_FAILURE
+            };
             return cargs;
         };
 
@@ -704,7 +709,7 @@ public:
                     << (t + 1);
                 // If the chain ended in ref_input (in-place, or an even
                 // out-of-place ping-pong count), copy it into expected_outputs.
-                if (is_inplace || ref_args.final_in_out == 0)
+                if (is_inplace || ref_args.result_buffer == 0)
                 {
                     std::copy(ref_input.begin(), ref_input.end(),
                               expected_outputs[t].begin());
@@ -735,7 +740,7 @@ public:
             ASSERT_EQ(thread_args[t].ret, AOCLFFTZ_SUCCESS)
                 << "execute_io failed on thread " << t;
             const DataType *concurrent_result =
-                (is_inplace || thread_args[t].final_in_out == 0)
+                (is_inplace || thread_args[t].result_buffer == 0)
                     ? concurrent_inputs[t].data()
                     : concurrent_outputs[t].data();
             for (FFTZ_INTP i = 0; i < buf_elems; i++)
@@ -766,7 +771,7 @@ private:
 
     // Run `iters` chained transforms on the shared handle, widening the window
     // for a concurrency bug. Out-of-place ping-pongs in/out; in-place reuses one
-    // buffer. final_in_out: 0=in, 1=out.
+    // buffer. result_buffer: 0=in, 1=out.
     template<typename DataType>
     static void execute_io_loop(concurrent_args *args)
     {
@@ -791,7 +796,7 @@ private:
             }
         }
         // Out-of-place result is in `out` after an odd number of transforms.
-        args->final_in_out = (!args->inplace && (completed % 2 == 1)) ? 1 : 0;
+        args->result_buffer = (!args->inplace && (completed % 2 == 1)) ? 1 : 0;
         args->ret = status;
     }
 };
