@@ -144,8 +144,6 @@ FFTZ_INT32 execute_sr_solver(aoclfftz_solution_t *sol,
     aoclfftz_mutable_ctx_t even_ctx = *ctx;
     even_ctx.in_real  = input_base_real;
     even_ctx.in_imag  = MOVE_ADDR(input_base_real, dt_bytes);
-    even_ctx.out_real = ctx->out_real;
-    even_ctx.out_imag = ctx->out_imag;
     SET_OUTOFPLACE(even_ctx.flags);
 
     FFTZ_INT32 status = even_sol->solver->execute_solver(even_sol, &even_ctx);
@@ -161,6 +159,10 @@ FFTZ_INT32 execute_sr_solver(aoclfftz_solution_t *sol,
     odd1_ctx.out_real = MOVE_ADDR(ctx->out_real, n2 * out_stride * elem_size);
     odd1_ctx.out_imag = MOVE_ADDR(odd1_ctx.out_real, dt_bytes);
     SET_OUTOFPLACE(odd1_ctx.flags);
+    if (ctx->ct_buf_base == ctx->out_real)
+    {
+        odd1_ctx.ct_buf_base = odd1_ctx.out_real;
+    }
 
     status = odd1_sol->solver->execute_solver(odd1_sol, &odd1_ctx);
     if (status != SOLVER_SUCCESS)
@@ -176,6 +178,10 @@ FFTZ_INT32 execute_sr_solver(aoclfftz_solution_t *sol,
                                  (n2 + n4) * out_stride * elem_size);
     odd3_ctx.out_imag = MOVE_ADDR(odd3_ctx.out_real, dt_bytes);
     SET_OUTOFPLACE(odd3_ctx.flags);
+    if (ctx->ct_buf_base == ctx->out_real)
+    {
+        odd3_ctx.ct_buf_base = odd3_ctx.out_real;
+    }
 
     status = odd3_sol->solver->execute_solver(odd3_sol, &odd3_ctx);
     if (status != SOLVER_SUCCESS)
