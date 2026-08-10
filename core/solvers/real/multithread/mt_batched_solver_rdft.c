@@ -12,6 +12,7 @@
  */
 
 #include "core/common/memory_manager.h"
+#include "utils/thread_control.h"
 
 FFTZ_INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
                                         aoclfftz_solution_t *next_sol,
@@ -37,6 +38,14 @@ FFTZ_INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
     FFTZ_INT32 num_threads_used = sol->decomp_scheme->thread_info->n_threads;
     next_sol->decomp_scheme->thread_info->avl_threads /= num_threads_used;
     next_sol->decomp_scheme->thread_info->active_threads *= num_threads_used;
+
+    // The quotient above is only what the batch loop could not absorb. Trim it
+    // to what the transform under the batch loop can actually feed.
+    next_sol->decomp_scheme->thread_info->avl_threads =
+        cap_nested_thread_budget(
+            next_sol->decomp_scheme,
+            next_sol->decomp_scheme->thread_info->avl_threads);
+
     // Strides are prepared based on real points, so adjust them (scale by 2)
     // for complex points (i.e. R2C output and C2R input)
     // Scale ALL vector strides, not just vecs[0], to handle vec_rank > 1 cases

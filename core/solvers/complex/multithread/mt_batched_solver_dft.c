@@ -13,6 +13,7 @@
  */
 
 #include "core/solvers/solver.h"
+#include "utils/thread_control.h"
 
 FFTZ_INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol,
                                    FFTZ_INT32 num_threads_used,
@@ -36,6 +37,11 @@ FFTZ_INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol,
     // can be used by the child threads in the next level
     sol->decomp_scheme->thread_info->avl_threads /= num_threads_used;
     sol->decomp_scheme->thread_info->active_threads *= num_threads_used;
+
+    // The quotient above is only what the batch loop could not absorb. Trim it
+    // to what the transform under the batch loop can actually feed.
+    sol->decomp_scheme->thread_info->avl_threads = cap_nested_thread_budget(
+        sol->decomp_scheme, sol->decomp_scheme->thread_info->avl_threads);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 

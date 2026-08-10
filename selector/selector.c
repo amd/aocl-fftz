@@ -18,6 +18,9 @@
 #include "core/kernels/kernel_list.h"
 #include "utils/dispatcher.h"
 #include "utils/utils.h"
+#ifdef MULTI_THREADING
+#include "utils/thread_control.h"
+#endif
 
 // Function pointers to communicate the exact selector model for executing the
 // problem.
@@ -1118,6 +1121,10 @@ static inline FFTZ_INT32 prepare_and_setup_dft(aoclfftz_selector_t *sel_obj)
         ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_prepare_and_setup_dft;
     }
+
+#ifdef MULTI_THREADING
+    cap_plan_thread_budget(sel_obj->solution->decomp_scheme);
+#endif
 
     if (IS_REAL(sel_obj->solution->decomp_scheme->flags))
     {

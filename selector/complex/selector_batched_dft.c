@@ -14,6 +14,9 @@
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
+#ifdef MULTI_THREADING
+#include "utils/thread_control.h"
+#endif
 
 FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
@@ -107,15 +110,19 @@ FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     FFTZ_INT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
     if (sol->decomp_scheme->batched_vecs)
     {
-        // Avoid nested parallelism: use 1 thread if inner_batch is small,
-        // otherwise all threads
+        // batched_vecs means the problem batch is carried further down and
+        // vecs[0] holds only the CT sub-batch, which deep in the recursion is
+        // a handful of iterations. Spending the budget on a team that narrow
+        // buys nothing and nests it inside whatever is already running, so
+        // take the level whole or leave it serial for the batch loop below.
         n_threads = (inner_batch < avl_threads) ? 1 : avl_threads;
     }
     else
     {
-        // Standard case: use minimum of inner_batch and available threads
+        // The batch loop cannot employ more threads than it has iterations.
         n_threads = (inner_batch < avl_threads) ? inner_batch : avl_threads;
     }
+    n_threads = cap_batch_loop_threads(sel->solution->decomp_scheme, n_threads);
     sel->solution->decomp_scheme->thread_info->n_threads = n_threads;
 #endif
 

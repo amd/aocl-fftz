@@ -12,7 +12,11 @@
  *  @author S. Biplab Raut
  */
 
+#include "selector/selector.h"
 #include "core/common/memory_manager.h"
+#ifdef MULTI_THREADING
+#include "utils/thread_control.h"
+#endif
 
 FFTZ_INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                             aoclfftz_realhelper_t *realhelper)
@@ -53,12 +57,13 @@ FFTZ_INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         goto exit_batched_dft;
     }
 
-    FFTZ_UINT32 n_threads = 1;
+    FFTZ_INT32 n_threads = 1;
 #ifdef MULTI_THREADING
     FFTZ_INT32 avl_threads =
         sel->solution->decomp_scheme->thread_info->avl_threads;
     FFTZ_INT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
     n_threads = (inner_batch < avl_threads) ? inner_batch : avl_threads;
+    n_threads = cap_batch_loop_threads(sel->solution->decomp_scheme, n_threads);
     sel->solution->decomp_scheme->thread_info->n_threads = n_threads;
 #endif
 
