@@ -26,6 +26,15 @@
 // The batch loop is the cheaper of the two axes, so a level takes what it can
 // from the batch first and only passes the remainder down. Neither axis scales
 // without bound, so the rules below bound what each level may keep.
+//
+// All of it is opt-in. Under dynamic_load_model = 0 the caller has asked for
+// num_threads to be spent as given, so every cap below returns its input
+// untouched and the budget reaches the solvers whole.
+
+static FFTZ_INT32 dynamic_load_model_on(aoclfftz_decomp_scheme_t *decomp_scheme)
+{
+    return decomp_scheme->thread_info->pthr_fft->dynamic_load_model == 1;
+}
 
 static FFTZ_INTP count_dim_elems(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
@@ -87,6 +96,11 @@ static FFTZ_INTP intra_transform_thread_limit(FFTZ_INTP n, FFTZ_INT32 dim_rank)
 FFTZ_INT32 cap_nested_thread_budget(aoclfftz_decomp_scheme_t *decomp_scheme,
                                     FFTZ_INT32 child_threads)
 {
+    if (!dynamic_load_model_on(decomp_scheme))
+    {
+        return child_threads;
+    }
+
     if (child_threads <= 1)
     {
         return 1;
@@ -106,6 +120,11 @@ FFTZ_INT32 cap_nested_thread_budget(aoclfftz_decomp_scheme_t *decomp_scheme,
 FFTZ_INT32 cap_batch_loop_threads(aoclfftz_decomp_scheme_t *decomp_scheme,
                                   FFTZ_INT32 n_threads)
 {
+    if (!dynamic_load_model_on(decomp_scheme))
+    {
+        return n_threads;
+    }
+
     FFTZ_INTP elems =
         count_dim_elems(decomp_scheme) * count_vec_elems(decomp_scheme);
 
@@ -125,6 +144,11 @@ FFTZ_INT32 cap_batch_loop_threads(aoclfftz_decomp_scheme_t *decomp_scheme,
 // further down would leave a multi-threaded solver driving a one-thread plan.
 FFTZ_VOID cap_plan_thread_budget(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
+    if (!dynamic_load_model_on(decomp_scheme))
+    {
+        return;
+    }
+
     thread_info_t *thread_info = decomp_scheme->thread_info;
 
     // Two independent bounds, both of which have to hold.

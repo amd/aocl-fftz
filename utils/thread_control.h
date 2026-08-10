@@ -10,6 +10,9 @@
  *  decisions are policy only: they read the decomposition and return or trim a
  *  thread count, and never create a team themselves.
  *
+ *  The policy is only in effect under dynamic_load_model = 1. With the model
+ *  off, every helper below returns the count it was given.
+ *
  *  @author Ashwin K. Godbole
  */
 
