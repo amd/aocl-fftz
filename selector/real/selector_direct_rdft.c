@@ -18,6 +18,52 @@
 #include "core/solvers/real/direct_solver_rdft_utils.h"
 #include "utils/utils.h"
 
+// Picks the ST or MT direct solver variant. MT is chosen only when multiple
+// threads are available and enough parallel work exists. This only records the
+// decision (solver_type + kernel counts); binding the execute function pointer
+// is the caller's/parent's responsibility once this selector returns.
+static FFTZ_INT32 select_real_direct_solver_type(aoclfftz_solution_t *solution,
+                                                 aoclfftz_realhelper_t *realhelper,
+                                                 FFTZ_INT32 *num_threads)
+{
+    aoclfftz_generic_solver_t *solver = solution->solver;
+
+    // Populate kernel counts first, since the parallel-width check reads them.
+    set_kernel_count_in_each_group(solution, realhelper);
+
+#ifdef MULTI_THREADING
+    // Only one of r2hc/r2hcf carries the groups, and both share the same set
+    // width, so the group total covers either case.
+    FFTZ_INTP num_groups = NUM_RFFT_GROUPS(solver);
+    FFTZ_INTP r2c_iters = num_groups / solver->kernel_r2hc->sets;
+
+    FFTZ_INTP c2c_iters = 0;
+    if (solver->kernel_c2c->count != 0)
+    {
+        FFTZ_INTP num_c2c_per_group = solver->kernel_c2c->count / num_groups;
+        c2c_iters = (num_c2c_per_group >= num_groups) ? num_groups
+                                                      : num_c2c_per_group;
+    }
+
+    FFTZ_INTP max_parallel_iters =
+        (r2c_iters > c2c_iters) ? r2c_iters : c2c_iters;
+
+    if (*num_threads > 1 && max_parallel_iters > 1)
+    {
+        solver->solver_type =
+            select_real_mt_direct_solver_type(solution, realhelper->is_CT);
+    }
+    else
+#endif
+    {
+        *num_threads = 1;
+        solver->solver_type =
+            select_real_st_direct_solver_type(solution, realhelper->is_CT);
+    }
+
+    return SOLVER_SUCCESS;
+}
+
 FFTZ_INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                            aoclfftz_realhelper_t *realhelper)
 {
@@ -45,6 +91,7 @@ FFTZ_INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     FFTZ_UINT32 selector_mode = GET_SELECTOR_MODE(decomp_scheme->flags);
     FFTZ_UINT8 dir = FFT_DIR(decomp_scheme->flags);
     FFTZ_INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 setup_ret = AOCLFFTZ_SETUP_FAILURE;
 
     kernel_t *kernel_c2c = NULL;
     kernel_t *kernel_r2hc = NULL;
@@ -127,121 +174,127 @@ FFTZ_INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 cur_sel->solution->solver->kernel_r2hcf->sets =
                     kernel_r2hcf->sets[precision - 2];
 
-#ifdef MULTI_THREADING
-                if (num_threads == 1)
+                // Choose the direct solver variant and thread count for this
+                // problem. The execute function pointer is bound by the parent
+                // (selector level) after this selector returns.
+                setup_ret = select_real_direct_solver_type(
+                    cur_sel->solution, realhelper, &num_threads);
+                if (setup_ret != SOLVER_SUCCESS)
                 {
-#endif
-                    cur_sel->solution->solver->solver_type =
-                        select_real_direct_solver_type(cur_sel->solution,
-                                                       realhelper->is_CT);
-                    if (set_solver_fp(cur_sel->solution->solver) !=
-                        SOLVER_SUCCESS)
-                    {
-                        ret = SELECTOR_FAILURE;
-                    }
-                    else
-                    {
-                        ret = setup_real_direct_solver(
-                            cur_sel->solution, cur_sel->cost_analysis,
-                            kernel_c2c, kernel_r2hc, kernel_r2hcf, realhelper);
-                    }
+                    AOCLFFTZ_ERROR("Direct solver variant selection failed for "
+                                   "solver_type %d",
+                                   cur_sel->solution->solver->solver_type);
+                    ret = SELECTOR_FAILURE;
+                    goto exit_direct_rdft;
+                }
+
 #ifdef MULTI_THREADING
+                if (num_threads > 1)
+                {
+                    setup_ret = setup_real_mt_direct_solver(
+                        cur_sel->solution, cur_sel->cost_analysis, kernel_c2c,
+                        kernel_r2hc, kernel_r2hcf, realhelper, sel->has_nested);
+                    if (setup_ret != SOLVER_SUCCESS)
+                    {
+                        AOCLFFTZ_ERROR("setup_real_mt_direct_solver failed: %d",
+                                       setup_ret);
+                        ret = SELECTOR_FAILURE;
+                        goto exit_direct_rdft;
+                    }
                 }
                 else
+#endif
                 {
-                    cur_sel->solution->solver->solver_type =
-                        select_real_mt_direct_solver_type(cur_sel->solution,
-                                                          realhelper->is_CT);
-                    if (set_solver_fp(cur_sel->solution->solver) !=
-                        SOLVER_SUCCESS)
+                    setup_ret = setup_real_direct_solver(
+                        cur_sel->solution, cur_sel->cost_analysis, kernel_c2c,
+                        kernel_r2hc, kernel_r2hcf, realhelper);
+                    if (setup_ret != SOLVER_SUCCESS)
                     {
+                        AOCLFFTZ_ERROR("setup_real_direct_solver failed: %d",
+                                       setup_ret);
                         ret = SELECTOR_FAILURE;
-                    }
-                    else
-                    {
-                        ret = setup_real_mt_direct_solver(
-                            cur_sel->solution, cur_sel->cost_analysis, kernel_c2c,
-                            kernel_r2hc, kernel_r2hcf, realhelper,
-                            sel->has_nested);
+                        goto exit_direct_rdft;
                     }
                 }
-#endif
-                if (SELECTOR_SUCCESS == ret)
+
+                if (selector_mode == AOCLFFTZ_FIXED_SELECTOR)
                 {
-                    if (selector_mode == AOCLFFTZ_FIXED_SELECTOR)
+                    if (!sel->cost_analysis->ops
+                        || (cur_sel->cost_analysis->ops
+                            < sel->cost_analysis->ops))
                     {
-                        if (!sel->cost_analysis->ops
-                            || (cur_sel->cost_analysis->ops
-                                < sel->cost_analysis->ops))
+                        sel->cost_analysis->ops =
+                            cur_sel->cost_analysis->ops;
+                        sel->cost_analysis->time =
+                            cur_sel->cost_analysis->time;
+                        // copy solution object from cur_sel to sel
+                        setup_ret = copy_solution_obj(
+                            sel->solution, cur_sel->solution);
+                        if (setup_ret != AOCLFFTZ_SUCCESS)
                         {
-                            sel->cost_analysis->ops =
-                                cur_sel->cost_analysis->ops;
-                            sel->cost_analysis->time =
-                                cur_sel->cost_analysis->time;
-                            // copy solution object from cur_sel to sel
-                            ret = copy_solution_obj(
-                                sel->solution, cur_sel->solution);
-                            if (ret != AOCLFFTZ_SUCCESS)
-                            {
-                                AOCLFFTZ_ERROR("copy_solution_obj failed: %s",
-                                               get_status_string(ret));
-                                goto exit_direct_rdft;
-                            }
-                            ret = copy_strides(
-                                sel->solution, cur_sel->solution);
-                            if (ret != AOCLFFTZ_SUCCESS)
-                            {
-                                AOCLFFTZ_ERROR("copy_strides failed: %s",
-                                               get_status_string(ret));
-                                goto exit_direct_rdft;
-                            }
+                            AOCLFFTZ_ERROR("copy_solution_obj failed: %s",
+                                            get_status_string(setup_ret));
+                            ret = SELECTOR_FAILURE;
+                            goto exit_direct_rdft;
                         }
+                        setup_ret = copy_strides(
+                            sel->solution, cur_sel->solution);
+                        if (setup_ret != AOCLFFTZ_SUCCESS)
+                        {
+                            AOCLFFTZ_ERROR("copy_strides failed: %s",
+                                            get_status_string(setup_ret));
+                            ret = SELECTOR_FAILURE;
+                            goto exit_direct_rdft;
+                        }
+                        ret = SELECTOR_SUCCESS;
                     }
+                }
 #ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
-                    else
+                else
+                {
+                    if (sel->cost_analysis->time == 0 ||
+                        cur_sel->cost_analysis->time < sel->cost_analysis->time)
                     {
-                        if (cur_sel->cost_analysis->time <
-                            sel->cost_analysis->time)
+                        sel->cost_analysis->ops =
+                            cur_sel->cost_analysis->ops;
+                        sel->cost_analysis->time =
+                            cur_sel->cost_analysis->time;
+                        // copy solution object from cur_sel to sel
+                        setup_ret = copy_solution_obj(
+                            sel->solution, cur_sel->solution);
+                        if (setup_ret != AOCLFFTZ_SUCCESS)
                         {
-                            sel->cost_analysis->ops =
-                                cur_sel->cost_analysis->ops;
-                            sel->cost_analysis->time =
-                                cur_sel->cost_analysis->time;
-                            // copy solution object from cur_sel to sel
-                            ret = copy_solution_obj(
-                                sel->solution, cur_sel->solution);
-                            if (ret != AOCLFFTZ_SUCCESS)
-                            {
-                                AOCLFFTZ_ERROR("copy_solution_obj failed: %s",
-                                               get_status_string(ret));
-                                goto exit_direct_rdft;
-                            }
-                            ret = copy_strides(
-                                sel->solution, cur_sel->solution);
-                            if (ret != AOCLFFTZ_SUCCESS)
-                            {
-                                AOCLFFTZ_ERROR("copy_strides failed: %s",
-                                               get_status_string(ret));
-                                goto exit_direct_rdft;
-                            }
+                            AOCLFFTZ_ERROR("copy_solution_obj failed: %s",
+                                            get_status_string(setup_ret));
+                            ret = SELECTOR_FAILURE;
+                            goto exit_direct_rdft;
                         }
+                        setup_ret = copy_strides(
+                            sel->solution, cur_sel->solution);
+                        if (setup_ret != AOCLFFTZ_SUCCESS)
+                        {
+                            AOCLFFTZ_ERROR("copy_strides failed: %s",
+                                            get_status_string(setup_ret));
+                            ret = SELECTOR_FAILURE;
+                            goto exit_direct_rdft;
+                        }
+                        ret = SELECTOR_SUCCESS;
                     }
+                }
 #endif // AOCLFFTZ_AUTO_SELECTOR_MODE
-                    if (stats_mode)
-                    {
-                        // capture stats
-                    }
-                } // if (SELECTOR_SUCCESS == ret)
+                if (stats_mode)
+                {
+                    // capture stats
+                }
             } // End of FOR loop
             break;
         } // if (radix == n)
     } // End of FOR loop
 
-    destroy_selector(cur_sel);
-
-    AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
-
-    return SELECTOR_SUCCESS;
+    if (ret != SELECTOR_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("No suitable kernel found");
+    }
 
 exit_direct_rdft:
     destroy_selector(cur_sel);

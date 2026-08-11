@@ -57,8 +57,6 @@ FFTZ_INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
 
     FFTZ_INT32 avl_threads = sol->decomp_scheme->thread_info->avl_threads;
 
-    set_kernel_count_in_each_group(sol, realhelper);
-
     // Setting the number of threads based on the batches
     FFTZ_UINTP c2c_batches = sol->solver->kernel_c2c->count;
     FFTZ_UINTP r2hc_batches = sol->solver->kernel_r2hc->count;
@@ -86,7 +84,13 @@ FFTZ_INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
         *has_nested = 1;
     }
 
-    allocate_and_setup_stride(sol, *realhelper);
+    status = allocate_and_setup_stride(sol, *realhelper);
+    if (status != SOLVER_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("Failed to allocate and set up real FFT strides "
+                       "(status %d)", status);
+        return status;
+    }
 
     update_ct_buffers(sol, realhelper);
 

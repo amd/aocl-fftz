@@ -51,8 +51,6 @@ FFTZ_INT32 setup_real_direct_solver(aoclfftz_solution_t *sol,
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
     FFTZ_INT32 status = SOLVER_SUCCESS;
 
-    set_kernel_count_in_each_group(sol, realhelper);
-
     status = allocate_and_setup_stride(sol, *realhelper);
     if (status != SOLVER_SUCCESS)
     {

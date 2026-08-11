@@ -126,13 +126,14 @@ FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     sel->solution->decomp_scheme->thread_info->n_threads = n_threads;
 #endif
 
+    // Only the ST/MT decision (solver_type) is recorded here; binding the
+    // execute function pointer is the parent's responsibility (done at the
+    // selector level once this selector returns).
     if (n_threads == 1)
     {
         // Setup batched solver to find the next solution for a single set/unit
         // of the vector problem
         sel->solution->solver->solver_type = SOLVER_BATCHED;
-        sel->solution->solver->execute_solver =
-            register_execute_batched_solver();
         ret = setup_batched_solver(cur_sel->solution);
     }
 #ifdef MULTI_THREADING
@@ -141,8 +142,6 @@ FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         // Setup multi threaded batched solver to find solution for a
         // vector problem
         sel->solution->solver->solver_type = SOLVER_MT_BATCHED;
-        sel->solution->solver->execute_solver =
-            register_execute_mt_batched_solver();
         ret = setup_mt_batched_solver(cur_sel->solution, n_threads,
                                       sel->has_nested);
     }

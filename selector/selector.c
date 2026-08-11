@@ -27,7 +27,7 @@
 // Not thread-safe
 typedef FFTZ_INT32(*selector_model_func_)(aoclfftz_selector_t*);
 typedef FFTZ_INT32 (*selector_model_rdft_func_)(aoclfftz_selector_t *,
-                                           aoclfftz_realhelper_t *);
+                                                aoclfftz_realhelper_t *);
 selector_model_func_ sel_fp = NULL;
 selector_model_rdft_func_ sel_rdft_fp = NULL;
 
@@ -400,22 +400,16 @@ FFTZ_INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     // Batched/vector FFT Solver
     if (level1_cond1 & 0x1)
     {
-        if (avl_threads == 1)
-        {
-            solver_obj->solver_type = SOLVER_BATCHED;
-        }
-        else
-        {
-            solver_obj->solver_type = SOLVER_MT_BATCHED;
-        }
-
-        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        // The batched family selector decides the ST/MT variant (it needs the
+        // effective thread count); the execute fp is bound here, at the
+        // selector level, once that decision is made.
+        ret = selector_batched_dft(sel, kertab);
+        if (ret == SELECTOR_SUCCESS &&
+            set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
             return SELECTOR_FAILURE;
         }
-
-        // call batched solver master
-        return selector_batched_dft(sel, kertab);
+        return ret;
     }
     // Transpose Solver (Standalone)
     if (standalone_transpose_cond)
@@ -489,47 +483,21 @@ FFTZ_INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     }
     else if (level2_cond & 0x1)
     {
-        if (avl_threads == 1)
-        {
-            if (sel->solution->decomp_scheme->batched_vecs == NULL)
-            {
-                solver_obj->solver_type = SOLVER_DIRECT;
-            }
-            else
-            {
-                solver_obj->solver_type = SOLVER_DIRECT_BATCHED_COLMAJOR;
-            }
-        }
-        else
-        {
-            if (sel->solution->decomp_scheme->batched_vecs == NULL)
-            {
-                solver_obj->solver_type = SOLVER_MT_DIRECT;
-            }
-            else
-            {
-                if (should_use_colmajor_batched_solver(sel->solution,
-                                                       kertab, avl_threads))
-                {
-                    solver_obj->solver_type = SOLVER_MT_DIRECT_BATCHED_COLMAJOR;
-                }
-                else
-                {
-                    solver_obj->solver_type = SOLVER_MT_DIRECT_BATCHED_ROWMAJOR;
-                }
-            }
-        }
-        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
-        {
-            return SELECTOR_FAILURE;
-        }
-
         //Direct sub-problems will use normal dft kernels
         //since they are leaf sub-problems always
         kertab = sel->kernel_tables->kt_dft;
 
-        // Call Direct Solver master
-        return selector_direct_dft(sel, kertab);
+        // Call Direct Solver master. The direct family selector decides the
+        // ST/MT/batched variant (it needs kernel sets and thread info); the
+        // execute fp is bound here, at the selector level, once that decision
+        // is made.
+        ret = selector_direct_dft(sel, kertab);
+        if (ret == SELECTOR_SUCCESS &&
+            set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+        return ret;
     }
     // Split-Radix FFT Solver
     else if (level2_cond & 0x2)
@@ -574,8 +542,6 @@ FFTZ_INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     FFTZ_INT32 ret = SELECTOR_FAILURE;
     FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
     FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    FFTZ_INT32 avl_threads =
-            sel->solution->decomp_scheme->thread_info->avl_threads;
 
     FFTZ_INT32 is_FFT_ker_supported = check_FFT_kernel_support(
         sel->solution->decomp_scheme->dims[0].n, kertab,
@@ -627,21 +593,15 @@ FFTZ_INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     // Batched/vector FFT Solver
     if (level1_cond1 & 0x1)
     {
-        if (avl_threads == 1)
-        {
-            solver_obj->solver_type = SOLVER_REAL_BATCHED;
-        }
-        else
-        {
-            solver_obj->solver_type = SOLVER_REAL_MT_BATCHED;
-        }
-
-        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        // The batched family selector decides the ST/MT variant; the execute
+        // fp is bound here, at the selector level, once that decision is made.
+        ret = selector_batched_rdft(sel, kertab, realhelper);
+        if (ret == SELECTOR_SUCCESS &&
+            set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
             return SELECTOR_FAILURE;
         }
-
-        return selector_batched_rdft(sel, kertab, realhelper);
+        return ret;
     }
     // Multi-dimensional FFT Solver
     if (level1_cond1 & 0x2)
@@ -693,22 +653,16 @@ FFTZ_INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     }
     else if (level2_cond & 0x1)
     {
-        if (avl_threads == 1)
-        {
-            solver_obj->solver_type = SOLVER_REAL_DIRECT_R2C;
-        }
-        else
-        {
-            solver_obj->solver_type = SOLVER_REAL_MT_DIRECT_R2C;
-        }
-
-        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        // Call Direct Solver master. The direct family selector decides the
+        // ST/MT variant; the execute fp is bound here, at the selector level,
+        // once that decision is made.
+        ret = selector_direct_rdft(sel, kertab, realhelper);
+        if (ret == SELECTOR_SUCCESS &&
+            set_solver_fp(solver_obj) != SOLVER_SUCCESS)
         {
             return SELECTOR_FAILURE;
         }
-
-        // Call Direct Solver master
-        return selector_direct_rdft(sel, kertab, realhelper);
+        return ret;
     }
     else
     {
@@ -725,6 +679,7 @@ FFTZ_INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     return ret;
 }
 
+#ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
 FFTZ_INT32 selector_autotuner_mode_dft_(aoclfftz_selector_t* sel)
 {
     AOCLFFTZ_LOG(INFO, global_logger_mode,
@@ -732,12 +687,14 @@ FFTZ_INT32 selector_autotuner_mode_dft_(aoclfftz_selector_t* sel)
     return SELECTOR_FAILURE;
 }
 
-FFTZ_INT32 selector_autotuner_mode_rdft_(aoclfftz_selector_t* sel)
+FFTZ_INT32 selector_autotuner_mode_rdft_(aoclfftz_selector_t* sel,
+                                         aoclfftz_realhelper_t *real_helper)
 {
     AOCLFFTZ_LOG(INFO, global_logger_mode,
         "Autotuner selector for RealFFT is not yet available for evaluation");
     return SELECTOR_FAILURE;
 }
+#endif
 
 // Main selector driver that invokes the complementary/alternate selector
 // algorithms/models and decides on the final selector based on its suitability

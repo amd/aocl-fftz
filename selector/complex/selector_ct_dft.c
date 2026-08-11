@@ -181,46 +181,19 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         radix_r_sol->decomp_scheme->vecs[0].in_stride =
             radix_m_sol->decomp_scheme->dims[0].out_stride;
 
-        aoclfftz_generic_solver_t* solver_obj = cur_sel->solution->solver;
-        FFTZ_INT32 avl_threads =
-            cur_sel->solution->decomp_scheme->thread_info->avl_threads;
-        if (avl_threads == 1)
-        {
-            if (sel->solution->decomp_scheme->batched_vecs == NULL)
-            {
-                solver_obj->solver_type = SOLVER_DIRECT;
-            }
-            else
-            {
-                solver_obj->solver_type = SOLVER_DIRECT_BATCHED_COLMAJOR;
-            }
-        }
-        else
-        {
-            if (sel->solution->decomp_scheme->batched_vecs == NULL)
-            {
-                solver_obj->solver_type = SOLVER_MT_DIRECT;
-            }
-            else
-            {
-                if (should_use_colmajor_batched_solver(cur_sel->solution,
-                                                       kertab, avl_threads))
-                {
-                    solver_obj->solver_type = SOLVER_MT_DIRECT_BATCHED_COLMAJOR;
-                }
-                else
-                {
-                    solver_obj->solver_type = SOLVER_MT_DIRECT_BATCHED_ROWMAJOR;
-                }
-            }
-        }
-        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
-        {
-            goto exit_ct_dft;
-        }
         ret = selector_direct_dft(cur_sel, kertab);
         if (ret != SELECTOR_SUCCESS)
         {
+            goto exit_ct_dft;
+        }
+
+        // Bind the radix-r leaf's execute fp here, at its parent (this CT
+        // selector), now that the direct family selector has chosen the
+        // concrete variant. Keeps binding with the solver higher up in the
+        // linked list, per the solver hierarchy.
+        if (set_solver_fp(radix_r_sol->solver) != SOLVER_SUCCESS)
+        {
+            ret = SELECTOR_FAILURE;
             goto exit_ct_dft;
         }
 #endif

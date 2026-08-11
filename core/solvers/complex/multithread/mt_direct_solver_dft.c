@@ -368,21 +368,15 @@ static FFTZ_INT32 execute_mt_direct_batched_colmajor_solver(
         sol->decomp_scheme->batched_vecs[0].n - (num_iters * num_sets);
 
     FFTZ_INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
+    FFTZ_INTP block_sz = num_iters / n_threads;
+    // Remaining blocks to distribute
+    FFTZ_INTP rem_blocks = num_iters % n_threads;
 
     #pragma omp parallel for num_threads(n_threads) collapse(2) schedule(static)
     for (FFTZ_INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
     {
         for (FFTZ_INT32 block = 0; block < n_threads; block++)
         {
-            FFTZ_UINT8 num_sets = sol->solver->kernel_c2c->sets;
-            // FFTZ_INTP num_iters = sol->decomp_scheme->batched_vecs[0].n /
-            // num_sets; FFTZ_INTP rem_iters =
-            //     sol->decomp_scheme->batched_vecs[0].n - (num_iters *
-            //     num_sets);
-            FFTZ_INTP block_sz = num_iters / n_threads;
-            FFTZ_INTP rem_blocks =
-                num_iters % n_threads; // Remaining blocks to distribute
-
             // Calculate this thread's work chunk
             FFTZ_INTP start_iter =
                 block * block_sz + (block < rem_blocks ? block : rem_blocks);

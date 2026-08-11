@@ -40,20 +40,24 @@ FFTZ_INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     FFTZ_INT32 rnk = 0;
     FFTZ_INTP batch_size = 1;
     FFTZ_INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 setup_ret = AOCLFFTZ_SETUP_FAILURE;
 
     cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
                              sel->has_nested);
     if (cur_sel == NULL)
     {
-        ret = AOCLFFTZ_MEMORY_FAILURE;
+        AOCLFFTZ_ERROR("Sub-problem selector allocation failed");
+        ret = SELECTOR_FAILURE;
         goto exit_batched_dft;
     }
 
     // copy solution object from sel to cur_sel
-    ret = copy_solution_obj(cur_sel->solution, sel->solution);
-    if (ret != AOCLFFTZ_SUCCESS)
+    setup_ret = copy_solution_obj(cur_sel->solution, sel->solution);
+    if (setup_ret != AOCLFFTZ_SUCCESS)
     {
-        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        AOCLFFTZ_ERROR("Copying parent solution to sub-problem failed: %s",
+                       get_status_string(setup_ret));
+        ret = SELECTOR_FAILURE;
         goto exit_batched_dft;
     }
 
@@ -67,24 +71,40 @@ FFTZ_INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     sel->solution->decomp_scheme->thread_info->n_threads = n_threads;
 #endif
 
+    // ST vs MT batched solver selection, based on the effective thread count.
+    // Only the decision (solver_type) is recorded here; binding the execute
+    // function pointer is the parent's responsibility (done at the selector
+    // level once this selector returns).
+    aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
+    if (n_threads == 1)
+    {
+        solver_obj->solver_type = SOLVER_REAL_BATCHED;
+    }
+    else
+    {
+        solver_obj->solver_type = SOLVER_REAL_MT_BATCHED;
+    }
 
     // Setup batched solver to find the next solution for a single set/unit
     // of the vector problem
     if (n_threads == 1)
     {
-        ret = setup_real_batched_solver(sel->solution, cur_sel->solution,
-                                        realhelper);
+        setup_ret = setup_real_batched_solver(sel->solution, cur_sel->solution,
+                                              realhelper);
     }
 #ifdef MULTI_THREADING
     else
     {
-        ret = setup_real_mt_batched_solver(sel->solution, cur_sel->solution,
-                                           realhelper,
-                                           sel->has_nested);
+        setup_ret = setup_real_mt_batched_solver(sel->solution,
+                                                 cur_sel->solution, realhelper,
+                                                 sel->has_nested);
     }
 #endif
-    if (ret != SELECTOR_SUCCESS)
+    if (setup_ret != SOLVER_SUCCESS)
     {
+        AOCLFFTZ_ERROR("%s batched solver setup failed (status %d)",
+                       (n_threads == 1) ? "ST" : "MT", setup_ret);
+        ret = SELECTOR_FAILURE;
         goto exit_batched_dft;
     }
 
@@ -92,6 +112,8 @@ FFTZ_INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     ret = selector_model_rdft_(cur_sel, realhelper);
     if (ret != SELECTOR_SUCCESS)
     {
+        AOCLFFTZ_ERROR("Failed to select a proper solution for a single real "
+                       "FFT batch");
         goto exit_batched_dft;
     }
 
@@ -112,8 +134,10 @@ FFTZ_INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     sel->solution->next_sol = alloc_sol_array(n_threads);
     if (sel->solution->next_sol == NULL)
     {
-        ret = AOCLFFTZ_MEMORY_FAILURE;
-        AOCLFFTZ_ERROR("alloc_sol_array failed: %s", get_status_string(ret));
+        setup_ret = AOCLFFTZ_MEMORY_FAILURE;
+        AOCLFFTZ_ERROR("alloc_sol_array failed: %s",
+                       get_status_string(setup_ret));
+        ret = SELECTOR_FAILURE;
         goto exit_batched_dft;
     }
     sel->solution->next_sol[0] = cur_sel->solution;

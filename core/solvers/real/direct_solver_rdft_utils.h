@@ -178,7 +178,7 @@ static inline FFTZ_VOID set_zero_for_dc_and_nyquist_ct(aoclfftz_solution_t *sol)
 }
 
 static inline aoclfftz_solver_type
-select_real_direct_solver_type(aoclfftz_solution_t *sol, FFTZ_UINT8 is_ct)
+select_real_st_direct_solver_type(aoclfftz_solution_t *sol, FFTZ_UINT8 is_ct)
 {
     FFTZ_UINT32 is_forward =
         FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR;
