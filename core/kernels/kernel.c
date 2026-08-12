@@ -34,14 +34,14 @@
 #define ACCESS_AVX512 0
 #endif
 
-static INTP real_variant_limits[NUM_KERNEL_CATEGORIES] =
+static FFTZ_INTP real_variant_limits[NUM_KERNEL_CATEGORIES] =
 {
     NUM_KERNELS_IN_EACH_DFT_VARIANT,
     2 * NUM_KERNELS_IN_EACH_DFT_VARIANT,
     3 * NUM_KERNELS_IN_EACH_DFT_VARIANT,
 };
 
-static INTP limits[NUM_KERNEL_CATEGORIES] =
+static FFTZ_INTP limits[NUM_KERNEL_CATEGORIES] =
 {
     NUM_KERNELS_IN_EACH_CATEGORY,
     2 * NUM_KERNELS_IN_EACH_CATEGORY,
@@ -49,7 +49,7 @@ static INTP limits[NUM_KERNEL_CATEGORIES] =
     4 * NUM_KERNELS_IN_EACH_CATEGORY
 };
 
-static INTP sets_complex_s[NUM_KERNEL_CATEGORIES] =
+static FFTZ_INTP sets_complex_s[NUM_KERNEL_CATEGORIES] =
 {
     NUM_SETS_C_S,
     NUM_SETS_128_S,
@@ -57,7 +57,7 @@ static INTP sets_complex_s[NUM_KERNEL_CATEGORIES] =
     NUM_SETS_512_S
 };
 
-static INTP sets_complex_d[NUM_KERNEL_CATEGORIES] =
+static FFTZ_INTP sets_complex_d[NUM_KERNEL_CATEGORIES] =
 {
     NUM_SETS_C_D,
     NUM_SETS_128_D,
@@ -65,7 +65,7 @@ static INTP sets_complex_d[NUM_KERNEL_CATEGORIES] =
     NUM_SETS_512_D
 };
 
-static INTP sets_real_s[NUM_KERNEL_CATEGORIES] =
+static FFTZ_INTP sets_real_s[NUM_KERNEL_CATEGORIES] =
 {
     NUM_SETS_REAL_C_S,
     NUM_SETS_REAL_128_S,
@@ -73,7 +73,7 @@ static INTP sets_real_s[NUM_KERNEL_CATEGORIES] =
     NUM_SETS_REAL_512_S
 };
 
-static INTP sets_real_d[NUM_KERNEL_CATEGORIES] =
+static FFTZ_INTP sets_real_d[NUM_KERNEL_CATEGORIES] =
 {
     NUM_SETS_REAL_C_D,
     NUM_SETS_REAL_128_D,
@@ -81,14 +81,14 @@ static INTP sets_real_d[NUM_KERNEL_CATEGORIES] =
     NUM_SETS_REAL_512_D
 };
 
-INT32 register_kernels_real(
+FFTZ_INT32 register_kernels_real(
     kernel_t kertab[NUM_KERNELS_IN_TABLE_REAL],
     kernel_fp_list_t static_kernel_table[NUM_REAL_KERNELS_VARIANTS]
                                         [NUM_KERNELS_IN_EACH_CATEGORY]
                                         [NUM_KERNEL_CATEGORIES],
-    INT32 dt, INT32 dir, INT32 cpu_flags)
+    FFTZ_INT32 dt, FFTZ_INT32 dir, FFTZ_INT32 cpu_flags)
 {
-    INTP kcat_register_available[NUM_KERNEL_CATEGORIES] =
+    FFTZ_INTP kcat_register_available[NUM_KERNEL_CATEGORIES] =
     {
         1, // C kernels are always registered
         ACCESS_AVX128 && (cpu_flags > 0),
@@ -96,16 +96,16 @@ INT32 register_kernels_real(
         ACCESS_AVX512 && (cpu_flags > 2),
     };
 
-    INTP row_offset = 0;
+    FFTZ_INTP row_offset = 0;
 
-    for (INTP rkvar = 0; rkvar < NUM_REAL_KERNELS_VARIANTS; rkvar++)
+    for (FFTZ_INTP rkvar = 0; rkvar < NUM_REAL_KERNELS_VARIANTS; rkvar++)
     {
-        INTP offset = row_offset;
-        for (INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
+        FFTZ_INTP offset = row_offset;
+        for (FFTZ_INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
         {
             if (kcat_register_available[kcat])
             {
-                for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY;
+                for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY;
                      i++, offset++)
                 {
                     if (static_kernel_table[rkvar][i][kcat].k_register_kernel !=
@@ -145,15 +145,15 @@ INT32 register_kernels_real(
     return KERNEL_SUCCESS;
 }
 
-INT32 register_kernels_complex(
+FFTZ_INT32 register_kernels_complex(
     kernel_t kertab[NUM_KERNELS_IN_TABLE_COMPLEX],
     kernel_fp_list_t static_kernel_table[NUM_KERNELS_IN_EACH_CATEGORY]
                                         [NUM_KERNEL_CATEGORIES],
     kernel_fp_list_t static_kernel_table_bwd[NUM_KERNELS_IN_EACH_CATEGORY]
                                             [NUM_KERNEL_CATEGORIES],
-    INT32 dt, INT32 dir, INT32 cpu_flags)
+    FFTZ_INT32 dt, FFTZ_INT32 dir, FFTZ_INT32 cpu_flags)
 {
-    INTP kcat_register_available[NUM_KERNEL_CATEGORIES] =
+    FFTZ_INTP kcat_register_available[NUM_KERNEL_CATEGORIES] =
     {
         1, // C kernels are always registered
         ACCESS_AVX128 && (cpu_flags > 0),
@@ -161,13 +161,14 @@ INT32 register_kernels_complex(
         ACCESS_AVX512 && (cpu_flags > 2),
     };
 
-    INTP offset = 0;
+    FFTZ_INTP offset = 0;
 
-    for (INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
+    for (FFTZ_INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
     {
         if (kcat_register_available[kcat])
         {
-            for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++, offset++)
+            for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY;
+                 i++, offset++)
             {
                 if (static_kernel_table[i][kcat].k_register_kernel != NULL)
                 {
@@ -204,7 +205,8 @@ INT32 register_kernels_complex(
                     }
                     else
                     {
-                        kertab[offset].sets[DT_DOUBLE - 2] = sets_complex_d[kcat];
+                        kertab[offset].sets[DT_DOUBLE - 2] =
+                            sets_complex_d[kcat];
                     }
                 }
             }
@@ -232,8 +234,9 @@ INT32 register_kernels_complex(
  *                      BACKWARD_FFT_DIR -> backward (a .* b)
  * @return Function pointer to the selected elementwise multiplication kernel
  */
-elementwise_mul_ register_elementwise_mul_kernel(INT32 cpu_flags, INT32 dt,
-                                                 UINT8 direction)
+elementwise_mul_ register_elementwise_mul_kernel(FFTZ_INT32 cpu_flags,
+                                                 FFTZ_INT32 dt,
+                                                 FFTZ_UINT8 direction)
 {
 #ifdef ENABLE_AVX512
     if (cpu_flags >= optlevel_avx512)
@@ -275,7 +278,7 @@ elementwise_mul_ register_elementwise_mul_kernel(INT32 cpu_flags, INT32 dt,
  * @param[in] dt        Data type (DT_FLOAT or DT_DOUBLE)
  * @return Function pointer to the selected normalization kernel
  */
-normalize_ register_normalize_kernel(INT32 cpu_flags, INT32 dt)
+normalize_ register_normalize_kernel(FFTZ_INT32 cpu_flags, FFTZ_INT32 dt)
 {
 #ifdef ENABLE_AVX512
     if (cpu_flags >= optlevel_avx512)

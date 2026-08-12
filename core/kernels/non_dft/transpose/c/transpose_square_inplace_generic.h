@@ -17,8 +17,8 @@
 // the required function declarations for the different supported datatypes
 
 // TRANSPOSE_DT is expected to be one of the following:
-//      FLOAT
-//      DOUBLE
+//      FFTZ_FLOAT
+//      FFTZ_DOUBLE
 //      aoclfftz_complex_f_t
 //      aoclfftz_complex_d_t
 #ifndef TRANSPOSE_DT
@@ -47,10 +47,10 @@
 //      q       : square transpose
 //      r       : rectangular transpose
 // -----------------------------------------------------------------------------
-//      FLOAT                   : FLOAT values
-//      DOUBLE                  : DOUBLE values
-//      aoclfftz_complex_f_t    : Complex(FLOAT) values
-//      aoclfftz_complex_d_t    : Complex(DOUBLE) values
+//      FFTZ_FLOAT                   : FFTZ_FLOAT values
+//      FFTZ_DOUBLE                  : FFTZ_DOUBLE values
+//      aoclfftz_complex_f_t    : Complex(FFTZ_FLOAT) values
+//      aoclfftz_complex_d_t    : Complex(FFTZ_DOUBLE) values
 // -----------------------------------------------------------------------------
 //      c       : portable C code
 //      avx128  : avx128 intrinsic code
@@ -60,8 +60,8 @@
 
 // All transpose kernels must take the same args given by TRANSPOSE_KERNEL_ARGS.
 // TRANSPOSE_KERNEL_ARGS expands to the following:
-//     VOID *in_ptr,
-//     VOID *out_ptr,
+//     FFTZ_VOID *in_ptr,
+//     FFTZ_VOID *out_ptr,
 //     aoclfftz_dim_t_64_ row_metadata,
 //     aoclfftz_dim_t_64_ column_metadata,
 //     aoclfftz_transpose_aux_mem_t *aux_mem
@@ -70,41 +70,40 @@
 // Declarations
 
 // iterative transpose for unit strided matrices
-VOID FUNC(tiq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
+FFTZ_VOID FUNC(tiq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
 
 // iterative transpose for arbitrarily strided matrices
-VOID FUNC(tisq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
+FFTZ_VOID FUNC(tisq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
 
 // copy a submatrix and its companion into local buffers, transpose them
 // in-place and (swap) store the transposed data of each one in the other's
 // location.
-VOID FUNC(copy_transpose_swap_store, TRANSPOSE_DT, c)
+FFTZ_VOID FUNC(copy_transpose_swap_store, TRANSPOSE_DT, c)
                     (TRANSPOSE_DT *matrix, aoclfftz_dim_t_64_ row_metadata,
-                    aoclfftz_dim_t_64_ column_metadata, INTP i, INTP j,
-                    TRANSPOSE_DT *buffer1, TRANSPOSE_DT *buffer2);
+                     aoclfftz_dim_t_64_ column_metadata, FFTZ_INTP i,
+                     FFTZ_INTP j, TRANSPOSE_DT *buffer1, TRANSPOSE_DT *buffer2);
 
 // recursive function that performs the transpose of the given matrix
-VOID FUNC(tiq_block_helper, TRANSPOSE_DT, c)(TRANSPOSE_DT *matrix,
-                    aoclfftz_dim_t_64_ row_metadata,
-                    aoclfftz_dim_t_64_ column_metadata, INTP i, INTP j,
-                    UINT8 in_top_right, TRANSPOSE_DT *buffer1,
-                    TRANSPOSE_DT *buffer2);
+FFTZ_VOID FUNC(tiq_block_helper, TRANSPOSE_DT, c)(TRANSPOSE_DT *matrix,
+    aoclfftz_dim_t_64_ row_metadata, aoclfftz_dim_t_64_ column_metadata,
+    FFTZ_INTP i, FFTZ_INTP j, FFTZ_UINT8 in_top_right, TRANSPOSE_DT *buffer1,
+    TRANSPOSE_DT *buffer2);
 
 // recursive transpose for unit strided matrices
-VOID FUNC(tiq_recursive_buf, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
+FFTZ_VOID FUNC(tiq_recursive_buf, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
 
 #else
 // implementations
 
-VOID FUNC(tiq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
+FFTZ_VOID FUNC(tiq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
     TRANSPOSE_DT *in = (TRANSPOSE_DT *)in_ptr;
 
-    for (INTP i = 0; i < row_metadata.n; ++i)
+    for (FFTZ_INTP i = 0; i < row_metadata.n; ++i)
     {
-        for (INTP j = i + 1; j < column_metadata.n; ++j)
+        for (FFTZ_INTP j = i + 1; j < column_metadata.n; ++j)
         {
             TRANSPOSE_DT temp =
                 in[LINEAR_IDX_2D(i, j, UNIT_STRIDE, row_metadata.in_stride)];
@@ -119,15 +118,15 @@ VOID FUNC(tiq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-VOID FUNC(tisq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
+FFTZ_VOID FUNC(tisq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
     TRANSPOSE_DT *in = (TRANSPOSE_DT *)in_ptr;
 
-    for (INTP i = 0; i < row_metadata.n; ++i)
+    for (FFTZ_INTP i = 0; i < row_metadata.n; ++i)
     {
-        for (INTP j = i + 1; j < column_metadata.n; ++j)
+        for (FFTZ_INTP j = i + 1; j < column_metadata.n; ++j)
         {
             TRANSPOSE_DT temp = in[LINEAR_IDX_2D(
                 i, j, column_metadata.in_stride, row_metadata.in_stride)];
@@ -145,13 +144,13 @@ VOID FUNC(tisq_iterative, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-VOID FUNC(copy_transpose_swap_store, TRANSPOSE_DT, c)
+FFTZ_VOID FUNC(copy_transpose_swap_store, TRANSPOSE_DT, c)
                     (TRANSPOSE_DT *matrix, aoclfftz_dim_t_64_ row_metadata,
-                    aoclfftz_dim_t_64_ column_metadata, INTP i, INTP j,
-                    TRANSPOSE_DT *buffer1, TRANSPOSE_DT *buffer2)
+                     aoclfftz_dim_t_64_ column_metadata, FFTZ_INTP i,
+                     FFTZ_INTP j, TRANSPOSE_DT *buffer1, TRANSPOSE_DT *buffer2)
 {
-    INTP leading_dim = row_metadata.in_stride;
-    INTP cols = column_metadata.n;
+    FFTZ_INTP leading_dim = row_metadata.in_stride;
+    FFTZ_INTP cols = column_metadata.n;
 
     /* TODO: check performance impact of replacing copy-then-inplace transpose
              with a direct out-of-place transpose */
@@ -163,7 +162,7 @@ VOID FUNC(copy_transpose_swap_store, TRANSPOSE_DT, c)
         &matrix[LINEAR_IDX_2D(j, i, UNIT_STRIDE, leading_dim)];
 
     /* copy data from B and C to the temp buffers */
-    for (INTP it = 0; it < cols; ++it)
+    for (FFTZ_INTP it = 0; it < cols; ++it)
     {
         /* copying from B to buffer1 */
         COPY_MATRIX_ELEMS(TRANSPOSE_DT, matrixB, it, 0, leading_dim, buffer1,
@@ -185,7 +184,7 @@ VOID FUNC(copy_transpose_swap_store, TRANSPOSE_DT, c)
                                                 column_metadata, NULL);
 
     /* copy data from the temp buffers to B and C */
-    for (INTP it = 0; it < cols; ++it)
+    for (FFTZ_INTP it = 0; it < cols; ++it)
     {
         /* copying from buffer2 to B */
         COPY_MATRIX_ELEMS(TRANSPOSE_DT, buffer2, it, 0, cols, matrixB, it, 0,
@@ -204,14 +203,13 @@ VOID FUNC(copy_transpose_swap_store, TRANSPOSE_DT, c)
 //
 //     - the destinations of elements in B & C, post transpose are within the
 //       other matrix (in C for B) (in B for C)
-VOID FUNC(tiq_block_helper, TRANSPOSE_DT, c)(TRANSPOSE_DT *matrix,
-                    aoclfftz_dim_t_64_ row_metadata,
-                    aoclfftz_dim_t_64_ column_metadata, INTP i, INTP j,
-                    UINT8 in_top_right, TRANSPOSE_DT *buffer1,
-                    TRANSPOSE_DT *buffer2)
+FFTZ_VOID FUNC(tiq_block_helper, TRANSPOSE_DT, c)(TRANSPOSE_DT *matrix,
+    aoclfftz_dim_t_64_ row_metadata, aoclfftz_dim_t_64_ column_metadata,
+    FFTZ_INTP i, FFTZ_INTP j, FFTZ_UINT8 in_top_right, TRANSPOSE_DT *buffer1,
+    TRANSPOSE_DT *buffer2)
 {
-    INTP leading_dim = row_metadata.in_stride;
-    INTP cols = column_metadata.n;
+    FFTZ_INTP leading_dim = row_metadata.in_stride;
+    FFTZ_INTP cols = column_metadata.n;
 
     TRANSPOSE_DT *sub_matrix =
         &matrix[LINEAR_IDX_2D(i, j, UNIT_STRIDE, leading_dim)];
@@ -323,7 +321,7 @@ VOID FUNC(tiq_block_helper, TRANSPOSE_DT, c)(TRANSPOSE_DT *matrix,
     }
 }
 
-VOID FUNC(tiq_recursive_buf, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
+FFTZ_VOID FUNC(tiq_recursive_buf, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 

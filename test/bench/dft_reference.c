@@ -75,19 +75,20 @@
  * NULL)
  * @param handle FFT problem handle for library execution
  * @param input_buffer Input data buffer (currently unused parameter)
- * @return INT32 Status code: BENCH_SUCCESS on success, error codes on failure
+ * @return FFTZ_INT32 Status code: BENCH_SUCCESS on success, error codes on
+ *         failure
  *         (MEMORY_FAILURE, EXECUTION_FAILURE, or comparison mismatch)
  */
-INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                             INTP *out_idx_map, VOID *handle,
-                             VOID *input_buffer)
+FFTZ_INT32 run_dft_reference_test(aoclfftz_bench_params_t *params,
+                                  FFTZ_INTP *in_idx_map, FFTZ_INTP *out_idx_map,
+                                  FFTZ_VOID *handle, FFTZ_VOID *input_buffer)
 {
     AOCLFFTZ_LOG(TRACE, params->logger_mode, "ENTER");
 
     // Return codes and configuration
-    INT32 status = BENCH_SUCCESS;
-    UINT32 is_align = params->aligned_alloc;
-    INTP problem_bytes_without_strides =
+    FFTZ_INT32 status = BENCH_SUCCESS;
+    FFTZ_UINT32 is_align = params->aligned_alloc;
+    FFTZ_INTP problem_bytes_without_strides =
         params->sz_info.n * params->sz_info.batches * DATA_STRIDE *
         params->sz_info.in_data_stride * params->sz_info.dt_bytes;
 
@@ -110,7 +111,7 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     }
 
     // Main iteration loop
-    for (INT32 i = 0; i < params->num_iterations && status == 0; i++)
+    for (FFTZ_INT32 i = 0; i < params->num_iterations && status == 0; i++)
     {
         if (params->use_random_seed)
         {
@@ -160,16 +161,17 @@ INT32 run_dft_reference_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
 
         // Input index map for DFT reference computation
         // C2C: preserve original input stride pattern, R2C/C2R: use contiguous
-        INTP *dftref_in_map = (params->fft_type == C2C) ? in_idx_map : NULL;
+        FFTZ_INTP *dftref_in_map =
+            (params->fft_type == C2C) ? in_idx_map : NULL;
         // Output index map for DFT reference computation
         // Always NULL - DFT reference output is computed in contiguous format
-        INTP *dftref_out_map = NULL;
+        FFTZ_INTP *dftref_out_map = NULL;
         // Input index map for comparison function
         // Always NULL - comparison input (reference) is in contiguous format
-        INTP *cmp_in_map = NULL;
+        FFTZ_INTP *cmp_in_map = NULL;
         // Output index map for comparison function
         // C2C: preserve original output stride pattern, R2C/C2R: use contiguous
-        INTP *cmp_out_map = (params->fft_type == C2C) ? out_idx_map : NULL;
+        FFTZ_INTP *cmp_out_map = (params->fft_type == C2C) ? out_idx_map : NULL;
 
         // Clear reference output buffer before DFT computation
         memset(buffers.out_ref, 0, problem_bytes_without_strides);
@@ -214,29 +216,36 @@ cleanup:
  * columns:
  *
  * +-------------------+---------------------------+---------------------------+---------------------------+---------------------------+
- * | FFT Type          | complex_in                | complex_out               | in_ref                    | out_ref                   |
+ * | FFT Type          | complex_in                | complex_out               |
+ * in_ref                    | out_ref                   |
  * +-------------------+---------------------------+---------------------------+---------------------------+---------------------------+
- * | C2C in-place      | (nil)                     | (nil)                     | input size (with strides) | problem size (no strides) |
- * | C2C out-of-place  | (nil)                     | (nil)                     | params->in                | problem size (no strides) |
- * | R2C in-place      | problem size (no strides) | problem size (no strides) | complex_in                | problem size (no strides) |
- * | R2C out-of-place  | problem size (no strides) | problem size (no strides) | complex_in                | problem size (no strides) |
- * | C2R in-place      | problem size (no strides) | problem size (no strides) | complex_in                | problem size (no strides) |
- * | C2R out-of-place  | problem size (no strides) | problem size (no strides) | complex_in                | problem size (no strides) |
+ * | C2C in-place      | (nil)                     | (nil)                     |
+ * input size (with strides) | problem size (no strides) | | C2C out-of-place  |
+ * (nil)                     | (nil)                     | params->in | problem
+ * size (no strides) | | R2C in-place      | problem size (no strides) | problem
+ * size (no strides) | complex_in                | problem size (no strides) |
+ * | R2C out-of-place  | problem size (no strides) | problem size (no strides) |
+ * complex_in                | problem size (no strides) | | C2R in-place      |
+ * problem size (no strides) | problem size (no strides) | complex_in | problem
+ * size (no strides) | | C2R out-of-place  | problem size (no strides) | problem
+ * size (no strides) | complex_in                | problem size (no strides) |
  * +-------------------+---------------------------+---------------------------+---------------------------+---------------------------+
  *
  * Here,
- *   problem size (no strides) = batches * transform size * complex data stride * dt_bytes
- *   input_size = (size of batches with vec_in_strides and transforms with in_strides) * data stride * dt_bytes
+ *   problem size (no strides) = batches * transform size * complex data stride
+ * * dt_bytes input_size = (size of batches with vec_in_strides and transforms
+ * with in_strides) * data stride * dt_bytes
  */
-INT32 allocate_dftref_buffers(aoclfftz_bench_params_t *params,
-                              dft_ref_buffers_t *buffers, UINT32 is_align)
+FFTZ_INT32 allocate_dftref_buffers(aoclfftz_bench_params_t *params,
+                              dft_ref_buffers_t *buffers, FFTZ_UINT32 is_align)
 {
-    INTP problem_bytes_without_strides =
+    FFTZ_INTP problem_bytes_without_strides =
         params->sz_info.n * params->sz_info.batches * DATA_STRIDE *
         params->sz_info.in_data_stride * params->sz_info.dt_bytes;
 
     // Always allocate reference output buffer for storing DFT results
-    ALLOC_INIT(buffers->out_ref, VOID, problem_bytes_without_strides, is_align);
+    ALLOC_INIT(buffers->out_ref, FFTZ_VOID, problem_bytes_without_strides,
+               is_align);
     if (buffers->out_ref == NULL)
     {
         AOCLFFTZ_ERROR("MEMORY_FAILURE : "
@@ -249,7 +258,7 @@ INT32 allocate_dftref_buffers(aoclfftz_bench_params_t *params,
         if (params->res_placement == IN_PLACE)
         {
             // For in-place C2C, need separate reference input buffer
-            ALLOC_INIT(buffers->in_ref, VOID, params->sz_info.input_bytes,
+            ALLOC_INIT(buffers->in_ref, FFTZ_VOID, params->sz_info.input_bytes,
                        is_align);
             if (buffers->in_ref == NULL)
             {
@@ -267,8 +276,8 @@ INT32 allocate_dftref_buffers(aoclfftz_bench_params_t *params,
     else // R2C & C2R transforms
     {
         // Allocate buffer for complex input (real->complex conversion)
-        ALLOC_INIT(buffers->complex_in, VOID, problem_bytes_without_strides,
-                   is_align);
+        ALLOC_INIT(buffers->complex_in, FFTZ_VOID,
+                   problem_bytes_without_strides, is_align);
         if (buffers->complex_in == NULL)
         {
             AOCLFFTZ_ERROR("MEMORY_FAILURE : Complex "
@@ -277,8 +286,8 @@ INT32 allocate_dftref_buffers(aoclfftz_bench_params_t *params,
         }
 
         // Allocate buffer for complex output (half-complex->complex conversion)
-        ALLOC_INIT(buffers->complex_out, VOID, problem_bytes_without_strides,
-                   is_align);
+        ALLOC_INIT(buffers->complex_out, FFTZ_VOID,
+                   problem_bytes_without_strides, is_align);
         if (buffers->complex_out == NULL)
         {
             AOCLFFTZ_ERROR("MEMORY_FAILURE : Complex "
@@ -307,32 +316,36 @@ INT32 allocate_dftref_buffers(aoclfftz_bench_params_t *params,
  *   DFT-REF input : params->in => buffers->complex_in
  *
  * R2C (Real-to-Complex):
- *   FFTZ          : params->in => [FFT] => params->out => [HC2C conversion] => buffers->complex_out
- *   DFT-REF input : params->in => [R2C conversion] => buffers->complex_in
+ *   FFTZ          : params->in => [FFT] => params->out => [HC2C conversion] =>
+ * buffers->complex_out DFT-REF input : params->in => [R2C conversion] =>
+ * buffers->complex_in
  *
  * C2R (Complex-to-Real):
- *   FFTZ          : params->in => [FFT] => params->out => [R2C conversion] => buffers->complex_out
- *   DFT-REF input : params->in => [HC2C conversion] => buffers->complex_in
+ *   FFTZ          : params->in => [FFT] => params->out => [R2C conversion] =>
+ * buffers->complex_out DFT-REF input : params->in => [HC2C conversion] =>
+ * buffers->complex_in
  *
- * @param[in] params Pointer to FFT parameters structure containing input/output buffers
- * @param[in] buffers Pointer to intermediate buffer structure for data conversions
+ * @param[in] params Pointer to FFT parameters structure containing input/output
+ * buffers
+ * @param[in] buffers Pointer to intermediate buffer structure for data
+ * conversions
  * @param[in] fft_type Type of FFT operation (C2C, R2C, C2R, R2R)
  * @param[in] direction FFT direction (forward or inverse)
  *
  * @return Status code indicating success or failure of the operation
  */
-INT32 execute_fft_and_postprocess(aoclfftz_bench_params_t *params,
-                                  dft_ref_buffers_t *buffers, VOID *handle,
-                                  INTP *in_idx_map, INTP *out_idx_map)
+FFTZ_INT32 execute_fft_and_postprocess(aoclfftz_bench_params_t *params,
+                                  dft_ref_buffers_t *buffers, FFTZ_VOID *handle,
+                                  FFTZ_INTP *in_idx_map, FFTZ_INTP *out_idx_map)
 {
-    INT32 ret;
-    INTP problem_bytes_without_strides = params->sz_info.n *
+    FFTZ_INT32 ret;
+    FFTZ_INTP problem_bytes_without_strides = params->sz_info.n *
                                          params->sz_info.batches * DATA_STRIDE *
                                          params->sz_info.dt_bytes;
-    INTP complex_input_bytes = (params->fft_type == C2C)
+    FFTZ_INTP complex_input_bytes = (params->fft_type == C2C)
                                    ? params->sz_info.input_bytes
                                    : problem_bytes_without_strides;
-    INTP complex_output_bytes = problem_bytes_without_strides;
+    FFTZ_INTP complex_output_bytes = problem_bytes_without_strides;
 
     if (params->fft_type == R2C)
     {
@@ -408,8 +421,8 @@ INT32 execute_fft_and_postprocess(aoclfftz_bench_params_t *params,
 /**
  * @brief Clean up allocated buffers
  */
-VOID cleanup_buffers(aoclfftz_bench_params_t *params,
-                     dft_ref_buffers_t *buffers, UINT32 is_align)
+FFTZ_VOID cleanup_buffers(aoclfftz_bench_params_t *params,
+                     dft_ref_buffers_t *buffers, FFTZ_UINT32 is_align)
 {
     // Always free reference output buffer
     FREE_ALLOCATED_MEM(buffers->out_ref, is_align);
@@ -428,7 +441,7 @@ VOID cleanup_buffers(aoclfftz_bench_params_t *params,
 }
 
 /**
- * @brief DFT reference implementation for FLOAT type
+ * @brief DFT reference implementation for FFTZ_FLOAT type
  * Computes multi dimensional DFT using the below formula
  *  X[k] = ∑x[n]⋅e ^-j2πk.n/N
  *  where n = (n1, n2,...,nd)
@@ -440,57 +453,61 @@ VOID cleanup_buffers(aoclfftz_bench_params_t *params,
  * @param out buffer to store the DFT output
  * @param in_idx_map index map input indices
  * @param out_idx_map index map for output indices
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
-               INTP *in_idx_map, INTP *out_idx_map)
+FFTZ_VOID dft_ref_f(aoclfftz_bench_params_t *params, FFTZ_VOID *in,
+                    FFTZ_VOID *out, FFTZ_INTP *in_idx_map,
+                    FFTZ_INTP *out_idx_map)
 {
-    // Use DOUBLE for intermediate variables to improve accuracy of accumulation
-    DOUBLE e[DATA_STRIDE], mul_buf[DATA_STRIDE];
-    FLOAT sign =
+    // Use FFTZ_DOUBLE for intermediate variables to improve accuracy of
+    // accumulation
+    FFTZ_DOUBLE e[DATA_STRIDE], mul_buf[DATA_STRIDE];
+    FFTZ_FLOAT sign =
         (params->dir == BACKWARD) ? 1.0f : -1.0f;
-    FLOAT *in_f = (FLOAT *)in;
-    FLOAT *out_f = (FLOAT *)out;
-    INT32 rank = params->dim_rank;
+    FFTZ_FLOAT *in_f = (FFTZ_FLOAT *)in;
+    FFTZ_FLOAT *out_f = (FFTZ_FLOAT *)out;
+    FFTZ_INT32 rank = params->dim_rank;
     aoclfftz_dim_t_64_ *dims = params->dims;
-    INTP n = params->sz_info.n;
-    INTP batches = params->sz_info.batches;
-    UINT32 is_align = params->aligned_alloc;
+    FFTZ_INTP n = params->sz_info.n;
+    FFTZ_INTP batches = params->sz_info.batches;
+    FFTZ_UINT32 is_align = params->aligned_alloc;
 
-    INTP *in_counter = NULL;
-    ALLOC_INIT(in_counter, INTP, rank * sizeof(INTP), is_align);
-    INTP *out_counter = NULL;
-    ALLOC_INIT(out_counter, INTP, rank * sizeof(INTP), is_align);
+    FFTZ_INTP *in_counter = NULL;
+    ALLOC_INIT(in_counter, FFTZ_INTP, rank * sizeof(FFTZ_INTP), is_align);
+    FFTZ_INTP *out_counter = NULL;
+    ALLOC_INIT(out_counter, FFTZ_INTP, rank * sizeof(FFTZ_INTP), is_align);
 
-    DOUBLE *inv_dims = NULL;
-    ALLOC_INIT(inv_dims, DOUBLE, rank * sizeof(DOUBLE), is_align);
+    FFTZ_DOUBLE *inv_dims = NULL;
+    ALLOC_INIT(inv_dims, FFTZ_DOUBLE, rank * sizeof(FFTZ_DOUBLE), is_align);
     // Precompute angle inv_dims
-    for (INTP i = 0; i < rank; i++)
+    for (FFTZ_INTP i = 0; i < rank; i++)
     {
         inv_dims[i] = 1.0 / dims[i].n;
     }
 
     // Iterate over all batches
-    for (INTP b = 0; b < batches; b++)
+    for (FFTZ_INTP b = 0; b < batches; b++)
     {
         RESET_ND_COUNTER(out_counter, rank);
         // For each output point k (multi-dimensional index)
-        for (INTP k = 0; k < n; k++)
+        for (FFTZ_INTP k = 0; k < n; k++)
         {
             // Compute output index, using out_idx_map if provided
-            INTP out_idx = out_idx_map ? out_idx_map[b * n + k] * DATA_STRIDE
+            FFTZ_INTP out_idx =
+                out_idx_map ? out_idx_map[b * n + k] * DATA_STRIDE
                                        : (b * n + k) * DATA_STRIDE;
             RESET_ND_COUNTER(in_counter, rank);
             // For each input point i (multi-dimensional index)
-            for (INTP i = 0; i < n; i++)
+            for (FFTZ_INTP i = 0; i < n; i++)
             {
                 // Compute input index, using in_idx_map if provided
-                INTP in_idx = in_idx_map ? in_idx_map[b * n + i] * DATA_STRIDE
+                FFTZ_INTP in_idx =
+                    in_idx_map ? in_idx_map[b * n + i] * DATA_STRIDE
                                          : (b * n + i) * DATA_STRIDE;
 
                 // Compute the DFT angle for this (k, i) pair:
                 // angle = sign * 2π * dot(k, i) / N
-                DOUBLE angle = sign * BENCH_2_PI;
+                FFTZ_DOUBLE angle = sign * BENCH_2_PI;
                 // The macro UPDATE_ANGLE updates 'angle' in-place based on the
                 // current multi-dimensional indices and dimensions
                 UPDATE_ANGLE(angle, in_counter, out_counter, inv_dims, rank);
@@ -504,8 +521,9 @@ VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
                 mul_buf[1] = (in_f[in_idx] * e[1]) + (in_f[in_idx + 1] * e[0]);
 
                 // Accumulate the result into the output buffer
-                out_f[out_idx] = out_f[out_idx] + (FLOAT)mul_buf[0];
-                out_f[out_idx + 1] = out_f[out_idx + 1] + (FLOAT)mul_buf[1];
+                out_f[out_idx] = out_f[out_idx] + (FFTZ_FLOAT)mul_buf[0];
+                out_f[out_idx + 1] =
+                    out_f[out_idx + 1] + (FFTZ_FLOAT)mul_buf[1];
 
                 // Move to next input multi-dimensional index
                 INCREMENT_ND_COUNTER(in_counter, dims, rank);
@@ -521,7 +539,7 @@ VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
 }
 
 /**
- * @brief DFT reference implementation for DOUBLE type
+ * @brief DFT reference implementation for FFTZ_DOUBLE type
  * Computes multi dimensional DFT using the below formula
  *  X[k] = ∑x[n]⋅e ^-j2πk.n/N
  *  where n = (n1, n2,...,nd)
@@ -533,57 +551,60 @@ VOID dft_ref_f(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
  * @param out buffer to store the DFT output
  * @param in_idx_map index map input indices
  * @param out_idx_map index map for output indices
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID dft_ref_d(aoclfftz_bench_params_t *params, VOID *in, VOID *out,
-               INTP *in_idx_map, INTP *out_idx_map)
+FFTZ_VOID dft_ref_d(aoclfftz_bench_params_t *params, FFTZ_VOID *in,
+                    FFTZ_VOID *out, FFTZ_INTP *in_idx_map,
+                    FFTZ_INTP *out_idx_map)
 {
-    DOUBLE e[DATA_STRIDE], mul_buf[DATA_STRIDE];
-    DOUBLE sign =
+    FFTZ_DOUBLE e[DATA_STRIDE], mul_buf[DATA_STRIDE];
+    FFTZ_DOUBLE sign =
         (params->dir == BACKWARD) ? 1.0f : -1.0f;
-    DOUBLE *in_d = (DOUBLE *)in;
-    DOUBLE *out_d = (DOUBLE *)out;
-    INT32 rank = params->dim_rank;
+    FFTZ_DOUBLE *in_d = (FFTZ_DOUBLE *)in;
+    FFTZ_DOUBLE *out_d = (FFTZ_DOUBLE *)out;
+    FFTZ_INT32 rank = params->dim_rank;
     aoclfftz_dim_t_64_ *dims = params->dims;
-    INTP n = params->sz_info.n;
-    INTP batches = params->sz_info.batches;
-    UINT32 is_align = params->aligned_alloc;
+    FFTZ_INTP n = params->sz_info.n;
+    FFTZ_INTP batches = params->sz_info.batches;
+    FFTZ_UINT32 is_align = params->aligned_alloc;
 
-    INTP *in_counter = NULL;
-    ALLOC_INIT(in_counter, INTP, rank * sizeof(INTP), is_align);
-    INTP *out_counter = NULL;
-    ALLOC_INIT(out_counter, INTP, rank * sizeof(INTP), is_align);
+    FFTZ_INTP *in_counter = NULL;
+    ALLOC_INIT(in_counter, FFTZ_INTP, rank * sizeof(FFTZ_INTP), is_align);
+    FFTZ_INTP *out_counter = NULL;
+    ALLOC_INIT(out_counter, FFTZ_INTP, rank * sizeof(FFTZ_INTP), is_align);
 
-    DOUBLE *inv_dims = NULL;
-    ALLOC_INIT(inv_dims, DOUBLE, rank * sizeof(DOUBLE), is_align);
+    FFTZ_DOUBLE *inv_dims = NULL;
+    ALLOC_INIT(inv_dims, FFTZ_DOUBLE, rank * sizeof(FFTZ_DOUBLE), is_align);
     // Precompute angle inv_dims
-    for (INTP i = 0; i < rank; i++)
+    for (FFTZ_INTP i = 0; i < rank; i++)
     {
         inv_dims[i] = 1.0 / dims[i].n;
     }
 
     // Iterate over all batches
     // TODO: add parallelization over batches to speed up, cache twiddles
-    for (INTP b = 0; b < batches; b++)
+    for (FFTZ_INTP b = 0; b < batches; b++)
     {
         RESET_ND_COUNTER(out_counter, rank);
         // For each output point k (multi-dimensional index)
-        for (INTP k = 0; k < n; k++)
+        for (FFTZ_INTP k = 0; k < n; k++)
         {
             // Compute output index, using out_idx_map if provided
-            INTP out_idx = out_idx_map ? out_idx_map[b * n + k] * DATA_STRIDE
+            FFTZ_INTP out_idx =
+                out_idx_map ? out_idx_map[b * n + k] * DATA_STRIDE
                                        : (b * n + k) * DATA_STRIDE;
             RESET_ND_COUNTER(in_counter, rank);
             // For each input point i (multi-dimensional index)
-            for (INTP i = 0; i < n; i++)
+            for (FFTZ_INTP i = 0; i < n; i++)
             {
                 // Compute input index, using in_idx_map if provided
-                INTP in_idx = in_idx_map ? in_idx_map[b * n + i] * DATA_STRIDE
+                FFTZ_INTP in_idx =
+                    in_idx_map ? in_idx_map[b * n + i] * DATA_STRIDE
                                          : (b * n + i) * DATA_STRIDE;
 
                 // Compute the DFT angle for this (k, i) pair:
                 // angle = sign * 2π * dot(k, i) / N
-                DOUBLE angle = sign * BENCH_2_PI;
+                FFTZ_DOUBLE angle = sign * BENCH_2_PI;
                 // The macro UPDATE_ANGLE updates 'angle' in-place based on the
                 // current multi-dimensional indices and dimensions
                 UPDATE_ANGLE(angle, in_counter, out_counter, inv_dims, rank);

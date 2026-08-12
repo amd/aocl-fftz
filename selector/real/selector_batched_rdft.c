@@ -14,7 +14,7 @@
 
 #include "core/common/memory_manager.h"
 
-INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                             aoclfftz_realhelper_t *realhelper)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
@@ -29,13 +29,13 @@ INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     }
 
     aoclfftz_selector_t *cur_sel = NULL;
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 stats_mode =
+    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 stats_mode =
         sel->solution->decomp_scheme->cntrl_params->measure_stats;
-    INT32 rnk = 0;
-    INTP batch_size = 1;
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 rnk = 0;
+    FFTZ_INTP batch_size = 1;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (cur_sel == NULL)
@@ -52,10 +52,11 @@ INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         goto exit_batched_dft;
     }
 
-    UINT32 n_threads = 1;
+    FFTZ_UINT32 n_threads = 1;
 #ifdef MULTI_THREADING
-    INT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
-    INT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
+    FFTZ_INT32 avl_threads =
+        sel->solution->decomp_scheme->thread_info->avl_threads;
+    FFTZ_INT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
     n_threads = (inner_batch < avl_threads) ? inner_batch : avl_threads;
     sel->solution->decomp_scheme->thread_info->n_threads = n_threads;
 #endif

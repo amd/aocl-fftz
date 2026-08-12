@@ -14,7 +14,7 @@
 
 #include "core/solvers/solver.h"
 
-INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
+FFTZ_INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
                                 aoclfftz_solution_t *next_sol,
                                 aoclfftz_realhelper_t *realhelper)
 {
@@ -29,7 +29,7 @@ INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
     // Strides are prepared based on real points, so adjust them (scale by 2)
     // for complex points (i.e. R2C output and C2R input)
     // Scale ALL vector strides, not just vecs[0], to handle vec_rank > 1 cases
-    for (INTP i = 0; i < sol->decomp_scheme->vec_rank; i++)
+    for (FFTZ_INTP i = 0; i < sol->decomp_scheme->vec_rank; i++)
     {
         if (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
         {
@@ -46,19 +46,19 @@ INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
 }
 
 // Recursively solves batched RFFT by handling the innermost dimension first.
-INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
+FFTZ_INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
                                            aoclfftz_solution_t *next_sol,
-                                           INTP vec_rank)
+                                           FFTZ_INTP vec_rank)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    INT32 status = SOLVER_SUCCESS;
-    INTP rnk_offset;
-    INTP v_in_stride;
-    INTP v_out_stride;
+    FFTZ_INT32 status = SOLVER_SUCCESS;
+    FFTZ_INTP rnk_offset;
+    FFTZ_INTP v_in_stride;
+    FFTZ_INTP v_out_stride;
 
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
     v_in_stride = sol->decomp_scheme->vecs[vec_rank - 1].in_stride * dt_bytes;
     v_out_stride = sol->decomp_scheme->vecs[vec_rank - 1].out_stride * dt_bytes;
@@ -67,9 +67,9 @@ INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
     {
         // For innermost vector rank,
         // re-arrange the input if needed and then execute the solver
-        INTP batches = sol->decomp_scheme->vecs[0].n;
+        FFTZ_INTP batches = sol->decomp_scheme->vecs[0].n;
 
-        for (INTP b = 0; b < batches; b++)
+        for (FFTZ_INTP b = 0; b < batches; b++)
         {
             status = next_sol->solver->execute_solver(next_sol);
             if (status != SOLVER_SUCCESS)
@@ -95,10 +95,10 @@ INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
         {
             // save pointer to restore it below since
             // they will be moved while execution
-            VOID *in_real = next_sol->decomp_scheme->in_real;
-            VOID *in_imag = next_sol->decomp_scheme->in_imag;
-            VOID *out_real = next_sol->decomp_scheme->out_real;
-            VOID *out_imag = next_sol->decomp_scheme->out_imag;
+            FFTZ_VOID *in_real = next_sol->decomp_scheme->in_real;
+            FFTZ_VOID *in_imag = next_sol->decomp_scheme->in_imag;
+            FFTZ_VOID *out_real = next_sol->decomp_scheme->out_real;
+            FFTZ_VOID *out_imag = next_sol->decomp_scheme->out_imag;
 
             // recursive call to solve the inner batches
             status = execute_real_batched_solver_internal(sol, next_sol,
@@ -121,12 +121,12 @@ INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
     return status;
 }
 
-static INT32 execute_real_batched_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_real_batched_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    INT32 status = SOLVER_SUCCESS;
+    FFTZ_INT32 status = SOLVER_SUCCESS;
     aoclfftz_solution_t *next_sol = sol->next_sol[0];
 
     next_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
@@ -141,7 +141,7 @@ static INT32 execute_real_batched_solver(aoclfftz_solution_t *sol)
     return status;
 }
 
-dft_solver_ register_execute_real_batched_solver(VOID)
+dft_solver_ register_execute_real_batched_solver(FFTZ_VOID)
 {
     return execute_real_batched_solver;
 }

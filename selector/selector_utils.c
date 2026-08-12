@@ -17,12 +17,12 @@
 #include "core/common/memory_manager.h"
 
 // to_ds, from_ds: short for to/from decomp_scheme
-INT32 copy_decomp_scheme( aoclfftz_decomp_scheme_t *to_ds,
+FFTZ_INT32 copy_decomp_scheme( aoclfftz_decomp_scheme_t *to_ds,
                           aoclfftz_decomp_scheme_t *from_ds)
 {
     to_ds->vec_rank = from_ds->vec_rank;
     to_ds->dim_rank = from_ds->dim_rank;
-    INT32 cnt, idx = 0;
+    FFTZ_INT32 cnt, idx = 0;
     for (cnt = 0; cnt < from_ds->dim_rank; cnt++)
     {
         if (from_ds->dims[cnt].n != 1)
@@ -100,7 +100,7 @@ INT32 copy_decomp_scheme( aoclfftz_decomp_scheme_t *to_ds,
     return AOCLFFTZ_SUCCESS;
 }
 
-INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
+FFTZ_INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
                          aoclfftz_solution_t *from_sol_obj )
 {
     // solver
@@ -145,7 +145,7 @@ INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->decomp_scheme->vec_rank;
     to_sol_obj->decomp_scheme->dim_rank =
         from_sol_obj->decomp_scheme->dim_rank;
-    INT32 cnt;
+    FFTZ_INT32 cnt;
     for (cnt = 0; cnt < to_sol_obj->decomp_scheme->dim_rank; cnt++)
     {
         to_sol_obj->decomp_scheme->dims[cnt].n =
@@ -264,7 +264,7 @@ INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
             if (!to_sol_obj->dft_bufs->transpose->aux_mem->data)
             {
                 ALLOC_ALIGN_INIT(
-                    to_sol_obj->dft_bufs->transpose->aux_mem->data, UINT8,
+                    to_sol_obj->dft_bufs->transpose->aux_mem->data, FFTZ_UINT8,
                     from_sol_obj->dft_bufs->transpose->aux_mem->size);
             }
             else
@@ -272,7 +272,7 @@ INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
                 FREE_ALIGN_ALLOCATED_MEM(
                     to_sol_obj->dft_bufs->transpose->aux_mem->data);
                 ALLOC_ALIGN_INIT(
-                    to_sol_obj->dft_bufs->transpose->aux_mem->data, UINT8,
+                    to_sol_obj->dft_bufs->transpose->aux_mem->data, FFTZ_UINT8,
                     from_sol_obj->dft_bufs->transpose->aux_mem->size);
             }
             if (to_sol_obj->dft_bufs->transpose->aux_mem->data == NULL)
@@ -294,16 +294,16 @@ INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
 // maps both in & out pointers to out pointer
 // incase of out-of-place problems, except the first DFT, other DFTs happen
 // in-place ie., in the output buffer.
-INT32 copy_solution_obj_out_p( aoclfftz_solution_t *to_sol_obj,
+FFTZ_INT32 copy_solution_obj_out_p( aoclfftz_solution_t *to_sol_obj,
                                aoclfftz_solution_t *from_sol_obj )
 {
-    INT32 ret = copy_solution_obj(to_sol_obj, from_sol_obj);
+    FFTZ_INT32 ret = copy_solution_obj(to_sol_obj, from_sol_obj);
     if (ret != AOCLFFTZ_SUCCESS)
     {
         AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
         return ret;
     }
-    INT32 cnt;
+    FFTZ_INT32 cnt;
     for (cnt = 0; cnt < to_sol_obj->decomp_scheme->dim_rank; cnt++)
     {
         to_sol_obj->decomp_scheme->dims[cnt].n =
@@ -349,7 +349,7 @@ INT32 copy_solution_obj_out_p( aoclfftz_solution_t *to_sol_obj,
 
 // Copy strides from one solution to another
 // except for the BATCHED_CT_L1_DIRECT solver
-INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
+FFTZ_INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
                     aoclfftz_solution_t *from_sol_obj )
 {
     if (from_sol_obj->strides_grp->strides->in_strides != NULL)
@@ -357,8 +357,8 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
         FREE_ALIGN_ALLOCATED_MEM(
             to_sol_obj->strides_grp->strides->in_strides);
         ALLOC_ALIGN_UNINIT(
-            to_sol_obj->strides_grp->strides->in_strides, INTP,
-            from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
+            to_sol_obj->strides_grp->strides->in_strides, FFTZ_INTP,
+            from_sol_obj->decomp_scheme->dims[0].n * sizeof(FFTZ_INTP));
         if (to_sol_obj->strides_grp->strides->in_strides == NULL)
         {
             AOCLFFTZ_ERROR("Memory allocation failed.");
@@ -366,15 +366,15 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
         }
         memcpy(to_sol_obj->strides_grp->strides->in_strides,
                 from_sol_obj->strides_grp->strides->in_strides,
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
+                from_sol_obj->decomp_scheme->dims[0].n * sizeof(FFTZ_INTP));
     }
     if (from_sol_obj->strides_grp->strides->out_strides != NULL)
     {
         FREE_ALIGN_ALLOCATED_MEM(
             to_sol_obj->strides_grp->strides->out_strides);
         ALLOC_ALIGN_UNINIT(
-            to_sol_obj->strides_grp->strides->out_strides, INTP,
-            from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
+            to_sol_obj->strides_grp->strides->out_strides, FFTZ_INTP,
+            from_sol_obj->decomp_scheme->dims[0].n * sizeof(FFTZ_INTP));
         if (to_sol_obj->strides_grp->strides->out_strides == NULL)
         {
             AOCLFFTZ_ERROR("Memory allocation failed.");
@@ -382,7 +382,7 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
         }
         memcpy(to_sol_obj->strides_grp->strides->out_strides,
                 from_sol_obj->strides_grp->strides->out_strides,
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
+                from_sol_obj->decomp_scheme->dims[0].n * sizeof(FFTZ_INTP));
     }
     to_sol_obj->strides_grp->strides->v_in_stride =
         from_sol_obj->strides_grp->strides->v_in_stride;
@@ -400,8 +400,8 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             FREE_ALIGN_ALLOCATED_MEM(
                 to_sol_obj->strides_grp->strides_c2c->in_strides);
             ALLOC_ALIGN_UNINIT(
-                to_sol_obj->strides_grp->strides_c2c->in_strides, INTP,
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
+                to_sol_obj->strides_grp->strides_c2c->in_strides, FFTZ_INTP,
+                from_sol_obj->decomp_scheme->dims[0].n * sizeof(FFTZ_INTP));
             if (to_sol_obj->strides_grp->strides_c2c->in_strides == NULL)
             {
                 AOCLFFTZ_ERROR("Memory allocation failed.");
@@ -409,15 +409,15 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             }
             memcpy(to_sol_obj->strides_grp->strides_c2c->in_strides,
                     from_sol_obj->strides_grp->strides_c2c->in_strides,
-                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
+                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(FFTZ_INTP));
         }
         if (from_sol_obj->strides_grp->strides_c2c->out_strides != NULL)
         {
             FREE_ALIGN_ALLOCATED_MEM(
                 to_sol_obj->strides_grp->strides_c2c->out_strides);
             ALLOC_ALIGN_UNINIT(
-                to_sol_obj->strides_grp->strides_c2c->out_strides, INTP,
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
+                to_sol_obj->strides_grp->strides_c2c->out_strides, FFTZ_INTP,
+                from_sol_obj->decomp_scheme->dims[0].n * sizeof(FFTZ_INTP));
             if (to_sol_obj->strides_grp->strides_c2c->out_strides == NULL)
             {
                 AOCLFFTZ_ERROR("Memory allocation failed.");
@@ -425,7 +425,7 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             }
             memcpy(to_sol_obj->strides_grp->strides_c2c->out_strides,
                     from_sol_obj->strides_grp->strides_c2c->out_strides,
-                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
+                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(FFTZ_INTP));
         }
         to_sol_obj->strides_grp->strides_c2c->v_in_stride =
             from_sol_obj->strides_grp->strides_c2c->v_in_stride;
@@ -444,8 +444,8 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             FREE_ALIGN_ALLOCATED_MEM(
                 to_sol_obj->strides_grp->strides_r2hc->in_strides);
             ALLOC_ALIGN_UNINIT(
-                to_sol_obj->strides_grp->strides_r2hc->in_strides, INTP,
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
+                to_sol_obj->strides_grp->strides_r2hc->in_strides, FFTZ_INTP,
+                from_sol_obj->decomp_scheme->dims[0].n * sizeof(FFTZ_INTP));
             if (to_sol_obj->strides_grp->strides_r2hc->in_strides == NULL)
             {
                 AOCLFFTZ_ERROR("Memory allocation failed.");
@@ -453,15 +453,15 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             }
             memcpy(to_sol_obj->strides_grp->strides_r2hc->in_strides,
                     from_sol_obj->strides_grp->strides_r2hc->in_strides,
-                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
+                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(FFTZ_INTP));
         }
         if (from_sol_obj->strides_grp->strides_r2hc->out_strides != NULL)
         {
             FREE_ALIGN_ALLOCATED_MEM(
                 to_sol_obj->strides_grp->strides_r2hc->out_strides);
             ALLOC_ALIGN_UNINIT(
-                to_sol_obj->strides_grp->strides_r2hc->out_strides, INTP,
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
+                to_sol_obj->strides_grp->strides_r2hc->out_strides, FFTZ_INTP,
+                from_sol_obj->decomp_scheme->dims[0].n * sizeof(FFTZ_INTP));
             if (to_sol_obj->strides_grp->strides_r2hc->out_strides == NULL)
             {
                 AOCLFFTZ_ERROR("Memory allocation failed.");
@@ -469,7 +469,7 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             }
             memcpy(to_sol_obj->strides_grp->strides_r2hc->out_strides,
                     from_sol_obj->strides_grp->strides_r2hc->out_strides,
-                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));
+                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(FFTZ_INTP));
         }
         to_sol_obj->strides_grp->strides_r2hc->v_in_stride =
             from_sol_obj->strides_grp->strides_r2hc->v_in_stride;
@@ -488,9 +488,9 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             FREE_ALIGN_ALLOCATED_MEM(
                 to_sol_obj->strides_grp->strides_r2hcf->in_strides);
             ALLOC_ALIGN_UNINIT(
-                to_sol_obj->strides_grp->strides_r2hcf->in_strides, INTP,
+                to_sol_obj->strides_grp->strides_r2hcf->in_strides, FFTZ_INTP,
                 from_sol_obj->decomp_scheme->dims[0].n * 2 *
-                    sizeof(INTP));
+                    sizeof(FFTZ_INTP));
             if (to_sol_obj->strides_grp->strides_r2hcf->in_strides == NULL)
             {
                 AOCLFFTZ_ERROR("Memory allocation failed.");
@@ -499,16 +499,16 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             memcpy(to_sol_obj->strides_grp->strides_r2hcf->in_strides,
                     from_sol_obj->strides_grp->strides_r2hcf->in_strides,
                     from_sol_obj->decomp_scheme->dims[0].n * 2 *
-                        sizeof(INTP));
+                        sizeof(FFTZ_INTP));
         }
         if (from_sol_obj->strides_grp->strides_r2hcf->out_strides != NULL)
         {
             FREE_ALIGN_ALLOCATED_MEM(
                 to_sol_obj->strides_grp->strides_r2hcf->out_strides);
             ALLOC_ALIGN_UNINIT(
-                to_sol_obj->strides_grp->strides_r2hcf->out_strides, INTP,
+                to_sol_obj->strides_grp->strides_r2hcf->out_strides, FFTZ_INTP,
                 from_sol_obj->decomp_scheme->dims[0].n * 2 *
-                    sizeof(INTP));
+                    sizeof(FFTZ_INTP));
             if (to_sol_obj->strides_grp->strides_r2hcf->out_strides == NULL)
             {
                 AOCLFFTZ_ERROR("Memory allocation failed.");
@@ -517,7 +517,7 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             memcpy(to_sol_obj->strides_grp->strides_r2hcf->out_strides,
                     from_sol_obj->strides_grp->strides_r2hcf->out_strides,
                     from_sol_obj->decomp_scheme->dims[0].n * 2 *
-                        sizeof(INTP));
+                        sizeof(FFTZ_INTP));
         }
         to_sol_obj->strides_grp->strides_r2hcf->v_in_stride =
             from_sol_obj->strides_grp->strides_r2hcf->v_in_stride;
@@ -533,25 +533,25 @@ INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
 }
 
 // Copy strides from one solution to another for the BATCHED_CT_L1_DIRECT solver
-INT32 copy_strides_batched_ct_l1_direct( aoclfftz_solution_t *to_sol_obj,
+FFTZ_INT32 copy_strides_batched_ct_l1_direct( aoclfftz_solution_t *to_sol_obj,
                                          aoclfftz_solution_t *from_sol_obj )
 {
     /* strides (radix_m kernel): radix_m entries, count = kernel_c2c_r */
     FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_grp->strides->in_strides);
     FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_grp->strides->out_strides);
     ALLOC_ALIGN_UNINIT(to_sol_obj->strides_grp->strides->in_strides,
-                       INTP,
+                       FFTZ_INTP,
                        from_sol_obj->solver->kernel_c2c_r->count *
-                           sizeof(INTP));
+                           sizeof(FFTZ_INTP));
     if (to_sol_obj->strides_grp->strides->in_strides == NULL)
     {
         AOCLFFTZ_ERROR("Memory allocation failed.");
         return AOCLFFTZ_MEMORY_FAILURE;
     }
     ALLOC_ALIGN_UNINIT(to_sol_obj->strides_grp->strides->out_strides,
-                       INTP,
+                       FFTZ_INTP,
                        from_sol_obj->solver->kernel_c2c_r->count *
-                           sizeof(INTP));
+                           sizeof(FFTZ_INTP));
     if (to_sol_obj->strides_grp->strides->out_strides == NULL)
     {
         AOCLFFTZ_ERROR("Memory allocation failed.");
@@ -559,26 +559,26 @@ INT32 copy_strides_batched_ct_l1_direct( aoclfftz_solution_t *to_sol_obj,
     }
     memcpy(to_sol_obj->strides_grp->strides->in_strides,
             from_sol_obj->strides_grp->strides->in_strides,
-            from_sol_obj->solver->kernel_c2c_r->count * sizeof(INTP));
+            from_sol_obj->solver->kernel_c2c_r->count * sizeof(FFTZ_INTP));
     memcpy(to_sol_obj->strides_grp->strides->out_strides,
             from_sol_obj->strides_grp->strides->out_strides,
-            from_sol_obj->solver->kernel_c2c_r->count * sizeof(INTP));
+            from_sol_obj->solver->kernel_c2c_r->count * sizeof(FFTZ_INTP));
     /* strides_c2c (radix_r kernel): radix_r entries, count = kernel_c2c */
     FREE_ALIGN_ALLOCATED_MEM(
         to_sol_obj->strides_grp->strides_c2c->in_strides);
     FREE_ALIGN_ALLOCATED_MEM(
         to_sol_obj->strides_grp->strides_c2c->out_strides);
     ALLOC_ALIGN_UNINIT(
-        to_sol_obj->strides_grp->strides_c2c->in_strides, INTP,
-        from_sol_obj->solver->kernel_c2c->count * sizeof(INTP));
+        to_sol_obj->strides_grp->strides_c2c->in_strides, FFTZ_INTP,
+        from_sol_obj->solver->kernel_c2c->count * sizeof(FFTZ_INTP));
     if (to_sol_obj->strides_grp->strides_c2c->in_strides == NULL)
     {
         AOCLFFTZ_ERROR("Memory allocation failed.");
         return AOCLFFTZ_MEMORY_FAILURE;
     }
     ALLOC_ALIGN_UNINIT(
-        to_sol_obj->strides_grp->strides_c2c->out_strides, INTP,
-        from_sol_obj->solver->kernel_c2c->count * sizeof(INTP));
+        to_sol_obj->strides_grp->strides_c2c->out_strides, FFTZ_INTP,
+        from_sol_obj->solver->kernel_c2c->count * sizeof(FFTZ_INTP));
     if (to_sol_obj->strides_grp->strides_c2c->out_strides == NULL)
     {
         AOCLFFTZ_ERROR("Memory allocation failed.");
@@ -586,10 +586,10 @@ INT32 copy_strides_batched_ct_l1_direct( aoclfftz_solution_t *to_sol_obj,
     }
     memcpy(to_sol_obj->strides_grp->strides_c2c->in_strides,
             from_sol_obj->strides_grp->strides_c2c->in_strides,
-            from_sol_obj->solver->kernel_c2c->count * sizeof(INTP));
+            from_sol_obj->solver->kernel_c2c->count * sizeof(FFTZ_INTP));
     memcpy(to_sol_obj->strides_grp->strides_c2c->out_strides,
             from_sol_obj->strides_grp->strides_c2c->out_strides,
-            from_sol_obj->solver->kernel_c2c->count * sizeof(INTP));
+            from_sol_obj->solver->kernel_c2c->count * sizeof(FFTZ_INTP));
     to_sol_obj->strides_grp->strides->v_in_stride =
         from_sol_obj->strides_grp->strides->v_in_stride;
     to_sol_obj->strides_grp->strides->v_out_stride =
@@ -612,7 +612,7 @@ INT32 copy_strides_batched_ct_l1_direct( aoclfftz_solution_t *to_sol_obj,
 // copy all contents except dims & vecs
 // necessary in ND setup where dim_rank & vec_rank will differ for the
 // sub-problem
-VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
+FFTZ_VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
                                 aoclfftz_solution_t *from_sol_obj )
 {
     // solver
@@ -728,7 +728,7 @@ VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
     to_sol_obj->next_sol = from_sol_obj->next_sol;
 }
 
-VOID swap_real_ct_solutions(aoclfftz_selector_t *sel)
+FFTZ_VOID swap_real_ct_solutions(aoclfftz_selector_t *sel)
 {
     aoclfftz_solution_t *curr = sel->solution;
     aoclfftz_solution_t *prev = NULL;

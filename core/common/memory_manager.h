@@ -19,7 +19,8 @@
 #include "selector/selector.h"
 
 
-aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank);
+aoclfftz_decomp_scheme_t *alloc_decomp_scheme(FFTZ_INT32 vec_rank,
+                                              FFTZ_INT32 dim_rank);
 /**
  * Allocates the shared chirp buffers (B, B_out) and the per-thread in/out
  * pool for a Bluestein node.
@@ -38,27 +39,29 @@ aoclfftz_decomp_scheme_t *alloc_decomp_scheme(INT32 vec_rank, INT32 dim_rank);
  * that re-point to the same B/B_out/in/out keep bs_buf_allocated = 0 to
  * prevent double-free in destroy_bluestein.
  */
-INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein,
-                              INTP bs_buf_size, INT32 num_bs_buf);
-aoclfftz_solution_t *alloc_solution(INT32 vec_rank, INT32 dim_rank);
-aoclfftz_solution_t **alloc_sol_array(INT32 n);
-INT32 alloc_stride_arrays(aoclfftz_strides_t *strides, INTP radix);
-INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides, INTP radix,
-                                   INTP in_stride, INTP out_stride);
+FFTZ_INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein,
+                              FFTZ_INTP bs_buf_size, FFTZ_INT32 num_bs_buf);
+aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank);
+aoclfftz_solution_t **alloc_sol_array(FFTZ_INT32 n);
+FFTZ_INT32 alloc_stride_arrays(aoclfftz_strides_t *strides, FFTZ_INTP radix);
+FFTZ_INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides,
+                                        FFTZ_INTP radix, FFTZ_INTP in_stride,
+                                        FFTZ_INTP out_stride);
 
-aoclfftz_selector_t *alloc_selector(INT32 vec_rank, INT32 dim_rank,
+aoclfftz_selector_t *alloc_selector(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank,
                                     kernel_tables_t *kernel_tables);
 
-VOID *alloc_twiddle_buffer(UINTP size, UINT32 dt_prec);
-INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution, VOID **buffer_ptr);
+FFTZ_VOID *alloc_twiddle_buffer(FFTZ_UINTP size, FFTZ_UINT32 dt_prec);
+FFTZ_INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution,
+                             FFTZ_VOID **buffer_ptr);
 
-VOID destroy_selector(aoclfftz_selector_t *sel);
-VOID destroy_selector_without_solution(aoclfftz_selector_t *sel);
-VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp);
+FFTZ_VOID destroy_selector(aoclfftz_selector_t *sel);
+FFTZ_VOID destroy_selector_without_solution(aoclfftz_selector_t *sel);
+FFTZ_VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp);
 
-VOID destroy_solution(aoclfftz_solution_t *sol);
-VOID destroy_solutions(aoclfftz_solution_t **sol, INT32 n);
-VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme);
-VOID destroy_bluestein(aoclfftz_bluestein_t *bluestein);
-UINTP calculate_max_buffer_size(aoclfftz_solution_t *sol);
+FFTZ_VOID destroy_solution(aoclfftz_solution_t *sol);
+FFTZ_VOID destroy_solutions(aoclfftz_solution_t **sol, FFTZ_INT32 n);
+FFTZ_VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme);
+FFTZ_VOID destroy_bluestein(aoclfftz_bluestein_t *bluestein);
+FFTZ_UINTP calculate_max_buffer_size(aoclfftz_solution_t *sol);
 #endif // MEMORY_MANAGER_H

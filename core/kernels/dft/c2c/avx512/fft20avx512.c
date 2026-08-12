@@ -19,7 +19,7 @@
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{46, 4, 58, 320, 80, 120},
                                                      {46, 4, 58, 160, 18, 120}};
 
-ops_cycles_t get_ops_cnt_fft20avx512(UINT8 precision, UINT8 direction)
+ops_cycles_t get_ops_cnt_fft20avx512(FFTZ_UINT8 precision, FFTZ_UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -31,32 +31,33 @@ ops_cycles_t get_ops_cnt_fft20avx512(UINT8 precision, UINT8 direction)
     }
 }
 
-static VOID fft20avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                            VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                            VOID *twd, UINT8 flag)
+static FFTZ_VOID fft20avx512fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                                 FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                                 FFTZ_INTP n, aoclfftz_strides_t *strides,
+                                 FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
-    FLOAT *in_r = (FLOAT *)in_real;
-    FLOAT *out_r = (FLOAT *)out_real;
-    FLOAT *curr_in = NULL;
-    FLOAT *curr_out = NULL;
+    FFTZ_FLOAT *in_r = (FFTZ_FLOAT *)in_real;
+    FFTZ_FLOAT *out_r = (FFTZ_FLOAT *)out_real;
+    FFTZ_FLOAT *curr_in = NULL;
+    FFTZ_FLOAT *curr_out = NULL;
 
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
-    INTP v_out_stride = strides->v_out_stride;
-    UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
 
-    INTP N = n / NUM_SETS_512_S;
-    INTP remaining_sets = n % NUM_SETS_512_S;
-    INTP count = 0;
+    FFTZ_INTP N = n / NUM_SETS_512_S;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_512_S;
+    FFTZ_INTP count = 0;
 
     /* Radix-20 twiddle constants */
     __m512 v_C1 =
@@ -275,7 +276,8 @@ static VOID fft20avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
             v_out18 = PS_P90_512(v_av15, v_av18);
         }
 
-        /* Stage 5: Compute X[1], X[9], X[11], X[19], X[3], X[7], X[13], X[17] */
+        /* Stage 5: Compute X[1], X[9], X[11], X[19], X[3], X[7], X[13], X[17]
+         */
         __m512 v_av19 = _mm512_fmadd_ps(v_C2, v_cv6, v_cv3);
         __m512 v_av20 = _mm512_fmadd_ps(v_C2, v_cv5, v_cv4);
         __m512 v_av21 = _mm512_fnmadd_ps(v_C2, v_cv4, v_cv5);
@@ -1283,31 +1285,32 @@ static VOID fft20avx512fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-static VOID fft20avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                            VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                            VOID *twd, UINT8 flag)
+static FFTZ_VOID fft20avx512fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                                 FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                                 FFTZ_INTP n, aoclfftz_strides_t *strides,
+                                 FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
-    DOUBLE *in_r = (DOUBLE *)in_real;
-    DOUBLE *out_r = (DOUBLE *)out_real;
-    DOUBLE *curr_in, *curr_out;
+    FFTZ_DOUBLE *in_r = (FFTZ_DOUBLE *)in_real;
+    FFTZ_DOUBLE *out_r = (FFTZ_DOUBLE *)out_real;
+    FFTZ_DOUBLE *curr_in, *curr_out;
 
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
-    INTP v_out_stride = strides->v_out_stride;
-    UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
 
-    INTP N = n / NUM_SETS_512_D;
-    INTP remaining_sets = n % NUM_SETS_512_D;
-    INTP count;
+    FFTZ_INTP N = n / NUM_SETS_512_D;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_512_D;
+    FFTZ_INTP count;
 
     // Radix-20 twiddle constants
     __m512d v_C1 =
@@ -2202,7 +2205,7 @@ static VOID fft20avx512fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-kfft_ register_kernel_fft20avx512(UINT8 precision, UINT8 direction)
+kfft_ register_kernel_fft20avx512(FFTZ_UINT8 precision, FFTZ_UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {

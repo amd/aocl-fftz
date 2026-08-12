@@ -16,21 +16,22 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
+FFTZ_INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
                              aoclfftz_solution_t *real_dim_sol,
                              aoclfftz_solution_t *complex_dims_sol,
                              aoclfftz_realhelper_t *realhelper)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    INT32 dt_prec, dt_bytes;
+    FFTZ_INT32 dt_prec, dt_bytes;
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     dt_bytes = DT_PRECISION_BYTES(dt_prec);
 
-    // Logical bytes per REAL_NDIM aux slab; round up so thread slabs stay aligned.
-    INTP logical_aux_buf_size =
+    // Logical bytes per REAL_NDIM aux slab; round up so thread slabs stay
+    // aligned.
+    FFTZ_INTP logical_aux_buf_size =
         calculate_max_buffer_size(sol) * DATA_STRIDE * dt_bytes;
-    INTP padded_aux_buf_size = GET_PADDED_SIZE(logical_aux_buf_size);
+    FFTZ_INTP padded_aux_buf_size = GET_PADDED_SIZE(logical_aux_buf_size);
 
     copy_solution_obj_wo_dims(complex_dims_sol, sol);
     copy_solution_obj_wo_dims(real_dim_sol, sol);
@@ -53,7 +54,7 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
             }
         }
         FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
-        ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_1, VOID,
+        ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_1, FFTZ_VOID,
             sol->decomp_scheme->outer_buf_cnt * padded_aux_buf_size);
         if (sol->dft_bufs->buffered->aux_buffer_1 == NULL)
         {
@@ -71,8 +72,9 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
         }
     }
 
-    INT32 dim_rank = sol->decomp_scheme->dim_rank;
-    UINT8 is_forward = (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR);
+    FFTZ_INT32 dim_rank = sol->decomp_scheme->dim_rank;
+    FFTZ_UINT8 is_forward = (
+        FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR);
 
     // Assign buffer pointers
     if (is_forward)
@@ -85,8 +87,10 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
             real_dim_sol->decomp_scheme->out_real;
         complex_dims_sol->decomp_scheme->in_imag =
             real_dim_sol->decomp_scheme->out_imag;
-        complex_dims_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-        complex_dims_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+        complex_dims_sol->decomp_scheme->out_real =
+            sol->decomp_scheme->out_real;
+        complex_dims_sol->decomp_scheme->out_imag =
+            sol->decomp_scheme->out_imag;
     }
     else
     {
@@ -120,11 +124,11 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
     // C2R (backward): half-complex data is in input,
     //   use in_stride for complex_dims_sol
     // FIXME : memcpy instead ?
-    for (INT32 i = 0; i < dim_rank - 1; i++)
+    for (FFTZ_INT32 i = 0; i < dim_rank - 1; i++)
     {
         complex_dims_sol->decomp_scheme->dims[i].n =
             sol->decomp_scheme->dims[i + 1].n;
-        INTP dim_stride = is_forward
+        FFTZ_INTP dim_stride = is_forward
                             ? sol->decomp_scheme->dims[i + 1].out_stride
                             : sol->decomp_scheme->dims[i + 1].in_stride;
         complex_dims_sol->decomp_scheme->dims[i].in_stride = dim_stride;
@@ -137,7 +141,7 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
     // - C2R (backward): input is half-complex with n/2 + 1 valid points
     complex_dims_sol->decomp_scheme->vecs[0].n =
         sol->decomp_scheme->dims[0].n / 2 + 1;
-    INTP vec_stride = is_forward ? sol->decomp_scheme->dims[0].out_stride
+    FFTZ_INTP vec_stride = is_forward ? sol->decomp_scheme->dims[0].out_stride
                                  : sol->decomp_scheme->dims[0].in_stride;
     complex_dims_sol->decomp_scheme->vecs[0].in_stride = vec_stride;
     complex_dims_sol->decomp_scheme->vecs[0].out_stride = vec_stride;
@@ -149,7 +153,7 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
         sol->decomp_scheme->dims[0].out_stride;
 
     // Setup batch vectors for real_dim_sol
-    for (INT32 i = 0; i < dim_rank - 1; i++)
+    for (FFTZ_INT32 i = 0; i < dim_rank - 1; i++)
     {
         real_dim_sol->decomp_scheme->vecs[i].n =
             sol->decomp_scheme->dims[i + 1].n;
@@ -164,17 +168,18 @@ INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
-static INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     aoclfftz_solution_t *complex_dims_sol = sol->dft_bufs->nd_sol;
     aoclfftz_solution_t *real_dim_sol = sol->next_sol[0];
 
-    INT32 dt_prec, dt_bytes;
+    FFTZ_INT32 dt_prec, dt_bytes;
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     dt_bytes = DT_PRECISION_BYTES(dt_prec);
-    UINT8 is_forward = (FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR);
+    FFTZ_UINT8 is_forward = (
+        FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR);
 
     if (is_forward)
     {
@@ -238,7 +243,7 @@ static INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
-dft_solver_ register_execute_real_ndim_solver(VOID)
+dft_solver_ register_execute_real_ndim_solver(FFTZ_VOID)
 {
     return execute_real_ndim_solver;
 }

@@ -17,7 +17,7 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                            aoclfftz_realhelper_t *realhelper)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
@@ -34,16 +34,16 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     aoclfftz_decomp_scheme_t *decomp_scheme = sel->solution->decomp_scheme;
 
     aoclfftz_selector_t *cur_sel = NULL;
-    INTP n = decomp_scheme->dims[0].n;
-    INTP n_batch = decomp_scheme->vecs[0].n;
-    INT32 vec_rank = decomp_scheme->vec_rank;
-    INT32 dim_rank = decomp_scheme->dim_rank;
-    INT32 stats_mode = decomp_scheme->cntrl_params->measure_stats;
-    INT32 avl_threads = decomp_scheme->thread_info->avl_threads;
-    UINT32 precision = DT_PRECISION_FLAG(decomp_scheme->flags);
-    UINT32 selector_mode = GET_SELECTOR_MODE(decomp_scheme->flags);
-    UINT8 dir = FFT_DIR(decomp_scheme->flags);
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INTP n = decomp_scheme->dims[0].n;
+    FFTZ_INTP n_batch = decomp_scheme->vecs[0].n;
+    FFTZ_INT32 vec_rank = decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = decomp_scheme->dim_rank;
+    FFTZ_INT32 stats_mode = decomp_scheme->cntrl_params->measure_stats;
+    FFTZ_INT32 avl_threads = decomp_scheme->thread_info->avl_threads;
+    FFTZ_UINT32 precision = DT_PRECISION_FLAG(decomp_scheme->flags);
+    FFTZ_UINT32 selector_mode = GET_SELECTOR_MODE(decomp_scheme->flags);
+    FFTZ_UINT8 dir = FFT_DIR(decomp_scheme->flags);
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     kernel_t *kernel_c2c = NULL;
     kernel_t *kernel_r2hc = NULL;
@@ -56,7 +56,7 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         goto exit_direct_rdft;
     }
 
-    INT32 num_threads = (n_batch < avl_threads) ? n_batch : avl_threads;
+    FFTZ_INT32 num_threads = (n_batch < avl_threads) ? n_batch : avl_threads;
     decomp_scheme->thread_info->n_threads = num_threads;
 
     // copy solution object from sel to cur_sel
@@ -69,27 +69,29 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 
     // find a suitable kernel within the list of C kernels, and if one is found,
     // check for the existance of other implementations for the same radix
-    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
+    for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
-        UINT32 radix = kertab[i].radix;
+        FFTZ_UINT32 radix = kertab[i].radix;
 
         if (radix == 0) // End of search for suitable kernels in the list
         {
             break;
         }
 
-        if ((INTP)radix == n)
+        if ((FFTZ_INTP)radix == n)
         {
             AOCLFFTZ_LOG(TRACE, global_logger_mode,
                                    "Evaluating Radix-%td kernel", n);
 
-            for (INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
+            for (FFTZ_INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
             {
-                INTP kloc = (kcat * NUM_KERNELS_IN_EACH_CATEGORY) + i;
+                FFTZ_INTP kloc = (kcat * NUM_KERNELS_IN_EACH_CATEGORY) + i;
 
-                INTP kloc_r2hc  = 0 * NUM_KERNELS_IN_EACH_DFT_VARIANT + kloc;
-                INTP kloc_r2hcf = 1 * NUM_KERNELS_IN_EACH_DFT_VARIANT + kloc;
-                INTP kloc_c2c   = 2 * NUM_KERNELS_IN_EACH_DFT_VARIANT + kloc;
+                FFTZ_INTP kloc_r2hc =
+                    0 * NUM_KERNELS_IN_EACH_DFT_VARIANT + kloc;
+                FFTZ_INTP kloc_r2hcf =
+                    1 * NUM_KERNELS_IN_EACH_DFT_VARIANT + kloc;
+                FFTZ_INTP kloc_c2c = 2 * NUM_KERNELS_IN_EACH_DFT_VARIANT + kloc;
 
                 if (kertab[kloc_r2hc].kfft[dir] == NULL ||
                     kertab[kloc_r2hcf].kfft[dir] == NULL ||
@@ -112,7 +114,8 @@ INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                     kernel_r2hc->kfft[BACKWARD_FFT_DIR];
                 cur_sel->solution->solver->kernel_r2hcf->kfft[FORWARD_FFT_DIR] =
                     kernel_r2hcf->kfft[FORWARD_FFT_DIR];
-                cur_sel->solution->solver->kernel_r2hcf->kfft[BACKWARD_FFT_DIR] =
+                cur_sel->solution->solver->kernel_r2hcf
+                    ->kfft[BACKWARD_FFT_DIR] =
                     kernel_r2hcf->kfft[BACKWARD_FFT_DIR];
 
                 cur_sel->solution->solver->kernel_c2c->sets =

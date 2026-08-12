@@ -17,7 +17,7 @@
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 100, 140, 44, 0, 0},
                                                      {0, 100, 140, 44, 0, 0}};
 
-ops_cycles_t get_ops_cnt_fft11c(UINT8 precision, UINT8 direction)
+ops_cycles_t get_ops_cnt_fft11c(FFTZ_UINT8 precision, FFTZ_UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -29,66 +29,67 @@ ops_cycles_t get_ops_cnt_fft11c(UINT8 precision, UINT8 direction)
     }
 }
 
-static VOID fft11c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                        VOID *twd, UINT8 flag)
+static FFTZ_VOID fft11c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                             FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                             FFTZ_INTP n, aoclfftz_strides_t *strides,
+                             FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    const DOUBLE CRTM_11_1 =
+    const FFTZ_DOUBLE CRTM_11_1 =
         +0.84125353283118116029052039464203089547681594330064;
-    const DOUBLE CRTM_11_2 =
+    const FFTZ_DOUBLE CRTM_11_2 =
         +0.54064081745559759544482548159299693174139803024473;
-    const DOUBLE CRTM_11_3 =
+    const FFTZ_DOUBLE CRTM_11_3 =
         +0.41541501300188639668675795488636098054966524290126;
-    const DOUBLE CRTM_11_4 =
+    const FFTZ_DOUBLE CRTM_11_4 =
         +0.90963199535451838458365117807108162835411650732265;
-    const DOUBLE CRTM_11_5 =
+    const FFTZ_DOUBLE CRTM_11_5 =
         +0.14231483827328501490317354898047094957684096668515;
-    const DOUBLE CRTM_11_6 =
+    const FFTZ_DOUBLE CRTM_11_6 =
         +0.98982144188093275042610808187068914262031166769031;
-    const DOUBLE CRTM_11_7 =
+    const FFTZ_DOUBLE CRTM_11_7 =
         +0.65486073394528511198338203198719613618953603946564;
-    const DOUBLE CRTM_11_8 =
+    const FFTZ_DOUBLE CRTM_11_8 =
         +0.75574957435425824224552448923467521721665586591805;
-    const DOUBLE CRTM_11_9 =
+    const FFTZ_DOUBLE CRTM_11_9 =
         +0.95949297361449738989036805706632769906245484800000;
-    const DOUBLE CRTM_11_10 =
+    const FFTZ_DOUBLE CRTM_11_10 =
         +0.28173255684142978898192655345478532989004751779983;
 
-    DOUBLE *in_r, *in_i, *out_r, *out_i;
+    FFTZ_DOUBLE *in_r, *in_i, *out_r, *out_i;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
-    INTP cnt;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP cnt;
 
     if (flag) // non-zero flag indicates that the fft is inverse
     {
-        in_r = (DOUBLE *)in_imag;
-        in_i = (DOUBLE *)in_real;
-        out_r = (DOUBLE *)out_imag;
-        out_i = (DOUBLE *)out_real;
+        in_r = (FFTZ_DOUBLE *)in_imag;
+        in_i = (FFTZ_DOUBLE *)in_real;
+        out_r = (FFTZ_DOUBLE *)out_imag;
+        out_i = (FFTZ_DOUBLE *)out_real;
     }
     else
     {
-        in_r = (DOUBLE *)in_real;
-        in_i = (DOUBLE *)in_imag;
-        out_r = (DOUBLE *)out_real;
-        out_i = (DOUBLE *)out_imag;
+        in_r = (FFTZ_DOUBLE *)in_real;
+        in_i = (FFTZ_DOUBLE *)in_imag;
+        out_r = (FFTZ_DOUBLE *)out_real;
+        out_i = (FFTZ_DOUBLE *)out_imag;
     }
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v211r, v310r, v49r, v58r,
-            v67r, v112i, v103i, v94i, v85i, v76i, v211i, v310i, v49i, v58i,
-            v67i, v112r, v103r, v94r, v85r, v76r, tvrr, tvri, tvir, tvii, tvrr1,
-            tvri1, tvir1, tvii1, tvrr2, tvri2, tvir2, tvii2, tvrr3, tvri3,
-            tvir3, tvii3, tvrr4, tvri4, tvir4, tvii4;
+        FFTZ_DOUBLE v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v211r, v310r, v49r,
+            v58r, v67r, v112i, v103i, v94i, v85i, v76i, v211i, v310i, v49i,
+            v58i, v67i, v112r, v103r, v94r, v85r, v76r, tvrr, tvri, tvir, tvii,
+            tvrr1, tvri1, tvir1, tvii1, tvrr2, tvri2, tvir2, tvii2, tvrr3,
+            tvri3, tvir3, tvii3, tvrr4, tvri4, tvir4, tvii4;
 
         v1r = in_r[in_strides[1]];
         v2r = in_r[in_strides[10]];
@@ -251,66 +252,67 @@ static VOID fft11c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-static VOID fft11c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                        VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                        VOID *twd, UINT8 flag)
+static FFTZ_VOID fft11c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                             FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                             FFTZ_INTP n, aoclfftz_strides_t *strides,
+                             FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    const FLOAT CRTM_11_1 =
+    const FFTZ_FLOAT CRTM_11_1 =
         +0.84125353283118116029052039464203089547681594330064;
-    const FLOAT CRTM_11_2 =
+    const FFTZ_FLOAT CRTM_11_2 =
         +0.54064081745559759544482548159299693174139803024473;
-    const FLOAT CRTM_11_3 =
+    const FFTZ_FLOAT CRTM_11_3 =
         +0.41541501300188639668675795488636098054966524290126;
-    const FLOAT CRTM_11_4 =
+    const FFTZ_FLOAT CRTM_11_4 =
         +0.90963199535451838458365117807108162835411650732265;
-    const FLOAT CRTM_11_5 =
+    const FFTZ_FLOAT CRTM_11_5 =
         +0.14231483827328501490317354898047094957684096668515;
-    const FLOAT CRTM_11_6 =
+    const FFTZ_FLOAT CRTM_11_6 =
         +0.98982144188093275042610808187068914262031166769031;
-    const FLOAT CRTM_11_7 =
+    const FFTZ_FLOAT CRTM_11_7 =
         +0.65486073394528511198338203198719613618953603946564;
-    const FLOAT CRTM_11_8 =
+    const FFTZ_FLOAT CRTM_11_8 =
         +0.75574957435425824224552448923467521721665586591805;
-    const FLOAT CRTM_11_9 =
+    const FFTZ_FLOAT CRTM_11_9 =
         +0.95949297361449738989036805706632769906245484800000;
-    const FLOAT CRTM_11_10 =
+    const FFTZ_FLOAT CRTM_11_10 =
         +0.28173255684142978898192655345478532989004751779983;
 
-    FLOAT *in_r, *in_i, *out_r, *out_i;
+    FFTZ_FLOAT *in_r, *in_i, *out_r, *out_i;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
-    INTP cnt;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP cnt;
 
     if (flag) // non-zero flag indicates that the fft is inverse
     {
-        in_r = (FLOAT *)in_imag;
-        in_i = (FLOAT *)in_real;
-        out_r = (FLOAT *)out_imag;
-        out_i = (FLOAT *)out_real;
+        in_r = (FFTZ_FLOAT *)in_imag;
+        in_i = (FFTZ_FLOAT *)in_real;
+        out_r = (FFTZ_FLOAT *)out_imag;
+        out_i = (FFTZ_FLOAT *)out_real;
     }
     else
     {
-        in_r = (FLOAT *)in_real;
-        in_i = (FLOAT *)in_imag;
-        out_r = (FLOAT *)out_real;
-        out_i = (FLOAT *)out_imag;
+        in_r = (FFTZ_FLOAT *)in_real;
+        in_i = (FFTZ_FLOAT *)in_imag;
+        out_r = (FFTZ_FLOAT *)out_real;
+        out_i = (FFTZ_FLOAT *)out_imag;
     }
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v211r, v310r, v49r, v58r,
-            v67r, v112i, v103i, v94i, v85i, v76i, v211i, v310i, v49i, v58i,
-            v67i, v112r, v103r, v94r, v85r, v76r, tvrr, tvri, tvir, tvii, tvrr1,
-            tvri1, tvir1, tvii1, tvrr2, tvri2, tvir2, tvii2, tvrr3, tvri3,
-            tvir3, tvii3, tvrr4, tvri4, tvir4, tvii4;
+        FFTZ_FLOAT v1r, v1i, v2r, v2i, v3r, v3i, v4r, v4i, v211r, v310r, v49r,
+            v58r, v67r, v112i, v103i, v94i, v85i, v76i, v211i, v310i, v49i,
+            v58i, v67i, v112r, v103r, v94r, v85r, v76r, tvrr, tvri, tvir, tvii,
+            tvrr1, tvri1, tvir1, tvii1, tvrr2, tvri2, tvir2, tvii2, tvrr3,
+            tvri3, tvir3, tvii3, tvrr4, tvri4, tvir4, tvii4;
 
         v1r = in_r[in_strides[1]];
         v2r = in_r[in_strides[10]];
@@ -473,7 +475,8 @@ static VOID fft11c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-kfft_ register_kernel_fft11c(UINT8 precision, UINT8 direction /* unused */)
+kfft_ register_kernel_fft11c(FFTZ_UINT8 precision,
+                             FFTZ_UINT8 direction /* unused */)
 {
     if (precision == DT_FLOAT)
     {

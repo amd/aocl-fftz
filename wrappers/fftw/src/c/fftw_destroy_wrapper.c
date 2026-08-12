@@ -10,12 +10,12 @@
 
 #include "src/translator/fftz_translator.h"
 
-VOID fftw_destroy_plan(fftw_plan p)
+FFTZ_VOID fftw_destroy_plan(fftw_plan p)
 {
     aoclfftz_destroy(p);
 }
 
-VOID fftwf_destroy_plan(fftwf_plan p)
+FFTZ_VOID fftwf_destroy_plan(fftwf_plan p)
 {
     aoclfftz_destroy(p);
 }

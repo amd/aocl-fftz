@@ -48,7 +48,7 @@ const std::vector<aoclfftz_flags_t> unsupported_flags = {
     {0, 1, 1, 1, 1}, // complex, backward, in-order, out-of-place, transpose
 };
 
-const std::vector<INT32> unsupported_rank = { INT32_MIN, -1 };
+const std::vector<FFTZ_INT32> unsupported_rank = { INT32_MIN, -1 };
 
 // Random number generator setup for generating invalid test values
 #define INIT_RANDOM_NUM_GEN() \
@@ -58,7 +58,7 @@ const std::vector<INT32> unsupported_rank = { INT32_MIN, -1 };
     prng.seed(42);
 
 // Function to check if the handle is destroyed
-static bool is_handle_null(VOID *handle)
+static bool is_handle_null(FFTZ_VOID *handle)
 {
     return (handle == NULL);
 }
@@ -68,14 +68,14 @@ template<typename ProblemType>
 class AoclfftzAPITest : public ::testing::Test
 {
 public:
-    INT32 optOff;
-    INT32 optLevel;
-    INT32 num_threads;
-    UINT32 dynamic_load_model;
+    FFTZ_INT32 optOff;
+    FFTZ_INT32 optLevel;
+    FFTZ_INT32 num_threads;
+    FFTZ_UINT32 dynamic_load_model;
     ProblemType *problem;
-    VOID *handle;
-    UINTP input_size;
-    UINTP output_size;
+    FFTZ_VOID *handle;
+    FFTZ_UINTP input_size;
+    FFTZ_UINTP output_size;
     void SetUp() override
     {
         problem = NULL;
@@ -105,14 +105,15 @@ public:
     }
 
     // Function to clean up the problem descriptor
-    VOID cleanup_problem()
+    FFTZ_VOID cleanup_problem()
     {
         if (problem == NULL)
         {
             return;
         }
         /* Default value of is_inplace is 0,
-         * If problem->flags are invalid, free the memory buffer based on default flags */
+         * If problem->flags are invalid, free the memory buffer based on
+         * default flags */
         bool is_inplace = isValidFlags(problem->flags) ?
                                     !problem->flags.fft_placement : 0;
         if (problem->in)
@@ -146,7 +147,7 @@ public:
         return 1;
     }
 
-    VOID get_inout_size(UINTP *in_size, UINTP *out_size)
+    FFTZ_VOID get_inout_size(FFTZ_UINTP *in_size, FFTZ_UINTP *out_size)
     {
         in_size[0] = input_size;
         out_size[0] = output_size;
@@ -154,14 +155,14 @@ public:
 
     // Function to create a sample problem for testing
     template<typename DataType, typename DimT>
-    VOID create_pdesc(bool is_forward = true, bool is_inplace = false,
+    FFTZ_VOID create_pdesc(bool is_forward = true, bool is_inplace = false,
             InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
     {
         if (problem == NULL)
         {
             return;
         }
-        INT32 in_size = 0, out_size = 0;
+        FFTZ_INT32 in_size = 0, out_size = 0;
         problem->dim_rank = 3;
         problem->vec_rank = 1;
         problem->dims = new DimT[problem->dim_rank];
@@ -173,7 +174,8 @@ public:
                                                         "for dims or vecs!");
         }
         // Update flags based on transform direction and placement
-        // Only update fft_direction and fft_placement, preserve other flag fields
+        // Only update fft_direction and fft_placement, preserve other flag
+        // fields
         if (is_forward)
         {
             problem->flags.fft_direction = 0;
@@ -237,14 +239,14 @@ public:
             throw std::runtime_error("Memory allocation failed for input "
                                                     "or output arrays");
         }
-        for (INT32 i = 0; i < in_size; i++)
+        for (FFTZ_INT32 i = 0; i < in_size; i++)
         {
             problem->in[i] =
                 get_value_based_on_strategy<DataType>(value_strategy, in_size);
         }
         if (!is_inplace)
         {
-            for (INT32 i = 0; i < out_size; i++)
+            for (FFTZ_INT32 i = 0; i < out_size; i++)
             {
                 problem->out[i] = (DataType)0.0;
             }
@@ -262,14 +264,14 @@ public:
      *
      */
     template<typename DataType, typename DimT>
-    VOID create_1d_pdesc(bool is_forward = true, bool is_inplace = false,
+    FFTZ_VOID create_1d_pdesc(bool is_forward = true, bool is_inplace = false,
             InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
     {
         if (problem == NULL)
         {
             return;
         }
-        INT32 in_size = 0, out_size = 0;
+        FFTZ_INT32 in_size = 0, out_size = 0;
         problem->dim_rank = 1;
         problem->vec_rank = 1;
         problem->dims = new DimT[problem->dim_rank];
@@ -277,7 +279,8 @@ public:
         if (problem->dims == NULL || problem->vecs == NULL)
         {
             cleanup_problem();
-            throw std::runtime_error("Memory allocation failed for dims or vecs!");
+            throw std::runtime_error(
+                "Memory allocation failed for dims or vecs!");
         }
 
         // Update flags based on transform direction and placement
@@ -334,11 +337,12 @@ public:
         if (problem->in == NULL || problem->out == NULL)
         {
             cleanup_problem();
-            throw std::runtime_error("Memory allocation failed for input or output arrays");
+            throw std::runtime_error(
+                "Memory allocation failed for input or output arrays");
         }
 
         // Initialize input buffer with values based on strategy
-        for (INT32 i = 0; i < in_size; i++)
+        for (FFTZ_INT32 i = 0; i < in_size; i++)
         {
             problem->in[i] =
                 get_value_based_on_strategy<DataType>(value_strategy, in_size);
@@ -347,7 +351,7 @@ public:
         // Initialize output buffer (for out-of-place only)
         if (!is_inplace)
         {
-            for (INT32 i = 0; i < out_size; i++)
+            for (FFTZ_INT32 i = 0; i < out_size; i++)
             {
                 problem->out[i] = static_cast<DataType>(0.0);
             }
@@ -363,31 +367,33 @@ public:
     }
 
     // Calls the appropriate sample problem creation based on problem type
-    VOID create_default_pdesc(bool is_forward = true, bool is_inplace = false,
-            InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
+    FFTZ_VOID create_default_pdesc(bool is_forward = true,
+        bool is_inplace = false,
+        InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
     {
         if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_f>::value)
         {
-            create_pdesc<FLOAT, aoclfftz_dim_t>(is_forward, is_inplace,
+            create_pdesc<FFTZ_FLOAT, aoclfftz_dim_t>(is_forward, is_inplace,
                                                 value_strategy);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_d>::value)
         {
-            create_pdesc<DOUBLE, aoclfftz_dim_t>(is_forward, is_inplace,
+            create_pdesc<FFTZ_DOUBLE, aoclfftz_dim_t>(is_forward, is_inplace,
                                                  value_strategy);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_f_64_>::value)
         {
-            create_pdesc<FLOAT, aoclfftz_dim_t_64_>(is_forward, is_inplace,
+            create_pdesc<FFTZ_FLOAT, aoclfftz_dim_t_64_>(is_forward, is_inplace,
                                                     value_strategy);
         }
         else if constexpr (std::is_same<ProblemType,
                                             aoclfftz_prob_desc_d_64_>::value)
         {
-            create_pdesc<DOUBLE, aoclfftz_dim_t_64_>(is_forward, is_inplace,
-                                                     value_strategy);
+            create_pdesc<FFTZ_DOUBLE, aoclfftz_dim_t_64_>(is_forward,
+                                                          is_inplace,
+                                                          value_strategy);
         }
         else
         {
@@ -403,41 +409,43 @@ public:
      * instantiation based on the problem type (float/double and 32-bit/64-bit
      * indices).
      */
-    VOID create_default_1d_pdesc(bool is_forward = true,
+    FFTZ_VOID create_default_1d_pdesc(bool is_forward = true,
             bool is_inplace = false,
             InputValueStrategy value_strategy = InputValueStrategy::MID_RANGE)
     {
         if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_f>::value)
         {
-            create_1d_pdesc<FLOAT, aoclfftz_dim_t>(is_forward, is_inplace,
+            create_1d_pdesc<FFTZ_FLOAT, aoclfftz_dim_t>(is_forward, is_inplace,
                                                    value_strategy);
         }
         else if constexpr (std::is_same<ProblemType,
                            aoclfftz_prob_desc_d>::value)
         {
-            create_1d_pdesc<DOUBLE, aoclfftz_dim_t>(is_forward, is_inplace,
+            create_1d_pdesc<FFTZ_DOUBLE, aoclfftz_dim_t>(is_forward, is_inplace,
                                                     value_strategy);
         }
         else if constexpr (std::is_same<ProblemType,
                            aoclfftz_prob_desc_f_64_>::value)
         {
-            create_1d_pdesc<FLOAT, aoclfftz_dim_t_64_>(is_forward, is_inplace,
-                                                       value_strategy);
+            create_1d_pdesc<FFTZ_FLOAT, aoclfftz_dim_t_64_>(is_forward,
+                                                            is_inplace,
+                                                            value_strategy);
         }
         else if constexpr (std::is_same<ProblemType,
                            aoclfftz_prob_desc_d_64_>::value)
         {
-            create_1d_pdesc<DOUBLE, aoclfftz_dim_t_64_>(is_forward, is_inplace,
-                                                        value_strategy);
+            create_1d_pdesc<FFTZ_DOUBLE, aoclfftz_dim_t_64_>(is_forward,
+                is_inplace, value_strategy);
         }
         else
         {
-            throw std::runtime_error("Unsupported problem type for create_1d_pdesc.");
+            throw std::runtime_error(
+                "Unsupported problem type for create_1d_pdesc.");
         }
     }
 
     // Calls the appropriate setup API based on the specified problem type
-    VOID *aoclfftz_setup(ProblemType *problem)
+    FFTZ_VOID *aoclfftz_setup(ProblemType *problem)
     {
         if constexpr (std::is_same<ProblemType, aoclfftz_prob_desc_f>::value)
         {
@@ -465,7 +473,7 @@ public:
     }
 
     // Functions to retrieve supported option levels and flags
-    std::vector<INT32> get_supported_optlevels()
+    std::vector<FFTZ_INT32> get_supported_optlevels()
     {
         return {0, 1, 2, 3};
     }
@@ -473,13 +481,13 @@ public:
     std::vector<aoclfftz_flags_t> get_supported_flags()
     {
         std::vector<aoclfftz_flags_t> flags;
-        for (UINT32 in_place : {0,1})
+        for (FFTZ_UINT32 in_place : {0,1})
         {
-            for (UINT32 in_order : {0})
+            for (FFTZ_UINT32 in_order : {0})
             {
-                for (UINT32 forward : {0,1})
+                for (FFTZ_UINT32 forward : {0,1})
                 {
-                    for (UINT32 complex : {0})
+                    for (FFTZ_UINT32 complex : {0})
                     {
                         aoclfftz_flags flag;
                         flag.fft_placement       = in_place;
@@ -497,7 +505,7 @@ public:
     }
 
     // Function to run the setup and validate the handle
-    void run_setup_and_validate(INT32 err_no)
+    void run_setup_and_validate(FFTZ_INT32 err_no)
     {
         if (err_no == INVALID)
         {
@@ -513,7 +521,7 @@ public:
     }
 
     // Validates execute_io correctness using execute output as reference
-    VOID validate_execute_io(bool is_forward)
+    FFTZ_VOID validate_execute_io(bool is_forward)
     {
         cleanup_problem();
         create_default_pdesc(is_forward);
@@ -521,19 +529,19 @@ public:
         handle = aoclfftz_setup(problem);
 
         // invoke execute API
-        INT32 exe = aoclfftz_execute(handle);
+        FFTZ_INT32 exe = aoclfftz_execute(handle);
         EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
 
         // involve execute_io API
-        UINTP input_size = 0;
-        UINTP output_size = 0;
+        FFTZ_UINTP input_size = 0;
+        FFTZ_UINTP output_size = 0;
         get_inout_size(&input_size, &output_size);
 
-        VOID *in, *out;
+        FFTZ_VOID *in, *out;
         in = malloc(input_size);
         out = malloc(output_size);
 
-        VOID *temp_out = malloc(output_size);
+        FFTZ_VOID *temp_out = malloc(output_size);
         memcpy(in, problem->in, input_size);
         memcpy(temp_out, problem->out, output_size);
         memset(out, 0, output_size);
@@ -541,7 +549,7 @@ public:
         EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
 
         // Compare 'out' buffer against output buffer in problem desc
-        INT32 ret = memcmp(out, temp_out, output_size);
+        FFTZ_INT32 ret = memcmp(out, temp_out, output_size);
         free(temp_out);
         temp_out = NULL;
         EXPECT_EQ(ret, 0); // Expect successful comparison
@@ -553,8 +561,11 @@ public:
         out = NULL;
     }
 
-    // Tests aoclfftz_execute_io after freeing original buffers and passing new ones.
-    VOID validate_execute_io_after_buffer_free_and_alloc(bool is_forward, bool use_1d_problem)
+    // Tests aoclfftz_execute_io after freeing original buffers and passing new
+    // ones.
+    FFTZ_VOID
+    validate_execute_io_after_buffer_free_and_alloc(bool is_forward,
+                                                    bool use_1d_problem)
     {
         cleanup_problem();
 
@@ -575,17 +586,17 @@ public:
         }
 
         // First execute with original buffers to get reference output
-        INT32 exe = aoclfftz_execute(handle);
+        FFTZ_INT32 exe = aoclfftz_execute(handle);
         EXPECT_EQ(exe, AOCLFFTZ_SUCCESS) << "First execute failed";
 
-        UINTP in_size = 0;
-        UINTP out_size = 0;
+        FFTZ_UINTP in_size = 0;
+        FFTZ_UINTP out_size = 0;
         get_inout_size(&in_size, &out_size);
 
         // Allocate all buffers together
-        VOID *reference_output = malloc(out_size);
-        VOID *new_in = malloc(in_size);
-        VOID *new_out = malloc(out_size);
+        FFTZ_VOID *reference_output = malloc(out_size);
+        FFTZ_VOID *new_in = malloc(in_size);
+        FFTZ_VOID *new_out = malloc(out_size);
 
         // Check allocations, cleanup and return on failure
         if (reference_output == NULL || new_in == NULL || new_out == NULL)
@@ -610,13 +621,14 @@ public:
             << "execute_io failed after buffer realloc"
             << " [1D=" << use_1d_problem << ", forward=" << is_forward << "]";
 
-        // Verify output matches reference (same input should produce same output)
+        // Verify output matches reference (same input should produce same
+        // output)
         if(exe == AOCLFFTZ_SUCCESS)
         {
-            INT32 cmp_result = memcmp(new_out, reference_output, out_size);
-            EXPECT_EQ(cmp_result, 0)
-                << "Output mismatch after buffer realloc"
-                << " [1D=" << use_1d_problem << ", forward=" << is_forward << "]";
+            FFTZ_INT32 cmp_result = memcmp(new_out, reference_output, out_size);
+            EXPECT_EQ(cmp_result, 0) << "Output mismatch after buffer realloc"
+                                     << " [1D=" << use_1d_problem
+                                     << ", forward=" << is_forward << "]";
         }
 
     cleanup_and_return:

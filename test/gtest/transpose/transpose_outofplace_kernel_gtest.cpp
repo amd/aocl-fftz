@@ -23,14 +23,14 @@
  *
  */
 auto name_generator =
-    [](const ::testing::TestParamInfo<
-        std::tuple<std::tuple<INTP, INTP>, INTP, INTP, INT32>> &info)
+    [](const ::testing::TestParamInfo< std::tuple<std::tuple<FFTZ_INTP,
+       FFTZ_INTP>, FFTZ_INTP, FFTZ_INTP, FFTZ_INT32>> &info)
 {
-    INTP rows = std::get<0>(std::get<0>(info.param));
-    INTP cols = std::get<1>(std::get<0>(info.param));
-    INTP in_stride = std::get<1>(info.param);
-    INTP out_stride = std::get<2>(info.param);
-    INT32 kernel_idx = std::get<3>(info.param);
+    FFTZ_INTP rows = std::get<0>(std::get<0>(info.param));
+    FFTZ_INTP cols = std::get<1>(std::get<0>(info.param));
+    FFTZ_INTP in_stride = std::get<1>(info.param);
+    FFTZ_INTP out_stride = std::get<2>(info.param);
+    FFTZ_INT32 kernel_idx = std::get<3>(info.param);
     std::string kernel_name = transpose_kernel_names_table[kernel_idx];
 
     std::string test_name = std::to_string(rows) + "x" + std::to_string(cols);
@@ -60,11 +60,11 @@ TEST_P(AoclfftzOutOfPlaceTransposeKernelTestF64C, TEST_DOUBLE_COMPLEX_KERNEL)
     test_kernel();
 }
 
-std::vector<std::tuple<INTP, INTP>> dims = {
+std::vector<std::tuple<FFTZ_INTP, FFTZ_INTP>> dims = {
     {10, 10}, {69, 69}, {360, 360}, {512, 512},
     {10, 40}, {82, 69}, {341, 3},   {16, 1024}};
 
-std::vector<INTP> strides = {1, 35, 102};
+std::vector<FFTZ_INTP> strides = {1, 35, 102};
 
 // Arbitrarily (General) strided, out-of-place matrix transpose
 // -----------------------------------------------------------------------------

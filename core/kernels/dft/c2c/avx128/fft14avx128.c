@@ -18,7 +18,7 @@
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 36, 74, 56, 6, 6},
                                                      {0, 36, 74, 28, 6, 6}};
 
-ops_cycles_t get_ops_cnt_fft14avx128(UINT8 precision, UINT8 direction)
+ops_cycles_t get_ops_cnt_fft14avx128(FFTZ_UINT8 precision, FFTZ_UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -30,12 +30,13 @@ ops_cycles_t get_ops_cnt_fft14avx128(UINT8 precision, UINT8 direction)
     }
 }
 
-static VOID fft14avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                            VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                            VOID *twd, UINT8 flag)
+static FFTZ_VOID fft14avx128fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                                 FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                                 FFTZ_INTP n, aoclfftz_strides_t *strides,
+                                 FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    const FLOAT CRTM_14[6] = {
+    const FFTZ_FLOAT CRTM_14[6] = {
         0.90096886790241912623610231950744505116591916200000,
         0.43388373911755809802961881825301518357930603231829,
         0.62348980185873356948108200474179836074227404291372,
@@ -43,22 +44,22 @@ static VOID fft14avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         0.22252093395631447715505298010340457043006139348720,
         0.97492791218182360701813168299393121723278580100000};
 
-    FLOAT *in_r = (FLOAT *)in_real;
-    FLOAT *out_r = (FLOAT *)out_real;
+    FFTZ_FLOAT *in_r = (FFTZ_FLOAT *)in_real;
+    FFTZ_FLOAT *out_r = (FFTZ_FLOAT *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
-    INTP v_out_stride = strides->v_out_stride;
-    UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
-    INTP N = n / NUM_SETS_128_S;
-    INTP count;
-    FLOAT *curr_in, *curr_out;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
+    FFTZ_INTP N = n / NUM_SETS_128_S;
+    FFTZ_INTP count;
+    FFTZ_FLOAT *curr_in, *curr_out;
 
     __m128 v_in0, v_in1, v_in2, v_in3, v_in4, v_in5, v_in6, v_in7, v_in8;
     __m128 v_in9, v_in10, v_in11, v_in12, v_in13;
@@ -571,12 +572,13 @@ static VOID fft14avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-static VOID fft14avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                            VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                            VOID *twd, UINT8 flag)
+static FFTZ_VOID fft14avx128fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                                 FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                                 FFTZ_INTP n, aoclfftz_strides_t *strides,
+                                 FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    const DOUBLE CRTM_14[6] = {
+    const FFTZ_DOUBLE CRTM_14[6] = {
         0.90096886790241912623610231950744505116591916200000,
         0.43388373911755809802961881825301518357930603231829,
         0.62348980185873356948108200474179836074227404291372,
@@ -584,20 +586,20 @@ static VOID fft14avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         0.22252093395631447715505298010340457043006139348720,
         0.97492791218182360701813168299393121723278580100000};
 
-    DOUBLE *in_r = (DOUBLE *)in_real;
-    DOUBLE *out_r = (DOUBLE *)out_real;
+    FFTZ_DOUBLE *in_r = (FFTZ_DOUBLE *)in_real;
+    FFTZ_DOUBLE *out_r = (FFTZ_DOUBLE *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
-    INTP N = n / NUM_SETS_128_D;
-    INTP count;
-    DOUBLE *curr_in, *curr_out;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP N = n / NUM_SETS_128_D;
+    FFTZ_INTP count;
+    FFTZ_DOUBLE *curr_in, *curr_out;
 
     __m128d v_in0, v_in1, v_in2, v_in3, v_in4, v_in5, v_in6, v_in7, v_in8;
     __m128d v_in9, v_in10, v_in11, v_in12, v_in13;
@@ -848,7 +850,8 @@ static VOID fft14avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-kfft_ register_kernel_fft14avx128(UINT8 precision, UINT8 direction /* unused */)
+kfft_ register_kernel_fft14avx128(FFTZ_UINT8 precision,
+                                  FFTZ_UINT8 direction /* unused */)
 {
     if (precision == DT_FLOAT)
     {

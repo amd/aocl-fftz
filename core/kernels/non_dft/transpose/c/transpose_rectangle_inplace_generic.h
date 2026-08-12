@@ -17,8 +17,8 @@
 // the required function declarations for the different supported datatypes
 
 // TRANSPOSE_DT is expected to be one of the following:
-//      FLOAT
-//      DOUBLE
+//      FFTZ_FLOAT
+//      FFTZ_DOUBLE
 //      aoclfftz_complex_f_t
 //      aoclfftz_complex_d_t
 #ifndef TRANSPOSE_DT
@@ -47,10 +47,10 @@
 //      q       : square transpose
 //      r       : rectangular transpose
 // -----------------------------------------------------------------------------
-//      FLOAT                   : FLOAT values
-//      DOUBLE                  : DOUBLE values
-//      aoclfftz_complex_f_t    : Complex(FLOAT) values
-//      aoclfftz_complex_d_t    : Complex(DOUBLE) values
+//      FFTZ_FLOAT                   : FFTZ_FLOAT values
+//      FFTZ_DOUBLE                  : FFTZ_DOUBLE values
+//      aoclfftz_complex_f_t    : Complex(FFTZ_FLOAT) values
+//      aoclfftz_complex_d_t    : Complex(FFTZ_DOUBLE) values
 // -----------------------------------------------------------------------------
 //      c       : portable C code
 //      avx128  : avx128 intrinsic code
@@ -60,8 +60,8 @@
 
 // All transpose kernels must take the same args given by TRANSPOSE_KERNEL_ARGS.
 // TRANSPOSE_KERNEL_ARGS expands to the following:
-//     VOID *in_ptr,
-//     VOID *out_ptr,
+//     FFTZ_VOID *in_ptr,
+//     FFTZ_VOID *out_ptr,
 //     aoclfftz_dim_t_64_ row_metadata,
 //     aoclfftz_dim_t_64_ column_metadata,
 //     aoclfftz_transpose_aux_mem_t *aux_mem
@@ -70,34 +70,35 @@
 // Declarations
 
 // cycles based transpose for unit strided matrices
-VOID FUNC(tir_cycles, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
+FFTZ_VOID FUNC(tir_cycles, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
 
 // cycles based transpose for arbitrarily strided matrices
-VOID FUNC(tisr_cycles, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
+FFTZ_VOID FUNC(tisr_cycles, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS);
 
 #else
 // implementations
 
-VOID FUNC(tir_cycles, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
+FFTZ_VOID FUNC(tir_cycles, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
     TRANSPOSE_DT *in = (TRANSPOSE_DT *)in_ptr;
 
-    INTP size = row_metadata.n * column_metadata.n - 1;
+    FFTZ_INTP size = row_metadata.n * column_metadata.n - 1;
     aux_mem->data[0] = 1;
     aux_mem->data[size] = 1;
 
     TRANSPOSE_DT hold;
-    INTP next;
-    INTP start;
-    INTP iter = 1;
+    FFTZ_INTP next;
+    FFTZ_INTP start;
+    FFTZ_INTP iter = 1;
 
     while (iter < size)
     {
         start = iter;
-        INTP true_index = NTH_ELEMS_LINEAR_IDX_2D(iter, column_metadata.n, 1,
-                                                  row_metadata.in_stride);
+        FFTZ_INTP true_index = NTH_ELEMS_LINEAR_IDX_2D(iter, column_metadata.n,
+                                                       1,
+                                                       row_metadata.in_stride);
         hold = in[true_index];
 
         do
@@ -118,25 +119,25 @@ VOID FUNC(tir_cycles, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-VOID FUNC(tisr_cycles, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
+FFTZ_VOID FUNC(tisr_cycles, TRANSPOSE_DT, c)(TRANSPOSE_KERNEL_ARGS)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
     TRANSPOSE_DT *in = (TRANSPOSE_DT *)in_ptr;
 
-    INTP size = row_metadata.n * column_metadata.n - 1;
+    FFTZ_INTP size = row_metadata.n * column_metadata.n - 1;
     aux_mem->data[0] = 1;
     aux_mem->data[size] = 1;
 
     TRANSPOSE_DT hold;
-    INTP next;
-    INTP start;
-    INTP iter = 1;
+    FFTZ_INTP next;
+    FFTZ_INTP start;
+    FFTZ_INTP iter = 1;
 
     while (iter < size)
     {
         start = iter;
-        INTP true_index = NTH_ELEMS_LINEAR_IDX_2D(iter, column_metadata.n,
+        FFTZ_INTP true_index = NTH_ELEMS_LINEAR_IDX_2D(iter, column_metadata.n,
                                                   column_metadata.in_stride,
                                                   row_metadata.in_stride);
         hold = in[true_index];

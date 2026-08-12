@@ -17,11 +17,13 @@
 
 #include "api/types.h"
 
-VOID populate_stride_array(INTP *strides, INTP stride_val, INTP n,
-                           UINT8 compute_half_complex,
-                           UINT8 adjust_to_full_complex);
-VOID prepare_real_c2c_kernel_strides(INTP *in, INTP *out, INTP radix,
-                                     INTP n, INTP stride);
-VOID prepare_fused_kernel_strides(INTP *strides, INTP radix, INTP offset);
+FFTZ_VOID populate_stride_array(FFTZ_INTP *strides, FFTZ_INTP stride_val,
+                                FFTZ_INTP n, FFTZ_UINT8 compute_half_complex,
+                                FFTZ_UINT8 adjust_to_full_complex);
+FFTZ_VOID prepare_real_c2c_kernel_strides(FFTZ_INTP *in, FFTZ_INTP *out,
+                                          FFTZ_INTP radix, FFTZ_INTP n,
+                                          FFTZ_INTP stride);
+FFTZ_VOID prepare_fused_kernel_strides(FFTZ_INTP *strides, FFTZ_INTP radix,
+                                       FFTZ_INTP offset);
 
 #endif // STRIDES_H

@@ -41,8 +41,8 @@ extern "C"
  * @return kffft_ a kernel pointer; returns nullptr if kernel not found
  */
 template <class T>
-kfft_ get_kernel(const wrapper_kernel_fp_list *kernel_table, const INT32 dir,
-                 const UINT32 radix)
+kfft_ get_kernel(const wrapper_kernel_fp_list *kernel_table,
+                 const FFTZ_INT32 dir, const FFTZ_UINT32 radix)
 {
     while (kernel_table->k_register_kernel != nullptr)
     {
@@ -99,10 +99,10 @@ kfft_ get_kernel(const wrapper_kernel_fp_list *kernel_table, const INT32 dir,
  * @return kffft_ a kernel pointer; returns nullptr if kernel not found
  */
 template <class T>
-kfft_ get_twiddle_kernel(const UINT32 radix, const INT32 dir,
-                         const UINT8 kernel_type)
+kfft_ get_twiddle_kernel(const FFTZ_UINT32 radix, const FFTZ_INT32 dir,
+                         const FFTZ_UINT8 kernel_type)
 {
-    UINT8 prec;
+    FFTZ_UINT8 prec;
     if (typeid(T) == typeid(float))
     {
         prec = DT_FLOAT;
@@ -164,23 +164,22 @@ kfft_ get_twiddle_kernel(const UINT32 radix, const INT32 dir,
  * @param v_in_stride virtual in-stride of the kernel
  * @param twiddle_buffer twiddle buffer
  *
- * @return INT32 1 if successful, 0 if failed
+ * @return FFTZ_INT32 1 if successful, 0 if failed
  */
 template <typename T>
-INT32 gtest_twiddle_multiplier_no_transpose(T *in_real, T *in_imag, INTP radix,
-                                            INTP sets, INTP in_stride,
-                                            INTP v_in_stride,
-                                            VOID *twiddle_buffer)
+FFTZ_INT32 gtest_twiddle_multiplier_no_transpose(
+    T *in_real, T *in_imag, FFTZ_INTP radix, FFTZ_INTP sets,
+    FFTZ_INTP in_stride, FFTZ_INTP v_in_stride, FFTZ_VOID *twiddle_buffer)
 {
     T *twiddle_buffer_real = (T *)twiddle_buffer;
     T *twiddle_buffer_imag = twiddle_buffer_real + 1;
 
-    for (INTP r = 1; r < radix; r++)
+    for (FFTZ_INTP r = 1; r < radix; r++)
     {
-        INTP in_index = r * in_stride + v_in_stride;
-        INTP tw_in_index = DATA_STRIDE * (r * sets + 1);
+        FFTZ_INTP in_index = r * in_stride + v_in_stride;
+        FFTZ_INTP tw_in_index = DATA_STRIDE * (r * sets + 1);
 
-        for (INTP s = 1; s < sets; s++)
+        for (FFTZ_INTP s = 1; s < sets; s++)
         {
             T TW_real = twiddle_buffer_real[tw_in_index];
             T TW_imag = twiddle_buffer_imag[tw_in_index];
@@ -202,17 +201,19 @@ INT32 gtest_twiddle_multiplier_no_transpose(T *in_real, T *in_imag, INTP radix,
 }
 
 template <typename T>
-VOID compute_twiddle_buffer_wrapper(VOID *twiddle_buffer, INTP r, INTP m);
+FFTZ_VOID compute_twiddle_buffer_wrapper(FFTZ_VOID *twiddle_buffer, FFTZ_INTP r,
+                                         FFTZ_INTP m);
 
 template <>
-VOID compute_twiddle_buffer_wrapper<FLOAT>(VOID *twiddle_buffer, INTP r, INTP m)
+FFTZ_VOID compute_twiddle_buffer_wrapper<FFTZ_FLOAT>(FFTZ_VOID *twiddle_buffer,
+                                                     FFTZ_INTP r, FFTZ_INTP m)
 {
     compute_twiddle_buffer_float_wrapper(twiddle_buffer, r, m);
 }
 
 template <>
-VOID compute_twiddle_buffer_wrapper<DOUBLE>(VOID *twiddle_buffer, INTP r,
-                                            INTP m)
+FFTZ_VOID compute_twiddle_buffer_wrapper<FFTZ_DOUBLE>(FFTZ_VOID *twiddle_buffer,
+                                                      FFTZ_INTP r, FFTZ_INTP m)
 {
     compute_twiddle_buffer_double_wrapper(twiddle_buffer, r, m);
 }
@@ -223,7 +224,7 @@ VOID compute_twiddle_buffer_wrapper<DOUBLE>(VOID *twiddle_buffer, INTP r,
  * @param kernel_type kernel type (as an unsigned 8-bit integer)
  * @return wrapper_kernel_fp_list
  */
-wrapper_kernel_fp_list *get_kernel_table(UINT8 kernel_type)
+wrapper_kernel_fp_list *get_kernel_table(FFTZ_UINT8 kernel_type)
 {
     switch (kernel_type)
     {
@@ -274,7 +275,7 @@ wrapper_kernel_fp_list *get_kernel_table(UINT8 kernel_type)
  * @param kernel_type kernel type (as an unsigned 8-bit integer)
  * @return std::string name of the kernel type
  */
-std::string get_kernel_type_as_string(UINT8 kernel_type)
+std::string get_kernel_type_as_string(FFTZ_UINT8 kernel_type)
 {
     switch (kernel_type)
     {
@@ -326,7 +327,7 @@ std::string get_kernel_type_as_string(UINT8 kernel_type)
  * @param kernel_type aocl_fftz_kernel_type kernel type
  *
  */
-bool is_fused_kernel(UINT8 kernel_type)
+bool is_fused_kernel(FFTZ_UINT8 kernel_type)
 {
     switch (kernel_type)
     {
@@ -356,19 +357,20 @@ bool is_fused_kernel(UINT8 kernel_type)
  * @param v_out_stride vectorized output stride
  */
 template <class T>
-void permuted_copy(T *in, T *out, INTP n, INTP size, INTP in_stride,
-                   INTP out_stride, INTP v_in_stride, INTP v_out_stride)
+void permuted_copy(T *in, T *out, FFTZ_INTP n, FFTZ_INTP size,
+                   FFTZ_INTP in_stride, FFTZ_INTP out_stride,
+                   FFTZ_INTP v_in_stride, FFTZ_INTP v_out_stride)
 {
-    if (typeid(T) == typeid(FLOAT32))
+    if (typeid(T) == typeid(FFTZ_FLOAT32))
     {
-        permuted_copy_c_fp32_wrapper((FLOAT32 *)in, (FLOAT32 *)out, n, size,
-                                     in_stride, out_stride, v_in_stride,
+        permuted_copy_c_fp32_wrapper((FFTZ_FLOAT32 *)in, (FFTZ_FLOAT32 *)out, n,
+                                     size, in_stride, out_stride, v_in_stride,
                                      v_out_stride);
     }
-    else if (typeid(T) == typeid(FLOAT64))
+    else if (typeid(T) == typeid(FFTZ_FLOAT64))
     {
-        permuted_copy_c_fp64_wrapper((FLOAT64 *)in, (FLOAT64 *)out, n, size,
-                                     in_stride, out_stride, v_in_stride,
+        permuted_copy_c_fp64_wrapper((FFTZ_FLOAT64 *)in, (FFTZ_FLOAT64 *)out, n,
+                                     size, in_stride, out_stride, v_in_stride,
                                      v_out_stride);
     }
 }
@@ -380,15 +382,15 @@ void permuted_copy(T *in, T *out, INTP n, INTP size, INTP in_stride,
  * @param arr complex array
  * @param n size of the array (actual size = size * 2 [real + complex])
  */
-template <class T> inline void print_carray(T *arr, INTP n)
+template <class T> inline void print_carray(T *arr, FFTZ_INTP n)
 {
-    if (typeid(T) == typeid(FLOAT32))
+    if (typeid(T) == typeid(FFTZ_FLOAT32))
     {
-        PRINT_CARRAY_FP32((FLOAT32 *)arr, n);
+        PRINT_CARRAY_FP32((FFTZ_FLOAT32 *)arr, n);
     }
-    else if (typeid(T) == typeid(FLOAT64))
+    else if (typeid(T) == typeid(FFTZ_FLOAT64))
     {
-        PRINT_CARRAY_FP64((FLOAT64 *)arr, n);
+        PRINT_CARRAY_FP64((FFTZ_FLOAT64 *)arr, n);
     }
 }
 
@@ -400,13 +402,13 @@ template <class T> inline void print_carray(T *arr, INTP n)
  */
 template <class T> inline void print_complex(T *val)
 {
-    if (typeid(T) == typeid(FLOAT32))
+    if (typeid(T) == typeid(FFTZ_FLOAT32))
     {
-        PRINT_COMPLEX_FP32((FLOAT32 *)val);
+        PRINT_COMPLEX_FP32((FFTZ_FLOAT32 *)val);
     }
-    else if (typeid(T) == typeid(FLOAT64))
+    else if (typeid(T) == typeid(FFTZ_FLOAT64))
     {
-        PRINT_COMPLEX_FP64((FLOAT64 *)val);
+        PRINT_COMPLEX_FP64((FFTZ_FLOAT64 *)val);
     }
 }
 

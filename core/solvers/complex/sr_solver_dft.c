@@ -27,20 +27,20 @@
  *
  * @return SOLVER_SUCCESS on success, SOLVER_FAILURE on error
  */
-static INT32 split_radix_butterfly(aoclfftz_solution_t *sol);
+static FFTZ_INT32 split_radix_butterfly(aoclfftz_solution_t *sol);
 
 /* Setup: configure the three SR sub-problems */
 
-INT32 setup_sr_solver(aoclfftz_solution_t *sol,
+FFTZ_INT32 setup_sr_solver(aoclfftz_solution_t *sol,
                       aoclfftz_solution_t *sol_even,
                       aoclfftz_solution_t *sol_odd1,
                       aoclfftz_solution_t *sol_odd3,
-                      INTP n_even, INTP n_odd)
+                      FFTZ_INTP n_even, FFTZ_INTP n_odd)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     /* Setup even part (N/2 sub-problem): indices 0, 2, 4, 6, ... */
-    INT32 ret = copy_solution_obj(sol_even, sol);
+    FFTZ_INT32 ret = copy_solution_obj(sol_even, sol);
     if (ret != AOCLFFTZ_SUCCESS)
     {
         AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
@@ -86,15 +86,16 @@ INT32 setup_sr_solver(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
-INT32 execute_sr_solver(aoclfftz_solution_t *sol)
+FFTZ_INT32 execute_sr_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     /* Validate input pointers */
     if (!sol || !sol->decomp_scheme || !sol->next_sol || !sol->dft_bufs)
     {
-        AOCLFFTZ_LOG(INFO, global_logger_mode,
-                    "SR execute: NULL sol, decomp_scheme, next_sol, or dft_bufs");
+        AOCLFFTZ_LOG(
+            INFO, global_logger_mode,
+            "SR execute: NULL sol, decomp_scheme, next_sol, or dft_bufs");
         return SOLVER_FAILURE;
     }
 
@@ -103,38 +104,40 @@ INT32 execute_sr_solver(aoclfftz_solution_t *sol)
     aoclfftz_solution_t *odd1_sol = sol->dft_bufs->sr->odd1_sol;
     aoclfftz_solution_t *odd3_sol = sol->dft_bufs->sr->odd3_sol;
 
-    INTP n = sol->decomp_scheme->dims[0].n;
-    INTP n2 = n >> 1;  /* n/2 */
-    INTP n4 = n >> 2;  /* n/4 */
+    FFTZ_INTP n = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP n2 = n >> 1;  /* n/2 */
+    FFTZ_INTP n4 = n >> 2;  /* n/4 */
 
-    UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT32 dt_bytes = DT_PRECISION_BYTES(precision);
-    INTP elem_size = DATA_STRIDE * dt_bytes;
-    INTP in_stride = sol->decomp_scheme->dims[0].in_stride;
-    INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
+    FFTZ_UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    FFTZ_UINT32 dt_bytes = DT_PRECISION_BYTES(precision);
+    FFTZ_INTP elem_size = DATA_STRIDE * dt_bytes;
+    FFTZ_INTP in_stride = sol->decomp_scheme->dims[0].in_stride;
+    FFTZ_INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
 
     /*
      * Check addresses (not flags) to decide in-place vs out-of-place.
      * NDIM solver may set same buffer even with OUT_OF_PLACE flag.
      */
-    VOID *input_base_real = sol->decomp_scheme->in_real;
-    VOID *input_base_imag = sol->decomp_scheme->in_imag;
-    UINT8 need_input_copy =
+    FFTZ_VOID *input_base_real = sol->decomp_scheme->in_real;
+    FFTZ_VOID *input_base_imag = sol->decomp_scheme->in_imag;
+    FFTZ_UINT8 need_input_copy =
         (sol->decomp_scheme->in_real == sol->decomp_scheme->out_real);
 
     if (need_input_copy)
     {
         /* Input and output share the same buffer. Copy the input
-         * into a separate buffer(sr_input_copy) before sub-FFTs overwrite it. */
+         * into a separate buffer(sr_input_copy) before sub-FFTs overwrite it.
+         */
         if (sol->dft_bufs->sr->input_copy == NULL)
         {
             /* Buffer was not allocated because the plan was
              * created as out-of-place, but execute got same in/out. */
-            AOCLFFTZ_LOG(INFO, global_logger_mode,
-                         "SR input copy buffer not allocated for in-place execution");
+            AOCLFFTZ_LOG(
+                INFO, global_logger_mode,
+                "SR input copy buffer not allocated for in-place execution");
             return SOLVER_FAILURE;
         }
-        INTP buffer_size = sol->dft_bufs->sr->input_copy_size;
+        FFTZ_INTP buffer_size = sol->dft_bufs->sr->input_copy_size;
         memcpy(sol->dft_bufs->sr->input_copy,
                sol->decomp_scheme->in_real, buffer_size);
 
@@ -151,7 +154,7 @@ INT32 execute_sr_solver(aoclfftz_solution_t *sol)
     even_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
     SET_OUTOFPLACE(even_sol->decomp_scheme->flags);
 
-    INT32 status = even_sol->solver->execute_solver(even_sol);
+    FFTZ_INT32 status = even_sol->solver->execute_solver(even_sol);
     if (status != SOLVER_SUCCESS)
     {
         return status;
@@ -210,16 +213,16 @@ INT32 execute_sr_solver(aoclfftz_solution_t *sol)
  *
  * TODO: Vectorize the butterfly loop using SIMD intrinsics.
  */
-static INT32 split_radix_butterfly(aoclfftz_solution_t *sol)
+static FFTZ_INT32 split_radix_butterfly(aoclfftz_solution_t *sol)
 {
-    INTP n = sol->decomp_scheme->dims[0].n;
-    INTP n2 = n >> 1;  /* n/2 */
-    INTP n4 = n >> 2;  /* n/4 */
+    FFTZ_INTP n = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP n2 = n >> 1;  /* n/2 */
+    FFTZ_INTP n4 = n >> 2;  /* n/4 */
 
-    UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
 
-    INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
+    FFTZ_INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
 
     /* Twiddles must be available */
     if (!sol->twiddle || !sol->twiddle->TW)
@@ -230,10 +233,10 @@ static INT32 split_radix_butterfly(aoclfftz_solution_t *sol)
     }
 
     /* +1 for forward, -1 for backward (flips the j*v terms) */
-    INTP dir_sign = (direction == FORWARD_FFT_DIR) ? 1 : -1;
+    FFTZ_INTP dir_sign = (direction == FORWARD_FFT_DIR) ? 1 : -1;
 
     /* Stride in elements (interleaved format: real, imag pairs) */
-    INTP stride_elems = out_stride * DATA_STRIDE;
+    FFTZ_INTP stride_elems = out_stride * DATA_STRIDE;
 
     /*
      * Output buffer layout after the three recursive sub-FFTs.
@@ -250,15 +253,15 @@ static INT32 split_radix_butterfly(aoclfftz_solution_t *sol)
      * odd3_start – offset to O3[0]     (= 3N/4 * stride)
      * k_pos      – base index of element k in  output buffer (= k * stride)
      */
-    INTP even_mid    = n4 * stride_elems;
-    INTP odd1_start  = n2 * stride_elems;
-    INTP odd3_start  = odd1_start + even_mid;
+    FFTZ_INTP even_mid    = n4 * stride_elems;
+    FFTZ_INTP odd1_start  = n2 * stride_elems;
+    FFTZ_INTP odd3_start  = odd1_start + even_mid;
 
     if (precision == DT_FLOAT)
     {
-        FLOAT *data = (FLOAT *)sol->decomp_scheme->out_real;
+        FFTZ_FLOAT *data = (FFTZ_FLOAT *)sol->decomp_scheme->out_real;
         aoclfftz_complex_f_t *tw = (aoclfftz_complex_f_t *)sol->twiddle->TW;
-        FLOAT fdir = (FLOAT)dir_sign;
+        FFTZ_FLOAT fdir = (FFTZ_FLOAT)dir_sign;
 
         /*
          * k=0 special case: W^0 = 1, so twiddle multiply is identity.
@@ -266,22 +269,22 @@ static INT32 split_radix_butterfly(aoclfftz_solution_t *sol)
          */
         {
             /* Load even sub-problem: E[0], E[N/4] */
-            FLOAT e0_r = data[0];
-            FLOAT e0_i = data[1];
-            FLOAT en4_r = data[even_mid];
-            FLOAT en4_i = data[even_mid + 1];
+            FFTZ_FLOAT e0_r = data[0];
+            FFTZ_FLOAT e0_i = data[1];
+            FFTZ_FLOAT en4_r = data[even_mid];
+            FFTZ_FLOAT en4_i = data[even_mid + 1];
 
             /* Load odd sub-problems: O1[0], O3[0] */
-            FLOAT o1_r = data[odd1_start];
-            FLOAT o1_i = data[odd1_start + 1];
-            FLOAT o3_r = data[odd3_start];
-            FLOAT o3_i = data[odd3_start + 1];
+            FFTZ_FLOAT o1_r = data[odd1_start];
+            FFTZ_FLOAT o1_i = data[odd1_start + 1];
+            FFTZ_FLOAT o3_r = data[odd3_start];
+            FFTZ_FLOAT o3_i = data[odd3_start + 1];
 
             /* u = O1 + O3, v = O1 - O3 */
-            FLOAT u_r = o1_r + o3_r;
-            FLOAT u_i = o1_i + o3_i;
-            FLOAT v_r = o1_r - o3_r;
-            FLOAT v_i = o1_i - o3_i;
+            FFTZ_FLOAT u_r = o1_r + o3_r;
+            FFTZ_FLOAT u_i = o1_i + o3_i;
+            FFTZ_FLOAT v_r = o1_r - o3_r;
+            FFTZ_FLOAT v_i = o1_i - o3_i;
 
             /* X[0] = E[0] + u, X[N/2] = E[0] - u */
             data[0] = e0_r + u_r;
@@ -297,40 +300,40 @@ static INT32 split_radix_butterfly(aoclfftz_solution_t *sol)
         }
 
         /* Main loop: k=1 to N/4-1 with twiddle factors */
-        for (INTP k = 1; k < n4; k++)
+        for (FFTZ_INTP k = 1; k < n4; k++)
         {
-            INTP k_pos = k * stride_elems;
+            FFTZ_INTP k_pos = k * stride_elems;
 
             /* Load even sub-problem: E[k], E[k+N/4] */
-            FLOAT e_k_r = data[k_pos];
-            FLOAT e_k_i = data[k_pos + 1];
-            FLOAT e_kn4_r = data[k_pos + even_mid];
-            FLOAT e_kn4_i = data[k_pos + even_mid + 1];
+            FFTZ_FLOAT e_k_r = data[k_pos];
+            FFTZ_FLOAT e_k_i = data[k_pos + 1];
+            FFTZ_FLOAT e_kn4_r = data[k_pos + even_mid];
+            FFTZ_FLOAT e_kn4_i = data[k_pos + even_mid + 1];
 
             /* Load odd sub-problems: O1[k], O3[k] */
-            FLOAT o1_r = data[k_pos + odd1_start];
-            FLOAT o1_i = data[k_pos + odd1_start + 1];
-            FLOAT o3_r = data[k_pos + odd3_start];
-            FLOAT o3_i = data[k_pos + odd3_start + 1];
+            FFTZ_FLOAT o1_r = data[k_pos + odd1_start];
+            FFTZ_FLOAT o1_i = data[k_pos + odd1_start + 1];
+            FFTZ_FLOAT o3_r = data[k_pos + odd3_start];
+            FFTZ_FLOAT o3_i = data[k_pos + odd3_start + 1];
 
             /* Get twiddles: W_N^k and W_N^(3k) stored as pairs */
-            INTP tw_idx = k << 1;
-            FLOAT w1_cos = tw[tw_idx].real;
-            FLOAT w1_sin = tw[tw_idx].imag * fdir;
-            FLOAT w3_cos = tw[tw_idx + 1].real;
-            FLOAT w3_sin = tw[tw_idx + 1].imag * fdir;
+            FFTZ_INTP tw_idx = k << 1;
+            FFTZ_FLOAT w1_cos = tw[tw_idx].real;
+            FFTZ_FLOAT w1_sin = tw[tw_idx].imag * fdir;
+            FFTZ_FLOAT w3_cos = tw[tw_idx + 1].real;
+            FFTZ_FLOAT w3_sin = tw[tw_idx + 1].imag * fdir;
 
             /* Twiddle multiply: t1 = W^k * O1[k], t3 = W^(3k) * O3[k] */
-            FLOAT t1_r = w1_cos * o1_r - w1_sin * o1_i;
-            FLOAT t1_i = w1_sin * o1_r + w1_cos * o1_i;
-            FLOAT t3_r = w3_cos * o3_r - w3_sin * o3_i;
-            FLOAT t3_i = w3_sin * o3_r + w3_cos * o3_i;
+            FFTZ_FLOAT t1_r = w1_cos * o1_r - w1_sin * o1_i;
+            FFTZ_FLOAT t1_i = w1_sin * o1_r + w1_cos * o1_i;
+            FFTZ_FLOAT t3_r = w3_cos * o3_r - w3_sin * o3_i;
+            FFTZ_FLOAT t3_i = w3_sin * o3_r + w3_cos * o3_i;
 
             /* u = t1 + t3, v = t1 - t3 */
-            FLOAT u_r = t1_r + t3_r;
-            FLOAT u_i = t1_i + t3_i;
-            FLOAT v_r = t1_r - t3_r;
-            FLOAT v_i = t1_i - t3_i;
+            FFTZ_FLOAT u_r = t1_r + t3_r;
+            FFTZ_FLOAT u_i = t1_i + t3_i;
+            FFTZ_FLOAT v_r = t1_r - t3_r;
+            FFTZ_FLOAT v_i = t1_i - t3_i;
 
             /* X[k] = E[k] + u, X[k+N/2] = E[k] - u */
             data[k_pos] = e_k_r + u_r;
@@ -345,33 +348,33 @@ static INT32 split_radix_butterfly(aoclfftz_solution_t *sol)
             data[k_pos + odd3_start + 1] = e_kn4_i + fdir * v_r;
         }
     }
-    else /* DOUBLE precision */
+    else /* FFTZ_DOUBLE precision */
     {
-        DOUBLE *data = (DOUBLE *)sol->decomp_scheme->out_real;
+        FFTZ_DOUBLE *data = (FFTZ_DOUBLE *)sol->decomp_scheme->out_real;
         aoclfftz_complex_d_t *tw = (aoclfftz_complex_d_t *)sol->twiddle->TW;
-        DOUBLE ddir = (DOUBLE)dir_sign;
+        FFTZ_DOUBLE ddir = (FFTZ_DOUBLE)dir_sign;
 
         /*
          * k=0 special case: W^0 = 1, so twiddle multiply is identity.
          */
         {
             /* Load even sub-problem: E[0], E[N/4] */
-            DOUBLE e0_r = data[0];
-            DOUBLE e0_i = data[1];
-            DOUBLE en4_r = data[even_mid];
-            DOUBLE en4_i = data[even_mid + 1];
+            FFTZ_DOUBLE e0_r = data[0];
+            FFTZ_DOUBLE e0_i = data[1];
+            FFTZ_DOUBLE en4_r = data[even_mid];
+            FFTZ_DOUBLE en4_i = data[even_mid + 1];
 
             /* Load odd sub-problems: O1[0], O3[0] */
-            DOUBLE o1_r = data[odd1_start];
-            DOUBLE o1_i = data[odd1_start + 1];
-            DOUBLE o3_r = data[odd3_start];
-            DOUBLE o3_i = data[odd3_start + 1];
+            FFTZ_DOUBLE o1_r = data[odd1_start];
+            FFTZ_DOUBLE o1_i = data[odd1_start + 1];
+            FFTZ_DOUBLE o3_r = data[odd3_start];
+            FFTZ_DOUBLE o3_i = data[odd3_start + 1];
 
             /* u = O1 + O3, v = O1 - O3 */
-            DOUBLE u_r = o1_r + o3_r;
-            DOUBLE u_i = o1_i + o3_i;
-            DOUBLE v_r = o1_r - o3_r;
-            DOUBLE v_i = o1_i - o3_i;
+            FFTZ_DOUBLE u_r = o1_r + o3_r;
+            FFTZ_DOUBLE u_i = o1_i + o3_i;
+            FFTZ_DOUBLE v_r = o1_r - o3_r;
+            FFTZ_DOUBLE v_i = o1_i - o3_i;
 
             /* X[0] = E[0] + u, X[N/2] = E[0] - u */
             data[0] = e0_r + u_r;
@@ -387,40 +390,40 @@ static INT32 split_radix_butterfly(aoclfftz_solution_t *sol)
         }
 
         /* Main loop: k=1 to N/4-1 with twiddle factors */
-        for (INTP k = 1; k < n4; k++)
+        for (FFTZ_INTP k = 1; k < n4; k++)
         {
-            INTP k_pos = k * stride_elems;
+            FFTZ_INTP k_pos = k * stride_elems;
 
             /* Load even sub-problem: E[k], E[k+N/4] */
-            DOUBLE e_k_r = data[k_pos];
-            DOUBLE e_k_i = data[k_pos + 1];
-            DOUBLE e_kn4_r = data[k_pos + even_mid];
-            DOUBLE e_kn4_i = data[k_pos + even_mid + 1];
+            FFTZ_DOUBLE e_k_r = data[k_pos];
+            FFTZ_DOUBLE e_k_i = data[k_pos + 1];
+            FFTZ_DOUBLE e_kn4_r = data[k_pos + even_mid];
+            FFTZ_DOUBLE e_kn4_i = data[k_pos + even_mid + 1];
 
             /* Load odd sub-problems: O1[k], O3[k] */
-            DOUBLE o1_r = data[k_pos + odd1_start];
-            DOUBLE o1_i = data[k_pos + odd1_start + 1];
-            DOUBLE o3_r = data[k_pos + odd3_start];
-            DOUBLE o3_i = data[k_pos + odd3_start + 1];
+            FFTZ_DOUBLE o1_r = data[k_pos + odd1_start];
+            FFTZ_DOUBLE o1_i = data[k_pos + odd1_start + 1];
+            FFTZ_DOUBLE o3_r = data[k_pos + odd3_start];
+            FFTZ_DOUBLE o3_i = data[k_pos + odd3_start + 1];
 
             /* Get twiddles: W_N^k and W_N^(3k) stored as pairs */
-            INTP tw_idx = k << 1;
-            DOUBLE w1_cos = tw[tw_idx].real;
-            DOUBLE w1_sin = tw[tw_idx].imag * ddir;
-            DOUBLE w3_cos = tw[tw_idx + 1].real;
-            DOUBLE w3_sin = tw[tw_idx + 1].imag * ddir;
+            FFTZ_INTP tw_idx = k << 1;
+            FFTZ_DOUBLE w1_cos = tw[tw_idx].real;
+            FFTZ_DOUBLE w1_sin = tw[tw_idx].imag * ddir;
+            FFTZ_DOUBLE w3_cos = tw[tw_idx + 1].real;
+            FFTZ_DOUBLE w3_sin = tw[tw_idx + 1].imag * ddir;
 
             /* Twiddle multiply: t1 = W^k * O1[k], t3 = W^(3k) * O3[k] */
-            DOUBLE t1_r = w1_cos * o1_r - w1_sin * o1_i;
-            DOUBLE t1_i = w1_sin * o1_r + w1_cos * o1_i;
-            DOUBLE t3_r = w3_cos * o3_r - w3_sin * o3_i;
-            DOUBLE t3_i = w3_sin * o3_r + w3_cos * o3_i;
+            FFTZ_DOUBLE t1_r = w1_cos * o1_r - w1_sin * o1_i;
+            FFTZ_DOUBLE t1_i = w1_sin * o1_r + w1_cos * o1_i;
+            FFTZ_DOUBLE t3_r = w3_cos * o3_r - w3_sin * o3_i;
+            FFTZ_DOUBLE t3_i = w3_sin * o3_r + w3_cos * o3_i;
 
             /* u = t1 + t3, v = t1 - t3 */
-            DOUBLE u_r = t1_r + t3_r;
-            DOUBLE u_i = t1_i + t3_i;
-            DOUBLE v_r = t1_r - t3_r;
-            DOUBLE v_i = t1_i - t3_i;
+            FFTZ_DOUBLE u_r = t1_r + t3_r;
+            FFTZ_DOUBLE u_i = t1_i + t3_i;
+            FFTZ_DOUBLE v_r = t1_r - t3_r;
+            FFTZ_DOUBLE v_i = t1_i - t3_i;
 
             /* X[k] = E[k] + u, X[k+N/2] = E[k] - u */
             data[k_pos] = e_k_r + u_r;
@@ -439,7 +442,7 @@ static INT32 split_radix_butterfly(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
-dft_solver_ register_execute_sr_solver(VOID)
+dft_solver_ register_execute_sr_solver(FFTZ_VOID)
 {
     return execute_sr_solver;
 }

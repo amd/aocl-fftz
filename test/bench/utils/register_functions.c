@@ -20,9 +20,9 @@
  * @brief Register the setup, appropriate fftz API variants, and other utility
  * functions based on precision and data-model
  * @param params bench params object
- * @return INT32
+ * @return FFTZ_INT32
  */
-INT32 register_functions(aoclfftz_bench_params_t *params)
+FFTZ_INT32 register_functions(aoclfftz_bench_params_t *params)
 {
     if (params->precision == FLOAT_P)
     {

@@ -17,7 +17,7 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                          aoclfftz_realhelper_t *realhelper)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
@@ -34,10 +34,10 @@ INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     aoclfftz_selector_t *complex_dims_sol = NULL;
     aoclfftz_selector_t *real_dim_sol = NULL;
 
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 stats_mode =
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 stats_mode =
         sel->solution->decomp_scheme->cntrl_params->measure_stats;
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     real_dim_sol = alloc_selector(dim_rank - 1, 1, sel->kernel_tables);
 

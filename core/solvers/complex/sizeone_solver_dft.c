@@ -13,45 +13,47 @@
 #include <string.h> // for memcpy
 #include "core/solvers/solver.h"
 
-static VOID execute_float_kernel(VOID *in_real, VOID *in_imag, VOID *out_real,
-                          VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                          VOID *twd, UINT8 flag)
+static FFTZ_VOID execute_float_kernel(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                                      FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                                      FFTZ_INTP n, aoclfftz_strides_t *strides,
+                                      FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
-    UINT32 dt_bytes = sizeof(FLOAT);
-    INTP v_in_stride = strides->v_in_stride * dt_bytes * DATA_STRIDE;
-    INTP v_out_stride = strides->v_out_stride * dt_bytes * DATA_STRIDE;
+    FFTZ_UINT32 dt_bytes = sizeof(FFTZ_FLOAT);
+    FFTZ_INTP v_in_stride = strides->v_in_stride * dt_bytes * DATA_STRIDE;
+    FFTZ_INTP v_out_stride = strides->v_out_stride * dt_bytes * DATA_STRIDE;
 
-    for (INTP i = 0; i < n; i++)
+    for (FFTZ_INTP i = 0; i < n; i++)
     {
         memcpy(out_real, in_real, dt_bytes * DATA_STRIDE);
-        in_real = (VOID *)((CHAR *)in_real + v_in_stride);
-        out_real = (VOID *)((CHAR *)out_real + v_out_stride);
+        in_real = (FFTZ_VOID *)((FFTZ_CHAR *)in_real + v_in_stride);
+        out_real = (FFTZ_VOID *)((FFTZ_CHAR *)out_real + v_out_stride);
     }
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 }
 
-static VOID execute_double_kernel(VOID *in_real, VOID *in_imag, VOID *out_real,
-                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                           VOID *twd, UINT8 flag)
+static FFTZ_VOID execute_double_kernel(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                                       FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                                       FFTZ_INTP n, aoclfftz_strides_t *strides,
+                                       FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
-    UINT32 dt_bytes = sizeof(DOUBLE);
-    INTP v_in_stride = strides->v_in_stride * dt_bytes * DATA_STRIDE;
-    INTP v_out_stride = strides->v_out_stride * dt_bytes * DATA_STRIDE;
+    FFTZ_UINT32 dt_bytes = sizeof(FFTZ_DOUBLE);
+    FFTZ_INTP v_in_stride = strides->v_in_stride * dt_bytes * DATA_STRIDE;
+    FFTZ_INTP v_out_stride = strides->v_out_stride * dt_bytes * DATA_STRIDE;
 
-    for (INTP i = 0; i < n; i++)
+    for (FFTZ_INTP i = 0; i < n; i++)
     {
         memcpy(out_real, in_real, dt_bytes * DATA_STRIDE);
-        in_real = (VOID *)((CHAR *)in_real + v_in_stride);
-        out_real = (VOID *)((CHAR *)out_real + v_out_stride);
+        in_real = (FFTZ_VOID *)((FFTZ_CHAR *)in_real + v_in_stride);
+        out_real = (FFTZ_VOID *)((FFTZ_CHAR *)out_real + v_out_stride);
     }
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 }
 
-INT32 setup_sizeone_solver(aoclfftz_solution_t *sol)
+FFTZ_INT32 setup_sizeone_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -61,7 +63,7 @@ INT32 setup_sizeone_solver(aoclfftz_solution_t *sol)
     strides->v_out_h2_stride = strides->v_out_stride =
         sol->decomp_scheme->vecs[0].out_stride;
 
-    UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    FFTZ_UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     kfft_ kernel = (dt_prec == DT_FLOAT) ? execute_float_kernel
                                          : execute_double_kernel;
     sol->solver->kernel_c2c->kfft[FORWARD_FFT_DIR]  = kernel;
@@ -71,7 +73,8 @@ INT32 setup_sizeone_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
-static INT32 execute_sizeone_solver_internal(aoclfftz_solution_t *sol, INTP vec_rank)
+static FFTZ_INT32 execute_sizeone_solver_internal(aoclfftz_solution_t *sol,
+                                                  FFTZ_INTP vec_rank)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -79,7 +82,8 @@ static INT32 execute_sizeone_solver_internal(aoclfftz_solution_t *sol, INTP vec_
     if (vec_rank == 1)
     {
         // size-one kernel is bidirectional,
-        // so both kfft[FORWARD_FFT_DIR] and kfft[BACKWARD_FFT_DIR] point to the same kernel
+        // so both kfft[FORWARD_FFT_DIR] and kfft[BACKWARD_FFT_DIR] point to the
+        // same kernel
         kfft_ execute_innermost_batch =
             sol->solver->kernel_c2c->kfft[FORWARD_FFT_DIR];
         aoclfftz_strides_t *strides = sol->strides_grp->strides;
@@ -93,11 +97,11 @@ static INT32 execute_sizeone_solver_internal(aoclfftz_solution_t *sol, INTP vec_
         return SOLVER_SUCCESS;
     }
 
-    INTP batch;
-    INTP v_in_stride;
-    INTP v_out_stride;
-    INT32 status = SOLVER_SUCCESS;
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_INTP batch;
+    FFTZ_INTP v_in_stride;
+    FFTZ_INTP v_out_stride;
+    FFTZ_INT32 status = SOLVER_SUCCESS;
+    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
     v_in_stride = sol->decomp_scheme->vecs[vec_rank - 1].in_stride *
                   DATA_STRIDE * dt_bytes;
@@ -107,8 +111,8 @@ static INT32 execute_sizeone_solver_internal(aoclfftz_solution_t *sol, INTP vec_
     {
         // save pointer to restore it below since
         // they will be moved while execution
-        VOID *in_real = sol->decomp_scheme->in_real;
-        VOID *out_real = sol->decomp_scheme->out_real;
+        FFTZ_VOID *in_real = sol->decomp_scheme->in_real;
+        FFTZ_VOID *out_real = sol->decomp_scheme->out_real;
 
         //recursive call to solve the inner batches
         status = execute_sizeone_solver_internal(sol, vec_rank - 1);
@@ -126,7 +130,7 @@ static INT32 execute_sizeone_solver_internal(aoclfftz_solution_t *sol, INTP vec_
     return SOLVER_SUCCESS;
 }
 
-static INT32 execute_sizeone_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_sizeone_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -136,11 +140,11 @@ static INT32 execute_sizeone_solver(aoclfftz_solution_t *sol)
         return SOLVER_SUCCESS;
     }
 
-    INTP vec_rank = sol->decomp_scheme->vec_rank;
+    FFTZ_INTP vec_rank = sol->decomp_scheme->vec_rank;
     // save pointer to restore it below since
     // they will be moved while execution
-    VOID *in_real = sol->decomp_scheme->in_real;
-    VOID *out_real = sol->decomp_scheme->out_real;
+    FFTZ_VOID *in_real = sol->decomp_scheme->in_real;
+    FFTZ_VOID *out_real = sol->decomp_scheme->out_real;
 
     execute_sizeone_solver_internal(sol, vec_rank);
 
@@ -150,7 +154,7 @@ static INT32 execute_sizeone_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
-dft_solver_ register_execute_sizeone_solver(VOID)
+dft_solver_ register_execute_sizeone_solver(FFTZ_VOID)
 {
     return execute_sizeone_solver;
 }

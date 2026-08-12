@@ -79,8 +79,8 @@ auto compare_data_string(aoclfftz_complex_d_t recieved,
         /* 6 */ CONCAT(FUNC(tos_blocked, type, isa), _wrapper),                \
     }
 
-GENERATE_TRANSPOSE_KERNEL_TABLE(FLOAT, c);
-GENERATE_TRANSPOSE_KERNEL_TABLE(DOUBLE, c);
+GENERATE_TRANSPOSE_KERNEL_TABLE(FFTZ_FLOAT, c);
+GENERATE_TRANSPOSE_KERNEL_TABLE(FFTZ_DOUBLE, c);
 GENERATE_TRANSPOSE_KERNEL_TABLE(aoclfftz_complex_f_t, c);
 GENERATE_TRANSPOSE_KERNEL_TABLE(aoclfftz_complex_d_t, c);
 
@@ -99,14 +99,14 @@ static std::string transpose_kernel_names_table[] =
 template <typename T>
 static aoclfftz_transpose_kernel *get_transpose_kernels_c();
 
-template <> aoclfftz_transpose_kernel *get_transpose_kernels_c<FLOAT>()
+template <> aoclfftz_transpose_kernel *get_transpose_kernels_c<FFTZ_FLOAT>()
 {
-    return transpose_kernel_table_FLOAT_c;
+    return transpose_kernel_table_FFTZ_FLOAT_c;
 }
 
-template <> aoclfftz_transpose_kernel *get_transpose_kernels_c<DOUBLE>()
+template <> aoclfftz_transpose_kernel *get_transpose_kernels_c<FFTZ_DOUBLE>()
 {
-    return transpose_kernel_table_DOUBLE_c;
+    return transpose_kernel_table_FFTZ_DOUBLE_c;
 }
 
 template <>
@@ -122,30 +122,31 @@ aoclfftz_transpose_kernel *get_transpose_kernels_c<aoclfftz_complex_d_t>()
 }
 
 // -----------------------------------------------------------------------------
-template <typename T> static T get_value(INTP value)
+template <typename T> static T get_value(FFTZ_INTP value)
 {
     return static_cast<T>(value);
 }
 
-template <> aoclfftz_complex_f_t get_value(INTP value)
+template <> aoclfftz_complex_f_t get_value(FFTZ_INTP value)
 {
-    return aoclfftz_complex_f_t{static_cast<FLOAT>(value), 1.0f};
+    return aoclfftz_complex_f_t{static_cast<FFTZ_FLOAT>(value), 1.0f};
 }
 
-template <> aoclfftz_complex_d_t get_value(INTP value)
+template <> aoclfftz_complex_d_t get_value(FFTZ_INTP value)
 {
-    return aoclfftz_complex_d_t{static_cast<DOUBLE>(value), 1.0};
+    return aoclfftz_complex_d_t{static_cast<FFTZ_DOUBLE>(value), 1.0};
 }
 
 template <typename T>
-VOID matrix_init(T *matrix, INTP rows, INTP cols, INTP stride)
+FFTZ_VOID matrix_init(T *matrix, FFTZ_INTP rows, FFTZ_INTP cols,
+                      FFTZ_INTP stride)
 {
-    INTP leading_dim = stride * cols;
-    INTP value = 1;
+    FFTZ_INTP leading_dim = stride * cols;
+    FFTZ_INTP value = 1;
 
-    for (INTP i = 0; i < rows; i++)
+    for (FFTZ_INTP i = 0; i < rows; i++)
     {
-        for (INTP j = 0; j < cols; j++)
+        for (FFTZ_INTP j = 0; j < cols; j++)
         {
             matrix[(i * leading_dim) + (j * stride)] = get_value<T>(value);
             value++;
@@ -155,15 +156,15 @@ VOID matrix_init(T *matrix, INTP rows, INTP cols, INTP stride)
 
 // performs an out-of-place transpose
 template <typename T>
-void transpose_reference(T *in, T *out, INTP rows, INTP cols, INTP in_stride,
-                       INTP out_stride)
+void transpose_reference(T *in, T *out, FFTZ_INTP rows, FFTZ_INTP cols,
+                         FFTZ_INTP in_stride, FFTZ_INTP out_stride)
 {
-    INTP old_leading_dim = in_stride * cols;
-    INTP new_leading_dim = out_stride * rows;
+    FFTZ_INTP old_leading_dim = in_stride * cols;
+    FFTZ_INTP new_leading_dim = out_stride * rows;
 
-    for (INTP i = 0; i < rows; ++i)
+    for (FFTZ_INTP i = 0; i < rows; ++i)
     {
-        for (INTP j = 0; j < cols; ++j)
+        for (FFTZ_INTP j = 0; j < cols; ++j)
         {
             out[(j * new_leading_dim) + (i * out_stride)] =
                 in[(i * old_leading_dim) + (j * in_stride)];

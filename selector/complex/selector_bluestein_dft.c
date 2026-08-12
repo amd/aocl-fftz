@@ -18,7 +18,7 @@
 #include "core/solvers/solver.h"
 #include "utils/utils.h"
 
-INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
+FFTZ_INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -34,13 +34,13 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         return SELECTOR_FAILURE;
     }
 
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INTP n = sel->solution->decomp_scheme->dims[0].n;
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INTP n = sel->solution->decomp_scheme->dims[0].n;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     // Get the extended length
-    INTP m = get_extended_length(n);
+    FFTZ_INTP m = get_extended_length(n);
     AOCLFFTZ_LOG(INFO, global_logger_mode,
                            "Problem length %td, extended Bluestein length %td",
                            n, m);

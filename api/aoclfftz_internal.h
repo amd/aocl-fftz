@@ -99,7 +99,8 @@
 #define GET_STANDALONE_TRANSPOSE(flags) GET_BIT_FLAG32(flags, 8)
 
 // Move the base address of void pointer by adding offset
-#define MOVE_ADDR(base_addr, offset) (VOID *)((CHAR *)base_addr + offset)
+#define MOVE_ADDR(base_addr, offset)                                           \
+    (FFTZ_VOID *)((FFTZ_CHAR *)base_addr + offset)
 
 #define IS_POW2(x) (((x) & ((x) - 1)) == 0)
 
@@ -127,7 +128,8 @@
 #define NUM_KERNELS_IN_TABLE_REAL                                              \
     (NUM_KERNELS_IN_EACH_DFT_VARIANT * NUM_REAL_KERNELS_VARIANTS)
 
-#define MAX_NUM_KERNELS_IN_TABLE NUM_KERNELS_IN_TABLE_REAL // max of real and complex
+#define MAX_NUM_KERNELS_IN_TABLE                                               \
+    NUM_KERNELS_IN_TABLE_REAL // max of real and complex
 
 // AMD ZEN CPU Instruction approximated latency cycles
 #define AMD_ZEN_FP_FMA_CYCLES 4
@@ -170,16 +172,16 @@ typedef struct aoclfftz_realhelper aoclfftz_realhelper_t;
 // Computational cost analysis of solution of an executed problem/sub-problem
 typedef struct cost_analysis
 {
-    INT64 ops;
-    INT64 time;
+    FFTZ_INT64 ops;
+    FFTZ_INT64 time;
 } cost_analysis_t;
 
 // Kernel template function pointer for performing FFT
-typedef VOID (*kfft_)(VOID *in_real, VOID *in_imag,
-                      VOID *out_real, VOID *out_imag,
-                      INTP n,
+typedef FFTZ_VOID (*kfft_)(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                      FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                      FFTZ_INTP n,
                       aoclfftz_strides_t *strides,
-                      VOID *twd, UINT8 flag);
+                      FFTZ_VOID *twd, FFTZ_UINT8 flag);
 
 // Kernel information data structure holds the kernel function pointer and the
 // number of sets it can process in parallel based on the kernel type(C/SIMD).
@@ -190,8 +192,10 @@ typedef struct kernel_info
 {
     kfft_ kfft[NUM_FFT_DIRS]; // contains kernel function pointers for forward
                               // and backward directions
-    UINTP count; // used for Real FFT solvers: at any time, r2hc->count + 2 * r2hcf->count + 2 * c2c->count = vecs->n
-    UINT8 sets; // number of sets processable in parallel by kernel type (C/AVX-variants)
+    FFTZ_UINTP count; // used for Real FFT solvers: at any time, r2hc->count + 2
+                      // * r2hcf->count + 2 * c2c->count = vecs->n
+    FFTZ_UINT8 sets;  // number of sets processable in parallel by kernel type
+                      // (C/AVX-variants)
 } kernel_info_t;
 
 // Thread information structure holds the threading related information for the
@@ -199,23 +203,24 @@ typedef struct kernel_info
 typedef struct thread_info
 {
     aoclfftz_smp_pfft_t *pthr_fft; // Thread information from problem descriptor
-    INT32 avl_threads;  // Available number of threads at any point of execution
-    INT32 n_threads;    // Number of threads assigned to a particular solver
+    // Available number of threads at any point of execution
+    FFTZ_INT32 avl_threads;
+    FFTZ_INT32 n_threads; // Number of threads assigned to a particular solver
 } thread_info_t;
 
 // Solver execute template function pointer
-typedef INT32 (*dft_solver_)(aoclfftz_solution_t *solution);
+typedef FFTZ_INT32 (*dft_solver_)(aoclfftz_solution_t *solution);
 
 // Executor function pointer
-typedef INT32 (*execute_)(aoclfftz_executor_t *executor_obj);
+typedef FFTZ_INT32 (*execute_)(aoclfftz_executor_t *executor_obj);
 
 // Base data structure acting as an abstract class that is derived by the
 // top-level DFT data structure and implemented by all the solvers
 typedef struct aoclfftz_generic_solver
 {
-    INT32 solver_type;
+    FFTZ_INT32 solver_type;
     dft_solver_ execute_solver;
-    VOID (*destroy_solver)(aoclfftz_solution_t *solution);
+    FFTZ_VOID (*destroy_solver)(aoclfftz_solution_t *solution);
     kernel_info_t *kernel_c2c;
     kernel_info_t *kernel_c2c_r; // Used by batched_ct_l1_direct solver only
     kernel_info_t *kernel_r2hc;
@@ -225,24 +230,25 @@ typedef struct aoclfftz_generic_solver
 // Holds info on the main problem or decomposed sub-problem in current dimension
 typedef struct aoclfftz_decomp_scheme
 {
-    INT32 vec_rank;
-    INT32 dim_rank;
+    FFTZ_INT32 vec_rank;
+    FFTZ_INT32 dim_rank;
     aoclfftz_dim_t_64_ *dims;
     aoclfftz_dim_t_64_ *vecs;
-    aoclfftz_dim_t_64_ *batched_vecs; // used in batched-direct solver, otherwise NULL
-    // VOID *in;
-    VOID *in_real;
-    VOID *in_imag;
-    // VOID *out;
-    VOID *out_real;
-    VOID *out_imag;
+    // used in batched-direct solver, otherwise NULL
+    aoclfftz_dim_t_64_ *batched_vecs;
+    // FFTZ_VOID *in;
+    FFTZ_VOID *in_real;
+    FFTZ_VOID *in_imag;
+    // FFTZ_VOID *out;
+    FFTZ_VOID *out_real;
+    FFTZ_VOID *out_imag;
     aoclfftz_cntrl_params_t *cntrl_params;
     thread_info_t *thread_info;
     // Count of parallel "outer" workers for REAL_NDIM (by default 1).
     // When >1,
     // 1. setup_real_ndim_solver allocates aux_buffer_1 for all outer threads.
     // 2. selector_ndim_rdft allocates ct_buffer for all outer threads.
-    UINT32 outer_buf_cnt;
+    FFTZ_UINT32 outer_buf_cnt;
     // Application side flag bits
     //   bit 0: (0) in-place / (1) out-of-place
     //   bit 1: (0) in-order / (1) out-of-order
@@ -254,12 +260,12 @@ typedef struct aoclfftz_decomp_scheme
     //  transpose (alongside DFT): 9th-bit
     //   bit 8     : (0) no-transpose / (1) transpose
     //   bit 9     : (0) (transpose+fft) / (1) fft (no transpose)
-    //   bit 10    : (0) innermost dimension / (1) not innermost dimension (of ND-dim problem)
-    //   bit 11    : (0) not buffered / (1) buffered
-    //   bit 16    : (0) fixed selector mode / (1) auto tuner selector mode
-    //   bit 30-31 : floating point datatype precision
+    //   bit 10    : (0) innermost dimension / (1) not innermost dimension (of
+    //   ND-dim problem) bit 11    : (0) not buffered / (1) buffered bit 16    :
+    //   (0) fixed selector mode / (1) auto tuner selector mode bit 30-31 :
+    //   floating point datatype precision
     //               (00) 8-bit / (01) 16-bit / (10) 32-bit / (11) 64-bit
-    UINT32 flags;
+    FFTZ_UINT32 flags;
 } aoclfftz_decomp_scheme_t;
 
 // TW Holds twiddle factors used by a specific kernel for the given problem
@@ -268,22 +274,29 @@ typedef struct aoclfftz_decomp_scheme
 // memory pointer is used across array of next solutions.
 typedef struct aoclfftz_twiddle
 {
-    VOID *twiddle_buf_ptr; /*< pointer to owned twiddle buffer. It has to be allocated/freed with current struct. */
-    VOID *TW; /*< pointer to shared twiddle buffer. It must not be freed/allocated with the struct. */
-    UINTP cols; /*< number of columns/batches/sets that are used to set up the twiddle buffer in a CT problem */
-    UINTP load_multi_cols; /*< determines whether multiple columns are to be loaded from the twiddle buffer per iteration in the twiddle kernels */
+    FFTZ_VOID *twiddle_buf_ptr; /*< pointer to owned twiddle buffer. It has to
+                                   be allocated/freed with current struct. */
+    FFTZ_VOID *TW;   /*< pointer to shared twiddle buffer. It must not be
+                        freed/allocated with the struct. */
+    FFTZ_UINTP cols; /*< number of columns/batches/sets that are used to set up
+                        the twiddle buffer in a CT problem */
+    FFTZ_UINTP load_multi_cols; /*< determines whether multiple columns are to
+                                   be loaded from the twiddle buffer per
+                                   iteration in the twiddle kernels */
 } aoclfftz_twiddle_t;
 
 // Function pointer for elementwise multiplication kernels.
 // Two direction-specialized variants are stored in ele_mul[NUM_FFT_DIRS]:
 // ele_mul[FORWARD_FFT_DIR] computes a .* conj(b), ele_mul[BACKWARD_FFT_DIR]
 // computes a .* b. Selection happens at the call site, not inside the kernel.
-typedef VOID (*elementwise_mul_)(VOID *out, VOID *a, VOID *b, INTP n);
+typedef FFTZ_VOID (*elementwise_mul_)(FFTZ_VOID *out, FFTZ_VOID *a,
+                                      FFTZ_VOID *b, FFTZ_INTP n);
 
 // Function pointer for in-place complex buffer normalization kernels.
 // data[i] *= factor for i in [0, n) complex elements (factor is real and is
 // applied uniformly to real and imaginary parts)
-typedef VOID (*normalize_)(VOID *data, INTP n, DOUBLE factor);
+typedef FFTZ_VOID (*normalize_)(FFTZ_VOID *data, FFTZ_INTP n,
+                                FFTZ_DOUBLE factor);
 
 // Holds the Bluestein chirp sequence B and its FFT B_out (computed once
 // during plan setup), the internal in/out scratch buffers, and the
@@ -294,33 +307,34 @@ typedef VOID (*normalize_)(VOID *data, INTP n, DOUBLE factor);
 // is 1 only on the struct that owns (and frees) the pool
 typedef struct aoclfftz_bluestein
 {
-    VOID *B;
-    VOID *B_out;
-    VOID *in;
-    VOID *out;
+    FFTZ_VOID *B;
+    FFTZ_VOID *B_out;
+    FFTZ_VOID *in;
+    FFTZ_VOID *out;
     elementwise_mul_ ele_mul[NUM_FFT_DIRS];
     normalize_ normalize;
-    INTP bs_buf_size;         // bytes per per-thread in/out slot
-    INT32 num_bs_buf;         // number of per-thread slots in in/out
-    UINT8 bs_buf_allocated;   // 1 on the originating struct, 0 on copies
+    FFTZ_INTP bs_buf_size;         // bytes per per-thread in/out slot
+    FFTZ_INT32 num_bs_buf;         // number of per-thread slots in in/out
+    FFTZ_UINT8 bs_buf_allocated;   // 1 on the originating struct, 0 on copies
 } aoclfftz_bluestein_t;
 
 typedef struct aoclfftz_buffered
 {
-    VOID *aux_buffer_1;
-    VOID *aux_buffer_2;
+    FFTZ_VOID *aux_buffer_1;
+    FFTZ_VOID *aux_buffer_2;
     // 1: this node allocated aux_buffer_1/2 (must free);
     // 0: offset / alias into shared pool.
-    UINT8 is_aux_buffer_allocated;
-    // Padded aux_buffer size (REAL_NDIM / REAL_BUFFERED) per thread; 0 if unused.
-    INTP aux_buf_size_per_thread;
+    FFTZ_UINT8 is_aux_buffer_allocated;
+    // Padded aux_buffer size (REAL_NDIM / REAL_BUFFERED) per thread; 0 if
+    // unused.
+    FFTZ_INTP aux_buf_size_per_thread;
     // this is used to store the address of last direct solution's output buffer
     // NOTE: This is required since we cannot immediately get the address of the
     //       last node from one of the starting nodes.
     //       It can be avoided if we introduce support circular doubly
     //       linked-list or an additional field to point dependend non-next
     //       nodes from the current solution.
-    VOID **out_ptr;
+    FFTZ_VOID **out_ptr;
 } aoclfftz_buffered_t;
 
 // Holds split-radix solver specific sub-solutions and buffers.
@@ -334,19 +348,20 @@ typedef struct aoclfftz_sr
 {
     aoclfftz_solution_t *odd1_sol;  // N/4-point sub-solution for odd-1 indices
     aoclfftz_solution_t *odd3_sol;  // N/4-point sub-solution for odd-3 indices
-    VOID *input_copy;               // Pre-allocated buffer for in-place input safety copy
-    INTP  input_copy_size;          // Size of input_copy buffer in bytes
+    // Pre-allocated buffer for in-place input safety copy
+    FFTZ_VOID *input_copy;
+    FFTZ_INTP  input_copy_size;          // Size of input_copy buffer in bytes
 } aoclfftz_sr_t;
 
 // Internal types to denote complex numbers in fftz's transpose routines
 typedef struct aoclfftz_complex_f
 {
-    FLOAT real, imag;
+    FFTZ_FLOAT real, imag;
 } aoclfftz_complex_f_t;
 
 typedef struct aoclfftz_complex_d
 {
-    DOUBLE real, imag;
+    FFTZ_DOUBLE real, imag;
 } aoclfftz_complex_d_t;
 
 typedef enum aoclfftz_transpose_dtype
@@ -361,12 +376,13 @@ typedef enum aoclfftz_transpose_dtype
 // A data structure to track the visited locations in a matrix
 typedef struct aoclfftz_transpose_aux_mem
 {
-    UINT8 *data;
-    INTP size;
+    FFTZ_UINT8 *data;
+    FFTZ_INTP size;
 } aoclfftz_transpose_aux_mem_t;
 
 // function pointer compatible with all transpose kernel function signatures
-typedef void (*aoclfftz_transpose_kernel)(VOID *, VOID *, aoclfftz_dim_t_64_,
+typedef void (*aoclfftz_transpose_kernel)(FFTZ_VOID *, FFTZ_VOID *,
+                                          aoclfftz_dim_t_64_,
                                           aoclfftz_dim_t_64_,
                                           aoclfftz_transpose_aux_mem_t *);
 
@@ -384,12 +400,12 @@ typedef struct aoclfftz_transpose
 // that is acted upon by a specific kernel
 typedef struct aoclfftz_strides
 {
-    INTP *in_strides;
-    INTP *out_strides;
-    INTP v_in_stride;
-    INTP v_out_stride;
-    INTP v_in_h2_stride;
-    INTP v_out_h2_stride;
+    FFTZ_INTP *in_strides;
+    FFTZ_INTP *out_strides;
+    FFTZ_INTP v_in_stride;
+    FFTZ_INTP v_out_stride;
+    FFTZ_INTP v_in_h2_stride;
+    FFTZ_INTP v_out_h2_stride;
 } aoclfftz_strides_t;
 
 typedef struct aoclfftz_strides_grp
@@ -409,22 +425,24 @@ typedef struct aoclfftz_dft_bufs
     aoclfftz_buffered_t* buffered;
     aoclfftz_transpose_t* transpose;
     aoclfftz_solution_t* nd_sol; // may hold one of the solutions of ND
-    aoclfftz_sr_t* sr; // split-radix solver specific data (sub-solutions + buffers)
-    VOID *ct_buffer; // auxiliary buffer for CT problems
-    VOID *ct_buf_real; // real part of ct_buffer
-    VOID *ct_buf_imag; // imaginary part of ct_buffer
-    VOID *ct_buf_real_in; /* update `ct_buf_real_in` pointers used to store the modified input in the
-                             first CT stage for C2R out-of-place CT problems.
-                             use the auxiliary buffer which is not used for computation in that stage
-                             to store the modified input.
+    // split-radix solver specific data (sub-solutions + buffers)
+    aoclfftz_sr_t *sr;
+    FFTZ_VOID *ct_buffer; // auxiliary buffer for CT problems
+    FFTZ_VOID *ct_buf_real; // real part of ct_buffer
+    FFTZ_VOID *ct_buf_imag; // imaginary part of ct_buffer
+    FFTZ_VOID *ct_buf_real_in; /* update `ct_buf_real_in` pointers used to store
+                             the modified input in the    first CT stage for C2R
+                             out-of-place CT problems.    use the auxiliary
+                             buffer which is not used for computation in that
+                             stage    to store the modified input.
                            */
-    INTP ct_buf_size; // 64-byte aligned size per ct_buf / thread slot
-    INT32 num_ct_buf; // number of ct_buffer allocated in total. It should be
-                      // equal to the number of threads assigned to the first CT
-                      // stage in the solution.
-    UINT32 ct_buf_allocated; // to know that the solution originally allocated
-                             // the buffer and is responsible for freeing it in
-                             // the end.
+    FFTZ_INTP ct_buf_size; // 64-byte aligned size per ct_buf / thread slot
+    FFTZ_INT32 num_ct_buf; // number of ct_buffer allocated in total. It should
+                           // be equal to the number of threads assigned to the
+                           // first CT stage in the solution.
+    FFTZ_UINT32 ct_buf_allocated; // to know that the solution originally
+                                  // allocated the buffer and is responsible for
+                                  // freeing it in the end.
 } aoclfftz_dft_bufs_t;
 /////////////////////////// BUFS RELATED : END ////////////////////////////////
 
@@ -449,14 +467,16 @@ typedef struct aoclfftz_solution
 // and selectors.
 typedef struct aoclfftz_realhelper
 {
-    INTP problem_size;
-    INTP freq_factor; /*< frequency factor: For FWD (time->frequency conversion), it starts from 1 to problem_size. Reverse for BWD. */
-    UINT32 stage;
-    UINT8 is_last_stage;
-    UINT8 is_CT;
-    UINT8 is_buffered_invoked;
+    FFTZ_INTP problem_size;
+    /** frequency factor: For FWD (time->frequency conversion), it starts from 1
+     * to problem_size. Reverse for BWD. */
+    FFTZ_INTP freq_factor;
+    FFTZ_UINT32 stage;
+    FFTZ_UINT8 is_last_stage;
+    FFTZ_UINT8 is_CT;
+    FFTZ_UINT8 is_buffered_invoked;
 } aoclfftz_realhelper_t;
 
-execute_ register_execute_dft(VOID);
+execute_ register_execute_dft(FFTZ_VOID);
 
 #endif // AOCLFFTZ_INTERNAL_H

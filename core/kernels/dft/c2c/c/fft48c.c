@@ -17,7 +17,7 @@
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 196, 616, 192, 0, 0},
                                                      {0, 196, 616, 192, 0, 0}};
 
-ops_cycles_t get_ops_cnt_fft48c(UINT8 precision, UINT8 direction)
+ops_cycles_t get_ops_cnt_fft48c(FFTZ_UINT8 precision, FFTZ_UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -29,65 +29,66 @@ ops_cycles_t get_ops_cnt_fft48c(UINT8 precision, UINT8 direction)
     }
 }
 
-static VOID fft48c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                       VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                       VOID *twd, UINT8 flag)
+static FFTZ_VOID fft48c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                             FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                             FFTZ_INTP n, aoclfftz_strides_t *strides,
+                             FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
-    FLOAT *in_r, *in_i, *out_r, *out_i;
+    FFTZ_FLOAT *in_r, *in_i, *out_r, *out_i;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
-    INTP cnt;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP cnt;
 
     if (flag) // non-zero flag indicates that the fft is inverse
     {
-        in_r = (FLOAT *)in_imag;
-        in_i = (FLOAT *)in_real;
-        out_r = (FLOAT *)out_imag;
-        out_i = (FLOAT *)out_real;
+        in_r = (FFTZ_FLOAT *)in_imag;
+        in_i = (FFTZ_FLOAT *)in_real;
+        out_r = (FFTZ_FLOAT *)out_imag;
+        out_i = (FFTZ_FLOAT *)out_real;
     }
     else
     {
-        in_r = (FLOAT *)in_real;
-        in_i = (FLOAT *)in_imag;
-        out_r = (FLOAT *)out_real;
-        out_i = (FLOAT *)out_imag;
+        in_r = (FFTZ_FLOAT *)in_real;
+        in_i = (FFTZ_FLOAT *)in_imag;
+        out_r = (FFTZ_FLOAT *)out_real;
+        out_i = (FFTZ_FLOAT *)out_imag;
     }
 
     // Constant coefficients
-    FLOAT x69 = 0.13052619222005159154840622789548901019374070481173f;
-    FLOAT x80 = 0.9914448613738104111445575269285628712777382744481f;
-    FLOAT x90 = 0.79335334029123516457977696150129927662867592105191f;
-    FLOAT x101 = 0.60876142900872063941609754289816400451639371196248f;
-    FLOAT x112 = 0.86602540378443864676372317075293618347140262690519f;
-    FLOAT x125 = 0.70710678118654752440084436210484903928483593768847f;
-    FLOAT x138 = 0.9659258262890682867497431997288973676339048390084f;
-    FLOAT x150 = 0.25881904510252076234889883762404832834906890131993f;
-    FLOAT x162 = 0.5f;
-    FLOAT x181 = 0.92387953251128675612818318939678828682241662586364f;
-    FLOAT x193 = 0.38268343236508977172845998403039886676134456248563f;
-    FLOAT x465 = 0.60876142900872063941609754289816400451639371196247f;
-    FLOAT x472 = 0.96592582628906828674974319972889736763390483900841f;
+    FFTZ_FLOAT x69 = 0.13052619222005159154840622789548901019374070481173f;
+    FFTZ_FLOAT x80 = 0.9914448613738104111445575269285628712777382744481f;
+    FFTZ_FLOAT x90 = 0.79335334029123516457977696150129927662867592105191f;
+    FFTZ_FLOAT x101 = 0.60876142900872063941609754289816400451639371196248f;
+    FFTZ_FLOAT x112 = 0.86602540378443864676372317075293618347140262690519f;
+    FFTZ_FLOAT x125 = 0.70710678118654752440084436210484903928483593768847f;
+    FFTZ_FLOAT x138 = 0.9659258262890682867497431997288973676339048390084f;
+    FFTZ_FLOAT x150 = 0.25881904510252076234889883762404832834906890131993f;
+    FFTZ_FLOAT x162 = 0.5f;
+    FFTZ_FLOAT x181 = 0.92387953251128675612818318939678828682241662586364f;
+    FFTZ_FLOAT x193 = 0.38268343236508977172845998403039886676134456248563f;
+    FFTZ_FLOAT x465 = 0.60876142900872063941609754289816400451639371196247f;
+    FFTZ_FLOAT x472 = 0.96592582628906828674974319972889736763390483900841f;
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        FLOAT rl0, im0, rl1, im1, rl2, im2, rl3, im3, rl4, im4, rl5, im5, rl6,
-            im6, rl7, im7, rl8, im8, rl9, im9, rl10, im10, rl11, im11, rl12,
-            im12, rl13, im13, rl14, im14, rl15, im15, rl16, im16, rl17, im17,
-            rl18, im18, rl19, im19, rl20, im20, rl21, im21, rl22, im22, rl23,
-            im23, rl24, im24, rl25, im25, rl26, im26, rl27, im27, rl28, im28,
-            rl29, im29, rl30, im30, rl31, im31, rl32, im32, rl33, im33, rl34,
-            im34, rl35, im35, rl36, im36, rl37, im37, rl38, im38, rl39, im39,
-            rl40, im40, rl41, im41, rl42, im42, rl43, im43, rl44, im44, rl45,
-            im45, rl46, im46, rl47, im47;
+        FFTZ_FLOAT rl0, im0, rl1, im1, rl2, im2, rl3, im3, rl4, im4, rl5, im5,
+            rl6, im6, rl7, im7, rl8, im8, rl9, im9, rl10, im10, rl11, im11,
+            rl12, im12, rl13, im13, rl14, im14, rl15, im15, rl16, im16, rl17,
+            im17, rl18, im18, rl19, im19, rl20, im20, rl21, im21, rl22, im22,
+            rl23, im23, rl24, im24, rl25, im25, rl26, im26, rl27, im27, rl28,
+            im28, rl29, im29, rl30, im30, rl31, im31, rl32, im32, rl33, im33,
+            rl34, im34, rl35, im35, rl36, im36, rl37, im37, rl38, im38, rl39,
+            im39, rl40, im40, rl41, im41, rl42, im42, rl43, im43, rl44, im44,
+            rl45, im45, rl46, im46, rl47, im47;
 
         rl0 = in_r[in_strides[0]];
         im0 = in_i[in_strides[0]];
@@ -186,58 +187,58 @@ static VOID fft48c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         rl47 = in_r[in_strides[47]];
         im47 = in_i[in_strides[47]];
 
-        FLOAT x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14,
-            x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27,
-            x28, x29, x30, x31, x32, x33, x34, x35, x36, x37, x38, x39, x40,
-            x41, x42, x43, x44, x45, x46, x47, x48, x49, x50, x51, x52, x53,
-            x54, x55, x56, x57, x58, x61, x62, x64, x66, x67, x68, x72, x73,
-            x75, x77, x78, x79, x83, x85, x87, x88, x89, x92, x94, x95, x98,
-            x99, x100, x102, x104, x106, x107, x109, x111, x113, x115, x117,
-            x118, x120, x122, x123, x124, x126, x127, x129, x131, x133, x135,
-            x136, x137, x140, x142, x143, x145, x147, x148, x149, x151, x152,
-            x155, x156, x159, x160, x161, x163, x165, x167, x168, x169, x171,
-            x173, x174, x176, x178, x179, x180, x183, x185, x186, x188, x190,
-            x191, x192, x194, x195, x197, x199, x200, x201, x203, x204, x206,
-            x207, x208, x210, x211, x213, x214, x215, x217, x219, x220, x221,
-            x222, x223, x225, x227, x228, x229, x231, x232, x234, x235, x236,
-            x238, x240, x241, x243, x245, x246, x247, x249, x251, x252, x253,
-            x254, x256, x258, x259, x260, x262, x264, x265, x266, x268, x270,
-            x271, x272, x273, x274, x275, x276, x277, x278, x280, x281, x282,
-            x284, x285, x286, x287, x288, x289, x290, x292, x293, x294, x295,
-            x296, x297, x298, x299, x300, x301, x302, x303, x304, x306, x307,
-            x308, x309, x311, x312, x313, x314, x315, x316, x318, x319, x320,
-            x321, x322, x324, x325, x326, x328, x329, x330, x331, x332, x334,
-            x335, x336, x337, x338, x339, x340, x341, x342, x343, x344, x345,
-            x347, x348, x349, x350, x352, x353, x354, x355, x356, x357, x359,
-            x360, x362, x363, x364, x365, x366, x368, x369, x370, x371, x372,
-            x373, x374, x375, x376, x377, x378, x379, x381, x382, x383, x384,
-            x385, x386, x388, x389, x390, x391, x392, x393, x394, x396, x397,
-            x398, x399, x400, x401, x402, x403, x404, x405, x406, x407, x409,
-            x410, x411, x412, x414, x415, x416, x417, x418, x419, x420, x421,
-            x422, x423, x424, x425, x426, x428, x429, x430, x431, x432, x433,
-            x434, x435, x436, x437, x439, x440, x441, x442, x443, x444, x446,
-            x447, x448, x449, x450, x451, x452, x453, x454, x455, x456, x457,
-            x458, x463, x466, x467, x468, x469, x471, x473, x474, x475, x476,
-            x477, x478, x479, x480, x481, x482, x483, x484, x485, x486, x487,
-            x488, x489, x490, x492, x493, x495, x496, x497, x498, x499, x500,
-            x501, x502, x503, x504, x505, x506, x507, x508, x509, x510, x511,
-            x512, x513, x515, x516, x517, x518, x519, x520, x522, x523, x525,
-            x526, x527, x528, x529, x530, x531, x532, x533, x534, x535, x536,
-            x537, x538, x539, x540, x541, x542, x543, x544, x545, x547, x548,
-            x549, x550, x551, x552, x553, x554, x555, x557, x558, x559, x560,
-            x561, x562, x563, x564, x565, x566, x567, x568, x569, x570, x571,
-            x572, x573, x574, x575, x576, x577, x578, x579, x580, x581, x582,
-            x583, x584, x585, x586, x587, x588, x589, x590, x591, x592, x593,
-            x594, x595, x596, x597, x598, x600, x601, x602, x603, x604, x605,
-            x606, x607, x608, x609, x610, x611, x612, x613, x614, x615, x616,
-            x617, x618, x619, x620, x621, x622, x623, x624, x625, x626, x627,
-            x628, x629, x630, x631, x632, x633, x634, x635, x636, x637, x638,
-            x639, x640, x641, x642, x643, x644, x645, x646, x647, x648, x649,
-            x650, x651, x652, x653, x654, x655, x656, x657, x658, x659, x660,
-            x662, x663, x664, x665, x666, x667, x668, x669, x670, x671, x672,
-            x673, x674, x675, x676, x677, x678, x679, x680, x681, x682, x683,
-            x684, x685, x686, x687, x688, x689, x690, x691, x692, x693, x694,
-            x695, x696, x697;
+        FFTZ_FLOAT x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13,
+            x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26,
+            x27, x28, x29, x30, x31, x32, x33, x34, x35, x36, x37, x38, x39,
+            x40, x41, x42, x43, x44, x45, x46, x47, x48, x49, x50, x51, x52,
+            x53, x54, x55, x56, x57, x58, x61, x62, x64, x66, x67, x68, x72,
+            x73, x75, x77, x78, x79, x83, x85, x87, x88, x89, x92, x94, x95,
+            x98, x99, x100, x102, x104, x106, x107, x109, x111, x113, x115,
+            x117, x118, x120, x122, x123, x124, x126, x127, x129, x131, x133,
+            x135, x136, x137, x140, x142, x143, x145, x147, x148, x149, x151,
+            x152, x155, x156, x159, x160, x161, x163, x165, x167, x168, x169,
+            x171, x173, x174, x176, x178, x179, x180, x183, x185, x186, x188,
+            x190, x191, x192, x194, x195, x197, x199, x200, x201, x203, x204,
+            x206, x207, x208, x210, x211, x213, x214, x215, x217, x219, x220,
+            x221, x222, x223, x225, x227, x228, x229, x231, x232, x234, x235,
+            x236, x238, x240, x241, x243, x245, x246, x247, x249, x251, x252,
+            x253, x254, x256, x258, x259, x260, x262, x264, x265, x266, x268,
+            x270, x271, x272, x273, x274, x275, x276, x277, x278, x280, x281,
+            x282, x284, x285, x286, x287, x288, x289, x290, x292, x293, x294,
+            x295, x296, x297, x298, x299, x300, x301, x302, x303, x304, x306,
+            x307, x308, x309, x311, x312, x313, x314, x315, x316, x318, x319,
+            x320, x321, x322, x324, x325, x326, x328, x329, x330, x331, x332,
+            x334, x335, x336, x337, x338, x339, x340, x341, x342, x343, x344,
+            x345, x347, x348, x349, x350, x352, x353, x354, x355, x356, x357,
+            x359, x360, x362, x363, x364, x365, x366, x368, x369, x370, x371,
+            x372, x373, x374, x375, x376, x377, x378, x379, x381, x382, x383,
+            x384, x385, x386, x388, x389, x390, x391, x392, x393, x394, x396,
+            x397, x398, x399, x400, x401, x402, x403, x404, x405, x406, x407,
+            x409, x410, x411, x412, x414, x415, x416, x417, x418, x419, x420,
+            x421, x422, x423, x424, x425, x426, x428, x429, x430, x431, x432,
+            x433, x434, x435, x436, x437, x439, x440, x441, x442, x443, x444,
+            x446, x447, x448, x449, x450, x451, x452, x453, x454, x455, x456,
+            x457, x458, x463, x466, x467, x468, x469, x471, x473, x474, x475,
+            x476, x477, x478, x479, x480, x481, x482, x483, x484, x485, x486,
+            x487, x488, x489, x490, x492, x493, x495, x496, x497, x498, x499,
+            x500, x501, x502, x503, x504, x505, x506, x507, x508, x509, x510,
+            x511, x512, x513, x515, x516, x517, x518, x519, x520, x522, x523,
+            x525, x526, x527, x528, x529, x530, x531, x532, x533, x534, x535,
+            x536, x537, x538, x539, x540, x541, x542, x543, x544, x545, x547,
+            x548, x549, x550, x551, x552, x553, x554, x555, x557, x558, x559,
+            x560, x561, x562, x563, x564, x565, x566, x567, x568, x569, x570,
+            x571, x572, x573, x574, x575, x576, x577, x578, x579, x580, x581,
+            x582, x583, x584, x585, x586, x587, x588, x589, x590, x591, x592,
+            x593, x594, x595, x596, x597, x598, x600, x601, x602, x603, x604,
+            x605, x606, x607, x608, x609, x610, x611, x612, x613, x614, x615,
+            x616, x617, x618, x619, x620, x621, x622, x623, x624, x625, x626,
+            x627, x628, x629, x630, x631, x632, x633, x634, x635, x636, x637,
+            x638, x639, x640, x641, x642, x643, x644, x645, x646, x647, x648,
+            x649, x650, x651, x652, x653, x654, x655, x656, x657, x658, x659,
+            x660, x662, x663, x664, x665, x666, x667, x668, x669, x670, x671,
+            x672, x673, x674, x675, x676, x677, x678, x679, x680, x681, x682,
+            x683, x684, x685, x686, x687, x688, x689, x690, x691, x692, x693,
+            x694, x695, x696, x697;
 
         x0 = rl39 + rl9;
         x1 = rl3 + rl45;
@@ -830,7 +831,8 @@ static VOID fft48c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_i[out_strides[4]] = x448 + x458;
         out_r[out_strides[5]] = x169 - x113 + x467 + x469 + x474;
         out_i[out_strides[5]] = x475 + x476 + x477 - x478 + x481 + x484 + x489;
-        out_r[out_strides[6]] = im10 + im2 - im38 + x276 + x343 + x490 + x495 - x501 + x504;
+        out_r[out_strides[6]] =
+            im10 + im2 - im38 + x276 + x343 + x490 + x495 - x501 + x504;
         out_i[out_strides[6]] = x293 + x360 + x506 + x513 + x516;
         out_r[out_strides[7]] = x518 + x525 + x531 + x540;
         out_i[out_strides[7]] = x555 - x551;
@@ -841,7 +843,8 @@ static VOID fft48c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_r[out_strides[10]] = x300 + x584 - x585 + x588;
         out_i[out_strides[10]] = x357 - x365 + x589 + x591;
         out_r[out_strides[11]] = x592 + x593 - x594 - x595 + x598 + x604;
-        out_i[out_strides[11]] = x193 * x397 - x605 - x606 - x607 + x608 + x609 - x612;
+        out_i[out_strides[11]] =
+            x193 * x397 - x605 - x606 - x607 + x608 + x609 - x612;
         out_r[out_strides[12]] = x614 + x615;
         out_i[out_strides[12]] = x452 + x557 + x56 + x568 + x616;
         out_r[out_strides[13]] = -x617 - x618 + x619 + x620 - x622 - x625;
@@ -867,7 +870,8 @@ static VOID fft48c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_r[out_strides[23]] = x600 - x523 - x601 - x602 + x687;
         out_i[out_strides[23]] = x611 - x545 + x688 + x689;
         out_r[out_strides[24]] = x27 + x418 + x420 + x561 + x690;
-        out_i[out_strides[24]] = -im1 - im23 - im25 - im47 + x338 + x446 + x57 + x571;
+        out_i[out_strides[24]] =
+            -im1 - im23 - im25 - im47 + x338 + x446 + x57 + x571;
         out_r[out_strides[25]] = x152 - x102 - x691;
         out_i[out_strides[25]] = x247 - x222 + x273 + x488 + x630;
         out_r[out_strides[26]] = x290 - x299 + x316 + x588;
@@ -877,7 +881,8 @@ static VOID fft48c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_r[out_strides[28]] = -x437 - x692 - x693 - x694;
         out_i[out_strides[28]] = x697 - x695;
         out_r[out_strides[29]] = -x127 - x467 - x625 - x660;
-        out_i[out_strides[29]] = -x476 - x477 - x481 - x482 + x483 + x489 + x658;
+        out_i[out_strides[29]] =
+            -x476 - x477 - x481 - x482 + x483 + x489 + x658;
         out_r[out_strides[30]] = x501 - x495 + x504 + x634;
         out_i[out_strides[30]] = x516 - x513 + x645;
         out_r[out_strides[31]] = x138 * x520 + x150 * x386 - x523 - x540 - x671;
@@ -892,7 +897,8 @@ static VOID fft48c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_i[out_strides[35]] = x605 + x607 - x608 - x609 - x612 - x673;
         out_r[out_strides[36]] = -x435 - x613 - x694;
         out_i[out_strides[36]] = x421 + x457 + x56 + x569 + x696;
-        out_r[out_strides[37]] = x181 * x192 - x468 + x617 + x618 - x619 - x620 - x622 - x624;
+        out_r[out_strides[37]] =
+            x181 * x192 - x468 + x617 + x618 - x619 - x620 - x622 - x624;
         out_i[out_strides[37]] = x481 + x626 + x627 - x628 - x629 - x631;
         out_r[out_strides[38]] = -x637 - x640;
         out_i[out_strides[38]] = x516 + x644 - x646 + x684;
@@ -923,65 +929,66 @@ static VOID fft48c_fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-static VOID fft48c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                       VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                       VOID *twd, UINT8 flag)
+static FFTZ_VOID fft48c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                             FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                             FFTZ_INTP n, aoclfftz_strides_t *strides,
+                             FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
-    DOUBLE *in_r, *in_i, *out_r, *out_i;
+    FFTZ_DOUBLE *in_r, *in_i, *out_r, *out_i;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
-    INTP cnt;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP cnt;
 
     if (flag) // non-zero flag indicates that the fft is inverse
     {
-        in_r = (DOUBLE *)in_imag;
-        in_i = (DOUBLE *)in_real;
-        out_r = (DOUBLE *)out_imag;
-        out_i = (DOUBLE *)out_real;
+        in_r = (FFTZ_DOUBLE *)in_imag;
+        in_i = (FFTZ_DOUBLE *)in_real;
+        out_r = (FFTZ_DOUBLE *)out_imag;
+        out_i = (FFTZ_DOUBLE *)out_real;
     }
     else
     {
-        in_r = (DOUBLE *)in_real;
-        in_i = (DOUBLE *)in_imag;
-        out_r = (DOUBLE *)out_real;
-        out_i = (DOUBLE *)out_imag;
+        in_r = (FFTZ_DOUBLE *)in_real;
+        in_i = (FFTZ_DOUBLE *)in_imag;
+        out_r = (FFTZ_DOUBLE *)out_real;
+        out_i = (FFTZ_DOUBLE *)out_imag;
     }
 
     // Constant coefficients
-    DOUBLE x69 = 0.13052619222005159154840622789548901019374070481173;
-    DOUBLE x80 = 0.9914448613738104111445575269285628712777382744481;
-    DOUBLE x90 = 0.79335334029123516457977696150129927662867592105191;
-    DOUBLE x101 = 0.60876142900872063941609754289816400451639371196248;
-    DOUBLE x112 = 0.86602540378443864676372317075293618347140262690519;
-    DOUBLE x125 = 0.70710678118654752440084436210484903928483593768847;
-    DOUBLE x138 = 0.9659258262890682867497431997288973676339048390084;
-    DOUBLE x150 = 0.25881904510252076234889883762404832834906890131993;
-    DOUBLE x162 = 0.5;
-    DOUBLE x181 = 0.92387953251128675612818318939678828682241662586364;
-    DOUBLE x193 = 0.38268343236508977172845998403039886676134456248563;
-    DOUBLE x465 = 0.60876142900872063941609754289816400451639371196247;
-    DOUBLE x472 = 0.96592582628906828674974319972889736763390483900841;
+    FFTZ_DOUBLE x69 = 0.13052619222005159154840622789548901019374070481173;
+    FFTZ_DOUBLE x80 = 0.9914448613738104111445575269285628712777382744481;
+    FFTZ_DOUBLE x90 = 0.79335334029123516457977696150129927662867592105191;
+    FFTZ_DOUBLE x101 = 0.60876142900872063941609754289816400451639371196248;
+    FFTZ_DOUBLE x112 = 0.86602540378443864676372317075293618347140262690519;
+    FFTZ_DOUBLE x125 = 0.70710678118654752440084436210484903928483593768847;
+    FFTZ_DOUBLE x138 = 0.9659258262890682867497431997288973676339048390084;
+    FFTZ_DOUBLE x150 = 0.25881904510252076234889883762404832834906890131993;
+    FFTZ_DOUBLE x162 = 0.5;
+    FFTZ_DOUBLE x181 = 0.92387953251128675612818318939678828682241662586364;
+    FFTZ_DOUBLE x193 = 0.38268343236508977172845998403039886676134456248563;
+    FFTZ_DOUBLE x465 = 0.60876142900872063941609754289816400451639371196247;
+    FFTZ_DOUBLE x472 = 0.96592582628906828674974319972889736763390483900841;
 
     for (cnt = 0; cnt < n; cnt++)
     {
-        DOUBLE rl0, im0, rl1, im1, rl2, im2, rl3, im3, rl4, im4, rl5, im5, rl6,
-            im6, rl7, im7, rl8, im8, rl9, im9, rl10, im10, rl11, im11, rl12,
-            im12, rl13, im13, rl14, im14, rl15, im15, rl16, im16, rl17, im17,
-            rl18, im18, rl19, im19, rl20, im20, rl21, im21, rl22, im22, rl23,
-            im23, rl24, im24, rl25, im25, rl26, im26, rl27, im27, rl28, im28,
-            rl29, im29, rl30, im30, rl31, im31, rl32, im32, rl33, im33, rl34,
-            im34, rl35, im35, rl36, im36, rl37, im37, rl38, im38, rl39, im39,
-            rl40, im40, rl41, im41, rl42, im42, rl43, im43, rl44, im44, rl45,
-            im45, rl46, im46, rl47, im47;
+        FFTZ_DOUBLE rl0, im0, rl1, im1, rl2, im2, rl3, im3, rl4, im4, rl5, im5,
+            rl6, im6, rl7, im7, rl8, im8, rl9, im9, rl10, im10, rl11, im11,
+            rl12, im12, rl13, im13, rl14, im14, rl15, im15, rl16, im16, rl17,
+            im17, rl18, im18, rl19, im19, rl20, im20, rl21, im21, rl22, im22,
+            rl23, im23, rl24, im24, rl25, im25, rl26, im26, rl27, im27, rl28,
+            im28, rl29, im29, rl30, im30, rl31, im31, rl32, im32, rl33, im33,
+            rl34, im34, rl35, im35, rl36, im36, rl37, im37, rl38, im38, rl39,
+            im39, rl40, im40, rl41, im41, rl42, im42, rl43, im43, rl44, im44,
+            rl45, im45, rl46, im46, rl47, im47;
 
         rl0 = in_r[in_strides[0]];
         im0 = in_i[in_strides[0]];
@@ -1080,58 +1087,58 @@ static VOID fft48c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         rl47 = in_r[in_strides[47]];
         im47 = in_i[in_strides[47]];
 
-        DOUBLE x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14,
-            x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27,
-            x28, x29, x30, x31, x32, x33, x34, x35, x36, x37, x38, x39, x40,
-            x41, x42, x43, x44, x45, x46, x47, x48, x49, x50, x51, x52, x53,
-            x54, x55, x56, x57, x58, x61, x62, x64, x66, x67, x68, x72, x73,
-            x75, x77, x78, x79, x83, x85, x87, x88, x89, x92, x94, x95, x98,
-            x99, x100, x102, x104, x106, x107, x109, x111, x113, x115, x117,
-            x118, x120, x122, x123, x124, x126, x127, x129, x131, x133, x135,
-            x136, x137, x140, x142, x143, x145, x147, x148, x149, x151, x152,
-            x155, x156, x159, x160, x161, x163, x165, x167, x168, x169, x171,
-            x173, x174, x176, x178, x179, x180, x183, x185, x186, x188, x190,
-            x191, x192, x194, x195, x197, x199, x200, x201, x203, x204, x206,
-            x207, x208, x210, x211, x213, x214, x215, x217, x219, x220, x221,
-            x222, x223, x225, x227, x228, x229, x231, x232, x234, x235, x236,
-            x238, x240, x241, x243, x245, x246, x247, x249, x251, x252, x253,
-            x254, x256, x258, x259, x260, x262, x264, x265, x266, x268, x270,
-            x271, x272, x273, x274, x275, x276, x277, x278, x280, x281, x282,
-            x284, x285, x286, x287, x288, x289, x290, x292, x293, x294, x295,
-            x296, x297, x298, x299, x300, x301, x302, x303, x304, x306, x307,
-            x308, x309, x311, x312, x313, x314, x315, x316, x318, x319, x320,
-            x321, x322, x324, x325, x326, x328, x329, x330, x331, x332, x334,
-            x335, x336, x337, x338, x339, x340, x341, x342, x343, x344, x345,
-            x347, x348, x349, x350, x352, x353, x354, x355, x356, x357, x359,
-            x360, x362, x363, x364, x365, x366, x368, x369, x370, x371, x372,
-            x373, x374, x375, x376, x377, x378, x379, x381, x382, x383, x384,
-            x385, x386, x388, x389, x390, x391, x392, x393, x394, x396, x397,
-            x398, x399, x400, x401, x402, x403, x404, x405, x406, x407, x409,
-            x410, x411, x412, x414, x415, x416, x417, x418, x419, x420, x421,
-            x422, x423, x424, x425, x426, x428, x429, x430, x431, x432, x433,
-            x434, x435, x436, x437, x439, x440, x441, x442, x443, x444, x446,
-            x447, x448, x449, x450, x451, x452, x453, x454, x455, x456, x457,
-            x458, x463, x466, x467, x468, x469, x471, x473, x474, x475, x476,
-            x477, x478, x479, x480, x481, x482, x483, x484, x485, x486, x487,
-            x488, x489, x490, x492, x493, x495, x496, x497, x498, x499, x500,
-            x501, x502, x503, x504, x505, x506, x507, x508, x509, x510, x511,
-            x512, x513, x515, x516, x517, x518, x519, x520, x522, x523, x525,
-            x526, x527, x528, x529, x530, x531, x532, x533, x534, x535, x536,
-            x537, x538, x539, x540, x541, x542, x543, x544, x545, x547, x548,
-            x549, x550, x551, x552, x553, x554, x555, x557, x558, x559, x560,
-            x561, x562, x563, x564, x565, x566, x567, x568, x569, x570, x571,
-            x572, x573, x574, x575, x576, x577, x578, x579, x580, x581, x582,
-            x583, x584, x585, x586, x587, x588, x589, x590, x591, x592, x593,
-            x594, x595, x596, x597, x598, x600, x601, x602, x603, x604, x605,
-            x606, x607, x608, x609, x610, x611, x612, x613, x614, x615, x616,
-            x617, x618, x619, x620, x621, x622, x623, x624, x625, x626, x627,
-            x628, x629, x630, x631, x632, x633, x634, x635, x636, x637, x638,
-            x639, x640, x641, x642, x643, x644, x645, x646, x647, x648, x649,
-            x650, x651, x652, x653, x654, x655, x656, x657, x658, x659, x660,
-            x662, x663, x664, x665, x666, x667, x668, x669, x670, x671, x672,
-            x673, x674, x675, x676, x677, x678, x679, x680, x681, x682, x683,
-            x684, x685, x686, x687, x688, x689, x690, x691, x692, x693, x694,
-            x695, x696, x697;
+        FFTZ_DOUBLE x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13,
+            x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26,
+            x27, x28, x29, x30, x31, x32, x33, x34, x35, x36, x37, x38, x39,
+            x40, x41, x42, x43, x44, x45, x46, x47, x48, x49, x50, x51, x52,
+            x53, x54, x55, x56, x57, x58, x61, x62, x64, x66, x67, x68, x72,
+            x73, x75, x77, x78, x79, x83, x85, x87, x88, x89, x92, x94, x95,
+            x98, x99, x100, x102, x104, x106, x107, x109, x111, x113, x115,
+            x117, x118, x120, x122, x123, x124, x126, x127, x129, x131, x133,
+            x135, x136, x137, x140, x142, x143, x145, x147, x148, x149, x151,
+            x152, x155, x156, x159, x160, x161, x163, x165, x167, x168, x169,
+            x171, x173, x174, x176, x178, x179, x180, x183, x185, x186, x188,
+            x190, x191, x192, x194, x195, x197, x199, x200, x201, x203, x204,
+            x206, x207, x208, x210, x211, x213, x214, x215, x217, x219, x220,
+            x221, x222, x223, x225, x227, x228, x229, x231, x232, x234, x235,
+            x236, x238, x240, x241, x243, x245, x246, x247, x249, x251, x252,
+            x253, x254, x256, x258, x259, x260, x262, x264, x265, x266, x268,
+            x270, x271, x272, x273, x274, x275, x276, x277, x278, x280, x281,
+            x282, x284, x285, x286, x287, x288, x289, x290, x292, x293, x294,
+            x295, x296, x297, x298, x299, x300, x301, x302, x303, x304, x306,
+            x307, x308, x309, x311, x312, x313, x314, x315, x316, x318, x319,
+            x320, x321, x322, x324, x325, x326, x328, x329, x330, x331, x332,
+            x334, x335, x336, x337, x338, x339, x340, x341, x342, x343, x344,
+            x345, x347, x348, x349, x350, x352, x353, x354, x355, x356, x357,
+            x359, x360, x362, x363, x364, x365, x366, x368, x369, x370, x371,
+            x372, x373, x374, x375, x376, x377, x378, x379, x381, x382, x383,
+            x384, x385, x386, x388, x389, x390, x391, x392, x393, x394, x396,
+            x397, x398, x399, x400, x401, x402, x403, x404, x405, x406, x407,
+            x409, x410, x411, x412, x414, x415, x416, x417, x418, x419, x420,
+            x421, x422, x423, x424, x425, x426, x428, x429, x430, x431, x432,
+            x433, x434, x435, x436, x437, x439, x440, x441, x442, x443, x444,
+            x446, x447, x448, x449, x450, x451, x452, x453, x454, x455, x456,
+            x457, x458, x463, x466, x467, x468, x469, x471, x473, x474, x475,
+            x476, x477, x478, x479, x480, x481, x482, x483, x484, x485, x486,
+            x487, x488, x489, x490, x492, x493, x495, x496, x497, x498, x499,
+            x500, x501, x502, x503, x504, x505, x506, x507, x508, x509, x510,
+            x511, x512, x513, x515, x516, x517, x518, x519, x520, x522, x523,
+            x525, x526, x527, x528, x529, x530, x531, x532, x533, x534, x535,
+            x536, x537, x538, x539, x540, x541, x542, x543, x544, x545, x547,
+            x548, x549, x550, x551, x552, x553, x554, x555, x557, x558, x559,
+            x560, x561, x562, x563, x564, x565, x566, x567, x568, x569, x570,
+            x571, x572, x573, x574, x575, x576, x577, x578, x579, x580, x581,
+            x582, x583, x584, x585, x586, x587, x588, x589, x590, x591, x592,
+            x593, x594, x595, x596, x597, x598, x600, x601, x602, x603, x604,
+            x605, x606, x607, x608, x609, x610, x611, x612, x613, x614, x615,
+            x616, x617, x618, x619, x620, x621, x622, x623, x624, x625, x626,
+            x627, x628, x629, x630, x631, x632, x633, x634, x635, x636, x637,
+            x638, x639, x640, x641, x642, x643, x644, x645, x646, x647, x648,
+            x649, x650, x651, x652, x653, x654, x655, x656, x657, x658, x659,
+            x660, x662, x663, x664, x665, x666, x667, x668, x669, x670, x671,
+            x672, x673, x674, x675, x676, x677, x678, x679, x680, x681, x682,
+            x683, x684, x685, x686, x687, x688, x689, x690, x691, x692, x693,
+            x694, x695, x696, x697;
 
         x0 = rl39 + rl9;
         x1 = rl3 + rl45;
@@ -1724,7 +1731,8 @@ static VOID fft48c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_i[out_strides[4]] = x448 + x458;
         out_r[out_strides[5]] = x169 - x113 + x467 + x469 + x474;
         out_i[out_strides[5]] = x475 + x476 + x477 - x478 + x481 + x484 + x489;
-        out_r[out_strides[6]] = im10 + im2 - im38 + x276 + x343 + x490 + x495 - x501 + x504;
+        out_r[out_strides[6]] =
+            im10 + im2 - im38 + x276 + x343 + x490 + x495 - x501 + x504;
         out_i[out_strides[6]] = x293 + x360 + x506 + x513 + x516;
         out_r[out_strides[7]] = x518 + x525 + x531 + x540;
         out_i[out_strides[7]] = x555 - x551;
@@ -1735,7 +1743,8 @@ static VOID fft48c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_r[out_strides[10]] = x300 + x584 - x585 + x588;
         out_i[out_strides[10]] = x357 - x365 + x589 + x591;
         out_r[out_strides[11]] = x592 + x593 - x594 - x595 + x598 + x604;
-        out_i[out_strides[11]] = x193 * x397 - x605 - x606 - x607 + x608 + x609 - x612;
+        out_i[out_strides[11]] =
+            x193 * x397 - x605 - x606 - x607 + x608 + x609 - x612;
         out_r[out_strides[12]] = x614 + x615;
         out_i[out_strides[12]] = x452 + x557 + x56 + x568 + x616;
         out_r[out_strides[13]] = -x617 - x618 + x619 + x620 - x622 - x625;
@@ -1761,7 +1770,8 @@ static VOID fft48c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_r[out_strides[23]] = x600 - x523 - x601 - x602 + x687;
         out_i[out_strides[23]] = x611 - x545 + x688 + x689;
         out_r[out_strides[24]] = x27 + x418 + x420 + x561 + x690;
-        out_i[out_strides[24]] = -im1 - im23 - im25 - im47 + x338 + x446 + x57 + x571;
+        out_i[out_strides[24]] =
+            -im1 - im23 - im25 - im47 + x338 + x446 + x57 + x571;
         out_r[out_strides[25]] = x152 - x102 - x691;
         out_i[out_strides[25]] = x247 - x222 + x273 + x488 + x630;
         out_r[out_strides[26]] = x290 - x299 + x316 + x588;
@@ -1771,7 +1781,8 @@ static VOID fft48c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_r[out_strides[28]] = -x437 - x692 - x693 - x694;
         out_i[out_strides[28]] = x697 - x695;
         out_r[out_strides[29]] = -x127 - x467 - x625 - x660;
-        out_i[out_strides[29]] = -x476 - x477 - x481 - x482 + x483 + x489 + x658;
+        out_i[out_strides[29]] =
+            -x476 - x477 - x481 - x482 + x483 + x489 + x658;
         out_r[out_strides[30]] = x501 - x495 + x504 + x634;
         out_i[out_strides[30]] = x516 - x513 + x645;
         out_r[out_strides[31]] = x138 * x520 + x150 * x386 - x523 - x540 - x671;
@@ -1786,7 +1797,8 @@ static VOID fft48c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
         out_i[out_strides[35]] = x605 + x607 - x608 - x609 - x612 - x673;
         out_r[out_strides[36]] = -x435 - x613 - x694;
         out_i[out_strides[36]] = x421 + x457 + x56 + x569 + x696;
-        out_r[out_strides[37]] = x181 * x192 - x468 + x617 + x618 - x619 - x620 - x622 - x624;
+        out_r[out_strides[37]] =
+            x181 * x192 - x468 + x617 + x618 - x619 - x620 - x622 - x624;
         out_i[out_strides[37]] = x481 + x626 + x627 - x628 - x629 - x631;
         out_r[out_strides[38]] = -x637 - x640;
         out_i[out_strides[38]] = x516 + x644 - x646 + x684;
@@ -1817,7 +1829,8 @@ static VOID fft48c_fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-kfft_ register_kernel_fft48c(UINT8 precision, UINT8 direction /* unused */)
+kfft_ register_kernel_fft48c(FFTZ_UINT8 precision,
+                             FFTZ_UINT8 direction /* unused */)
 {
     if (precision == DT_FLOAT)
     {

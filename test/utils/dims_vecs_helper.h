@@ -22,17 +22,20 @@
 #include "utils/allocator.h"
 
 EXPORT_SYM_DYN
-INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
-                                  aoclfftz_dim_t_64_ **dims,
-                                  aoclfftz_dim_t_64_ **vecs,
-                                  INTP default_stride);
+FFTZ_INT32 allocate_and_fill_dims_vecs(FFTZ_CHAR *arg, FFTZ_INT32 dim_rank,
+                                       FFTZ_INT32 vec_rank,
+                                       aoclfftz_dim_t_64_ **dims,
+                                       aoclfftz_dim_t_64_ **vecs,
+                                       FFTZ_INTP default_stride);
 EXPORT_SYM_DYN
-VOID set_default_dims_vecs(INT32 dim_rank, INT32 vec_rank,
-                           aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                           aoclfftz_bench_fft_type_t type, UINT8 is_in_place,
-                           UINT8 logger_mode);
+FFTZ_VOID set_default_dims_vecs(FFTZ_INT32 dim_rank, FFTZ_INT32 vec_rank,
+                                aoclfftz_dim_t_64_ *dims,
+                                aoclfftz_dim_t_64_ *vecs,
+                                aoclfftz_bench_fft_type_t type,
+                                FFTZ_UINT8 is_in_place, FFTZ_UINT8 logger_mode);
 
 EXPORT_SYM_DYN
-INT32 find_dim_vec_ranks(CHAR *arg, INT32 *dim_rank, INT32 *vec_rank);
+FFTZ_INT32 find_dim_vec_ranks(FFTZ_CHAR *arg, FFTZ_INT32 *dim_rank,
+                              FFTZ_INT32 *vec_rank);
 
 #endif // DIMS_VECS_HELPER_H

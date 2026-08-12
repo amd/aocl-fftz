@@ -16,7 +16,7 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
+FFTZ_INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -32,20 +32,20 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     aoclfftz_decomp_scheme_t *decomp_scheme = sel->solution->decomp_scheme;
 
     aoclfftz_selector_t *cur_sel = NULL;
-    INTP n = decomp_scheme->dims[0].n;
-    INTP batch = decomp_scheme->vecs[0].n;
+    FFTZ_INTP n = decomp_scheme->dims[0].n;
+    FFTZ_INTP batch = decomp_scheme->vecs[0].n;
     if (decomp_scheme->batched_vecs != NULL &&
         decomp_scheme->batched_vecs[0].n > batch)
     {
         batch = decomp_scheme->batched_vecs[0].n;
     }
-    INT32 vec_rank = decomp_scheme->vec_rank;
-    INT32 dim_rank = decomp_scheme->dim_rank;
-    INT32 stats_mode = decomp_scheme->cntrl_params->measure_stats;
-    INT32 avl_threads = decomp_scheme->thread_info->avl_threads;
-    UINT32 precision = DT_PRECISION_FLAG(decomp_scheme->flags);
-    UINT32 selector_mode = GET_SELECTOR_MODE(decomp_scheme->flags);
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 vec_rank = decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = decomp_scheme->dim_rank;
+    FFTZ_INT32 stats_mode = decomp_scheme->cntrl_params->measure_stats;
+    FFTZ_INT32 avl_threads = decomp_scheme->thread_info->avl_threads;
+    FFTZ_UINT32 precision = DT_PRECISION_FLAG(decomp_scheme->flags);
+    FFTZ_UINT32 selector_mode = GET_SELECTOR_MODE(decomp_scheme->flags);
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (cur_sel == NULL)
@@ -54,7 +54,7 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     // set number of threads for execution to no. of batches
-    INT32 n_threads = (batch < avl_threads) ? batch : avl_threads;
+    FFTZ_INT32 n_threads = (batch < avl_threads) ? batch : avl_threads;
     decomp_scheme->thread_info->n_threads = n_threads;
 
     // copy solution object from sel to cur_sel
@@ -67,20 +67,20 @@ INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     // find a suitable kernel within the list of C kernels, and if one is found,
     // check for the existance of other implementations for the same radix
-    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
+    for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
-        UINT32 radix = kertab[i].radix;
-        UINT8 direction = FFT_DIR(decomp_scheme->flags);
+        FFTZ_UINT32 radix = kertab[i].radix;
+        FFTZ_UINT8 direction = FFT_DIR(decomp_scheme->flags);
         if (radix == 0) // End of search for suitable kernels in the list
         {
             break;
         }
 
-        if ((INTP)radix == n)
+        if ((FFTZ_INTP)radix == n)
         {
-            for (INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
+            for (FFTZ_INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
             {
-                INTP kloc = (kcat * NUM_KERNELS_IN_EACH_CATEGORY) + i;
+                FFTZ_INTP kloc = (kcat * NUM_KERNELS_IN_EACH_CATEGORY) + i;
 
                 if (kertab[kloc].kfft[direction] == NULL)
                 {

@@ -9,7 +9,8 @@ Data Structures
 :doc:`Defined Structures <typedefs>`
 
 Data structures and their typedef definitions associated with the APIs to support
-both single-precision (`FLOAT`) and double-precision (`DOUBLE`) computations.
+both single-precision (`FFTZ_FLOAT`) and double-precision (`FFTZ_DOUBLE`)
+computations.
 These structures encapsulate configuration parameters, execution contexts,
 and other essential parameters and flags required for efficient FFT operations.
 

@@ -25,15 +25,15 @@
  *
  * @param argc command-line argument count
  * @param argv command-line argument values as char array
- * @return INT32 status code: 0 indicates success
+ * @return FFTZ_INT32 status code: 0 indicates success
  *                 negative value indicates bench error code
  *                 positive value indicates specific parser error code
  */
-INT32 main(INT32 argc, CHAR **argv)
+FFTZ_INT32 main(FFTZ_INT32 argc, FFTZ_CHAR **argv)
 {
     printf("\nAOCL-FFTZ version: %s\n\n", aoclfftz_version());
 
-    INT32 status = BENCH_SUCCESS;
+    FFTZ_INT32 status = BENCH_SUCCESS;
 
     // prepare bench params from user inputs
     aoclfftz_bench_params_t *params = NULL;

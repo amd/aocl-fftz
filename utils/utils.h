@@ -18,7 +18,7 @@
 #include "api/types.h"
 #include "api/aoclfftz.h"
 
-extern INT32 global_logger_mode;
+extern FFTZ_INT32 global_logger_mode;
 
 /**
  * @brief Calculate minimum buffer size for strided array access.
@@ -31,7 +31,8 @@ extern INT32 global_logger_mode;
  * @param elem_size Size of each element in bytes
  * @return Required buffer size in bytes
  */
-static inline INTP strided_buffer_size(INTP n, INTP stride, INTP elem_size)
+static inline FFTZ_INTP strided_buffer_size(FFTZ_INTP n, FFTZ_INTP stride,
+                                            FFTZ_INTP elem_size)
 {
     return ((n - 1) * stride + 1) * elem_size;
 }
@@ -81,7 +82,7 @@ typedef struct timespec timeVal;
     {                                                                          \
         if (enableLog)                                                         \
         {                                                                      \
-            const CHAR *type = NULL;                                           \
+            const FFTZ_CHAR *type = NULL; \
             if (logType == INFO)                                               \
             {                                                                  \
                 type = "INFO";                                                 \
@@ -105,7 +106,7 @@ typedef struct timespec timeVal;
         }                                                                      \
     } while (0)
 #else
-#define AOCLFFTZ_LOG(logType, enableLog, ...) ((VOID)enableLog);
+#define AOCLFFTZ_LOG(logType, enableLog, ...) ((FFTZ_VOID)enableLog);
 #endif // AOCL_ENABLE_LOG
 
 #define AOCLFFTZ_ERROR__INTERNAL(str, ...)                                     \
@@ -140,25 +141,27 @@ typedef struct timespec timeVal;
 #endif
 #endif
 
-const CHAR* get_status_string(aoclfftz_error_type status);
+const FFTZ_CHAR* get_status_string(aoclfftz_error_type status);
 
-INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level);
+FFTZ_INT32 setup_dynamic_dispatcher(FFTZ_INT32 opt_off, FFTZ_INT32 opt_level);
 
 #ifdef ENABLE_APP_INFO_LOGS
 #define PRINT_PROBLEM_DESCRIPTOR(problem, dt_type, f_specifier, data_model)    \
 {                                                                              \
     printf("\n[AOCL-FFTZ] Problem : ");                                        \
-    const CHAR *data_type = (dt_type == DT_FLOAT) ? "Float" :                  \
+    const FFTZ_CHAR *data_type = (dt_type == DT_FLOAT) ? "Float" : \
                             (dt_type == DT_DOUBLE) ? "Double" : "Unknown";     \
-    const CHAR *fft_type = (problem->flags.fft_type == 0) ? "Complex" : "Real";\
-    const CHAR *direction = (problem->flags.fft_direction == FORWARD_FFT_DIR) ?\
+    const FFTZ_CHAR *fft_type =                                                \
+        (problem->flags.fft_type == 0) ? "Complex" : "Real";                   \
+    const FFTZ_CHAR *direction =                                               \
+        (problem->flags.fft_direction == FORWARD_FFT_DIR) ?                    \
                             "Forward" : "Backward";                            \
-    const CHAR *placement = (problem->flags.fft_placement == 0) ?              \
+    const FFTZ_CHAR *placement = (problem->flags.fft_placement == 0) ? \
                             "InPlace" : "OutOfPlace";                          \
-    const CHAR *storage_order = (problem->flags.storage_order == 0) ?          \
+    const FFTZ_CHAR *storage_order = (problem->flags.storage_order == 0) ? \
                                 "InOrder" : "OutOfOrder";                      \
-    INT32 threads = problem->pthr_fft.num_threads;                             \
-    for (INT32 i = problem->vec_rank - 1; i >= 0; i--)                         \
+    FFTZ_INT32 threads = problem->pthr_fft.num_threads; \
+    for (FFTZ_INT32 i = problem->vec_rank - 1; i >= 0; i--) \
     {                                                                          \
         printf(f_specifier ":" f_specifier ":" f_specifier, problem->vecs[i].n,\
                problem->vecs[i].in_stride, problem->vecs[i].out_stride);       \
@@ -168,7 +171,7 @@ INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level);
         }                                                                      \
     }                                                                          \
     printf("v"); /* vecs delimiter*/                                           \
-    for (INT32 i = problem->dim_rank - 1; i >= 0; i--)                         \
+    for (FFTZ_INT32 i = problem->dim_rank - 1; i >= 0; i--) \
     {                                                                          \
         printf(f_specifier ":" f_specifier ":" f_specifier, problem->dims[i].n,\
                problem->dims[i].in_stride, problem->dims[i].out_stride);       \
@@ -189,8 +192,8 @@ INT32 setup_dynamic_dispatcher(INT32 opt_off, INT32 opt_level);
 
 #else
 
-#define PRINT_LP64_PROBLEM_DESCRIPTOR(problem, data_type) ((VOID)0);
-#define PRINT_ILP64_PROBLEM_DESCRIPTOR(problem, data_type) ((VOID)0);
+#define PRINT_LP64_PROBLEM_DESCRIPTOR(problem, data_type) ((FFTZ_VOID)0);
+#define PRINT_ILP64_PROBLEM_DESCRIPTOR(problem, data_type) ((FFTZ_VOID)0);
 
 #endif
 

@@ -23,7 +23,8 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS][NUM_FFT_DIRS] =
                                                  {{0, 12, 24, 128, 8, 61},
                                                   {0, 14, 24, 128, 8, 61}}};
 
-ops_cycles_t get_ops_cnt_r2hcf_rfft5avx512(UINT8 precision, UINT8 direction)
+ops_cycles_t get_ops_cnt_r2hcf_rfft5avx512(FFTZ_UINT8 precision,
+                                           FFTZ_UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -49,32 +50,39 @@ ops_cycles_t get_ops_cnt_r2hcf_rfft5avx512(UINT8 precision, UINT8 direction)
     }
 }
 
-static VOID r2hcf_rfft5avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
-                                       VOID *out_real, VOID *out_imag, INTP n,
-                                       aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
+static FFTZ_VOID r2hcf_rfft5avx512_fp32_fwd(FFTZ_VOID *in_real,
+                                            FFTZ_VOID *in_imag,
+                                            FFTZ_VOID *out_real,
+                                            FFTZ_VOID *out_imag, FFTZ_INTP n,
+                                            aoclfftz_strides_t *strides,
+                                            FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    const FLOAT CRTM_5_1 = 0.559016994374947424102293417182819058860154590f;
-    const FLOAT CRTM_5_2 = 0.951056516295153572116439333379382143405698632f;
-    const FLOAT CRTM_5_3 = 0.587785252292473129168705954639072768597652438f;
-    const FLOAT CRTM_5_4 = 0.250000000000000000000000000000000000000000000f;
+    const FFTZ_FLOAT CRTM_5_1 =
+        0.559016994374947424102293417182819058860154590f;
+    const FFTZ_FLOAT CRTM_5_2 =
+        0.951056516295153572116439333379382143405698632f;
+    const FFTZ_FLOAT CRTM_5_3 =
+        0.587785252292473129168705954639072768597652438f;
+    const FFTZ_FLOAT CRTM_5_4 =
+        0.250000000000000000000000000000000000000000000f;
 
-    FLOAT *in = (FLOAT *)in_real;
-    FLOAT *out = (FLOAT *)out_real;
+    FFTZ_FLOAT *in = (FFTZ_FLOAT *)in_real;
+    FFTZ_FLOAT *out = (FFTZ_FLOAT *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
 
-    INTP cnt;
-    FLOAT *curr_in, *curr_out;
-    INTP N = n / NUM_SETS_REAL_512_S;
-    INTP remaining_sets = n % NUM_SETS_REAL_512_S;
+    FFTZ_INTP cnt;
+    FFTZ_FLOAT *curr_in, *curr_out;
+    FFTZ_INTP N = n / NUM_SETS_REAL_512_S;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_REAL_512_S;
 
     __m512 v_CRTM_5_1 = _mm512_set1_ps(CRTM_5_1);
     __m512 v_CRTM_5_2 = _mm512_set1_ps(CRTM_5_2);
@@ -555,9 +563,9 @@ static VOID r2hcf_rfft5avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
     if (remaining_sets & 1)
     {
         /* Standard DFT */
-        FLOAT a_in0, a_in1, a_in2, a_in3, a_in4;
-        FLOAT a_s1, a_s2, a_s3, a_s4, a_s5, a_s6, a_s7;
-        FLOAT a_t1, a_t2, a_t3, a_t4, a_t5, a_t6;
+        FFTZ_FLOAT a_in0, a_in1, a_in2, a_in3, a_in4;
+        FFTZ_FLOAT a_s1, a_s2, a_s3, a_s4, a_s5, a_s6, a_s7;
+        FFTZ_FLOAT a_t1, a_t2, a_t3, a_t4, a_t5, a_t6;
 
         a_in0 = *in;               // Input point 1: x(0)
         a_in1 = in[in_strides[2]]; // Input point 3: x(2)
@@ -589,9 +597,9 @@ static VOID r2hcf_rfft5avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
         out[out_strides[8]] = a_t5 + a_t6; // Output point 9: X(8)
 
         /* Shifted DFT */
-        FLOAT b_in0, b_in1, b_in2, b_in3, b_in4;
-        FLOAT b_s1, b_s2, b_s3, b_s4, b_s5, b_s6, b_s7;
-        FLOAT b_t1, b_t2, b_t3, b_t4, b_t5, b_t6;
+        FFTZ_FLOAT b_in0, b_in1, b_in2, b_in3, b_in4;
+        FFTZ_FLOAT b_s1, b_s2, b_s3, b_s4, b_s5, b_s6, b_s7;
+        FFTZ_FLOAT b_t1, b_t2, b_t3, b_t4, b_t5, b_t6;
 
         b_in0 = in[in_strides[1]]; // Input point 2: x(1)
         b_in1 = in[in_strides[3]]; // Input point 4: x(3)
@@ -624,33 +632,36 @@ static VOID r2hcf_rfft5avx512_fp32_fwd(VOID *in_real, VOID *in_imag,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-static VOID r2hcf_rfft5avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
-                                       VOID *out_real, VOID *out_imag, INTP n,
-                                       aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
+static FFTZ_VOID r2hcf_rfft5avx512_fp32_bwd(FFTZ_VOID *in_real,
+                                            FFTZ_VOID *in_imag,
+                                            FFTZ_VOID *out_real,
+                                            FFTZ_VOID *out_imag, FFTZ_INTP n,
+                                            aoclfftz_strides_t *strides,
+                                            FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    const FLOAT CRTM_5_1 = 1.11803398874989484820458683436563811772030918f;
-    const FLOAT CRTM_5_2 = 1.90211303259030714423287866675876428681139726f;
-    const FLOAT CRTM_5_3 = 1.17557050458494625833741190927814553719530488f;
-    const FLOAT CRTM_5_4 = 0.50000000000000000000000000000000000000000000f;
-    const FLOAT CRTM_5_5 = 2.00000000000000000000000000000000000000000000f;
+    const FFTZ_FLOAT CRTM_5_1 = 1.11803398874989484820458683436563811772030918f;
+    const FFTZ_FLOAT CRTM_5_2 = 1.90211303259030714423287866675876428681139726f;
+    const FFTZ_FLOAT CRTM_5_3 = 1.17557050458494625833741190927814553719530488f;
+    const FFTZ_FLOAT CRTM_5_4 = 0.50000000000000000000000000000000000000000000f;
+    const FFTZ_FLOAT CRTM_5_5 = 2.00000000000000000000000000000000000000000000f;
 
-    FLOAT *in = (FLOAT *)in_real;
-    FLOAT *out = (FLOAT *)out_real;
+    FFTZ_FLOAT *in = (FFTZ_FLOAT *)in_real;
+    FFTZ_FLOAT *out = (FFTZ_FLOAT *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
 
-    INTP cnt;
-    FLOAT *curr_in, *curr_out;
-    INTP N = n / NUM_SETS_REAL_512_S;
-    INTP remaining_sets = n % NUM_SETS_REAL_512_S;
+    FFTZ_INTP cnt;
+    FFTZ_FLOAT *curr_in, *curr_out;
+    FFTZ_INTP N = n / NUM_SETS_REAL_512_S;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_REAL_512_S;
 
     __m512 v_CRTM_5_1 = _mm512_set1_ps(CRTM_5_1);
     __m512 v_CRTM_5_2 = _mm512_set1_ps(CRTM_5_2);
@@ -1139,9 +1150,9 @@ static VOID r2hcf_rfft5avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
     if (remaining_sets & 1)
     {
         /* Standard DFT */
-        FLOAT a_in0, a_in1, a_in2, a_in3, a_in4;
-        FLOAT a_s1, a_s2, a_s3, a_s4, a_s5, a_s6, a_s7;
-        FLOAT a_t1, a_t2, a_t3, a_t4, a_t5, a_t6, a_t7;
+        FFTZ_FLOAT a_in0, a_in1, a_in2, a_in3, a_in4;
+        FFTZ_FLOAT a_s1, a_s2, a_s3, a_s4, a_s5, a_s6, a_s7;
+        FFTZ_FLOAT a_t1, a_t2, a_t3, a_t4, a_t5, a_t6, a_t7;
 
         a_in0 = *in;               // Input point 1: x(0)
         a_in1 = in[in_strides[3]]; // Input point 4: x(3)
@@ -1173,9 +1184,9 @@ static VOID r2hcf_rfft5avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
         out[out_strides[8]] = a_s4 + a_s6; // Output point 9: X(8)
 
         /* Shifted DFT */
-        FLOAT b_in0, b_in1, b_in2, b_in3, b_in4;
-        FLOAT b_s1, b_s2, b_s3, b_s4, b_s5, b_s6, b_s7;
-        FLOAT b_t1, b_t2, b_t3, b_t4, b_t5, b_t6, b_t7;
+        FFTZ_FLOAT b_in0, b_in1, b_in2, b_in3, b_in4;
+        FFTZ_FLOAT b_s1, b_s2, b_s3, b_s4, b_s5, b_s6, b_s7;
+        FFTZ_FLOAT b_t1, b_t2, b_t3, b_t4, b_t5, b_t6, b_t7;
 
         b_in0 = in[in_strides[1]]; // Input point 2: x(1)
         b_in1 = in[in_strides[2]]; // Input point 3: x(2)
@@ -1209,32 +1220,39 @@ static VOID r2hcf_rfft5avx512_fp32_bwd(VOID *in_real, VOID *in_imag,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-static VOID r2hcf_rfft5avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
-                                       VOID *out_real, VOID *out_imag, INTP n,
-                                       aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
+static FFTZ_VOID r2hcf_rfft5avx512_fp64_fwd(FFTZ_VOID *in_real,
+                                            FFTZ_VOID *in_imag,
+                                            FFTZ_VOID *out_real,
+                                            FFTZ_VOID *out_imag, FFTZ_INTP n,
+                                            aoclfftz_strides_t *strides,
+                                            FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    const DOUBLE CRTM_5_1 = 0.559016994374947424102293417182819058860154590;
-    const DOUBLE CRTM_5_2 = 0.951056516295153572116439333379382143405698632;
-    const DOUBLE CRTM_5_3 = 0.587785252292473129168705954639072768597652438;
-    const DOUBLE CRTM_5_4 = 0.250000000000000000000000000000000000000000000;
+    const FFTZ_DOUBLE CRTM_5_1 =
+        0.559016994374947424102293417182819058860154590;
+    const FFTZ_DOUBLE CRTM_5_2 =
+        0.951056516295153572116439333379382143405698632;
+    const FFTZ_DOUBLE CRTM_5_3 =
+        0.587785252292473129168705954639072768597652438;
+    const FFTZ_DOUBLE CRTM_5_4 =
+        0.250000000000000000000000000000000000000000000;
 
-    DOUBLE *in = (DOUBLE *)in_real;
-    DOUBLE *out = (DOUBLE *)out_real;
+    FFTZ_DOUBLE *in = (FFTZ_DOUBLE *)in_real;
+    FFTZ_DOUBLE *out = (FFTZ_DOUBLE *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
 
-    INTP cnt;
-    DOUBLE *curr_in, *curr_out;
-    INTP N = n / NUM_SETS_REAL_256_S;
-    INTP remaining_sets = n % NUM_SETS_REAL_256_S;
+    FFTZ_INTP cnt;
+    FFTZ_DOUBLE *curr_in, *curr_out;
+    FFTZ_INTP N = n / NUM_SETS_REAL_256_S;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_REAL_256_S;
 
     __m512d v_CRTM_5_1 = _mm512_set1_pd(CRTM_5_1);
     __m512d v_CRTM_5_2 = _mm512_set1_pd(CRTM_5_2);
@@ -1596,9 +1614,9 @@ static VOID r2hcf_rfft5avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
     if (remaining_sets & 1)
     {
         /* Standard DFT */
-        DOUBLE a_in0, a_in1, a_in2, a_in3, a_in4;
-        DOUBLE a_s1, a_s2, a_s3, a_s4, a_s5, a_s6, a_s7;
-        DOUBLE a_t1, a_t2, a_t3, a_t4, a_t5, a_t6;
+        FFTZ_DOUBLE a_in0, a_in1, a_in2, a_in3, a_in4;
+        FFTZ_DOUBLE a_s1, a_s2, a_s3, a_s4, a_s5, a_s6, a_s7;
+        FFTZ_DOUBLE a_t1, a_t2, a_t3, a_t4, a_t5, a_t6;
 
         a_in0 = *in;               // Input point 1: x(0)
         a_in1 = in[in_strides[2]]; // Input point 3: x(2)
@@ -1630,9 +1648,9 @@ static VOID r2hcf_rfft5avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
         out[out_strides[8]] = a_t5 + a_t6; // Output point 9: X(8)
 
         /* Shifted DFT */
-        DOUBLE b_in0, b_in1, b_in2, b_in3, b_in4;
-        DOUBLE b_s1, b_s2, b_s3, b_s4, b_s5, b_s6, b_s7;
-        DOUBLE b_t1, b_t2, b_t3, b_t4, b_t5, b_t6;
+        FFTZ_DOUBLE b_in0, b_in1, b_in2, b_in3, b_in4;
+        FFTZ_DOUBLE b_s1, b_s2, b_s3, b_s4, b_s5, b_s6, b_s7;
+        FFTZ_DOUBLE b_t1, b_t2, b_t3, b_t4, b_t5, b_t6;
 
         b_in0 = in[in_strides[1]]; // Input point 2: x(1)
         b_in1 = in[in_strides[3]]; // Input point 4: x(3)
@@ -1665,33 +1683,37 @@ static VOID r2hcf_rfft5avx512_fp64_fwd(VOID *in_real, VOID *in_imag,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-static VOID r2hcf_rfft5avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
-                                       VOID *out_real, VOID *out_imag, INTP n,
-                                       aoclfftz_strides_t *strides, VOID *twd, UINT8 flag)
+static FFTZ_VOID r2hcf_rfft5avx512_fp64_bwd(FFTZ_VOID *in_real,
+                                            FFTZ_VOID *in_imag,
+                                            FFTZ_VOID *out_real,
+                                            FFTZ_VOID *out_imag, FFTZ_INTP n,
+                                            aoclfftz_strides_t *strides,
+                                            FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    const DOUBLE CRTM_5_1 = 1.11803398874989484820458683436563811772030918;
-    const DOUBLE CRTM_5_2 = 1.90211303259030714423287866675876428681139726;
-    const DOUBLE CRTM_5_3 = 1.17557050458494625833741190927814553719530488;
-    const DOUBLE CRTM_5_4 = 0.50000000000000000000000000000000000000000000;
-    const DOUBLE CRTM_5_5 = 2.000000000000000000000000000000000000000000000;
+    const FFTZ_DOUBLE CRTM_5_1 = 1.11803398874989484820458683436563811772030918;
+    const FFTZ_DOUBLE CRTM_5_2 = 1.90211303259030714423287866675876428681139726;
+    const FFTZ_DOUBLE CRTM_5_3 = 1.17557050458494625833741190927814553719530488;
+    const FFTZ_DOUBLE CRTM_5_4 = 0.50000000000000000000000000000000000000000000;
+    const FFTZ_DOUBLE CRTM_5_5 =
+        2.000000000000000000000000000000000000000000000;
 
-    DOUBLE *in = (DOUBLE *)in_real;
-    DOUBLE *out = (DOUBLE *)out_real;
+    FFTZ_DOUBLE *in = (FFTZ_DOUBLE *)in_real;
+    FFTZ_DOUBLE *out = (FFTZ_DOUBLE *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
 
-    INTP cnt;
-    DOUBLE *curr_in, *curr_out;
-    INTP N = n / NUM_SETS_REAL_256_S;
-    INTP remaining_sets = n % NUM_SETS_REAL_256_S;
+    FFTZ_INTP cnt;
+    FFTZ_DOUBLE *curr_in, *curr_out;
+    FFTZ_INTP N = n / NUM_SETS_REAL_256_S;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_REAL_256_S;
 
     __m512d v_CRTM_5_1 = _mm512_set1_pd(CRTM_5_1);
     __m512d v_CRTM_5_2 = _mm512_set1_pd(CRTM_5_2);
@@ -2059,9 +2081,9 @@ static VOID r2hcf_rfft5avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
     if (remaining_sets & 1)
     {
         /* Standard DFT */
-        DOUBLE a_in0, a_in1, a_in2, a_in3, a_in4;
-        DOUBLE a_s1, a_s2, a_s3, a_s4, a_s5, a_s6, a_s7;
-        DOUBLE a_t1, a_t2, a_t3, a_t4, a_t5, a_t6, a_t7;
+        FFTZ_DOUBLE a_in0, a_in1, a_in2, a_in3, a_in4;
+        FFTZ_DOUBLE a_s1, a_s2, a_s3, a_s4, a_s5, a_s6, a_s7;
+        FFTZ_DOUBLE a_t1, a_t2, a_t3, a_t4, a_t5, a_t6, a_t7;
 
         a_in0 = *in;               // Input point 1: x(0)
         a_in1 = in[in_strides[3]]; // Input point 4: x(3)
@@ -2093,9 +2115,9 @@ static VOID r2hcf_rfft5avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
         out[out_strides[8]] = a_s4 + a_s6; // Output point 9: X(8)
 
         /* Shifted DFT */
-        DOUBLE b_in0, b_in1, b_in2, b_in3, b_in4;
-        DOUBLE b_s1, b_s2, b_s3, b_s4, b_s5, b_s6, b_s7;
-        DOUBLE b_t1, b_t2, b_t3, b_t4, b_t5, b_t6, b_t7;
+        FFTZ_DOUBLE b_in0, b_in1, b_in2, b_in3, b_in4;
+        FFTZ_DOUBLE b_s1, b_s2, b_s3, b_s4, b_s5, b_s6, b_s7;
+        FFTZ_DOUBLE b_t1, b_t2, b_t3, b_t4, b_t5, b_t6, b_t7;
 
         b_in0 = in[in_strides[1]]; // Input point 2: x(1)
         b_in1 = in[in_strides[2]]; // Input point 3: x(2)
@@ -2129,7 +2151,8 @@ static VOID r2hcf_rfft5avx512_fp64_bwd(VOID *in_real, VOID *in_imag,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-kfft_ register_kernel_r2hcf_rfft5avx512(UINT8 precision, UINT8 direction)
+kfft_ register_kernel_r2hcf_rfft5avx512(FFTZ_UINT8 precision,
+                                        FFTZ_UINT8 direction)
 {
     if (direction == FORWARD_FFT_DIR)
     {

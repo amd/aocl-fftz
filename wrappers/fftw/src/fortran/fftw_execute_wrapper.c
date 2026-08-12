@@ -11,42 +11,47 @@
 
 #include "src/translator/fftz_translator.h"
 
-VOID dfftw_execute_(fftw_plan *const p)
+FFTZ_VOID dfftw_execute_(fftw_plan *const p)
 {
     fftw_execute(*p);
 }
 
-VOID dfftwf_execute_(fftwf_plan *const p)
+FFTZ_VOID dfftwf_execute_(fftwf_plan *const p)
 {
     fftwf_execute(*p);
 }
 
-VOID dfftw_execute_dft_(fftw_plan *p, fftw_complex *in, fftw_complex *out)
+FFTZ_VOID dfftw_execute_dft_(fftw_plan *p, fftw_complex *in, fftw_complex *out)
 {
     fftw_execute_dft(*p, in, out);
 }
 
-VOID dfftwf_execute_dft_(fftwf_plan *p, fftwf_complex *in, fftwf_complex *out)
+FFTZ_VOID dfftwf_execute_dft_(fftwf_plan *p, fftwf_complex *in,
+                              fftwf_complex *out)
 {
     fftwf_execute_dft(*p, in, out);
 }
 
-VOID dfftw_execute_dft_r2c_(fftw_plan *p, DOUBLE *in, fftw_complex *out)
+FFTZ_VOID dfftw_execute_dft_r2c_(fftw_plan *p, FFTZ_DOUBLE *in,
+                                 fftw_complex *out)
 {
     fftw_execute_dft_r2c(*p, in, out);
 }
 
-VOID dfftwf_execute_dft_r2c_(fftwf_plan *p, FLOAT *in, fftwf_complex *out)
+FFTZ_VOID dfftwf_execute_dft_r2c_(fftwf_plan *p, FFTZ_FLOAT *in,
+                                  fftwf_complex *out)
 {
     fftwf_execute_dft_r2c(*p, in, out);
 }
 
-VOID dfftw_execute_dft_c2r_(fftw_plan *p, fftw_complex *in, DOUBLE *out)
+FFTZ_VOID dfftw_execute_dft_c2r_(fftw_plan *p, fftw_complex *in,
+                                 FFTZ_DOUBLE *out)
 {
     fftw_execute_dft_c2r(*p, in, out);
 }
 
-VOID dfftwf_execute_dft_c2r_(fftwf_plan *p, fftwf_complex *in, FLOAT *out)
+FFTZ_VOID dfftwf_execute_dft_c2r_(fftwf_plan *p, fftwf_complex *in,
+                                  FFTZ_FLOAT *out)
 {
     fftwf_execute_dft_c2r(*p, in, out);
 }

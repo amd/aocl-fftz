@@ -10,43 +10,48 @@
 
 #include "src/translator/fftz_translator.h"
 
-VOID fftw_execute(const fftw_plan p)
+FFTZ_VOID fftw_execute(const fftw_plan p)
 {
-    aoclfftz_execute((VOID *)p);
+    aoclfftz_execute((FFTZ_VOID *)p);
 }
 
-VOID fftwf_execute(const fftwf_plan p)
+FFTZ_VOID fftwf_execute(const fftwf_plan p)
 {
-    aoclfftz_execute((VOID *)p);
+    aoclfftz_execute((FFTZ_VOID *)p);
 }
 
-VOID fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out)
+FFTZ_VOID fftw_execute_dft(const fftw_plan p, fftw_complex *in,
+                           fftw_complex *out)
 {
-    aoclfftz_execute_io((VOID *)p, (VOID *)in, (VOID *)out);
+    aoclfftz_execute_io((FFTZ_VOID *)p, (FFTZ_VOID *)in, (FFTZ_VOID *)out);
 }
 
-VOID fftwf_execute_dft(const fftwf_plan p, fftwf_complex *in,
+FFTZ_VOID fftwf_execute_dft(const fftwf_plan p, fftwf_complex *in,
                        fftwf_complex *out)
 {
-    aoclfftz_execute_io((VOID *)p, (VOID *)in, (VOID *)out);
+    aoclfftz_execute_io((FFTZ_VOID *)p, (FFTZ_VOID *)in, (FFTZ_VOID *)out);
 }
 
-VOID fftw_execute_dft_r2c(const fftw_plan p, DOUBLE *in, fftw_complex *out)
+FFTZ_VOID fftw_execute_dft_r2c(const fftw_plan p, FFTZ_DOUBLE *in,
+                               fftw_complex *out)
 {
-    aoclfftz_execute_io((VOID *)p, (VOID *)in, (VOID *)out);
+    aoclfftz_execute_io((FFTZ_VOID *)p, (FFTZ_VOID *)in, (FFTZ_VOID *)out);
 }
 
-VOID fftwf_execute_dft_r2c(const fftwf_plan p, FLOAT *in, fftwf_complex *out)
+FFTZ_VOID fftwf_execute_dft_r2c(const fftwf_plan p, FFTZ_FLOAT *in,
+                                fftwf_complex *out)
 {
-    aoclfftz_execute_io((VOID *)p, (VOID *)in, (VOID *)out);
+    aoclfftz_execute_io((FFTZ_VOID *)p, (FFTZ_VOID *)in, (FFTZ_VOID *)out);
 }
 
-VOID fftw_execute_dft_c2r(const fftw_plan p, fftw_complex *in, DOUBLE *out)
+FFTZ_VOID fftw_execute_dft_c2r(const fftw_plan p, fftw_complex *in,
+                               FFTZ_DOUBLE *out)
 {
-    aoclfftz_execute_io((VOID *)p, (VOID *)in, (VOID *)out);
+    aoclfftz_execute_io((FFTZ_VOID *)p, (FFTZ_VOID *)in, (FFTZ_VOID *)out);
 }
 
-VOID fftwf_execute_dft_c2r(const fftwf_plan p, fftwf_complex *in, FLOAT *out)
+FFTZ_VOID fftwf_execute_dft_c2r(const fftwf_plan p, fftwf_complex *in,
+                                FFTZ_FLOAT *out)
 {
-    aoclfftz_execute_io((VOID *)p, (VOID *)in, (VOID *)out);
+    aoclfftz_execute_io((FFTZ_VOID *)p, (FFTZ_VOID *)in, (FFTZ_VOID *)out);
 }

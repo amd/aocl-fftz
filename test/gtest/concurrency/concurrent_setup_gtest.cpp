@@ -33,9 +33,9 @@ extern "C"
 namespace {
 
 // Per-test concurrency knobs.
-constexpr INT32 thread_count = 16;
-constexpr INT32 iter_count   = 32;
-constexpr INT32 fft_size     = 16;
+constexpr FFTZ_INT32 thread_count = 16;
+constexpr FFTZ_INT32 iter_count   = 32;
+constexpr FFTZ_INT32 fft_size     = 16;
 
 // Which (precision, fft_type) FFT variant an OpenMP thread should run.
 enum class fft_variant
@@ -54,7 +54,7 @@ template <>
 struct setup_api<double>
 {
     using prob_desc_t = aoclfftz_prob_desc_d;
-    static VOID *setup(prob_desc_t *p)
+    static FFTZ_VOID *setup(prob_desc_t *p)
     {
         return aoclfftz_setup_d(p);
     }
@@ -64,7 +64,7 @@ template <>
 struct setup_api<float>
 {
     using prob_desc_t = aoclfftz_prob_desc_f;
-    static VOID *setup(prob_desc_t *p)
+    static FFTZ_VOID *setup(prob_desc_t *p)
     {
         return aoclfftz_setup_f(p);
     }
@@ -75,9 +75,9 @@ struct setup_api<float>
 //   - real input    -> stride = 1 (contiguous reals)
 //   - complex input -> stride = 2 (real parts only; imag parts stay zero)
 template <typename T>
-static VOID fill_data(T *buf, INT32 n, INT32 stride)
+static FFTZ_VOID fill_data(T *buf, FFTZ_INT32 n, FFTZ_INT32 stride)
 {
-    for (INT32 i = 0; i < n; ++i)
+    for (FFTZ_INT32 i = 0; i < n; ++i)
     {
         buf[i * stride] = static_cast<T>(i);
     }
@@ -85,11 +85,11 @@ static VOID fill_data(T *buf, INT32 n, INT32 stride)
 
 // Populate the descriptor with the fields.
 template <typename T>
-static VOID populate_problem_descriptor(
+static FFTZ_VOID populate_problem_descriptor(
     typename setup_api<T>::prob_desc_t   &p,
     T                                    *in_ptr,
     T                                    *out_ptr,
-    INT32                                fft_type,
+    FFTZ_INT32                                fft_type,
     aoclfftz_dim_t                       &dim,
     aoclfftz_dim_t                       &vec)
 {
@@ -128,15 +128,15 @@ static VOID populate_problem_descriptor(
 // Run iter_count rendezvous-then-setup/execute/destroy iterations against
 // the supplied problem descriptor.
 template <typename T>
-static VOID run_fft(
+static FFTZ_VOID run_fft(
     typename setup_api<T>::prob_desc_t &problem,
-    INT32                                &had_failure)
+    FFTZ_INT32                                &had_failure)
 {
-    for (INT32 it = 0; it < iter_count; ++it)
+    for (FFTZ_INT32 it = 0; it < iter_count; ++it)
     {
         #pragma omp barrier
 
-        VOID *handle = setup_api<T>::setup(&problem);
+        FFTZ_VOID *handle = setup_api<T>::setup(&problem);
         if (handle == nullptr)
         {
             had_failure = 1;
@@ -151,7 +151,7 @@ static VOID run_fft(
 }
 
 template <typename T>
-static VOID run_complex(INT32 &had_failure)
+static FFTZ_VOID run_complex(FFTZ_INT32 &had_failure)
 {
     std::vector<T> in (2 * fft_size, T{0});
     std::vector<T> out(2 * fft_size, T{0});
@@ -167,7 +167,7 @@ static VOID run_complex(INT32 &had_failure)
 }
 
 template <typename T>
-static VOID run_real(INT32 &had_failure)
+static FFTZ_VOID run_real(FFTZ_INT32 &had_failure)
 {
     std::vector<T> in (fft_size,     T{0});
     std::vector<T> out(fft_size + 2, T{0});
@@ -182,7 +182,7 @@ static VOID run_real(INT32 &had_failure)
     run_fft<T>(problem, had_failure);
 }
 
-static VOID dispatch_run(fft_variant variant, INT32 &had_failure)
+static FFTZ_VOID dispatch_run(fft_variant variant, FFTZ_INT32 &had_failure)
 {
     switch (variant)
     {
@@ -201,18 +201,18 @@ static VOID dispatch_run(fft_variant variant, INT32 &had_failure)
 // returns the fft_variant that thread `tid` should execute, letting
 // callers interleave whichever variants they want. The test fails if any
 // setup or execute call returned an error on any iteration on any thread.
-static VOID run_concurrent_setup(
+static FFTZ_VOID run_concurrent_setup(
     const char *test_label,
-    const std::function<fft_variant(INT32)> &variant_for_thread)
+    const std::function<fft_variant(FFTZ_INT32)> &variant_for_thread)
 {
-    INT32 any_failure = 0;
+    FFTZ_INT32 any_failure = 0;
 
 #pragma omp parallel num_threads(thread_count) reduction(|| : any_failure)
   {
-    INT32 tid = omp_get_thread_num();
+    FFTZ_INT32 tid = omp_get_thread_num();
     fft_variant variant = variant_for_thread(tid);
 
-    INT32 had_failure = 0;
+    FFTZ_INT32 had_failure = 0;
     dispatch_run(variant, had_failure);
 
     any_failure = any_failure || had_failure;
@@ -230,7 +230,7 @@ TEST(ConcurrentSetupTest, SimultaneousSetupDoesNotFail)
 {
     run_concurrent_setup(
         "C2C double homogeneous",
-        [](INT32) -> fft_variant { return fft_variant::COMPLEX_DOUBLE; });
+        [](FFTZ_INT32) -> fft_variant { return fft_variant::COMPLEX_DOUBLE; });
 }
 
 // Mix R2C and C2C double-precision setups across threads.
@@ -238,7 +238,7 @@ TEST(ConcurrentSetupTest, MixedRealComplexSetupDoesNotFail)
 {
     run_concurrent_setup(
         "R2C+C2C double interleaved",
-        [](INT32 i) -> fft_variant {
+        [](FFTZ_INT32 i) -> fft_variant {
             return (i % 2 == 0) ? fft_variant::COMPLEX_DOUBLE
                                 : fft_variant::REAL_DOUBLE;
         });
@@ -249,7 +249,7 @@ TEST(ConcurrentSetupTest, MixedFloatDoubleSetupDoesNotFail)
 {
     run_concurrent_setup(
         "C2C f32+f64 interleaved",
-        [](INT32 i) -> fft_variant {
+        [](FFTZ_INT32 i) -> fft_variant {
             return (i % 2 == 0) ? fft_variant::COMPLEX_DOUBLE
                                 : fft_variant::COMPLEX_FLOAT;
         });
@@ -261,7 +261,7 @@ TEST(ConcurrentSetupTest, MixedAllFourSetupDoesNotFail)
 {
     run_concurrent_setup(
         "C2C+R2C x f32+f64 interleaved",
-        [](INT32 i) -> fft_variant {
+        [](FFTZ_INT32 i) -> fft_variant {
             switch (i % 4)
             {
                 case 0:  return fft_variant::COMPLEX_DOUBLE;

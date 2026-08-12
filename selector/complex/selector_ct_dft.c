@@ -17,7 +17,7 @@
 #include "utils/utils.h"
 #include "core/common/twiddle.h"
 
-INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
+FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -36,12 +36,12 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     // updating cost
     aoclfftz_solution_t *org_sol = NULL;
 
-    INTP n = sel->solution->decomp_scheme->dims[0].n;
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 stats_mode =
+    FFTZ_INTP n = sel->solution->decomp_scheme->dims[0].n;
+    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 stats_mode =
         sel->solution->decomp_scheme->cntrl_params->measure_stats;
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     if (vec_rank != 1 || dim_rank != 1)
     {
@@ -103,11 +103,11 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     // Flag to store whether the previous solution is selected
     // based on minimum ops cost
-    UINT8 is_previous_solution_selected = 0;
+    FFTZ_UINT8 is_previous_solution_selected = 0;
 
-    for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
+    for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
-        INTP radix_r = (INTP)kertab[i].radix;
+        FFTZ_INTP radix_r = (FFTZ_INTP)kertab[i].radix;
 
         if (radix_r == 0) // End of suitable kernels in the list
         {
@@ -121,7 +121,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         }
 
         // choose the other radix m
-        INTP radix_m = n / radix_r;
+        FFTZ_INTP radix_m = n / radix_r;
 
         // Create a new cur_sel & cur_sel_m selectors
         // if previous solutions is selected
@@ -153,7 +153,8 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
             goto exit_ct_dft;
         }
 
-        // TODO: if selector mode is AOCLFFTZ_AUTO_SELECTOR call twiddle multiplier
+        // TODO: if selector mode is AOCLFFTZ_AUTO_SELECTOR call twiddle
+        // multiplier
 
         // Call selector for the radix-r sub-problem
 #if 0
@@ -168,7 +169,7 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
             radix_m_sol->decomp_scheme->dims[0].out_stride;
 
         aoclfftz_generic_solver_t* solver_obj = cur_sel->solution->solver;
-        INT32 avl_threads =
+        FFTZ_INT32 avl_threads =
             cur_sel->solution->decomp_scheme->thread_info->avl_threads;
         if (avl_threads == 1)
         {
@@ -327,7 +328,8 @@ INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 RESET_COST(cur_sel_m);
                 if (cur_sel_m->solution->dft_bufs->ct_buf_allocated)
                 {
-                    FREE_ALIGN_ALLOCATED_MEM(cur_sel_m->solution->dft_bufs->ct_buffer);
+                    FREE_ALIGN_ALLOCATED_MEM(
+                        cur_sel_m->solution->dft_bufs->ct_buffer);
                     cur_sel_m->solution->dft_bufs->ct_buf_allocated = 0;
                 }
             }

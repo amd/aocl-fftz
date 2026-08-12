@@ -13,26 +13,26 @@
 
 #include "core/common/memory_manager.h"
 
-INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
+FFTZ_INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
                                  aoclfftz_realhelper_t *realhelper)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    INT32 status = SOLVER_SUCCESS;
+    FFTZ_INT32 status = SOLVER_SUCCESS;
     realhelper->is_buffered_invoked = 1;
 
-    INT32 dt_bytes = SOL_DT_SIZE(sol);
-    INTP n = sol->decomp_scheme->dims[0].n;
-    INTP num_slots = sol->decomp_scheme->outer_buf_cnt
+    FFTZ_INT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_INTP n = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP num_slots = sol->decomp_scheme->outer_buf_cnt
                    * sol->decomp_scheme->thread_info->n_threads;
 
-    INTP aux_buf_size = GET_PADDED_SIZE(n * dt_bytes);
+    FFTZ_INTP aux_buf_size = GET_PADDED_SIZE(n * dt_bytes);
 
     FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
     FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
-    ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_1, VOID,
+    ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_1, FFTZ_VOID,
                        aux_buf_size * num_slots + dt_bytes); // FIXME: remove the "+ dt_bytes" padding
-    ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_2, VOID,
+    ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_2, FFTZ_VOID,
                        aux_buf_size * num_slots + dt_bytes); // FIXME: remove the "+ dt_bytes" padding
     if (sol->dft_bufs->buffered->aux_buffer_1 == NULL ||
         sol->dft_bufs->buffered->aux_buffer_2 == NULL)
@@ -54,11 +54,11 @@ INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
     return status;
 }
 
-static INT32 execute_real_buffered_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_real_buffered_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    INT32 ret = SOLVER_SUCCESS;
+    FFTZ_INT32 ret = SOLVER_SUCCESS;
 
     // composite problem input
     sol->next_sol[0]->decomp_scheme->in_real = sol->decomp_scheme->in_real;
@@ -71,7 +71,7 @@ static INT32 execute_real_buffered_solver(aoclfftz_solution_t *sol)
     return ret;
 }
 
-dft_solver_ register_execute_real_buffered_solver(VOID)
+dft_solver_ register_execute_real_buffered_solver(FFTZ_VOID)
 {
     return execute_real_buffered_solver;
 }

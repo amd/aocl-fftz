@@ -18,7 +18,7 @@
 static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 38, 90, 104, 19, 35},
                                                      {0, 38, 90,  52,  6, 35}};
 
-ops_cycles_t get_ops_cnt_fft13avx256(UINT8 precision, UINT8 direction)
+ops_cycles_t get_ops_cnt_fft13avx256(FFTZ_UINT8 precision, FFTZ_UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -30,24 +30,31 @@ ops_cycles_t get_ops_cnt_fft13avx256(UINT8 precision, UINT8 direction)
     }
 }
 
-static VOID fft13avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                     VOID *twd, UINT8 flag)
+static FFTZ_VOID fft13avx256fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                                 FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                                 FFTZ_INTP n, aoclfftz_strides_t *strides,
+                                 FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    const FLOAT CRTM_13[10] =
-        {0.866025403784438646763723170752936183471402627f,
-         0.500000000000000000000000000000000000000000000f,
-         0.866025403784438646763723170752936183471402627f,
-         0.500000000000000000000000000000000000000000000f,
-         0.447320117602511140667282045633987571324387014f,  // 2 * DGC[3] * CRTM_13[3]
-         0.265966249214837287587521063842185948798330267f,  // 2 * DGC[4] * CRTM_13[3]
-         0.131467828262610852858973617628781241523254441f,  // 2 * DGC[7] * CRTM_13[3]
-         0.503537032863766627246873853868466977093348562f,  // 2 * DGC[8] * CRTM_13[3]
-         0.575140729474003121368385547455453388461001608f,  // 2 * DGC[5] * CRTM_13[2]
-         0.174138601152135905005660794929264742616964676f}; // 2 * DGC[6] * CRTM_13[2]
+    const FFTZ_FLOAT CRTM_13[10] = {
+        0.866025403784438646763723170752936183471402627f,
+        0.500000000000000000000000000000000000000000000f,
+        0.866025403784438646763723170752936183471402627f,
+        0.500000000000000000000000000000000000000000000f,
+        0.447320117602511140667282045633987571324387014f,  // 2 * DGC[3] *
+                                                           // CRTM_13[3]
+        0.265966249214837287587521063842185948798330267f,  // 2 * DGC[4] *
+                                                           // CRTM_13[3]
+        0.131467828262610852858973617628781241523254441f,  // 2 * DGC[7] *
+                                                           // CRTM_13[3]
+        0.503537032863766627246873853868466977093348562f,  // 2 * DGC[8] *
+                                                           // CRTM_13[3]
+        0.575140729474003121368385547455453388461001608f,  // 2 * DGC[5] *
+                                                           // CRTM_13[2]
+        0.174138601152135905005660794929264742616964676f}; // 2 * DGC[6] *
+                                                           // CRTM_13[2]
 
-    const FLOAT DGC[12] =
+    const FFTZ_FLOAT DGC[12] =
         {0.383795939621999107759935105622541328854274714f,   // DGC[0] + DGC[11]
          0.512495343165873201917369308123450118288250350f,   // 2 * DGC[1]
          0.313782782103169222093665453512006539320425272f,   // 2 * DGC[2]
@@ -61,23 +68,23 @@ static VOID fft13avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
          0.023198211211536581443310913308166504379654082f,   // 2 * DGC[10]
          -0.217129272955332441093268438955874662187608048f}; // DGC[0] - DGC[11]
 
-    FLOAT *in_r = (FLOAT *)in_real;
-    FLOAT *out_r = (FLOAT *)out_real;
+    FFTZ_FLOAT *in_r = (FFTZ_FLOAT *)in_real;
+    FFTZ_FLOAT *out_r = (FFTZ_FLOAT *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
-    INTP v_out_stride = strides->v_out_stride;
-    UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
-    INTP N = n / NUM_SETS_256_S;
-    INTP remaining_sets = n % NUM_SETS_256_S;
-    INTP count;
-    FLOAT *curr_in, *curr_out;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
+    FFTZ_INTP N = n / NUM_SETS_256_S;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_256_S;
+    FFTZ_INTP count;
+    FFTZ_FLOAT *curr_in, *curr_out;
 
     // Registers to hold input data points
     __m256 v_in0, v_in1, v_in2, v_in3, v_in4, v_in5, v_in6, v_in7, v_in8,
@@ -1018,24 +1025,31 @@ static VOID fft13avx256fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-static VOID fft13avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                     VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                     VOID *twd, UINT8 flag)
+static FFTZ_VOID fft13avx256fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                                 FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                                 FFTZ_INTP n, aoclfftz_strides_t *strides,
+                                 FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    const DOUBLE CRTM_13[10] =
-        {0.866025403784438646763723170752936183471402627,
-         0.500000000000000000000000000000000000000000000,
-         0.866025403784438646763723170752936183471402627,
-         0.500000000000000000000000000000000000000000000,
-         0.447320117602511140667282045633987571324387014,  // 2 * DGC[3] * CRTM_13[3]
-         0.265966249214837287587521063842185948798330267,  // 2 * DGC[4] * CRTM_13[3]
-         0.131467828262610852858973617628781241523254441,  // 2 * DGC[7] * CRTM_13[3]
-         0.503537032863766627246873853868466977093348562,  // 2 * DGC[8] * CRTM_13[3]
-         0.575140729474003121368385547455453388461001608,  // 2 * DGC[5] * CRTM_13[2]
-         0.174138601152135905005660794929264742616964676}; // 2 * DGC[6] * CRTM_13[2]
+    const FFTZ_DOUBLE CRTM_13[10] = {
+        0.866025403784438646763723170752936183471402627,
+        0.500000000000000000000000000000000000000000000,
+        0.866025403784438646763723170752936183471402627,
+        0.500000000000000000000000000000000000000000000,
+        0.447320117602511140667282045633987571324387014,  // 2 * DGC[3] *
+                                                          // CRTM_13[3]
+        0.265966249214837287587521063842185948798330267,  // 2 * DGC[4] *
+                                                          // CRTM_13[3]
+        0.131467828262610852858973617628781241523254441,  // 2 * DGC[7] *
+                                                          // CRTM_13[3]
+        0.503537032863766627246873853868466977093348562,  // 2 * DGC[8] *
+                                                          // CRTM_13[3]
+        0.575140729474003121368385547455453388461001608,  // 2 * DGC[5] *
+                                                          // CRTM_13[2]
+        0.174138601152135905005660794929264742616964676}; // 2 * DGC[6] *
+                                                          // CRTM_13[2]
 
-    const DOUBLE DGC[12] =
+    const FFTZ_DOUBLE DGC[12] =
         {0.383795939621999107759935105622541328854274714,   // DGC[0] + DGC[11]
          0.512495343165873201917369308123450118288250350,   // 2 * DGC[1]
          0.313782782103169222093665453512006539320425272,   // 2 * DGC[2]
@@ -1049,22 +1063,22 @@ static VOID fft13avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
          0.023198211211536581443310913308166504379654082,   // 2 * DGC[10]
          -0.217129272955332441093268438955874662187608048}; // DGC[0] - DGC[11]
 
-    DOUBLE *in_r = (DOUBLE *)in_real;
-    DOUBLE *out_r = (DOUBLE *)out_real;
+    FFTZ_DOUBLE *in_r = (FFTZ_DOUBLE *)in_real;
+    FFTZ_DOUBLE *out_r = (FFTZ_DOUBLE *)out_real;
     #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
     #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
     #endif
-    INTP v_in_stride = strides->v_in_stride;
-    UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
-    INTP v_out_stride = strides->v_out_stride;
-    UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
-    INTP N = n / NUM_SETS_256_D;
-    INTP count;
-    DOUBLE *curr_in, *curr_out;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
+    FFTZ_INTP N = n / NUM_SETS_256_D;
+    FFTZ_INTP count;
+    FFTZ_DOUBLE *curr_in, *curr_out;
 
     // Registers to hold input data points
     __m256d v_in0, v_in1, v_in2, v_in3, v_in4, v_in5, v_in6, v_in7, v_in8,
@@ -1679,7 +1693,8 @@ static VOID fft13avx256fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-kfft_ register_kernel_fft13avx256(UINT8 precision, UINT8 direction /* unused */)
+kfft_ register_kernel_fft13avx256(FFTZ_UINT8 precision,
+                                  FFTZ_UINT8 direction /* unused */)
 {
     if (precision == DT_FLOAT)
     {

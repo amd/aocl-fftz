@@ -14,7 +14,8 @@
 
 #include "core/solvers/solver.h"
 
-INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol, INT32 num_threads_used)
+FFTZ_INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol,
+                                   FFTZ_INT32 num_threads_used)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -36,16 +37,17 @@ INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol, INT32 num_threads_used)
 }
 
 // Recursively solves batched FFT by handling the innermost dimension first.
-INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
-                                         aoclfftz_solution_t **next_sol, INTP vec_rank)
+FFTZ_INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
+                                              aoclfftz_solution_t **next_sol,
+                                              FFTZ_INTP vec_rank)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    INT32 status = SOLVER_SUCCESS;
-    INTP rnk_offset, v_in_stride, v_out_stride;
+    FFTZ_INT32 status = SOLVER_SUCCESS;
+    FFTZ_INTP rnk_offset, v_in_stride, v_out_stride;
 
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
     v_in_stride = sol->decomp_scheme->vecs[vec_rank - 1].in_stride *
                   DATA_STRIDE * dt_bytes;
@@ -55,19 +57,19 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
     if (vec_rank == 1)
     {
         // For innermost vector rank, execute the solver
-        INTP batches = sol->decomp_scheme->vecs[0].n;
-        VOID *in_real = next_sol[0]->decomp_scheme->in_real;
-        VOID *in_imag = next_sol[0]->decomp_scheme->in_imag;
-        VOID *out_real = next_sol[0]->decomp_scheme->out_real;
-        VOID *out_imag = next_sol[0]->decomp_scheme->out_imag;
+        FFTZ_INTP batches = sol->decomp_scheme->vecs[0].n;
+        FFTZ_VOID *in_real = next_sol[0]->decomp_scheme->in_real;
+        FFTZ_VOID *in_imag = next_sol[0]->decomp_scheme->in_imag;
+        FFTZ_VOID *out_real = next_sol[0]->decomp_scheme->out_real;
+        FFTZ_VOID *out_imag = next_sol[0]->decomp_scheme->out_imag;
 
-        INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
+        FFTZ_INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
 
         #pragma omp parallel for num_threads(n_threads)
-        for (INTP b = 0; b < batches; b++)
+        for (FFTZ_INTP b = 0; b < batches; b++)
         {
-            INT32 tid = omp_get_thread_num();
-            INT32 local_status = SOLVER_SUCCESS;
+            FFTZ_INT32 tid = omp_get_thread_num();
+            FFTZ_INT32 local_status = SOLVER_SUCCESS;
 
             next_sol[tid]->decomp_scheme->in_real =
                                 MOVE_ADDR(in_real, b * v_in_stride);
@@ -94,20 +96,21 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
     else
     {
         // save pointers to reset after all executions
-        VOID *in_real = next_sol[0]->decomp_scheme->in_real;
-        VOID *in_imag = next_sol[0]->decomp_scheme->in_imag;
-        VOID *out_real = next_sol[0]->decomp_scheme->out_real;
-        VOID *out_imag = next_sol[0]->decomp_scheme->out_imag;
+        FFTZ_VOID *in_real = next_sol[0]->decomp_scheme->in_real;
+        FFTZ_VOID *in_imag = next_sol[0]->decomp_scheme->in_imag;
+        FFTZ_VOID *out_real = next_sol[0]->decomp_scheme->out_real;
+        FFTZ_VOID *out_imag = next_sol[0]->decomp_scheme->out_imag;
 
         for (rnk_offset = 0;
-             rnk_offset < sol->decomp_scheme->vecs[vec_rank - 1].n; rnk_offset++)
+             rnk_offset < sol->decomp_scheme->vecs[vec_rank - 1].n;
+             rnk_offset++)
         {
             // save pointer to restore it below since
             // they will be moved while execution
-            VOID *in_real = next_sol[0]->decomp_scheme->in_real;
-            VOID *in_imag = next_sol[0]->decomp_scheme->in_imag;
-            VOID *out_real = next_sol[0]->decomp_scheme->out_real;
-            VOID *out_imag = next_sol[0]->decomp_scheme->out_imag;
+            FFTZ_VOID *in_real = next_sol[0]->decomp_scheme->in_real;
+            FFTZ_VOID *in_imag = next_sol[0]->decomp_scheme->in_imag;
+            FFTZ_VOID *out_real = next_sol[0]->decomp_scheme->out_real;
+            FFTZ_VOID *out_imag = next_sol[0]->decomp_scheme->out_imag;
 
             //recursive call to solve the inner batches
             status = execute_mt_batched_solver_internal(sol, next_sol,
@@ -118,8 +121,8 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
             }
 
             // Adjust pointers for the next iteration
-            INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
-            for (INT32 i = 0; i < n_threads; i++)
+            FFTZ_INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
+            for (FFTZ_INT32 i = 0; i < n_threads; i++)
             {
                 next_sol[i]->decomp_scheme->in_real =
                     MOVE_ADDR(in_real, v_in_stride);
@@ -151,15 +154,15 @@ INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
  * sol->decomp_scheme->vecs[rnk].out_stride gives the offset at which
  * output buffer starts for the current rank/position in the vector array.
  */
-static INT32 execute_mt_batched_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_mt_batched_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    INT32 status = SOLVER_SUCCESS;
+    FFTZ_INT32 status = SOLVER_SUCCESS;
     aoclfftz_solution_t **next_sol = sol->next_sol;
 
-    for (INT32 i = 0; i < sol->decomp_scheme->thread_info->n_threads; i++)
+    for (FFTZ_INT32 i = 0; i < sol->decomp_scheme->thread_info->n_threads; i++)
     {
         next_sol[i]->decomp_scheme->in_real = sol->decomp_scheme->in_real;
         next_sol[i]->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
@@ -175,7 +178,7 @@ static INT32 execute_mt_batched_solver(aoclfftz_solution_t *sol)
     return status;
 }
 
-dft_solver_ register_execute_mt_batched_solver(VOID)
+dft_solver_ register_execute_mt_batched_solver(FFTZ_VOID)
 {
     return execute_mt_batched_solver;
 }

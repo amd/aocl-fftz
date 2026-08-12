@@ -14,7 +14,7 @@
 #include "selector/selector.h"
 #include "utils/utils.h"
 
-INT32 selector_transpose(aoclfftz_selector_t *sel)
+FFTZ_INT32 selector_transpose(aoclfftz_selector_t *sel)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -27,7 +27,7 @@ INT32 selector_transpose(aoclfftz_selector_t *sel)
         return SELECTOR_FAILURE;
     }
 
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     // Support only 2D transpose problems.
     if (sel->solution->decomp_scheme->dim_rank != 2)

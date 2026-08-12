@@ -19,9 +19,10 @@
 /**
  * Build the cached feature bitmask from CPU/OS detection.
  */
-static VOID detect_capabilities(UINT64 *cpu_capabilities, UINT32 max_cpuid_leaf,
-                                cpuid_result_t cpuid_leaf1,
-                                cpuid_result_t cpuid_leaf7)
+static FFTZ_VOID detect_capabilities(FFTZ_UINT64 *cpu_capabilities,
+                                     FFTZ_UINT32 max_cpuid_leaf,
+                                     cpuid_result_t cpuid_leaf1,
+                                     cpuid_result_t cpuid_leaf7)
 {
     if (has_avx(cpuid_leaf1) && has_avx_support(cpuid_leaf1))
     {
@@ -64,9 +65,9 @@ static VOID detect_capabilities(UINT64 *cpu_capabilities, UINT32 max_cpuid_leaf,
 /**
  * Initialize the dynamic dispatcher and detect capabilities.
  */
-VOID init_dynamic_dispatcher(UINT64 *cpu_capabilities)
+FFTZ_VOID init_dynamic_dispatcher(FFTZ_UINT64 *cpu_capabilities)
 {
-    UINT32 max_cpuid_leaf;
+    FFTZ_UINT32 max_cpuid_leaf;
     cpuid_result_t cpuid_leaf1, cpuid_leaf7;
 
     initialize_cpuid_cache(&max_cpuid_leaf, &cpuid_leaf1, &cpuid_leaf7);
@@ -75,9 +76,9 @@ VOID init_dynamic_dispatcher(UINT64 *cpu_capabilities)
 }
 
 /* Compute build max ISA dispatch level from the feature bitmask */
-INT32 get_max_build_isa_level(UINT64 cpu_capabilities)
+FFTZ_INT32 get_max_build_isa_level(FFTZ_UINT64 cpu_capabilities)
 {
-    INT32 level = optlevel_scalar;
+    FFTZ_INT32 level = optlevel_scalar;
 
 #ifdef ENABLE_AVX128
     if ((cpu_capabilities & FEATURE_LEVEL_AVX128) == FEATURE_LEVEL_AVX128)

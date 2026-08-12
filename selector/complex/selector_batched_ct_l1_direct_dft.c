@@ -6,8 +6,8 @@
  *  @brief Selector for the fused batched + 1-level CT solver.
  *
  *  For batched problems whose inner FFT decomposes into exactly one CT
- *  level (n = radix_r * radix_m, radix_r from twiddle kernel table, radix_m from
- *  standard FFT kernel table), this selector:
+ *  level (n = radix_r * radix_m, radix_r from twiddle kernel table, radix_m
+ * from standard FFT kernel table), this selector:
  *
  *    1. Iterates over candidate factorizations n = radix_r * radix_m
  *    2. Evaluates kernel cost across all ISA categories for each
@@ -27,21 +27,22 @@
 /* Tracks a candidate kernel's table index and its estimated cost. */
 typedef struct
 {
-    INTP  idx;
-    INT64 cost;
+    FFTZ_INTP  idx;
+    FFTZ_INT64 cost;
 } kernel_choice_t;
 
 /* Return the base-category slot index whose radix matches, or -1 if none. */
-static INTP find_radix_base_idx(kernel_t *kertab, INTP radix)
+static FFTZ_INTP find_radix_base_idx(kernel_t *kertab, FFTZ_INTP radix)
 {
-    for (INTP base_idx = 0; base_idx < NUM_KERNELS_IN_EACH_CATEGORY; base_idx++)
+    for (FFTZ_INTP base_idx = 0; base_idx < NUM_KERNELS_IN_EACH_CATEGORY;
+         base_idx++)
     {
         if (kertab[base_idx].radix == 0) // End of suitable kernels in the list
         {
             break;
         }
 
-        if ((INTP)kertab[base_idx].radix == radix)
+        if ((FFTZ_INTP)kertab[base_idx].radix == radix)
         {
             return base_idx;
         }
@@ -49,22 +50,23 @@ static INTP find_radix_base_idx(kernel_t *kertab, INTP radix)
     return -1;
 }
 
-/* Pick the optimal kernel across all ISA categories for a given radix & batch size. */
-static kernel_choice_t find_best_kernel(kernel_t *kertab, INTP base_idx,
-                                      UINT8 precision, UINT8 direction,
-                                      INTP batch)
+/* Pick the optimal kernel across all ISA categories for a given radix & batch
+ * size. */
+static kernel_choice_t find_best_kernel(kernel_t *kertab, FFTZ_INTP base_idx,
+                                        FFTZ_UINT8 precision,
+                                        FFTZ_UINT8 direction, FFTZ_INTP batch)
 {
     kernel_choice_t optimal = {-1, INT64_MAX};
 
-    for (INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
+    for (FFTZ_INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
     {
-        INTP kloc = kcat * NUM_KERNELS_IN_EACH_CATEGORY + base_idx;
+        FFTZ_INTP kloc = kcat * NUM_KERNELS_IN_EACH_CATEGORY + base_idx;
         if (kertab[kloc].kfft[direction] == NULL)
         {
             continue;
         }
 
-        INT64 cost = compute_kernel_cost(&kertab[kloc], precision,
+        FFTZ_INT64 cost = compute_kernel_cost(&kertab[kloc], precision,
                                          direction, batch);
         if (cost < optimal.cost)
         {
@@ -75,7 +77,7 @@ static kernel_choice_t find_best_kernel(kernel_t *kertab, INTP base_idx,
     return optimal;
 }
 
-INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel)
+FFTZ_INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -91,24 +93,25 @@ INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel)
     }
 
     aoclfftz_solution_t *sol = sel->solution;
-    INTP n = sol->decomp_scheme->dims[0].n;
-    INTP batch = sol->decomp_scheme->vecs[0].n;
-    UINT8 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INTP n = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP batch = sol->decomp_scheme->vecs[0].n;
+    FFTZ_UINT8 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     kernel_t *kertab_twid = sel->kernel_tables->kt_twid_dft;
     kernel_t *kertab_dft  = sel->kernel_tables->kt_dft;
 
-    INT64 best_ops = INT64_MAX;
+    FFTZ_INT64 best_ops = INT64_MAX;
     kernel_choice_t best_kr = {-1, INT64_MAX};
     kernel_choice_t best_km = {-1, INT64_MAX};
-    INTP best_radix_r = 0;
-    INTP best_radix_m = 0;
+    FFTZ_INTP best_radix_r = 0;
+    FFTZ_INTP best_radix_m = 0;
 
-    for (INTP kr_base = 0; kr_base < NUM_KERNELS_IN_EACH_CATEGORY; kr_base++)
+    for (FFTZ_INTP kr_base = 0; kr_base < NUM_KERNELS_IN_EACH_CATEGORY;
+         kr_base++)
     {
-        INTP radix_r = (INTP)kertab_twid[kr_base].radix;
+        FFTZ_INTP radix_r = (FFTZ_INTP)kertab_twid[kr_base].radix;
 
         if (radix_r == 0) // End of suitable kernels in the list
         {
@@ -121,9 +124,9 @@ INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel)
             continue;
         }
 
-        INTP radix_m = n / radix_r;
+        FFTZ_INTP radix_m = n / radix_r;
 
-        INTP km_base = find_radix_base_idx(kertab_dft, radix_m);
+        FFTZ_INTP km_base = find_radix_base_idx(kertab_dft, radix_m);
         if (km_base < 0)
         {
             continue;
@@ -138,7 +141,7 @@ INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel)
             continue;
         }
 
-        INT64 cur_ops = kr.cost + km.cost;
+        FFTZ_INT64 cur_ops = kr.cost + km.cost;
         if (cur_ops < best_ops)
         {
             best_ops     = cur_ops;

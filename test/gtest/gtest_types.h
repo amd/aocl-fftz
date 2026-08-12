@@ -61,20 +61,21 @@ enum aocl_fftz_kernel_type
  * @brief A type used as the parameter for the parameterized tests (TEST_P)
  *
  * std::tuple<radix, aocl_fftz_kernel_type>
- * used UINT8 instead of aocl_fftz_kernel_type to perform bitwise operations
- * to make decisions.
+ * used FFTZ_UINT8 instead of aocl_fftz_kernel_type to perform bitwise
+ * operations to make decisions.
  */
-typedef std::tuple<UINT32, UINT8> aoclfftz_kernel_test_params_t;
+typedef std::tuple<FFTZ_UINT32, FFTZ_UINT8> aoclfftz_kernel_test_params_t;
 
 /**
  * @brief A type used as the parameter for the paraterized selector tests
  * (TEST_P)
  *
  */
-typedef std::tuple<std::string, INT32, INT32, std::vector<aoclfftz_solver_type>>
+typedef std::tuple<std::string, FFTZ_INT32, FFTZ_INT32,
+                   std::vector<aoclfftz_solver_type>>
     aoclfftz_selector_test_params_t;
 
 // function pointer to dft_solver
-typedef INT32 (*dft_solver_)(aoclfftz_solution_t *sol);
+typedef FFTZ_INT32 (*dft_solver_)(aoclfftz_solution_t *sol);
 
 #endif // AOCLFFTZ_GTEST_TYPES_H

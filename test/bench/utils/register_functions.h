@@ -20,6 +20,6 @@
 #include "test/bench/utils/data_generation.h"
 #include "test/bench/dft_reference.h"
 
-INT32 register_functions(aoclfftz_bench_params_t *params);
+FFTZ_INT32 register_functions(aoclfftz_bench_params_t *params);
 
 #endif // REGISTER_FUNCTIONS_H

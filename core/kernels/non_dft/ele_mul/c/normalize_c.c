@@ -14,30 +14,32 @@
 
 #include "core/kernels/kernel.h"
 
-static VOID normalize_fp32_c(VOID *data, INTP n, DOUBLE factor)
+static FFTZ_VOID normalize_fp32_c(FFTZ_VOID *data, FFTZ_INTP n,
+                                  FFTZ_DOUBLE factor)
 {
-    FLOAT *ptr_data = (FLOAT *)data;
-    const FLOAT factor_f = (FLOAT)factor;
-    INTP total_elements = n * DATA_STRIDE;
+    FFTZ_FLOAT *ptr_data = (FFTZ_FLOAT *)data;
+    const FFTZ_FLOAT factor_f = (FFTZ_FLOAT)factor;
+    FFTZ_INTP total_elements = n * DATA_STRIDE;
 
-    for (INTP i = 0; i < total_elements; i++)
+    for (FFTZ_INTP i = 0; i < total_elements; i++)
     {
         ptr_data[i] *= factor_f;
     }
 }
 
-static VOID normalize_fp64_c(VOID *data, INTP n, DOUBLE factor)
+static FFTZ_VOID normalize_fp64_c(FFTZ_VOID *data, FFTZ_INTP n,
+                                  FFTZ_DOUBLE factor)
 {
-    DOUBLE *ptr_data = (DOUBLE *)data;
-    INTP total_elements = n * DATA_STRIDE;
+    FFTZ_DOUBLE *ptr_data = (FFTZ_DOUBLE *)data;
+    FFTZ_INTP total_elements = n * DATA_STRIDE;
 
-    for (INTP i = 0; i < total_elements; i++)
+    for (FFTZ_INTP i = 0; i < total_elements; i++)
     {
         ptr_data[i] *= factor;
     }
 }
 
-normalize_ register_normalize_c(UINT8 precision)
+normalize_ register_normalize_c(FFTZ_UINT8 precision)
 {
     if (precision == DT_FLOAT)
     {

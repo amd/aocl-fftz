@@ -15,7 +15,7 @@
 
 #include "core/common/memory_manager.h"
 
-INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
+FFTZ_INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                           kernel_t *kernel)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
@@ -23,15 +23,15 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
     // TODO: Update the batch to batched_vecs[0].n if batched_vecs is not NULL
-    INTP batch = sol->decomp_scheme->vecs[0].n;
-    INTP radix = sol->decomp_scheme->dims[0].n;
-    UINT8 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
-    INT32 status = SOLVER_SUCCESS;
+    FFTZ_INTP batch = sol->decomp_scheme->vecs[0].n;
+    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
+    FFTZ_UINT8 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_INT32 status = SOLVER_SUCCESS;
 
     if (strides->in_strides == NULL)
     {
-        INT32 ret = alloc_and_fill_stride_arrays(strides, radix,
+        FFTZ_INT32 ret = alloc_and_fill_stride_arrays(strides, radix,
                         sol->decomp_scheme->dims[0].in_stride,
                         sol->decomp_scheme->dims[0].out_stride);
         if (ret != SOLVER_SUCCESS)
@@ -89,13 +89,13 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     return status;
 }
 
-static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_direct_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
 
     kfft_ kfft = sol->solver->kernel_c2c->kfft[direction];
     kfft(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
@@ -122,30 +122,31 @@ static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
  * executing all problem batches (batched_vecs) for each CT batch. This access
  * pattern is optimal when problem batch stride < elemental stride.
  */
-static INT32 execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32
+execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
     kfft_ kernel = sol->solver->kernel_c2c->kfft[direction];
 
-    VOID *in_real = sol->decomp_scheme->in_real;
-    VOID *in_imag = sol->decomp_scheme->in_imag;
-    VOID *out_real = sol->decomp_scheme->out_real;
-    VOID *out_imag = sol->decomp_scheme->out_imag;
+    FFTZ_VOID *in_real = sol->decomp_scheme->in_real;
+    FFTZ_VOID *in_imag = sol->decomp_scheme->in_imag;
+    FFTZ_VOID *out_real = sol->decomp_scheme->out_real;
+    FFTZ_VOID *out_imag = sol->decomp_scheme->out_imag;
 
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
     // vec-strides across DFT butterflies of the same CT problem
-    INTP ct_in_stride =
+    FFTZ_INTP ct_in_stride =
         sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE * dt_bytes;
-    INTP ct_out_stride =
+    FFTZ_INTP ct_out_stride =
         sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE * dt_bytes;
 
     // execute the direct kernel
-    for (INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
+    for (FFTZ_INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
     {
         aoclfftz_twiddle_t tw_local = {
             .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
@@ -168,12 +169,12 @@ static INT32 execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
-dft_solver_ register_execute_direct_solver(VOID)
+dft_solver_ register_execute_direct_solver(FFTZ_VOID)
 {
     return execute_direct_solver;
 }
 
-dft_solver_ register_execute_direct_batched_colmajor_solver(VOID)
+dft_solver_ register_execute_direct_batched_colmajor_solver(FFTZ_VOID)
 {
     return execute_direct_batched_colmajor_solver;
 }

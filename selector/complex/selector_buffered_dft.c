@@ -15,7 +15,7 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
+FFTZ_INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -29,9 +29,9 @@ INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     aoclfftz_selector_t *cur_sel = NULL;
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (cur_sel == NULL)

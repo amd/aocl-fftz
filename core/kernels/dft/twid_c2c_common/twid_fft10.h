@@ -18,68 +18,69 @@
 
 #include "core/kernels/simd_includes/generic_kernels_common.h"
 
-static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                            VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                            VOID *twd, UINT8 flag)
+static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                                 FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                                 FFTZ_INTP n, aoclfftz_strides_t *strides,
+                                 FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
-    const FLOAT CRTM_10[4] = {
+    const FFTZ_FLOAT CRTM_10[4] = {
         0.55901699437494742410229341718281905886015458990288f,
         0.58778525229247315738615484497912915412138427663885f,
         0.25000000000000000000000000000000000000000000000000f,
         0.95105651629515357211643933337938214340569863400000f};
 
-    FLOAT *in_r = (FLOAT *)in_real;
-    FLOAT *out_r = (FLOAT *)out_real;
+    FFTZ_FLOAT *in_r = (FFTZ_FLOAT *)in_real;
+    FFTZ_FLOAT *out_r = (FFTZ_FLOAT *)out_real;
 #if defined(KERNEL_VARIANT_C2R)
-    FLOAT *in_h2_r = in_r;
+    FFTZ_FLOAT *in_h2_r = in_r;
 #elif defined(KERNEL_VARIANT_R2C)
-    FLOAT *out_h2_r = out_r;
+    FFTZ_FLOAT *out_h2_r = out_r;
 #endif
 
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
-    INTP v_out_stride = strides->v_out_stride;
-    UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
 #if defined(KERNEL_VARIANT_C2R)
-    INTP v_in_h2_stride = strides->v_in_h2_stride;
+    FFTZ_INTP v_in_h2_stride = strides->v_in_h2_stride;
 #elif defined(KERNEL_VARIANT_R2C)
-    INTP v_out_h2_stride = strides->v_out_h2_stride;
+    FFTZ_INTP v_out_h2_stride = strides->v_out_h2_stride;
 #endif
 
     aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
-    FLOAT *tw = (FLOAT *)tws->TW;
-    UINTP cols = tws->cols;
-    UINTP load_multi_cols = tws->load_multi_cols;
+    FFTZ_FLOAT *tw = (FFTZ_FLOAT *)tws->TW;
+    FFTZ_UINTP cols = tws->cols;
+    FFTZ_UINTP load_multi_cols = tws->load_multi_cols;
 
-    INTP N = n / NUM_SETS_S;
-    INTP remaining_sets = n % NUM_SETS_S;
+    FFTZ_INTP N = n / NUM_SETS_S;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_S;
 
 #if defined(KERNEL_USE_AVX512)
-    INTP do_256_whole = (INTP)(remaining_sets >= NUM_SETS_256_S);
-    INTP do_128_whole =
-        (INTP)(remaining_sets % NUM_SETS_256_S >= NUM_SETS_128_S);
-    INTP cnt_256 = load_multi_cols * (N * NUM_SETS_512_S);
-    INTP cnt_128 =
+    FFTZ_INTP do_256_whole = (FFTZ_INTP)(remaining_sets >= NUM_SETS_256_S);
+    FFTZ_INTP do_128_whole =
+        (FFTZ_INTP)(remaining_sets % NUM_SETS_256_S >= NUM_SETS_128_S);
+    FFTZ_INTP cnt_256 = load_multi_cols * (N * NUM_SETS_512_S);
+    FFTZ_INTP cnt_128 =
         load_multi_cols * (N * NUM_SETS_512_S + do_256_whole * NUM_SETS_256_S);
-    INTP cnt_128_low =
+    FFTZ_INTP cnt_128_low =
         load_multi_cols * (N * NUM_SETS_512_S + do_256_whole * NUM_SETS_256_S +
                            do_128_whole * NUM_SETS_128_S);
 #elif defined(KERNEL_USE_AVX256)
-    INTP do_128_whole = (INTP)(remaining_sets >= NUM_SETS_128_S);
-    INTP cnt_128 = load_multi_cols * (N * NUM_SETS_256_S);
-    INTP cnt_128_low =
+    FFTZ_INTP do_128_whole = (FFTZ_INTP)(remaining_sets >= NUM_SETS_128_S);
+    FFTZ_INTP cnt_128 = load_multi_cols * (N * NUM_SETS_256_S);
+    FFTZ_INTP cnt_128_low =
         load_multi_cols * (N * NUM_SETS_256_S + do_128_whole * NUM_SETS_128_S);
 #elif defined(KERNEL_USE_AVX128)
-    INTP cnt_128_low = load_multi_cols * (N * NUM_SETS_128_S);
+    FFTZ_INTP cnt_128_low = load_multi_cols * (N * NUM_SETS_128_S);
 #endif
 
     VREGTYPE_S v_C1 = BCAST_S(CRTM_10[0]);
@@ -87,7 +88,7 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
     VREGTYPE_S v_C3 = BCAST_S(CRTM_10[2]);
     VREGTYPE_S v_C4 = BCAST_S(CRTM_10[3]);
 
-    INTP count;
+    FFTZ_INTP count;
 
 #if defined(KERNEL_DIRECTION_BWD)
     v_C2 = NEG_S(v_C2, 1);
@@ -102,7 +103,7 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
         VREGTYPE_S v_out9, v_cv1, v_cv2, v_cv3, v_cv4, v_tv1, v_tv2;
         VREGTYPE_S v_av1, v_av2, v_av3, v_av4, v_av5, v_av6, v_av7, v_av8,
             v_av9;
-        INTP col = count * load_multi_cols * NUM_SETS_S;
+        FFTZ_INTP col = count * load_multi_cols * NUM_SETS_S;
 
         LOAD_IN_S(in_r, in_strides, 1, v_in_stride, v_in1, tw, cols, col,
                   load_multi_cols, is_contiguous_in);
@@ -784,60 +785,61 @@ static VOID TWID_KNAME_FP32(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                            VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                            VOID *twd, UINT8 flag)
+static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                                 FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                                 FFTZ_INTP n, aoclfftz_strides_t *strides,
+                                 FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
 
-    const DOUBLE CRTM_10[4] = {
+    const FFTZ_DOUBLE CRTM_10[4] = {
         0.55901699437494742410229341718281905886015458990288,
         0.58778525229247315738615484497912915412138427663885,
         0.25000000000000000000000000000000000000000000000000,
         0.95105651629515357211643933337938214340569863400000};
 
-    DOUBLE *in_r = (DOUBLE *)in_real;
-    DOUBLE *out_r = (DOUBLE *)out_real;
+    FFTZ_DOUBLE *in_r = (FFTZ_DOUBLE *)in_real;
+    FFTZ_DOUBLE *out_r = (FFTZ_DOUBLE *)out_real;
 #if defined(KERNEL_VARIANT_C2R)
-    DOUBLE *in_h2_r = in_r;
+    FFTZ_DOUBLE *in_h2_r = in_r;
 #elif defined(KERNEL_VARIANT_R2C)
-    DOUBLE *out_h2_r = out_r;
+    FFTZ_DOUBLE *out_h2_r = out_r;
 #endif
 
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
-    INTP v_out_stride = strides->v_out_stride;
-    UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
 #if defined(KERNEL_VARIANT_C2R)
-    INTP v_in_h2_stride = strides->v_in_h2_stride;
+    FFTZ_INTP v_in_h2_stride = strides->v_in_h2_stride;
 #elif defined(KERNEL_VARIANT_R2C)
-    INTP v_out_h2_stride = strides->v_out_h2_stride;
+    FFTZ_INTP v_out_h2_stride = strides->v_out_h2_stride;
 #endif
 
     aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
-    DOUBLE *tw = (DOUBLE *)tws->TW;
-    UINTP cols = tws->cols;
-    UINTP load_multi_cols = tws->load_multi_cols;
+    FFTZ_DOUBLE *tw = (FFTZ_DOUBLE *)tws->TW;
+    FFTZ_UINTP cols = tws->cols;
+    FFTZ_UINTP load_multi_cols = tws->load_multi_cols;
 
-    INTP N = n / NUM_SETS_D;
-    INTP count;
+    FFTZ_INTP N = n / NUM_SETS_D;
+    FFTZ_INTP count;
 
 #if defined(KERNEL_USE_AVX512)
-    INTP remaining_sets = n % NUM_SETS_D;
-    INTP do_256_whole = (INTP)(remaining_sets >= NUM_SETS_256_D);
-    INTP cnt_256 = load_multi_cols * (N * NUM_SETS_512_D);
-    INTP cnt_128 =
+    FFTZ_INTP remaining_sets = n % NUM_SETS_D;
+    FFTZ_INTP do_256_whole = (FFTZ_INTP)(remaining_sets >= NUM_SETS_256_D);
+    FFTZ_INTP cnt_256 = load_multi_cols * (N * NUM_SETS_512_D);
+    FFTZ_INTP cnt_128 =
         load_multi_cols * (N * NUM_SETS_512_D + do_256_whole * NUM_SETS_256_D);
 #elif defined(KERNEL_USE_AVX256)
-    INTP remaining_sets = n % NUM_SETS_D;
-    INTP cnt_128 = load_multi_cols * (N * NUM_SETS_256_D);
+    FFTZ_INTP remaining_sets = n % NUM_SETS_D;
+    FFTZ_INTP cnt_128 = load_multi_cols * (N * NUM_SETS_256_D);
 #elif defined(KERNEL_USE_AVX128)
     // nothing, since double doesn't have any tail cases to process for AVX128
 #endif
@@ -860,7 +862,7 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
         VREGTYPE_D v_out9, v_cv1, v_cv2, v_cv3, v_cv4, v_tv1, v_tv2;
         VREGTYPE_D v_av1, v_av2, v_av3, v_av4, v_av5, v_av6, v_av7, v_av8,
             v_av9;
-        INTP col = count * load_multi_cols * NUM_SETS_D;
+        FFTZ_INTP col = count * load_multi_cols * NUM_SETS_D;
 
         LOAD_IN_D(in_r, in_strides, 1, v_in_stride, v_in1, tw, cols, col,
                   load_multi_cols, is_contiguous_in);
@@ -1359,7 +1361,7 @@ static VOID TWID_KNAME_FP64(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-kfft_ REGISTER_KERNEL(UINT8 precision, UINT8 direction)
+kfft_ REGISTER_KERNEL(FFTZ_UINT8 precision, FFTZ_UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -1375,7 +1377,7 @@ kfft_ REGISTER_KERNEL(UINT8 precision, UINT8 direction)
     }
 }
 
-ops_cycles_t GET_OPS_COUNT(UINT8 precision, UINT8 direction)
+ops_cycles_t GET_OPS_COUNT(FFTZ_UINT8 precision, FFTZ_UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {

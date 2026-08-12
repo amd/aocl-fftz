@@ -32,10 +32,10 @@
     {                                                                          \
         p_desc->dim_rank = params->dim_rank;                                   \
         p_desc->vec_rank = params->vec_rank;                                   \
-        UINT32 is_align = params->aligned_alloc;                               \
+        FFTZ_UINT32 is_align = params->aligned_alloc; \
         ALLOC_UNINIT(p_desc->dims, dim_t, sizeof(dim_t) * p_desc->dim_rank,    \
                         is_align);                                             \
-        for (INT32 i = 0; i < p_desc->dim_rank; i++)                           \
+        for (FFTZ_INT32 i = 0; i < p_desc->dim_rank; i++) \
         {                                                                      \
             p_desc->dims[i].n = (dt_t)params->dims[i].n;                       \
             p_desc->dims[i].in_stride = (dt_t)params->dims[i].in_stride;       \
@@ -43,7 +43,7 @@
         }                                                                      \
         ALLOC_UNINIT(p_desc->vecs, dim_t, sizeof(dim_t) * p_desc->vec_rank,    \
                         is_align);                                             \
-        for (INT32 i = 0; i < p_desc->vec_rank; i++)                           \
+        for (FFTZ_INT32 i = 0; i < p_desc->vec_rank; i++) \
         {                                                                      \
             p_desc->vecs[i].n = (dt_t)params->vecs[i].n;                       \
             p_desc->vecs[i].in_stride = (dt_t)params->vecs[i].in_stride;       \
@@ -88,15 +88,15 @@
         }                                                                      \
     }
 
-INT32 prepare_bench_params(INT32 argc, CHAR **argv,
+FFTZ_INT32 prepare_bench_params(FFTZ_INT32 argc, FFTZ_CHAR **argv,
                            aoclfftz_bench_params_t *bench_params);
 aoclfftz_flags_t set_flag(aoclfftz_bench_params_t *params);
-INT32 get_option(CHAR **argv, INT32 arg_idx);
-VOID *setup_problem_f(aoclfftz_bench_params_t *params);
-VOID *setup_problem_d(aoclfftz_bench_params_t *params);
-VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params);
-VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params);
-VOID destroy_bench_param(aoclfftz_bench_params_t *params);
-VOID show_help_menu(VOID);
+FFTZ_INT32 get_option(FFTZ_CHAR **argv, FFTZ_INT32 arg_idx);
+FFTZ_VOID *setup_problem_f(aoclfftz_bench_params_t *params);
+FFTZ_VOID *setup_problem_d(aoclfftz_bench_params_t *params);
+FFTZ_VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params);
+FFTZ_VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params);
+FFTZ_VOID destroy_bench_param(aoclfftz_bench_params_t *params);
+FFTZ_VOID show_help_menu(FFTZ_VOID);
 
 #endif // BENCH_PROBLEM_H

@@ -14,16 +14,16 @@
 #include "core/common/memory_manager.h"
 
 
-INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
-                      aoclfftz_solution_t *sol_m, UINT32 radix_r,
-                      UINT32 radix_m)
+FFTZ_INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
+                      aoclfftz_solution_t *sol_m, FFTZ_UINT32 radix_r,
+                      FFTZ_UINT32 radix_m)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     // Setup radix-m sub-problem
     // out-of-order -> in-order for out-of-place problems
     // out-of-order -> out-of-order for inplace problems
-    INT32 ret = copy_solution_obj(sol_m, sol);
+    FFTZ_INT32 ret = copy_solution_obj(sol_m, sol);
     if (ret != AOCLFFTZ_SUCCESS)
     {
         AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
@@ -73,11 +73,11 @@ INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
 }
 
 
-static INT32 execute_ct_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_ct_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    INT32 status = SOLVER_SUCCESS;
+    FFTZ_INT32 status = SOLVER_SUCCESS;
     aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
     aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
 
@@ -105,7 +105,7 @@ static INT32 execute_ct_solver(aoclfftz_solution_t *sol)
     return status;
 }
 
-dft_solver_ register_execute_ct_solver(VOID)
+dft_solver_ register_execute_ct_solver(FFTZ_VOID)
 {
     return execute_ct_solver;
 }

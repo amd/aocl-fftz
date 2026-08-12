@@ -16,13 +16,13 @@
 
 #define TYPE_GENERIC_IMPLEMENTATION
 
-#define TRANSPOSE_DT FLOAT
+#define TRANSPOSE_DT FFTZ_FLOAT
 #include "core/kernels/non_dft/transpose/c/transpose_square_inplace_generic.h"
 #include "core/kernels/non_dft/transpose/c/transpose_rectangle_inplace_generic.h"
 #include "core/kernels/non_dft/transpose/c/transpose_outofplace_generic.h"
 #undef TRANSPOSE_DT
 
-#define TRANSPOSE_DT DOUBLE
+#define TRANSPOSE_DT FFTZ_DOUBLE
 #include "core/kernels/non_dft/transpose/c/transpose_square_inplace_generic.h"
 #include "core/kernels/non_dft/transpose/c/transpose_rectangle_inplace_generic.h"
 #include "core/kernels/non_dft/transpose/c/transpose_outofplace_generic.h"

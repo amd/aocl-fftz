@@ -15,7 +15,7 @@
 #include "test/bench/utils/bench_utils.h"
 #include "utils/utils.h"
 /**
- * @brief Compare the two data of length n (FLOAT type)
+ * @brief Compare the two data of length n (FFTZ_FLOAT type)
  *        Used to compare output with reference output.
  *
  *        This function is used to compare the output of the FFT implementation
@@ -23,48 +23,59 @@
  *        (optionally using index maps for strided or permuted access) and
  *        reports if any element differs by more than the allowed tolerance.
  *
- * @param params   Pointer to aoclfftz_bench_params_t containing test configuration and tolerance.
- * @param a        Pointer to the first data array (FLOAT type).
- * @param b        Pointer to the second data array (FLOAT type).
+ * @param params   Pointer to aoclfftz_bench_params_t containing test
+ * configuration and tolerance.
+ * @param a        Pointer to the first data array (FFTZ_FLOAT type).
+ * @param b        Pointer to the second data array (FFTZ_FLOAT type).
  * @param batches  Number of batches (or vectors) to compare.
  * @param n        Number of elements per batch.
- * @param a_map    Optional index map for the first array (NULL for linear access).
- * @param b_map    Optional index map for the second array (NULL for linear access).
+ * @param a_map    Optional index map for the first array (NULL for linear
+ * access).
+ * @param b_map    Optional index map for the second array (NULL for linear
+ * access).
  * @param data_stride Stride between elements in the data arrays.
- * @return         BENCH_SUCCESS (0) if all data points match within tolerance, or an error code.
+ * @return         BENCH_SUCCESS (0) if all data points match within tolerance,
+ * or an error code.
  */
-INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *a_map, INTP *b_map, INT32 data_stride)
+FFTZ_INT32 compare_f(aoclfftz_bench_params_t *params, FFTZ_VOID *a,
+                     FFTZ_VOID *b, FFTZ_INTP batches, FFTZ_INTP n,
+                     FFTZ_INTP *a_map, FFTZ_INTP *b_map, FFTZ_INT32 data_stride)
 {
-    DOUBLE tol = params->tolerance;
-    FLOAT *a_f = (FLOAT *)a;
-    FLOAT *b_f = (FLOAT *)b;
-    INT32 status = BENCH_SUCCESS;
+    FFTZ_DOUBLE tol = params->tolerance;
+    FFTZ_FLOAT *a_f = (FFTZ_FLOAT *)a;
+    FFTZ_FLOAT *b_f = (FFTZ_FLOAT *)b;
+    FFTZ_INT32 status = BENCH_SUCCESS;
 
-    INT32 dim_rank = params->dim_rank;
+    FFTZ_INT32 dim_rank = params->dim_rank;
     aoclfftz_dim_t_64_ *dims = params->dims;
-    INT32 vec_rank = params->vec_rank;
+    FFTZ_INT32 vec_rank = params->vec_rank;
     aoclfftz_dim_t_64_ *vecs = params->vecs;
-    INTP *dim_counter = NULL;
-    INTP *vec_counter = NULL;
-    FLOAT max_abs_err = 0.0;
-    FLOAT max_mag = 0.0;
-    INTP max_err_idx = -1;
-    INTP first_err_idx = INT64_MAX;
-    FLOAT first_abs_err = 0.0;
-    INTP *d_maxerr_coords = NULL;
-    INTP *d_err_coords = NULL;
-    INTP *b_maxerr_coords = NULL;
-    INTP *b_err_coords = NULL;
-    UINT32 is_aligned = params->aligned_alloc;
-    INT32 logger_mode = params->logger_mode;
+    FFTZ_INTP *dim_counter = NULL;
+    FFTZ_INTP *vec_counter = NULL;
+    FFTZ_FLOAT max_abs_err = 0.0;
+    FFTZ_FLOAT max_mag = 0.0;
+    FFTZ_INTP max_err_idx = -1;
+    FFTZ_INTP first_err_idx = INT64_MAX;
+    FFTZ_FLOAT first_abs_err = 0.0;
+    FFTZ_INTP *d_maxerr_coords = NULL;
+    FFTZ_INTP *d_err_coords = NULL;
+    FFTZ_INTP *b_maxerr_coords = NULL;
+    FFTZ_INTP *b_err_coords = NULL;
+    FFTZ_UINT32 is_aligned = params->aligned_alloc;
+    FFTZ_INT32 logger_mode = params->logger_mode;
 
-    ALLOC_INIT(dim_counter, INTP, dim_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(vec_counter, INTP, vec_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(d_maxerr_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(d_err_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(b_maxerr_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(b_err_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
+    ALLOC_INIT(dim_counter, FFTZ_INTP, dim_rank * sizeof(FFTZ_INTP),
+               is_aligned);
+    ALLOC_INIT(vec_counter, FFTZ_INTP, vec_rank * sizeof(FFTZ_INTP),
+               is_aligned);
+    ALLOC_INIT(d_maxerr_coords, FFTZ_INTP, dim_rank * sizeof(FFTZ_INTP),
+               is_aligned);
+    ALLOC_INIT(d_err_coords, FFTZ_INTP, dim_rank * sizeof(FFTZ_INTP),
+               is_aligned);
+    ALLOC_INIT(b_maxerr_coords, FFTZ_INTP, vec_rank * sizeof(FFTZ_INTP),
+               is_aligned);
+    ALLOC_INIT(b_err_coords, FFTZ_INTP, vec_rank * sizeof(FFTZ_INTP),
+               is_aligned);
 
     if (dim_counter == NULL || vec_counter == NULL ||
         d_maxerr_coords == NULL || d_err_coords == NULL ||
@@ -74,16 +85,17 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
         goto cleanup;
     }
 
-    INTP N = batches * n;
-    for (INTP i = 0; i < N * data_stride; i++)
+    FFTZ_INTP N = batches * n;
+    for (FFTZ_INTP i = 0; i < N * data_stride; i++)
     {
-        INTP idx_a = a_map ? a_map[i / data_stride] : i / data_stride;
-        INTP idx_b = b_map ? b_map[i / data_stride] : i / data_stride;
-        FLOAT abs_err =
+        FFTZ_INTP idx_a = a_map ? a_map[i / data_stride] : i / data_stride;
+        FFTZ_INTP idx_b = b_map ? b_map[i / data_stride] : i / data_stride;
+        FFTZ_FLOAT abs_err =
             fabsf(a_f[idx_a * data_stride + (i % data_stride)] -
                  b_f[idx_b * data_stride + (i % data_stride)]);
-        FLOAT mag = fminf((fabsf(a_f[idx_a * data_stride + (i % data_stride)])),
-                          (fabsf(b_f[idx_b * data_stride + (i % data_stride)])));
+        FFTZ_FLOAT mag = fminf(
+            (fabsf(a_f[idx_a * data_stride + (i % data_stride)])),
+            (fabsf(b_f[idx_b * data_stride + (i % data_stride)])));
         if (abs_err > max_abs_err)
         {
             max_err_idx = idx_b;
@@ -114,7 +126,7 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
         }
     }
 
-    FLOAT rel_err;
+    FFTZ_FLOAT rel_err;
     if (max_abs_err == 0.0 && max_mag == 0.0)
     {
         rel_err = 0.0;
@@ -171,9 +183,9 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
                 fprintf(stderr, "\n\t%5s%26s%32s\n",
                         "Index", "Expected", "Actual");
             }
-            for (INTP i = 0, c = 100; i < N && c > 0; i++, c--)
+            for (FFTZ_INTP i = 0, c = 100; i < N && c > 0; i++, c--)
             {
-                INTP idx = b_map ? b_map[i] : i;
+                FFTZ_INTP idx = b_map ? b_map[i] : i;
                 fprintf(stderr, "%7td -> ", idx);
                 PRINT_ND_COUNTER(dim_counter, vec_counter, dim_rank, vec_rank);
                 if (data_stride == 1)
@@ -209,9 +221,9 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
                 fprintf(out_file, "\t%5s%26s%32s\n", "Index", "Expected",
                         "Actual");
             }
-            for (INTP i = 0; i < N; i++)
+            for (FFTZ_INTP i = 0; i < N; i++)
             {
-                INTP idx = b_map ? b_map[i] : i;
+                FFTZ_INTP idx = b_map ? b_map[i] : i;
                 fprintf(out_file, "%7td -> ", idx);
                 PRINT_ND_COUNTER_TO_FILE(out_file, dim_counter, vec_counter,
                                          dim_rank, vec_rank);
@@ -235,8 +247,8 @@ INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
                 }
             }
             fclose(out_file);
-            CHAR path[PATH_SIZE_MAX];
-            CHAR *ret = GETCWD(path, sizeof(path));
+            FFTZ_CHAR path[PATH_SIZE_MAX];
+            FFTZ_CHAR *ret = GETCWD(path, sizeof(path));
             if (ret == NULL)
             {
                 STRCPY(path, PATH_SIZE_MAX, "current_dir");
@@ -264,13 +276,15 @@ cleanup:
 }
 
 /**
- * @brief Compare the two data of length n (DOUBLE type)
+ * @brief Compare the two data of length n (FFTZ_DOUBLE type)
  *        Used to compare output with reference output.
  *
- * This function is typically used to compare the output of a computation with a reference output.
- * It supports optional index mapping for strided or non-contiguous data layouts.
+ * This function is typically used to compare the output of a computation with a
+ * reference output. It supports optional index mapping for strided or
+ * non-contiguous data layouts.
  *
- * @param params Pointer to aoclfftz_bench_params_t containing test configuration and tolerance.
+ * @param params Pointer to aoclfftz_bench_params_t containing test
+ * configuration and tolerance.
  * @param a Pointer to the first data buffer.
  * @param b Pointer to the second data buffer.
  * @param batches Number of batches (vector size).
@@ -278,38 +292,46 @@ cleanup:
  * @param a_map Optional index map for buffer a (NULL for linear access).
  * @param b_map Optional index map for buffer b (NULL for linear access).
  * @param data_stride Stride between elements (1 for real, 2 for complex).
- * @return INT32 BENCH_SUCCESS if all data points match within tolerance, VERIFICATION_FAILURE otherwise.
+ * @return FFTZ_INT32 BENCH_SUCCESS if all data points match within tolerance,
+ * VERIFICATION_FAILURE otherwise.
  */
-INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *a_map, INTP *b_map, INT32 data_stride)
+FFTZ_INT32 compare_d(aoclfftz_bench_params_t *params, FFTZ_VOID *a,
+                     FFTZ_VOID *b, FFTZ_INTP batches, FFTZ_INTP n,
+                     FFTZ_INTP *a_map, FFTZ_INTP *b_map, FFTZ_INT32 data_stride)
 {
-    DOUBLE tol = params->tolerance;
-    DOUBLE *a_d = (DOUBLE *)a;
-    DOUBLE *b_d = (DOUBLE *)b;
-    INT32 status = BENCH_SUCCESS;
-    INT32 dim_rank = params->dim_rank;
+    FFTZ_DOUBLE tol = params->tolerance;
+    FFTZ_DOUBLE *a_d = (FFTZ_DOUBLE *)a;
+    FFTZ_DOUBLE *b_d = (FFTZ_DOUBLE *)b;
+    FFTZ_INT32 status = BENCH_SUCCESS;
+    FFTZ_INT32 dim_rank = params->dim_rank;
     aoclfftz_dim_t_64_ *dims = params->dims;
-    INT32 vec_rank = params->vec_rank;
+    FFTZ_INT32 vec_rank = params->vec_rank;
     aoclfftz_dim_t_64_ *vecs = params->vecs;
-    INTP *dim_counter = NULL;
-    INTP *vec_counter = NULL;
-    UINT32 is_aligned = params->aligned_alloc;
-    DOUBLE max_abs_err = 0.0;
-    DOUBLE max_mag = 0.0;
-    INTP max_err_idx = -1;
-    INTP first_err_idx = INT64_MAX;
-    DOUBLE first_abs_err = 0.0;
-    INTP *d_maxerr_coords = NULL;
-    INTP *d_err_coords = NULL;
-    INTP *b_maxerr_coords = NULL;
-    INTP *b_err_coords = NULL;
-    INT32 logger_mode = params->logger_mode;
-    ALLOC_INIT(dim_counter, INTP, dim_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(vec_counter, INTP, vec_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(d_maxerr_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(d_err_coords, INTP, dim_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(b_maxerr_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
-    ALLOC_INIT(b_err_coords, INTP, vec_rank * sizeof(INTP), is_aligned);
+    FFTZ_INTP *dim_counter = NULL;
+    FFTZ_INTP *vec_counter = NULL;
+    FFTZ_UINT32 is_aligned = params->aligned_alloc;
+    FFTZ_DOUBLE max_abs_err = 0.0;
+    FFTZ_DOUBLE max_mag = 0.0;
+    FFTZ_INTP max_err_idx = -1;
+    FFTZ_INTP first_err_idx = INT64_MAX;
+    FFTZ_DOUBLE first_abs_err = 0.0;
+    FFTZ_INTP *d_maxerr_coords = NULL;
+    FFTZ_INTP *d_err_coords = NULL;
+    FFTZ_INTP *b_maxerr_coords = NULL;
+    FFTZ_INTP *b_err_coords = NULL;
+    FFTZ_INT32 logger_mode = params->logger_mode;
+    ALLOC_INIT(dim_counter, FFTZ_INTP, dim_rank * sizeof(FFTZ_INTP),
+               is_aligned);
+    ALLOC_INIT(vec_counter, FFTZ_INTP, vec_rank * sizeof(FFTZ_INTP),
+               is_aligned);
+    ALLOC_INIT(d_maxerr_coords, FFTZ_INTP, dim_rank * sizeof(FFTZ_INTP),
+               is_aligned);
+    ALLOC_INIT(d_err_coords, FFTZ_INTP, dim_rank * sizeof(FFTZ_INTP),
+               is_aligned);
+    ALLOC_INIT(b_maxerr_coords, FFTZ_INTP, vec_rank * sizeof(FFTZ_INTP),
+               is_aligned);
+    ALLOC_INIT(b_err_coords, FFTZ_INTP, vec_rank * sizeof(FFTZ_INTP),
+               is_aligned);
 
     if (dim_counter == NULL || vec_counter == NULL ||
         d_maxerr_coords == NULL || d_err_coords == NULL ||
@@ -319,15 +341,17 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
         goto cleanup;
     }
 
-    INTP N = batches * n;
-    for (INTP i = 0; i < N * data_stride; i++)
+    FFTZ_INTP N = batches * n;
+    for (FFTZ_INTP i = 0; i < N * data_stride; i++)
     {
-        INTP idx_a = a_map ? a_map[i / data_stride] : i / data_stride;
-        INTP idx_b = b_map ? b_map[i / data_stride] : i / data_stride;
-        DOUBLE abs_err = fabs(a_d[idx_a * data_stride + (i % data_stride)] -
+        FFTZ_INTP idx_a = a_map ? a_map[i / data_stride] : i / data_stride;
+        FFTZ_INTP idx_b = b_map ? b_map[i / data_stride] : i / data_stride;
+        FFTZ_DOUBLE abs_err =
+            fabs(a_d[idx_a * data_stride + (i % data_stride)] -
                               b_d[idx_b * data_stride + (i % data_stride)]);
-        DOUBLE mag = fmin((fabs(a_d[idx_a * data_stride + (i % data_stride)])),
-                          (fabs(b_d[idx_b * data_stride + (i % data_stride)])));
+        FFTZ_DOUBLE mag = fmin(
+            (fabs(a_d[idx_a * data_stride + (i % data_stride)])),
+            (fabs(b_d[idx_b * data_stride + (i % data_stride)])));
         if (abs_err > max_abs_err)
         {
             max_err_idx = idx_b;
@@ -357,7 +381,7 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             }
         }
     }
-    DOUBLE rel_err;
+    FFTZ_DOUBLE rel_err;
     if (max_abs_err == 0.0 && max_mag == 0.0)
     {
         rel_err = 0.0;
@@ -406,15 +430,17 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
             // Using printf instead of logger to avoid file and line prefix
             if (data_stride == 1)
             {
-                fprintf(stderr, "\n\t%10s%20s%24s\n", "Index", "Expected", "Actual");
+                fprintf(stderr, "\n\t%10s%20s%24s\n", "Index", "Expected",
+                        "Actual");
             }
             else
             {
-                fprintf(stderr, "\n\t%10s%30s%48s\n", "Index", "Expected", "Actual");
+                fprintf(stderr, "\n\t%10s%30s%48s\n", "Index", "Expected",
+                        "Actual");
             }
-            for (INTP i = 0, c = 100; i < N && c > 0; i++, c--)
+            for (FFTZ_INTP i = 0, c = 100; i < N && c > 0; i++, c--)
             {
-                INTP idx = b_map ? b_map[i] : i;
+                FFTZ_INTP idx = b_map ? b_map[i] : i;
                 // vecs
                 fprintf(stderr, "%7td -> ", idx);
                 PRINT_ND_COUNTER(dim_counter, vec_counter, dim_rank, vec_rank);
@@ -451,9 +477,9 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
                 fprintf(out_file, "\t%10s%30s%48s\n", "Index", "Expected",
                         "Actual");
             }
-            for (INTP i = 0; i < N; i++)
+            for (FFTZ_INTP i = 0; i < N; i++)
             {
-                INTP idx = b_map ? b_map[i] : i;
+                FFTZ_INTP idx = b_map ? b_map[i] : i;
                 fprintf(out_file, "%7td -> ", idx);
                 PRINT_ND_COUNTER_TO_FILE(out_file, dim_counter, vec_counter,
                                          dim_rank, vec_rank);
@@ -478,8 +504,8 @@ INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
                 }
             }
             fclose(out_file);
-            CHAR path[PATH_SIZE_MAX];
-            CHAR *ret = GETCWD(path, sizeof(path));
+            FFTZ_CHAR path[PATH_SIZE_MAX];
+            FFTZ_CHAR *ret = GETCWD(path, sizeof(path));
             if (ret == NULL)
             {
                 STRCPY(path, PATH_SIZE_MAX, "current_dir");

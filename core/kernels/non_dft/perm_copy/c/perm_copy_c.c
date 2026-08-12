@@ -37,21 +37,22 @@
  * @param[in]  v_in_stride  Input stride between offset groups
  * @param[in]  v_out_stride Output stride between offset groups
  */
-VOID permuted_copy_c_fp64(VOID *in, VOID *out, INTP n, INTP size,
-                          INTP in_stride, INTP out_stride, INTP v_in_stride,
-                          INTP v_out_stride)
+FFTZ_VOID permuted_copy_c_fp64(FFTZ_VOID *in, FFTZ_VOID *out, FFTZ_INTP n,
+                               FFTZ_INTP size, FFTZ_INTP in_stride,
+                               FFTZ_INTP out_stride, FFTZ_INTP v_in_stride,
+                               FFTZ_INTP v_out_stride)
 {
-    DOUBLE *p_in = (DOUBLE *)in;
-    DOUBLE *p_out = (DOUBLE *)out;
+    FFTZ_DOUBLE *p_in = (FFTZ_DOUBLE *)in;
+    FFTZ_DOUBLE *p_out = (FFTZ_DOUBLE *)out;
 
     /* Iterate over offset groups */
-    for (INTP i = 0; i < n; i++)
+    for (FFTZ_INTP i = 0; i < n; i++)
     {
         /* Copy each element within the offset group */
-        for (INTP j = 0; j < size; j++)
+        for (FFTZ_INTP j = 0; j < size; j++)
         {
-            INTP in_idx = j * in_stride;
-            INTP out_idx = j * out_stride;
+            FFTZ_INTP in_idx = j * in_stride;
+            FFTZ_INTP out_idx = j * out_stride;
 
             /* Copy real and imaginary parts */
             p_out[out_idx] = p_in[in_idx];
@@ -79,21 +80,22 @@ VOID permuted_copy_c_fp64(VOID *in, VOID *out, INTP n, INTP size,
  * @param[in]  v_in_stride  Input stride between offset groups
  * @param[in]  v_out_stride Output stride between offset groups
  */
-VOID permuted_copy_c_fp32(VOID *in, VOID *out, INTP n, INTP size,
-                          INTP in_stride, INTP out_stride, INTP v_in_stride,
-                          INTP v_out_stride)
+FFTZ_VOID permuted_copy_c_fp32(FFTZ_VOID *in, FFTZ_VOID *out, FFTZ_INTP n,
+                               FFTZ_INTP size, FFTZ_INTP in_stride,
+                               FFTZ_INTP out_stride, FFTZ_INTP v_in_stride,
+                               FFTZ_INTP v_out_stride)
 {
-    FLOAT *p_in = (FLOAT *)in;
-    FLOAT *p_out = (FLOAT *)out;
+    FFTZ_FLOAT *p_in = (FFTZ_FLOAT *)in;
+    FFTZ_FLOAT *p_out = (FFTZ_FLOAT *)out;
 
     /* Iterate over offset groups */
-    for (INTP i = 0; i < n; i++)
+    for (FFTZ_INTP i = 0; i < n; i++)
     {
         /* Copy each element within the offset group */
-        for (INTP j = 0; j < size; j++)
+        for (FFTZ_INTP j = 0; j < size; j++)
         {
-            INTP in_idx = j * in_stride;
-            INTP out_idx = j * out_stride;
+            FFTZ_INTP in_idx = j * in_stride;
+            FFTZ_INTP out_idx = j * out_stride;
 
             /* Copy real and imaginary parts */
             p_out[out_idx] = p_in[in_idx];

@@ -17,7 +17,7 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {
                                                 { 0, 184, 396, 1472, 108, 0 },
                                                 { 0, 184, 396, 736, 108, 0 }};
 
-ops_cycles_t get_ops_cnt_fft48avx128(UINT8 precision, UINT8 direction)
+ops_cycles_t get_ops_cnt_fft48avx128(FFTZ_UINT8 precision, FFTZ_UINT8 direction)
 {
     if (precision == DT_FLOAT)
     {
@@ -29,44 +29,56 @@ ops_cycles_t get_ops_cnt_fft48avx128(UINT8 precision, UINT8 direction)
     }
 }
 
-static VOID fft48avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
-                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                           VOID *twd, UINT8 flag)
+static FFTZ_VOID fft48avx128fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                                 FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                                 FFTZ_INTP n, aoclfftz_strides_t *strides,
+                                 FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    const FLOAT C0 = 0.5f;
-    const FLOAT C1 = 0.866025403784438646763723170752936183471402626905190f;
-    const FLOAT C2 = 1.0f;
-    const FLOAT C5 = 0.965925826289068286749743199728897367633904839008404f;
-    const FLOAT C6 = 0.258819045102520762348898837624048328349068901319930f;
-    const FLOAT C7 = 0.707106781186547524400844362104849039284835937688474f;
-    const FLOAT C10 = 0.96592582628906828674974319972889736763390483900840f;
-    const FLOAT C11 = 0.99144486137381041114455752692856287127773827444810f;
-    const FLOAT C12 = 0.13052619222005159154840622789548901019374070481173f;
-    const FLOAT C13 = 0.92387953251128675612818318939678828682241662586364f;
-    const FLOAT C14 = 0.38268343236508977172845998403039886676134456248562f;
-    const FLOAT C17 = 0.79335334029123516457977696150129927662867592105191f;
-    const FLOAT C18 = 0.60876142900872063941609754289816400451639371196247f;
+    const FFTZ_FLOAT C0 = 0.5f;
+    const FFTZ_FLOAT C1 =
+        0.866025403784438646763723170752936183471402626905190f;
+    const FFTZ_FLOAT C2 = 1.0f;
+    const FFTZ_FLOAT C5 =
+        0.965925826289068286749743199728897367633904839008404f;
+    const FFTZ_FLOAT C6 =
+        0.258819045102520762348898837624048328349068901319930f;
+    const FFTZ_FLOAT C7 =
+        0.707106781186547524400844362104849039284835937688474f;
+    const FFTZ_FLOAT C10 =
+        0.96592582628906828674974319972889736763390483900840f;
+    const FFTZ_FLOAT C11 =
+        0.99144486137381041114455752692856287127773827444810f;
+    const FFTZ_FLOAT C12 =
+        0.13052619222005159154840622789548901019374070481173f;
+    const FFTZ_FLOAT C13 =
+        0.92387953251128675612818318939678828682241662586364f;
+    const FFTZ_FLOAT C14 =
+        0.38268343236508977172845998403039886676134456248562f;
+    const FFTZ_FLOAT C17 =
+        0.79335334029123516457977696150129927662867592105191f;
+    const FFTZ_FLOAT C18 =
+        0.60876142900872063941609754289816400451639371196247f;
 
-    FLOAT *in_r = (FLOAT *)in_real;
-    FLOAT *out_r = (FLOAT *)out_real;
-    FLOAT *curr_in, *curr_out;
+    FFTZ_FLOAT *in_r = (FFTZ_FLOAT *)in_real;
+    FFTZ_FLOAT *out_r = (FFTZ_FLOAT *)out_real;
+    FFTZ_FLOAT *curr_in, *curr_out;
 
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
-    INTP v_out_stride = strides->v_out_stride;
-    UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_UINT8 is_contiguous_in = (v_in_stride == DATA_STRIDE);
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
 
-    INTP N = n / NUM_SETS_128_S;
-    INTP remaining_sets = n % NUM_SETS_128_S;
-    INTP count;
+    FFTZ_INTP N = n / NUM_SETS_128_S;
+    FFTZ_INTP remaining_sets = n % NUM_SETS_128_S;
+    FFTZ_INTP count;
 
     __m128 v_C0 = _mm_set1_ps(C0);
     __m128 v_C3 = _mm_set1_ps(C1);
@@ -1924,42 +1936,53 @@ static VOID fft48avx128fp32(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-
-static VOID fft48avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
-                           VOID *out_imag, INTP n, aoclfftz_strides_t *strides,
-                           VOID *twd, UINT8 flag)
+static FFTZ_VOID fft48avx128fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
+                                 FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+                                 FFTZ_INTP n, aoclfftz_strides_t *strides,
+                                 FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
-    const DOUBLE C0 = 0.5;
-    const DOUBLE C1 = 0.866025403784438646763723170752936183471402626905190;
-    const DOUBLE C2 = 1.0;
-    const DOUBLE C5 = 0.965925826289068286749743199728897367633904839008404;
-    const DOUBLE C6 = 0.258819045102520762348898837624048328349068901319930;
-    const DOUBLE C7 = 0.707106781186547524400844362104849039284835937688474;
-    const DOUBLE C10 = 0.96592582628906828674974319972889736763390483900840;
-    const DOUBLE C11 = 0.99144486137381041114455752692856287127773827444810;
-    const DOUBLE C12 = 0.13052619222005159154840622789548901019374070481173;
-    const DOUBLE C13 = 0.92387953251128675612818318939678828682241662586364;
-    const DOUBLE C14 = 0.38268343236508977172845998403039886676134456248562;
-    const DOUBLE C17 = 0.79335334029123516457977696150129927662867592105191;
-    const DOUBLE C18 = 0.60876142900872063941609754289816400451639371196247;
+    const FFTZ_DOUBLE C0 = 0.5;
+    const FFTZ_DOUBLE C1 =
+        0.866025403784438646763723170752936183471402626905190;
+    const FFTZ_DOUBLE C2 = 1.0;
+    const FFTZ_DOUBLE C5 =
+        0.965925826289068286749743199728897367633904839008404;
+    const FFTZ_DOUBLE C6 =
+        0.258819045102520762348898837624048328349068901319930;
+    const FFTZ_DOUBLE C7 =
+        0.707106781186547524400844362104849039284835937688474;
+    const FFTZ_DOUBLE C10 =
+        0.96592582628906828674974319972889736763390483900840;
+    const FFTZ_DOUBLE C11 =
+        0.99144486137381041114455752692856287127773827444810;
+    const FFTZ_DOUBLE C12 =
+        0.13052619222005159154840622789548901019374070481173;
+    const FFTZ_DOUBLE C13 =
+        0.92387953251128675612818318939678828682241662586364;
+    const FFTZ_DOUBLE C14 =
+        0.38268343236508977172845998403039886676134456248562;
+    const FFTZ_DOUBLE C17 =
+        0.79335334029123516457977696150129927662867592105191;
+    const FFTZ_DOUBLE C18 =
+        0.60876142900872063941609754289816400451639371196247;
 
-    DOUBLE *in_r = (DOUBLE *)in_real;
-    DOUBLE *out_r = (DOUBLE *)out_real;
-    DOUBLE *curr_in, *curr_out;
+    FFTZ_DOUBLE *in_r = (FFTZ_DOUBLE *)in_real;
+    FFTZ_DOUBLE *out_r = (FFTZ_DOUBLE *)out_real;
+    FFTZ_DOUBLE *curr_in, *curr_out;
 
 #ifdef VOLATILE_STRIDE_ARRAY
-    volatile INTP *in_strides = strides->in_strides;
-    volatile INTP *out_strides = strides->out_strides;
+    volatile FFTZ_INTP *in_strides = strides->in_strides;
+    volatile FFTZ_INTP *out_strides = strides->out_strides;
 #else
-    INTP *in_strides = strides->in_strides;
-    INTP *out_strides = strides->out_strides;
+    FFTZ_INTP *in_strides = strides->in_strides;
+    FFTZ_INTP *out_strides = strides->out_strides;
 #endif
-    INTP v_in_stride = strides->v_in_stride;
-    INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_out_stride = strides->v_out_stride;
 
-    INTP N = n / NUM_SETS_128_D;
-    INTP count;
+    FFTZ_INTP N = n / NUM_SETS_128_D;
+    FFTZ_INTP count;
 
     __m128d v_C0 = _mm_set1_pd(C0);
     __m128d v_C3 = _mm_set1_pd(C1);
@@ -2893,7 +2916,8 @@ static VOID fft48avx128fp64(VOID *in_real, VOID *in_imag, VOID *out_real,
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-kfft_ register_kernel_fft48avx128(UINT8 precision, UINT8 direction /* unused */)
+kfft_ register_kernel_fft48avx128(FFTZ_UINT8 precision,
+                                  FFTZ_UINT8 direction /* unused */)
 {
     if (precision == DT_FLOAT)
     {
