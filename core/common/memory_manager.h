@@ -54,16 +54,18 @@ static inline aoclfftz_error_type alloc_per_call_scratch(
     *scratch_slab = NULL;
 
     // Pack regions 64-byte aligned so AVX aligned loads/stores stay valid and
-    // fast. CT & BS sizes are already padded at setup; pad SR here.
+    // fast. CT, BS and pow2 sizes are already padded at setup; pad SR here.
     FFTZ_UINTP ct_buffer_size     = exec_meta->ct_buffer_total_size;
     FFTZ_UINTP bs_buffer_size     = exec_meta->bs_buffer_size;
     FFTZ_UINTP sr_input_copy_size =
                                 GET_PADDED_SIZE(exec_meta->sr_input_copy_size);
+    FFTZ_UINTP pow2_buf_size      = exec_meta->pow2_buf_size;
 
     // Two Bluestein regions of equal size: bs_in_base, bs_out_base
     FFTZ_UINTP total = ct_buffer_size
                        + (bs_buffer_size * 2)
-                       + sr_input_copy_size;
+                       + sr_input_copy_size
+                       + pow2_buf_size;
     if (total == 0)
     {
         return AOCLFFTZ_SUCCESS;
@@ -92,6 +94,12 @@ static inline aoclfftz_error_type alloc_per_call_scratch(
     if (exec_meta->sr_input_copy_size > 0)
     {
         ctx->sr_input_copy_base = MOVE_ADDR(slab, offset);
+        offset += sr_input_copy_size;
+    }
+    if (exec_meta->pow2_buf_size > 0)
+    {
+        ctx->pow2_buf_base = MOVE_ADDR(slab, offset);
+        offset += pow2_buf_size;
     }
     *scratch_slab = slab;
     return AOCLFFTZ_SUCCESS;
@@ -106,4 +114,5 @@ FFTZ_VOID destroy_solutions(aoclfftz_solution_t **sol, FFTZ_INT32 n);
 FFTZ_VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme);
 FFTZ_VOID destroy_bluestein(aoclfftz_bluestein_t *bluestein);
 FFTZ_UINTP calculate_max_buffer_size(aoclfftz_solution_t *sol);
+FFTZ_VOID destroy_pow2_iterative(aoclfftz_pow2_iterative_t *pow2_iterative);
 #endif // MEMORY_MANAGER_H

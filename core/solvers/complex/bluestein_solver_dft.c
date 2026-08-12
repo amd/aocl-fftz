@@ -137,9 +137,9 @@ static FFTZ_INT32 execute_bluestein_solver(aoclfftz_solution_t *sol,
     bs_ctx.ct_offset = 0;
 
     // Two-level split of the shared bs pool: bs_dim_offset selects this dim's slice,
-    // then bs_buf_size * bs_slot_idx picks this thread's slot within it.
+    // then bs_buf_size * thr_slot_idx picks this thread's slot within it.
     FFTZ_INTP bs_buf_offset = bluestein->bs_dim_offset +
-                              bluestein->bs_buf_size * ctx->bs_slot_idx;
+                              bluestein->bs_buf_size * ctx->thr_slot_idx;
 
     bs_ctx.in_real     = MOVE_ADDR(ctx->bs_in_base, bs_buf_offset);
     bs_ctx.in_imag     = MOVE_ADDR(bs_ctx.in_real, dt_bytes);

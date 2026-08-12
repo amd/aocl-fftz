@@ -119,8 +119,8 @@ FFTZ_INT32 execute_real_mt_batched_solver_internal(aoclfftz_solution_t *sol,
             thr_ctx.ct_offset = ctx->ct_offset +
                (FFTZ_INTP)tid * (FFTZ_INTP)next_sol[tid]->dft_bufs->ct_buf_size;
 
-            // Index used to slice the bs_[in/out]_base for Bluestein/MT_Bluestein.
-            thr_ctx.bs_slot_idx = ctx->bs_slot_idx * n_threads + tid;
+            // Per-thread slot index for the bs and pow2 scratch pools.
+            thr_ctx.thr_slot_idx = ctx->thr_slot_idx * n_threads + tid;
 
             local_status = next_sol[tid]->solver->execute_solver(
                                                     next_sol[tid], &thr_ctx);

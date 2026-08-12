@@ -35,6 +35,10 @@ FFTZ_VOID initialize_cpuid_cache(FFTZ_UINT32 *max_cpuid_leaf,
 // CPUID helpers
 cpuid_result_t cpuid(FFTZ_UINT32 leaf, FFTZ_UINT32 subleaf);
 
+// Total size in bytes of the cache at the given level (1=L1d, 2=L2, 3=L3).
+// Returns 0 when the level is unavailable or CPUID cannot report it.
+FFTZ_UINTP cpuid_cache_size(FFTZ_UINT32 cache_level);
+
 // XGETBV / XCR0 helpers
 FFTZ_UINT64 get_xcr0(FFTZ_VOID);
 FFTZ_INT32 is_xgetbv_supported(cpuid_result_t cpuid_leaf1);

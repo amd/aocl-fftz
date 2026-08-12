@@ -73,6 +73,10 @@ FFTZ_INT32 register_solvers(FFTZ_VOID)
     // SR is registered unconditionally here. The selector decides whether
     // to actually dispatch SR based on per-call cpu_flags.
     solvers_table[SOLVER_SR] = register_execute_sr_solver();
+    // POW2 iterative fast path is registered unconditionally; the selector gate
+    // decides whether to dispatch it.
+    solvers_table[SOLVER_POW2_ITERATIVE] =
+        register_execute_pow2_iterative_solver();
     solvers_table[SOLVER_TRANSPOSE] = register_execute_transpose_solver();
 #ifdef MULTI_THREADING
     solvers_table[SOLVER_MT_DIRECT] = register_execute_mt_direct_solver();
@@ -124,4 +128,49 @@ FFTZ_INT64 compute_kernel_cost(const kernel_t *ker, FFTZ_UINT8 precision,
         ops = (ops + sets - 1) / sets;
     }
     return ops * batch;
+}
+
+FFTZ_INTP find_radix_base_idx(kernel_t *kertab, FFTZ_INTP radix)
+{
+    for (FFTZ_INTP base_idx = 0; base_idx < NUM_KERNELS_IN_EACH_CATEGORY;
+         base_idx++)
+    {
+        if (kertab[base_idx].radix == 0) // End of suitable kernels in the list
+        {
+            break;
+        }
+
+        if ((FFTZ_INTP)kertab[base_idx].radix == radix)
+        {
+            return base_idx;
+        }
+    }
+    return -1;
+}
+
+kernel_choice_t find_best_kernel(kernel_t *kertab,
+                                 FFTZ_INTP base_idx,
+                                 FFTZ_UINT8 precision,
+                                 FFTZ_UINT8 direction,
+                                 FFTZ_INTP batch)
+{
+    kernel_choice_t optimal = {-1, INT64_MAX};
+
+    for (FFTZ_INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
+    {
+        FFTZ_INTP kloc = kcat * NUM_KERNELS_IN_EACH_CATEGORY + base_idx;
+        if (kertab[kloc].kfft[direction] == NULL)
+        {
+            continue;
+        }
+
+        FFTZ_INT64 cost = compute_kernel_cost(&kertab[kloc], precision,
+                                         direction, batch);
+        if (cost < optimal.cost)
+        {
+            optimal.idx  = kloc;
+            optimal.cost = cost;
+        }
+    }
+    return optimal;
 }

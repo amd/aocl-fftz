@@ -153,6 +153,14 @@
 #define MAX_NUM_KERNELS_IN_TABLE                                               \
     NUM_KERNELS_IN_TABLE_REAL // max of real and complex
 
+// Pow2-iterative solver tunables. Below MIN_N the split yields <= 2 stages,
+// which the direct and CT solvers already handle.
+#define POW2_ITERATIVE_MIN_N 512
+#define POW2_ITERATIVE_MAX_STAGES 16
+
+// Assumed L1 data cache size when CPUID does not report one.
+#define DEFAULT_L1D_BYTES (32 * 1024)
+
 // AMD ZEN CPU Instruction approximated latency cycles
 #define AMD_ZEN_FP_FMA_CYCLES 4
 #define AMD_ZEN_FP_MUL_CYCLES 3
@@ -202,6 +210,7 @@ typedef struct aoclfftz_twiddle aoclfftz_twiddle_t;
 typedef struct aoclfftz_bluestein aoclfftz_bluestein_t;
 typedef struct aoclfftz_buffered aoclfftz_buffered_t;
 typedef struct aoclfftz_sr aoclfftz_sr_t;
+typedef struct aoclfftz_pow2_iterative aoclfftz_pow2_iterative_t;
 typedef struct aoclfftz_executor aoclfftz_executor_t;
 typedef struct aoclfftz_realhelper aoclfftz_realhelper_t;
 
@@ -218,12 +227,13 @@ typedef struct aoclfftz_mutable_ctx
     FFTZ_VOID *bs_in_base;           // Bluestein per-call input scratch
     FFTZ_VOID *bs_out_base;          // Bluestein per-call output scratch
     FFTZ_VOID *sr_input_copy_base;   // Split-radix per-call input copy scratch
+    FFTZ_VOID *pow2_buf_base;        // Pow2-iterative per-call ping-pong pool
     FFTZ_INTP ct_offset;             // Byte offset into the ct_buffer,
                                      // accumulated per-thread by mt_batched
     FFTZ_UINT32 flags;               // Plan flags (direction, precision, etc.)
-    FFTZ_INT32 bs_slot_idx;          // Slot index used by
-                                     // Bluestein/MT_Bluestein to slice
-                                     // bs_[in/out]_base
+    FFTZ_INT32 thr_slot_idx;         // Dense per-thread slot index, used to
+                                     // slice bs_[in/out]_base (Bluestein) and
+                                     // pow2_buf_base (pow2-iterative)
 } aoclfftz_mutable_ctx_t;
 
 // Per-handle scratch byte sizes & the immutable execution context recorded at
@@ -238,6 +248,8 @@ typedef struct aoclfftz_immutable_metadata
     FFTZ_UINTP bs_buffer_size;          // Total Bluestein pool size, summed
                                         // over all Bluestein nodes
     FFTZ_UINTP sr_input_copy_size;      // Split-radix in-place input copy
+    FFTZ_UINTP pow2_buf_size;           // Pow2-iterative ping-pong pool, sized
+                                        // for all concurrent slots
     FFTZ_UINTP ct_buffer_total_size;    // CT scratch pool size for the owners
                                         // -> NDIM, BUFFERED, CTL1D
     aoclfftz_mutable_ctx_t base_ctx;    // execution context built at setup time
@@ -499,6 +511,35 @@ typedef struct aoclfftz_strides_grp
 
 /////////////////////////// STRIDE RELATED : END //////////////////////////////
 
+// One radix stage of the power-of-2 iterative solver (SOLVER_POW2_ITERATIVE).
+typedef struct aoclfftz_pow2_iterative_stage
+{
+    FFTZ_INTP  radix;     // stage radix
+    kfft_ kfft[NUM_FFT_DIRS]; // stage kernel, per FFT direction: a node can be
+                              // executed either way (e.g. Bluestein's inner FFT)
+    FFTZ_VOID *twiddle;   // stage twiddle table (NULL for the leaf stage)
+    FFTZ_INTP  sets;      // kernel register width (sets processed in parallel)
+
+    aoclfftz_strides_t strides; // radix + element strides (in/out arrays owned)
+    FFTZ_INTP  count;          // element count argument passed to the kernel
+    FFTZ_INTP  num_groups;     // number of kernel invocations for this stage
+    FFTZ_INTP  src_grp_stride; // byte offset between consecutive source groups
+    FFTZ_INTP  dst_grp_stride; // byte offset between consecutive destination groups
+} aoclfftz_pow2_iterative_stage_t;
+
+// Fused leaf solver: `stages` is a flat array, not solution-tree nodes, so the
+// tree walkers cannot see it. `aoclfftz_pow2_iterative_stage` lists the per-stage
+// state that this solver builds itself.
+typedef struct aoclfftz_pow2_iterative
+{
+    aoclfftz_pow2_iterative_stage_t *stages;  // [num_stages], leaf first
+    FFTZ_VOID *pingpong_buf; // solver-owned ping-pong pool: one slot of two
+                             // buffers (A and B) per concurrent thread
+    FFTZ_INTP buf_bytes;     // bytes in one buffer (A or B)
+    FFTZ_UINTP pool_bytes;   // bytes in the whole pool (slots * 2 * buf_bytes)
+    FFTZ_INT32 num_stages;
+} aoclfftz_pow2_iterative_t;
+
 /////////////////////////// BUFS RELATED : START //////////////////////////////
 typedef struct aoclfftz_dft_bufs
 {
@@ -506,8 +547,8 @@ typedef struct aoclfftz_dft_bufs
     aoclfftz_buffered_t* buffered;
     aoclfftz_transpose_t* transpose;
     aoclfftz_solution_t* nd_sol; // may hold one of the solutions of ND
-    // split-radix solver specific data (sub-solutions + buffers)
     aoclfftz_sr_t *sr;
+    aoclfftz_pow2_iterative_t* pow2_iterative;
     FFTZ_VOID *ct_buffer; // auxiliary buffer for CT problems
     FFTZ_VOID *ct_buf_real; // real part of ct_buffer
     FFTZ_VOID *ct_buf_imag; // imaginary part of ct_buffer

@@ -16,6 +16,7 @@
 #include "core/common/memory_manager.h"
 #include "core/common/twiddle.h"
 #include "core/kernels/kernel_list.h"
+#include "utils/cpu_features.h"
 #include "utils/dispatcher.h"
 #include "utils/utils.h"
 #ifdef MULTI_THREADING
@@ -170,6 +171,38 @@ is_split_radix_applicable(aoclfftz_decomp_scheme_t *decomp_scheme)
             (decomp_scheme->batched_vecs == NULL) && (!is_col_major) &&
             !IS_NOT_INNERMOST_DIM(decomp_scheme->flags) &&
             (decomp_scheme->thread_info->pthr_fft->num_threads == 1));
+}
+
+// L1 data cache size in bytes, queried via CPUID.
+static FFTZ_INTP get_l1d_bytes(FFTZ_VOID)
+{
+    FFTZ_UINTP bytes = cpuid_cache_size(1u);
+    return (bytes > 0u) ? (FFTZ_INTP)bytes : DEFAULT_L1D_BYTES;
+}
+
+static FFTZ_INT32 is_pow2_iterative_applicable(aoclfftz_decomp_scheme_t *decomp_scheme)
+{
+    FFTZ_INTP n = decomp_scheme->dims[0].n;
+    FFTZ_UINT8 precision = DT_PRECISION_FLAG(decomp_scheme->flags);
+    FFTZ_INTP bytes_per_elem = DATA_STRIDE * (FFTZ_INTP)DT_PRECISION_BYTES(precision);
+    FFTZ_INTP max_elems = get_l1d_bytes() / bytes_per_elem;
+
+    // Pow2-iterative is applicable for complex, 1D, row-major, contiguous
+    // (in_stride==1), single-threaded transforms on the innermost dimension
+    // whose size is a power-of-2 of at least POW2_ITERATIVE_MIN_N and at most
+    // max_elems. Batching over a single vector rank (vec_rank==1) is supported;
+    // multi-rank batched_vecs is not.
+    return (!IS_REAL(decomp_scheme->flags)
+            && (n >= POW2_ITERATIVE_MIN_N)
+            && IS_POW2(n)
+            && (n <= max_elems)
+            && (decomp_scheme->dim_rank == 1)
+            && (decomp_scheme->vec_rank == 1)
+            && (decomp_scheme->batched_vecs == NULL)
+            && (!check_col_major(decomp_scheme))
+            && !IS_NOT_INNERMOST_DIM(decomp_scheme->flags)
+            && (decomp_scheme->dims[0].in_stride == 1)
+            && (decomp_scheme->thread_info->pthr_fft->num_threads == 1));
 }
 
 FFTZ_INTP check_CT_solvability(FFTZ_INTP n, kernel_t *kertab)
@@ -371,6 +404,23 @@ FFTZ_INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
         // call buffered solver master
         ret = selector_buffered_dft(sel, kertab);
         return ret;
+    }
+
+    // Power-of-2 iterative multi-stage fused pass for L1-resident power-of-2
+    // sizes. Attempted ahead of batched_ct_l1_direct and the generic SR/CT
+    // chain; falls through if the gate or solver setup (e.g. <= 2 stages)
+    // declines.
+    if (is_pow2_iterative_applicable(sel->solution->decomp_scheme))
+    {
+        solver_obj->solver_type = SOLVER_POW2_ITERATIVE;
+        if (set_solver_fp(solver_obj) == SOLVER_SUCCESS)
+        {
+            ret = selector_pow2_iterative_dft(sel);
+            if (ret == SELECTOR_SUCCESS)
+            {
+                return ret;
+            }
+        }
     }
 
     // Batched CT one level direct: fuses the batch loop and one
@@ -1635,6 +1685,10 @@ FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
                     curr->twiddle->load_multi_cols = lmc;
                 }
             }
+            // SOLVER_POW2_ITERATIVE binds its own twiddles in
+            // setup_pow2_iterative_solver, so that an allocation failure can
+            // reject the plan instead of surfacing at execute time.
+
             // Process N-D solution after the current solution
             if (curr->solver->solver_type == SOLVER_NDIM)
             {
@@ -2466,7 +2520,7 @@ static FFTZ_VOID compute_exec_metadata(
         // Assign this node a region at the running total and grow the pool by
         // its full size (slots * per-slot bytes), 64-byte aligned for SIMD.
         //
-        // The node slices its region by bs_slot_idx, a dense index in
+        // The node slices its region by thr_slot_idx, a dense index in
         // [0, active_threads_at_level), so it needs active_threads_at_level slots.
         thread_info_t *thread_info = sol->decomp_scheme->thread_info;
         FFTZ_UINTP n_slots = (FFTZ_UINTP)thread_info->active_threads;
@@ -2484,6 +2538,19 @@ static FFTZ_VOID compute_exec_metadata(
             metadata->sr_input_copy_size = sr_size;
             metadata->base_ctx.sr_input_copy_base =
                             sol->dft_bufs->sr->input_copy;
+        }
+    }
+
+    // Pow2-iterative owns a private ping-pong pool (see the solver). Sequential
+    // nodes reuse the region, so take the max rather than summing; concurrency
+    // within a node is covered by its per-thread slots.
+    if (stype == SOLVER_POW2_ITERATIVE && sol->dft_bufs->pow2_iterative != NULL)
+    {
+        aoclfftz_pow2_iterative_t *it = sol->dft_bufs->pow2_iterative;
+        if (it->pool_bytes > metadata->pow2_buf_size)
+        {
+            metadata->pow2_buf_size = it->pool_bytes;
+            metadata->base_ctx.pow2_buf_base = it->pingpong_buf;
         }
     }
 

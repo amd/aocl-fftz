@@ -144,6 +144,7 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
         sol->next_sol = NULL;
         sol->decomp_scheme->batched_vecs = NULL;
         sol->dft_bufs->nd_sol = NULL;
+        sol->dft_bufs->pow2_iterative = NULL;
         sol->strides_grp->strides->in_strides = NULL;
         sol->strides_grp->strides->out_strides = NULL;
         sol->strides_grp->strides->v_in_stride = 0;
@@ -494,6 +495,28 @@ FFTZ_VOID destroy_bluestein(aoclfftz_bluestein_t* bluestein)
     }
 }
 
+// Frees the pow2 iterative solver state: the ping-pong pool (both buffers, one
+// pair per slot), the per-stage stride arrays, the stage array and the struct.
+// The twiddle block is freed by the generic solution teardown.
+FFTZ_VOID destroy_pow2_iterative(aoclfftz_pow2_iterative_t *pow2_iterative)
+{
+    if (pow2_iterative == NULL)
+    {
+        return;
+    }
+    if (pow2_iterative->stages != NULL)
+    {
+        for (FFTZ_INT32 s = 0; s < pow2_iterative->num_stages; s++)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(pow2_iterative->stages[s].strides.in_strides);
+            FREE_ALIGN_ALLOCATED_MEM(pow2_iterative->stages[s].strides.out_strides);
+        }
+    }
+    FREE_ALIGN_ALLOCATED_MEM(pow2_iterative->pingpong_buf);
+    FREE_ALIGN_ALLOCATED_MEM(pow2_iterative->stages);
+    FREE_ALIGN_ALLOCATED_MEM(pow2_iterative);
+}
+
 FFTZ_VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp)
 {
     FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides->in_strides);
@@ -528,6 +551,7 @@ FFTZ_VOID destroy_solution(aoclfftz_solution_t* sol)
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->ct_buffer);
             sol->dft_bufs->ct_buf_allocated = 0;
         }
+        destroy_pow2_iterative(sol->dft_bufs->pow2_iterative);
         FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->sr->input_copy);
 
         // Free auxiliary buffers based on solver type:
@@ -592,6 +616,7 @@ FFTZ_VOID destroy_solutions(aoclfftz_solution_t **sol, FFTZ_INT32 n)
                     FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->ct_buffer);
                     cur_sol->dft_bufs->ct_buf_allocated = 0;
                 }
+                destroy_pow2_iterative(cur_sol->dft_bufs->pow2_iterative);
 
                 destroy_bluestein(cur_sol->dft_bufs->bluestein);
                 destroy_transpose(cur_sol->dft_bufs->transpose);

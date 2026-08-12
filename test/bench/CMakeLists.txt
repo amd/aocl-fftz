@@ -90,6 +90,16 @@ set(STANDARD_TEST_SUITE
     "AVX512_C2C_MT_BLUESTEIN_BATCHED_STRIDED ./aocl_fftz_bench 4v71:3:3 -b a -o 3 -n 8"                       # accuracy | complex  | double   | LP64       | 1D  | yes      | MT+BS     | outplace  | forward   | AVX512  | MT batched Bluestein, strided
     "AVX512_C2C_MT_BLUESTEIN_IP ./aocl_fftz_bench 97 -b a -r i -o 3 -n 16"                                    # accuracy | complex  | double   | LP64       | 1D  |  no      | MT+BS     | inplace   | forward   | AVX512  | MT Bluestein, inplace, many threads
     "AVX512_C2C_CT_MT_BLUESTEIN ./aocl_fftz_bench 194 -b a -o 3 -n 8"                                         # accuracy | complex  | double   | LP64       | 1D  |  no      | CT+MT+BS  | outplace  | forward   | AVX512  | CT (2*97) wrapping MT Bluestein on the prime leaf
+    # Pow2-iterative, one case per ISA level so the solver's per-stage kernel
+    # selection is exercised at each register width. The gate caps N at
+    # L1d/bytes_per_elem, which is 4096 float / 2048 double on a 32 KiB L1d;
+    # 512 and 2048 stay inside it on any part with at least that much L1d, so
+    # these keep landing on this solver. Between them the four cover both
+    # sizes, directions, placements, precisions and data models.
+    "C_C2C_POW2_ITERATIVE_512_FWD_OP ./aocl_fftz_bench 512 -b a -r o --dir f"                                 # accuracy | complex  | double   | LP64       | 1D  |  no      | pow2iter  | outplace  | forward   | C       | Pow2-iterative multi-stage, scalar kernels
+    "AVX128_C2C_POW2_ITERATIVE_512_BWD_IP ./aocl_fftz_bench 512 -b a -r i --dir b -p f -o 1"                  # accuracy | complex  | float    | LP64       | 1D  |  no      | pow2iter  | inplace   | backward  | AVX128  | Pow2-iterative multi-stage, AVX128 kernels, float
+    "AVX256_C2C_POW2_ITERATIVE_2048_FWD_IP ./aocl_fftz_bench 2048 -b a -r i --dir f -m i -o 2"                # accuracy | complex  | double   | ILP64      | 1D  |  no      | pow2iter  | inplace   | forward   | AVX256  | Pow2-iterative multi-stage, AVX256 kernels, ILP64
+    "AVX512_C2C_POW2_ITERATIVE_2048_BWD_OP ./aocl_fftz_bench 2048 -b a -r o --dir b -p f -o 3"                # accuracy | complex  | float    | LP64       | 1D  |  no      | pow2iter  | outplace  | backward  | AVX512  | Pow2-iterative multi-stage, AVX512 kernels, float
     "C_C2C_COLMAJOR_CT_OP ./aocl_fftz_bench 100:1:1v120:100:100 -b a --dir f"                                 # accuracy | complex  | double   | LP64       | 1D  | yes      | CT        | outplace  | forward   | C       | C column major CT
     "C_C2C_COLMAJOR_CT_IP ./aocl_fftz_bench 150:1:1v128:150:150 -b a --dir f -r i"                            # accuracy | complex  | double   | LP64       | 1D  | yes      | CT        | inplace   | forward   | C       | C column major CT inplace
     "C_C2C_COLMAJOR_PRIME_OP ./aocl_fftz_bench 317:1:1v73:317:317 -b a --dir f"                               # accuracy | complex  | double   | LP64       | 1D  | yes      | CT+BS     | outplace  | forward   | C       | C column major BS prime
