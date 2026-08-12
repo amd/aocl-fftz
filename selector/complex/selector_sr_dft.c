@@ -136,14 +136,7 @@ FFTZ_INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     /* Link sub-solutions to parent */
-    sel->solution->next_sol = alloc_sol_array(1);
-    if (!sel->solution->next_sol)
-    {
-        ret = SELECTOR_FAILURE;
-        goto exit_sr_dft;
-    }
-
-    sel->solution->next_sol[0] = cur_sel_even->solution;
+    sel->solution->next_sol = cur_sel_even->solution;
     sel->solution->dft_bufs->sr->odd1_sol = cur_sel_odd1->solution;
     sel->solution->dft_bufs->sr->odd3_sol = cur_sel_odd3->solution;
 

@@ -127,6 +127,17 @@ FFTZ_INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
             break;
         }
 
+        // A C2C stride slot holds MAX_REAL_KERNEL_RADIX entries, so a wider
+        // radix would overrun it at execute time. Skip it until the limit is
+        // raised along with the new kernels.
+        if (radix > MAX_REAL_KERNEL_RADIX)
+        {
+            AOCLFFTZ_ERROR("Radix-%u real kernel exceeds "
+                           "MAX_REAL_KERNEL_RADIX (%d); raise it to match the "
+                           "real kernel tables", radix, MAX_REAL_KERNEL_RADIX);
+            continue;
+        }
+
         if ((FFTZ_INTP)radix == n)
         {
             AOCLFFTZ_LOG(TRACE, global_logger_mode,

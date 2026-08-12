@@ -74,23 +74,7 @@ FFTZ_INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         goto exit_batched_dft;
     }
 
-    sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
-    if (sel->solution->next_sol == NULL)
-    {
-        ret = AOCLFFTZ_MEMORY_FAILURE;
-        AOCLFFTZ_ERROR("alloc_sol_array failed: %s", get_status_string(ret));
-        goto exit_batched_dft;
-    }
-    sel->solution->next_sol[0] = cur_sel->solution;
-
-    // Set the out_ptr to last direct solution's output
-    aoclfftz_solution_t *temp_sol = sel->solution->next_sol[0];
-    while (HAS_NEXT(temp_sol))
-    {
-        temp_sol = temp_sol->next_sol[0];
-    }
-    sel->solution->dft_bufs->buffered->out_ptr =
-        &temp_sol->decomp_scheme->out_real;
+    sel->solution->next_sol = cur_sel->solution;
 
     // destroy only the selector not the solution within it
     destroy_selector_without_solution(cur_sel);

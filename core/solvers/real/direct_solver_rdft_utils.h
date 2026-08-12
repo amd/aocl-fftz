@@ -12,6 +12,7 @@
 #ifndef DIRECT_SOLVER_UTILS_H
 #define DIRECT_SOLVER_UTILS_H
 
+#include <string.h>
 #include "api/aoclfftz_internal.h"
 #include "core/kernels/kernel.h"
 #include "core/solvers/solver.h"
@@ -50,7 +51,22 @@ static inline FFTZ_UINT8 is_input_prob_buffer(aoclfftz_solution_t *sol)
 }
 
 /**
- * Updates the strides for the second half of the batch.
+ * @brief Initializes the C2C kernel stride array `dst`: first half from `strides_c2c`,
+ * second half, which wraps around at Nyquist, from `strides`.
+ */
+static inline FFTZ_VOID init_real_c2c_strides(FFTZ_INTP *dst,
+                                              const FFTZ_INTP *strides_c2c,
+                                              const FFTZ_INTP *strides,
+                                              FFTZ_INTP radix)
+{
+    FFTZ_INTP half_stride_start = (radix + 1) >> 1;
+    memcpy(dst, strides_c2c, radix * sizeof(FFTZ_INTP));
+    memcpy(dst + half_stride_start, strides + half_stride_start,
+           (radix - half_stride_start) * sizeof(FFTZ_INTP));
+}
+
+/**
+ * @brief Updates the strides for the second half of the batch.
  * It subtracts the stride_offset from each stride value to properly address
  * memory locations in the next iteration of C2C kernel execution.
  */
@@ -83,6 +99,21 @@ zero_rdft_dc_and_nyquist_fp64(FFTZ_DOUBLE *out, FFTZ_INTP nyquist_im_offset)
 }
 
 /**
+ * @brief Resolve a node's I/O pointers from its roles and the per-call ctx. A SWAP
+ * input reads aux_pool_base_1, a SWAP output writes aux_pool_base_2, and each
+ * stage swaps the two so its output feeds the next stage.
+ */
+static inline FFTZ_VOID aoclfftz_resolve_real_io(
+    const aoclfftz_mutable_ctx_t *ctx, FFTZ_UINT8 in_role, FFTZ_UINT8 out_role,
+    FFTZ_VOID **in_real, FFTZ_VOID **out_real)
+{
+    *in_real  = (in_role == REAL_USE_AUX_AND_SWAP) ?
+                ctx->aux_pool_base_1 : ctx->in_real;
+    *out_real = (out_role == REAL_USE_AUX_AND_SWAP) ?
+                ctx->aux_pool_base_2 : ctx->out_real;
+}
+
+/**
  * @brief Sets imaginary parts of DC and Nyquist frequencies to zero for
  * batched R2C transforms.
  *
@@ -92,10 +123,11 @@ zero_rdft_dc_and_nyquist_fp64(FFTZ_DOUBLE *out, FFTZ_INTP nyquist_im_offset)
  * discrete Fourier transform of a real-valued signal. This function handles
  * batched transforms.
  *
- * @param sol [in, out] The solution object containing problem details,
- *            including the output buffer to be modified.
+ * @param sol [in] The solution object containing problem details.
+ * @param out_real [in, out] The output buffer to be modified.
  */
-static inline FFTZ_VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t *sol)
+static inline FFTZ_VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t *sol,
+                                                            FFTZ_VOID *out_real)
 {
     FFTZ_INTP nyquist_im_offset = sol->decomp_scheme->nyquist_im_offset_direct;
     FFTZ_INTP v_out_stride = sol->strides_grp->strides->v_out_stride;
@@ -103,7 +135,7 @@ static inline FFTZ_VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t 
 
     if (DT_PRECISION_FLAG(sol->decomp_scheme->flags) == DT_FLOAT)
     {
-        FFTZ_FLOAT *out = (FFTZ_FLOAT *)sol->decomp_scheme->out_real;
+        FFTZ_FLOAT *out = (FFTZ_FLOAT *)out_real;
         for (FFTZ_UINTP b = 0; b < num_batches; b++)
         {
             zero_rdft_dc_and_nyquist_fp32(out, nyquist_im_offset);
@@ -112,7 +144,7 @@ static inline FFTZ_VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t 
     }
     else
     {
-        FFTZ_DOUBLE *out = (FFTZ_DOUBLE *)sol->decomp_scheme->out_real;
+        FFTZ_DOUBLE *out = (FFTZ_DOUBLE *)out_real;
         for (FFTZ_UINTP b = 0; b < num_batches; b++)
         {
             zero_rdft_dc_and_nyquist_fp64(out, nyquist_im_offset);
@@ -130,21 +162,22 @@ static inline FFTZ_VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t 
  * corresponding to the Nyquist frequency to zero. This is a property of the
  * discrete Fourier transform of a real-valued signal.
  *
- * @param sol [in, out] The solution object containing problem details,
- *            including the output buffer to be modified.
+ * @param sol [in] The solution object containing problem details.
+ * @param out_real [in, out] The output buffer to be modified.
  */
-static inline FFTZ_VOID set_zero_for_dc_and_nyquist(aoclfftz_solution_t *sol)
+static inline FFTZ_VOID set_zero_for_dc_and_nyquist(aoclfftz_solution_t *sol,
+                                                    FFTZ_VOID *out_real)
 {
     FFTZ_INTP nyquist_im_offset = sol->decomp_scheme->nyquist_im_offset_direct;
 
     if (DT_PRECISION_FLAG(sol->decomp_scheme->flags) == DT_FLOAT)
     {
-        zero_rdft_dc_and_nyquist_fp32((FFTZ_FLOAT *)sol->decomp_scheme->out_real,
+        zero_rdft_dc_and_nyquist_fp32((FFTZ_FLOAT *)out_real,
                                       nyquist_im_offset);
     }
     else
     {
-        zero_rdft_dc_and_nyquist_fp64((FFTZ_DOUBLE *)sol->decomp_scheme->out_real,
+        zero_rdft_dc_and_nyquist_fp64((FFTZ_DOUBLE *)out_real,
                                       nyquist_im_offset);
     }
 }
@@ -158,21 +191,22 @@ static inline FFTZ_VOID set_zero_for_dc_and_nyquist(aoclfftz_solution_t *sol)
  * corresponding to the Nyquist frequency to zero. This is a property of the
  * discrete Fourier transform of a real-valued signal.
  *
- * @param sol [in, out] The solution object containing problem details,
- *            including the output buffer to be modified.
+ * @param sol [in] The solution object containing problem details.
+ * @param out_real [in, out] The output buffer to be modified.
  */
-static inline FFTZ_VOID set_zero_for_dc_and_nyquist_ct(aoclfftz_solution_t *sol)
+static inline FFTZ_VOID set_zero_for_dc_and_nyquist_ct(aoclfftz_solution_t *sol,
+                                                       FFTZ_VOID *out_real)
 {
     FFTZ_INTP nyquist_im_offset = sol->decomp_scheme->nyquist_im_offset_ct;
 
     if (DT_PRECISION_FLAG(sol->decomp_scheme->flags) == DT_FLOAT)
     {
-        zero_rdft_dc_and_nyquist_fp32((FFTZ_FLOAT *)sol->decomp_scheme->out_real,
+        zero_rdft_dc_and_nyquist_fp32((FFTZ_FLOAT *)out_real,
                                       nyquist_im_offset);
     }
     else
     {
-        zero_rdft_dc_and_nyquist_fp64((FFTZ_DOUBLE *)sol->decomp_scheme->out_real,
+        zero_rdft_dc_and_nyquist_fp64((FFTZ_DOUBLE *)out_real,
                                       nyquist_im_offset);
     }
 }

@@ -393,15 +393,18 @@ FFTZ_INT32 allocate_and_setup_stride(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
-/** Update the in/out buffers of direct solution for CT problem
+/** Record the aux I/O roles of a Direct node in a CT problem
  *
- * This routes the single-thread aux_buffer_1/2 for each Direct node based on
- * its CT decomposition stage (parity), independent of the node ordering in the
- * chain. In recursive mode the chain mirrors the complex CT tree:
+ * The roles come from the node's position in the CT decomposition, independent
+ * of the node ordering in the chain. No buffer is bound here: the tree stays
+ * read-only and the pointers are resolved per call from the roles. The
+ * alternation between the two aux pools is added during execution, where every
+ * stage swaps them in ctx once its kernels are done. In recursive mode the
+ * chain mirrors the complex CT tree:
  * ... -> buffered -> CT -> direct(r) -> [CT -> direct]* -> direct(last)
  *
- * Here, the buffered holds the in & out of the current batch. The stage-parity
- * assignment yields the following Direct data flow (3-level CT example):
+ * Here, the buffered holds the in & out of the current batch. The roles and the
+ * per-stage swap together yield the following data flow (3-level CT example):
  *
  * buffered           [in -> out]
  * |--> direct(r)       [in   -> aux2]   (stage 0: in = problem input)
@@ -414,32 +417,15 @@ FFTZ_VOID update_ct_buffers(aoclfftz_solution_t *sol,
     if (!realhelper->is_CT)
         return;
 
-    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
-
-    FFTZ_VOID *in_real = NULL;
-    FFTZ_VOID *out_real = NULL;
-
-    if (realhelper->stage & 0x1)
-    {
-        in_real = sol->dft_bufs->buffered->aux_buffer_2;
-        out_real = sol->dft_bufs->buffered->aux_buffer_1;
-    }
-    else
-    {
-        in_real = sol->dft_bufs->buffered->aux_buffer_1;
-        out_real = sol->dft_bufs->buffered->aux_buffer_2;
-    }
-
-    if (realhelper->stage > 0)
-    {
-        sol->decomp_scheme->in_real = in_real;
-        sol->decomp_scheme->in_imag = MOVE_ADDR(in_real, dt_bytes);
-    }
-    if (!realhelper->is_last_stage)
-    {
-        sol->decomp_scheme->out_real = out_real;
-        sol->decomp_scheme->out_imag = MOVE_ADDR(out_real, dt_bytes);
-    }
+    // Record per-node I/O roles so the tree stays read-only. Every stage but the
+    // first reads from aux, and every stage but the last writes to aux; the two
+    // ends keep REAL_USE_IO_BUF so they use the plan's own in/out buffer.
+    sol->decomp_scheme->real_in_role  = (realhelper->stage) > 0 ?
+                                        REAL_USE_AUX_AND_SWAP :
+                                        REAL_USE_IO_BUF;
+    sol->decomp_scheme->real_out_role = realhelper->is_last_stage ?
+                                        REAL_USE_IO_BUF :
+                                        REAL_USE_AUX_AND_SWAP;
 }
 
 /**

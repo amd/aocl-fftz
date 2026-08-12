@@ -102,12 +102,11 @@ FFTZ_INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
 
 static inline FFTZ_VOID
 execute_real_mt_direct_kernels(aoclfftz_solution_t *sol,
-                               FFTZ_INT32 n_threads_real)
+                               FFTZ_INT32 n_threads_real,
+                               FFTZ_VOID *in,
+                               FFTZ_VOID *out)
 {
     FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
-
-    FFTZ_VOID *in = sol->decomp_scheme->in_real;
-    FFTZ_VOID *out = sol->decomp_scheme->out_real;
 
     /* Execute R2HC Kernels */
     if (sol->solver->kernel_r2hc->count != 0)
@@ -195,11 +194,10 @@ execute_real_mt_direct_kernels(aoclfftz_solution_t *sol,
 }
 
 static inline FFTZ_VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
-                                                    FFTZ_INT32 n_threads_c2c)
+                                                    FFTZ_INT32 n_threads_c2c,
+                                                    FFTZ_VOID *in,
+                                                    FFTZ_VOID *out)
 {
-    FFTZ_VOID *in = sol->decomp_scheme->in_real;
-    FFTZ_VOID *out = sol->decomp_scheme->out_real;
-
     FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
     FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
     kfft_ kernel_c2c = sol->solver->kernel_c2c->kfft[direction];
@@ -501,9 +499,13 @@ static FFTZ_INT32 execute_real_mt_direct_r2c(aoclfftz_solution_t *sol,
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    FFTZ_VOID *in = ctx->in_real;
+    FFTZ_VOID *out = ctx->out_real;
+
     execute_real_mt_direct_kernels(sol,
-                                   sol->decomp_scheme->thread_info->n_threads);
-    set_zero_for_dc_and_nyquist(sol);
+                                   sol->decomp_scheme->thread_info->n_threads,
+                                   in, out);
+    set_zero_for_dc_and_nyquist(sol, out);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
@@ -516,9 +518,13 @@ static FFTZ_INT32 execute_real_mt_direct_r2c_batched(aoclfftz_solution_t *sol,
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    FFTZ_VOID *in = ctx->in_real;
+    FFTZ_VOID *out = ctx->out_real;
+
     execute_real_mt_direct_kernels(sol,
-                                   sol->decomp_scheme->thread_info->n_threads);
-    set_zero_for_dc_and_nyquist_batched(sol);
+                                   sol->decomp_scheme->thread_info->n_threads,
+                                   in, out);
+    set_zero_for_dc_and_nyquist_batched(sol, out);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
@@ -530,15 +536,24 @@ static FFTZ_INT32 execute_real_mt_direct_c2r(aoclfftz_solution_t *sol,
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    FFTZ_VOID *in = ctx->in_real;
+    FFTZ_VOID *out = ctx->out_real;
+
     execute_real_mt_direct_kernels(sol,
-                                   sol->decomp_scheme->thread_info->n_threads);
+                                   sol->decomp_scheme->thread_info->n_threads,
+                                   in, out);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
 }
 
-// CT intra-stage: parallel R2HC/R2HCF and C2C within one CT stage.
-static FFTZ_VOID execute_real_mt_ct_intra_stage_kernels(aoclfftz_solution_t *sol)
+// Runs one CT stage's kernels, then swaps the aux ping-pong pools in ctx.
+// ITERATIVE and PARTIAL_RECURSION hand that ctx straight to next_sol; under
+// TRUE_RECURSION ctx is by reference, so radix_r's swap is seen by radix_m.
+static FFTZ_VOID execute_real_mt_ct_intra_stage_kernels(aoclfftz_solution_t *sol,
+                                                        aoclfftz_mutable_ctx_t *ctx,
+                                                        FFTZ_VOID *in,
+                                                        FFTZ_VOID *out)
 {
     FFTZ_INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
 
@@ -563,18 +578,21 @@ static FFTZ_VOID execute_real_mt_ct_intra_stage_kernels(aoclfftz_solution_t *sol
         {
             #pragma omp section
             {
-                execute_real_mt_direct_kernels(sol, n_threads_real);
+                execute_real_mt_direct_kernels(sol, n_threads_real, in, out);
             }
             #pragma omp section
             {
-                execute_real_mt_c2c_kernels(sol, n_threads_c2c);
+                execute_real_mt_c2c_kernels(sol, n_threads_c2c, in, out);
             }
         }
     }
     else
     {
-        execute_real_mt_direct_kernels(sol, n_threads_real);
+        execute_real_mt_direct_kernels(sol, n_threads_real, in, out);
     }
+
+    // Alternate the pools so the next stage reads what this one wrote.
+    SWAP_BUFFERS(ctx->aux_pool_base_1, ctx->aux_pool_base_2);
 }
 
 // CT forward R2C stage (R2HC + R2HCF + C2C); zero DC/Nyquist on last stage
@@ -585,8 +603,12 @@ static FFTZ_INT32 execute_real_mt_direct_ct_r2c(aoclfftz_solution_t *sol,
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     FFTZ_INT32 ret = SOLVER_SUCCESS;
+    FFTZ_VOID *in = NULL;
+    FFTZ_VOID *out = NULL;
+    aoclfftz_resolve_real_io(ctx, sol->decomp_scheme->real_in_role,
+                             sol->decomp_scheme->real_out_role, &in, &out);
 
-    execute_real_mt_ct_intra_stage_kernels(sol);
+    execute_real_mt_ct_intra_stage_kernels(sol, ctx, in, out);
 
 #if REAL_FFT_EXECUTION_ORDER == REAL_FFT_ORDER_TRUE_RECURSION
     // Recurse-then-combine mode: the CT solver owns tree traversal, so the
@@ -595,16 +617,16 @@ static FFTZ_INT32 execute_real_mt_direct_ct_r2c(aoclfftz_solution_t *sol,
     if (!HAS_NEXT(sol) &&
         FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR)
     {
-        set_zero_for_dc_and_nyquist_ct(sol);
+        set_zero_for_dc_and_nyquist_ct(sol, out);
     }
 #else
     if (HAS_NEXT(sol))
     {
-        ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0], ctx);
+        ret = sol->next_sol->solver->execute_solver(sol->next_sol, ctx);
     }
     else
     {
-        set_zero_for_dc_and_nyquist_ct(sol);
+        set_zero_for_dc_and_nyquist_ct(sol, out);
     }
 #endif
 
@@ -619,13 +641,17 @@ static FFTZ_INT32 execute_real_mt_direct_ct_c2r(aoclfftz_solution_t *sol,
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     FFTZ_INT32 ret = SOLVER_SUCCESS;
+    FFTZ_VOID *in = NULL;
+    FFTZ_VOID *out = NULL;
+    aoclfftz_resolve_real_io(ctx, sol->decomp_scheme->real_in_role,
+                             sol->decomp_scheme->real_out_role, &in, &out);
 
-    execute_real_mt_ct_intra_stage_kernels(sol);
+    execute_real_mt_ct_intra_stage_kernels(sol, ctx, in, out);
 
 #if REAL_FFT_EXECUTION_ORDER != REAL_FFT_ORDER_TRUE_RECURSION
     if (HAS_NEXT(sol))
     {
-        ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0], ctx);
+        ret = sol->next_sol->solver->execute_solver(sol->next_sol, ctx);
     }
 #endif
 

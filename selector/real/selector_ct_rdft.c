@@ -73,28 +73,16 @@ FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     }
 
     // Create empty solutions to copy cur_sel & cur_sel_m
-    sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
+    sel->solution->next_sol = alloc_solution(vec_rank, dim_rank);
     if (sel->solution->next_sol == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_ct_dft;
     }
-    sel->solution->next_sol[0] = alloc_solution(vec_rank, dim_rank);
-    if (sel->solution->next_sol[0] == NULL)
-    {
-        ret = AOCLFFTZ_MEMORY_FAILURE;
-        goto exit_ct_dft;
-    }
 
-    aoclfftz_solution_t *next_sol = sel->solution->next_sol[0];
-    next_sol->next_sol = alloc_sol_array(1 /*n_threads*/);
+    aoclfftz_solution_t *next_sol = sel->solution->next_sol;
+    next_sol->next_sol = alloc_solution(vec_rank, dim_rank);
     if (next_sol->next_sol == NULL)
-    {
-        ret = AOCLFFTZ_MEMORY_FAILURE;
-        goto exit_ct_dft;
-    }
-    next_sol->next_sol[0] = alloc_solution(vec_rank, dim_rank);
-    if (next_sol->next_sol[0] == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_ct_dft;
@@ -228,11 +216,12 @@ FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 }
                 // Destroy the solutions except the first 3 objects
                 // since it points to current CT, CT-R, CT-M respectively
-                if (next_sol->next_sol[0] != NULL)
+                if (next_sol->next_sol->next_sol != NULL)
                 {
-                    destroy_solutions(next_sol->next_sol[0]->next_sol, 1);
+                    destroy_solution(next_sol->next_sol->next_sol);
+                    next_sol->next_sol->next_sol = NULL;
                 }
-                aoclfftz_solution_t **sel_next_sol = next_sol->next_sol;
+                aoclfftz_solution_t *sel_next_sol = next_sol->next_sol;
                 ret = copy_solution_obj(next_sol, cur_sel->solution);
                 if (ret != AOCLFFTZ_SUCCESS)
                 {
@@ -250,7 +239,7 @@ FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                 // Restore the original next_sol after copy
                 next_sol->next_sol = sel_next_sol;
                 ret = copy_solution_obj(
-                    next_sol->next_sol[0], cur_sel_m->solution);
+                    next_sol->next_sol, cur_sel_m->solution);
                 if (ret != AOCLFFTZ_SUCCESS)
                 {
                     AOCLFFTZ_ERROR("copy_solution_obj failed: %s",
@@ -258,7 +247,7 @@ FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                     goto exit_ct_dft;
                 }
                 ret = copy_strides(
-                    next_sol->next_sol[0], cur_sel_m->solution);
+                    next_sol->next_sol, cur_sel_m->solution);
                 if (ret != AOCLFFTZ_SUCCESS)
                 {
                     AOCLFFTZ_ERROR("copy_strides failed: %s",
@@ -277,9 +266,9 @@ FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
             {
                 // Destroy the solutions of cur_sel and cur_sel_m
                 // except first solution
-                destroy_solutions(cur_sel->solution->next_sol, 1);
+                destroy_solution(cur_sel->solution->next_sol);
                 cur_sel->solution->next_sol = NULL;
-                destroy_solutions(cur_sel_m->solution->next_sol, 1);
+                destroy_solution(cur_sel_m->solution->next_sol);
                 cur_sel_m->solution->next_sol = NULL;
                 is_previous_solution_selected = 0;
                 // The solution is being discarded

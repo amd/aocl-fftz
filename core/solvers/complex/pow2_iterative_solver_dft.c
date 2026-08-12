@@ -473,7 +473,7 @@ static FFTZ_INT32 execute_pow2_iterative_solver(aoclfftz_solution_t *sol,
 
     // This thread's ping-pong slot.
     FFTZ_VOID *buf_a = MOVE_ADDR(ctx->pow2_buf_base,
-                                 (FFTZ_INTP)ctx->thr_slot_idx * 2 *
+                                 (FFTZ_INTP)ctx->slot_idx * 2 *
                                  it->buf_bytes);
     FFTZ_VOID *buf_b = MOVE_ADDR(buf_a, it->buf_bytes);
 

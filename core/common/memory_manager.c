@@ -186,8 +186,9 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
         sol->dft_bufs->buffered->aux_buffer_2 = NULL;
         sol->dft_bufs->buffered->is_aux_buffer_allocated = 0;
         sol->dft_bufs->buffered->aux_buf_size_per_thread = 0;
-        sol->dft_bufs->buffered->out_ptr = NULL;
         sol->decomp_scheme->thread_info->ndim_concurrency = 0;
+        sol->decomp_scheme->real_in_role = REAL_USE_IO_BUF;
+        sol->decomp_scheme->real_out_role = REAL_USE_IO_BUF;
         sol->dft_bufs->transpose->row_info = (aoclfftz_dim_t_64_){0};
         sol->dft_bufs->transpose->col_info = (aoclfftz_dim_t_64_){0};
         sol->dft_bufs->transpose->aux_mem->size = 0;
@@ -254,28 +255,6 @@ FFTZ_INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides,
         strides->out_strides[i] = i * out_stride * DATA_STRIDE;
     }
     return AOCLFFTZ_SUCCESS;
-}
-
-// Allocate n placeholders for next solution
-aoclfftz_solution_t **alloc_sol_array(FFTZ_INT32 n)
-{
-    aoclfftz_solution_t **sol = NULL;
-    if (n > 0)
-    {
-        ALLOC_ALIGN_UNINIT(sol, aoclfftz_solution_t*,
-                        n * sizeof(aoclfftz_solution_t*));
-        if (sol == NULL)
-        {
-            AOCLFFTZ_ERROR("alloc_sol_array failed: %s",
-                           get_status_string(AOCLFFTZ_MEMORY_FAILURE));
-            return NULL;
-        }
-        for (FFTZ_INT32 i = 0; i < n; i++)
-        {
-            sol[i] = NULL;
-        }
-    }
-    return sol;
 }
 
 aoclfftz_selector_t *alloc_selector(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank,
@@ -534,9 +513,6 @@ FFTZ_VOID destroy_solution(aoclfftz_solution_t* sol)
     if (sol != NULL)
     {
         FFTZ_INT32 solver_type = sol->solver->solver_type;
-        FFTZ_INT32 n_sols = (solver_type == SOLVER_REAL_MT_BATCHED)
-                             ? sol->decomp_scheme->thread_info->n_threads
-                             : 1;
         destroy_decomp_scheme(sol->decomp_scheme);
         destroy_strides_grp(sol->strides_grp);
 
@@ -584,88 +560,13 @@ FFTZ_VOID destroy_solution(aoclfftz_solution_t* sol)
         destroy_solution(sol->dft_bufs->nd_sol);
         destroy_solution(sol->dft_bufs->sr->odd1_sol);
         destroy_solution(sol->dft_bufs->sr->odd3_sol);
-        destroy_solutions(sol->next_sol, n_sols);
+        destroy_solution(sol->next_sol);
 
         FREE_ALIGN_ALLOCATED_MEM(sol);
     }
     return;
 }
 
-FFTZ_VOID destroy_solutions(aoclfftz_solution_t **sol, FFTZ_INT32 n)
-{
-    if (sol != NULL)
-    {
-        for (FFTZ_INT32 i = 0; i < n; i++)
-        {
-            aoclfftz_solution_t *cur_sol = sol[i];
-            if (cur_sol != NULL)
-            {
-                FFTZ_INT32 solver_type = cur_sol->solver->solver_type;
-                FFTZ_INT32 n_sols = (solver_type == SOLVER_REAL_MT_BATCHED)
-                                ? cur_sol->decomp_scheme->thread_info->n_threads
-                                : 1;
-
-                destroy_solutions(cur_sol->next_sol, n_sols);
-                destroy_decomp_scheme(cur_sol->decomp_scheme);
-                destroy_strides_grp(cur_sol->strides_grp);
-
-                FREE_ALIGN_ALLOCATED_MEM(cur_sol->twiddle->twiddle_buf_ptr);
-                cur_sol->twiddle->TW = NULL;
-                if (cur_sol->dft_bufs->ct_buf_allocated)
-                {
-                    FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->ct_buffer);
-                    cur_sol->dft_bufs->ct_buf_allocated = 0;
-                }
-                destroy_pow2_iterative(cur_sol->dft_bufs->pow2_iterative);
-
-                destroy_bluestein(cur_sol->dft_bufs->bluestein);
-                destroy_transpose(cur_sol->dft_bufs->transpose);
-
-                FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->sr->input_copy);
-
-                if (i == 0 && solver_type == SOLVER_REAL_NDIM)
-                {
-                    // SOLVER_REAL_NDIM: Only has aux_buffer_1 for inplace/C2R cases
-                    if (cur_sol->dft_bufs->buffered &&
-                        cur_sol->dft_bufs->buffered->aux_buffer_1)
-                    {
-                        FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_1);
-                        cur_sol->dft_bufs->buffered->aux_buffer_1 = NULL;
-                    }
-                }
-
-                // SOLVER_REAL_BUFFERED: Has both aux_buffer_1 and aux_buffer_2,
-                // only the node that allocated frees aux_buffer_1/2
-                else if (solver_type == SOLVER_REAL_BUFFERED &&
-                         cur_sol->dft_bufs->buffered &&
-                         cur_sol->dft_bufs->buffered->is_aux_buffer_allocated &&
-                         (cur_sol->dft_bufs->buffered->aux_buffer_1 ||
-                          cur_sol->dft_bufs->buffered->aux_buffer_2))
-                {
-                    FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_1);
-                    cur_sol->dft_bufs->buffered->aux_buffer_1 = NULL;
-                    FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_2);
-                    cur_sol->dft_bufs->buffered->aux_buffer_2 = NULL;
-                }
-                // Free nd_sol exactly once. SOLVER_NDIM allocates a single
-                // solution with no deep copies. SOLVER_REAL_NDIM creates clones
-                // that all share clone 0's nd_sol (complex_dims_sol),
-                // so only the owner (i == 0) frees it.
-                if ((solver_type == SOLVER_NDIM) ||
-                   ((solver_type == SOLVER_REAL_NDIM) && (i == 0)))
-                {
-                    destroy_solution(cur_sol->dft_bufs->nd_sol);
-                    cur_sol->dft_bufs->nd_sol = NULL;
-                }
-                destroy_solution(cur_sol->dft_bufs->sr->odd1_sol);
-                destroy_solution(cur_sol->dft_bufs->sr->odd3_sol);
-
-                FREE_ALIGN_ALLOCATED_MEM(cur_sol);
-            }
-        }
-        FREE_ALIGN_ALLOCATED_MEM(sol);
-    }
-}
 // Note: Since the use case for this function is primarily to free "temporary"
 //       selectors, and since temporary selectors are expected to be allocated
 //       using `alloc_selector_without_scratch_space`, this function does not
@@ -680,6 +581,8 @@ FFTZ_VOID destroy_selector_without_solution(aoclfftz_selector_t *sel)
         {
             FREE_ALIGN_ALLOCATED_MEM(sel->exec_metadata->base_ctx.bs_in_base);
             FREE_ALIGN_ALLOCATED_MEM(sel->exec_metadata->base_ctx.bs_out_base);
+            FREE_ALIGN_ALLOCATED_MEM(
+                            sel->exec_metadata->base_ctx.c2c_strides_base);
         }
         FREE_ALIGN_ALLOCATED_MEM(sel->exec_metadata);
         FREE_ALIGN_ALLOCATED_MEM(sel);

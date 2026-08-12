@@ -131,7 +131,7 @@ static FFTZ_INT32 execute_buffered_solver(aoclfftz_solution_t *sol,
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(ctx);
-    aoclfftz_solution_t *next_sol = sol->next_sol[0];
+    aoclfftz_solution_t *next_sol = sol->next_sol;
     aoclfftz_mutable_ctx_t child_ctx = *ctx;
     // Reroute the child's output into a private CT-buffer slot.
 #ifdef MULTI_THREADING

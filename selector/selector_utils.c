@@ -98,6 +98,8 @@ FFTZ_INT32 copy_decomp_scheme( aoclfftz_decomp_scheme_t *to_ds,
     to_ds->thread_info->n_threads = 1;
     to_ds->thread_info->active_threads = from_ds->thread_info->active_threads;
     to_ds->flags = from_ds->flags;
+    to_ds->real_in_role = from_ds->real_in_role;
+    to_ds->real_out_role = from_ds->real_out_role;
     return AOCLFFTZ_SUCCESS;
 }
 
@@ -203,6 +205,10 @@ FFTZ_INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->decomp_scheme->thread_info->n_threads;
     to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;
     setup_rdft_dc_nyquist_offsets_ds(to_sol_obj->decomp_scheme);
+    to_sol_obj->decomp_scheme->real_in_role =
+        from_sol_obj->decomp_scheme->real_in_role;
+    to_sol_obj->decomp_scheme->real_out_role =
+        from_sol_obj->decomp_scheme->real_out_role;
 
     // twiddle
     to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;
@@ -236,8 +242,6 @@ FFTZ_INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->dft_bufs->buffered->aux_buffer_2;
     to_sol_obj->dft_bufs->buffered->aux_buf_size_per_thread =
         from_sol_obj->dft_bufs->buffered->aux_buf_size_per_thread;
-    to_sol_obj->dft_bufs->buffered->out_ptr =
-        from_sol_obj->dft_bufs->buffered->out_ptr;
     to_sol_obj->dft_bufs->ct_buffer =
         from_sol_obj->dft_bufs->ct_buffer;
     to_sol_obj->decomp_scheme->thread_info->active_threads =
@@ -680,6 +684,10 @@ FFTZ_VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
     to_sol_obj->decomp_scheme->thread_info->n_threads =
         from_sol_obj->decomp_scheme->thread_info->n_threads;
     to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;
+    to_sol_obj->decomp_scheme->real_in_role =
+        from_sol_obj->decomp_scheme->real_in_role;
+    to_sol_obj->decomp_scheme->real_out_role =
+        from_sol_obj->decomp_scheme->real_out_role;
 
     // twiddle
     to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;
@@ -723,8 +731,6 @@ FFTZ_VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
     to_sol_obj->dft_bufs->ct_buf_size = from_sol_obj->dft_bufs->ct_buf_size;
     to_sol_obj->decomp_scheme->thread_info->active_threads =
         from_sol_obj->decomp_scheme->thread_info->active_threads;
-    to_sol_obj->dft_bufs->buffered->out_ptr =
-        from_sol_obj->dft_bufs->buffered->out_ptr;
     to_sol_obj->next_sol = from_sol_obj->next_sol;
 }
 
@@ -738,27 +744,27 @@ FFTZ_VOID swap_real_ct_solutions(aoclfftz_selector_t *sel)
         /* swap first CT node */
         if (sel->solution->solver->solver_type == SOLVER_REAL_CT &&
             (is_solver_real_direct_family(
-                 sel->solution->next_sol[0]->solver->solver_type)))
+                 sel->solution->next_sol->solver->solver_type)))
         {
-            sel->solution = curr->next_sol[0];
-            curr->next_sol[0] = sel->solution->next_sol[0];
-            sel->solution->next_sol[0] = curr;
+            sel->solution = curr->next_sol;
+            curr->next_sol = sel->solution->next_sol;
+            sel->solution->next_sol = curr;
         }
         /* swap remaining CT nodes */
         prev = curr;
-        curr = curr->next_sol[0];
-        while (curr && curr->next_sol && curr->next_sol[0])
+        curr = curr->next_sol;
+        while (curr && curr->next_sol)
         {
-            next = curr->next_sol[0];
+            next = curr->next_sol;
             if (curr->solver->solver_type == SOLVER_REAL_CT &&
                 is_solver_real_direct_family(next->solver->solver_type))
             {
-                prev->next_sol[0] = next;
-                curr->next_sol[0] = next->next_sol[0];
-                next->next_sol[0] = curr;
+                prev->next_sol = next;
+                curr->next_sol = next->next_sol;
+                next->next_sol = curr;
             }
             prev = curr;
-            curr = curr->next_sol[0];
+            curr = curr->next_sol;
         }
     }
 }

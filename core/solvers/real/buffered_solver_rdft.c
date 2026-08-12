@@ -11,8 +11,6 @@
  *  @author Srirammaswamy Srinivasan
  */
 
-#include <assert.h>
-
 #include "core/common/memory_manager.h"
 
 FFTZ_INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
@@ -64,33 +62,17 @@ static FFTZ_INT32 execute_real_buffered_solver(aoclfftz_solution_t *sol,
 
     FFTZ_INT32 ret = SOLVER_SUCCESS;
 
-    // composite problem input
-    sol->next_sol[0]->decomp_scheme->in_real = sol->decomp_scheme->in_real;
-    // composite problem output
-    *sol->dft_bufs->buffered->out_ptr = sol->decomp_scheme->out_real;
+    // Select the aux region belonging to this thread and hand it down. This is
+    // the only place the per-thread offset is applied; the nodes below just use
+    // these pointers, and every Direct CT stage swaps aux_pool_base_1/_2 once
+    // its kernels are done.
+    aoclfftz_mutable_ctx_t child_ctx = *ctx;
+    FFTZ_INTP aux_size = sol->dft_bufs->buffered->aux_buf_size_per_thread;
+    FFTZ_INTP aux_off = (FFTZ_INTP)ctx->slot_idx * aux_size;
+    child_ctx.aux_pool_base_1 = MOVE_ADDR(ctx->aux_pool_base_1, aux_off);
+    child_ctx.aux_pool_base_2 = MOVE_ADDR(ctx->aux_pool_base_2, aux_off);
 
-#if REAL_FFT_EXECUTION_ORDER != REAL_FFT_ORDER_ITERATIVE
-    // In recursive mode the tree is Buffered → CT → Direct(r, stage=0).
-    // The batched solver advances Buffered's in_real per batch, which is
-    // propagated above to CT. Direct(r, stage=0) also reads from the problem
-    // input, so forward the per-batch pointer to it. Inner Direct nodes
-    // (stage > 0) read from auxiliary buffers set at setup time and must
-    // NOT be overwritten, so only the CT's immediate child is updated.
-    // Invariant: the real buffered solver always wraps a CT problem
-    // (Buffered -> CT -> Direct(r, stage=0)); the selector only chooses
-    // REAL_BUFFERED when the kernel is not directly supported, so next_sol[0]
-    // is always a REAL_CT node. Asserted in debug builds; the NULL guards below
-    // keep release builds safe against a malformed chain.
-    assert(sol->next_sol[0]->solver->solver_type == SOLVER_REAL_CT);
-    if (sol->next_sol[0]->next_sol != NULL &&
-        sol->next_sol[0]->next_sol[0] != NULL)
-    {
-        sol->next_sol[0]->next_sol[0]->decomp_scheme->in_real =
-            sol->decomp_scheme->in_real;
-    }
-#endif
-
-    ret = sol->next_sol[0]->solver->execute_solver(sol->next_sol[0], ctx);
+    ret = sol->next_sol->solver->execute_solver(sol->next_sol, &child_ctx);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return ret;

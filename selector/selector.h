@@ -59,12 +59,12 @@ typedef struct aoclfftz_selector
  */
 #define FOR_EACH_SOLUTION(var, start_solution)                                 \
     for (aoclfftz_solution_t *var = start_solution; var != NULL;               \
-         var = (var != NULL && var->next_sol) ? *(var->next_sol) : NULL)
+         var = var->next_sol)
 
 /*
  * @brief Macro to check if there is a next solution
  */
-#define HAS_NEXT(sol) (sol->next_sol != NULL && sol->next_sol[0] != NULL)
+#define HAS_NEXT(sol) ((sol)->next_sol != NULL)
 
 // macro functions
 #define INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank)                         \
@@ -183,7 +183,7 @@ typedef struct aoclfftz_selector
  */
 #define SWAP_BUFFERS(buf1, buf2)                                               \
 {                                                                              \
-    FFTZ_VOID *temp_buffer_for_swap = buf1; \
+    FFTZ_VOID *temp_buffer_for_swap = buf1;                                    \
     buf1 = buf2;                                                               \
     buf2 = temp_buffer_for_swap;                                               \
 }

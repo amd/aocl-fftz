@@ -102,7 +102,7 @@ FFTZ_INT32 execute_sr_solver(aoclfftz_solution_t *sol,
     }
 
     /* Get sub-problems */
-    aoclfftz_solution_t *even_sol = sol->next_sol[0];
+    aoclfftz_solution_t *even_sol = sol->next_sol;
     aoclfftz_solution_t *odd1_sol = sol->dft_bufs->sr->odd1_sol;
     aoclfftz_solution_t *odd3_sol = sol->dft_bufs->sr->odd3_sol;
 

@@ -269,7 +269,7 @@ static FFTZ_INT32 execute_mt_bluestein_solver(aoclfftz_solution_t *sol,
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    aoclfftz_solution_t *next_sol = sol->next_sol[0];
+    aoclfftz_solution_t *next_sol = sol->next_sol;
     aoclfftz_bluestein_t *bluestein = sol->dft_bufs->bluestein;
     FFTZ_UINT8 dt_prec = DT_PRECISION_FLAG(ctx->flags);
     FFTZ_UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
@@ -283,9 +283,9 @@ static FFTZ_INT32 execute_mt_bluestein_solver(aoclfftz_solution_t *sol,
     bs_ctx.ct_offset = 0;
 
     // Two-level split of the shared bs pool: bs_dim_offset selects this dim's slice,
-    // then bs_buf_size * thr_slot_idx picks this thread's slot within it.
+    // then bs_buf_size * slot_idx picks this thread's slot within it.
     FFTZ_INTP bs_buf_offset = bluestein->bs_dim_offset +
-                              bluestein->bs_buf_size * ctx->thr_slot_idx;
+                              bluestein->bs_buf_size * ctx->slot_idx;
 
     bs_ctx.in_real     = MOVE_ADDR(ctx->bs_in_base, bs_buf_offset);
     bs_ctx.in_imag     = MOVE_ADDR(bs_ctx.in_real, dt_bytes);

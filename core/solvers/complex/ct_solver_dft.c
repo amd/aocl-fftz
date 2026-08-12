@@ -80,8 +80,8 @@ static FFTZ_INT32 execute_ct_solver(aoclfftz_solution_t *sol,
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     FFTZ_INT32 status = SOLVER_SUCCESS;
-    aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
-    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
+    aoclfftz_solution_t *radix_r_sol = sol->next_sol;
+    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol;
 
     // Build child ctx for radix-m: same in/out as parent
     aoclfftz_mutable_ctx_t m_ctx = *ctx;

@@ -91,6 +91,14 @@
 #define UNSET_BUFFERED(flags) SET_BIT_FLAG32(flags, 11, 0)
 #define IS_BUFFERED(flags) GET_BIT_FLAG32(flags, 11)
 
+// Per-node I/O role for the REAL (R2C/C2R) execute path. Storing the role
+// (fixed at setup) instead of an absolute pointer keeps the tree read-only, so
+// each caller resolves its own buffer via aoclfftz_resolve_real_io().
+#define REAL_USE_IO_BUF       0 // read from / write to the handle's own input / output
+                                // buffer, carried in ctx->in_real / ctx->out_real
+#define REAL_USE_AUX_AND_SWAP 1 // read from / write to the aux buffers, carried in
+                                // ctx->aux_pool_base_1 / ctx->aux_pool_base_2
+
 // Get size of datatype based on the precision
 #define DT_PRECISION_BYTES(dt_prec) (1 << dt_prec)
 
@@ -138,6 +146,8 @@
 #define NUM_STANDARD_KERNELS 15
 // Number of higher radix kernels (radix > 16, e.g., radix 48)
 #define NUMBER_OF_HIGHER_RADIX_KERNELS 2
+// Largest radix in the real kernel tables.
+#define MAX_REAL_KERNEL_RADIX 16
 // Total number of kernels in each category
 #define NUM_KERNELS_IN_EACH_CATEGORY                                           \
   (NUM_STANDARD_KERNELS + NUMBER_OF_HIGHER_RADIX_KERNELS)
@@ -228,12 +238,23 @@ typedef struct aoclfftz_mutable_ctx
     FFTZ_VOID *bs_out_base;          // Bluestein per-call output scratch
     FFTZ_VOID *sr_input_copy_base;   // Split-radix per-call input copy scratch
     FFTZ_VOID *pow2_buf_base;        // Pow2-iterative per-call ping-pong pool
+    FFTZ_VOID *aux_pool_base_1;      // REAL_BUFFERED aux ping-pong pool 1; the
+                                     // buffered node re-points it to this
+                                     // thread's slice before descending
+    FFTZ_VOID *aux_pool_base_2;      // REAL_BUFFERED aux ping-pong pool 2 (same
+                                     // per-thread slicing as pool 1)
+    FFTZ_VOID *aux_pool_base_ndim;   // REAL_NDIM C2R aux pool base
+    FFTZ_VOID *c2c_strides_base;     // C2C stride scratch pool for the
+                                     // single-threaded real Direct CT nodes; one
+                                     // MAX_REAL_KERNEL_RADIX-entry slot per thread
+                                     // that may run their C2C kernels
+    FFTZ_VOID *transpose_aux_base;   // Standalone-transpose visited-cell bitmap
     FFTZ_INTP ct_offset;             // Byte offset into the ct_buffer,
                                      // accumulated per-thread by mt_batched
     FFTZ_UINT32 flags;               // Plan flags (direction, precision, etc.)
-    FFTZ_INT32 thr_slot_idx;         // Dense per-thread slot index, used to
-                                     // slice bs_[in/out]_base (Bluestein) and
-                                     // pow2_buf_base (pow2-iterative)
+    FFTZ_INT32 slot_idx;             // Slices bs_[in/out]_base for Bluestein/MT_Bluestein,
+                                     // the aux pools for REAL_BUFFERED/REAL_NDIM
+                                     // and c2c_strides_base for real Direct CT.
 } aoclfftz_mutable_ctx_t;
 
 // Per-handle scratch byte sizes & the immutable execution context recorded at
@@ -252,6 +273,12 @@ typedef struct aoclfftz_immutable_metadata
                                         // for all concurrent slots
     FFTZ_UINTP ct_buffer_total_size;    // CT scratch pool size for the owners
                                         // -> NDIM, BUFFERED, CTL1D
+    FFTZ_UINTP aux_buffered_pool_size;  // REAL_BUFFERED aux ping-pong pool size,
+                                        // two pools of this size are allocated
+    FFTZ_UINTP aux_ndim_pool_size;      // REAL_NDIM C2R aux pool size
+    FFTZ_UINTP c2c_strides_pool_size;   // Real direct solvers' C2C stride
+                                        // scratch pool
+    FFTZ_UINTP transpose_aux_size;      // Standalone-transpose bitmap size
     aoclfftz_mutable_ctx_t base_ctx;    // execution context built at setup time
     FFTZ_INT32 setup_buffers_acquired;  // 0 = setup-time buffers free; whoever
                                         // grabs them flips to 1, so others
@@ -357,8 +384,13 @@ typedef struct aoclfftz_decomp_scheme
     FFTZ_UINT32 flags;
     // Real forward R2C post-process: precomputed DC/Nyquist imag slot indices.
     FFTZ_INTP nyquist_im_offset_direct; // per transform; direct R2C zero
-    FFTZ_INTP nyquist_im_offset_ct;    // full output span; CT R2C last-stage
+    FFTZ_INTP nyquist_im_offset_ct;     // full output span; CT R2C last-stage
                                         // zero.
+    // Per-node I/O roles for the REAL execute path (setup-time constants).
+    // REAL_USE_IO_BUF: read from / write to the handle's own input / output buffers
+    // REAL_USE_AUX_AND_SWAP: read from / write to the aux buffers
+    FFTZ_UINT8 real_in_role;
+    FFTZ_UINT8 real_out_role;
 } aoclfftz_decomp_scheme_t;
 
 // TW Holds twiddle factors used by a specific kernel for the given problem
@@ -421,18 +453,11 @@ typedef struct aoclfftz_buffered
     // Padded aux_buffer size (REAL_NDIM / REAL_BUFFERED) per thread; 0 if
     // unused.
     FFTZ_INTP aux_buf_size_per_thread;
-    // this is used to store the address of last direct solution's output buffer
-    // NOTE: This is required since we cannot immediately get the address of the
-    //       last node from one of the starting nodes.
-    //       It can be avoided if we introduce support circular doubly
-    //       linked-list or an additional field to point dependend non-next
-    //       nodes from the current solution.
-    FFTZ_VOID **out_ptr;
 } aoclfftz_buffered_t;
 
 // Holds split-radix solver specific sub-solutions and buffers.
 // The SR algorithm decomposes an N-point FFT into:
-//   - Even: N/2-point sub-problem (stored via next_sol[0])
+//   - Even: N/2-point sub-problem (stored via next_sol)
 //   - Odd1: N/4-point sub-problem (indices 1, 5, 9, ...)
 //   - Odd3: N/4-point sub-problem (indices 3, 7, 11, ...)
 // The input_copy buffer is used for in-place transforms to preserve input data
@@ -573,7 +598,7 @@ typedef struct aoclfftz_solution
     aoclfftz_strides_grp_t *strides_grp;
     aoclfftz_dft_bufs_t *dft_bufs;
     aoclfftz_twiddle_t *twiddle;
-    aoclfftz_solution_t **next_sol;
+    aoclfftz_solution_t *next_sol;
 } aoclfftz_solution_t;
 
 // Helper data structure to store setup-time information related to real solvers
