@@ -508,11 +508,48 @@ FFTZ_VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp)
     FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hcf->out_strides);
 }
 
+/**
+ * Free aux scratch that this node allocated.
+ *
+ * In a real plan, one node mallocs the aux pool and everyone else borrows it.
+ * Child CT/Direct nodes just hold pointers into that pool, so we do nothing
+ * for them. We only free when is_aux_buffer_allocated is set on this node.
+ *
+ * REAL_BUFFERED gets two buffers. The buffered solver uses them as a
+ * ping-pong pair while data moves through the CT direct chain
+ * (see update_ct_buffers()). Both must be freed when the plan is torn down.
+ *
+ * REAL_BATCHED_CT_L1_DIRECT gets one buffer. Fused execute passes data from
+ * stage_r to stage_m through aux_buffer_1 only; aux_buffer_2 is never used.
+ *
+ * REAL_NDIM may allocate aux_buffer_1 for inplace/C2R cases (no
+ * is_aux_buffer_allocated flag; free when aux_buffer_1 is non-NULL).
+ *
+ */
+
+FFTZ_VOID release_owned_real_buffered_aux(aoclfftz_solution_t *sol)
+{
+    if (sol == NULL || sol->solver == NULL || sol->dft_bufs == NULL ||
+        sol->dft_bufs->buffered == NULL ||
+        sol->dft_bufs->buffered->is_aux_buffer_allocated == 0)
+    {
+        return;
+    }
+
+    FFTZ_INT32 solver_type = sol->solver->solver_type;
+    FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
+    if (solver_type == SOLVER_REAL_BUFFERED)
+    {
+        FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
+    }
+    sol->dft_bufs->buffered->aux_buffer_2 = NULL;
+    sol->dft_bufs->buffered->is_aux_buffer_allocated = 0;
+}
+
 FFTZ_VOID destroy_solution(aoclfftz_solution_t* sol)
 {
     if (sol != NULL)
     {
-        FFTZ_INT32 solver_type = sol->solver->solver_type;
         destroy_decomp_scheme(sol->decomp_scheme);
         destroy_strides_grp(sol->strides_grp);
 
@@ -530,33 +567,7 @@ FFTZ_VOID destroy_solution(aoclfftz_solution_t* sol)
         destroy_pow2_iterative(sol->dft_bufs->pow2_iterative);
         FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->sr->input_copy);
 
-        // Free auxiliary buffers based on solver type:
-        // 1. For 1D real problems, real buffered solver will create
-        //    aux_buffers and the same address will be used in other solvers
-        //    So free the aux_buffers only for real buffered solver.
-        // 2. For in-place ND real problem, real ND solver will create
-        //    aux_buffer, so free it.
-        // 3. SOLVER_REAL_NDIM root owns aux_buffer_1 for inplace/C2R cases,
-        //    so free it here (for non-batched Real NDIM problems).
-        //
-        // Clearing these buffers will happen only once (which will be from
-        // destroy_handle).
-        if (solver_type == SOLVER_REAL_BUFFERED &&
-            sol->dft_bufs->buffered->is_aux_buffer_allocated &&
-            (sol->dft_bufs->buffered->aux_buffer_1 ||
-             sol->dft_bufs->buffered->aux_buffer_2))
-        {
-            FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
-            sol->dft_bufs->buffered->aux_buffer_1 = NULL;
-            FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
-            sol->dft_bufs->buffered->aux_buffer_2 = NULL;
-        }
-        else if (solver_type == SOLVER_REAL_NDIM && sol->dft_bufs->buffered &&
-                 sol->dft_bufs->buffered->aux_buffer_1)
-        {
-            FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
-            sol->dft_bufs->buffered->aux_buffer_1 = NULL;
-        }
+        release_owned_real_buffered_aux(sol);
         destroy_solution(sol->dft_bufs->nd_sol);
         destroy_solution(sol->dft_bufs->sr->odd1_sol);
         destroy_solution(sol->dft_bufs->sr->odd3_sol);
@@ -582,7 +593,7 @@ FFTZ_VOID destroy_selector_without_solution(aoclfftz_selector_t *sel)
             FREE_ALIGN_ALLOCATED_MEM(sel->exec_metadata->base_ctx.bs_in_base);
             FREE_ALIGN_ALLOCATED_MEM(sel->exec_metadata->base_ctx.bs_out_base);
             FREE_ALIGN_ALLOCATED_MEM(
-                            sel->exec_metadata->base_ctx.c2c_strides_base);
+                sel->exec_metadata->base_ctx.c2c_strides_base);
         }
         FREE_ALIGN_ALLOCATED_MEM(sel->exec_metadata);
         FREE_ALIGN_ALLOCATED_MEM(sel);

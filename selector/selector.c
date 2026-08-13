@@ -17,6 +17,7 @@
 #include "core/common/twiddle.h"
 #include "core/kernels/kernel_list.h"
 #include "utils/cpu_features.h"
+#include "core/solvers/real/direct_solver_rdft_utils.h"
 #include "utils/dispatcher.h"
 #include "utils/utils.h"
 #ifdef MULTI_THREADING
@@ -590,9 +591,8 @@ FFTZ_INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     //All the CT sub-problems will use fused twiddle dft kernels
     kernel_t *kertab = sel->kernel_tables->kt_rdft;
     FFTZ_INT32 ret = SELECTOR_FAILURE;
-    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 pre_fuse_vec_rank = sel->solution->decomp_scheme->vec_rank;
     FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-
     FFTZ_INT32 is_FFT_ker_supported = check_FFT_kernel_support(
         sel->solution->decomp_scheme->dims[0].n, kertab,
         !IS_NOT_INNERMOST_DIM(sel->solution->decomp_scheme->flags));
@@ -607,15 +607,14 @@ FFTZ_INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     SET_SELECTOR_MODE(sel->solution->decomp_scheme->flags,
                       AOCLFFTZ_FIXED_SELECTOR);
 
-    if (sel->solution->decomp_scheme->vec_rank > 1)
+    if (pre_fuse_vec_rank > 1)
     {
         fuse_vecs(sel->solution, is_FFT_ker_supported);
     }
-
     // SOLVER_BATCHED
     level1_cond1 =
         ((sel->solution->decomp_scheme->dims[0].n != 1) && /* non-size-one */
-         ((vec_rank > 1) ||                                /* ND Batched */
+         ((pre_fuse_vec_rank > 1) ||                        /* ND Batched */
           /* 1D Batched 1D Non-direct cases*/
           ((sel->solution->decomp_scheme->vecs[0].n > 1) &&
            !is_FFT_ker_supported &&
@@ -639,7 +638,20 @@ FFTZ_INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     // SOLVER_PFA
     // SOLVER_RADER
 
-    /** Level 1 decisions : Solvers **/
+    if (check_batched_ct_l1_direct_rdft_solvability(
+            sel->solution->decomp_scheme, realhelper, kertab))
+    {
+        solver_obj->solver_type = SOLVER_REAL_BATCHED_CT_L1_DIRECT;
+        if (set_solver_fp(solver_obj) == SOLVER_SUCCESS)
+        {
+            ret = selector_batched_ct_l1_direct_rdft(sel, kertab, realhelper);
+            if (ret == SELECTOR_SUCCESS)
+            {
+                return ret;
+            }
+        }
+    }
+
     // Batched/vector FFT Solver
     if (level1_cond1 & 0x1)
     {
@@ -1710,7 +1722,8 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
         {
             // Always inherit the parent's twiddle buffer reference.
             curr->twiddle->TW = prev->twiddle->TW;
-            if (curr->solver->solver_type == SOLVER_REAL_CT)
+            if (curr->solver->solver_type == SOLVER_REAL_CT ||
+                curr->solver->solver_type == SOLVER_REAL_BATCHED_CT_L1_DIRECT)
             {
                 // goto next direct node to setup twiddle buffer
                 while (
@@ -1854,9 +1867,10 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
                 }
                 curr->twiddle->TW = prev->twiddle->TW;
             }
-            else if (prev->solver->solver_type == SOLVER_REAL_CT &&
-                     is_solver_real_direct_family(
-                         curr->solver->solver_type) &&
+            else if ((prev->solver->solver_type == SOLVER_REAL_CT ||
+                      prev->solver->solver_type ==
+                          SOLVER_REAL_BATCHED_CT_L1_DIRECT) &&
+                     is_solver_real_direct_family(curr->solver->solver_type) &&
                      curr->solver->kernel_c2c->count > 0 &&
                      curr->twiddle->twiddle_buf_ptr == NULL)
             {
@@ -2050,6 +2064,15 @@ static FFTZ_VOID compute_exec_metadata(
             // REAL_NDIM owns the single C2R intermediate aux pool.
             metadata->aux_ndim_pool_size = GET_PADDED_SIZE(slots_size);
             metadata->base_ctx.aux_pool_base_ndim =
+                sol->dft_bufs->buffered->aux_buffer_1;
+        }
+        else if (stype == SOLVER_REAL_BATCHED_CT_L1_DIRECT)
+        {
+            // Fused real L1 CT owns one inter-stage aux pool (stage_r -> stage_m).
+            // Reuses aux_buffered_pool_size (single pool,no ping-pong aux_buffer_2).
+            metadata->aux_buffered_pool_size =
+                GET_PADDED_SIZE(slots_size + (FFTZ_UINTP)SOL_DT_SIZE(sol));
+            metadata->base_ctx.aux_pool_base_1 =
                 sol->dft_bufs->buffered->aux_buffer_1;
         }
     }

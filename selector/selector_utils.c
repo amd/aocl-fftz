@@ -242,6 +242,8 @@ FFTZ_INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->dft_bufs->buffered->aux_buffer_2;
     to_sol_obj->dft_bufs->buffered->aux_buf_size_per_thread =
         from_sol_obj->dft_bufs->buffered->aux_buf_size_per_thread;
+    // Borrower after copy; only the node that malloc'd the pool keeps ownership.
+    to_sol_obj->dft_bufs->buffered->is_aux_buffer_allocated = 0;
     to_sol_obj->dft_bufs->ct_buffer =
         from_sol_obj->dft_bufs->ct_buffer;
     to_sol_obj->decomp_scheme->thread_info->active_threads =

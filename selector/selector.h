@@ -282,6 +282,12 @@ FFTZ_INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                              aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                        aoclfftz_realhelper_t *realhelper);
+FFTZ_INT32 check_batched_ct_l1_direct_rdft_solvability(
+    aoclfftz_decomp_scheme_t *decomp_scheme, aoclfftz_realhelper_t *realhelper,
+    kernel_t *kertab_rdft);
+FFTZ_INT32
+selector_batched_ct_l1_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+                                   aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                          aoclfftz_realhelper_t *realhelper);
 FFTZ_VOID destroy_handle(FFTZ_VOID *handle);

@@ -69,12 +69,21 @@ static inline aoclfftz_error_type alloc_per_call_scratch(
                                 GET_PADDED_SIZE(exec_meta->transpose_aux_size);
 
     // Two Bluestein regions (bs_in_base, bs_out_base), two REAL_BUFFERED aux
-    // ping-pong pools (aux_pool_base_1, aux_pool_base_2, each of equal size),
-    // one REAL_NDIM aux pool (aux_pool_base_ndim), one real-direct C2C stride
-    // pool (c2c_strides_base), the SR input copy and one transpose bitmap.
+    // ping-pong pools (aux_pool_base_1, aux_pool_base_2, each of
+    // aux_buffered_size), one REAL_NDIM aux pool (aux_pool_base_ndim), one
+    // real-direct C2C stride pool (c2c_strides_base), the SR input copy and one
+    // transpose bitmap.
+    FFTZ_UINTP aux_slab_total = 0;
+    aux_slab_total = aux_buffered_size;
+    // REAL_BUFFERED pre-seeds aux_pool_base_2 in base_ctx; L1 CT leaves it
+    // NULL.
+    if (ctx->aux_pool_base_2 != NULL)
+    {
+        aux_slab_total += aux_buffered_size;
+    }
     FFTZ_UINTP total = ct_buffer_size
                        + (bs_buffer_size * 2)
-                       + (aux_buffered_size * 2)
+                       + aux_slab_total
                        + aux_ndim_size
                        + c2c_strides_size
                        + sr_input_copy_size
@@ -107,10 +116,17 @@ static inline aoclfftz_error_type alloc_per_call_scratch(
     }
     if (exec_meta->aux_buffered_pool_size > 0)
     {
+        // Real batched CT L1 direct solver owns one inter-stage aux pool. It'd
+        // use aux_pool_base_1 and Real BUFFERED uses both aux_pool_base_1 and
+        // aux_pool_base_2.
         ctx->aux_pool_base_1 = MOVE_ADDR(slab, offset);
         offset += aux_buffered_size;
-        ctx->aux_pool_base_2 = MOVE_ADDR(slab, offset);
-        offset += aux_buffered_size;
+        // REAL_BUFFERED ping-pong: base_ctx has aux_pool_base_2 preset.
+        if (ctx->aux_pool_base_2 != NULL)
+        {
+            ctx->aux_pool_base_2 = MOVE_ADDR(slab, offset);
+            offset += aux_buffered_size;
+        }
     }
     if (exec_meta->aux_ndim_pool_size > 0)
     {
@@ -144,6 +160,8 @@ static inline aoclfftz_error_type alloc_per_call_scratch(
 FFTZ_VOID destroy_selector(aoclfftz_selector_t *sel);
 FFTZ_VOID destroy_selector_without_solution(aoclfftz_selector_t *sel);
 FFTZ_VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp);
+
+FFTZ_VOID release_owned_real_buffered_aux(aoclfftz_solution_t *sol);
 
 FFTZ_VOID destroy_solution(aoclfftz_solution_t *sol);
 FFTZ_VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme);

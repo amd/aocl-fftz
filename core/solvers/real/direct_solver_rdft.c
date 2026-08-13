@@ -107,134 +107,6 @@ static inline FFTZ_VOID execute_r2hcf_kernels(aoclfftz_solution_t *sol,
                  FFT_DIR(sol->decomp_scheme->flags));
 }
 
-static inline FFTZ_VOID execute_c2c_kernels(aoclfftz_solution_t *sol,
-                                            const aoclfftz_mutable_ctx_t *ctx,
-                                            FFTZ_VOID *in, FFTZ_VOID *out)
-{
-    if (sol->solver->kernel_c2c->count == 0)
-    {
-        return;
-    }
-
-    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
-    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
-    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
-    kfft_ kernel_c2c = sol->solver->kernel_c2c->kfft[direction];
-    FFTZ_UINT32 is_fwd = (direction == FORWARD_FFT_DIR);
-
-    FFTZ_INTP num_groups = NUM_RFFT_GROUPS(sol->solver);
-    FFTZ_INTP num_c2c_per_group = sol->solver->kernel_c2c->count / num_groups;
-    FFTZ_UINT8 use_asymmetric_kernel = num_c2c_per_group >= num_groups;
-
-    // Select this invocation's private stride slot from the shared per-call pool.
-    // This keeps asymmetric stride updates isolated from concurrent executions.
-    FFTZ_INTP strides_off = (FFTZ_INTP)ctx->slot_idx * MAX_REAL_KERNEL_RADIX *
-                            (FFTZ_INTP)sizeof(FFTZ_INTP);
-    FFTZ_INTP *c2c_stride = MOVE_ADDR(ctx->c2c_strides_base, strides_off);
-
-    FFTZ_INTP batch_in_stride =
-        is_input_prob_buffer(sol)
-            ? sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE
-            : DATA_STRIDE;
-    FFTZ_INTP batch_out_stride =
-        is_output_prob_buffer(sol)
-            ? sol->decomp_scheme->dims[0].out_stride * DATA_STRIDE
-            : DATA_STRIDE;
-
-    if (is_fwd)
-    {
-        init_real_c2c_strides(c2c_stride,
-                              sol->strides_grp->strides_c2c->out_strides,
-                              sol->strides_grp->strides->out_strides, radix);
-        aoclfftz_strides_t strides_local = *(sol->strides_grp->strides_c2c);
-        strides_local.out_strides = c2c_stride;
-
-        aoclfftz_twiddle_t tw_local = *(sol->twiddle);
-        tw_local.load_multi_cols = 0; // use same twiddle values across batches
-        if (!use_asymmetric_kernel)
-        {
-            for (FFTZ_INTP group_id = 0; group_id < num_c2c_per_group;
-                 group_id++)
-            {
-                // This for loop computes C2C batches within the groups,
-                // while the kernel does across multiple groups
-                kernel_c2c(in, MOVE_ADDR(in, dt_bytes), out,
-                           MOVE_ADDR(out, dt_bytes), num_groups,
-                           &strides_local, &tw_local, direction);
-
-                update_asymmetric_strides(c2c_stride, radix,
-                                          batch_out_stride);
-
-                // move twiddle buffer to next batch
-                tw_local.TW = MOVE_ADDR(tw_local.TW, (FFTZ_INTP)(radix - 1) *
-                                        DATA_STRIDE * dt_bytes);
-                // Move the in & out buffers to point the next batch
-                in = MOVE_ADDR(in, batch_in_stride * dt_bytes);
-                out = MOVE_ADDR(out, batch_out_stride * dt_bytes);
-            }
-        }
-        else
-        {
-            FFTZ_INTP v_in_stride = sol->strides_grp->strides->v_in_stride;
-            FFTZ_INTP v_out_stride = sol->strides_grp->strides->v_out_stride;
-            for (FFTZ_INTP group_id = 0; group_id < num_groups; group_id++)
-            {
-                kernel_c2c(in, MOVE_ADDR(in, dt_bytes), out,
-                           MOVE_ADDR(out, dt_bytes), num_c2c_per_group,
-                           &strides_local, sol->twiddle,
-                           direction);
-
-                // Move the in & out buffers to point the next valid data
-                in = MOVE_ADDR(in, v_in_stride * dt_bytes);
-                out = MOVE_ADDR(out, v_out_stride * dt_bytes);
-            }
-        }
-    }
-    else
-    {
-        init_real_c2c_strides(c2c_stride,
-                              sol->strides_grp->strides_c2c->in_strides,
-                              sol->strides_grp->strides->in_strides, radix);
-        aoclfftz_strides_t strides_local = *(sol->strides_grp->strides_c2c);
-        strides_local.in_strides = c2c_stride;
-
-        aoclfftz_twiddle_t tw_local = *(sol->twiddle);
-        tw_local.load_multi_cols = 0; // use same twiddle values across batches
-        if (!use_asymmetric_kernel)
-        {
-            for (FFTZ_INTP group_id = 0; group_id < num_c2c_per_group;
-                 group_id++)
-            {
-                kernel_c2c(in, MOVE_ADDR(in, dt_bytes), out,
-                           MOVE_ADDR(out, dt_bytes), num_groups,
-                           &strides_local, &tw_local, direction);
-                update_asymmetric_strides(c2c_stride, radix,
-                                          batch_in_stride);
-                // move twiddle buffer to next batch
-                tw_local.TW = MOVE_ADDR(tw_local.TW, (FFTZ_INTP)(radix - 1) *
-                                        DATA_STRIDE * dt_bytes);
-                // Move the in & out buffers to point the next batch
-                in = MOVE_ADDR(in, batch_in_stride * dt_bytes);
-                out = MOVE_ADDR(out, batch_out_stride * dt_bytes);
-            }
-        }
-        else
-        {
-            FFTZ_INTP v_in_stride = sol->strides_grp->strides->v_in_stride;
-            FFTZ_INTP v_out_stride = sol->strides_grp->strides->v_out_stride;
-            for (FFTZ_INTP group_id = 0; group_id < num_groups; group_id++)
-            {
-                kernel_c2c(in, MOVE_ADDR(in, dt_bytes), out,
-                           MOVE_ADDR(out, dt_bytes), num_c2c_per_group,
-                           &strides_local, sol->twiddle,
-                           direction);
-                in = MOVE_ADDR(in, v_in_stride * dt_bytes);
-                out = MOVE_ADDR(out, v_out_stride * dt_bytes);
-            }
-        }
-    }
-}
-
 // Runs one CT stage's kernels, then swaps the aux ping-pong pools in ctx.
 // ITERATIVE and PARTIAL_RECURSION hand that ctx straight to next_sol; under
 // TRUE_RECURSION ctx is by reference, so radix_r's swap is seen by radix_m.
@@ -260,7 +132,7 @@ FFTZ_VOID execute_ct_intra_stage_kernels(aoclfftz_solution_t *sol,
     in = MOVE_ADDR(in, in_offset * dt_bytes);
     out = MOVE_ADDR(out, out_offset * dt_bytes);
 
-    execute_c2c_kernels(sol, ctx, in, out);
+    execute_c2c_kernels_rdft(sol, ctx, in, out, 0);
 
     // Alternate the pools so the next stage reads what this one wrote.
     SWAP_BUFFERS(ctx->aux_pool_base_1, ctx->aux_pool_base_2);

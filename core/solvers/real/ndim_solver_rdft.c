@@ -61,8 +61,8 @@ FFTZ_INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
                            get_status_string(AOCLFFTZ_MEMORY_FAILURE));
             return AOCLFFTZ_MEMORY_FAILURE;
         }
-        sol->dft_bufs->buffered->aux_buf_size_per_thread = padded_aux_buf_size;
         sol->dft_bufs->buffered->is_aux_buffer_allocated = 1;
+        sol->dft_bufs->buffered->aux_buf_size_per_thread = padded_aux_buf_size;
     }
     else
     {

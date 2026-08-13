@@ -59,6 +59,7 @@ typedef enum
     SOLVER_REAL_NDIM,
     SOLVER_REAL_BUFFERED,
     SOLVER_REAL_BATCHED,
+    SOLVER_REAL_BATCHED_CT_L1_DIRECT,
     SOLVER_REAL_PERM_KER,
     SOLVER_REAL_SIZEONE,
     SOLVER_REAL_MT_DIRECT_R2C,
@@ -147,6 +148,7 @@ FFTZ_INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
                              aoclfftz_solution_t *complex_dims_sol,
                              aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 setup_real_sizeone_solver(aoclfftz_solution_t *sol);
+FFTZ_INT32 setup_batched_ct_l1_direct_real_solver(aoclfftz_solution_t *sol);
 #ifdef MULTI_THREADING
 FFTZ_INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
                                   cost_analysis_t *cost,
@@ -187,6 +189,7 @@ dft_solver_ register_execute_real_direct_c2r(FFTZ_VOID);
 dft_solver_ register_execute_real_direct_ct_r2c(FFTZ_VOID);
 dft_solver_ register_execute_real_direct_ct_c2r(FFTZ_VOID);
 dft_solver_ register_execute_real_batched_solver(FFTZ_VOID);
+dft_solver_ register_execute_real_batched_ct_l1_direct_solver(FFTZ_VOID);
 dft_solver_ register_execute_real_buffered_solver(FFTZ_VOID);
 dft_solver_ register_execute_real_ct_solver(FFTZ_VOID);
 dft_solver_ register_execute_real_ndim_solver(FFTZ_VOID);

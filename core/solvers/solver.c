@@ -39,6 +39,8 @@ FFTZ_INT32 register_solvers(FFTZ_VOID)
         register_execute_real_direct_ct_c2r();
     solvers_table[SOLVER_REAL_CT] = register_execute_real_ct_solver();
     solvers_table[SOLVER_REAL_BATCHED] = register_execute_real_batched_solver();
+    solvers_table[SOLVER_REAL_BATCHED_CT_L1_DIRECT] =
+        register_execute_real_batched_ct_l1_direct_solver();
     solvers_table[SOLVER_REAL_BUFFERED] =
         register_execute_real_buffered_solver();
     solvers_table[SOLVER_REAL_NDIM] = register_execute_real_ndim_solver();
