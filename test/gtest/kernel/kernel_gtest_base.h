@@ -96,12 +96,22 @@ class AoclfftzKernelTestBase
     }
 
     /**
-     * @brief A high level function to run the twiddle kernel tests based on the
-     * given test parameter (aoclfftz_kernel_test_params_t)
+     * @brief A high level function to run the C2C forward/backward, R2C and
+     * C2R twiddle kernel tests based on the given test parameter
+     * (aoclfftz_kernel_test_params_t)
      *
-     * @param special if true, special values like NaN, infinity and
-     * sub-normals values will be used in input data (default: false)
+     * `twiddle_kind` is derived from `kernel_type` (each kind has its own
+     * direction-specific kernel type: C2C_TWID_FWD_*, C2C_TWID_BWD_*,
+     * C2C_TWID_R2C_* or C2C_TWID_C2R_*).
      *
+     * FWD/BWD apply twiddle-on-load then the matching-direction butterfly.
+     * R2C additionally H2-conjugates on store; C2R additionally
+     * H2-conjugates on load and twiddles on store instead of load. Each
+     * kind is validated by reusing already-verified building blocks: the
+     * plain C2C kernel of the matching direction, plus
+     * gtest_twiddle_multiplier_no_transpose() / gtest_conjugate_h2_points()
+     * to mirror the load-side/store-side transforms the kernel under test
+     * performs internally, then comparing against that kernel's own output.
      */
     FFTZ_VOID run_twiddle_kernel_test()
     {
@@ -110,11 +120,19 @@ class AoclfftzKernelTestBase
         in_stride       = std::get<0>(io_param);
         out_stride      = std::get<1>(io_param);
         offset          = std::get<2>(io_param);
-        is_bwd          = std::get<3>(io_param);
         is_out_of_place = std::get<4>(io_param);
         FFTZ_UINT8 load_multi_cols_param = std::get<5>(io_param);
         radix           = std::get<0>(param);
         kernel_type     = std::get<1>(param);
+
+        twiddle_kind kind;
+        if (!twiddle_kind_from_kernel_type(kernel_type, kind))
+        {
+            GTEST_FATAL_FAILURE_("Given kernel is not a twiddle kernel.");
+            return;
+        }
+
+        is_bwd = twiddle_kind_is_bwd(kind);
 
         // to prevent the "goto jumps over variable initialization" issue
         kfft_ tw_kernel = nullptr;
@@ -142,14 +160,6 @@ class AoclfftzKernelTestBase
         bool use_input_params = !is_out_of_place;
         aocl_fftz_test_input input_type = aocl_fftz_test_input::RANDOM;
 
-        if (kernel_type < aocl_fftz_kernel_type::C2C_TWID_C ||
-            kernel_type > aocl_fftz_kernel_type::C2C_TWID_AVX512)
-        {
-            CLEANUP_CODE;
-            GTEST_FATAL_FAILURE_("Given kernel is not a twiddle kernel.");
-            return;
-        }
-
         tw_kernel = get_twiddle_kernel<T>(radix, is_bwd, kernel_type);
         if (tw_kernel == nullptr)
         {
@@ -160,8 +170,12 @@ class AoclfftzKernelTestBase
                                     .c_str());
         }
 
+        // R2C's H1 output matches the plain forward C2C kernel's output
+        // exactly; only the H2 output differs (by a conjugation) -- see
+        // gtest_conjugate_h2_points() below. C2R's internal butterfly
+        // matches the plain backward C2C kernel's butterfly (both use the
+        // normal component convention and backward-direction algebra).
         table = get_kernel_table(aocl_fftz_kernel_type::C2C_C);
-
         if (table == nullptr)
         {
             CLEANUP_CODE;
@@ -172,7 +186,9 @@ class AoclfftzKernelTestBase
         if (fft_kernel == nullptr)
         {
             CLEANUP_CODE;
-            GTEST_FATAL_FAILURE_(std::string("C2C kernel for radix " +
+            GTEST_FATAL_FAILURE_(std::string(std::string("C2C ") +
+                                             (is_bwd ? "backward" : "forward") +
+                                             " kernel for radix " +
                                              std::to_string(radix) +
                                              " not found.")
                                     .c_str());
@@ -184,14 +200,16 @@ class AoclfftzKernelTestBase
         in_stride_w_ds  = in_stride * data_stride;
         out_stride_w_ds = out_stride * data_stride;
 
-        k_in = prepare_input(input_type); // the input to the regular kernel
+        // the input to the reference path; modified in place below for the
+        // r2c/c2r kinds
+        k_in = prepare_input(input_type);
         if (k_in == nullptr)
         {
             CLEANUP_CODE;
             GTEST_FATAL_FAILURE_("Input preparation failed");
         }
 
-        twk_in = nullptr; // the input to the twiddle kernel
+        twk_in = nullptr; // the unmodified input to the kernel under test
         ALLOC_ALIGN_UNINIT(twk_in, T, sizeof(T) * input_length * data_stride);
         if (twk_in == nullptr)
         {
@@ -200,11 +218,12 @@ class AoclfftzKernelTestBase
                                  "allocation failed");
         }
 
-        // copy the regular kernel's input to the twiddle kernel's input
+        // copy the reference input to the kernel's input before the
+        // reference path below modifies its own copy in place
         memcpy(twk_in, k_in, input_length * data_stride * sizeof(T));
 
-        k_out = nullptr; // the output of the regular kernel
-        twk_out = nullptr; // the output of the twiddle kernel
+        k_out = nullptr; // the output of the reference (plain kernel) path
+        twk_out = nullptr; // the output of the twiddle kernel under test
 
         if (is_out_of_place)
         {
@@ -225,7 +244,7 @@ class AoclfftzKernelTestBase
             twk_out = twk_in;
         }
 
-        // prepare the strides for the regular kernel
+        // prepare the strides for the reference kernel
         ALLOC_ALIGN_UNINIT(k_stride.in_strides, FFTZ_INTP,
                            radix * sizeof(FFTZ_INTP));
         if (k_stride.in_strides == nullptr)
@@ -288,39 +307,107 @@ class AoclfftzKernelTestBase
         tws.twiddle_buf_ptr = twiddle_buffer;
         tws.load_multi_cols = load_multi_cols_param;
 
-        // perform the twiddle multiplication on the kernel's input buffer
-        // this is to simulate the condition where the m (offset) fft has been
-        // performed and the twiddle multiplication followed by the kernel
-        // (radix/r) fft has to be done next.
-        if (is_bwd && load_multi_cols_param != 0)
+        // Reference path, load side:
+        // - FWD/R2C: forward-style twiddle-on-load (r, i argument order).
+        // - BWD: backward-style twiddle-on-load (i, r argument order) --
+        //   simulates the condition where the m (offset) fft has already
+        //   been performed and the twiddle multiplication followed by the
+        //   kernel (radix/r) fft has to be done next.
+        // - C2R: H2-conjugates its input in place instead -- upper-half
+        //   points (index >= ceil(radix/2)) are stored as the complex
+        //   conjugate of the logical spectral value, so negating their
+        //   imaginary component lets the plain backward C2C kernel below
+        //   combine the correct logical values.
+        // When load_multi_cols == 0 the kernel broadcasts the twiddle
+        // buffer's column 0 (the identity twiddle, see setup above) to
+        // every column, so no twiddle needs to be applied to the reference
+        // path either (FWD/R2C/BWD cases).
+        switch (kind)
         {
-            error = gtest_twiddle_multiplier_no_transpose(
-            k_in_i, k_in_r, radix, offset, in_stride_w_ds,
-            k_stride.v_in_stride, (FFTZ_INTP)load_multi_cols_param);
-        }
-        else if (!is_bwd && load_multi_cols_param != 0)
-        {
-            error = gtest_twiddle_multiplier_no_transpose(
-            k_in_r, k_in_i, radix, offset, in_stride_w_ds,
-            k_stride.v_in_stride, (FFTZ_INTP)load_multi_cols_param);
+        case twiddle_kind::FWD:
+        case twiddle_kind::R2C:
+            if (load_multi_cols_param != 0)
+            {
+                error = gtest_twiddle_multiplier_no_transpose(
+                    k_in_r, k_in_i, radix, offset, in_stride_w_ds,
+                    k_stride.v_in_stride, (FFTZ_INTP)load_multi_cols_param);
+
+                if (error == 0)
+                {
+                    CLEANUP_CODE;
+                    GTEST_FATAL_FAILURE_(
+                        "Twiddle multiplication (reference input) failed");
+                }
+            }
+            break;
+
+        case twiddle_kind::BWD:
+            if (load_multi_cols_param != 0)
+            {
+                error = gtest_twiddle_multiplier_no_transpose(
+                    k_in_i, k_in_r, radix, offset, in_stride_w_ds,
+                    k_stride.v_in_stride, (FFTZ_INTP)load_multi_cols_param);
+
+                if (error == 0)
+                {
+                    CLEANUP_CODE;
+                    GTEST_FATAL_FAILURE_(
+                        "Twiddle multiplication (reference input) failed");
+                }
+            }
+            break;
+
+        case twiddle_kind::C2R:
+            gtest_conjugate_h2_points(k_in_r, k_in_i, radix, offset,
+                                      k_stride.in_strides,
+                                      k_stride.v_in_stride);
+            break;
         }
 
-        // Only validate the multiplier result when a multiplication was
-        // actually attempted. For load_multi_cols == 0 neither branch above
-        // runs (the kernel applies no twiddle in that case), so `error`
-        // legitimately stays 0 and must not be treated as a failure.
-        if (load_multi_cols_param != 0 && error == 0)
-        {
-            CLEANUP_CODE;
-            GTEST_FATAL_FAILURE_(
-                "Twiddle multiplication (after regular kernel) failed");
-        }
-
-        // execute the regular kernel
+        // execute the reference butterfly of the matching direction
         fft_kernel(k_in_r, k_in_i, k_out_r, k_out_i, offset, &k_stride, NULL,
                    is_bwd);
 
-        // execute the twiddle kernel
+        // Reference path, store side -- the mirror of the load side above:
+        // - FWD/BWD: no store-side operation.
+        // - R2C: H2-conjugates its output, because the R2C twiddle kernels
+        //   negate the imaginary component of the upper-half points
+        //   internally after computing the same combine formula.
+        // - C2R: applies its store-side twiddle instead, where index 0
+        //   (DC) and column 0 are trivially untwiddled, matching the loop
+        //   bounds already implemented by
+        //   gtest_twiddle_multiplier_no_transpose.
+        switch (kind)
+        {
+        case twiddle_kind::FWD:
+        case twiddle_kind::BWD:
+            break;
+
+        case twiddle_kind::R2C:
+            gtest_conjugate_h2_points(k_out_r, k_out_i, radix, offset,
+                                      k_stride.out_strides,
+                                      k_stride.v_out_stride);
+            break;
+
+        case twiddle_kind::C2R:
+            if (load_multi_cols_param != 0)
+            {
+                error = gtest_twiddle_multiplier_no_transpose(
+                    k_out_r, k_out_i, radix, offset, out_stride_w_ds,
+                    k_stride.v_out_stride, (FFTZ_INTP)load_multi_cols_param);
+
+                if (error == 0)
+                {
+                    CLEANUP_CODE;
+                    GTEST_FATAL_FAILURE_(
+                        "Twiddle multiplication (reference output) failed");
+                }
+            }
+            break;
+        }
+
+        // execute the twiddle kernel under test on the unmodified input;
+        // it performs its own twiddle and/or H2 conjugation internally
         tw_kernel(twk_in_r, twk_in_i, twk_out_r, twk_out_i, offset, &k_stride,
                   &tws, is_bwd);
 
@@ -1041,38 +1128,59 @@ class AoclfftzKernelTestDouble : public AoclfftzKernelTestBase<FFTZ_DOUBLE>
 };
 
 /**
- * @brief A derived class from AoclfftzTwiddleKernelTestBase for FFTZ_FLOAT type
+ * @brief The output comparison tolerance to use for the given data type
  *
  */
-class AoclfftzTwiddleKernelTestFloat : public AoclfftzKernelTestBase<FFTZ_FLOAT>
+template <typename T> constexpr T kernel_test_tolerance();
+
+template <> constexpr FFTZ_FLOAT kernel_test_tolerance<FFTZ_FLOAT>()
+{
+    return TOLERANCE_F;
+}
+
+template <> constexpr FFTZ_DOUBLE kernel_test_tolerance<FFTZ_DOUBLE>()
+{
+    return TOLERANCE_D;
+}
+
+/**
+ * @brief A derived class from AoclfftzKernelTestBase used for the C2C, C2R
+ * and R2C twiddle kernel tests
+ *
+ * The three kinds need distinct fixture *types*: GTest instantiates every
+ * TEST_P registered against a fixture class for every
+ * INSTANTIATE_TEST_SUITE_P bound to that same class, so sharing one fixture
+ * between the C2C-twiddle-on-load, C2R-twiddle-on-store and R2C test bodies
+ * would cross-multiply every body against every parameter set. They do not
+ * need distinct *definitions*: `Tag` exists only to make each alias below a
+ * distinct type.
+ *
+ */
+template <typename T, int Tag>
+class AoclfftzTwiddleKernelTestT : public AoclfftzKernelTestBase<T>
 {
   public:
-    AoclfftzTwiddleKernelTestFloat()
+    AoclfftzTwiddleKernelTestT()
     {
-        is_complex          = true;
-        data_stride         = 2;
-        tolerance           = TOLERANCE_F;
-        buf_size_multiplier = 1;
+        this->is_complex          = true;
+        this->data_stride         = 2;
+        this->tolerance           = kernel_test_tolerance<T>();
+        this->buf_size_multiplier = 1;
     }
 };
 
-/**
- * @brief A derived class from AoclfftzTwiddleKernelTestBase for FFTZ_DOUBLE
- * type
- *
- */
-class AoclfftzTwiddleKernelTestDouble
-    : public AoclfftzKernelTestBase<FFTZ_DOUBLE>
-{
-  public:
-    AoclfftzTwiddleKernelTestDouble()
-    {
-        is_complex          = true;
-        data_stride         = 2;
-        tolerance           = TOLERANCE_D;
-        buf_size_multiplier = 1;
-    }
-};
+using AoclfftzTwiddleKernelTestFloat =
+    AoclfftzTwiddleKernelTestT<FFTZ_FLOAT, 0>;
+using AoclfftzTwiddleKernelTestDouble =
+    AoclfftzTwiddleKernelTestT<FFTZ_DOUBLE, 0>;
+using AoclfftzC2RTwiddleKernelTestFloat =
+    AoclfftzTwiddleKernelTestT<FFTZ_FLOAT, 1>;
+using AoclfftzC2RTwiddleKernelTestDouble =
+    AoclfftzTwiddleKernelTestT<FFTZ_DOUBLE, 1>;
+using AoclfftzR2CTwiddleKernelTestFloat =
+    AoclfftzTwiddleKernelTestT<FFTZ_FLOAT, 2>;
+using AoclfftzR2CTwiddleKernelTestDouble =
+    AoclfftzTwiddleKernelTestT<FFTZ_DOUBLE, 2>;
 
 /**
  * @brief A derived class from AoclfftzKernelTestBase for FFTZ_FLOAT type

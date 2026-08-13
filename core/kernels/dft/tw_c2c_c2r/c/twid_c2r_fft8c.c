@@ -59,13 +59,13 @@ static FFTZ_VOID twid_c2r_fft8c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     FFTZ_DOUBLE *tw = (FFTZ_DOUBLE *)(tws->TW);
     FFTZ_UINTP load_multi_cols = tws->load_multi_cols;
 
-    in_h1_r = (FFTZ_DOUBLE *)in_imag;
+    in_h1_r = (FFTZ_DOUBLE *)in_real;
     in_h2_r = in_h1_r;
-    in_h1_i = (FFTZ_DOUBLE *)in_real;
+    in_h1_i = (FFTZ_DOUBLE *)in_imag;
     in_h2_i = in_h1_i;
-    out_h1_r = (FFTZ_DOUBLE *)out_imag;
+    out_h1_r = (FFTZ_DOUBLE *)out_real;
     out_h2_r = out_h1_r;
-    out_h1_i = (FFTZ_DOUBLE *)out_real;
+    out_h1_i = (FFTZ_DOUBLE *)out_imag;
     out_h2_i = out_h1_i;
 
     FFTZ_DOUBLE *tw_ptr = tw;
@@ -101,28 +101,28 @@ static FFTZ_VOID twid_c2r_fft8c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         // Input point 5: x(4)
         FFTZ_DOUBLE v5r_t = in_h2_r[in_strides[4]];
         FFTZ_DOUBLE v5i_t = in_h2_i[in_strides[4]];
-        v5r_t = -v5r_t;
+        v5i_t = -v5i_t;
         v5r = v5r_t;
         v5i = v5i_t;
 
         // Input point 6: x(5)
         FFTZ_DOUBLE v6r_t = in_h2_r[in_strides[5]];
         FFTZ_DOUBLE v6i_t = in_h2_i[in_strides[5]];
-        v6r_t = -v6r_t;
+        v6i_t = -v6i_t;
         v6r = v6r_t;
         v6i = v6i_t;
 
         // Input point 7: x(6)
         FFTZ_DOUBLE v7r_t = in_h2_r[in_strides[6]];
         FFTZ_DOUBLE v7i_t = in_h2_i[in_strides[6]];
-        v7r_t = -v7r_t;
+        v7i_t = -v7i_t;
         v7r = v7r_t;
         v7i = v7i_t;
 
         // Input point 8: x(7)
         FFTZ_DOUBLE v8r_t = in_h2_r[in_strides[7]];
         FFTZ_DOUBLE v8i_t = in_h2_i[in_strides[7]];
-        v8r_t = -v8r_t;
+        v8i_t = -v8i_t;
         v8r = v8r_t;
         v8i = v8i_t;
 
@@ -153,8 +153,8 @@ static FFTZ_VOID twid_c2r_fft8c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         tvrr = v15r - v37r;
         tvri = v82i - v64i;
-        FFTZ_DOUBLE _or_2 = tvrr - tvri;
-        FFTZ_DOUBLE _or_6 = tvrr + tvri;
+        FFTZ_DOUBLE _or_2 = tvrr + tvri;
+        FFTZ_DOUBLE _or_6 = tvrr - tvri;
 
         v15i = v1i + v5i;
         v51i = v1i - v5i;
@@ -166,8 +166,8 @@ static FFTZ_VOID twid_c2r_fft8c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
             FFTZ_DOUBLE _twr = tw_ptr[3 * DATA_STRIDE];
             FFTZ_DOUBLE _twi = tw_ptr[3 * DATA_STRIDE + 1];
             FFTZ_DOUBLE _oi = tvir - tvii;
-            out_h2_r[out_strides[4]] = _or_4 * _twr + _oi * _twi;
-            out_h2_i[out_strides[4]] = _oi * _twr - _or_4 * _twi;
+            out_h2_r[out_strides[4]] = _or_4 * _twr - _oi * _twi;
+            out_h2_i[out_strides[4]] = _or_4 * _twi + _oi * _twr;
         }
 
         tvir = v82r - v64r;
@@ -176,16 +176,16 @@ static FFTZ_VOID twid_c2r_fft8c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         {
             FFTZ_DOUBLE _twr = tw_ptr[DATA_STRIDE];
             FFTZ_DOUBLE _twi = tw_ptr[DATA_STRIDE + 1];
-            FFTZ_DOUBLE _oi_2 = tvir + tvii;
-            out_h1_r[out_strides[2]] = _or_2 * _twr + _oi_2 * _twi;
-            out_h1_i[out_strides[2]] = _oi_2 * _twr - _or_2 * _twi;
+            FFTZ_DOUBLE _oi_2 = tvii - tvir;
+            out_h1_r[out_strides[2]] = _or_2 * _twr - _oi_2 * _twi;
+            out_h1_i[out_strides[2]] = _or_2 * _twi + _oi_2 * _twr;
         }
         {
             FFTZ_DOUBLE _twr = tw_ptr[5 * DATA_STRIDE];
             FFTZ_DOUBLE _twi = tw_ptr[5 * DATA_STRIDE + 1];
-            FFTZ_DOUBLE _oi = tvii - tvir;
-            out_h2_r[out_strides[6]] = _or_6 * _twr + _oi * _twi;
-            out_h2_i[out_strides[6]] = _oi * _twr - _or_6 * _twi;
+            FFTZ_DOUBLE _oi = tvii + tvir;
+            out_h2_r[out_strides[6]] = _or_6 * _twr - _oi * _twi;
+            out_h2_i[out_strides[6]] = _or_6 * _twi + _oi * _twr;
         }
 
         tv1rr = CRTM_8_1 * (v28r - v46r);
@@ -193,13 +193,13 @@ static FFTZ_VOID twid_c2r_fft8c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         tvrr = v51r + tv1rr;
         tvri = tv1ri - v73i;
-        FFTZ_DOUBLE _or_1 = tvrr - tvri;
-        FFTZ_DOUBLE _or_7 = tvrr + tvri;
+        FFTZ_DOUBLE _or_1 = tvrr + tvri;
+        FFTZ_DOUBLE _or_7 = tvrr - tvri;
 
         tvrr = v51r - tv1rr;
         tvri = tv1ri + v73i;
-        FFTZ_DOUBLE _or_3 = tvrr - tvri;
-        FFTZ_DOUBLE _or_5 = tvrr + tvri;
+        FFTZ_DOUBLE _or_3 = tvrr + tvri;
+        FFTZ_DOUBLE _or_5 = tvrr - tvri;
 
         tv1ir = CRTM_8_1 * (v82r + v64r);
         tvir = tv1ir + v73r;
@@ -208,16 +208,16 @@ static FFTZ_VOID twid_c2r_fft8c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         {
             FFTZ_DOUBLE _twr = tw_ptr[0];
             FFTZ_DOUBLE _twi = tw_ptr[1];
-            FFTZ_DOUBLE _oi_1 = tvir + tvii;
-            out_h1_r[out_strides[1]] = _or_1 * _twr + _oi_1 * _twi;
-            out_h1_i[out_strides[1]] = _oi_1 * _twr - _or_1 * _twi;
+            FFTZ_DOUBLE _oi_1 = tvii - tvir;
+            out_h1_r[out_strides[1]] = _or_1 * _twr - _oi_1 * _twi;
+            out_h1_i[out_strides[1]] = _or_1 * _twi + _oi_1 * _twr;
         }
         {
             FFTZ_DOUBLE _twr = tw_ptr[6 * DATA_STRIDE];
             FFTZ_DOUBLE _twi = tw_ptr[6 * DATA_STRIDE + 1];
-            FFTZ_DOUBLE _oi = tvii - tvir;
-            out_h2_r[out_strides[7]] = _or_7 * _twr + _oi * _twi;
-            out_h2_i[out_strides[7]] = _oi * _twr - _or_7 * _twi;
+            FFTZ_DOUBLE _oi = tvir + tvii;
+            out_h2_r[out_strides[7]] = _or_7 * _twr - _oi * _twi;
+            out_h2_i[out_strides[7]] = _or_7 * _twi + _oi * _twr;
         }
 
         tvir = tv1ir - v73r;
@@ -226,16 +226,16 @@ static FFTZ_VOID twid_c2r_fft8c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         {
             FFTZ_DOUBLE _twr = tw_ptr[2 * DATA_STRIDE];
             FFTZ_DOUBLE _twi = tw_ptr[2 * DATA_STRIDE + 1];
-            FFTZ_DOUBLE _oi_3 = tvir + tvii;
-            out_h1_r[out_strides[3]] = _or_3 * _twr + _oi_3 * _twi;
-            out_h1_i[out_strides[3]] = _oi_3 * _twr - _or_3 * _twi;
+            FFTZ_DOUBLE _oi_3 = tvii - tvir;
+            out_h1_r[out_strides[3]] = _or_3 * _twr - _oi_3 * _twi;
+            out_h1_i[out_strides[3]] = _or_3 * _twi + _oi_3 * _twr;
         }
         {
             FFTZ_DOUBLE _twr = tw_ptr[4 * DATA_STRIDE];
             FFTZ_DOUBLE _twi = tw_ptr[4 * DATA_STRIDE + 1];
-            FFTZ_DOUBLE _oi = tvii - tvir;
-            out_h2_r[out_strides[5]] = _or_5 * _twr + _oi * _twi;
-            out_h2_i[out_strides[5]] = _oi * _twr - _or_5 * _twi;
+            FFTZ_DOUBLE _oi = tvir + tvii;
+            out_h2_r[out_strides[5]] = _or_5 * _twr - _oi * _twi;
+            out_h2_i[out_strides[5]] = _or_5 * _twi + _oi * _twr;
         }
 
         in_h1_r += v_in_stride;
@@ -280,13 +280,13 @@ static FFTZ_VOID twid_c2r_fft8c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     FFTZ_FLOAT *tw = (FFTZ_FLOAT *)(tws->TW);
     FFTZ_UINTP load_multi_cols = tws->load_multi_cols;
 
-    in_h1_r = (FFTZ_FLOAT *)in_imag;
+    in_h1_r = (FFTZ_FLOAT *)in_real;
     in_h2_r = in_h1_r;
-    in_h1_i = (FFTZ_FLOAT *)in_real;
+    in_h1_i = (FFTZ_FLOAT *)in_imag;
     in_h2_i = in_h1_i;
-    out_h1_r = (FFTZ_FLOAT *)out_imag;
+    out_h1_r = (FFTZ_FLOAT *)out_real;
     out_h2_r = out_h1_r;
-    out_h1_i = (FFTZ_FLOAT *)out_real;
+    out_h1_i = (FFTZ_FLOAT *)out_imag;
     out_h2_i = out_h1_i;
 
     FFTZ_FLOAT *tw_ptr = tw;
@@ -322,28 +322,28 @@ static FFTZ_VOID twid_c2r_fft8c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         // Input point 5: x(4)
         FFTZ_FLOAT v5r_t = in_h2_r[in_strides[4]];
         FFTZ_FLOAT v5i_t = in_h2_i[in_strides[4]];
-        v5r_t = -v5r_t;
+        v5i_t = -v5i_t;
         v5r = v5r_t;
         v5i = v5i_t;
 
         // Input point 6: x(5)
         FFTZ_FLOAT v6r_t = in_h2_r[in_strides[5]];
         FFTZ_FLOAT v6i_t = in_h2_i[in_strides[5]];
-        v6r_t = -v6r_t;
+        v6i_t = -v6i_t;
         v6r = v6r_t;
         v6i = v6i_t;
 
         // Input point 7: x(6)
         FFTZ_FLOAT v7r_t = in_h2_r[in_strides[6]];
         FFTZ_FLOAT v7i_t = in_h2_i[in_strides[6]];
-        v7r_t = -v7r_t;
+        v7i_t = -v7i_t;
         v7r = v7r_t;
         v7i = v7i_t;
 
         // Input point 8: x(7)
         FFTZ_FLOAT v8r_t = in_h2_r[in_strides[7]];
         FFTZ_FLOAT v8i_t = in_h2_i[in_strides[7]];
-        v8r_t = -v8r_t;
+        v8i_t = -v8i_t;
         v8r = v8r_t;
         v8i = v8i_t;
 
@@ -374,8 +374,8 @@ static FFTZ_VOID twid_c2r_fft8c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         tvrr = v15r - v37r;
         tvri = v82i - v64i;
-        FFTZ_FLOAT _or_2 = tvrr - tvri;
-        FFTZ_FLOAT _or_6 = tvrr + tvri;
+        FFTZ_FLOAT _or_2 = tvrr + tvri;
+        FFTZ_FLOAT _or_6 = tvrr - tvri;
 
         v15i = v1i + v5i;
         v51i = v1i - v5i;
@@ -387,8 +387,8 @@ static FFTZ_VOID twid_c2r_fft8c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
             FFTZ_FLOAT _twr = tw_ptr[3 * DATA_STRIDE];
             FFTZ_FLOAT _twi = tw_ptr[3 * DATA_STRIDE + 1];
             FFTZ_FLOAT _oi = tvir - tvii;
-            out_h2_r[out_strides[4]] = _or_4 * _twr + _oi * _twi;
-            out_h2_i[out_strides[4]] = _oi * _twr - _or_4 * _twi;
+            out_h2_r[out_strides[4]] = _or_4 * _twr - _oi * _twi;
+            out_h2_i[out_strides[4]] = _or_4 * _twi + _oi * _twr;
         }
 
         tvir = v82r - v64r;
@@ -397,16 +397,16 @@ static FFTZ_VOID twid_c2r_fft8c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         {
             FFTZ_FLOAT _twr = tw_ptr[DATA_STRIDE];
             FFTZ_FLOAT _twi = tw_ptr[DATA_STRIDE + 1];
-            FFTZ_FLOAT _oi_2 = tvir + tvii;
-            out_h1_r[out_strides[2]] = _or_2 * _twr + _oi_2 * _twi;
-            out_h1_i[out_strides[2]] = _oi_2 * _twr - _or_2 * _twi;
+            FFTZ_FLOAT _oi_2 = tvii - tvir;
+            out_h1_r[out_strides[2]] = _or_2 * _twr - _oi_2 * _twi;
+            out_h1_i[out_strides[2]] = _or_2 * _twi + _oi_2 * _twr;
         }
         {
             FFTZ_FLOAT _twr = tw_ptr[5 * DATA_STRIDE];
             FFTZ_FLOAT _twi = tw_ptr[5 * DATA_STRIDE + 1];
-            FFTZ_FLOAT _oi = tvii - tvir;
-            out_h2_r[out_strides[6]] = _or_6 * _twr + _oi * _twi;
-            out_h2_i[out_strides[6]] = _oi * _twr - _or_6 * _twi;
+            FFTZ_FLOAT _oi = tvii + tvir;
+            out_h2_r[out_strides[6]] = _or_6 * _twr - _oi * _twi;
+            out_h2_i[out_strides[6]] = _or_6 * _twi + _oi * _twr;
         }
 
         tv1rr = CRTM_8_1 * (v28r - v46r);
@@ -414,13 +414,13 @@ static FFTZ_VOID twid_c2r_fft8c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         tvrr = v51r + tv1rr;
         tvri = tv1ri - v73i;
-        FFTZ_FLOAT _or_1 = tvrr - tvri;
-        FFTZ_FLOAT _or_7 = tvrr + tvri;
+        FFTZ_FLOAT _or_1 = tvrr + tvri;
+        FFTZ_FLOAT _or_7 = tvrr - tvri;
 
         tvrr = v51r - tv1rr;
         tvri = tv1ri + v73i;
-        FFTZ_FLOAT _or_3 = tvrr - tvri;
-        FFTZ_FLOAT _or_5 = tvrr + tvri;
+        FFTZ_FLOAT _or_3 = tvrr + tvri;
+        FFTZ_FLOAT _or_5 = tvrr - tvri;
 
         tv1ir = CRTM_8_1 * (v82r + v64r);
         tvir = tv1ir + v73r;
@@ -429,16 +429,16 @@ static FFTZ_VOID twid_c2r_fft8c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         {
             FFTZ_FLOAT _twr = tw_ptr[0];
             FFTZ_FLOAT _twi = tw_ptr[1];
-            FFTZ_FLOAT _oi_1 = tvir + tvii;
-            out_h1_r[out_strides[1]] = _or_1 * _twr + _oi_1 * _twi;
-            out_h1_i[out_strides[1]] = _oi_1 * _twr - _or_1 * _twi;
+            FFTZ_FLOAT _oi_1 = tvii - tvir;
+            out_h1_r[out_strides[1]] = _or_1 * _twr - _oi_1 * _twi;
+            out_h1_i[out_strides[1]] = _or_1 * _twi + _oi_1 * _twr;
         }
         {
             FFTZ_FLOAT _twr = tw_ptr[6 * DATA_STRIDE];
             FFTZ_FLOAT _twi = tw_ptr[6 * DATA_STRIDE + 1];
-            FFTZ_FLOAT _oi = tvii - tvir;
-            out_h2_r[out_strides[7]] = _or_7 * _twr + _oi * _twi;
-            out_h2_i[out_strides[7]] = _oi * _twr - _or_7 * _twi;
+            FFTZ_FLOAT _oi = tvir + tvii;
+            out_h2_r[out_strides[7]] = _or_7 * _twr - _oi * _twi;
+            out_h2_i[out_strides[7]] = _or_7 * _twi + _oi * _twr;
         }
 
         tvir = tv1ir - v73r;
@@ -447,16 +447,16 @@ static FFTZ_VOID twid_c2r_fft8c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         {
             FFTZ_FLOAT _twr = tw_ptr[2 * DATA_STRIDE];
             FFTZ_FLOAT _twi = tw_ptr[2 * DATA_STRIDE + 1];
-            FFTZ_FLOAT _oi_3 = tvir + tvii;
-            out_h1_r[out_strides[3]] = _or_3 * _twr + _oi_3 * _twi;
-            out_h1_i[out_strides[3]] = _oi_3 * _twr - _or_3 * _twi;
+            FFTZ_FLOAT _oi_3 = tvii - tvir;
+            out_h1_r[out_strides[3]] = _or_3 * _twr - _oi_3 * _twi;
+            out_h1_i[out_strides[3]] = _or_3 * _twi + _oi_3 * _twr;
         }
         {
             FFTZ_FLOAT _twr = tw_ptr[4 * DATA_STRIDE];
             FFTZ_FLOAT _twi = tw_ptr[4 * DATA_STRIDE + 1];
-            FFTZ_FLOAT _oi = tvii - tvir;
-            out_h2_r[out_strides[5]] = _or_5 * _twr + _oi * _twi;
-            out_h2_i[out_strides[5]] = _oi * _twr - _or_5 * _twi;
+            FFTZ_FLOAT _oi = tvir + tvii;
+            out_h2_r[out_strides[5]] = _or_5 * _twr - _oi * _twi;
+            out_h2_i[out_strides[5]] = _or_5 * _twi + _oi * _twr;
         }
 
         in_h1_r += v_in_stride;

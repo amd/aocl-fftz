@@ -57,13 +57,13 @@ static FFTZ_VOID twid_c2r_fft2c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     FFTZ_FLOAT *tw = (FFTZ_FLOAT *)(tws->TW);
     FFTZ_UINTP load_multi_cols = tws->load_multi_cols;
 
-    in_h1_r = (FFTZ_FLOAT *)in_imag;
+    in_h1_r = (FFTZ_FLOAT *)in_real;
     in_h2_r = in_h1_r;
-    in_h1_i = (FFTZ_FLOAT *)in_real;
+    in_h1_i = (FFTZ_FLOAT *)in_imag;
     in_h2_i = in_h1_i;
-    out_h1_r = (FFTZ_FLOAT *)out_imag;
+    out_h1_r = (FFTZ_FLOAT *)out_real;
     out_h2_r = out_h1_r;
-    out_h1_i = (FFTZ_FLOAT *)out_real;
+    out_h1_i = (FFTZ_FLOAT *)out_imag;
     out_h2_i = out_h1_i;
 
     FFTZ_FLOAT *tw_ptr = tw;
@@ -77,7 +77,7 @@ static FFTZ_VOID twid_c2r_fft2c_fp32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         // Input point 2: x(1)
         FFTZ_FLOAT v2r_t = in_h2_r[in_strides[1]];
         FFTZ_FLOAT v2i_t = in_h2_i[in_strides[1]];
-        v2r_t = -v2r_t;
+        v2i_t = -v2i_t;
 
         FFTZ_FLOAT v2r = v2r_t;
         FFTZ_FLOAT v2i = v2i_t;
@@ -135,13 +135,13 @@ static FFTZ_VOID twid_c2r_fft2c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     FFTZ_DOUBLE *tw = (FFTZ_DOUBLE *)(tws->TW);
     FFTZ_UINTP load_multi_cols = tws->load_multi_cols;
 
-    in_h1_r = (FFTZ_DOUBLE *)in_imag;
+    in_h1_r = (FFTZ_DOUBLE *)in_real;
     in_h2_r = in_h1_r;
-    in_h1_i = (FFTZ_DOUBLE *)in_real;
+    in_h1_i = (FFTZ_DOUBLE *)in_imag;
     in_h2_i = in_h1_i;
-    out_h1_r = (FFTZ_DOUBLE *)out_imag;
+    out_h1_r = (FFTZ_DOUBLE *)out_real;
     out_h2_r = out_h1_r;
-    out_h1_i = (FFTZ_DOUBLE *)out_real;
+    out_h1_i = (FFTZ_DOUBLE *)out_imag;
     out_h2_i = out_h1_i;
 
     FFTZ_DOUBLE *tw_ptr = tw;
@@ -154,7 +154,7 @@ static FFTZ_VOID twid_c2r_fft2c_fp64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         // Input point 2: x(1)
         FFTZ_DOUBLE v2r_t = in_h2_r[in_strides[1]];
         FFTZ_DOUBLE v2i_t = in_h2_i[in_strides[1]];
-        v2r_t = -v2r_t;
+        v2i_t = -v2i_t;
         FFTZ_DOUBLE v2r = v2r_t;
         FFTZ_DOUBLE v2i = v2i_t;
 

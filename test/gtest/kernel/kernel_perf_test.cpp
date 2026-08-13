@@ -121,8 +121,13 @@ class PerformanceTest : public benchmark::Fixture {
         FFTZ_INT32 data_stride = is_real ? 1 : 2;
         aoclfftz_twiddle_t tws;
 
-        if (kernel_type < aocl_fftz_kernel_type::C2C_TWID_C ||
-            kernel_type > aocl_fftz_kernel_type::C2C_TWID_AVX512)
+        bool is_c2c_twid_kernel =
+            kernel_type >= aocl_fftz_kernel_type::C2C_TWID_FWD_C &&
+            kernel_type <= aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512;
+        bool is_r2c_c2r_twid_kernel =
+            kernel_type >= aocl_fftz_kernel_type::C2C_TWID_R2C_C &&
+            kernel_type <= aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512;
+        if (!is_c2c_twid_kernel && !is_r2c_c2r_twid_kernel)
         {
             state.SkipWithError(
                 std::string("Given kernel is not a twiddle kernel.").c_str());
@@ -330,10 +335,12 @@ BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_real_f, FFTZ_FLOAT)
                                    // Batch sizes to cover all possible cases in
                                    // C & AVX kernels
                                    // benchmark::CreateDenseRange(1, 15, 1),
-                                   // aocl_fftz_kernel_type -> C/AVX
+                                   // aocl_fftz_kernel_type -> C/AVX,
+                                   // FWD then BWD
                                    benchmark::CreateDenseRange(
-                                       aocl_fftz_kernel_type::C2C_TWID_C,
-                                       aocl_fftz_kernel_type::C2C_TWID_AVX512,
+                                       aocl_fftz_kernel_type::C2C_TWID_FWD_C,
+                                       aocl_fftz_kernel_type::
+                                           C2C_TWID_BWD_AVX512,
                                        1),
                                    {IN_STRIDE},
                                    {OUT_STRIDE},
@@ -367,10 +374,75 @@ BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_real_f, FFTZ_FLOAT)
                                    // Batch sizes to cover all possible cases in
                                    // C & AVX kernels
                                    // benchmark::CreateDenseRange(1, 15, 1),
-                                   // aocl_fftz_kernel_type -> C/AVX
+                                   // aocl_fftz_kernel_type -> C/AVX,
+                                   // FWD then BWD
                                    benchmark::CreateDenseRange(
-                                       aocl_fftz_kernel_type::C2C_TWID_C,
-                                       aocl_fftz_kernel_type::C2C_TWID_AVX512,
+                                       aocl_fftz_kernel_type::C2C_TWID_FWD_C,
+                                       aocl_fftz_kernel_type::
+                                           C2C_TWID_BWD_AVX512,
+                                       1),
+                                   {IN_STRIDE},
+                                   {OUT_STRIDE},
+                                   {VEC_IN_STRIDE},
+                                   {VEC_OUT_STRIDE},
+                                   {COMPLEX},
+                               })
+                               ->ArgNames({"radix", "batch", "kernel_type",
+                                           "in_stride", "out_stride",
+                                           "v_in_stride", "v_out_stride",
+                                           "is_real"});
+
+                           // Second twiddle registration covering the R2C and
+                           // C2R kinds, which the C2C FWD..BWD range above
+                           // does not reach
+                           BENCHMARK_REGISTER_F(PerformanceTest,
+                                                Kernel_twiddle_d)
+                               ->ComputeStatistics(
+                                   "min",
+                                   [](const std::vector<double> &v) -> double {
+                                       return *(std::min_element(std::begin(v),
+                                                                 std::end(v)));
+                                   })
+                               ->ArgsProduct({
+                                   // Covers all direct kernels from 2-16
+                                   benchmark::CreateDenseRange(2, 16, 1),
+                                   {31},
+                                   // aocl_fftz_kernel_type -> C/AVX,
+                                   // R2C then C2R
+                                   benchmark::CreateDenseRange(
+                                       aocl_fftz_kernel_type::C2C_TWID_R2C_C,
+                                       aocl_fftz_kernel_type::
+                                           C2C_TWID_C2R_AVX512,
+                                       1),
+                                   {IN_STRIDE},
+                                   {OUT_STRIDE},
+                                   {VEC_IN_STRIDE},
+                                   {VEC_OUT_STRIDE},
+                                   {COMPLEX},
+                               })
+                               ->ArgNames({"radix", "batch", "kernel_type",
+                                           "in_stride", "out_stride",
+                                           "v_in_stride", "v_out_stride",
+                                           "is_real"});
+
+                           BENCHMARK_REGISTER_F(PerformanceTest,
+                                                Kernel_twiddle_f)
+                               ->ComputeStatistics(
+                                   "min",
+                                   [](const std::vector<double> &v) -> double {
+                                       return *(std::min_element(std::begin(v),
+                                                                 std::end(v)));
+                                   })
+                               ->ArgsProduct({
+                                   // Covers all direct kernels from 2-16
+                                   benchmark::CreateDenseRange(2, 16, 1),
+                                   {31},
+                                   // aocl_fftz_kernel_type -> C/AVX,
+                                   // R2C then C2R
+                                   benchmark::CreateDenseRange(
+                                       aocl_fftz_kernel_type::C2C_TWID_R2C_C,
+                                       aocl_fftz_kernel_type::
+                                           C2C_TWID_C2R_AVX512,
                                        1),
                                    {IN_STRIDE},
                                    {OUT_STRIDE},
