@@ -81,6 +81,7 @@ file(GLOB CORE_SRC_FILES CONFIGURE_DEPENDS ${CORE_PATH}/*.c ${CORE_PATH}/*.h
 file(GLOB CORE_C_FILES CONFIGURE_DEPENDS
                         ${CORE_PATH}/kernels/dft/c2c/c/*.c ${CORE_PATH}/kernels/dft/c2c/c/*.h
                         ${CORE_PATH}/kernels/non_dft/ele_mul/c/*.c
+                        ${CORE_PATH}/kernels/non_dft/type_convert/c/*.c
                         ${CORE_PATH}/kernels/non_dft/perm_copy/c/*.c
                         ${CORE_PATH}/kernels/dft/r2hc/c/*.c ${CORE_PATH}/kernels/dft/r2hc/c/*.h
                         ${CORE_PATH}/kernels/dft/r2hc_fused/c/*.c ${CORE_PATH}/kernels/dft/r2hc_fused/c/*.h

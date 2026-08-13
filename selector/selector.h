@@ -256,8 +256,6 @@ FFTZ_INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
 FFTZ_INT32 selector_model_dft_(aoclfftz_selector_t *sel);
 FFTZ_INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
                            aoclfftz_realhelper_t *realhelper);
-FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *sol);
-FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *sol);
 FFTZ_VOID *setup_dft_f(aoclfftz_prob_desc_f *problem);
 FFTZ_VOID *setup_dft_d(aoclfftz_prob_desc_d *problem);
 FFTZ_VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem);
@@ -290,6 +288,8 @@ selector_batched_ct_l1_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                                    aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                          aoclfftz_realhelper_t *realhelper);
+FFTZ_INT32 selector_bluestein_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+                                   aoclfftz_realhelper_t *realhelper);
 FFTZ_VOID destroy_handle(FFTZ_VOID *handle);
 FFTZ_VOID fuse_vecs(aoclfftz_solution_t *sol, FFTZ_INT32 is_FFT_ker_supported);
 FFTZ_INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);

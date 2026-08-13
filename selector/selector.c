@@ -110,6 +110,24 @@ FFTZ_INT32 register_solvers_kernels(kernel_tables_t *kernel_tables,
         return SELECTOR_FAILURE;
     }
 
+    // Register all four real Bluestein type conversion kernels for the plan.
+    // Each real Bluestein node later binds the two it requires.
+    kernel_tables->type_convert_r2c =
+        register_r2c_type_convert_kernel(cpu_flags, dt);
+    kernel_tables->type_convert_c2hc =
+        register_c2hc_type_convert_kernel(cpu_flags, dt);
+    kernel_tables->type_convert_hc2c =
+        register_hc2c_type_convert_kernel(cpu_flags, dt);
+    kernel_tables->type_convert_c2r =
+        register_c2r_type_convert_kernel(cpu_flags, dt);
+    if (kernel_tables->type_convert_r2c == NULL ||
+        kernel_tables->type_convert_c2hc == NULL ||
+        kernel_tables->type_convert_hc2c == NULL ||
+        kernel_tables->type_convert_c2r == NULL)
+    {
+        return SELECTOR_FAILURE;
+    }
+
     return ret;
 }
 
@@ -262,6 +280,52 @@ FFTZ_INT32 is_prime(FFTZ_INT32 n)
     }
 
     return 1;
+}
+
+// Divides out every factor of n that a kernel radix can handle, using the same
+// radix table as check_CT_solvability, and returns the remaining residue. The
+// residue determines how n must be solved:
+//   1         : the radices cover n completely, so CT or direct handles it
+//   n         : no radix divides n, so n is a prime or prime power with no
+//               kernel and the Bluestein solver handles it standalone
+//   otherwise : radices combined with such a prime, such as 34 = 2 x 17 or
+//               153 = 9 x 17. This requires a Bluestein below a Cooley-Tukey
+//               leaf, which is not yet supported.
+static FFTZ_INTP kernel_radix_residue(FFTZ_INTP n, kernel_t *kertab)
+{
+    FFTZ_INTP residue = n;
+
+    // Strip one supported radix at a time until no kernel radix divides the
+    // residue
+    while (check_CT_solvability(residue, kertab))
+    {
+        for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
+        {
+            FFTZ_UINT32 radix = kertab[i].radix;
+            if (radix == 0) // End of suitable kernels in the list
+            {
+                break;
+            }
+            // Divide out this radix if it factorizes the residue
+            if (radix > 1 && (residue % (FFTZ_INTP)radix) == 0)
+            {
+                residue /= (FFTZ_INTP)radix;
+                break;
+            }
+        }
+    }
+
+    return residue;
+}
+
+// Reports whether n is the unsupported case above, a prime with no kernel
+// combined with kernel radices. A standalone prime or prime power is supported,
+// as the Bluestein solver handles it directly.
+static FFTZ_INT32 is_prime_in_ct(FFTZ_INTP n, kernel_t *kertab)
+{
+    FFTZ_INTP residue = kernel_radix_residue(n, kertab);
+
+    return (residue != 1 && residue != n);
 }
 
 // Check if the input problem contains a prime factor that requires a
@@ -593,6 +657,19 @@ FFTZ_INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
     FFTZ_INT32 ret = SELECTOR_FAILURE;
     FFTZ_INT32 pre_fuse_vec_rank = sel->solution->decomp_scheme->vec_rank;
     FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+
+    // Reject composite sizes whose factorization leaves a prime above the
+    // highest supported radix, before any partial solution tree is built. Such
+    // a prime would land at a Cooley-Tukey leaf and need an unsupported
+    // Bluestein leaf; standalone primes and prime powers still use Bluestein.
+    if (is_prime_in_ct(sel->solution->decomp_scheme->dims[0].n, kertab))
+    {
+        AOCLFFTZ_ERROR("SELECTOR_FAILURE : "
+                       "Composite sizes with a prime factor above the "
+                       "highest supported radix are not supported yet");
+        return SELECTOR_FAILURE;
+    }
+
     FFTZ_INT32 is_FFT_ker_supported = check_FFT_kernel_support(
         sel->solution->decomp_scheme->dims[0].n, kertab,
         !IS_NOT_INNERMOST_DIM(sel->solution->decomp_scheme->flags));
@@ -676,12 +753,19 @@ FFTZ_INT32 selector_fixed_mode_rdft_(aoclfftz_selector_t *sel,
 
         return selector_ndim_rdft(sel, kertab, realhelper);
     }
-    // Large Primes - Bluestein FFT Solver
+    // Bluestein FFT Solver, for a standalone prime or prime power that has no
+    // kernel. Sizes that would need such a prime below a Cooley-Tukey leaf are
+    // already rejected up front.
     if (level1_cond1 & 0x4)
     {
-        AOCLFFTZ_ERROR("SELECTOR_FAILURE : "
-                                   "Large Prime RealFFT is not supported");
-        return SELECTOR_FAILURE;
+        solver_obj->solver_type = SOLVER_REAL_BLUESTEIN;
+        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        {
+            return SELECTOR_FAILURE;
+        }
+
+        // Call real Bluestein Solver master
+        return selector_bluestein_rdft(sel, kertab, realhelper);
     }
     // Buffered FFT Solver
     if (level1_cond2 & 0x1)
@@ -1117,6 +1201,9 @@ FFTZ_INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
     return ret;
 }
 
+static FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *sol);
+static FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *sol);
+
 static FFTZ_VOID compute_exec_metadata(aoclfftz_solution_t *sol,
                                   aoclfftz_immutable_metadata_t *out);
 
@@ -1163,16 +1250,21 @@ static inline FFTZ_INT32 prepare_and_setup_dft(aoclfftz_selector_t *sel_obj)
             realhelper->freq_factor = realhelper->problem_size;
         }
         ret = selector_driver_rdft_(sel_obj, realhelper);
+        // Both steps below walk next_sol to the end of the chain, so run them
+        // only on a tree the selector finished building.
+        if (ret == SELECTOR_SUCCESS)
+        {
 #if REAL_FFT_EXECUTION_ORDER == REAL_FFT_ORDER_ITERATIVE
-        // Iterative execution consumes a Direct-first chain
-        // (Buffered -> Direct -> CT -> Direct -> ...), so the selector's
-        // natural CT-first tree is reordered here. In recursive mode the tree
-        // is left unswapped (Buffered -> CT -> Direct(r) -> Direct(m) -> ...),
-        // exactly mirroring the complex CT solution tree consumed by the
-        // recursive execute path.
-        swap_real_ct_solutions(sel_obj);
+            // Iterative execution consumes a Direct-first chain
+            // (Buffered -> Direct -> CT -> Direct -> ...), so the selector's
+            // natural CT-first tree is reordered here. In recursive mode the
+            // tree is left unswapped, exactly mirroring the complex CT
+            // solution tree consumed by the recursive execute path:
+            // (Buffered -> CT -> Direct(r) -> Direct(m) -> ...).
+            swap_real_ct_solutions(sel_obj);
 #endif
-        setup_twiddle_buffer_real(sel_obj->solution);
+            setup_twiddle_buffer_real(sel_obj->solution);
+        }
         FREE_ALIGN_ALLOCATED_MEM(realhelper);
     }
     else
@@ -1614,7 +1706,7 @@ static inline FFTZ_INTP detect_load_multi_cols(aoclfftz_solution_t *sol)
                : 1;
 }
 
-FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
+static FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
 {
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
     aoclfftz_solution_t *curr = solution;
@@ -1706,10 +1798,41 @@ FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *solution)
 #endif
 }
 
-FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
+// Bluestein and N-D are the only real solvers that hold a complex subtree.
+// The walks in setup_twiddle_buffer_real never step into one, so each subtree
+// is set up as the walk reaches the node holding it.
+
+// Call once the node is known to be Bluestein. Its child is next_sol.
+static FFTZ_VOID setup_twiddle_bluestein_subtree(aoclfftz_solution_t *sol)
+{
+    if (HAS_NEXT(sol))
+    {
+        setup_twiddle_buffer_complex(sol->next_sol);
+    }
+}
+
+// Call on any node. Only an N-D node holds a subtree, on dft_bufs->nd_sol.
+static FFTZ_VOID setup_twiddle_ndim_subtree(aoclfftz_solution_t *sol)
+{
+    if (sol->solver->solver_type == SOLVER_REAL_NDIM && sol->dft_bufs != NULL
+        && sol->dft_bufs->nd_sol != NULL)
+    {
+        setup_twiddle_buffer_complex(sol->dft_bufs->nd_sol);
+    }
+}
+
+static FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
 {
     if (solution == NULL)
     {
+        return;
+    }
+    // A Bluestein root is the standalone prime case, which leaves no real node
+    // for the walks below. For a batched prime the node sits further down the
+    // chain, where both walks stop at it.
+    if (solution->solver->solver_type == SOLVER_REAL_BLUESTEIN)
+    {
+        setup_twiddle_bluestein_subtree(solution);
         return;
     }
 #if IN_MEMORY_TWIDDLE_FACTORS == 1
@@ -1720,6 +1843,14 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
         aoclfftz_solution_t *prev = solution;
         FOR_EACH_SOLUTION(curr, solution)
         {
+            // Everything below a Bluestein node is complex, so set up that
+            // subtree and stop walking.
+            if (curr->solver->solver_type == SOLVER_REAL_BLUESTEIN)
+            {
+                setup_twiddle_bluestein_subtree(curr);
+                break;
+            }
+            setup_twiddle_ndim_subtree(curr);
             // Always inherit the parent's twiddle buffer reference.
             curr->twiddle->TW = prev->twiddle->TW;
             if (curr->solver->solver_type == SOLVER_REAL_CT ||
@@ -1823,8 +1954,19 @@ FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *solution)
     else
     {
         aoclfftz_solution_t *prev = solution;
+        // This walk begins at the node after the root, so the root is done
+        // here instead.
+        setup_twiddle_ndim_subtree(solution);
         FOR_EACH_SOLUTION(curr, solution->next_sol)
         {
+            // Everything below a Bluestein node is complex, so set up that
+            // subtree and stop walking.
+            if (curr->solver->solver_type == SOLVER_REAL_BLUESTEIN)
+            {
+                setup_twiddle_bluestein_subtree(curr);
+                break;
+            }
+            setup_twiddle_ndim_subtree(curr);
             if (curr->solver->solver_type == SOLVER_REAL_CT &&
                 is_solver_real_direct_family(prev->solver->solver_type) &&
                 prev->twiddle->twiddle_buf_ptr == NULL)
@@ -1996,7 +2138,8 @@ static FFTZ_VOID compute_exec_metadata(
         compute_exec_metadata(sol->dft_bufs->sr->odd3_sol, metadata);
     }
 
-    if ((stype == SOLVER_BLUESTEIN || stype == SOLVER_MT_BLUESTEIN)
+    if ((stype == SOLVER_BLUESTEIN || stype == SOLVER_MT_BLUESTEIN ||
+         stype == SOLVER_REAL_BLUESTEIN)
         && sol->dft_bufs->bluestein != NULL
         && sol->dft_bufs->bluestein->bs_buf_size > 0)
     {

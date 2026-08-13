@@ -111,6 +111,12 @@ typedef struct kernel_tables
     elementwise_mul_ ele_mul_strided_in[NUM_FFT_DIRS];
     elementwise_mul_fused_norm_ ele_mul_fused_norm[NUM_FFT_DIRS];
     elementwise_mul_fused_norm_ ele_mul_fused_norm_strided_out[NUM_FFT_DIRS];
+    // Conversion kernels used by the real Bluestein solver. All four are
+    // selected once per plan by register_solvers_kernels.
+    type_convert_ type_convert_r2c;
+    type_convert_ type_convert_c2hc;
+    type_convert_ type_convert_hc2c;
+    type_convert_ type_convert_c2r;
 } kernel_tables_t;
 
 // Function declarations for the common routines
@@ -155,6 +161,23 @@ elementwise_mul_fused_norm_
 register_elementwise_mul_fused_norm_strided_out_kernel(FFTZ_INT32 cpu_flags,
                                                        FFTZ_INT32 dt,
                                                        FFTZ_UINT8 direction);
+
+// Selects the type conversion kernel variant for the given cpu_flags and
+// precision. Called once per plan from register_solvers_kernels.
+type_convert_ register_r2c_type_convert_kernel(FFTZ_INT32 cpu_flags,
+                                               FFTZ_INT32 dt);
+type_convert_ register_c2hc_type_convert_kernel(FFTZ_INT32 cpu_flags,
+                                                FFTZ_INT32 dt);
+type_convert_ register_hc2c_type_convert_kernel(FFTZ_INT32 cpu_flags,
+                                                FFTZ_INT32 dt);
+type_convert_ register_c2r_type_convert_kernel(FFTZ_INT32 cpu_flags,
+                                               FFTZ_INT32 dt);
+
+// Scalar C variants of the real<->complex type conversion kernels.
+type_convert_ register_r2c_type_convert_c(FFTZ_UINT8 precision);
+type_convert_ register_c2hc_type_convert_c(FFTZ_UINT8 precision);
+type_convert_ register_hc2c_type_convert_c(FFTZ_UINT8 precision);
+type_convert_ register_c2r_type_convert_c(FFTZ_UINT8 precision);
 
 // Kernel function declarations for different floating point precision types
 // supported in scalar and vector compute variants

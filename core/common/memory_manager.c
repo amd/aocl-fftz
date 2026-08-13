@@ -182,6 +182,8 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
         sol->dft_bufs->bluestein->mul[BACKWARD_FFT_DIR] = NULL;
         sol->dft_bufs->bluestein->post_mul[FORWARD_FFT_DIR]  = NULL;
         sol->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR] = NULL;
+        sol->dft_bufs->bluestein->cast_to_complex = NULL;
+        sol->dft_bufs->bluestein->cast_from_complex = NULL;
         sol->dft_bufs->buffered->aux_buffer_1 = NULL;
         sol->dft_bufs->buffered->aux_buffer_2 = NULL;
         sol->dft_bufs->buffered->is_aux_buffer_allocated = 0;
@@ -315,6 +317,14 @@ aoclfftz_selector_t *alloc_selector(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank,
                 kernel_tables->ele_mul_fused_norm_strided_out[FORWARD_FFT_DIR];
             selector->kernel_tables->ele_mul_fused_norm_strided_out[BACKWARD_FFT_DIR] =
                 kernel_tables->ele_mul_fused_norm_strided_out[BACKWARD_FFT_DIR];
+            selector->kernel_tables->type_convert_r2c =
+                kernel_tables->type_convert_r2c;
+            selector->kernel_tables->type_convert_c2hc =
+                kernel_tables->type_convert_c2hc;
+            selector->kernel_tables->type_convert_hc2c =
+                kernel_tables->type_convert_hc2c;
+            selector->kernel_tables->type_convert_c2r =
+                kernel_tables->type_convert_c2r;
         }
 
         return selector;

@@ -236,6 +236,10 @@ FFTZ_INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->dft_bufs->bluestein->post_mul[FORWARD_FFT_DIR];
     to_sol_obj->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR] =
         from_sol_obj->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->cast_to_complex =
+        from_sol_obj->dft_bufs->bluestein->cast_to_complex;
+    to_sol_obj->dft_bufs->bluestein->cast_from_complex =
+        from_sol_obj->dft_bufs->bluestein->cast_from_complex;
     to_sol_obj->dft_bufs->buffered->aux_buffer_1 =
         from_sol_obj->dft_bufs->buffered->aux_buffer_1;
     to_sol_obj->dft_bufs->buffered->aux_buffer_2 =
@@ -718,6 +722,10 @@ FFTZ_VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->dft_bufs->bluestein->post_mul[FORWARD_FFT_DIR];
     to_sol_obj->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR] =
         from_sol_obj->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->cast_to_complex =
+        from_sol_obj->dft_bufs->bluestein->cast_to_complex;
+    to_sol_obj->dft_bufs->bluestein->cast_from_complex =
+        from_sol_obj->dft_bufs->bluestein->cast_from_complex;
     to_sol_obj->dft_bufs->buffered->aux_buffer_1 =
         from_sol_obj->dft_bufs->buffered->aux_buffer_1;
     to_sol_obj->dft_bufs->buffered->aux_buffer_2 =

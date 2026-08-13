@@ -60,6 +60,7 @@ typedef enum
     SOLVER_REAL_BUFFERED,
     SOLVER_REAL_BATCHED,
     SOLVER_REAL_BATCHED_CT_L1_DIRECT,
+    SOLVER_REAL_BLUESTEIN,
     SOLVER_REAL_PERM_KER,
     SOLVER_REAL_SIZEONE,
     SOLVER_REAL_MT_DIRECT_R2C,
@@ -136,6 +137,7 @@ FFTZ_INT32 setup_real_direct_solver(aoclfftz_solution_t *sol,
 FFTZ_INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
                                 aoclfftz_solution_t *next_sol,
                                 aoclfftz_realhelper_t *realhelper);
+FFTZ_INT32 setup_real_bluestein_solver(aoclfftz_solution_t *sol, FFTZ_INTP n);
 FFTZ_INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
                                  aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 setup_real_ct_solver(aoclfftz_solution_t *sol,
@@ -190,6 +192,7 @@ dft_solver_ register_execute_real_direct_ct_r2c(FFTZ_VOID);
 dft_solver_ register_execute_real_direct_ct_c2r(FFTZ_VOID);
 dft_solver_ register_execute_real_batched_solver(FFTZ_VOID);
 dft_solver_ register_execute_real_batched_ct_l1_direct_solver(FFTZ_VOID);
+dft_solver_ register_execute_real_bluestein_solver(FFTZ_VOID);
 dft_solver_ register_execute_real_buffered_solver(FFTZ_VOID);
 dft_solver_ register_execute_real_ct_solver(FFTZ_VOID);
 dft_solver_ register_execute_real_ndim_solver(FFTZ_VOID);

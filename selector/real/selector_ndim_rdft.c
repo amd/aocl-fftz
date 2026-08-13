@@ -77,9 +77,6 @@ FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     sel->solution->dft_bufs->ct_buf_size =
         complex_dims_sol->solution->dft_bufs->ct_buf_size;
 
-    // Setup twiddle factors for the complex dimensions sub-problem
-    setup_twiddle_buffer_complex(complex_dims_sol->solution);
-
     sel->cost_analysis->ops =
         complex_dims_sol->cost_analysis->ops + real_dim_sol->cost_analysis->ops;
     sel->cost_analysis->time = complex_dims_sol->cost_analysis->time +

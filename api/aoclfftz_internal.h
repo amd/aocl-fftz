@@ -81,6 +81,8 @@
 
 #define SET_FFT_DIR(flags, val) SET_BIT_FLAG32(flags, 2, val)
 
+#define SET_COMPLEX(flags) SET_BIT_FLAG32(flags, 3, 0)
+
 #define SET_BIT_REPRODUCIBLE(flags, val) SET_BIT_FLAG32(flags, 4, val)
 #define GET_BIT_REPRODUCIBLE(flags) GET_BIT_FLAG32(flags, 4)
 
@@ -423,6 +425,20 @@ typedef FFTZ_VOID (*elementwise_mul_fused_norm_)(FFTZ_VOID *out, FFTZ_VOID *a,
                                                  FFTZ_DOUBLE factor,
                                                  FFTZ_INTP out_stride);
 
+// Conversion kernels for the real Bluestein solver, which operates on complex
+// data and therefore converts its input on entry and its result on exit.
+// Selected per plan from cpu_flags and precision.
+//
+// Each name reads source2destination, where r denotes reals, c denotes
+// complex (all n points) and hc denotes half complex (the n/2+1 points that
+// represent a real spectrum). All share the signature (dst, src, n, stride):
+//   r2c  : n reals -> n complex, imaginary parts zeroed
+//   c2hc : retains the first n/2+1 points, discards the remainder
+//   hc2c : n/2+1 points -> all n, via X[n-k] = conj(X[k])
+//   c2r  : n complex -> the real part of each
+typedef FFTZ_VOID (*type_convert_)(FFTZ_VOID *dst, FFTZ_VOID *src, FFTZ_INTP n,
+                                   FFTZ_INTP stride);
+
 // Holds the Bluestein chirp sequence B and its FFT B_out (computed once
 // during plan setup), plus elementwise-multiply/fused_norm_multiply kernels
 // bound at plan setup.
@@ -439,6 +455,13 @@ typedef struct aoclfftz_bluestein
     elementwise_mul_ mul[NUM_FFT_DIRS];
     // Step 3: (1/m) * output * chirp (post_mul[] on B);
     elementwise_mul_fused_norm_ post_mul[NUM_FFT_DIRS];
+    // Conversion kernels for a real Bluestein node; NULL on complex nodes. A
+    // plan executes a single direction, so the selector binds only the pair
+    // that direction requires.
+    // problem layout -> n complex, pre-process
+    type_convert_ cast_to_complex;
+    // n complex -> problem layout, post-process
+    type_convert_ cast_from_complex;
     FFTZ_INTP bs_buf_size;           // bytes per per-call bs_in/out scratch slot
     FFTZ_INTP bs_dim_offset;         // byte offset of this dim in bs scratch pool
 } aoclfftz_bluestein_t;

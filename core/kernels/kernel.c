@@ -327,6 +327,46 @@ register_elementwise_mul_fused_norm_strided_out_kernel(FFTZ_INT32 cpu_flags,
 #undef DISPATCH_REG_AVX512
 #undef DISPATCH_REG_AVX256
 #undef DISPATCH_REG_AVX128
+
+/**
+ * @brief Registers the real Bluestein real<->complex type conversion kernels.
+ *
+ * Selects the best available implementation based on the optimization level
+ * and data type. AVX512/AVX256/AVX128 variants slot into the same ifdef
+ * structure once implemented; the scalar C path is the current default.
+ *
+ * @param[in] cpu_flags Optimization level (optimization_level_t)
+ * @param[in] dt        Data type (DT_FLOAT or DT_DOUBLE)
+ * @return Function pointer to the selected type conversion kernel
+ */
+type_convert_ register_r2c_type_convert_kernel(FFTZ_INT32 cpu_flags,
+                                               FFTZ_INT32 dt)
+{
+    /* TODO: add AVX512/AVX256/AVX128 variants here. */
+    return register_r2c_type_convert_c(dt);
+}
+
+type_convert_ register_c2hc_type_convert_kernel(FFTZ_INT32 cpu_flags,
+                                                FFTZ_INT32 dt)
+{
+    /* TODO: add AVX512/AVX256/AVX128 variants here. */
+    return register_c2hc_type_convert_c(dt);
+}
+
+type_convert_ register_hc2c_type_convert_kernel(FFTZ_INT32 cpu_flags,
+                                                FFTZ_INT32 dt)
+{
+    /* TODO: add AVX512/AVX256/AVX128 variants here. */
+    return register_hc2c_type_convert_c(dt);
+}
+
+type_convert_ register_c2r_type_convert_kernel(FFTZ_INT32 cpu_flags,
+                                               FFTZ_INT32 dt)
+{
+    /* TODO: add AVX512/AVX256/AVX128 variants here. */
+    return register_c2r_type_convert_c(dt);
+}
+
 #undef ACCESS_AVX128
 #undef ACCESS_AVX256
 #undef ACCESS_AVX512

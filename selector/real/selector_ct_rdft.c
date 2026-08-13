@@ -288,13 +288,14 @@ FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
 
     *(sel->has_nested) = nested_selected;
 
-    // if n could not be factorized by any registered kernel, then
-    // it belongs to a Bluestein sub-problem.
+    // No registered radix divides n, so this leaf is a prime above the highest
+    // supported radix. CT cannot host a Bluestein leaf, so the enclosing
+    // composite size is rejected.
     if (!has_factorizing_kernel)
     {
         AOCLFFTZ_ERROR("SELECTOR_FAILURE : "
-                       "Multiples of Large Prime RealFFT is not "
-                       "supported");
+                       "Composite sizes with a prime factor above the "
+                       "highest supported radix are not supported yet");
         ret = SELECTOR_FAILURE;
     }
 
