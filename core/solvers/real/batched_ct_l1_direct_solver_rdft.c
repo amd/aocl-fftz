@@ -107,7 +107,6 @@ execute_batched_ct_l1_rdft_stage(aoclfftz_solution_t *stage_sol,
                                  aoclfftz_mutable_ctx_t *ctx,
                                  FFTZ_VOID *in, FFTZ_VOID *out)
 {
-    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(stage_sol);
     FFTZ_UINT8 direction = FFT_DIR(stage_sol->decomp_scheme->flags);
     kfft_ kfft_r2hc = stage_sol->solver->kernel_r2hc->kfft[FORWARD_FFT_DIR];
     kfft_ kfft_r2hcf = stage_sol->solver->kernel_r2hcf->kfft[FORWARD_FFT_DIR];
@@ -130,18 +129,9 @@ execute_batched_ct_l1_rdft_stage(aoclfftz_solution_t *stage_sol,
         return;
     }
 
-    FFTZ_INTP in_offset =
-        is_input_prob_buffer(stage_sol)
-            ? stage_sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE
-            : 1;
-    FFTZ_INTP out_offset =
-        is_output_prob_buffer(stage_sol)
-            ? stage_sol->decomp_scheme->dims[0].out_stride * DATA_STRIDE
-            : 1;
-    FFTZ_VOID *c2c_in = MOVE_ADDR(in, in_offset * dt_bytes);
-    FFTZ_VOID *c2c_out = MOVE_ADDR(out, out_offset * dt_bytes);
-
-    execute_c2c_kernels_rdft(stage_sol, ctx, c2c_in, c2c_out, 1);
+    // execute_c2c_kernels_rdft() skips the R2HC/R2HCF bands itself, as the
+    // regrouped aux layout makes that offset depend on the stage's kernel mix.
+    execute_c2c_kernels_rdft(stage_sol, ctx, in, out, 1);
 }
 
 // Execute all batches: stage_r → aux → stage_m → out, then zero DC/Nyquist

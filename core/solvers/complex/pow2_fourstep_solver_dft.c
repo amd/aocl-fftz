@@ -244,10 +244,10 @@ static FFTZ_INT32 fourstep_fill_stage_strides(
         st->strides.v_out_stride = out_elem_stride * DATA_STRIDE;
     }
 
-    // The c2c radix kernels step the second point-half by *_h2 strides; this
+    // The c2c radix kernels step the second point-half by *_sym strides; this
     // dense layout shares the primary stride across both halves.
-    st->strides.v_in_h2_stride = st->strides.v_in_stride;
-    st->strides.v_out_h2_stride = st->strides.v_out_stride;
+    st->strides.v_in_sym_stride = st->strides.v_in_stride;
+    st->strides.v_out_sym_stride = st->strides.v_out_stride;
     return SOLVER_SUCCESS;
 }
 

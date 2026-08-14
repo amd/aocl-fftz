@@ -1300,6 +1300,7 @@ static inline FFTZ_INT32 prepare_and_setup_dft(aoclfftz_selector_t *sel_obj)
         }
         realhelper->stage = 0;
         realhelper->is_CT = 0;
+        realhelper->is_last_stage = 1;
         realhelper->is_buffered_invoked = 0;
         realhelper->problem_size = sel_obj->solution->decomp_scheme->dims[0].n;
         if (FFT_DIR(sel_obj->solution->decomp_scheme->flags) ==

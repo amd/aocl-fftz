@@ -33,9 +33,9 @@ FFTZ_INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
     FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
     FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
     ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_1, FFTZ_VOID,
-                       aux_buf_size * num_slots + dt_bytes); // FIXME: remove the "+ dt_bytes" padding
+                       aux_buf_size * num_slots + 2 * dt_bytes); // FIXME: remove the "+ 2*dt_bytes" padding
     ALLOC_ALIGN_UNINIT(sol->dft_bufs->buffered->aux_buffer_2, FFTZ_VOID,
-                       aux_buf_size * num_slots + dt_bytes); // FIXME: remove the "+ dt_bytes" padding
+                       aux_buf_size * num_slots + 2 * dt_bytes); // FIXME: remove the "+ 2*dt_bytes" padding
     if (sol->dft_bufs->buffered->aux_buffer_1 == NULL ||
         sol->dft_bufs->buffered->aux_buffer_2 == NULL)
     {

@@ -16,7 +16,7 @@
 #define AOCLFFTZ_CORE_WRAPPER_H
 
 #include "core/common/memory_manager.h"
-#include "core/common/strides.h"
+#include "core/solvers/real/strides_rdft.h"
 #include "core/kernels/kernel.h"
 #include "core/solvers/solver.h"
 #include "selector/selector.h"
@@ -270,13 +270,10 @@ destroy_decomp_scheme_wrapper(aoclfftz_decomp_scheme_t *decomp_scheme);
 EXPORT_SYM_DYN FFTZ_VOID destroy_handle_wrapper(FFTZ_VOID *handle);
 
 /* ---------------- strides wrapper ---------------- */
-EXPORT_SYM_DYN FFTZ_VOID populate_stride_array_wrapper(
-    FFTZ_INTP *strides, FFTZ_INTP stride_val, FFTZ_INTP n,
-    FFTZ_UINT8 compute_half_complex, FFTZ_UINT8 adjust_to_full_complex);
-
-/* ---------------- fused strides wrapper ---------------- */
-EXPORT_SYM_DYN FFTZ_VOID prepare_fused_kernel_strides_wrapper(
-    FFTZ_INTP *strides, FFTZ_INTP radix, FFTZ_INTP offset);
+EXPORT_SYM_DYN FFTZ_VOID populate_stride_array_wrapper(FFTZ_INTP *strides,
+                                        FFTZ_INTP stride_val, FFTZ_INTP n,
+                                        FFTZ_UINT8 compute_half_complex,
+                                        FFTZ_UINT8 adjust_to_full_complex);
 
 /* ---------------- wrapper kernel tables ---------------- */
 

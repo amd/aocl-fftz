@@ -360,14 +360,6 @@ FFTZ_VOID populate_stride_array_wrapper(FFTZ_INTP *strides,
                           adjust_to_full_complex);
 }
 
-/* ---------------- fused strides wrapper ---------------- */
-FFTZ_VOID prepare_fused_kernel_strides_wrapper(FFTZ_INTP *strides,
-                                               FFTZ_INTP radix,
-                                               FFTZ_INTP offset)
-{
-    prepare_fused_kernel_strides(strides, radix, offset);
-}
-
 // Transpose wrappers
 #define TRANSPOSE_WRAPPER_DEFN(kernel_name, TYPE, isa)                         \
     FFTZ_VOID CONCAT(FUNC(kernel_name, TYPE, isa),                             \

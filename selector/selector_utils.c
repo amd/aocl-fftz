@@ -398,10 +398,10 @@ FFTZ_INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->strides_grp->strides->v_in_stride;
     to_sol_obj->strides_grp->strides->v_out_stride =
         from_sol_obj->strides_grp->strides->v_out_stride;
-    to_sol_obj->strides_grp->strides->v_in_h2_stride =
-        from_sol_obj->strides_grp->strides->v_in_h2_stride;
-    to_sol_obj->strides_grp->strides->v_out_h2_stride =
-        from_sol_obj->strides_grp->strides->v_out_h2_stride;
+    to_sol_obj->strides_grp->strides->v_in_sym_stride =
+        from_sol_obj->strides_grp->strides->v_in_sym_stride;
+    to_sol_obj->strides_grp->strides->v_out_sym_stride =
+        from_sol_obj->strides_grp->strides->v_out_sym_stride;
 
     if (from_sol_obj->solver->kernel_c2c->count != 0)
     {
@@ -441,10 +441,10 @@ FFTZ_INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             from_sol_obj->strides_grp->strides_c2c->v_in_stride;
         to_sol_obj->strides_grp->strides_c2c->v_out_stride =
             from_sol_obj->strides_grp->strides_c2c->v_out_stride;
-        to_sol_obj->strides_grp->strides_c2c->v_in_h2_stride =
-            from_sol_obj->strides_grp->strides_c2c->v_in_h2_stride;
-        to_sol_obj->strides_grp->strides_c2c->v_out_h2_stride =
-            from_sol_obj->strides_grp->strides_c2c->v_out_h2_stride;
+        to_sol_obj->strides_grp->strides_c2c->v_in_sym_stride =
+            from_sol_obj->strides_grp->strides_c2c->v_in_sym_stride;
+        to_sol_obj->strides_grp->strides_c2c->v_out_sym_stride =
+            from_sol_obj->strides_grp->strides_c2c->v_out_sym_stride;
     }
 
     if (from_sol_obj->solver->kernel_r2hc->count != 0)
@@ -485,10 +485,10 @@ FFTZ_INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             from_sol_obj->strides_grp->strides_r2hc->v_in_stride;
         to_sol_obj->strides_grp->strides_r2hc->v_out_stride =
             from_sol_obj->strides_grp->strides_r2hc->v_out_stride;
-        to_sol_obj->strides_grp->strides_r2hc->v_in_h2_stride =
-            from_sol_obj->strides_grp->strides_r2hc->v_in_h2_stride;
-        to_sol_obj->strides_grp->strides_r2hc->v_out_h2_stride =
-            from_sol_obj->strides_grp->strides_r2hc->v_out_h2_stride;
+        to_sol_obj->strides_grp->strides_r2hc->v_in_sym_stride =
+            from_sol_obj->strides_grp->strides_r2hc->v_in_sym_stride;
+        to_sol_obj->strides_grp->strides_r2hc->v_out_sym_stride =
+            from_sol_obj->strides_grp->strides_r2hc->v_out_sym_stride;
     }
 
     if (from_sol_obj->solver->kernel_r2hcf->count != 0)
@@ -533,10 +533,10 @@ FFTZ_INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             from_sol_obj->strides_grp->strides_r2hcf->v_in_stride;
         to_sol_obj->strides_grp->strides_r2hcf->v_out_stride =
             from_sol_obj->strides_grp->strides_r2hcf->v_out_stride;
-        to_sol_obj->strides_grp->strides_r2hcf->v_in_h2_stride =
-            from_sol_obj->strides_grp->strides_r2hcf->v_in_h2_stride;
-        to_sol_obj->strides_grp->strides_r2hcf->v_out_h2_stride =
-            from_sol_obj->strides_grp->strides_r2hcf->v_out_h2_stride;
+        to_sol_obj->strides_grp->strides_r2hcf->v_in_sym_stride =
+            from_sol_obj->strides_grp->strides_r2hcf->v_in_sym_stride;
+        to_sol_obj->strides_grp->strides_r2hcf->v_out_sym_stride =
+            from_sol_obj->strides_grp->strides_r2hcf->v_out_sym_stride;
     }
 
     return AOCLFFTZ_SUCCESS;
@@ -604,18 +604,18 @@ FFTZ_INT32 copy_strides_batched_ct_l1_direct( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->strides_grp->strides->v_in_stride;
     to_sol_obj->strides_grp->strides->v_out_stride =
         from_sol_obj->strides_grp->strides->v_out_stride;
-    to_sol_obj->strides_grp->strides->v_in_h2_stride =
-        from_sol_obj->strides_grp->strides->v_in_h2_stride;
-    to_sol_obj->strides_grp->strides->v_out_h2_stride =
-        from_sol_obj->strides_grp->strides->v_out_h2_stride;
+    to_sol_obj->strides_grp->strides->v_in_sym_stride =
+        from_sol_obj->strides_grp->strides->v_in_sym_stride;
+    to_sol_obj->strides_grp->strides->v_out_sym_stride =
+        from_sol_obj->strides_grp->strides->v_out_sym_stride;
     to_sol_obj->strides_grp->strides_c2c->v_in_stride =
         from_sol_obj->strides_grp->strides_c2c->v_in_stride;
     to_sol_obj->strides_grp->strides_c2c->v_out_stride =
         from_sol_obj->strides_grp->strides_c2c->v_out_stride;
-    to_sol_obj->strides_grp->strides_c2c->v_in_h2_stride =
-        from_sol_obj->strides_grp->strides_c2c->v_in_h2_stride;
-    to_sol_obj->strides_grp->strides_c2c->v_out_h2_stride =
-        from_sol_obj->strides_grp->strides_c2c->v_out_h2_stride;
+    to_sol_obj->strides_grp->strides_c2c->v_in_sym_stride =
+        from_sol_obj->strides_grp->strides_c2c->v_in_sym_stride;
+    to_sol_obj->strides_grp->strides_c2c->v_out_sym_stride =
+        from_sol_obj->strides_grp->strides_c2c->v_out_sym_stride;
     return AOCLFFTZ_SUCCESS;
 }
 

@@ -15,40 +15,8 @@
 #include <string.h>
 #include "api/aoclfftz_internal.h"
 #include "core/kernels/kernel.h"
+#include "core/solvers/real/strides_rdft.h"
 #include "core/solvers/solver.h"
-
-/**
- * @brief Paired input and output stride values used for element-level access,
- * vector/batch traversal, and C2C kernel batch stepping in both direct
- * and CT decomposition scenarios.
- * Note: Stride arrays cannot be stored here.
- */
-typedef struct base_strides
-{
-    FFTZ_INTP in_stride;  /**< Stride for input buffer access */
-    FFTZ_INTP out_stride; /**< Stride for output buffer access */
-} base_strides_t;
-
-/**
- * @brief In RFFT, output can be the real problem input buffer or a temp buffer.
- * This function checks if the output is the real problem output buffer.
- */
-static inline FFTZ_UINT8 is_output_prob_buffer(aoclfftz_solution_t *sol)
-{
-    FFTZ_UINT32 is_fwd = FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR;
-    FFTZ_UINT32 is_last_stage = sol->next_sol == NULL;
-    return (is_fwd && is_last_stage);
-}
-
-/**
- * @brief In RFFT, input can be the real problem input buffer or a temp buffer.
- * This function checks if the input is the real problem input buffer.
- */
-static inline FFTZ_UINT8 is_input_prob_buffer(aoclfftz_solution_t *sol)
-{
-    return (FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR &&
-            NUM_RFFT_GROUPS(sol->solver) == 1);
-}
 
 /**
  * @brief Initializes the C2C kernel stride array `dst`: first half from `strides_c2c`,
@@ -214,6 +182,9 @@ static inline FFTZ_VOID set_zero_for_dc_and_nyquist_ct(aoclfftz_solution_t *sol,
 /**
  * @brief Run C2C kernel batches for a real direct / CT stage node.
  *
+ * @param in,out Stage buffer bases. Callers pass the buffer start: skipping the
+ *        R2HC / R2HCF bands is done here, as the regrouped aux layout makes that
+ *        offset depend on the stage's kernel mix.
  * @param ctx Per-call mutable context for thread-safe C2C stride slots.
  * @param strides_prepped 1 when prepare_fused_c2c_asymmetric_strides already
  *        copied Nyquist-half strides at setup; 0 for the normal direct path.
@@ -233,6 +204,25 @@ execute_c2c_kernels_rdft(aoclfftz_solution_t *sol,
     FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
     kfft_ kernel_c2c = sol->solver->kernel_c2c->kfft[direction];
     FFTZ_UINT32 is_fwd = (direction == FORWARD_FFT_DIR);
+
+    // regroup aux: r2hcf reserves radix*2 interleaved slots; r2hc reserves radix
+    // real slots (one per output point), not the legacy radix*2 even-radix layout.
+    FFTZ_INTP real_band_offset =
+        sol->solver->kernel_r2hcf->count * radix * 2
+        + sol->solver->kernel_r2hc->count * radix;
+    FFTZ_INTP hc_band_offset =
+        sol->solver->kernel_r2hcf->count * 2
+        + sol->solver->kernel_r2hc->count * (radix % 2 == 0 ? 2 : 1);
+
+    FFTZ_INTP in_offset = is_input_prob_buffer(sol)
+                         ? sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE
+                         : (is_fwd ? real_band_offset : hc_band_offset);
+    FFTZ_INTP out_offset = is_output_prob_buffer(sol)
+                         ? sol->decomp_scheme->dims[0].out_stride * DATA_STRIDE
+                         : (is_fwd ? hc_band_offset : real_band_offset);
+    // move in,out pointers to the start of C2C points, by skipping R2HC points
+    in = MOVE_ADDR(in, in_offset * dt_bytes);
+    out = MOVE_ADDR(out, out_offset * dt_bytes);
 
     FFTZ_INTP num_groups = NUM_RFFT_GROUPS(sol->solver);
     FFTZ_INTP num_c2c_per_group = sol->solver->kernel_c2c->count / num_groups;
@@ -318,6 +308,8 @@ execute_c2c_kernels_rdft(aoclfftz_solution_t *sol,
         }
         else
         {
+            // Group step already accounts for the endpoint points each group
+            // occupies, see set_vector_strides_for_kernels().
             FFTZ_INTP v_in_stride = sol->strides_grp->strides->v_in_stride;
             FFTZ_INTP v_out_stride = sol->strides_grp->strides->v_out_stride;
             for (FFTZ_INTP group_id = 0; group_id < num_groups; group_id++)
@@ -352,6 +344,8 @@ execute_c2c_kernels_rdft(aoclfftz_solution_t *sol,
         }
         else
         {
+            // Group step already accounts for the endpoint points each group
+            // occupies, see set_vector_strides_for_kernels().
             FFTZ_INTP v_in_stride = sol->strides_grp->strides->v_in_stride;
             FFTZ_INTP v_out_stride = sol->strides_grp->strides->v_out_stride;
             for (FFTZ_INTP group_id = 0; group_id < num_groups; group_id++)
@@ -430,6 +424,5 @@ FFTZ_VOID update_ct_buffers(aoclfftz_solution_t *sol,
 FFTZ_VOID compute_cost(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                   const kernel_t *kernel_c2c, const kernel_t *kernel_r2hc,
                   const kernel_t *kernel_r2hcf);
-FFTZ_VOID prepare_fused_c2c_asymmetric_strides(aoclfftz_solution_t *sol);
 
 #endif // DIRECT_SOLVER_UTILS_H

@@ -49,9 +49,9 @@ static FFTZ_VOID TWID_KNAME_FP32(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     FFTZ_INTP v_out_stride = strides->v_out_stride;
     FFTZ_UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
 #if defined(KERNEL_VARIANT_C2R)
-    FFTZ_INTP v_in_h2_stride = strides->v_in_h2_stride;
+    FFTZ_INTP v_in_h2_stride = strides->v_in_sym_stride;
 #elif defined(KERNEL_VARIANT_R2C)
-    FFTZ_INTP v_out_h2_stride = strides->v_out_h2_stride;
+    FFTZ_INTP v_out_h2_stride = strides->v_out_sym_stride;
 #endif
 
     aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;
@@ -705,9 +705,9 @@ static FFTZ_VOID TWID_KNAME_FP64(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     FFTZ_INTP v_out_stride = strides->v_out_stride;
     FFTZ_UINT8 is_contiguous_out = (v_out_stride == DATA_STRIDE);
 #if defined(KERNEL_VARIANT_C2R)
-    FFTZ_INTP v_in_h2_stride = strides->v_in_h2_stride;
+    FFTZ_INTP v_in_h2_stride = strides->v_in_sym_stride;
 #elif defined(KERNEL_VARIANT_R2C)
-    FFTZ_INTP v_out_h2_stride = strides->v_out_h2_stride;
+    FFTZ_INTP v_out_h2_stride = strides->v_out_sym_stride;
 #endif
 
     aoclfftz_twiddle_t *tws = (aoclfftz_twiddle_t *)twd;

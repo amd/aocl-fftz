@@ -8,6 +8,19 @@
  *  This file contains the functions that setup, execute and destroy
  *  the solver.
  *
+ *  A CT intermediate stage works on a regrouped aux buffer, where the
+ *  half-complex points of all G groups share a DC band and a Nyquist band
+ *  (even radix only) ahead of the complex pairs of HC format:
+ *
+ *   address: 0           ... G-1  G           ... 2G-1  2G ...
+ *            +-------------------+---------------------+----------------+
+ *   data:    | DC[0] ... DC[G-1] | NYQ[0] ... NYQ[G-1] | complex pairs  |
+ *            +-------------------+---------------------+----------------+
+ *              ^ step v_*_sym_stride                     ^ step v_*_stride
+ *
+ *  So every kernel of a stage starts from the same in/out base pointer, and
+ *  the points the C2C kernels must skip are folded into the strides at setup.
+ *
  *  @author Srirammaswamy Srinivasan
  */
 
@@ -92,7 +105,6 @@ static inline FFTZ_VOID execute_r2hc_kernels(aoclfftz_solution_t *sol,
 static inline FFTZ_VOID execute_r2hcf_kernels(aoclfftz_solution_t *sol,
                                               FFTZ_VOID *in, FFTZ_VOID *out)
 {
-    // Execute R2HCF kernels (for CT problems)
     if (sol->solver->kernel_r2hcf->count == 0)
     {
         return;
@@ -118,20 +130,6 @@ FFTZ_VOID execute_ct_intra_stage_kernels(aoclfftz_solution_t *sol,
 {
     execute_r2hc_kernels(sol, in, out);
     execute_r2hcf_kernels(sol, in, out);
-
-    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
-    FFTZ_INTP in_offset =
-        is_input_prob_buffer(sol)
-            ? sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE
-            : 1;
-    FFTZ_INTP out_offset =
-        is_output_prob_buffer(sol)
-            ? sol->decomp_scheme->dims[0].out_stride * DATA_STRIDE
-            : 1;
-    // move in,out pointers to the start of C2C points, by skipping R2HC points
-    in = MOVE_ADDR(in, in_offset * dt_bytes);
-    out = MOVE_ADDR(out, out_offset * dt_bytes);
-
     execute_c2c_kernels_rdft(sol, ctx, in, out, 0);
 
     // Alternate the pools so the next stage reads what this one wrote.

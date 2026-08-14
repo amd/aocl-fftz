@@ -118,10 +118,15 @@ execute_real_mt_direct_kernels(aoclfftz_solution_t *sol,
         FFTZ_UINT8 num_sets_r2hc = sol->solver->kernel_r2hc->sets;
 
         // vector stride prep for R2HC kernels
-        FFTZ_INTP v_in_stride_r2hc, v_out_stride_r2hc;
+        FFTZ_INTP v_in_stride_r2hc, v_out_stride_r2hc,
+                  v_in_dc_nyq_stride_r2hc, v_out_dc_nyq_stride_r2hc;
         v_in_stride_r2hc  = sol->strides_grp->strides_r2hc->v_in_stride
                             * dt_bytes * num_sets_r2hc;
         v_out_stride_r2hc = sol->strides_grp->strides_r2hc->v_out_stride
+                            * dt_bytes * num_sets_r2hc;
+        v_in_dc_nyq_stride_r2hc = sol->strides_grp->strides_r2hc->v_in_sym_stride
+                            * dt_bytes * num_sets_r2hc;
+        v_out_dc_nyq_stride_r2hc = sol->strides_grp->strides_r2hc->v_out_sym_stride
                             * dt_bytes * num_sets_r2hc;
         FFTZ_UINTP num_iters_r2hc = sol->solver->kernel_r2hc->count /
                                num_sets_r2hc;
@@ -132,9 +137,12 @@ execute_real_mt_direct_kernels(aoclfftz_solution_t *sol,
         for (FFTZ_UINTP batch = 0; batch < num_iters_r2hc; batch++)
         {
             FFTZ_INTP v_istride = batch * v_in_stride_r2hc;
+            FFTZ_INTP v_dc_nyq_istride = batch * v_in_dc_nyq_stride_r2hc;
             FFTZ_INTP v_ostride = batch * v_out_stride_r2hc;
-            kernel_r2hc(MOVE_ADDR(in, v_istride), MOVE_ADDR(in, v_istride),
-                        MOVE_ADDR(out, v_ostride), MOVE_ADDR(out, v_ostride),
+            FFTZ_INTP v_dc_nyq_ostride = batch * v_out_dc_nyq_stride_r2hc;
+            kernel_r2hc(MOVE_ADDR(in, v_dc_nyq_istride), MOVE_ADDR(in, v_istride),
+                        MOVE_ADDR(out, v_dc_nyq_ostride),
+                        MOVE_ADDR(out, v_ostride),
                         num_sets_r2hc, sol->strides_grp->strides_r2hc,
                         sol->twiddle, FFT_DIR(sol->decomp_scheme->flags));
         }
@@ -142,9 +150,12 @@ execute_real_mt_direct_kernels(aoclfftz_solution_t *sol,
         if (rem_iters_r2hc)
         {
             FFTZ_INTP v_istride = num_iters_r2hc * v_in_stride_r2hc;
+            FFTZ_INTP v_dc_nyq_istride = num_iters_r2hc * v_in_dc_nyq_stride_r2hc;
             FFTZ_INTP v_ostride = num_iters_r2hc * v_out_stride_r2hc;
-            kernel_r2hc(MOVE_ADDR(in, v_istride), MOVE_ADDR(in, v_istride),
-                        MOVE_ADDR(out, v_ostride), MOVE_ADDR(out, v_ostride),
+            FFTZ_INTP v_dc_nyq_ostride = num_iters_r2hc * v_out_dc_nyq_stride_r2hc;
+            kernel_r2hc(MOVE_ADDR(in, v_dc_nyq_istride), MOVE_ADDR(in, v_istride),
+                        MOVE_ADDR(out, v_dc_nyq_ostride),
+                        MOVE_ADDR(out, v_ostride),
                         rem_iters_r2hc, sol->strides_grp->strides_r2hc,
                         sol->twiddle, FFT_DIR(sol->decomp_scheme->flags));
         }
@@ -162,8 +173,14 @@ execute_real_mt_direct_kernels(aoclfftz_solution_t *sol,
         FFTZ_INTP v_in_stride_r2hcf =
             sol->strides_grp->strides_r2hcf->v_in_stride * dt_bytes *
             num_sets_r2hcf;
+        FFTZ_INTP v_in_dc_nyq_stride_r2hcf =
+            sol->strides_grp->strides_r2hcf->v_in_sym_stride * dt_bytes *
+            num_sets_r2hcf;
         FFTZ_INTP v_out_stride_r2hcf =
             sol->strides_grp->strides_r2hcf->v_out_stride * dt_bytes *
+            num_sets_r2hcf;
+        FFTZ_INTP v_out_dc_nyq_stride_r2hcf =
+            sol->strides_grp->strides_r2hcf->v_out_sym_stride * dt_bytes *
             num_sets_r2hcf;
         FFTZ_UINTP num_iters_r2hcf =
             sol->solver->kernel_r2hcf->count / num_sets_r2hcf;
@@ -174,9 +191,12 @@ execute_real_mt_direct_kernels(aoclfftz_solution_t *sol,
         for (FFTZ_UINTP batch = 0; batch < num_iters_r2hcf; batch++)
         {
             FFTZ_INTP v_istride = batch * v_in_stride_r2hcf;
+            FFTZ_INTP v_dc_nyq_istride = batch * v_in_dc_nyq_stride_r2hcf;
             FFTZ_INTP v_ostride = batch * v_out_stride_r2hcf;
-            kernel_r2hcf(MOVE_ADDR(in, v_istride), MOVE_ADDR(in, v_istride),
-                         MOVE_ADDR(out, v_ostride), MOVE_ADDR(out, v_ostride),
+            FFTZ_INTP v_dc_nyq_ostride = batch * v_out_dc_nyq_stride_r2hcf;
+            kernel_r2hcf(MOVE_ADDR(in, v_dc_nyq_istride), MOVE_ADDR(in, v_istride),
+                         MOVE_ADDR(out, v_dc_nyq_ostride),
+                         MOVE_ADDR(out, v_ostride),
                          num_sets_r2hcf, sol->strides_grp->strides_r2hcf,
                          sol->twiddle, FFT_DIR(sol->decomp_scheme->flags));
         }
@@ -184,9 +204,12 @@ execute_real_mt_direct_kernels(aoclfftz_solution_t *sol,
         if (rem_iters_r2hcf)
         {
             FFTZ_INTP in_offset = num_iters_r2hcf * v_in_stride_r2hcf;
+            FFTZ_INTP in_dc_nyq_offset = num_iters_r2hcf * v_in_dc_nyq_stride_r2hcf;
             FFTZ_INTP out_offset = num_iters_r2hcf * v_out_stride_r2hcf;
-            kernel_r2hcf(MOVE_ADDR(in, in_offset), MOVE_ADDR(in, in_offset),
-                         MOVE_ADDR(out, out_offset), MOVE_ADDR(out, out_offset),
+            FFTZ_INTP out_dc_nyq_offset = num_iters_r2hcf * v_out_dc_nyq_stride_r2hcf;
+            kernel_r2hcf(MOVE_ADDR(in, in_dc_nyq_offset), MOVE_ADDR(in, in_offset),
+                         MOVE_ADDR(out, out_dc_nyq_offset),
+                         MOVE_ADDR(out, out_offset),
                          rem_iters_r2hcf, sol->strides_grp->strides_r2hcf,
                          sol->twiddle, FFT_DIR(sol->decomp_scheme->flags));
         }
@@ -208,19 +231,31 @@ static inline FFTZ_VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
     FFTZ_INTP num_c2c_per_group = sol->solver->kernel_c2c->count / num_groups;
     FFTZ_UINT8 use_asymmetric_kernel = (num_c2c_per_group >= num_groups);
 
+    FFTZ_UINT32 is_fwd = (direction == FORWARD_FFT_DIR);
+
+    // Regrouped aux: r2hcf reserves radix*2 interleaved slots; r2hc reserves radix
+    // real slots (one per output point), not the legacy radix*2 even-radix layout.
+    FFTZ_INTP real_band_offset =
+        sol->solver->kernel_r2hcf->count * radix * 2
+        + sol->solver->kernel_r2hc->count * radix;
+    FFTZ_INTP hc_band_offset =
+        sol->solver->kernel_r2hcf->count * 2
+        + sol->solver->kernel_r2hc->count * (radix % 2 == 0 ? 2 : 1);
+
+    // batch strides are scaled by DATA_STRIDE at every use site
     FFTZ_INTP batch_in_stride = 1;
     FFTZ_INTP batch_out_stride = 1;
-    FFTZ_INTP c2c_in_offset = 1;
-    FFTZ_INTP c2c_out_offset = 1;
+    FFTZ_INTP c2c_in_offset = is_fwd ? real_band_offset : hc_band_offset;
+    FFTZ_INTP c2c_out_offset = is_fwd ? hc_band_offset : real_band_offset;
     if (is_input_prob_buffer(sol))
     {
         batch_in_stride = sol->decomp_scheme->dims[0].in_stride;
-        c2c_in_offset = sol->decomp_scheme->dims[0].in_stride * DATA_STRIDE;
+        c2c_in_offset = batch_in_stride * DATA_STRIDE;
     }
     else if (is_output_prob_buffer(sol))
     {
         batch_out_stride = sol->decomp_scheme->dims[0].out_stride;
-        c2c_out_offset = sol->decomp_scheme->dims[0].out_stride * DATA_STRIDE;
+        c2c_out_offset = batch_out_stride * DATA_STRIDE;
     }
 
     FFTZ_VOID *in_c2c = MOVE_ADDR(in, c2c_in_offset * dt_bytes);
@@ -336,6 +371,8 @@ static inline FFTZ_VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
         }
         else
         {
+            // Group step already accounts for the endpoint points each group
+            // occupies, see set_vector_strides_for_kernels().
             FFTZ_INTP v_in_stride  = sol->strides_grp->strides->v_in_stride;
             FFTZ_INTP v_out_stride = sol->strides_grp->strides->v_out_stride;
 
@@ -452,7 +489,9 @@ static inline FFTZ_VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
         }
         else
         {
-            // Asymmetric stride execution path for forward
+            // Asymmetric stride execution path for forward. Group step already
+            // accounts for the endpoint points each group occupies, see
+            // set_vector_strides_for_kernels().
             FFTZ_INTP v_in_stride  = sol->strides_grp->strides->v_in_stride;
             FFTZ_INTP v_out_stride = sol->strides_grp->strides->v_out_stride;
 

@@ -73,8 +73,8 @@ static FFTZ_VOID pow2_setup_stage_layout(aoclfftz_solution_t *sol,
                                      DATA_STRIDE * (FFTZ_INTP)dt_bytes;
     }
 
-    strides->v_in_h2_stride = strides->v_in_stride;
-    strides->v_out_h2_stride = strides->v_out_stride;
+    strides->v_in_sym_stride = strides->v_in_stride;
+    strides->v_out_sym_stride = strides->v_out_stride;
 }
 
 // Allocate one twiddle block for the plan and give each twiddle stage (>= 1)

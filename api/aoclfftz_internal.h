@@ -299,9 +299,23 @@ typedef struct cost_analysis
     FFTZ_INT64 time;
 } cost_analysis_t;
 
-// Kernel template function pointer for performing FFT
-typedef FFTZ_VOID (*kfft_)(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
-                      FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
+// Kernel template function pointer for performing FFT.
+// All kernels share this signature. Parameter meaning depends on kernel type:
+//
+// C2C kernels:
+//   in_1  -> in_real,   in_2  -> in_imag
+//   out_1 -> out_real,  out_2 -> out_imag
+//
+// Real R2HC and R2HCF kernels name the parameters explicitly:
+//   in_1  -> in_real,    in_2  -> in_complex
+//   out_1 -> out_real,   out_2 -> out_complex
+//
+//   in_real / out_real: DC and Nyquist in half-complex layout, or
+//                       plain real sample points when the buffer is not
+//                       Hermitian half-complex
+//   in_complex / out_complex: complex-pair values in half-complex layout
+typedef FFTZ_VOID (*kfft_)(FFTZ_VOID *in_1, FFTZ_VOID *in_2,
+                      FFTZ_VOID *out_1, FFTZ_VOID *out_2,
                       FFTZ_INTP n,
                       aoclfftz_strides_t *strides,
                       FFTZ_VOID *twd, FFTZ_UINT8 flag);
@@ -419,7 +433,7 @@ typedef struct aoclfftz_twiddle
 // Two direction-specialized variants are stored in mul[NUM_FFT_DIRS]:
 // mul[FORWARD_FFT_DIR] computes a .* conj(b), mul[BACKWARD_FFT_DIR]
 // computes a .* b. start_idx and stride are used by strided variants.
-typedef FFTZ_VOID (*elementwise_mul_)(FFTZ_VOID *out, FFTZ_VOID *a, 
+typedef FFTZ_VOID (*elementwise_mul_)(FFTZ_VOID *out, FFTZ_VOID *a,
                                       FFTZ_VOID *b, FFTZ_INTP n,
                                       FFTZ_INTP start_idx, FFTZ_INTP stride);
 
@@ -561,8 +575,12 @@ typedef struct aoclfftz_strides
     FFTZ_INTP *out_strides;
     FFTZ_INTP v_in_stride;
     FFTZ_INTP v_out_stride;
-    FFTZ_INTP v_in_h2_stride;
-    FFTZ_INTP v_out_h2_stride;
+    // Batch step for Hermitian-symmetric handling,
+    // equals v_in_stride/v_out_stride by default.
+    // - R2HC/R2HCF: real bins (DC, Nyquist).
+    // - Real C2C twiddle: second half of complex pairs
+    FFTZ_INTP v_in_sym_stride;
+    FFTZ_INTP v_out_sym_stride;
 } aoclfftz_strides_t;
 
 typedef struct aoclfftz_strides_grp
