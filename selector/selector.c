@@ -200,31 +200,35 @@ static FFTZ_INTP get_l1d_bytes(FFTZ_VOID)
     return (bytes > 0u) ? (FFTZ_INTP)bytes : DEFAULT_L1D_BYTES;
 }
 
+// L2 cache size in bytes, queried via CPUID.
+static FFTZ_INTP get_l2_bytes(FFTZ_VOID)
+{
+    FFTZ_UINTP bytes = cpuid_cache_size(2u);
+    return (bytes > 0u) ? (FFTZ_INTP)bytes : DEFAULT_L2_BYTES;
+}
+
 // The two regimes of the pow2 fast path. Both share one gate: the iterative
-// solver owns L1-resident sizes, four-step takes over once the array spills L1
-// and full-array passes go memory-bound.
+// solver owns sizes within its 2x L1D budget, four-step takes over once the
+// array spills that budget and full-array passes go memory-bound.
 typedef enum pow2_regime
 {
     POW2_REGIME_ITERATIVE = 0,
     POW2_REGIME_FOURSTEP = 1,
 } pow2_regime_t;
 
-// Shared pow2 gate. The structural conditions are identical for both regimes,
-// which differ only in their size band, so `regime` picks the band.
+// Shared pow2 gate. Both regimes need the same structure and differ only in
+// their size band, which `regime` picks.
 //
 // Structural: complex, 1D, row-major, contiguous (in_stride==1),
 // single-threaded, innermost dimension, power-of-2 size. Batching over a single
 // vector rank (vec_rank==1) is supported; multi-rank batched_vecs is not.
 //
-// Size bands, in complex elements that fit L1D (max_l1_elems):
-// - iterative: POW2_ITERATIVE_MIN_N <= n <= max_l1_elems;
-// - four-step: n > max_l1_elems, and the larger factor n1 of the balanced split
-//   still L1-resident (n1 <= max_l1_elems). For n = 2^k that caps four-step at
-//   roughly max_l1_elems^2; beyond it neither regime applies and the problem
-//   continues down the generic chain (batched_ct_l1_direct, split-radix where
-//   applicable, then regular CT). No lower bound is needed here:
-//   n > max_l1_elems already implies n >= POW2_ITERATIVE_MIN_N on any L1D worth
-//   dispatching on.
+// Size bands, in complex elements:
+// - iterative: POW2_ITERATIVE_MIN_N <= n <= max_iterative_elems (2x L1D).
+// - four-step: n > max_iterative_elems, and n1 of the balanced split within L2
+//   (n1 <= max_subfft_elems). Its lower bound is implied by the iterative cap.
+// - neither: continues down the generic chain (batched_ct_l1_direct,
+//   split-radix where applicable, then regular CT).
 //
 // `l1d_bytes` comes from the caller so the two regimes share one CPUID query.
 static FFTZ_INT32 is_pow2_solvable(aoclfftz_decomp_scheme_t *decomp_scheme,
@@ -233,7 +237,8 @@ static FFTZ_INT32 is_pow2_solvable(aoclfftz_decomp_scheme_t *decomp_scheme,
     FFTZ_INTP n = decomp_scheme->dims[0].n;
     FFTZ_UINT8 precision = DT_PRECISION_FLAG(decomp_scheme->flags);
     FFTZ_INTP bytes_per_elem = DATA_STRIDE * (FFTZ_INTP)DT_PRECISION_BYTES(precision);
-    FFTZ_INTP max_l1_elems = l1d_bytes / bytes_per_elem;
+    // The 2 is empirical.
+    FFTZ_INTP max_iterative_elems = (2 * l1d_bytes) / bytes_per_elem;
 
     if (!(!IS_REAL(decomp_scheme->flags)
           && IS_POW2(n)
@@ -250,14 +255,16 @@ static FFTZ_INT32 is_pow2_solvable(aoclfftz_decomp_scheme_t *decomp_scheme,
 
     if (regime == POW2_REGIME_ITERATIVE)
     {
-        return ((n >= POW2_ITERATIVE_MIN_N) && (n <= max_l1_elems));
+        return ((n >= POW2_ITERATIVE_MIN_N) && (n <= max_iterative_elems));
     }
+
+    FFTZ_INTP max_subfft_elems = get_l2_bytes() / bytes_per_elem;
 
     // Same split the solver performs, so the gate cannot promise a shape that
     // setup then rejects.
     FFTZ_INTP n1 = 0, n2 = 0;
-    return ((n > max_l1_elems) && pow2_balanced_split(n, &n1, &n2)
-            && (n1 <= max_l1_elems));
+    return ((n > max_iterative_elems) && pow2_balanced_split(n, &n1, &n2)
+            && (n1 <= max_subfft_elems));
 }
 
 FFTZ_INTP check_CT_solvability(FFTZ_INTP n, kernel_t *kertab)
@@ -507,9 +514,9 @@ FFTZ_INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
         return ret;
     }
 
-    // Power-of-2 iterative multi-stage fused pass for L1-resident power-of-2
-    // sizes. Attempted ahead of batched_ct_l1_direct and the generic SR/CT
-    // chain; falls through if the gate or solver setup (e.g. <= 2 stages)
+    // Power-of-2 iterative multi-stage fused pass for sizes within its 2x L1D
+    // element budget. Attempted ahead of batched_ct_l1_direct and the generic
+    // SR/CT chain; falls through if the gate or solver setup (e.g. <= 2 stages)
     // declines.
     FFTZ_INTP l1d_bytes = get_l1d_bytes();
     if (is_pow2_solvable(sel->solution->decomp_scheme, l1d_bytes,
@@ -526,8 +533,9 @@ FFTZ_INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
         }
     }
 
-    // Power-of-2 four-step (Regime 2): the array spills L1 but the sub-FFTs do
-    // not. Falls through to the generic chain when setup declines.
+    // Power-of-2 four-step (Regime 2): the array spills the iterative solver's
+    // 2x L1D budget but the sub-FFTs stay within L2. Falls through to the
+    // generic chain when setup declines.
     if (is_pow2_solvable(sel->solution->decomp_scheme, l1d_bytes,
                          POW2_REGIME_FOURSTEP))
     {

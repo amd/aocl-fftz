@@ -7,10 +7,10 @@
  *  (SOLVER_POW2_FOURSTEP).
  *
  *  Reached from the dispatcher once is_pow2_solvable accepts the
- *  problem (power-of-two whose working set spills L1 but whose ~sqrt(N)
- *  sub-FFTs stay L1-resident). Delegates to setup_pow2_fourstep_solver and
- *  records the cost estimate; setup declines (caller falls through to CT) when
- *  no fused kernel is available.
+ *  problem (power-of-two whose working set spills the iterative solver's L1
+ *  budget but whose ~sqrt(N) sub-FFTs stay L2-resident). Delegates to
+ *  setup_pow2_fourstep_solver and records the cost estimate; setup declines
+ *  (caller falls through to CT) when no fused kernel is available.
  *
  *  @author Ashwin K. Godbole
  */

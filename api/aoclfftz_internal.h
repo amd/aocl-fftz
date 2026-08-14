@@ -171,8 +171,9 @@
 #define POW2_ITERATIVE_MIN_N 512
 #define POW2_MAX_DECOMP_STAGES 16
 
-// Assumed L1 data cache size when CPUID does not report one.
+// Assumed cache sizes when CPUID does not report one.
 #define DEFAULT_L1D_BYTES (32 * 1024)
+#define DEFAULT_L2_BYTES (512 * 1024)
 
 // AMD ZEN CPU Instruction approximated latency cycles
 #define AMD_ZEN_FP_FMA_CYCLES 4
@@ -621,7 +622,8 @@ typedef struct aoclfftz_pow2_iterative
 // - sub1    : n1-point FFT down each of the n2 columns, written transposed
 // - fused   : inter-step twiddle multiply + transpose, in a single pass
 // - sub2    : n2-point FFT down each of the n1 columns, output natural order
-// - selected when N spills L1 but n1 still fits it (see is_pow2_solvable)
+// - selected when N spills the iterative solver's 2x L1D budget but n1 still
+//   fits L2 (see is_pow2_solvable)
 // - declined at setup, falling through to CT, when no fused kernel exists or
 //   n1/n2 are not micro-tile multiples
 typedef struct aoclfftz_pow2_fourstep_subfft

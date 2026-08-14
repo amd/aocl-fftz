@@ -23,7 +23,7 @@
 #include "core/kernels/non_dft/fused_twiddle_transpose/fused_twiddle_transpose_cmul.h"
 #include <immintrin.h>
 
-// fp64 (4x4 micro-tile inside an 8x8 cache block)
+// fp64 (4x4 micro-tile; cache-block edge from fused_twiddle_transpose.h)
 
 // Each complex double is one 128-bit lane, so the transpose is a direct strided
 // store with the multiply fused on the loaded lane.
@@ -98,7 +98,7 @@ static FFTZ_VOID fused_twiddle_transpose_fp64_avx128_bwd(
                                   in_row_stride, out_row_stride, 1);
 }
 
-// fp32 (8x8 micro-tile inside a 16x16 cache block)
+// fp32 (8x8 micro-tile; cache-block edge from fused_twiddle_transpose.h)
 
 // Two complex floats fill one 128-bit lane. The 8x8 micro-tile is walked a row
 // pair at a time: both rows are multiplied into 8 registers and transposed with

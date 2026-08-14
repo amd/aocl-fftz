@@ -23,7 +23,7 @@
 #include "core/kernels/non_dft/fused_twiddle_transpose/fused_twiddle_transpose_cmul.h"
 #include <immintrin.h>
 
-// fp64 (4x4 micro-tile inside an 8x8 cache block)
+// fp64 (4x4 micro-tile; cache-block edge from fused_twiddle_transpose.h)
 
 // Each 4x4-tile source row spans two 256-bit lanes (cols 0-1, 2-3), multiplied
 // before the register transpose (128-bit lane swaps emit full-cacheline rows).
@@ -156,7 +156,7 @@ static FFTZ_VOID fused_twiddle_transpose_fp64_avx256_bwd(
                                   in_row_stride, out_row_stride, 1);
 }
 
-// fp32 (8x8 micro-tile inside a 16x16 cache block)
+// fp32 (8x8 micro-tile; cache-block edge from fused_twiddle_transpose.h)
 
 // In-register transpose of a 4x4 tile of 64-bit elements (complex floats).
 #define TRANSPOSE_4x4_FP32(r0, r1, r2, r3, o0, o1, o2, o3)                     \

@@ -24,12 +24,18 @@
 #ifndef FUSED_TWIDDLE_TRANSPOSE_H
 #define FUSED_TWIDDLE_TRANSPOSE_H
 
-// fp64 (complex double): 4x4 register micro-tile inside an 8x8 cache block
-#define FUSED_TWIDDLE_TRANSPOSE_FP64_CACHE_BLOCK 8
+// Every ISA variant uses the cache-block edges below; they were measured on
+// AVX-512. A block reads CACHE_BLOCK complex per source row before jumping a
+// row stride, so wider blocks amortise the strided walk over more contiguous
+// bytes, but CACHE_BLOCK also sets the count of open destination write streams.
+// Past these values the write streams cost more than the source side recovers.
+
+// fp64 (complex double): 4x4 register micro-tile inside a 16x16 cache block
+#define FUSED_TWIDDLE_TRANSPOSE_FP64_CACHE_BLOCK 16
 #define FUSED_TWIDDLE_TRANSPOSE_FP64_MICRO_TILE 4
 
-// fp32 (complex float): 8x8 register micro-tile inside a 16x16 cache block
-#define FUSED_TWIDDLE_TRANSPOSE_FP32_CACHE_BLOCK 16
+// fp32 (complex float): 8x8 register micro-tile inside a 64x64 cache block
+#define FUSED_TWIDDLE_TRANSPOSE_FP32_CACHE_BLOCK 64
 #define FUSED_TWIDDLE_TRANSPOSE_FP32_MICRO_TILE 8
 
 #endif // FUSED_TWIDDLE_TRANSPOSE_H

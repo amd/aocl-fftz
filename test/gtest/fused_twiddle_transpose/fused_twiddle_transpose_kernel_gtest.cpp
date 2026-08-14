@@ -63,12 +63,16 @@ TEST_P(AoclfftzFusedTwiddleTransposeKernelTestF64, TEST_DOUBLE_COMPLEX_KERNEL)
 }
 
 // Geometries: square and non-square, edges multiples of 8 (both micro-tiles)
-// and large enough that the blocked walk crosses cache-block boundaries.
+// and large enough that the blocked walk crosses cache-block boundaries. The
+// fp32 block is 64, so the small edges below leave its outer loops at one
+// iteration; {72, 80} is what crosses it (one full block plus a remainder on
+// each walk).
 static std::vector<std::tuple<FFTZ_INTP, FFTZ_INTP>> tt_dims = {
     {16, 16}, /* square */
     {16, 32}, /* non-square */
     {32, 16}, /* non-square (transposed aspect) */
     {24, 40}, /* non-square, not a multiple of the cache block */
+    {72, 80}, /* crosses the fp32 cache block, partial on both edges */
 };
 
 // Row-stride padding: 0 (tight) and a positive pad so in_row_stride > n2 and

@@ -20,11 +20,11 @@
  *  columns are row-contiguous, so fourstep_batched_colfft batches columns as
  *  the kernels' SIMD dimension.
  *
- *  Sizes: the gate (is_pow2_solvable) takes N that spills L1 while n1 still
- *  fits it, capping four-step near (L1 in complex elements)^2. Setup declines
- *  (SOLVER_FAILURE, caller falls through to CT) when no fused kernel exists for
- *  the configuration or n1/n2 are not micro-tile multiples: fused-only, with no
- *  standalone twiddle or transpose path.
+ *  Sizes: the gate (is_pow2_solvable) takes N past the iterative solver's 2x
+ *  L1D budget while n1 still fits L2. Setup declines (SOLVER_FAILURE, caller falls
+ *  through to CT) when no fused kernel exists for the configuration or n1/n2
+ *  are not micro-tile multiples: fused-only, with no standalone twiddle or
+ *  transpose path.
  *
  *  Memory above the caller buffers, in complex elements:
  *    ping-pong pool : 2 * slots * max(n1 * sub1_row_stride,

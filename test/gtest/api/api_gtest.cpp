@@ -833,6 +833,12 @@ TYPED_TEST_P(AoclfftzConcurrentTest, C2C_BATCHED_NDIM_BS_2)
     concurrent_exec_io::sweep(this, {97, 19}, 3);
 }
 
+// Four-step: power-of-2 size.
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_FOURSTEP)
+{
+    concurrent_exec_io::sweep(this, {1048576}, 1);
+}
+
 REGISTER_TYPED_TEST_SUITE_P(
     AoclfftzConcurrentTest,
     C2C_DIRECT,
@@ -844,7 +850,8 @@ REGISTER_TYPED_TEST_SUITE_P(
     C2C_BLUESTEIN,
     C2C_BATCHED_BLUESTEIN,
     C2C_BATCHED_NDIM_BS_1,
-    C2C_BATCHED_NDIM_BS_2
+    C2C_BATCHED_NDIM_BS_2,
+    C2C_FOURSTEP
 );
 
 // Concurrency is the focus here, not type coverage, so run a single type
