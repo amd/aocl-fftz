@@ -574,7 +574,8 @@ static FFTZ_VOID execute_real_mt_ct_intra_stage_kernels(aoclfftz_solution_t *sol
     int enable_parallelism = n_threads_c2c > 0;
     if (enable_parallelism)
     {
-        #pragma omp parallel sections
+        // Use a team of 2 threads, one per section.
+        #pragma omp parallel sections num_threads(2)
         {
             #pragma omp section
             {
