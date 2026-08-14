@@ -311,7 +311,8 @@ elementwise_mul_fused_norm_
 register_elementwise_mul_fused_norm_kernel(FFTZ_INT32 cpu_flags, FFTZ_INT32 dt,
                                            FFTZ_UINT8 direction)
 {
-    DISPATCH_REG_KERNEL(cpu_flags, dt, direction, register_elementwise_mul_fused_norm);
+    DISPATCH_REG_KERNEL(cpu_flags, dt, direction,
+                        register_elementwise_mul_fused_norm);
 }
 
 elementwise_mul_fused_norm_
@@ -321,6 +322,34 @@ register_elementwise_mul_fused_norm_strided_out_kernel(FFTZ_INT32 cpu_flags,
 {
     DISPATCH_REG_KERNEL(cpu_flags, dt, direction,
                         register_elementwise_mul_fused_norm_strided_out);
+}
+
+/**
+ * @brief Registers the fused four-step twiddle + transpose kernel.
+ *
+ * Selects the best available implementation based on the optimization level
+ * and data type, falling back to the portable scalar C variant when no SIMD
+ * variant is available (scalar build / optlevel_scalar), so the four-step
+ * solver can run at every optimization level.
+ * - optlevel_avx512 (3): AVX512 implementation
+ * - optlevel_avx256 (2): AVX256 implementation
+ * - optlevel_avx128 (1): AVX128 implementation
+ * - optlevel_scalar (0): scalar C implementation
+ *
+ * @param[in] cpu_flags Optimization level (optimization_level_t) obtained
+ *                      from get_max_build_isa_level()
+ * @param[in] dt        Data type (DT_FLOAT or DT_DOUBLE)
+ * @param[in] direction FORWARD_FFT_DIR  -> data .* tw,
+ *                      otherwise        -> data .* conj(tw)
+ * @return Function pointer to the selected fused kernel, or NULL if none.
+ */
+fused_twiddle_transpose_
+register_fused_twiddle_transpose_kernel(FFTZ_INT32 cpu_flags, FFTZ_INT32 dt,
+                                        FFTZ_UINT8 direction)
+{
+    /* Falls through to the portable scalar C variant on a scalar build. */
+    DISPATCH_REG_KERNEL(cpu_flags, dt, direction,
+                        register_fused_twiddle_transpose);
 }
 
 #undef DISPATCH_REG_KERNEL

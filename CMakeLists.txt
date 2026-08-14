@@ -82,6 +82,7 @@ file(GLOB CORE_C_FILES CONFIGURE_DEPENDS
                         ${CORE_PATH}/kernels/dft/c2c/c/*.c ${CORE_PATH}/kernels/dft/c2c/c/*.h
                         ${CORE_PATH}/kernels/non_dft/ele_mul/c/*.c
                         ${CORE_PATH}/kernels/non_dft/type_convert/c/*.c
+                        ${CORE_PATH}/kernels/non_dft/fused_twiddle_transpose/c/*.c
                         ${CORE_PATH}/kernels/non_dft/perm_copy/c/*.c
                         ${CORE_PATH}/kernels/dft/r2hc/c/*.c ${CORE_PATH}/kernels/dft/r2hc/c/*.h
                         ${CORE_PATH}/kernels/dft/r2hc_fused/c/*.c ${CORE_PATH}/kernels/dft/r2hc_fused/c/*.h
@@ -98,6 +99,7 @@ if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX512")
     file(GLOB CORE_AVX512_FILES CONFIGURE_DEPENDS
                             ${CORE_PATH}/kernels/dft/c2c/avx512/*.c
                             ${CORE_PATH}/kernels/non_dft/ele_mul/avx512/*.c
+                            ${CORE_PATH}/kernels/non_dft/fused_twiddle_transpose/avx512/*.c
                             ${CORE_PATH}/kernels/dft/r2hc/avx512/*.c
                             ${CORE_PATH}/kernels/dft/r2hc_fused/avx512/*.c
                             ${CORE_PATH}/kernels/dft/tw_c2c_fwd/avx512/*.c
@@ -112,6 +114,7 @@ if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX256|AVX512")
     add_compile_definitions(ENABLE_AVX256)
     file(GLOB CORE_AVX256_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/dft/c2c/avx256/*.c
                                                   ${CORE_PATH}/kernels/non_dft/ele_mul/avx256/*.c
+                                                  ${CORE_PATH}/kernels/non_dft/fused_twiddle_transpose/avx256/*.c
                                                   ${CORE_PATH}/kernels/dft/r2hc/avx256/*.c
                                                   ${CORE_PATH}/kernels/dft/r2hc_fused/avx256/*.c
                                                   ${CORE_PATH}/kernels/dft/tw_c2c_fwd/avx256/*.c
@@ -126,6 +129,7 @@ if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX128|AVX256|AVX512")
     add_compile_definitions(ENABLE_AVX128)
     file(GLOB CORE_AVX128_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/dft/c2c/avx128/*.c
                                                   ${CORE_PATH}/kernels/non_dft/ele_mul/avx128/*.c
+                                                  ${CORE_PATH}/kernels/non_dft/fused_twiddle_transpose/avx128/*.c
                                                   ${CORE_PATH}/kernels/dft/r2hc/avx128/*.c
                                                   ${CORE_PATH}/kernels/dft/r2hc_fused/avx128/*.c
                                                   ${CORE_PATH}/kernels/dft/tw_c2c_fwd/avx128/*.c

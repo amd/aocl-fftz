@@ -14,6 +14,8 @@
 #ifndef MEMORY_MANAGER_H
 #define MEMORY_MANAGER_H
 
+#include <string.h>
+
 #include "utils/allocator.h"
 #include "api/aoclfftz_internal.h"
 #include "selector/selector.h"
@@ -147,6 +149,13 @@ static inline aoclfftz_error_type alloc_per_call_scratch(
     {
         ctx->pow2_buf_base = MOVE_ADDR(slab, offset);
         offset += pow2_buf_size;
+        // Only four-step reads pad lanes it never wrote, so only it pays for
+        // the zero-fill; every other pow2 plan overwrites the pool before
+        // reading.
+        if (exec_meta->pow2_buf_needs_zero)
+        {
+            memset(ctx->pow2_buf_base, 0, (size_t)pow2_buf_size);
+        }
     }
     if (exec_meta->transpose_aux_size > 0)
     {
@@ -168,4 +177,6 @@ FFTZ_VOID destroy_decomp_scheme(aoclfftz_decomp_scheme_t *decomp_scheme);
 FFTZ_VOID destroy_bluestein(aoclfftz_bluestein_t *bluestein);
 FFTZ_UINTP calculate_max_buffer_size(aoclfftz_solution_t *sol);
 FFTZ_VOID destroy_pow2_iterative(aoclfftz_pow2_iterative_t *pow2_iterative);
+FFTZ_VOID destroy_pow2_fourstep(aoclfftz_pow2_fourstep_t *pow2_fourstep);
 #endif // MEMORY_MANAGER_H
+

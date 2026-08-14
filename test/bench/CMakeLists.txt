@@ -441,9 +441,35 @@ set(STANDARD_TEST_SUITE
     # TODO: Add more test cases with different combinations. This list is expected to be larger than TEST_SUITE.
     )
 
+# Pow2-fourstep, sampled across 2^14..2^23 at one size per ISA level. The gate
+# hands a pow2 N to this solver once N spills L1d and the larger factor
+# n1 = 2^ceil(log2(N)/2) of the balanced split still fits, which caps N at
+# roughly (L1d/bytes_per_elem)^2: 2^22 double / 2^24 float on a 32 KiB L1d.
+# 2^21 double sits exactly on that boundary (n1 = 2048 elements = 32 KiB) and
+# 2^23 is only reachable in float, hence the precision split below. Between them
+# the four cover both directions, placements, precisions and data models. All are
+# single-threaded and unit-strided, as the gate requires.
+#
+# Held in their own list because ACCURACY_WITH_DFT compares against an O(N^2)
+# reference DFT, which at these sizes runs for hours (2^18) to days (2^23) --
+# for scale, the 2^17 case above already takes ~6 mins. They are therefore
+# registered only when that reference is off.
+set(POW2_FOURSTEP_TEST_SUITE
+    "EXT_C_C2C_POW2_FOURSTEP_2_18_FWD_OP ./aocl_fftz_bench 262144 -b a -r o --dir f"                          # accuracy | complex  | double   | LP64       | 1D  |  no     | pow2four  | outplace  | forward   | C       | Pow2-fourstep
+    "EXT_AVX256_C2C_POW2_FOURSTEP_2_20_BWD_IP ./aocl_fftz_bench 1048576 -b a -r i --dir b -m i -o 2"          # accuracy | complex  | double   | ILP64      | 1D  |  no     | pow2four  | inplace   | backward  | AVX256  | Pow2-fourstep
+    "EXT_AVX512_C2C_POW2_FOURSTEP_2_21_BWD_IP ./aocl_fftz_bench 2097152 -b a -r i --dir b -o 3"               # accuracy | complex  | double   | LP64       | 1D  |  no     | pow2four  | inplace   | backward  | AVX512  | Pow2-fourstep
+    "EXT_AVX512_C2C_POW2_FOURSTEP_2_23_FWD_OP ./aocl_fftz_bench 8388608 -b a -r o --dir f -p f -o 3"          # accuracy | complex  | float    | LP64       | 1D  |  no     | pow2four  | outplace  | forward   | AVX512  | Pow2-fourstep
+    )
+
 # Determine which test suites to use based on AOCL_TEST_COVERAGE
 if(AOCL_TEST_COVERAGE STREQUAL "EXHAUSTIVE")
     set(TEST_SUITE ${STANDARD_TEST_SUITE} ${EXHAUSTIVE_TEST_SUITE})
+    if(ACCURACY_WITH_DFT)
+        message(STATUS "DFT Reference enabled: skipping pow2-fourstep tests"
+                       " (2^18..2^23 against an O(N^2) reference)")
+    else()
+        list(APPEND TEST_SUITE ${POW2_FOURSTEP_TEST_SUITE})
+    endif()
 else()
     set(TEST_SUITE ${STANDARD_TEST_SUITE})
 endif()

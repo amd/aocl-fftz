@@ -15,6 +15,7 @@
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
 #include "core/common/twiddle.h"
+#include "core/common/pow2_radix_decompose.h"
 #include "core/kernels/kernel_list.h"
 #include "utils/cpu_features.h"
 #include "core/solvers/real/direct_solver_rdft_utils.h"
@@ -199,29 +200,64 @@ static FFTZ_INTP get_l1d_bytes(FFTZ_VOID)
     return (bytes > 0u) ? (FFTZ_INTP)bytes : DEFAULT_L1D_BYTES;
 }
 
-static FFTZ_INT32 is_pow2_iterative_applicable(aoclfftz_decomp_scheme_t *decomp_scheme)
+// The two regimes of the pow2 fast path. Both share one gate: the iterative
+// solver owns L1-resident sizes, four-step takes over once the array spills L1
+// and full-array passes go memory-bound.
+typedef enum pow2_regime
+{
+    POW2_REGIME_ITERATIVE = 0,
+    POW2_REGIME_FOURSTEP = 1,
+} pow2_regime_t;
+
+// Shared pow2 gate. The structural conditions are identical for both regimes,
+// which differ only in their size band, so `regime` picks the band.
+//
+// Structural: complex, 1D, row-major, contiguous (in_stride==1),
+// single-threaded, innermost dimension, power-of-2 size. Batching over a single
+// vector rank (vec_rank==1) is supported; multi-rank batched_vecs is not.
+//
+// Size bands, in complex elements that fit L1D (max_l1_elems):
+// - iterative: POW2_ITERATIVE_MIN_N <= n <= max_l1_elems;
+// - four-step: n > max_l1_elems, and the larger factor n1 of the balanced split
+//   still L1-resident (n1 <= max_l1_elems). For n = 2^k that caps four-step at
+//   roughly max_l1_elems^2; beyond it neither regime applies and the problem
+//   continues down the generic chain (batched_ct_l1_direct, split-radix where
+//   applicable, then regular CT). No lower bound is needed here:
+//   n > max_l1_elems already implies n >= POW2_ITERATIVE_MIN_N on any L1D worth
+//   dispatching on.
+//
+// `l1d_bytes` comes from the caller so the two regimes share one CPUID query.
+static FFTZ_INT32 is_pow2_solvable(aoclfftz_decomp_scheme_t *decomp_scheme,
+                                   FFTZ_INTP l1d_bytes, pow2_regime_t regime)
 {
     FFTZ_INTP n = decomp_scheme->dims[0].n;
     FFTZ_UINT8 precision = DT_PRECISION_FLAG(decomp_scheme->flags);
     FFTZ_INTP bytes_per_elem = DATA_STRIDE * (FFTZ_INTP)DT_PRECISION_BYTES(precision);
-    FFTZ_INTP max_elems = get_l1d_bytes() / bytes_per_elem;
+    FFTZ_INTP max_l1_elems = l1d_bytes / bytes_per_elem;
 
-    // Pow2-iterative is applicable for complex, 1D, row-major, contiguous
-    // (in_stride==1), single-threaded transforms on the innermost dimension
-    // whose size is a power-of-2 of at least POW2_ITERATIVE_MIN_N and at most
-    // max_elems. Batching over a single vector rank (vec_rank==1) is supported;
-    // multi-rank batched_vecs is not.
-    return (!IS_REAL(decomp_scheme->flags)
-            && (n >= POW2_ITERATIVE_MIN_N)
-            && IS_POW2(n)
-            && (n <= max_elems)
-            && (decomp_scheme->dim_rank == 1)
-            && (decomp_scheme->vec_rank == 1)
-            && (decomp_scheme->batched_vecs == NULL)
-            && (!check_col_major(decomp_scheme))
-            && !IS_NOT_INNERMOST_DIM(decomp_scheme->flags)
-            && (decomp_scheme->dims[0].in_stride == 1)
-            && (decomp_scheme->thread_info->pthr_fft->num_threads == 1));
+    if (!(!IS_REAL(decomp_scheme->flags)
+          && IS_POW2(n)
+          && (decomp_scheme->dim_rank == 1)
+          && (decomp_scheme->vec_rank == 1)
+          && (decomp_scheme->batched_vecs == NULL)
+          && (!check_col_major(decomp_scheme))
+          && !IS_NOT_INNERMOST_DIM(decomp_scheme->flags)
+          && (decomp_scheme->dims[0].in_stride == 1)
+          && (decomp_scheme->thread_info->pthr_fft->num_threads == 1)))
+    {
+        return 0;
+    }
+
+    if (regime == POW2_REGIME_ITERATIVE)
+    {
+        return ((n >= POW2_ITERATIVE_MIN_N) && (n <= max_l1_elems));
+    }
+
+    // Same split the solver performs, so the gate cannot promise a shape that
+    // setup then rejects.
+    FFTZ_INTP n1 = 0, n2 = 0;
+    return ((n > max_l1_elems) && pow2_balanced_split(n, &n1, &n2)
+            && (n1 <= max_l1_elems));
 }
 
 FFTZ_INTP check_CT_solvability(FFTZ_INTP n, kernel_t *kertab)
@@ -475,12 +511,30 @@ FFTZ_INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     // sizes. Attempted ahead of batched_ct_l1_direct and the generic SR/CT
     // chain; falls through if the gate or solver setup (e.g. <= 2 stages)
     // declines.
-    if (is_pow2_iterative_applicable(sel->solution->decomp_scheme))
+    FFTZ_INTP l1d_bytes = get_l1d_bytes();
+    if (is_pow2_solvable(sel->solution->decomp_scheme, l1d_bytes,
+                         POW2_REGIME_ITERATIVE))
     {
         solver_obj->solver_type = SOLVER_POW2_ITERATIVE;
         if (set_solver_fp(solver_obj) == SOLVER_SUCCESS)
         {
             ret = selector_pow2_iterative_dft(sel);
+            if (ret == SELECTOR_SUCCESS)
+            {
+                return ret;
+            }
+        }
+    }
+
+    // Power-of-2 four-step (Regime 2): the array spills L1 but the sub-FFTs do
+    // not. Falls through to the generic chain when setup declines.
+    if (is_pow2_solvable(sel->solution->decomp_scheme, l1d_bytes,
+                         POW2_REGIME_FOURSTEP))
+    {
+        solver_obj->solver_type = SOLVER_POW2_FOURSTEP;
+        if (set_solver_fp(solver_obj) == SOLVER_SUCCESS)
+        {
+            ret = selector_pow2_fourstep_dft(sel);
             if (ret == SELECTOR_SUCCESS)
             {
                 return ret;
@@ -2169,17 +2223,37 @@ static FFTZ_VOID compute_exec_metadata(
         }
     }
 
-    // Pow2-iterative owns a private ping-pong pool (see the solver). Sequential
-    // nodes reuse the region, so take the max rather than summing; concurrency
-    // within a node is covered by its per-thread slots.
-    if (stype == SOLVER_POW2_ITERATIVE && sol->dft_bufs->pow2_iterative != NULL)
+    // The pow2 solvers share one per-call region: sequential nodes reuse it, so
+    // take the max, and per-node concurrency is covered by its per-thread slots.
     {
-        aoclfftz_pow2_iterative_t *it = sol->dft_bufs->pow2_iterative;
-        if (it->pool_bytes > metadata->pow2_buf_size)
+        FFTZ_UINTP pow2_pool_bytes = 0;
+        FFTZ_VOID *pow2_pool = NULL;
+        // Only four-step folds padded rows through the pool, so only it needs the
+        // per-call copy zeroed (see alloc_per_call_scratch).
+        FFTZ_INT32 pow2_pool_needs_zero = 0;
+
+        if (stype == SOLVER_POW2_ITERATIVE && sol->dft_bufs->pow2_iterative != NULL)
         {
-            metadata->pow2_buf_size = it->pool_bytes;
-            metadata->base_ctx.pow2_buf_base = it->pingpong_buf;
+            aoclfftz_pow2_iterative_t *it = sol->dft_bufs->pow2_iterative;
+            pow2_pool_bytes = it->pool_bytes;
+            pow2_pool = it->pingpong_buf;
         }
+        else if (stype == SOLVER_POW2_FOURSTEP
+                 && sol->dft_bufs->pow2_fourstep != NULL)
+        {
+            aoclfftz_pow2_fourstep_t *fs = sol->dft_bufs->pow2_fourstep;
+            pow2_pool_bytes = fs->pool_bytes;
+            pow2_pool = fs->scratch;
+            pow2_pool_needs_zero = 1;
+        }
+
+        if (pow2_pool_bytes > metadata->pow2_buf_size)
+        {
+            metadata->pow2_buf_size = pow2_pool_bytes;
+            metadata->base_ctx.pow2_buf_base = pow2_pool;
+        }
+        // Sticky: any four-step node in the plan makes the shared region need it.
+        metadata->pow2_buf_needs_zero |= pow2_pool_needs_zero;
     }
 
     // Record the aux pool size of buffered/ndim solvers and their

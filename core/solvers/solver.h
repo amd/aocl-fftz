@@ -45,6 +45,7 @@ typedef enum
     SOLVER_SIZEONE,
     SOLVER_SR,
     SOLVER_POW2_ITERATIVE,
+    SOLVER_POW2_FOURSTEP,
     SOLVER_MT_DIRECT,
     SOLVER_MT_DIRECT_BATCHED_COLMAJOR,
     SOLVER_MT_DIRECT_BATCHED_ROWMAJOR,
@@ -113,8 +114,12 @@ FFTZ_INT32 setup_sr_solver(aoclfftz_solution_t *sol,
                            aoclfftz_solution_t *sol_odd1,
                            aoclfftz_solution_t *sol_odd3, FFTZ_INTP n_even,
                            FFTZ_INTP n_odd);
-FFTZ_INT32 setup_pow2_iterative_solver(aoclfftz_solution_t *sol, kernel_t *kt_dft,
-                                   kernel_t *kt_twid, FFTZ_INT64 *out_cost);
+FFTZ_INT32 setup_pow2_iterative_solver(aoclfftz_solution_t *sol,
+                                       kernel_t *kt_dft, kernel_t *kt_twid,
+                                       FFTZ_INT64 *out_cost);
+FFTZ_INT32 setup_pow2_fourstep_solver(aoclfftz_solution_t *sol,
+                                      kernel_t *kt_dft, kernel_t *kt_twid,
+                                      FFTZ_INT64 *out_ops);
 #ifdef MULTI_THREADING
 FFTZ_INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol,
                                   cost_analysis_t *cost, kernel_t *kernel,
@@ -177,6 +182,7 @@ dft_solver_ register_execute_sizeone_solver(FFTZ_VOID);
 dft_solver_ register_execute_transpose_solver(FFTZ_VOID);
 dft_solver_ register_execute_sr_solver(FFTZ_VOID);
 dft_solver_ register_execute_pow2_iterative_solver(FFTZ_VOID);
+dft_solver_ register_execute_pow2_fourstep_solver(FFTZ_VOID);
 #ifdef MULTI_THREADING
 dft_solver_ register_execute_mt_direct_solver(FFTZ_VOID);
 dft_solver_ register_execute_mt_direct_batched_rowmajor_solver(FFTZ_VOID);

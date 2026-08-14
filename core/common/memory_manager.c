@@ -145,6 +145,7 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
         sol->decomp_scheme->batched_vecs = NULL;
         sol->dft_bufs->nd_sol = NULL;
         sol->dft_bufs->pow2_iterative = NULL;
+        sol->dft_bufs->pow2_fourstep = NULL;
         sol->strides_grp->strides->in_strides = NULL;
         sol->strides_grp->strides->out_strides = NULL;
         sol->strides_grp->strides->v_in_stride = 0;
@@ -497,13 +498,43 @@ FFTZ_VOID destroy_pow2_iterative(aoclfftz_pow2_iterative_t *pow2_iterative)
     {
         for (FFTZ_INT32 s = 0; s < pow2_iterative->num_stages; s++)
         {
-            FREE_ALIGN_ALLOCATED_MEM(pow2_iterative->stages[s].strides.in_strides);
-            FREE_ALIGN_ALLOCATED_MEM(pow2_iterative->stages[s].strides.out_strides);
+            FREE_ALIGN_ALLOCATED_MEM(
+                pow2_iterative->stages[s].stage_info.strides.in_strides);
+            FREE_ALIGN_ALLOCATED_MEM(
+                pow2_iterative->stages[s].stage_info.strides.out_strides);
         }
     }
     FREE_ALIGN_ALLOCATED_MEM(pow2_iterative->pingpong_buf);
     FREE_ALIGN_ALLOCATED_MEM(pow2_iterative->stages);
     FREE_ALIGN_ALLOCATED_MEM(pow2_iterative);
+}
+
+// Frees the four-step state: scratch pool, per-sub-FFT stage and stride arrays,
+// and the struct. Twiddle tables are freed by the generic solution teardown.
+FFTZ_VOID destroy_pow2_fourstep(aoclfftz_pow2_fourstep_t *pow2_fourstep)
+{
+    if (pow2_fourstep == NULL)
+    {
+        return;
+    }
+    aoclfftz_pow2_fourstep_subfft_t *subffts[2] = {&pow2_fourstep->sub1,
+                                                   &pow2_fourstep->sub2};
+    for (FFTZ_INT32 sf = 0; sf < 2; sf++)
+    {
+        if (subffts[sf]->stages == NULL)
+        {
+            continue;
+        }
+        for (FFTZ_INT32 s = 0; s < subffts[sf]->num_stages; s++)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(subffts[sf]->stages[s].strides.in_strides);
+            FREE_ALIGN_ALLOCATED_MEM(subffts[sf]->stages[s].strides.out_strides);
+        }
+    }
+    FREE_ALIGN_ALLOCATED_MEM(pow2_fourstep->sub1.stages);
+    FREE_ALIGN_ALLOCATED_MEM(pow2_fourstep->sub2.stages);
+    FREE_ALIGN_ALLOCATED_MEM(pow2_fourstep->scratch);
+    FREE_ALIGN_ALLOCATED_MEM(pow2_fourstep);
 }
 
 FFTZ_VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp)
@@ -575,6 +606,7 @@ FFTZ_VOID destroy_solution(aoclfftz_solution_t* sol)
             sol->dft_bufs->ct_buf_allocated = 0;
         }
         destroy_pow2_iterative(sol->dft_bufs->pow2_iterative);
+        destroy_pow2_fourstep(sol->dft_bufs->pow2_fourstep);
         FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->sr->input_copy);
 
         release_owned_real_buffered_aux(sol);

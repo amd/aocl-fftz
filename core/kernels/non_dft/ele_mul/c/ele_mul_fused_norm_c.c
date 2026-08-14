@@ -154,3 +154,4 @@ register_elementwise_mul_fused_norm_strided_out_c(FFTZ_UINT8 precision,
 {
     return register_elementwise_mul_fused_norm_c(precision, direction);
 }
+

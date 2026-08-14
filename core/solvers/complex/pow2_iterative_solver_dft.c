@@ -15,202 +15,13 @@
 #include "core/solvers/solver.h"
 #include "core/common/memory_manager.h"
 #include "core/common/twiddle.h"
+#include "core/common/pow2_radix_decompose.h"
 
-#if defined(__GNUC__) || defined(__clang__)
-    #define LOG_BASE_2(n) (63 - __builtin_clzll((FFTZ_UINT64)(n)))
-#else
-    static inline FFTZ_INT32 fftz_log2_floor(FFTZ_UINT64 v)
-    {
-        FFTZ_INT32 r = 0;
-        while (v >>= 1)
-        {
-            r++;
-        }
-        return r;
-    }
-    #define LOG_BASE_2(n) fftz_log2_floor((FFTZ_UINT64)(n))
-#endif
-
-// This solver plans its own kernels; the sibling complex families are planned
-// selector-side instead.
-//
-// Lowest-cost kernel variant (across ISA categories) for the exact `radix`,
-// ranked by cost for `direction`. Both directions come from the *same* table
-// entry: a node can run either way (Bluestein drives its inner FFT forward then
-// backward through one node), and one entry means one register width, so the
-// twiddle layout repacked by the selector stays valid for both.
-//
-// Fills out_kfft[] and returns 1, or 0 if no usable entry exists. out_cost and
-// out_sets, when non-NULL, receive the variant's estimated cycles for `batch`
-// and its register width.
-static FFTZ_INT32 pow2_pick_kernel(kernel_t *kertab, FFTZ_INTP radix,
-                                   FFTZ_UINT8 precision, FFTZ_UINT8 direction,
-                                   FFTZ_INTP batch, kfft_ *out_kfft,
-                                   FFTZ_INT64 *out_cost, FFTZ_INTP *out_sets)
-{
-    if (out_cost != NULL)
-    {
-        *out_cost = 0;
-    }
-    if (out_sets != NULL)
-    {
-        *out_sets = 1;
-    }
-
-    FFTZ_INTP base_idx = find_radix_base_idx(kertab, radix);
-    if (base_idx < 0)
-    {
-        return 0;
-    }
-
-    kernel_choice_t choice = find_best_kernel(kertab, base_idx,
-                                              precision, direction,
-                                              batch);
-    if (choice.idx < 0)
-    {
-        return 0;
-    }
-
-    kfft_ fwd = kertab[choice.idx].kfft[FORWARD_FFT_DIR];
-    kfft_ bwd = kertab[choice.idx].kfft[BACKWARD_FFT_DIR];
-    if (fwd == NULL || bwd == NULL)
-    {
-        return 0;
-    }
-
-    out_kfft[FORWARD_FFT_DIR] = fwd;
-    out_kfft[BACKWARD_FFT_DIR] = bwd;
-    if (out_cost != NULL)
-    {
-        *out_cost = choice.cost;
-    }
-    if (out_sets != NULL)
-    {
-        *out_sets = (FFTZ_INTP)kertab[choice.idx].sets[precision - 2];
-    }
-    return 1;
-}
-
-// Whether `kertab` has an entry for `radix` that serves both FFT directions.
-static FFTZ_INT32 pow2_radix_has_both_directions(kernel_t *kertab,
-                                                 FFTZ_INTP radix)
-{
-    FFTZ_INTP base_idx = find_radix_base_idx(kertab, radix);
-    if (base_idx < 0)
-    {
-        return 0;
-    }
-    for (FFTZ_INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
-    {
-        FFTZ_INTP kloc = kcat * NUM_KERNELS_IN_EACH_CATEGORY + base_idx;
-        if (kertab[kloc].kfft[FORWARD_FFT_DIR] != NULL
-            && kertab[kloc].kfft[BACKWARD_FFT_DIR] != NULL)
-        {
-            return 1;
-        }
-    }
-    return 0; // radix present but not usable in both directions
-}
-
-// Largest radix in `kertab` that divides `remaining` and serves both
-// directions, or 0 if there is none.
-static FFTZ_INTP pow2_pick_largest(kernel_t *kertab, FFTZ_INTP remaining)
-{
-    FFTZ_INTP best_radix = 0;
-    for (FFTZ_INTP b = 0; b < NUM_KERNELS_IN_EACH_CATEGORY; b++)
-    {
-        FFTZ_INTP r = (FFTZ_INTP)kertab[b].radix;
-        if (r == 0) // end of the kernel list
-        {
-            break;
-        }
-        if (r <= best_radix || r > remaining || (remaining % r) != 0)
-        {
-            continue;
-        }
-        if (pow2_radix_has_both_directions(kertab, r))
-        {
-            best_radix = r;
-        }
-    }
-    return best_radix;
-}
-
-// Factor n = 2^log2(n) into the fewest radix stages from {2,4,8,16}, spreading
-// the exponent evenly so the smallest radix is maximised: 1024 -> [16, 8, 8],
-// not [16, 16, 4]. `n` must be a power of two, which
-// is_pow2_iterative_applicable guarantees. Returns the stage count, or 0 if the
-// split needs too many stages or a stage's radix has no bidirectional kernel.
-static FFTZ_INT32 pow2_balanced_decompose(FFTZ_INTP n, kernel_t *kt_dft,
-                                          kernel_t *kt_twid, FFTZ_INTP *radixes)
-{
-    FFTZ_INT32 log2n = LOG_BASE_2(n);
-
-    // Each stage covers a radix of at most 16 = 2^4, so at least ceil(log2n/4)
-    // stages are needed.
-    FFTZ_INT32 num_stages = (log2n + 3) / 4;
-    if (num_stages > POW2_ITERATIVE_MAX_STAGES)
-    {
-        return 0;
-    }
-
-    // Give every stage the same base exponent; hand the leftover units one each
-    // to the first few stages.
-    FFTZ_INT32 base_exponent = log2n / num_stages;
-    FFTZ_INT32 stages_with_extra = log2n % num_stages;
-    for (FFTZ_INT32 stage = 0; stage < num_stages; stage++)
-    {
-        FFTZ_INT32 exponent = base_exponent + (stage < stages_with_extra ? 1 : 0);
-        FFTZ_INTP radix = (FFTZ_INTP)1 << exponent;
-        kernel_t *kt = (stage == 0) ? kt_dft : kt_twid;
-        if (!pow2_radix_has_both_directions(kt, radix))
-        {
-            return 0;
-        }
-        radixes[stage] = radix;
-    }
-    return num_stages;
-}
-
-// Factor n by taking the largest usable radix at each stage. Returns the stage
-// count, or 0 if n cannot be consumed within POW2_ITERATIVE_MAX_STAGES stages.
-static FFTZ_INT32 pow2_greedy_decompose(FFTZ_INTP n, kernel_t *kt_dft,
-                                        kernel_t *kt_twid, FFTZ_INTP *radixes)
-{
-    FFTZ_INTP remaining = n;
-    FFTZ_INT32 num_stages = 0;
-
-    while (remaining > 1 && num_stages < POW2_ITERATIVE_MAX_STAGES)
-    {
-        kernel_t *kt = (num_stages == 0) ? kt_dft : kt_twid;
-        FFTZ_INTP radix = pow2_pick_largest(kt, remaining);
-        if (radix == 0)
-        {
-            return 0;
-        }
-        radixes[num_stages] = radix;
-        remaining /= radix;
-        num_stages++;
-    }
-    return (remaining == 1) ? num_stages : 0;
-}
-
-// Factor n into radix stages (stage 0 from kt_dft, the rest from kt_twid).
-// Prefers the balanced split, falls back to greedy largest-first. Returns the
-// stage count, or 0 on failure.
-static FFTZ_INT32 pow2_decompose(FFTZ_INTP n, kernel_t *kt_dft, kernel_t *kt_twid,
-                             FFTZ_INTP *radixes)
-{
-    FFTZ_INT32 num_stages = pow2_balanced_decompose(n, kt_dft, kt_twid, radixes);
-    if (num_stages > 0)
-    {
-        return num_stages;
-    }
-    return pow2_greedy_decompose(n, kt_dft, kt_twid, radixes);
-}
+// This solver plans its own kernels (the sibling families are planned selector-
+// side), reusing the radix split shared with four-step in pow2_radix_decompose.
 
 // Fill in one stage's counts and strides; `cols` is the product of the earlier
-// radixes and `stage_data->radix` must already be set. Stage 0 gathers the
+// radixes and `stage_data->stage_info.radix` must already be set. Stage 0 gathers the
 // strided input into a dense buffer as one group; later stages walk num_groups
 // groups over it, and the last writes out through the caller's output stride.
 static FFTZ_VOID pow2_setup_stage_layout(aoclfftz_solution_t *sol,
@@ -222,7 +33,8 @@ static FFTZ_VOID pow2_setup_stage_layout(aoclfftz_solution_t *sol,
     FFTZ_INTP in_stride = sol->decomp_scheme->dims[0].in_stride;
     FFTZ_INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
     FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
-    FFTZ_INTP radix = stage_data->radix;
+    FFTZ_INTP radix = stage_data->stage_info.radix;
+    aoclfftz_strides_t *strides = &stage_data->stage_info.strides;
 
     if (stage_num == 0)
     {
@@ -231,11 +43,11 @@ static FFTZ_VOID pow2_setup_stage_layout(aoclfftz_solution_t *sol,
         stage_data->num_groups = 1;
         for (FFTZ_INTP i = 0; i < radix; i++)
         {
-            stage_data->strides.in_strides[i] = i * vecs_0 * in_stride * DATA_STRIDE;
-            stage_data->strides.out_strides[i] = i * DATA_STRIDE;
+            strides->in_strides[i] = i * vecs_0 * in_stride * DATA_STRIDE;
+            strides->out_strides[i] = i * DATA_STRIDE;
         }
-        stage_data->strides.v_in_stride = in_stride * DATA_STRIDE;
-        stage_data->strides.v_out_stride = radix * DATA_STRIDE;
+        strides->v_in_stride = in_stride * DATA_STRIDE;
+        strides->v_out_stride = radix * DATA_STRIDE;
         stage_data->src_grp_stride = 0;
         stage_data->dst_grp_stride = 0;
     }
@@ -248,15 +60,12 @@ static FFTZ_VOID pow2_setup_stage_layout(aoclfftz_solution_t *sol,
         stage_data->num_groups = num_groups;
         for (FFTZ_INTP i = 0; i < radix; i++)
         {
-            stage_data->strides.in_strides[i] = i * num_groups * cols *
-                                                DATA_STRIDE;
+            strides->in_strides[i] = i * num_groups * cols * DATA_STRIDE;
 
-            stage_data->strides.out_strides[i] = i * cols *
-                                                 eff_out_stride *
-                                                 DATA_STRIDE;
+            strides->out_strides[i] = i * cols * eff_out_stride * DATA_STRIDE;
         }
-        stage_data->strides.v_in_stride = DATA_STRIDE;
-        stage_data->strides.v_out_stride = eff_out_stride * DATA_STRIDE;
+        strides->v_in_stride = DATA_STRIDE;
+        strides->v_out_stride = eff_out_stride * DATA_STRIDE;
 
         stage_data->src_grp_stride = cols * DATA_STRIDE * (FFTZ_INTP)dt_bytes;
 
@@ -264,8 +73,8 @@ static FFTZ_VOID pow2_setup_stage_layout(aoclfftz_solution_t *sol,
                                      DATA_STRIDE * (FFTZ_INTP)dt_bytes;
     }
 
-    stage_data->strides.v_in_h2_stride = stage_data->strides.v_in_stride;
-    stage_data->strides.v_out_h2_stride = stage_data->strides.v_out_stride;
+    strides->v_in_h2_stride = strides->v_in_stride;
+    strides->v_out_h2_stride = strides->v_out_stride;
 }
 
 // Allocate one twiddle block for the plan and give each twiddle stage (>= 1)
@@ -279,11 +88,11 @@ static FFTZ_INT32 pow2_setup_twiddles(aoclfftz_solution_t *sol,
     FFTZ_UINT32 dt_bytes = DT_PRECISION_BYTES(dt_prec);
 
     FFTZ_INTP total_tw = 0;
-    FFTZ_INTP cols = it->stages[0].radix;
+    FFTZ_INTP cols = it->stages[0].stage_info.radix;
     for (FFTZ_INT32 stage = 1; stage < it->num_stages; stage++)
     {
-        total_tw += (it->stages[stage].radix - 1) * cols;
-        cols *= it->stages[stage].radix;
+        total_tw += (it->stages[stage].stage_info.radix - 1) * cols;
+        cols *= it->stages[stage].stage_info.radix;
     }
 
     FFTZ_VOID *TW = alloc_twiddle_buffer((FFTZ_UINTP)total_tw, dt_prec);
@@ -294,17 +103,17 @@ static FFTZ_INT32 pow2_setup_twiddles(aoclfftz_solution_t *sol,
     sol->twiddle->twiddle_buf_ptr = TW;
 
     FFTZ_INTP offset = 0;
-    cols = it->stages[0].radix;
+    cols = it->stages[0].stage_info.radix;
     for (FFTZ_INT32 stage = 1; stage < it->num_stages; stage++)
     {
-        FFTZ_INTP rs = it->stages[stage].radix;
+        FFTZ_INTP rs = it->stages[stage].stage_info.radix;
         FFTZ_VOID *tw_s = MOVE_ADDR(TW,
                                     offset * DATA_STRIDE * (FFTZ_INTP)dt_bytes);
         // Repacked (linear) layout must match the register width of the kernel
         // that will consume it. The solver runs with load_multi_cols == 1.
         compute_twiddle_buffer(tw_s, rs, cols, it->stages[stage].sets, 1,
                                dt_prec);
-        it->stages[stage].twiddle = tw_s;
+        it->stages[stage].stage_info.twiddle = tw_s;
         offset += (rs - 1) * cols;
         cols *= rs;
     }
@@ -316,8 +125,9 @@ static FFTZ_INT32 pow2_setup_twiddles(aoclfftz_solution_t *sol,
 // Set up the solver: decompose N into radix stages, bind a kernel per stage and
 // allocate the stage array, ping-pong pool and twiddles. Returns SOLVER_FAILURE
 // when no radix split exists or any allocation fails.
-FFTZ_INT32 setup_pow2_iterative_solver(aoclfftz_solution_t *sol, kernel_t *kt_dft,
-                                  kernel_t *kt_twid, FFTZ_INT64 *out_cost)
+FFTZ_INT32 setup_pow2_iterative_solver(aoclfftz_solution_t *sol,
+                                       kernel_t *kt_dft, kernel_t *kt_twid,
+                                       FFTZ_INT64 *out_cost)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -331,8 +141,8 @@ FFTZ_INT32 setup_pow2_iterative_solver(aoclfftz_solution_t *sol, kernel_t *kt_df
     FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
     FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
-    FFTZ_INTP radixes[POW2_ITERATIVE_MAX_STAGES];
-    FFTZ_INT32 num_stages = pow2_decompose(n, kt_dft, kt_twid, radixes);
+    FFTZ_INTP radixes[POW2_MAX_DECOMP_STAGES];
+    FFTZ_INT32 num_stages = pow2_radix_decompose(n, kt_dft, kt_twid, radixes);
 
     // The largest power-of-two radix is 16, so two stages reach only 256 and
     // POW2_ITERATIVE_MIN_N rules those sizes out. Only a kernel table with no
@@ -371,17 +181,19 @@ FFTZ_INT32 setup_pow2_iterative_solver(aoclfftz_solution_t *sol, kernel_t *kt_df
         FFTZ_INTP radix = radixes[stage_num];
         kernel_t *kt = (stage_num == 0) ? kt_dft : kt_twid;
 
-        stage_data->radix = radix;
-        stage_data->kfft[FORWARD_FFT_DIR] = NULL;
-        stage_data->kfft[BACKWARD_FFT_DIR] = NULL;
-        stage_data->twiddle = NULL;
-        stage_data->sets = 1;
-        stage_data->strides.in_strides = NULL;
-        stage_data->strides.out_strides = NULL;
+        aoclfftz_strides_t *strides = &stage_data->stage_info.strides;
 
-        ALLOC_ALIGN_UNINIT(stage_data->strides.in_strides, FFTZ_INTP, radix * sizeof(FFTZ_INTP));
-        ALLOC_ALIGN_UNINIT(stage_data->strides.out_strides, FFTZ_INTP, radix * sizeof(FFTZ_INTP));
-        if (stage_data->strides.in_strides == NULL || stage_data->strides.out_strides == NULL)
+        stage_data->stage_info.radix = radix;
+        stage_data->stage_info.kfft[FORWARD_FFT_DIR] = NULL;
+        stage_data->stage_info.kfft[BACKWARD_FFT_DIR] = NULL;
+        stage_data->stage_info.twiddle = NULL;
+        stage_data->sets = 1;
+        strides->in_strides = NULL;
+        strides->out_strides = NULL;
+
+        ALLOC_ALIGN_UNINIT(strides->in_strides, FFTZ_INTP, radix * sizeof(FFTZ_INTP));
+        ALLOC_ALIGN_UNINIT(strides->out_strides, FFTZ_INTP, radix * sizeof(FFTZ_INTP));
+        if (strides->in_strides == NULL || strides->out_strides == NULL)
         {
             goto exit_pow2_iterative;
         }
@@ -389,9 +201,9 @@ FFTZ_INT32 setup_pow2_iterative_solver(aoclfftz_solution_t *sol, kernel_t *kt_df
         pow2_setup_stage_layout(sol, stage_data, stage_num, num_stages, cols);
 
         FFTZ_INT64 stage_cost = 0;
-        if (!pow2_pick_kernel(kt, radix, precision, direction,
-                              stage_data->count, stage_data->kfft, &stage_cost,
-                              &stage_data->sets))
+        if (!pow2_radix_pick_kernel(kt, radix, precision, direction,
+                                    stage_data->count, stage_data->stage_info.kfft,
+                                    &stage_cost, &stage_data->sets))
         {
             goto exit_pow2_iterative;
         }
@@ -404,6 +216,12 @@ FFTZ_INT32 setup_pow2_iterative_solver(aoclfftz_solution_t *sol, kernel_t *kt_df
     // node concurrently. Solver-owned rather than carved from the shared CT
     // scratch because ancestors (BUFFERED, BLUESTEIN) alias ctx->ct_buf_base
     // onto the caller's output buffer, which only fits one of the two.
+    //
+    // Only the general execute path (strided or split-real/imag output) uses
+    // buffer B -- the dense out-of-place case ping-pongs between the caller
+    // output and buffer A -- but a later aoclfftz_execute_io swap can move any
+    // plan onto the general path, so both are allocated once here at setup
+    // rather than on the execute hot path.
     {
         FFTZ_INTP buf_bytes =
             GET_PADDED_SIZE(n * DATA_STRIDE * (FFTZ_INTP)dt_bytes);
@@ -504,9 +322,9 @@ static FFTZ_INT32 execute_pow2_iterative_solver(aoclfftz_solution_t *sol,
             stage0_dst = buf_a;
         }
 
-        it->stages[0].kfft[direction](in_real, in_imag,
+        it->stages[0].stage_info.kfft[direction](in_real, in_imag,
                            stage0_dst, MOVE_ADDR(stage0_dst, (FFTZ_INTP)dt_bytes),
-                           it->stages[0].count, &it->stages[0].strides,
+                           it->stages[0].count, &it->stages[0].stage_info.strides,
                            NULL, direction);
 
         FFTZ_VOID *src_buf = stage0_dst;
@@ -522,7 +340,7 @@ static FFTZ_INT32 execute_pow2_iterative_solver(aoclfftz_solution_t *sol,
 
             aoclfftz_twiddle_t tw;
             tw.twiddle_buf_ptr = NULL;
-            tw.TW = stage->twiddle;
+            tw.TW = stage->stage_info.twiddle;
             tw.load_multi_cols = 1;
 
             FFTZ_VOID *dst_real = (!oop_dense && is_last) ? out_real : dst_buf;
@@ -535,11 +353,12 @@ static FFTZ_INT32 execute_pow2_iterative_solver(aoclfftz_solution_t *sol,
             {
                 FFTZ_INTP src_offset = grp_idx * stage->src_grp_stride;
                 FFTZ_INTP dst_offset = grp_idx * stage->dst_grp_stride;
-                stage->kfft[direction](MOVE_ADDR(src_buf, src_offset),
+                stage->stage_info.kfft[direction](MOVE_ADDR(src_buf, src_offset),
                             MOVE_ADDR(src_buf, src_offset + (FFTZ_INTP)dt_bytes),
                             MOVE_ADDR(dst_real, dst_offset),
                             MOVE_ADDR(dst_imag, dst_offset),
-                            stage->count, &stage->strides, &tw, direction);
+                            stage->count, &stage->stage_info.strides, &tw,
+                            direction);
             }
 
             if (!is_last)
@@ -564,3 +383,4 @@ dft_solver_ register_execute_pow2_iterative_solver(FFTZ_VOID)
 {
     return execute_pow2_iterative_solver;
 }
+

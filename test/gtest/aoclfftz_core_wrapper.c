@@ -391,6 +391,34 @@ TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tisr_cycles, c)
 TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tos_iterative, c)
 TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tos_blocked, c)
 
+// Fused four-step twiddle + transpose register wrappers.
+fused_twiddle_transpose_
+register_fused_twiddle_transpose_c_wrapper(FFTZ_UINT8 prec, FFTZ_UINT8 dir)
+{
+    return register_fused_twiddle_transpose_c(prec, dir);
+}
+#ifdef ENABLE_AVX128
+fused_twiddle_transpose_
+register_fused_twiddle_transpose_avx128_wrapper(FFTZ_UINT8 prec, FFTZ_UINT8 dir)
+{
+    return register_fused_twiddle_transpose_avx128(prec, dir);
+}
+#endif
+#ifdef ENABLE_AVX256
+fused_twiddle_transpose_
+register_fused_twiddle_transpose_avx256_wrapper(FFTZ_UINT8 prec, FFTZ_UINT8 dir)
+{
+    return register_fused_twiddle_transpose_avx256(prec, dir);
+}
+#endif
+#ifdef ENABLE_AVX512
+fused_twiddle_transpose_
+register_fused_twiddle_transpose_avx512_wrapper(FFTZ_UINT8 prec, FFTZ_UINT8 dir)
+{
+    return register_fused_twiddle_transpose_avx512(prec, dir);
+}
+#endif
+
 // for the gtests, we want to use the in-memory twiddle factors
 // so we define IN_MEMORY_TWIDDLE_FACTORS to 1 if not explicitly set/defined
 #if !defined(IN_MEMORY_TWIDDLE_FACTORS)

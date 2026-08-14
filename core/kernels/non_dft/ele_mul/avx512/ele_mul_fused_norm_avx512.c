@@ -689,3 +689,4 @@ register_elementwise_mul_fused_norm_strided_out_avx512(FFTZ_UINT8 precision,
         }
     }
 }
+

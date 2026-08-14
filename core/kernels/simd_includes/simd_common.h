@@ -541,7 +541,9 @@
         _mm_castpd_ps(_mm_unpackhi_pd(_s0, _s1)));                             \
 }
 
-#ifdef ENABLE_FMA
+// MSVC cannot combine /arch:AVX with FMA, and AVX128/AVX256 build under /arch:AVX
+// alone, so FMA emission is gated off on Windows.
+#if defined(ENABLE_FMA) && !defined(_WIN32)
 
 // FMADD: (a * b) + c
 #define FMADD_128_S(a, b, c) _mm_fmadd_ps((a), (b), (c))
@@ -705,7 +707,7 @@
         _mm256_xor_pd((c), _neg_256_d[1].d)                                    \
     )
 
-#endif // ENABLE_FMA
+#endif // ENABLE_FMA && !_WIN32
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 2, other: 0}
 #define ITW_GATHER_128_D(gbase, starr, stidx, offset, gdest, twbuf,            \

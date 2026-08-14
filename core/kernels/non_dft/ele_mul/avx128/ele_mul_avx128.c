@@ -401,3 +401,4 @@ register_elementwise_mul_strided_in_avx128(FFTZ_UINT8 precision,
         }
     }
 }
+

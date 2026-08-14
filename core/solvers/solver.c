@@ -77,10 +77,10 @@ FFTZ_INT32 register_solvers(FFTZ_VOID)
     // SR is registered unconditionally here. The selector decides whether
     // to actually dispatch SR based on per-call cpu_flags.
     solvers_table[SOLVER_SR] = register_execute_sr_solver();
-    // POW2 iterative fast path is registered unconditionally; the selector gate
-    // decides whether to dispatch it.
     solvers_table[SOLVER_POW2_ITERATIVE] =
         register_execute_pow2_iterative_solver();
+    solvers_table[SOLVER_POW2_FOURSTEP] =
+        register_execute_pow2_fourstep_solver();
     solvers_table[SOLVER_TRANSPOSE] = register_execute_transpose_solver();
 #ifdef MULTI_THREADING
     solvers_table[SOLVER_MT_DIRECT] = register_execute_mt_direct_solver();

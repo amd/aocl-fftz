@@ -444,6 +444,26 @@ TRANSPOSE_WRAPPER_ALL_TYPES_DECL(tisr_cycles, c)
 TRANSPOSE_WRAPPER_ALL_TYPES_DECL(tos_iterative, c)
 TRANSPOSE_WRAPPER_ALL_TYPES_DECL(tos_blocked, c)
 
+// Fused four-step twiddle + transpose register wrappers; scalar (c) always
+// available, AVX variants gated on the ENABLE_AVX* macros.
+EXPORT_SYM_DYN fused_twiddle_transpose_
+register_fused_twiddle_transpose_c_wrapper(FFTZ_UINT8 prec, FFTZ_UINT8 dir);
+#ifdef ENABLE_AVX128
+EXPORT_SYM_DYN fused_twiddle_transpose_
+register_fused_twiddle_transpose_avx128_wrapper(FFTZ_UINT8 prec,
+                                                FFTZ_UINT8 dir);
+#endif
+#ifdef ENABLE_AVX256
+EXPORT_SYM_DYN fused_twiddle_transpose_
+register_fused_twiddle_transpose_avx256_wrapper(FFTZ_UINT8 prec,
+                                                FFTZ_UINT8 dir);
+#endif
+#ifdef ENABLE_AVX512
+EXPORT_SYM_DYN fused_twiddle_transpose_
+register_fused_twiddle_transpose_avx512_wrapper(FFTZ_UINT8 prec,
+                                                FFTZ_UINT8 dir);
+#endif
+
 // twiddle buffer setup wrappers
 EXPORT_SYM_DYN FFTZ_VOID compute_twiddle_buffer_float_wrapper(
     FFTZ_VOID *twiddle_buffer, FFTZ_INTP r, FFTZ_INTP m,

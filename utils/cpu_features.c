@@ -221,40 +221,31 @@ static FFTZ_INT32 is_vendor_amd(FFTZ_VOID)
         && v.ecx == 0x444d4163u; /* "cAMD" */
 }
 
+// Guard against a malformed cache leaf; the walk normally stops at the type-0
+// terminator well before this.
+#define MAX_CACHE_SUBLEAVES 32u
+
+// CPUID leaf for "deterministic cache parameters", 0 if unsupported: Intel at
+// 0x4, AMD at 0x8000001D, both sub-leaf indexed with the same field layout.
+static FFTZ_UINT32 deterministic_cache_leaf(FFTZ_VOID)
+{
+    if (is_vendor_amd())
+    {
+        return (cpuid(0x80000000u, 0u).eax >= 0x8000001Du) ? 0x8000001Du : 0u;
+    }
+    return (cpuid(0u, 0u).eax >= 4u) ? 4u : 0u;
+}
+
 FFTZ_UINTP cpuid_cache_size(FFTZ_UINT32 cache_level)
 {
-    if (cache_level == 0u)
+    FFTZ_UINT32 leaf = deterministic_cache_leaf();
+    if (leaf == 0u)
     {
         return 0u;
     }
 
-    // Select the "deterministic cache parameters" leaf.
-    // - Intel exposes it at leaf 0x4
-    // - AMD (with topology extensions) mirrors the same encoding at leaf 0x8000001D
-    // Both are sub-leaf indexed and share the EAX/EBX/ECX field layout.
-    FFTZ_UINT32 leaf;
-    if (is_vendor_amd())
-    {
-        FFTZ_UINT32 max_ext = cpuid(0x80000000u, 0u).eax;
-        if (max_ext < 0x8000001Du)
-        {
-            return 0u;
-        }
-        leaf = 0x8000001Du;
-    }
-    else
-    {
-        FFTZ_UINT32 max_std = cpuid(0u, 0u).eax;
-        if (max_std < 4u)
-        {
-            return 0u;
-        }
-        leaf = 4u;
-    }
-
     // Walk the cache hierarchy sub-leaves until the terminator (type 0).
-    // The 32 bound is only a guard against a malformed leaf.
-    for (FFTZ_UINT32 sub = 0u; sub < 32u; sub++)
+    for (FFTZ_UINT32 sub = 0u; sub < MAX_CACHE_SUBLEAVES; sub++)
     {
         cpuid_result_t r = cpuid(leaf, sub);
 
@@ -284,4 +275,29 @@ FFTZ_UINTP cpuid_cache_size(FFTZ_UINT32 cache_level)
     }
 
     return 0u;
+}
+
+FFTZ_INTP cpuid_cache_line_size(FFTZ_VOID)
+{
+    // The line size (EBX bits 11:0 + 1) is uniform across levels, so the first
+    // data/unified sub-leaf suffices.
+    FFTZ_UINT32 leaf = deterministic_cache_leaf();
+    if (leaf != 0u)
+    {
+        for (FFTZ_UINT32 sub = 0u; sub < MAX_CACHE_SUBLEAVES; sub++)
+        {
+            cpuid_result_t r = cpuid(leaf, sub);
+            FFTZ_UINT32 cache_type = r.eax & 0x1Fu; // 0=none 1=data 2=inst 3=unified
+            if (cache_type == 0u)
+            {
+                break;
+            }
+            if (cache_type == 1u || cache_type == 3u)
+            {
+                return (FFTZ_INTP)((r.ebx & 0xFFFu) + 1u);
+            }
+        }
+    }
+
+    return DEFAULT_CACHE_LINE_BYTES;
 }
