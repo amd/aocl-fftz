@@ -2303,11 +2303,10 @@ static FFTZ_VOID compute_exec_metadata(
         }
     }
 
-    // update_asymmetric_strides modifies the REAL_DIRECT C2C strides in place,
-    // so each batched thread requires its own scratch. Within a thread, nodes
-    // execute sequentially and can reuse the same stride memory. Only the CT
-    // stages run C2C kernels, and only the single-threaded ones draw from this
-    // pool; the MT solvers allocate their own per-thread stride copies.
+    // The shared C2C stride table is immutable, so the symmetric path copies it
+    // into a per-thread slot here before update_asymmetric_strides mutates it.
+    // Nodes reuse slots (sequential within a thread), hence max not sum. Only
+    // single-threaded CT stages draw from this pool; MT allocates its own.
     if ((stype == SOLVER_REAL_DIRECT_CT_R2C ||
          stype == SOLVER_REAL_DIRECT_CT_C2R)
         && sol->solver->kernel_c2c != NULL

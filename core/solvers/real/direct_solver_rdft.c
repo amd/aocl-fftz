@@ -130,7 +130,7 @@ FFTZ_VOID execute_ct_intra_stage_kernels(aoclfftz_solution_t *sol,
 {
     execute_r2hc_kernels(sol, in, out);
     execute_r2hcf_kernels(sol, in, out);
-    execute_c2c_kernels_rdft(sol, ctx, in, out, 0);
+    execute_c2c_kernels_rdft(sol, ctx, in, out);
 
     // Alternate the pools so the next stage reads what this one wrote.
     SWAP_BUFFERS(ctx->aux_pool_base_1, ctx->aux_pool_base_2);

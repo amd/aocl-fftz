@@ -769,49 +769,17 @@ FFTZ_INT32 setup_c2c_stride_arrays(aoclfftz_solution_t *sol,
                               : c2c_stride.out_stride;
     prepare_real_c2c_kernel_strides(target_stride_array, target_stride_array,
                                     radix, freq_factor, c2c_batch_stride);
-    return SOLVER_SUCCESS;
-}
-
-/*
- * Setup stride tables before execute for one fused CT stage (stage_r or
- * stage_m in REAL_BATCHED_CT_L1_DIRECT).
- *
- * Each direct stage may run R2HC, R2HCF, and C2C kernels.Real and C2C kernels
- * use separate tables: strides (real) and strides_c2c (complex).
- *
- * Some C2C work only touches the upper half of the real spectrum (from
- * Nyquist index (radix+1)/2 through radix-1). For that half, C2C must use
- * the same memory offsets as the real kernels, not default c2c layout.
- *
- * This function copies those upper-half entries once at setup:
- *   forward  (R2C): real out_strides  -> c2c out_strides
- *   backward (C2R): real in_strides   -> c2c in_strides
- *
- * Called from setup_batched_ct_l1_direct_real_solver for both stages.
- * Returns immediately if kernel_c2c->count == 0 (stage has no C2C pass).
- */
-FFTZ_VOID prepare_fused_c2c_asymmetric_strides(aoclfftz_solution_t *sol)
-{
-    if (sol->solver->kernel_c2c->count == 0)
-    {
-        return;
-    }
-
-    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
+    
+    // The C2C table is immutable after setup. Initialize its entries above
+    // Nyquist with the prepared real-kernel strides.
     FFTZ_INTP half_stride_start = (radix + 1) >> 1;
     FFTZ_INTP half_stride_n = radix - half_stride_start;
-    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_INTP *c2c_stride_array = is_backward ?
+                              sol->strides_grp->strides_c2c->in_strides :
+                              sol->strides_grp->strides_c2c->out_strides;
+    memcpy(c2c_stride_array + half_stride_start,
+           target_stride_array + half_stride_start,
+           half_stride_n * sizeof(FFTZ_INTP));
 
-    if (direction == FORWARD_FFT_DIR)
-    {
-        memcpy(sol->strides_grp->strides_c2c->out_strides + half_stride_start,
-               sol->strides_grp->strides->out_strides + half_stride_start,
-               half_stride_n * sizeof(FFTZ_INTP));
-    }
-    else
-    {
-        memcpy(sol->strides_grp->strides_c2c->in_strides + half_stride_start,
-               sol->strides_grp->strides->in_strides + half_stride_start,
-               half_stride_n * sizeof(FFTZ_INTP));
-    }
+    return SOLVER_SUCCESS;
 }

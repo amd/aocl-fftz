@@ -19,21 +19,6 @@
 #include "core/solvers/solver.h"
 
 /**
- * @brief Initializes the C2C kernel stride array `dst`: first half from `strides_c2c`,
- * second half, which wraps around at Nyquist, from `strides`.
- */
-static inline FFTZ_VOID init_real_c2c_strides(FFTZ_INTP *dst,
-                                              const FFTZ_INTP *strides_c2c,
-                                              const FFTZ_INTP *strides,
-                                              FFTZ_INTP radix)
-{
-    FFTZ_INTP half_stride_start = (radix + 1) >> 1;
-    memcpy(dst, strides_c2c, radix * sizeof(FFTZ_INTP));
-    memcpy(dst + half_stride_start, strides + half_stride_start,
-           (radix - half_stride_start) * sizeof(FFTZ_INTP));
-}
-
-/**
  * @brief Updates the strides for the second half of the batch.
  * It subtracts the stride_offset from each stride value to properly address
  * memory locations in the next iteration of C2C kernel execution.
@@ -186,13 +171,11 @@ static inline FFTZ_VOID set_zero_for_dc_and_nyquist_ct(aoclfftz_solution_t *sol,
  *        R2HC / R2HCF bands is done here, as the regrouped aux layout makes that
  *        offset depend on the stage's kernel mix.
  * @param ctx Per-call mutable context for thread-safe C2C stride slots.
- * @param strides_prepped 1 when prepare_fused_c2c_asymmetric_strides already
- *        copied Nyquist-half strides at setup; 0 for the normal direct path.
  */
 static inline FFTZ_VOID
 execute_c2c_kernels_rdft(aoclfftz_solution_t *sol,
                          const aoclfftz_mutable_ctx_t *ctx, FFTZ_VOID *in,
-                         FFTZ_VOID *out, FFTZ_UINT8 strides_prepped)
+                         FFTZ_VOID *out)
 {
     if (sol->solver->kernel_c2c->count == 0)
     {
@@ -228,53 +211,10 @@ execute_c2c_kernels_rdft(aoclfftz_solution_t *sol,
     FFTZ_INTP num_c2c_per_group = sol->solver->kernel_c2c->count / num_groups;
     FFTZ_UINT8 use_asymmetric_kernel = num_c2c_per_group >= num_groups;
 
-    FFTZ_INTP half_stride_start = (radix + 1) >> 1;
-    FFTZ_INTP half_stride_n = radix - half_stride_start;
-
-    FFTZ_INTP *stride_mut = NULL;
     aoclfftz_strides_t strides_local = *(sol->strides_grp->strides_c2c);
-
-    if (ctx != NULL)
-    {
-        FFTZ_INTP strides_off = (FFTZ_INTP)ctx->slot_idx * MAX_REAL_KERNEL_RADIX *
-                                (FFTZ_INTP)sizeof(FFTZ_INTP);
-        stride_mut = MOVE_ADDR(ctx->c2c_strides_base, strides_off);
-
-        if (is_fwd)
-        {
-            init_real_c2c_strides(stride_mut,
-                                  sol->strides_grp->strides_c2c->out_strides,
-                                  sol->strides_grp->strides->out_strides, radix);
-            strides_local.out_strides = stride_mut;
-        }
-        else
-        {
-            init_real_c2c_strides(stride_mut,
-                                  sol->strides_grp->strides_c2c->in_strides,
-                                  sol->strides_grp->strides->in_strides, radix);
-            strides_local.in_strides = stride_mut;
-        }
-    }
-    else if (is_fwd)
-    {
-        stride_mut = sol->strides_grp->strides_c2c->out_strides;
-        if (!use_asymmetric_kernel || !strides_prepped)
-        {
-            init_real_c2c_strides(stride_mut,
-                                  sol->strides_grp->strides_c2c->out_strides,
-                                  sol->strides_grp->strides->out_strides, radix);
-        }
-    }
-    else
-    {
-        stride_mut = sol->strides_grp->strides_c2c->in_strides;
-        if (!use_asymmetric_kernel || !strides_prepped)
-        {
-            memcpy(stride_mut + half_stride_start,
-                   sol->strides_grp->strides->in_strides + half_stride_start,
-                   half_stride_n * sizeof(FFTZ_INTP));
-        }
-    }
+    FFTZ_INTP strides_off = (FFTZ_INTP)ctx->slot_idx * MAX_REAL_KERNEL_RADIX *
+                            (FFTZ_INTP)sizeof(FFTZ_INTP);
+    FFTZ_INTP *stride_mut = MOVE_ADDR(ctx->c2c_strides_base, strides_off);
 
     FFTZ_INTP batch_in_stride =
         is_input_prob_buffer(sol)
@@ -291,6 +231,11 @@ execute_c2c_kernels_rdft(aoclfftz_solution_t *sol,
         tw_local.load_multi_cols = 0; // use same twiddle values across batches
         if (!use_asymmetric_kernel)
         {
+            // Only this path mutates strides via update_asymmetric_strides, so
+            // it works on a private copy of the immutable C2C strides buffer.
+            memcpy(stride_mut, sol->strides_grp->strides_c2c->out_strides,
+                   radix * sizeof(FFTZ_INTP));
+            strides_local.out_strides = stride_mut;
             for (FFTZ_INTP group_id = 0; group_id < num_c2c_per_group;
                  group_id++)
             {
@@ -329,6 +274,11 @@ execute_c2c_kernels_rdft(aoclfftz_solution_t *sol,
         tw_local.load_multi_cols = 0; // use same twiddle values across batches
         if (!use_asymmetric_kernel)
         {
+            // Only this path mutates strides via update_asymmetric_strides, so
+            // it works on a private copy of the immutable C2C strides buffer.
+            memcpy(stride_mut, sol->strides_grp->strides_c2c->in_strides,
+                   radix * sizeof(FFTZ_INTP));
+            strides_local.in_strides = stride_mut;
             for (FFTZ_INTP group_id = 0; group_id < num_c2c_per_group;
                  group_id++)
             {

@@ -76,12 +76,6 @@ FFTZ_INT32 setup_batched_ct_l1_direct_real_solver(aoclfftz_solution_t *sol)
         goto exit_setup;
     }
 
-    aoclfftz_solution_t *stage_r = sol->next_sol;
-    aoclfftz_solution_t *stage_m = stage_r->next_sol;
-
-    prepare_fused_c2c_asymmetric_strides(stage_r);
-    prepare_fused_c2c_asymmetric_strides(stage_m);
-
     sol->twiddle->twiddle_buf_ptr = NULL;
     sol->twiddle->TW = NULL;
     sol->twiddle->load_multi_cols = 1;
@@ -131,7 +125,7 @@ execute_batched_ct_l1_rdft_stage(aoclfftz_solution_t *stage_sol,
 
     // execute_c2c_kernels_rdft() skips the R2HC/R2HCF bands itself, as the
     // regrouped aux layout makes that offset depend on the stage's kernel mix.
-    execute_c2c_kernels_rdft(stage_sol, ctx, in, out, 1);
+    execute_c2c_kernels_rdft(stage_sol, ctx, in, out);
 }
 
 // Execute all batches: stage_r → aux → stage_m → out, then zero DC/Nyquist

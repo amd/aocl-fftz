@@ -290,14 +290,8 @@ static inline FFTZ_VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
         n_threads_c2c_inner = 1; // No inner parallelization for asymmetric
     }
 
-    FFTZ_INTP half_stride_start = (radix + 1) >> 1;
-    FFTZ_INTP half_stride_n = radix - half_stride_start;
     if (direction == BACKWARD_FFT_DIR)
     {
-        memcpy(sol->strides_grp->strides_c2c->in_strides + half_stride_start,
-               sol->strides_grp->strides->in_strides + half_stride_start,
-               half_stride_n * sizeof(FFTZ_INTP));
-
         if (!use_asymmetric_kernel)
         {
             FFTZ_INTP batch_stride = batch_in_stride * DATA_STRIDE;
@@ -416,10 +410,6 @@ static inline FFTZ_VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
     }
     else
     {
-        memcpy(sol->strides_grp->strides_c2c->out_strides + half_stride_start,
-               sol->strides_grp->strides->out_strides + half_stride_start,
-               half_stride_n * sizeof(FFTZ_INTP));
-
         if (!use_asymmetric_kernel)
         {
             FFTZ_INTP batch_stride = batch_out_stride * DATA_STRIDE;
