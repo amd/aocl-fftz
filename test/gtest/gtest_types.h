@@ -15,6 +15,11 @@
 #define AOCLFFTZ_GTEST_TYPES_H
 
 #include <tuple>
+
+#ifdef MULTI_THREADING
+#include <omp.h>
+#endif
+
 extern "C"
 {
 #include "core/solvers/solver.h"
