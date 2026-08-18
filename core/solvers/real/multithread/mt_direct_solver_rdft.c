@@ -43,43 +43,19 @@ static FFTZ_INT32 execute_real_mt_direct_ct_c2r(aoclfftz_solution_t *sol,
  *         (C2C + R2HC/R2HCF kernels)
  */
 FFTZ_INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
-                                  cost_analysis_t *cost,
-                                  const kernel_t *kernel_c2c,
-                                  const kernel_t *kernel_r2hc,
-                                  const kernel_t *kernel_r2hcf,
-                                  aoclfftz_realhelper_t *realhelper,
-                                  FFTZ_UINT8 *has_nested)
+                                       cost_analysis_t *cost,
+                                       const kernel_t *kernel_c2c,
+                                       const kernel_t *kernel_r2hc,
+                                       const kernel_t *kernel_r2hcf,
+                                       aoclfftz_realhelper_t *realhelper,
+                                       FFTZ_UINT8 *has_nested)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
     FFTZ_INT32 status = SOLVER_SUCCESS;
 
-    thread_info_t *thread_info = sol->decomp_scheme->thread_info;
-
-    FFTZ_INT32 avl_threads = sol->decomp_scheme->thread_info->avl_threads;
-
-    // Setting the number of threads based on the batches
-    FFTZ_UINTP c2c_batches = sol->solver->kernel_c2c->count;
-    FFTZ_UINTP r2hc_batches = sol->solver->kernel_r2hc->count;
-    FFTZ_UINTP r2hcf_batches = sol->solver->kernel_r2hcf->count;
-    if (c2c_batches)
-    {
-        r2hc_batches = (r2hc_batches + 1) / DATA_STRIDE;
-    }
-    FFTZ_INTP total_batches = r2hc_batches + r2hcf_batches + c2c_batches;
-    sol->decomp_scheme->thread_info->n_threads = (avl_threads < total_batches)
-                                               ? avl_threads : total_batches;
-
-    // Mirrors the C2C thread split in execute_real_mt_direct_solver: that
-    // function only takes the nested `parallel sections` + `parallel for` path
-    // when the C2C share of the thread budget rounds up to at least one thread.
-    // This has to sit below set_kernel_count_in_each_group, since the kernel
-    // counts and n_threads it reads are not populated before that call.
-    FFTZ_INTP n_threads_c2c =
-        (total_batches > 0)
-            ? ((FFTZ_INTP)sol->decomp_scheme->thread_info->n_threads *
-               (FFTZ_INTP)c2c_batches) / total_batches
-            : 0;
-    if (n_threads_c2c > 0 || thread_info->active_threads != 1)
+    // thread_info->n_threads is already settled by the selector
+    if (sol->solver->kernel_c2c->count > 0 ||
+        sol->decomp_scheme->thread_info->active_threads != 1)
     {
         *has_nested = 1;
     }
@@ -100,12 +76,13 @@ FFTZ_INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
     return status;
 }
 
-static inline FFTZ_VOID
+static inline FFTZ_INT32
 execute_real_mt_direct_kernels(aoclfftz_solution_t *sol,
                                FFTZ_INT32 n_threads_real,
                                FFTZ_VOID *in,
                                FFTZ_VOID *out)
 {
+    FFTZ_INT32 ret = SOLVER_SUCCESS;
     FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
 
     /* Execute R2HC Kernels */
@@ -214,17 +191,22 @@ execute_real_mt_direct_kernels(aoclfftz_solution_t *sol,
                          sol->twiddle, FFT_DIR(sol->decomp_scheme->flags));
         }
     }
+    return ret;
 }
 
-static inline FFTZ_VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
+static inline FFTZ_INT32 execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
                                                     FFTZ_INT32 n_threads_c2c,
                                                     FFTZ_VOID *in,
                                                     FFTZ_VOID *out)
 {
+    if (sol->solver->kernel_c2c->count == 0)
+    {
+        return SOLVER_SUCCESS;
+    }
+
     FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
     FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
     kfft_ kernel_c2c = sol->solver->kernel_c2c->kfft[direction];
-    FFTZ_UINT8 num_sets_c2c = sol->solver->kernel_c2c->sets;
 
     FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
     FFTZ_INTP num_groups = NUM_RFFT_GROUPS(sol->solver);
@@ -261,33 +243,22 @@ static inline FFTZ_VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
     FFTZ_VOID *in_c2c = MOVE_ADDR(in, c2c_in_offset * dt_bytes);
     FFTZ_VOID *out_c2c = MOVE_ADDR(out, c2c_out_offset * dt_bytes);
 
-    FFTZ_INTP v_in_stride_c2c =
-        sol->strides_grp->strides_c2c->v_in_stride * dt_bytes * num_sets_c2c;
-    FFTZ_INTP v_out_stride_c2c =
-        sol->strides_grp->strides_c2c->v_out_stride * dt_bytes * num_sets_c2c;
-
-    FFTZ_UINTP num_iters_c2c = num_groups / num_sets_c2c;
-    FFTZ_UINTP rem_iters_c2c = num_groups - (num_iters_c2c * num_sets_c2c);
-
-    // setting the number of threads for inner C2C kernel
-    // execution
-    FFTZ_INT32 n_threads_c2c_outer = 1;
-    FFTZ_INT32 n_threads_c2c_inner = 1;
+    // Per thread stride buffers requires for symmetric kernel execution
+    FFTZ_INTP stride_slot_bytes = 0;
+    FFTZ_VOID *stride_slab = NULL;
     if (!use_asymmetric_kernel)
     {
-        // Symmetric case: parallelize over num_c2c_per_group
-        n_threads_c2c_outer = n_threads_c2c > num_c2c_per_group
-                                  ? num_c2c_per_group
-                                  : n_threads_c2c;
-        n_threads_c2c_inner = n_threads_c2c / n_threads_c2c_outer;
-    }
-    else
-    {
-        // Asymmetric case: parallelize over num_groups
-        n_threads_c2c_outer = n_threads_c2c > num_groups
-                                  ? num_groups
-                                  : n_threads_c2c;
-        n_threads_c2c_inner = 1; // No inner parallelization for asymmetric
+        stride_slot_bytes = (FFTZ_INTP)GET_PADDED_SIZE(
+            (FFTZ_UINTP)sizeof(aoclfftz_strides_t) +
+            (FFTZ_UINTP)radix * sizeof(FFTZ_INTP));
+        ALLOC_ALIGN_UNINIT(stride_slab, FFTZ_VOID,
+                           (FFTZ_UINTP)n_threads_c2c *
+                           (FFTZ_UINTP)stride_slot_bytes);
+        if (stride_slab == NULL)
+        {
+            AOCLFFTZ_ERROR("Failed to allocate stride slab for C2C kernels");
+            return AOCLFFTZ_MEMORY_FAILURE;
+        }
     }
 
     if (direction == BACKWARD_FFT_DIR)
@@ -295,116 +266,81 @@ static inline FFTZ_VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
         if (!use_asymmetric_kernel)
         {
             FFTZ_INTP batch_stride = batch_in_stride * DATA_STRIDE;
-            #pragma omp parallel for num_threads(n_threads_c2c_outer)
-            for (FFTZ_INTP group_id = 0; group_id < num_c2c_per_group;
-                 group_id++)
+            #pragma omp parallel num_threads(n_threads_c2c)
             {
-                FFTZ_VOID *in_local =
-                    MOVE_ADDR(in_c2c, group_id * batch_in_stride * DATA_STRIDE *
-                                          dt_bytes);
-                FFTZ_VOID *out_local =
-                    MOVE_ADDR(out_c2c, group_id * batch_out_stride *
-                                           DATA_STRIDE * dt_bytes);
-
                 aoclfftz_strides_t *strides_c2c_per_thread;
-                // TODO: allocation happens per loop iteration > num_threads
-                // TODO: pre-allocate a single strides buffer for all threads outside
-                // the loop and give each thread its own chunk, so the allocation and
-                // its failure check happen once instead of per iteration
-                ALLOC_ALIGN_UNINIT(strides_c2c_per_thread, aoclfftz_strides_t,
-                                   sizeof(aoclfftz_strides_t));
-                memcpy(strides_c2c_per_thread, sol->strides_grp->strides_c2c,
-                       sizeof(aoclfftz_strides_t));
-
                 FFTZ_INTP *local_in_strides;
-                ALLOC_ALIGN_UNINIT(local_in_strides, FFTZ_INTP,
-                                   sizeof(FFTZ_INTP) * radix);
+
+                real_mt_c2c_thread_stride_slot(stride_slab, stride_slot_bytes,
+                                               &strides_c2c_per_thread,
+                                               &local_in_strides);
+
+                memcpy(strides_c2c_per_thread,
+                       sol->strides_grp->strides_c2c,
+                       sizeof(aoclfftz_strides_t));
                 memcpy(local_in_strides,
                        sol->strides_grp->strides_c2c->in_strides,
                        sizeof(FFTZ_INTP) * radix);
                 strides_c2c_per_thread->in_strides = local_in_strides;
-                update_asymmetric_strides(local_in_strides, radix,
-                                          group_id * batch_stride);
 
-                // Slide TW per group so distinct C2C-points read distinct
-                // twiddle columns; load_multi_cols=0 mirrors the ST path so
-                // each butterfly reuses the same column.
-                aoclfftz_twiddle_t tw_local = *(sol->twiddle);
-                FFTZ_UINTP tw_offset =
-                    (FFTZ_UINTP)(radix - 1) * DATA_STRIDE * dt_bytes * group_id;
-                tw_local.TW = MOVE_ADDR(tw_local.TW, tw_offset);
-                tw_local.load_multi_cols = 0;
-
-                for (FFTZ_INTP group_num = 0; group_num < num_iters_c2c;
-                     group_num++)
+                // update_asymmetric_strides mutates in place; track the last
+                // group applied so each iteration only pays the delta from it.
+                FFTZ_INTP prev_group = -1;
+                #pragma omp for
+                for (FFTZ_INTP group_id = 0; group_id < num_c2c_per_group;
+                     group_id++)
                 {
-                    FFTZ_VOID *in_real_c2c =
-                        MOVE_ADDR(in_local, group_num * v_in_stride_c2c);
-                    FFTZ_VOID *out_real_c2c =
-                        MOVE_ADDR(out_local, group_num * v_out_stride_c2c);
-                    kernel_c2c(in_real_c2c, MOVE_ADDR(in_real_c2c, dt_bytes),
-                               out_real_c2c, MOVE_ADDR(out_real_c2c, dt_bytes),
-                               num_sets_c2c, strides_c2c_per_thread, &tw_local,
+                    FFTZ_VOID *in_local =
+                        MOVE_ADDR(in_c2c, group_id * batch_in_stride *
+                                              DATA_STRIDE * dt_bytes);
+                    FFTZ_VOID *out_local =
+                        MOVE_ADDR(out_c2c, group_id * batch_out_stride *
+                                               DATA_STRIDE * dt_bytes);
+
+                    FFTZ_INTP delta =
+                        (prev_group < 0) ? group_id : (group_id - prev_group);
+                    if (delta != 0)
+                    {
+                        update_asymmetric_strides(local_in_strides, radix,
+                                                  delta * batch_stride);
+                    }
+                    prev_group = group_id;
+
+                    aoclfftz_twiddle_t tw_local = *(sol->twiddle);
+                    FFTZ_UINTP tw_offset = (FFTZ_UINTP)(radix - 1) *
+                                           DATA_STRIDE * dt_bytes * group_id;
+                    tw_local.TW = MOVE_ADDR(tw_local.TW, tw_offset);
+                    tw_local.load_multi_cols = 0;
+
+                    kernel_c2c(in_local, MOVE_ADDR(in_local, dt_bytes),
+                               out_local, MOVE_ADDR(out_local, dt_bytes),
+                               num_groups, strides_c2c_per_thread, &tw_local,
                                direction);
                 }
-
-                if (rem_iters_c2c)
-                {
-                    FFTZ_VOID *in_real_c2c =
-                        MOVE_ADDR(in_local, num_iters_c2c * v_in_stride_c2c);
-                    FFTZ_VOID *out_real_c2c =
-                        MOVE_ADDR(out_local, num_iters_c2c * v_out_stride_c2c);
-                    kernel_c2c(in_real_c2c, MOVE_ADDR(in_real_c2c, dt_bytes),
-                               out_real_c2c, MOVE_ADDR(out_real_c2c, dt_bytes),
-                               rem_iters_c2c, strides_c2c_per_thread, &tw_local,
-                               FFT_DIR(sol->decomp_scheme->flags));
-                }
-                FREE_ALIGN_ALLOCATED_MEM(local_in_strides);
-                FREE_ALIGN_ALLOCATED_MEM(strides_c2c_per_thread);
             }
         }
         else
         {
             // Group step already accounts for the endpoint points each group
-            // occupies, see set_vector_strides_for_kernels().
+            // occupies.
             FFTZ_INTP v_in_stride  = sol->strides_grp->strides->v_in_stride;
             FFTZ_INTP v_out_stride = sol->strides_grp->strides->v_out_stride;
 
-            #pragma omp parallel for num_threads(n_threads_c2c_outer)
-            for (FFTZ_INTP group_id = 0; group_id < num_groups; group_id++)
+            #pragma omp parallel num_threads(n_threads_c2c)
             {
-                FFTZ_VOID *in_local  = MOVE_ADDR(in_c2c,
-                                 group_id * v_in_stride * dt_bytes);
-                FFTZ_VOID *out_local = MOVE_ADDR(out_c2c,
-                                  group_id * v_out_stride * dt_bytes);
+                #pragma omp for
+                for (FFTZ_INTP group_id = 0; group_id < num_groups; group_id++)
+                {
+                    FFTZ_VOID *in_local =
+                        MOVE_ADDR(in_c2c, group_id * v_in_stride * dt_bytes);
+                    FFTZ_VOID *out_local =
+                        MOVE_ADDR(out_c2c, group_id * v_out_stride * dt_bytes);
 
-                aoclfftz_strides_t *strides_c2c_per_thread;
-                ALLOC_ALIGN_UNINIT(strides_c2c_per_thread, aoclfftz_strides_t,
-                                   sizeof(aoclfftz_strides_t));
-                memcpy(strides_c2c_per_thread, sol->strides_grp->strides_c2c,
-                       sizeof(aoclfftz_strides_t));
-
-                // Allocate and copy a private in_strides array
-                // for this thread
-                FFTZ_INTP *local_in_strides;
-                ALLOC_ALIGN_UNINIT(local_in_strides, FFTZ_INTP,
-                                   sizeof(FFTZ_INTP) * radix);
-
-                memcpy(local_in_strides,
-                       sol->strides_grp->strides_c2c->in_strides,
-                       sizeof(FFTZ_INTP) * radix);
-                strides_c2c_per_thread->in_strides = local_in_strides;
-
-                // Kernel execution - using num_c2c_per_group for
-                // asymmetric case swapping real & imag points
-                // for backward kernel
-                kernel_c2c(in_local, MOVE_ADDR(in_local, dt_bytes), out_local,
-                           MOVE_ADDR(out_local, dt_bytes), num_c2c_per_group,
-                           strides_c2c_per_thread, sol->twiddle,
-                           FFT_DIR(sol->decomp_scheme->flags));
-
-                FREE_ALIGN_ALLOCATED_MEM(local_in_strides);
-                FREE_ALIGN_ALLOCATED_MEM(strides_c2c_per_thread);
+                    kernel_c2c(in_local, MOVE_ADDR(in_local, dt_bytes),
+                               out_local, MOVE_ADDR(out_local, dt_bytes),
+                               num_c2c_per_group, sol->strides_grp->strides_c2c,
+                               sol->twiddle, FFT_DIR(sol->decomp_scheme->flags));
+                }
             }
         }
     }
@@ -413,113 +349,89 @@ static inline FFTZ_VOID execute_real_mt_c2c_kernels(aoclfftz_solution_t *sol,
         if (!use_asymmetric_kernel)
         {
             FFTZ_INTP batch_stride = batch_out_stride * DATA_STRIDE;
-            #pragma omp parallel for num_threads(n_threads_c2c_outer)
-            for (FFTZ_INTP group_id = 0; group_id < num_c2c_per_group;
-                 group_id++)
+            #pragma omp parallel num_threads(n_threads_c2c)
             {
-                // This for loop computes C2C batches within the groups,
-                // while the kernel does across multiple groups
-                FFTZ_VOID *in_local =
-                    MOVE_ADDR(in_c2c, group_id * batch_in_stride * DATA_STRIDE *
-                                          dt_bytes);
-                FFTZ_VOID *out_local =
-                    MOVE_ADDR(out_c2c, group_id * batch_out_stride *
-                                           DATA_STRIDE * dt_bytes);
-
                 aoclfftz_strides_t *strides_c2c_per_thread;
-                ALLOC_ALIGN_UNINIT(strides_c2c_per_thread, aoclfftz_strides_t,
-                                   sizeof(aoclfftz_strides_t));
-                memcpy(strides_c2c_per_thread, sol->strides_grp->strides_c2c,
-                       sizeof(aoclfftz_strides_t));
-
                 FFTZ_INTP *local_out_strides;
-                ALLOC_ALIGN_UNINIT(local_out_strides, FFTZ_INTP,
-                                   sizeof(FFTZ_INTP) * radix);
+
+                real_mt_c2c_thread_stride_slot(stride_slab, stride_slot_bytes,
+                                               &strides_c2c_per_thread,
+                                               &local_out_strides);
+
+                memcpy(strides_c2c_per_thread,
+                       sol->strides_grp->strides_c2c,
+                       sizeof(aoclfftz_strides_t));
                 memcpy(local_out_strides,
                        sol->strides_grp->strides_c2c->out_strides,
-                       sizeof(FFTZ_INTP) * radix);
+                       sizeof(FFTZ_INTP) * (FFTZ_UINTP)radix);
                 strides_c2c_per_thread->out_strides = local_out_strides;
-                update_asymmetric_strides(local_out_strides, radix,
-                                          group_id * batch_stride);
 
-                FFTZ_UINTP tw_offset =
-                    (FFTZ_UINTP)(radix - 1) * DATA_STRIDE * dt_bytes * group_id;
-                aoclfftz_twiddle_t tw_local = *(sol->twiddle);
-                tw_local.TW = MOVE_ADDR(tw_local.TW, tw_offset);
-                tw_local.load_multi_cols = 0;
-
-                #pragma omp parallel for num_threads(n_threads_c2c_inner)
-                for (FFTZ_INTP group_num = 0; group_num < num_iters_c2c;
-                     group_num++)
+                // update_asymmetric_strides mutates in place; track the last
+                // group applied so each iteration only pays the delta from it.
+                FFTZ_INTP prev_group = -1;
+                #pragma omp for
+                for (FFTZ_INTP group_id = 0; group_id < num_c2c_per_group;
+                     group_id++)
                 {
-                    FFTZ_VOID *in_real_c2c =
-                        MOVE_ADDR(in_local, group_num * v_in_stride_c2c);
-                    FFTZ_VOID *out_real_c2c =
-                        MOVE_ADDR(out_local, group_num * v_out_stride_c2c);
-                    kernel_c2c(in_real_c2c, MOVE_ADDR(in_real_c2c, dt_bytes),
-                               out_real_c2c, MOVE_ADDR(out_real_c2c, dt_bytes),
-                               num_sets_c2c, strides_c2c_per_thread, &tw_local,
-                               FFT_DIR(sol->decomp_scheme->flags));
-                }
-                if (rem_iters_c2c)
-                {
-                    FFTZ_VOID *in_real_c2c =
-                        MOVE_ADDR(in_local, num_iters_c2c * v_in_stride_c2c);
-                    FFTZ_VOID *out_real_c2c =
-                        MOVE_ADDR(out_local, num_iters_c2c * v_out_stride_c2c);
-                    kernel_c2c(in_real_c2c, MOVE_ADDR(in_real_c2c, dt_bytes),
-                               out_real_c2c, MOVE_ADDR(out_real_c2c, dt_bytes),
-                               rem_iters_c2c, strides_c2c_per_thread, &tw_local,
-                               FFT_DIR(sol->decomp_scheme->flags));
-                }
+                    FFTZ_VOID *in_local =
+                        MOVE_ADDR(in_c2c, group_id * batch_in_stride *
+                                              DATA_STRIDE * dt_bytes);
+                    FFTZ_VOID *out_local =
+                        MOVE_ADDR(out_c2c, group_id * batch_out_stride *
+                                               DATA_STRIDE * dt_bytes);
 
-                FREE_ALIGN_ALLOCATED_MEM(local_out_strides);
-                FREE_ALIGN_ALLOCATED_MEM(strides_c2c_per_thread);
+                    FFTZ_INTP delta =
+                        (prev_group < 0) ? group_id : (group_id - prev_group);
+                    if (delta != 0)
+                    {
+                        update_asymmetric_strides(local_out_strides, radix,
+                                                  delta * batch_stride);
+                    }
+                    prev_group = group_id;
+
+                    FFTZ_UINTP tw_offset = (FFTZ_UINTP)(radix - 1) *
+                                           DATA_STRIDE * dt_bytes * group_id;
+                    aoclfftz_twiddle_t tw_local = *(sol->twiddle);
+                    tw_local.TW = MOVE_ADDR(tw_local.TW, tw_offset);
+                    tw_local.load_multi_cols = 0;
+
+                    kernel_c2c(in_local, MOVE_ADDR(in_local, dt_bytes),
+                               out_local, MOVE_ADDR(out_local, dt_bytes),
+                               num_groups, strides_c2c_per_thread, &tw_local,
+                               direction);
+                }
             }
         }
         else
         {
             // Asymmetric stride execution path for forward. Group step already
-            // accounts for the endpoint points each group occupies, see
-            // set_vector_strides_for_kernels().
+            // accounts for the dc and nyquist points each group occupies.
             FFTZ_INTP v_in_stride  = sol->strides_grp->strides->v_in_stride;
             FFTZ_INTP v_out_stride = sol->strides_grp->strides->v_out_stride;
 
-            #pragma omp parallel for num_threads(n_threads_c2c_outer)
-            for (FFTZ_INTP group_id = 0; group_id < num_groups; group_id++)
+            #pragma omp parallel num_threads(n_threads_c2c)
             {
-                FFTZ_VOID *in_local  = MOVE_ADDR(in_c2c,
-                                  group_id * v_in_stride * dt_bytes);
-                FFTZ_VOID *out_local = MOVE_ADDR(out_c2c,
-                                  group_id * v_out_stride * dt_bytes);
-                aoclfftz_strides_t *strides_c2c_per_thread;
-                ALLOC_ALIGN_UNINIT(strides_c2c_per_thread,
-                                    aoclfftz_strides_t,
-                                    sizeof(aoclfftz_strides_t));
-                memcpy(strides_c2c_per_thread, sol->strides_grp->strides_c2c,
-                       sizeof(aoclfftz_strides_t));
+                #pragma omp for
+                for (FFTZ_INTP group_id = 0; group_id < num_groups; group_id++)
+                {
+                    FFTZ_VOID *in_local =
+                        MOVE_ADDR(in_c2c, group_id * v_in_stride * dt_bytes);
+                    FFTZ_VOID *out_local =
+                        MOVE_ADDR(out_c2c, group_id * v_out_stride * dt_bytes);
 
-                // Allocate and copy a private out_strides array
-                // for this thread
-                FFTZ_INTP *local_out_strides;
-                ALLOC_ALIGN_UNINIT(local_out_strides, FFTZ_INTP,
-                                   sizeof(FFTZ_INTP) * radix);
-                memcpy(local_out_strides,
-                       sol->strides_grp->strides_c2c->out_strides,
-                       sizeof(FFTZ_INTP) * radix);
-                strides_c2c_per_thread->out_strides = local_out_strides;
-
-                // Kernel execution - using group_size for asymmetric case
-                kernel_c2c(in_local, MOVE_ADDR(in_local, dt_bytes),
-                           out_local, MOVE_ADDR(out_local, dt_bytes),
-                           num_c2c_per_group, strides_c2c_per_thread,
-                           sol->twiddle, FFT_DIR(sol->decomp_scheme->flags));
-
-                FREE_ALIGN_ALLOCATED_MEM(local_out_strides);
-                FREE_ALIGN_ALLOCATED_MEM(strides_c2c_per_thread);
+                    kernel_c2c(in_local, MOVE_ADDR(in_local, dt_bytes),
+                               out_local, MOVE_ADDR(out_local, dt_bytes),
+                               num_c2c_per_group, sol->strides_grp->strides_c2c,
+                               sol->twiddle, FFT_DIR(sol->decomp_scheme->flags));
+                }
             }
         }
     }
+    if (!use_asymmetric_kernel)
+    {
+        FREE_ALIGN_ALLOCATED_MEM(stride_slab);
+    }
+    return SOLVER_SUCCESS;
 }
 
 // Direct-only forward R2C for non-batched problems (vecs[0].n == 1).
@@ -531,13 +443,13 @@ static FFTZ_INT32 execute_real_mt_direct_r2c(aoclfftz_solution_t *sol,
     FFTZ_VOID *in = ctx->in_real;
     FFTZ_VOID *out = ctx->out_real;
 
-    execute_real_mt_direct_kernels(sol,
+    FFTZ_INT32 ret = execute_real_mt_direct_kernels(sol,
                                    sol->decomp_scheme->thread_info->n_threads,
                                    in, out);
     set_zero_for_dc_and_nyquist(sol, out);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
-    return SOLVER_SUCCESS;
+    return ret;
 }
 
 // Direct-only forward R2C for batched problems (vecs[0].n > 1). Batched
@@ -550,13 +462,13 @@ static FFTZ_INT32 execute_real_mt_direct_r2c_batched(aoclfftz_solution_t *sol,
     FFTZ_VOID *in = ctx->in_real;
     FFTZ_VOID *out = ctx->out_real;
 
-    execute_real_mt_direct_kernels(sol,
+    FFTZ_INT32 ret = execute_real_mt_direct_kernels(sol,
                                    sol->decomp_scheme->thread_info->n_threads,
                                    in, out);
     set_zero_for_dc_and_nyquist_batched(sol, out);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
-    return SOLVER_SUCCESS;
+    return ret;
 }
 
 // Direct-only backward C2R
@@ -568,61 +480,38 @@ static FFTZ_INT32 execute_real_mt_direct_c2r(aoclfftz_solution_t *sol,
     FFTZ_VOID *in = ctx->in_real;
     FFTZ_VOID *out = ctx->out_real;
 
-    execute_real_mt_direct_kernels(sol,
+    FFTZ_INT32 ret = execute_real_mt_direct_kernels(sol,
                                    sol->decomp_scheme->thread_info->n_threads,
                                    in, out);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
-    return SOLVER_SUCCESS;
+    return ret;
 }
 
-// Runs one CT stage's kernels, then swaps the aux ping-pong pools in ctx.
 // ITERATIVE and PARTIAL_RECURSION hand that ctx straight to next_sol; under
 // TRUE_RECURSION ctx is by reference, so radix_r's swap is seen by radix_m.
-static FFTZ_VOID execute_real_mt_ct_intra_stage_kernels(aoclfftz_solution_t *sol,
+static FFTZ_INT32 execute_real_mt_ct_intra_stage_kernels(aoclfftz_solution_t *sol,
                                                         aoclfftz_mutable_ctx_t *ctx,
                                                         FFTZ_VOID *in,
                                                         FFTZ_VOID *out)
 {
     FFTZ_INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
 
-    // since r2hc perform computation on half points, their weightage in thread
-    // distributions is half
-    FFTZ_INTP batch_wt_sum = sol->solver->kernel_c2c->count +
-                         (sol->solver->kernel_r2hc->count + 1) / DATA_STRIDE +
-                         sol->solver->kernel_r2hcf->count;
-    FFTZ_INT32 n_threads_c2c =
-        (n_threads * sol->solver->kernel_c2c->count) / batch_wt_sum;
-    FFTZ_INT32 n_threads_real = n_threads - n_threads_c2c;
-
-    /*
-     * Parallelization Strategy:
-     * Parallelize the execution blocks of both real and complex kernels only
-     * when count of R2HC/R2HCF > 0 and count of C2C > 0.
-     */
-    int enable_parallelism = n_threads_c2c > 0;
-    if (enable_parallelism)
+    FFTZ_INT32 ret = execute_real_mt_direct_kernels(sol, n_threads, in, out);
+    if (ret != SOLVER_SUCCESS)
     {
-        // Use a team of 2 threads, one per section.
-        #pragma omp parallel sections num_threads(2)
-        {
-            #pragma omp section
-            {
-                execute_real_mt_direct_kernels(sol, n_threads_real, in, out);
-            }
-            #pragma omp section
-            {
-                execute_real_mt_c2c_kernels(sol, n_threads_c2c, in, out);
-            }
-        }
+        return ret;
     }
-    else
+
+    ret = execute_real_mt_c2c_kernels(sol, n_threads, in, out);
+    if (ret != SOLVER_SUCCESS)
     {
-        execute_real_mt_direct_kernels(sol, n_threads_real, in, out);
+        return ret;
     }
 
     // Alternate the pools so the next stage reads what this one wrote.
     SWAP_BUFFERS(ctx->aux_pool_base_1, ctx->aux_pool_base_2);
+    return SOLVER_SUCCESS;
 }
 
 // CT forward R2C stage (R2HC + R2HCF + C2C); zero DC/Nyquist on last stage
@@ -638,7 +527,11 @@ static FFTZ_INT32 execute_real_mt_direct_ct_r2c(aoclfftz_solution_t *sol,
     aoclfftz_resolve_real_io(ctx, sol->decomp_scheme->real_in_role,
                              sol->decomp_scheme->real_out_role, &in, &out);
 
-    execute_real_mt_ct_intra_stage_kernels(sol, ctx, in, out);
+    ret = execute_real_mt_ct_intra_stage_kernels(sol, ctx, in, out);
+    if (ret != SOLVER_SUCCESS)
+    {
+        return ret;
+    }
 
 #if REAL_FFT_EXECUTION_ORDER == REAL_FFT_ORDER_TRUE_RECURSION
     // Recurse-then-combine mode: the CT solver owns tree traversal, so the
@@ -676,7 +569,11 @@ static FFTZ_INT32 execute_real_mt_direct_ct_c2r(aoclfftz_solution_t *sol,
     aoclfftz_resolve_real_io(ctx, sol->decomp_scheme->real_in_role,
                              sol->decomp_scheme->real_out_role, &in, &out);
 
-    execute_real_mt_ct_intra_stage_kernels(sol, ctx, in, out);
+    ret = execute_real_mt_ct_intra_stage_kernels(sol, ctx, in, out);
+    if (ret != SOLVER_SUCCESS)
+    {
+        return ret;
+    }
 
 #if REAL_FFT_EXECUTION_ORDER != REAL_FFT_ORDER_TRUE_RECURSION
     if (HAS_NEXT(sol))

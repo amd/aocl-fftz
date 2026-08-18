@@ -223,3 +223,21 @@ FFTZ_VOID compute_cost(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
     cost->ops = c2c_cost + r2hc_cost + r2hcf_cost;
 }
+
+#ifdef MULTI_THREADING
+// Multiple stride copies are required for c2c parallel execution
+// This function points the calling thread at its own slot of the C2C stride
+FFTZ_VOID real_mt_c2c_thread_stride_slot(FFTZ_VOID *stride_slab,
+                                    FFTZ_INTP stride_slot_bytes,
+                                    aoclfftz_strides_t **strides_c2c_per_thread,
+                                    FFTZ_INTP **local_strides)
+{
+    FFTZ_CHAR *slot = (FFTZ_CHAR *)stride_slab +
+                      (FFTZ_INTP)omp_get_thread_num() * stride_slot_bytes;
+    FFTZ_INTP stride_array_offset = (FFTZ_INTP)sizeof(aoclfftz_strides_t);
+
+    *strides_c2c_per_thread = (aoclfftz_strides_t *)slot;
+    *local_strides = (FFTZ_INTP *)(slot + stride_array_offset);
+}
+
+#endif

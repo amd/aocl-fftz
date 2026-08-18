@@ -16,6 +16,7 @@
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
 #include "core/solvers/real/direct_solver_rdft_utils.h"
+#include "utils/thread_control.h"
 #include "utils/utils.h"
 
 // Picks the ST or MT direct solver variant. MT is chosen only when multiple
@@ -32,24 +33,15 @@ static FFTZ_INT32 select_real_direct_solver_type(aoclfftz_solution_t *solution,
     set_kernel_count_in_each_group(solution, realhelper);
 
 #ifdef MULTI_THREADING
-    // Only one of r2hc/r2hcf carries the groups, and both share the same set
-    // width, so the group total covers either case.
-    FFTZ_INTP num_groups = NUM_RFFT_GROUPS(solver);
-    FFTZ_INTP r2c_iters = num_groups / solver->kernel_r2hc->sets;
+    FFTZ_INT32 n_threads_mt = cap_real_mt_direct_threads(solution, *num_threads);
 
-    FFTZ_INTP c2c_iters = 0;
-    if (solver->kernel_c2c->count != 0)
+    if (n_threads_mt > 1)
     {
-        FFTZ_INTP num_c2c_per_group = solver->kernel_c2c->count / num_groups;
-        c2c_iters = (num_c2c_per_group >= num_groups) ? num_groups
-                                                      : num_c2c_per_group;
-    }
-
-    FFTZ_INTP max_parallel_iters =
-        (r2c_iters > c2c_iters) ? r2c_iters : c2c_iters;
-
-    if (*num_threads > 1 && max_parallel_iters > 1)
-    {
+        *num_threads = n_threads_mt;
+        // Only the MT variant reads this. Leaving it alone for a stage that went
+        // single-threaded keeps the count the level was allocated visible to the
+        // cost model, which is what decides between decompositions.
+        solution->decomp_scheme->thread_info->n_threads = n_threads_mt;
         solver->solver_type =
             select_real_mt_direct_solver_type(solution, realhelper->is_CT);
     }

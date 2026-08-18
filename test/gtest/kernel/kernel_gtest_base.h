@@ -22,11 +22,11 @@
 #include <utility>
 #include <chrono>
 
+#include "test/gtest/kernel/kernel_gtest_utils.h"
 extern "C"
 {
-#include "core/solvers/real/strides_rdft.h"
+    #include "core/solvers/real/strides_rdft.h"
 }
-#include "test/gtest/kernel/kernel_gtest_utils.h"
 #include "test/gtest/gtest_types.h"
 #include "utils/allocator.h"
 

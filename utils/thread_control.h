@@ -54,6 +54,47 @@ FFTZ_INT32 cap_batch_loop_threads(aoclfftz_decomp_scheme_t *decomp_scheme,
  */
 FFTZ_VOID cap_plan_thread_budget(aoclfftz_decomp_scheme_t *decomp_scheme);
 
+/**
+ * @brief Trim a Real-kernel OpenMP team to what the kernel loop can feed.
+ *
+ * @param decomp_scheme Decomposition of the transform being executed
+ * @param kernel_count  Total r2hc + r2hcf kernel invocations
+ * @param n_threads     Team size the caller would otherwise use
+ * @return @p n_threads, or a smaller count if the work does not justify it
+ */
+FFTZ_INT32 cap_real_kernel_loop_threads(aoclfftz_decomp_scheme_t *decomp_scheme,
+                                   FFTZ_INTP kernel_count, FFTZ_INT32 n_threads);
+
+/**
+ * @brief Trim a C2C outer-loop OpenMP team from iteration and inner work.
+ *
+ * @param decomp_scheme Decomposition of the transform being executed
+ * @param outer_iters   Parallel loop trip count
+ * @param exec_per_iter Kernel batch units each outer iteration runs
+ * @param n_threads     Team size the caller would otherwise use
+ * @return @p n_threads, or a smaller count if the work does not justify it
+ */
+FFTZ_INT32 cap_real_c2c_loop_threads(aoclfftz_decomp_scheme_t *decomp_scheme,
+                                          FFTZ_INTP outer_iters,
+                                          FFTZ_INTP exec_per_iter,
+                                          FFTZ_INT32 n_threads);
+
+/**
+ * @brief Team size for one MT real direct stage, settled at setup time.
+ *
+ * Returning 1 means the stage takes the single-threaded solver instead. The
+ * widest of the two loops decides whether a team forms at all; past that gate
+ * the load model decides the width (or, with the model off, the budget goes
+ * out whole). Under the model both kernel families run on the same team, so
+ * the narrowest request wins.
+ *
+ * @param sol       Solution whose stage kernels are being sized
+ * @param n_threads Budget the caller would otherwise use
+ * @return Settled team size, or 1 to select the ST solver
+ */
+FFTZ_INT32 cap_real_mt_direct_threads(aoclfftz_solution_t *sol,
+                                      FFTZ_INT32 n_threads);
+
 #endif // MULTI_THREADING
 
 #endif // AOCLFFTZ_THREAD_CONTROL_H

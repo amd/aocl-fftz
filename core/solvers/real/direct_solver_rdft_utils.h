@@ -367,6 +367,13 @@ select_real_mt_direct_solver_type(aoclfftz_solution_t *sol, FFTZ_UINT8 is_ct)
 FFTZ_VOID setup_rdft_dc_nyquist_offsets_ds(aoclfftz_decomp_scheme_t *ds);
 FFTZ_VOID set_kernel_count_in_each_group(aoclfftz_solution_t *sol,
                              aoclfftz_realhelper_t *realhelper);
+
+#ifdef MULTI_THREADING
+FFTZ_VOID real_mt_c2c_thread_stride_slot(FFTZ_VOID *stride_slab,
+                                         FFTZ_INTP stride_slot_bytes,
+                                         aoclfftz_strides_t **strides_c2c_per_thread,
+                                         FFTZ_INTP **local_strides);
+#endif
 FFTZ_INT32 allocate_and_setup_stride(aoclfftz_solution_t *sol,
                                aoclfftz_realhelper_t realhelper);
 FFTZ_VOID update_ct_buffers(aoclfftz_solution_t *sol,

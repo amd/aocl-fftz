@@ -79,6 +79,7 @@ static FFTZ_INTP count_vec_elems(aoclfftz_decomp_scheme_t *decomp_scheme)
 #define FFTZ_MIN_ELEMS_PER_INTRA_THREAD 2048
 #define FFTZ_MAX_INTRA_TRANSFORM_THREADS 32
 #define FFTZ_MAX_CT_SPLIT_THREADS 16
+#define FFTZ_MIN_KERNELS_REQ_PER_THREAD 256
 
 static FFTZ_INTP intra_transform_thread_limit(FFTZ_INTP n, FFTZ_INT32 dim_rank)
 {
@@ -178,6 +179,139 @@ FFTZ_VOID cap_plan_thread_budget(aoclfftz_decomp_scheme_t *decomp_scheme)
     }
 
     thread_info->avl_threads = max_threads;
+}
+
+FFTZ_INT32 cap_real_kernel_loop_threads(aoclfftz_decomp_scheme_t *decomp_scheme,
+                                   FFTZ_INTP kernel_count, FFTZ_INT32 n_threads)
+{
+    if (!dynamic_load_model_on(decomp_scheme))
+    {
+        return n_threads;
+    }
+
+    if (n_threads <= 1 || kernel_count <= 0)
+    {
+        return 1;
+    }
+
+    FFTZ_INTP max_threads = kernel_count / FFTZ_MIN_KERNELS_REQ_PER_THREAD;
+    if (max_threads < 1)
+    {
+        max_threads = 1;
+    }
+
+    return (max_threads < (FFTZ_INTP)n_threads) ? (FFTZ_INT32)max_threads
+                                              : n_threads;
+}
+
+FFTZ_INT32 cap_real_c2c_loop_threads(aoclfftz_decomp_scheme_t *decomp_scheme,
+                                          FFTZ_INTP outer_iters,
+                                          FFTZ_INTP exec_per_iter,
+                                          FFTZ_INT32 n_threads)
+{
+    if (!dynamic_load_model_on(decomp_scheme))
+    {
+        return n_threads;
+    }
+
+    if (n_threads <= 1 || outer_iters < 2 || exec_per_iter <= 0)
+    {
+        return 1;
+    }
+
+    FFTZ_INTP total_exec = outer_iters * exec_per_iter;
+    FFTZ_INTP max_threads = total_exec / FFTZ_MIN_KERNELS_REQ_PER_THREAD;
+    if (max_threads < 1)
+    {
+        return 1;
+    }
+
+    FFTZ_INT32 team = n_threads;
+    if ((FFTZ_INTP)team > max_threads)
+    {
+        team = (FFTZ_INT32)max_threads;
+    }
+    if ((FFTZ_INTP)team > outer_iters)
+    {
+        team = (FFTZ_INT32)outer_iters;
+    }
+    return team;
+}
+
+// Team size for one MT real direct stage, settled at setup. Returns 1 (select
+// the ST solver) when neither loop reaches past one iteration. With the model
+// off the budget goes out whole; under it both kernel families share the team,
+// so the narrowest of their requested widths wins.
+FFTZ_INT32 cap_real_mt_direct_threads(aoclfftz_solution_t *sol,
+                                      FFTZ_INT32 n_threads)
+{
+    if (n_threads <= 1)
+    {
+        return 1;
+    }
+
+    aoclfftz_generic_solver_t *solver = sol->solver;
+
+    FFTZ_INTP r2c_iters = NUM_RFFT_GROUPS(solver);
+    FFTZ_INTP c2c_iters = 0;
+    FFTZ_INTP c2c_inner_iters = 0;
+    if (solver->kernel_c2c->count != 0)
+    {
+        FFTZ_INTP num_groups = NUM_RFFT_GROUPS(solver);
+        FFTZ_INTP num_c2c_per_group = solver->kernel_c2c->count / num_groups;
+
+        FFTZ_INTP is_asymmetric_c2c = num_c2c_per_group >= num_groups;
+        c2c_iters       = is_asymmetric_c2c ? num_groups
+                                            : num_c2c_per_group;
+        c2c_inner_iters = is_asymmetric_c2c ? num_c2c_per_group : num_groups;
+    }
+
+    FFTZ_INTP max_parallel_iters = 0;
+    FFTZ_INT32 budget = 0;
+    if (sol->decomp_scheme->thread_info->pthr_fft->dynamic_load_model == 0)
+    {
+        // Iterations per kernel set
+        r2c_iters /= sol->solver->kernel_r2hc->sets;
+        max_parallel_iters = (r2c_iters > c2c_iters) ? r2c_iters
+                           : c2c_iters;
+        budget = (n_threads < max_parallel_iters) ? n_threads
+                      : max_parallel_iters;
+        return (budget < 1) ? 1 : budget;
+    }
+
+    // A team cannot be wider than max_parallel_iters.
+    max_parallel_iters = (r2c_iters > c2c_iters) ? r2c_iters
+                       : c2c_iters;
+    budget = (n_threads < max_parallel_iters) ? n_threads
+                      : max_parallel_iters;
+    if (budget <= 1)
+    {
+        return 1;
+    }
+
+    FFTZ_INT32 team = budget;
+
+    if (r2c_iters != 0)
+    {
+        FFTZ_INT32 real_team = cap_real_kernel_loop_threads(
+            sol->decomp_scheme, r2c_iters, budget);
+        if (real_team < team)
+        {
+            team = real_team;
+        }
+    }
+
+    if (c2c_iters != 0)
+    {
+        FFTZ_INT32 c2c_team = cap_real_c2c_loop_threads(
+            sol->decomp_scheme, c2c_iters, c2c_inner_iters, budget);
+        if (c2c_team < team)
+        {
+            team = c2c_team;
+        }
+    }
+
+    return (team > 1) ? team : 1;
 }
 
 #endif // MULTI_THREADING
