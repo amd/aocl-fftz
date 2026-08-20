@@ -1,28 +1,5 @@
-# Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright notice,
-# this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-# 3. Neither the name of the copyright holder nor the names of its
-# contributors may be used to endorse or promote products derived from this
-# software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
+# Copyright Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
 
 # @file CMakeLists.txt
 #
@@ -133,9 +110,71 @@ foreach(FILE ${GTEST_SRC_FILES})
     if(NOT "${TNAME}" MATCHES "[A-Za-z0-9_]*_gtest")
         continue()
     endif()
+
+    # Concurrency gtests use OpenMP for their parallel region and rendezvous
+    # barrier, which is how they actually create the multi-thread race window
+    # they are designed to stress. They must therefore link OpenMP into the
+    # test binary even when the library itself was built single-threaded
+    # (ENABLE_MULTI_THREADING=OFF), otherwise the `#pragma omp parallel` is
+    # silently dropped and the test degrades to a meaningless serial run.
+    # Top-level CMake only calls find_package(OpenMP) when
+    # ENABLE_MULTI_THREADING=ON, so locate it here as a *soft* dependency:
+    # if OpenMP can't be found, skip the concurrency test rather than failing
+    # configure (preserves the prior single-thread-without-OpenMP build path).
+    if("${FILE}" MATCHES ".*/concurrency/.*")
+        # NB: on Windows, OpenMP_libomp_LIBRARY has a non-empty default
+        # cache value (LLVM path) even though it isn't consumed there, so
+        # gate on the imported target rather than that variable.
+        if(WIN32 OR NOT OpenMP_libomp_LIBRARY)
+            if(NOT TARGET OpenMP::OpenMP_C)
+                find_package(OpenMP)
+            endif()
+            if(NOT TARGET OpenMP::OpenMP_C)
+                message(STATUS "OpenMP not found: skipping concurrency gtest ${TNAME}")
+                continue()
+            endif()
+        endif()
+    endif()
+
+    # Only api_gtest's concurrency suite needs OpenMP, so api_gtest always
+    # builds. Probe OpenMP softly: if found, define AOCLFFTZ_API_CONCURRENCY_TESTS
+    # to compile in that suite; otherwise the rest of api_gtest still builds and runs.
+    set(API_GTEST_HAS_OPENMP FALSE)
+    if("${TNAME}" STREQUAL "api_gtest")
+        if(WIN32 OR NOT OpenMP_libomp_LIBRARY)
+            if(NOT TARGET OpenMP::OpenMP_C)
+                find_package(OpenMP)
+            endif()
+            if(TARGET OpenMP::OpenMP_C)
+                set(API_GTEST_HAS_OPENMP TRUE)
+            else()
+                message(STATUS "OpenMP not found: api_gtest built"
+                               " without concurrency suite")
+            endif()
+        else()
+            set(API_GTEST_HAS_OPENMP TRUE)
+        endif()
+    endif()
+
     add_executable(${TNAME} ${FILE})
     add_dependencies(${TNAME} ${deps_googletest})
-    target_link_libraries(${TNAME} ${gtest_lib_name} gtest gtest_main Threads::Threads)
+    target_link_libraries(${TNAME} PRIVATE ${gtest_lib_name} gtest gtest_main Threads::Threads)
+
+    if("${FILE}" MATCHES ".*/concurrency/.*" OR API_GTEST_HAS_OPENMP)
+        if(WIN32 OR NOT OpenMP_libomp_LIBRARY)
+            target_link_libraries(${TNAME} PRIVATE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+        else()
+            target_compile_options(${TNAME} PRIVATE -fopenmp)
+            target_link_options(${TNAME} PRIVATE -fopenmp)
+            target_link_libraries(${TNAME} PRIVATE ${OpenMP_libomp_LIBRARY})
+        endif()
+    endif()
+
+    if(API_GTEST_HAS_OPENMP)
+        target_compile_definitions(${TNAME}
+            PRIVATE AOCLFFTZ_API_CONCURRENCY_TESTS)
+    endif()
+
     gtest_discover_tests(${TNAME})
 endforeach()
 
@@ -363,6 +402,16 @@ if(FUZZTEST)
         target_link_libraries(fuzz_test PRIVATE aocl_fftz_static)
     else()
         target_link_libraries(fuzz_test PRIVATE aocl_fftz)
+        # fuzz_test picks up the same OpenMP runtime (custom path or system)
+        if(ENABLE_MULTI_THREADING)
+            if(OpenMP_libomp_LIBRARY)
+                target_compile_options(fuzz_test PRIVATE -fopenmp)
+                target_link_options(fuzz_test PRIVATE -fopenmp)
+                target_link_libraries(fuzz_test PUBLIC ${OpenMP_libomp_LIBRARY})
+            else()
+                target_link_libraries(fuzz_test PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+            endif()
+        endif()
     endif()
     target_link_libraries(fuzz_test PRIVATE fuzztest_fuzztest_gtest_main)
     gtest_discover_tests(fuzz_test)

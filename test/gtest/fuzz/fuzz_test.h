@@ -1,30 +1,5 @@
-/*
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file fuzz_test.h
  *
@@ -45,9 +20,10 @@
 /**
  * @brief Base class for the AOCLFFTZ Fuzz Tests
  *
- * @tparam dt_t data-type of input and output (supported: FLOAT and DOUBLE)
- * @tparam dm_t data-model for data length and strides (supported: LP64[INT32]
- * and ILP64[INTP])
+ * @tparam dt_t data-type of input and output (
+     supported: FFTZ_FLOAT and FFTZ_DOUBLE)
+ * @tparam dm_t data-model for data length and strides (supported:
+ * LP64[FFTZ_INT32] and ILP64[FFTZ_INTP])
  * @tparam dim_t type of aoclfftz_dim struct
  * @tparam prob_desc_t type of problem descriptor struct
  */
@@ -55,33 +31,33 @@ template <class dt_t, class dm_t, class dim_t, class prob_desc_t>
 class AoclfftzFuzzTestBase
 {
  public:
-    VOID *(*aoclfftz_setup)(prob_desc_t *problem);
+    FFTZ_VOID *(*aoclfftz_setup)(prob_desc_t *problem);
     AoclfftzFuzzTestBase()
     {
         aoclfftz_setup = nullptr;
-        if (std::is_same<dt_t, FLOAT>::value)
+        if (std::is_same<dt_t, FFTZ_FLOAT>::value)
         {
-            if (std::is_same<dm_t, INT32>::value)
+            if (std::is_same<dm_t, FFTZ_INT32>::value)
             {
-                aoclfftz_setup = reinterpret_cast<VOID *(*)(prob_desc_t *)>
+                aoclfftz_setup = reinterpret_cast<FFTZ_VOID *(*)(prob_desc_t *)>
                                                         (aoclfftz_setup_f);
             }
             else
             {
-                aoclfftz_setup = reinterpret_cast<VOID *(*)(prob_desc_t *)>
+                aoclfftz_setup = reinterpret_cast<FFTZ_VOID *(*)(prob_desc_t *)>
                                                         (aoclfftz_setup_f_64_);
             }
         }
-        else if (std::is_same<dt_t, DOUBLE>::value)
+        else if (std::is_same<dt_t, FFTZ_DOUBLE>::value)
         {
-            if (std::is_same<dm_t, INT32>::value)
+            if (std::is_same<dm_t, FFTZ_INT32>::value)
             {
-                aoclfftz_setup = reinterpret_cast<VOID *(*)(prob_desc_t *)>
+                aoclfftz_setup = reinterpret_cast<FFTZ_VOID *(*)(prob_desc_t *)>
                                                         (aoclfftz_setup_d);
             }
             else
             {
-                aoclfftz_setup = reinterpret_cast<VOID *(*)(prob_desc_t *)>
+                aoclfftz_setup = reinterpret_cast<FFTZ_VOID *(*)(prob_desc_t *)>
                                                         (aoclfftz_setup_d_64_);
             }
         }
@@ -94,16 +70,17 @@ class AoclfftzFuzzTestBase
 * @param problem_size string holding the input problem
 
 */
-VOID fuzz_input_buffer_test(const std::string& problem_size)
+FFTZ_VOID fuzz_input_buffer_test(const std::string& problem_size)
 {
     std::string prob = problem_size;
-    INT32 status = PARSER_SUCCESS;
-    INT32 dim_rank = 0;
-    INT32 vec_rank = 0;
+    FFTZ_INT32 status = PARSER_SUCCESS;
+    FFTZ_INT32 dim_rank = 0;
+    FFTZ_INT32 vec_rank = 0;
     aoclfftz_bench_params_t *params = NULL;
     ALLOC_ALIGN_UNINIT(params, aoclfftz_bench_params_t,
                          sizeof(aoclfftz_bench_params_t));
-    status = find_dim_vec_ranks((CHAR *)prob.c_str(), &dim_rank, &vec_rank);
+    status = find_dim_vec_ranks((FFTZ_CHAR *)prob.c_str(), &dim_rank,
+                                &vec_rank);
     if (status != PARSER_SUCCESS)
     {
         AOCLFFTZ_ERROR("Failed on finding dim_rank and vec_rank\n");
@@ -113,7 +90,7 @@ VOID fuzz_input_buffer_test(const std::string& problem_size)
     aoclfftz_dim_t_64_ *dims = NULL;
     aoclfftz_dim_t_64_ *vecs = NULL;
     status = allocate_and_fill_dims_vecs(
-        (CHAR *)prob.c_str(), dim_rank, vec_rank, &dims, &vecs, 1);
+        (FFTZ_CHAR *)prob.c_str(), dim_rank, vec_rank, &dims, &vecs, 1);
     if (status != PARSER_SUCCESS)
     {
         FREE_ALIGN_ALLOCATED_MEM(dims);
@@ -126,12 +103,12 @@ VOID fuzz_input_buffer_test(const std::string& problem_size)
                     params->fft_type,
                     params->res_placement == IN_PLACE,
                     params->logger_mode);
-    UINTP input_size = 0;
-    UINTP output_size = 0;
+    FFTZ_UINTP input_size = 0;
+    FFTZ_UINTP output_size = 0;
 
     params->sz_info.n = calculate_size(dims, dim_rank);
     params->sz_info.batches = calculate_size(vecs, vec_rank);
-    INTP size = params->sz_info.n * params->sz_info.batches ;
+    FFTZ_INTP size = params->sz_info.n * params->sz_info.batches ;
     calculate_buffer_sizes(dim_rank, vec_rank, dims, vecs, &input_size,
                            &output_size, params->fft_type);
 
@@ -145,17 +122,17 @@ VOID fuzz_input_buffer_test(const std::string& problem_size)
                                          params->sz_info.dt_bytes;
     params->sz_info.n_in = params->sz_info.n;
     params->sz_info.n_out = params->sz_info.n;
-    INTP *in_idx_map = NULL;
-    ALLOC_ALIGN_UNINIT(in_idx_map, INTP, size * sizeof(INTP));
-    INTP *out_idx_map = NULL;
-    ALLOC_ALIGN_UNINIT(out_idx_map, INTP, size * sizeof(INTP));
+    FFTZ_INTP *in_idx_map = NULL;
+    ALLOC_ALIGN_UNINIT(in_idx_map, FFTZ_INTP, size * sizeof(FFTZ_INTP));
+    FFTZ_INTP *out_idx_map = NULL;
+    ALLOC_ALIGN_UNINIT(out_idx_map, FFTZ_INTP, size * sizeof(FFTZ_INTP));
     // Preparing the index map
-    prepare_index_map(dim_rank, vec_rank, dims,
-                    vecs, in_idx_map, out_idx_map, params->fft_type, ALIGNED_ALLOC);
+    prepare_index_map(dim_rank, vec_rank, dims, vecs, in_idx_map, out_idx_map,
+                      params->fft_type, ALIGNED_ALLOC);
     // Allocate in/out buffers
-    ALLOC_UNINIT(params->in, VOID, params->sz_info.input_bytes,
+    ALLOC_UNINIT(params->in, FFTZ_VOID, params->sz_info.input_bytes,
                  params->aligned_alloc);
-    ALLOC_INIT(params->out, VOID, params->sz_info.output_bytes,
+    ALLOC_INIT(params->out, FFTZ_VOID, params->sz_info.output_bytes,
                params->aligned_alloc);
 
     register_functions(params);
@@ -179,7 +156,7 @@ VOID fuzz_input_buffer_test(const std::string& problem_size)
     }
     dt_t *input = NULL;
     ALLOC_ALIGN_UNINIT(input, dt_t, sizeof(dt_t) * DATA_STRIDE * input_size);
-    for (INTP idx = 0; idx < size; idx = idx + 1)
+    for (FFTZ_INTP idx = 0; idx < size; idx = idx + 1)
     {
         (input)[in_idx_map[idx] * DATA_STRIDE] = inBuf[idx * DATA_STRIDE];
         (input)[in_idx_map[idx] * DATA_STRIDE + 1] =
@@ -187,17 +164,17 @@ VOID fuzz_input_buffer_test(const std::string& problem_size)
     }
 
     // Setup and run tests
-    VOID *handle = params->setup_problem(params);
+    FFTZ_VOID *handle = params->setup_problem(params);
     EXPECT_FALSE(handle == NULL);
     // Verifying the correctness of FFT output against signal properties
-    INT32 result = run_linearity_test(params, in_idx_map, out_idx_map, handle,
-                                         (VOID *)input);
+    FFTZ_INT32 result = run_linearity_test(params, in_idx_map, out_idx_map,
+                                           handle, (FFTZ_VOID *)input);
     EXPECT_EQ(result, BENCH_SUCCESS);
     result = run_impulse_transform_test(params, in_idx_map, out_idx_map, handle,
-                                        (VOID *)input);
+                                        (FFTZ_VOID *)input);
     EXPECT_EQ(result, BENCH_SUCCESS);
     result = run_timeshift_test(params, in_idx_map, out_idx_map, handle,
-                                 (VOID *)input);
+                                 (FFTZ_VOID *)input);
     EXPECT_EQ(result, BENCH_SUCCESS);
 
     aoclfftz_destroy(handle);
@@ -222,8 +199,8 @@ VOID fuzz_input_buffer_test(const std::string& problem_size)
 * @param pthr_fft structure member of problem descriptor
 * @param cntrl_params structure member of problem descriptor
 */
-VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
-                            UINT32 flags, aoclfftz_smp_pfft_t pthr_fft,
+FFTZ_VOID fuzz_problem_desc_test(const std::array<FFTZ_INTP, 8>& dims_and_vecs,
+                            FFTZ_UINT32 flags, aoclfftz_smp_pfft_t pthr_fft,
                             aoclfftz_cntrl_params_t cntrl_params)
 {
     // Allocate memory for benchmark parameters
@@ -236,8 +213,8 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
         return;
     }
     // Extract dimension and vector ranks
-    INT32 dim_rank = dims_and_vecs[0];
-    INT32 vec_rank = dims_and_vecs[1];
+    FFTZ_INT32 dim_rank = dims_and_vecs[0];
+    FFTZ_INT32 vec_rank = dims_and_vecs[1];
     aoclfftz_dim_t_64_ *dims = NULL;
     aoclfftz_dim_t_64_ *vecs = NULL;
     construct_dims_and_vecs(dims_and_vecs, &dims, &vecs);
@@ -261,11 +238,11 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
                     params->fft_type,
                     params->res_placement == IN_PLACE,
                     params->logger_mode);
-    UINTP input_size = 0;
-    UINTP output_size = 0;
+    FFTZ_UINTP input_size = 0;
+    FFTZ_UINTP output_size = 0;
     params->sz_info.n = calculate_size(dims, dim_rank);
     params->sz_info.batches = calculate_size(vecs, vec_rank);
-    INTP size = params->sz_info.n * params->sz_info.batches;
+    FFTZ_INTP size = params->sz_info.n * params->sz_info.batches;
     calculate_buffer_sizes(dim_rank, vec_rank, dims, vecs, &input_size,
                            &output_size, params->fft_type);
     params->sz_info.input_size = input_size;
@@ -278,8 +255,8 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
                                          params->sz_info.dt_bytes;
     params->sz_info.n_in = params->sz_info.n;
     params->sz_info.n_out = params->sz_info.n;
-    INTP n0 = params->dims[0].n;
-    INTP n0_hc = n0 / 2 + 1; // half-complex size for R2C/C2R
+    FFTZ_INTP n0 = params->dims[0].n;
+    FFTZ_INTP n0_hc = n0 / 2 + 1; // half-complex size for R2C/C2R
 
     // Adjust sizes for half-complex transforms:
     // R2C: N real → (N/2+1) complex (Hermitian symmetry reduces storage)
@@ -293,10 +270,10 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
         params->sz_info.n_in = (params->sz_info.n * n0_hc) / n0;
     }
 
-    INTP *in_idx_map = NULL;
-    ALLOC_ALIGN_UNINIT(in_idx_map, INTP, size * sizeof(INTP));
-    INTP *out_idx_map = NULL;
-    ALLOC_ALIGN_UNINIT(out_idx_map, INTP, size * sizeof(INTP));
+    FFTZ_INTP *in_idx_map = NULL;
+    ALLOC_ALIGN_UNINIT(in_idx_map, FFTZ_INTP, size * sizeof(FFTZ_INTP));
+    FFTZ_INTP *out_idx_map = NULL;
+    ALLOC_ALIGN_UNINIT(out_idx_map, FFTZ_INTP, size * sizeof(FFTZ_INTP));
 
     if (in_idx_map == NULL || out_idx_map == NULL)
     {
@@ -312,13 +289,13 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
     register_functions(params);
 
     // Log dims and vecs for debugging
-    for (INTP i = 0; i < dim_rank; i++)
+    for (FFTZ_INTP i = 0; i < dim_rank; i++)
     {
         printf("Dims[%td]: n=%ld, in_stride=%ld, out_stride=%ld\n",
                i, params->dims[i].n, params->dims[i].in_stride,
                params->dims[i].out_stride);
     }
-    for (INTP i = 0; i < vec_rank; i++)
+    for (FFTZ_INTP i = 0; i < vec_rank; i++)
     {
         printf("Vecs[%td]: n=%ld, in_stride=%ld, out_stride=%ld\n",
                i, params->vecs[i].n, params->vecs[i].in_stride,
@@ -326,15 +303,15 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
     }
 
     // create input and output buffers
-    UINT32 is_align = params->aligned_alloc;
-    INTP input_bytes = params->sz_info.input_bytes;
-    INTP output_bytes = params->sz_info.output_bytes;
+    FFTZ_UINT32 is_align = params->aligned_alloc;
+    FFTZ_INTP input_bytes = params->sz_info.input_bytes;
+    FFTZ_INTP output_bytes = params->sz_info.output_bytes;
     if (params->fft_type != C2C &&
         params->res_placement == IN_PLACE)
     {
         input_bytes = MAX(input_bytes, output_bytes);
     }
-    ALLOC_UNINIT(params->in, VOID, input_bytes, is_align);
+    ALLOC_UNINIT(params->in, FFTZ_VOID, input_bytes, is_align);
     if (params->in == NULL)
     {
         printf("Failed to allocate memory for input buffer\n");
@@ -349,7 +326,7 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
     }
     else
     {
-        ALLOC_INIT(params->out, VOID, output_bytes, is_align);
+        ALLOC_INIT(params->out, FFTZ_VOID, output_bytes, is_align);
         if (params->out == NULL)
         {
             printf("Failed to allocate memory for output buffer\n");
@@ -360,7 +337,7 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
     // Generate input buffer
     std::vector<dt_t> inBuf(size * params->sz_info.in_data_stride);
     absl::BitGen prng;
-    if (std::is_same<dt_t, FLOAT>::value)
+    if (std::is_same<dt_t, FFTZ_FLOAT>::value)
     {
         for (int i = 0; i < size * params->sz_info.in_data_stride; ++i)
         {
@@ -375,16 +352,16 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
         }
     }
     dt_t *input = NULL;
-    INT32 in_data_stride = params->sz_info.in_data_stride;
-    INT32 out_data_stride = params->sz_info.out_data_stride;
+    FFTZ_INT32 in_data_stride = params->sz_info.in_data_stride;
+    FFTZ_INT32 out_data_stride = params->sz_info.out_data_stride;
     ALLOC_ALIGN_UNINIT(input, dt_t, params->sz_info.input_bytes);
     if (input == NULL)
     {
         printf("Failed to allocate memory for input buffer\n");
         return;
     }
-    INTP n = params->sz_info.n_in * params->sz_info.batches;
-    for (INTP idx = 0; idx < n * in_data_stride; ++idx)
+    FFTZ_INTP n = params->sz_info.n_in * params->sz_info.batches;
+    for (FFTZ_INTP idx = 0; idx < n * in_data_stride; ++idx)
     {
         (input)[in_idx_map[idx / in_data_stride] * in_data_stride +
                         (idx % in_data_stride)] = inBuf[idx];
@@ -398,11 +375,11 @@ VOID fuzz_problem_desc_test(const std::array<INTP, 8>& dims_and_vecs,
     params->measure_stats = cntrl_params.measure_stats;
 
     // Setup problem and run tests
-    VOID *handle = params->setup_problem(params);
+    FFTZ_VOID *handle = params->setup_problem(params);
     if (handle != NULL)
     {
-        INT32 result = run_impulse_transform_test(
-            params, in_idx_map, out_idx_map, handle, (VOID *)input);
+        FFTZ_INT32 result = run_impulse_transform_test(
+            params, in_idx_map, out_idx_map, handle, (FFTZ_VOID *)input);
         EXPECT_EQ(result, BENCH_SUCCESS);
     }
     else
@@ -433,16 +410,20 @@ auto problemsize = fuzztest::ElementOf<std::string>(
                      {"2x4:2:4x2"},  // InStride != OutStride
                      {"19:1:1"}});   // Bluestein
 
-class AoclfftzFuzzTestFloatLP64 : public AoclfftzFuzzTestBase<FLOAT, INT32,
+class AoclfftzFuzzTestFloatLP64
+    : public AoclfftzFuzzTestBase<FFTZ_FLOAT, FFTZ_INT32,
                              aoclfftz_dim_t, aoclfftz_prob_desc_f>{};
 
-class AoclfftzFuzzTestFloatILP64 : public AoclfftzFuzzTestBase<FLOAT, INTP,
+class AoclfftzFuzzTestFloatILP64
+    : public AoclfftzFuzzTestBase<FFTZ_FLOAT, FFTZ_INTP,
                              aoclfftz_dim_t_64_, aoclfftz_prob_desc_f_64_>{};
 
-class AoclfftzFuzzTestDoubleLP64 : public AoclfftzFuzzTestBase<DOUBLE, INT32,
+class AoclfftzFuzzTestDoubleLP64
+    : public AoclfftzFuzzTestBase<FFTZ_DOUBLE, FFTZ_INT32,
                              aoclfftz_dim_t, aoclfftz_prob_desc_d>{};
 
-class AoclfftzFuzzTestDoubleILP64 : public AoclfftzFuzzTestBase<DOUBLE, INTP,
+class AoclfftzFuzzTestDoubleILP64
+    : public AoclfftzFuzzTestBase<FFTZ_DOUBLE, FFTZ_INTP,
                              aoclfftz_dim_t_64_, aoclfftz_prob_desc_d_64_>{};
 
 #endif // FUZZ_TEST_H

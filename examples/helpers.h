@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file helpers.h
  *
@@ -63,8 +38,8 @@
 
 #define PREPARE_RANDOM_INPUT(in, input_size, fft_type, data_type)              \
 {                                                                              \
-    UINTP data_stride = DATA_STRIDE(fft_type);                                 \
-    INTP idx = 0;                                                              \
+    FFTZ_UINTP data_stride = DATA_STRIDE(fft_type); \
+    FFTZ_INTP idx = 0; \
     for (idx = 0; idx < input_size * data_stride; ++idx)                       \
     {                                                                          \
         in[idx] = (data_type)(20.0 / RAND_MAX) * rand() - 10.0;                \
@@ -99,9 +74,9 @@
  * For vecs:
  *
  * - vecs[0]: Use n, is, os from the last dim (dims[dim_rank-1]).
- *   - Real, dim_rank > 1: Use full-length strides (n*is, n*os). The half-complex
- *     layout only shortens the fastest changing dimension; the batch stride still 
- *     needs full n or else batches may overlap.
+ *   - Real, dim_rank > 1: Use full-length strides (n*is, n*os). The
+ * half-complex layout only shortens the fastest changing dimension; the batch
+ * stride still needs full n or else batches may overlap.
  *   - Real, dim_rank == 1: Stride calculations are as follows:
  *   ------------------|--------------------|--------------------
  *    Type             | in_stride          | out_stride
@@ -120,19 +95,19 @@
  * @param dims dims structure to set default strides
  * @param vecs vecs structure to set default strides
  * @param flags fft configuration flags
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID set_default_dims_vecs(aoclfftz_dim_t_64_ *dims, INT32 dim_rank,
-                           aoclfftz_dim_t_64_ *vecs, INT32 vec_rank,
+FFTZ_VOID set_default_dims_vecs(aoclfftz_dim_t_64_ *dims, FFTZ_INT32 dim_rank,
+                           aoclfftz_dim_t_64_ *vecs, FFTZ_INT32 vec_rank,
                            aoclfftz_flags_t flags)
 {
     // Set default strides for dims if not explicitly provided
-    UINT8 is_in_place = !flags.fft_placement;
-    UINT8 is_forward = !flags.fft_direction;
-    for (INT32 i = 0; i < dim_rank; i++)
+    FFTZ_UINT8 is_in_place = !flags.fft_placement;
+    FFTZ_UINT8 is_forward = !flags.fft_direction;
+    for (FFTZ_INT32 i = 0; i < dim_rank; i++)
     {
-        INTP def_in_stride = 0;
-        INTP def_out_stride = 0;
+        FFTZ_INTP def_in_stride = 0;
+        FFTZ_INTP def_out_stride = 0;
         if (i == 0)
         {
             def_in_stride = 1;
@@ -146,13 +121,16 @@ VOID set_default_dims_vecs(aoclfftz_dim_t_64_ *dims, INT32 dim_rank,
                 {
                     if (is_in_place)
                     {
-                        def_in_stride = (dims[0].n / 2 + 1) * dims[0].in_stride * 2;
-                        def_out_stride = (dims[0].n / 2 + 1) * dims[0].out_stride;
+                        def_in_stride =
+                            (dims[0].n / 2 + 1) * dims[0].in_stride * 2;
+                        def_out_stride =
+                            (dims[0].n / 2 + 1) * dims[0].out_stride;
                     }
                     else 
                     {
                         def_in_stride = dims[0].n * dims[0].in_stride;
-                        def_out_stride = (dims[0].n / 2 + 1) * dims[0].out_stride;
+                        def_out_stride =
+                            (dims[0].n / 2 + 1) * dims[0].out_stride;
                     }
                 }
                 else
@@ -160,7 +138,8 @@ VOID set_default_dims_vecs(aoclfftz_dim_t_64_ *dims, INT32 dim_rank,
                     if (is_in_place)
                     {
                         def_in_stride = (dims[0].n / 2 + 1) * dims[0].in_stride;
-                        def_out_stride = (dims[0].n / 2 + 1) * dims[0].out_stride * 2;
+                        def_out_stride =
+                            (dims[0].n / 2 + 1) * dims[0].out_stride * 2;
                     }
                     else
                     {
@@ -193,10 +172,10 @@ VOID set_default_dims_vecs(aoclfftz_dim_t_64_ *dims, INT32 dim_rank,
     }
 
     // set strides for vecs if not provided
-    for (INT32 i = 0; i < vec_rank; i++)
+    for (FFTZ_INT32 i = 0; i < vec_rank; i++)
     {
-        INTP def_in_stride = 0;
-        INTP def_out_stride = 0;
+        FFTZ_INTP def_in_stride = 0;
+        FFTZ_INTP def_out_stride = 0;
         if (i == 0)
         {
             aoclfftz_dim_t_64_ last_dim = dims[dim_rank - 1];
@@ -218,19 +197,23 @@ VOID set_default_dims_vecs(aoclfftz_dim_t_64_ *dims, INT32 dim_rank,
                         else /* R2C out-of-place */
                         {
                             def_in_stride = last_dim.n * last_dim.in_stride;
-                            def_out_stride = (last_dim.n / 2 + 1) * last_dim.out_stride;
+                            def_out_stride =
+                                (last_dim.n / 2 + 1) * last_dim.out_stride;
                         }
                     }
                     else
                     {
                         if (is_in_place) /* C2R in-place */
                         {
-                            def_in_stride = (last_dim.n / 2 + 1) * last_dim.in_stride;
-                            def_out_stride = (last_dim.n / 2 + 1) * last_dim.out_stride * 2;
+                            def_in_stride =
+                                (last_dim.n / 2 + 1) * last_dim.in_stride;
+                            def_out_stride =
+                                (last_dim.n / 2 + 1) * last_dim.out_stride * 2;
                         }
                         else /* C2R out-of-place */
                         {
-                            def_in_stride = (last_dim.n / 2 + 1) * last_dim.in_stride;
+                            def_in_stride =
+                                (last_dim.n / 2 + 1) * last_dim.in_stride;
                             def_out_stride = last_dim.n * last_dim.out_stride;
                         }
                     }
@@ -274,11 +257,12 @@ VOID set_default_dims_vecs(aoclfftz_dim_t_64_ *dims, INT32 dim_rank,
  * @param vec_rank rank of the vectors
  * @param in_buffer_size calculated size of input
  * @param out_buffer_size calculated size of output
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID calculate_buffer_sizes(aoclfftz_dim_t_64_ *dims, INT32 dim_rank,
-                            aoclfftz_dim_t_64_ *vecs, INT32 vec_rank,
-                            UINTP *in_buffer_size, UINTP *out_buffer_size)
+FFTZ_VOID calculate_buffer_sizes(aoclfftz_dim_t_64_ *dims, FFTZ_INT32 dim_rank,
+                                 aoclfftz_dim_t_64_ *vecs, FFTZ_INT32 vec_rank,
+                                 FFTZ_UINTP *in_buffer_size,
+                                 FFTZ_UINTP *out_buffer_size)
 {
     // Example: for an 1D problem with 1D batch
     // Problem size : 3:6:6v4:1:1
@@ -287,14 +271,14 @@ VOID calculate_buffer_sizes(aoclfftz_dim_t_64_ *dims, INT32 dim_rank,
     // <---vec stride--->
     // <-------------(Batches -1)---------><--- Problem size * dim_stride --->
     // ((Batches -1) * (vec_stride)) + (Problem size * dim stride)
-    UINTP in_size = 1;
-    UINTP out_size = 1;
-    for (INT32 i = 0; i < dim_rank; i++)
+    FFTZ_UINTP in_size = 1;
+    FFTZ_UINTP out_size = 1;
+    for (FFTZ_INT32 i = 0; i < dim_rank; i++)
     {
         in_size += ((dims[i].n - 1) * (dims[i].in_stride));
         out_size += ((dims[i].n - 1) * (dims[i].out_stride));
     }
-    for (INT32 i = 0; i < vec_rank; i++)
+    for (FFTZ_INT32 i = 0; i < vec_rank; i++)
     {
         in_size += ((vecs[i].n - 1) * (vecs[i].in_stride));
         out_size += ((vecs[i].n - 1) * (vecs[i].out_stride));

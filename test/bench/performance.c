@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2024-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file performance.c
  *
@@ -54,24 +29,24 @@
  * @brief Run and benchmark the FFT problem
  *
  * @param params aoclfftz_bench_params_t type contains parsed arguments
- * @param handle handle object of VOID* type
+ * @param handle handle object of FFTZ_VOID* type
  * @param stats performance statistics object
- * @return INT32 status code
+ * @return FFTZ_INT32 status code
  */
-INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
-                                      VOID *handle, perf_stats_t *stats)
+FFTZ_INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
+                                      FFTZ_VOID *handle, perf_stats_t *stats)
 {
     AOCLFFTZ_LOG(TRACE, params->logger_mode, "ENTER");
-    INT32 status;
+    FFTZ_INT32 status;
 #ifdef WIN32
     timer clk_tick;
 #endif
     timeVal start_time, end_time;
-    DOUBLE tot_time = 0.0, cur_time = 0.0;
-    INTP n = calculate_size(params->dims, params->dim_rank);
-    INTP batches = calculate_size(params->vecs, params->vec_rank);
-    UINTP input_size = 0;
-    UINTP output_size = 0;
+    FFTZ_DOUBLE tot_time = 0.0, cur_time = 0.0;
+    FFTZ_INTP n = calculate_size(params->dims, params->dim_rank);
+    FFTZ_INTP batches = calculate_size(params->vecs, params->vec_rank);
+    FFTZ_UINTP input_size = 0;
+    FFTZ_UINTP output_size = 0;
     calculate_buffer_sizes(params->dim_rank, params->vec_rank, params->dims,
                            params->vecs, &input_size, &output_size, 
                            params->fft_type);
@@ -79,7 +54,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     // prepare random seed value
     if (params->use_random_seed)
     {
-        params->seed = (INT32)((INT64)time(0) % (INT_MAX));
+        params->seed = (FFTZ_INT32)((FFTZ_INT64)time(0) % (INT_MAX));
     }
 
     AOCLFFTZ_LOG(INFO, params->logger_mode, "seed   : %d",
@@ -98,14 +73,15 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
         return EXECUTION_FAILURE;
     }
 
-    INT32 iter = calibrate_iterations(handle, params->min_bench_time, params);
+    FFTZ_INT32 iter = calibrate_iterations(handle, params->min_bench_time,
+                                           params);
 
     // warmup iterations (skipped from profiling)
     // TODO: improvise this logic
     AOCLFFTZ_LOG(TRACE, params->logger_mode, "WARM-UP START");
-    for (INT32 i = 0; i < WARMUP_ITERATIONS; ++i)
+    for (FFTZ_INT32 i = 0; i < WARMUP_ITERATIONS; ++i)
     {
-        INT32 j = iter + 1;
+        FFTZ_INT32 j = iter + 1;
         while (--j)
         {
             aoclfftz_execute(handle);
@@ -114,12 +90,12 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
     AOCLFFTZ_LOG(TRACE, params->logger_mode, "WARM-UP END");
 
     initTimer(clk_tick);
-    for (INT32 i = 0; i < params->num_iterations; i++)
+    for (FFTZ_INT32 i = 0; i < params->num_iterations; i++)
     {
         AOCLFFTZ_LOG(INFO, params->logger_mode, "Iteration: %d",
                                i + 1);
 
-        INT32 j = iter + 1;
+        FFTZ_INT32 j = iter + 1;
         getTime(start_time);
         while (--j)
         {
@@ -133,7 +109,7 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
         {
             stats->min_time = cur_time;
         }
-        stats->avg_time = (DOUBLE)tot_time / params->num_iterations;
+        stats->avg_time = (FFTZ_DOUBLE)tot_time / params->num_iterations;
         bench_sleep(1e8); // 0.1 seconds
     }
 
@@ -160,11 +136,11 @@ INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
 /**
  * @brief prints performance stats
  */
-VOID print_perf_stats(perf_stats_t *stats)
+FFTZ_VOID print_perf_stats(perf_stats_t *stats)
 {
     // prepare suitable execution time unit
-    DOUBLE time_multiplier = 1.0;
-    CHAR time_unit[3];
+    FFTZ_DOUBLE time_multiplier = 1.0;
+    FFTZ_CHAR time_unit[3];
     // units will be decided based on minimum of min_time and avg_time
     // which is min_time
     // print time in seconds
@@ -203,13 +179,13 @@ VOID print_perf_stats(perf_stats_t *stats)
     printf("=====================================\n");
 }
 
-VOID calculate_and_print_scaling(perf_stats_t st, perf_stats_t mt)
+FFTZ_VOID calculate_and_print_scaling(perf_stats_t st, perf_stats_t mt)
 {
     printf("\nPerformance numbers in Multi threaded mode\n");
     print_perf_stats(&mt);
     printf("\nPerformance numbers in Single threaded mode\n");
     print_perf_stats(&st);
-    DOUBLE scaling_factor = st.avg_time / mt.avg_time;
+    FFTZ_DOUBLE scaling_factor = st.avg_time / mt.avg_time;
     if (scaling_factor < 1)
     {
         PRINT_FAILURE_FORMATTED("Scaling Factor (Single->Multi): %.2fx\n",
@@ -227,14 +203,14 @@ VOID calculate_and_print_scaling(perf_stats_t st, perf_stats_t mt)
  *
  * @param params bench params object
  * @param stats performance statistic object
- * @return INT32 bench status code
+ * @return FFTZ_INT32 bench status code
  */
-INT32 run_bench_on_perf_mode_and_get_stats(aoclfftz_bench_params_t *params,
+FFTZ_INT32 run_bench_on_perf_mode_and_get_stats(aoclfftz_bench_params_t *params,
                                            perf_stats_t *stats)
 {
-    INT32 status = BENCH_SUCCESS;
+    FFTZ_INT32 status = BENCH_SUCCESS;
 
-    VOID *handle = params->setup_problem(params);
+    FFTZ_VOID *handle = params->setup_problem(params);
     if (handle == NULL)
     {
         PRINT_FAILURE("\nTest bench failed [REASON: Setup problem failed]\n\n");
@@ -260,11 +236,11 @@ exit:
  * @brief run the test bench on performance mode and calculate MFLOPS.
  *
  * @param params bench params object
- * @return INT32 bench status code
+ * @return FFTZ_INT32 bench status code
  */
-INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params)
+FFTZ_INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params)
 {
-    INT32 status = BENCH_SUCCESS;
+    FFTZ_INT32 status = BENCH_SUCCESS;
     perf_stats_t stats =
     {
         .min_time = DBL_MAX,
@@ -315,34 +291,34 @@ exit:
 /**
  * @brief Computes the number of iterations for benchmarking
  *
- * @param handle handle object of VOID* type
+ * @param handle handle object of FFTZ_VOID* type
  * @param min_bench_time minimum time to run benchmark
  * @param params aoclfftz_bench_params_t type contains parsed arguments
- * @return INT32 iterations
+ * @return FFTZ_INT32 iterations
  */
-INT32 calibrate_iterations(VOID *handle, DOUBLE min_bench_time,
+FFTZ_INT32 calibrate_iterations(FFTZ_VOID *handle, FFTZ_DOUBLE min_bench_time,
                             aoclfftz_bench_params_t *params)
 {
-    DOUBLE minq_time = 1e5; // minimum quantifiable time 100 us
-    INT32 increase_iterations = 1;
-    DOUBLE cur_time = 0;
+    FFTZ_DOUBLE minq_time = 1e5; // minimum quantifiable time 100 us
+    FFTZ_INT32 increase_iterations = 1;
+    FFTZ_DOUBLE cur_time = 0;
 #ifdef WIN32
     timer clk_tick;
 #endif
     timeVal start_time, end_time;
     initTimer(clk_tick);
-    INT32 iters = 1;
+    FFTZ_INT32 iters = 1;
 
     for (iters = 1; increase_iterations && iters < INT32_MAX; iters *= 5)
     {
-        INT32 j = iters + 1;
+        FFTZ_INT32 j = iters + 1;
         getTime(start_time);
         while (--j)
         {
             aoclfftz_execute(handle);
         }
         getTime(end_time);
-        cur_time = (DOUBLE)diffTime(clk_tick, start_time, end_time);
+        cur_time = (FFTZ_DOUBLE)diffTime(clk_tick, start_time, end_time);
         // if execution time is above the minimum quantifiable limit,
         // then stop the iterations
         if (cur_time >= minq_time)
@@ -364,17 +340,17 @@ INT32 calibrate_iterations(VOID *handle, DOUBLE min_bench_time,
  * @brief Wrapper function for nanosleep
  *
  * @param nano_seconds sleep time in nano seconds
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID bench_sleep(INT64 nano_seconds)
+FFTZ_VOID bench_sleep(FFTZ_INT64 nano_seconds)
 {
 #ifdef WIN32
     DWORD milli_seconds = (nano_seconds / 1e6);
     Sleep(milli_seconds);
 #else
     timeVal t;
-    t.tv_sec = nano_seconds / (INT64)1e9; // 1 second
-    t.tv_nsec = nano_seconds % (INT64)1e9; // 1 second
+    t.tv_sec = nano_seconds / (FFTZ_INT64)1e9; // 1 second
+    t.tv_nsec = nano_seconds % (FFTZ_INT64)1e9; // 1 second
     nanosleep(&t, &t);
 #endif
 }

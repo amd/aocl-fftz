@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file transpose_solver.c
  *
@@ -40,14 +15,14 @@
 #include "core/solvers/solver.h"
 #include "core/solvers/transpose_solver.h"
 #include "core/common/memory_manager.h"
-#include "core/kernels/transpose/transpose_kernels.h"
+#include "core/kernels/non_dft/transpose/transpose_kernels.h"
 
 // Returns a pointer to the best suited transpose kernel for this problem
 aoclfftz_transpose_kernel
 get_transpose_kernel(aoclfftz_transpose_dtype type,
                      aoclfftz_dim_t_64_ row_metadata,
-                     aoclfftz_dim_t_64_ column_metadata, UINT8 is_inplace,
-                     UINT8 is_square, INTP cpu_flags)
+                     aoclfftz_dim_t_64_ column_metadata, FFTZ_UINT8 is_inplace,
+                     FFTZ_UINT8 is_square)
 {
     aoclfftz_transpose_kernel kernel = NULL;
 
@@ -55,8 +30,8 @@ get_transpose_kernel(aoclfftz_transpose_dtype type,
     {
         if (is_square)
         {
-            INTP selector_rec_mindim = 0;
-            INTP kernel_rec_mindim = 0;
+            FFTZ_INTP selector_rec_mindim = 0;
+            FFTZ_INTP kernel_rec_mindim = 0;
             SET_VAR(type, SEL_REC_MINDIM_, selector_rec_mindim);
             SET_VAR(type, REC_MIN_, kernel_rec_mindim);
 
@@ -114,7 +89,7 @@ get_transpose_kernel(aoclfftz_transpose_dtype type,
 }
 // -----------------------------------------------------------------------------
 
-INT32 setup_transpose_solver(aoclfftz_solution_t *sol, INT32 cpu_flags)
+FFTZ_INT32 setup_transpose_solver(aoclfftz_solution_t *sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -140,42 +115,49 @@ INT32 setup_transpose_solver(aoclfftz_solution_t *sol, INT32 cpu_flags)
         return SOLVER_FAILURE;
     }
 
-    INT64 is_square = (transpose->row_info.n == transpose->col_info.n);
+    FFTZ_INT64 is_square = (transpose->row_info.n == transpose->col_info.n);
     if (! is_square)
     {
         transpose->aux_mem->size =
             transpose->row_info.n * transpose->col_info.n;
-        ALLOC_ALIGN_UNINIT(transpose->aux_mem->data, UINT8,
+        ALLOC_ALIGN_UNINIT(transpose->aux_mem->data, FFTZ_UINT8,
                            transpose->aux_mem->size);
+        if (transpose->aux_mem->data == NULL)
+        {
+            AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit (failure) : "
+                                                    "aux_mem allocation "
+                                                    "failed");
+            return AOCLFFTZ_MEMORY_FAILURE;
+        }
     }
 
     // Save the required kernel for the transpose operation
     transpose->kernel = get_transpose_kernel(
         dtype, transpose->row_info, transpose->col_info,
         !IS_OUT_OF_PLACE(sol->decomp_scheme->flags),
-        is_square, cpu_flags);
+        is_square);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SOLVER_SUCCESS;
 }
 
-static INT32 execute_transpose_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_transpose_solver(aoclfftz_solution_t *sol,
+                                           aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    aoclfftz_decomp_scheme_t *decomp_scheme = sol->decomp_scheme;
-
     if (sol->dft_bufs->transpose->aux_mem->size > 0)
     {
         memset(sol->dft_bufs->transpose->aux_mem->data, 0,
-               sol->dft_bufs->transpose->aux_mem->size * sizeof(UINT8));
+               sol->dft_bufs->transpose->aux_mem->size * sizeof(FFTZ_UINT8));
     }
 
-    sol->dft_bufs->transpose->kernel((VOID *)decomp_scheme->in_real,
-                           (VOID *)decomp_scheme->out_real,
-                           sol->dft_bufs->transpose->row_info, sol->dft_bufs->transpose->col_info,
-                           sol->dft_bufs->transpose->aux_mem);
+    sol->dft_bufs->transpose->kernel((FFTZ_VOID *)ctx->in_real,
+                                     (FFTZ_VOID *)ctx->out_real,
+                                     sol->dft_bufs->transpose->row_info,
+                                     sol->dft_bufs->transpose->col_info,
+                                     sol->dft_bufs->transpose->aux_mem);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return 0;

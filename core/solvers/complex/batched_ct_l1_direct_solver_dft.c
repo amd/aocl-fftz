@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2026, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file batched_ct_l1_direct_solver_dft.c
  *
@@ -37,10 +12,10 @@
  *  recursion.
  *
  *  Data layout in sol->:
- *    kfft_m    = sol->solver->kernel_c2c->kfft
+ *    kfft_m    = sol->solver->kernel_c2c->kfft[dir]
  *    vecs_m    = sol->solver->kernel_c2c->count
  *    strides_m = sol->strides_grp->strides
- *    kfft_r    = sol->solver->kernel_c2c_r->kfft
+ *    kfft_r    = sol->solver->kernel_c2c_r->kfft[dir]
  *    vecs_r    = sol->solver->kernel_c2c_r->count
  *    strides_r = sol->strides_grp->strides_c2c
  *    twiddle_r = sol->twiddle
@@ -51,9 +26,11 @@
 #include "core/solvers/solver.h"
 #include "core/common/memory_manager.h"
 
-static INT32 fill_direct_strides(aoclfftz_strides_t *strides, INTP radix,
-                          INTP dim_in_stride, INTP dim_out_stride,
-                          INTP vec_in_stride, INTP vec_out_stride)
+static FFTZ_INT32 fill_direct_strides(aoclfftz_strides_t *strides,
+                                      FFTZ_INTP radix, FFTZ_INTP dim_in_stride,
+                                      FFTZ_INTP dim_out_stride,
+                                      FFTZ_INTP vec_in_stride,
+                                      FFTZ_INTP vec_out_stride)
 {
     // Free any pre-existing arrays: solution objects can be reused across
     // different ND dimensions, so the radix (and thus array size) may differ.
@@ -62,56 +39,64 @@ static INT32 fill_direct_strides(aoclfftz_strides_t *strides, INTP radix,
     strides->in_strides = NULL;
     strides->out_strides = NULL;
 
-    INT32 ret = alloc_and_fill_stride_arrays(strides, radix,
+    FFTZ_INT32 ret = alloc_and_fill_stride_arrays(strides, radix,
                                              dim_in_stride, dim_out_stride);
     if (ret != SOLVER_SUCCESS)
     {
         return ret;
     }
 
-    strides->v_in_stride  = vec_in_stride  * DATA_STRIDE;
-    strides->v_out_stride = vec_out_stride * DATA_STRIDE;
+    strides->v_in_h2_stride = strides->v_in_stride =
+        vec_in_stride * DATA_STRIDE;
+    strides->v_out_h2_stride = strides->v_out_stride =
+        vec_out_stride * DATA_STRIDE;
     return SOLVER_SUCCESS;
 }
 
-INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
+FFTZ_INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
                                          kernel_t *ker_m, kernel_t *ker_r,
-                                         INTP radix_r, INTP radix_m)
+                                         FFTZ_INTP radix_r, FFTZ_INTP radix_m)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    INTP n = sol->decomp_scheme->dims[0].n;
-    INTP in_stride  = sol->decomp_scheme->dims[0].in_stride;
-    INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
-    INT32 ret = SOLVER_SUCCESS;
+    FFTZ_INTP n = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP in_stride  = sol->decomp_scheme->dims[0].in_stride;
+    FFTZ_INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
+    FFTZ_INT32 ret = SOLVER_SUCCESS;
 
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
-    INTP buffer_out_stride = 1;
+    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_INTP buffer_out_stride = 1;
 
-    // Allocate a private scratch buffer when no parent buffer exists or
-    // when the parent's is BUFFERED.
-    // Otherwise reuse the parent ND buffer already pointed to by ct_buf_real.
-    // TODO: In all cases, we should use the parent ND buffer instead of allocating a new one.
-    if (sol->dft_bufs->ct_buf_real == NULL ||
-        sol->decomp_scheme->out_real == sol->dft_bufs->ct_buf_real)
+    // Unpadded: the inherited NDIM pool has no per-slice padding, if parent is mt_batched
+    // the padded ct_buf_size might cross the assigned memory slot, hence avoid padding.
+    FFTZ_INTP ct_buf_size = n * DATA_STRIDE * dt_bytes;
+
+    // Allocate a private scratch buffer when no parent buffer exists
+    if (sol->dft_bufs->ct_buf_real == NULL)
     {
-        UINTP buffer_length = (UINTP)n;
-        UINTP ct_buf_size = buffer_length * DATA_STRIDE * dt_bytes;
-        ALLOC_ALIGN_UNINIT(sol->dft_bufs->ct_buffer, VOID, ct_buf_size);
+        ct_buf_size = GET_PADDED_SIZE(n * DATA_STRIDE * dt_bytes);
+        FFTZ_INT32 n_bufs = sol->decomp_scheme->thread_info->active_threads;
+        ALLOC_ALIGN_UNINIT(sol->dft_bufs->ct_buffer, FFTZ_VOID, ct_buf_size
+                                                                * n_bufs);
         if (sol->dft_bufs->ct_buffer == NULL)
         {
             ret = AOCLFFTZ_MEMORY_FAILURE;
             goto exit_setup;
         }
         sol->dft_bufs->ct_buf_allocated = 1;
-        sol->dft_bufs->ct_buf_size = ct_buf_size;
         sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buffer;
         sol->dft_bufs->ct_buf_imag =
             MOVE_ADDR(sol->dft_bufs->ct_buffer, dt_bytes);
     }
+    sol->dft_bufs->ct_buf_size = ct_buf_size;
 
-    sol->solver->kernel_c2c->kfft  = ker_m->kfft;
-    sol->solver->kernel_c2c->count = (UINTP)radix_r;
+    sol->solver->kernel_c2c->kfft[FORWARD_FFT_DIR] =
+        ker_m->kfft[FORWARD_FFT_DIR];
+    sol->solver->kernel_c2c->kfft[BACKWARD_FFT_DIR] =
+        ker_m->kfft[BACKWARD_FFT_DIR];
+    sol->solver->kernel_c2c->count = (FFTZ_UINTP)radix_r;
+    sol->solver->kernel_c2c->sets =
+        ker_m->sets[DT_PRECISION_FLAG(sol->decomp_scheme->flags) - 2];
 
     {
         aoclfftz_strides_t *strides_m = sol->strides_grp->strides;
@@ -125,8 +110,13 @@ INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
         }
     }
 
-    sol->solver->kernel_c2c_r->kfft  = ker_r->kfft;
-    sol->solver->kernel_c2c_r->count = (UINTP)radix_m;
+    sol->solver->kernel_c2c_r->kfft[FORWARD_FFT_DIR] =
+        ker_r->kfft[FORWARD_FFT_DIR];
+    sol->solver->kernel_c2c_r->kfft[BACKWARD_FFT_DIR] =
+        ker_r->kfft[BACKWARD_FFT_DIR];
+    sol->solver->kernel_c2c_r->count = (FFTZ_UINTP)radix_m;
+    sol->solver->kernel_c2c_r->sets =
+        ker_r->sets[DT_PRECISION_FLAG(sol->decomp_scheme->flags) - 2];
 
     {
         aoclfftz_strides_t *strides_r = sol->strides_grp->strides_c2c;
@@ -143,7 +133,6 @@ INT32 setup_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
 
     sol->twiddle->twiddle_buf_ptr = NULL;
     sol->twiddle->TW = NULL;
-    sol->twiddle->cols = 0;
     sol->twiddle->load_multi_cols = 1;
 
     sol->next_sol = NULL;
@@ -153,47 +142,74 @@ exit_setup:
     return ret;
 }
 
-static INT32 execute_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol,
+                                                    aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    kfft_ kfft_m = sol->solver->kernel_c2c->kfft;
-    aoclfftz_strides_t *strides_m = sol->strides_grp->strides;
-    INTP vecs_m = (INTP)sol->solver->kernel_c2c->count;
+    FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(ctx);
+    FFTZ_UINT8 direction = FFT_DIR(ctx->flags);
 
-    kfft_ kfft_r = sol->solver->kernel_c2c_r->kfft;
+    kfft_ kfft_m = sol->solver->kernel_c2c->kfft[direction];
+    aoclfftz_strides_t *strides_m = sol->strides_grp->strides;
+    FFTZ_INTP vecs_m = (FFTZ_INTP)sol->solver->kernel_c2c->count;
+
+    kfft_ kfft_r = sol->solver->kernel_c2c_r->kfft[direction];
     aoclfftz_strides_t *strides_r = sol->strides_grp->strides_c2c;
     aoclfftz_twiddle_t *twiddle_r = sol->twiddle;
-    INTP vecs_r = (INTP)sol->solver->kernel_c2c_r->count;
+    FFTZ_INTP vecs_r = (FFTZ_INTP)sol->solver->kernel_c2c_r->count;
 
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
-    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_INTP v_in_stride = sol->decomp_scheme->vecs[0].in_stride *
+                            DATA_STRIDE * dt_bytes;
+    FFTZ_INTP v_out_stride = sol->decomp_scheme->vecs[0].out_stride *
+                             DATA_STRIDE * dt_bytes;
 
-    INTP v_in_stride = sol->decomp_scheme->vecs[0].in_stride *
-                       DATA_STRIDE * dt_bytes;
-    INTP v_out_stride = sol->decomp_scheme->vecs[0].out_stride *
-                        DATA_STRIDE * dt_bytes;
+    FFTZ_VOID *in_real  = ctx->in_real;
+    FFTZ_VOID *in_imag  = ctx->in_imag;
+    FFTZ_VOID *out_real = ctx->out_real;
+    FFTZ_VOID *out_imag = ctx->out_imag;
 
-    VOID *in_real  = sol->decomp_scheme->in_real;
-    VOID *in_imag  = sol->decomp_scheme->in_imag;
-    VOID *out_real = sol->decomp_scheme->out_real;
-    VOID *out_imag = sol->decomp_scheme->out_imag;
-    VOID *ct_buf_real = sol->dft_bufs->ct_buf_real;
-    VOID *ct_buf_imag = sol->dft_bufs->ct_buf_imag;
+    FFTZ_INTP batches = sol->decomp_scheme->vecs[0].n;
 
-    INTP batches = sol->decomp_scheme->vecs[0].n;
-
-    for (INTP b = 0; b < batches; b++)
+    if (ctx->ct_buf_base != out_real)
     {
-        kfft_m(in_real, in_imag, ct_buf_real, ct_buf_imag,
-               vecs_m, strides_m, NULL, direction);
-        kfft_r(ct_buf_real, ct_buf_imag, out_real, out_imag,
-               vecs_r, strides_r, twiddle_r, direction);
+        // Out-of-place path: radix-m writes into this thread's private CT slot,
+        // radix-r then reads that slot into out. (m) in -> ct, (r) ct -> out.
+        FFTZ_VOID *ct_buf_real;
+        FFTZ_VOID *ct_buf_imag;
 
-        in_real  = MOVE_ADDR(in_real,  v_in_stride);
-        in_imag  = MOVE_ADDR(in_imag,  v_in_stride);
-        out_real = MOVE_ADDR(out_real, v_out_stride);
-        out_imag = MOVE_ADDR(out_imag, v_out_stride);
+        // Pick this thread's slot within the shared ct_buffer.
+        ct_buf_real = MOVE_ADDR(ctx->ct_buf_base, ctx->ct_offset);
+        ct_buf_imag = MOVE_ADDR(ct_buf_real, dt_bytes);
+
+        for (FFTZ_INTP b = 0; b < batches; b++)
+        {
+            kfft_m(in_real, in_imag, ct_buf_real, ct_buf_imag,
+                vecs_m, strides_m, NULL, direction);
+            kfft_r(ct_buf_real, ct_buf_imag, out_real, out_imag,
+                vecs_r, strides_r, twiddle_r, direction);
+
+            in_real  = MOVE_ADDR(in_real,  v_in_stride);
+            in_imag  = MOVE_ADDR(in_imag,  v_in_stride);
+            out_real = MOVE_ADDR(out_real, v_out_stride);
+            out_imag = MOVE_ADDR(out_imag, v_out_stride);
+        }
+    }
+    else
+    {
+        // In-place path (ct_buf_base aliased to out): (m) in -> out, (r) out -> out.
+        for (FFTZ_INTP b = 0; b < batches; b++)
+        {
+            kfft_m(in_real, in_imag, out_real, out_imag,
+                vecs_m, strides_m, NULL, direction);
+            kfft_r(out_real, out_imag, out_real, out_imag,
+                vecs_r, strides_r, twiddle_r, direction);
+
+            in_real  = MOVE_ADDR(in_real,  v_in_stride);
+            in_imag  = MOVE_ADDR(in_imag,  v_in_stride);
+            out_real = MOVE_ADDR(out_real, v_out_stride);
+            out_imag = MOVE_ADDR(out_imag, v_out_stride);
+        }
     }
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
@@ -201,7 +217,7 @@ static INT32 execute_batched_ct_l1_direct_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
-dft_solver_ register_execute_batched_ct_l1_direct_solver(VOID)
+dft_solver_ register_execute_batched_ct_l1_direct_solver(FFTZ_VOID)
 {
     return execute_batched_ct_l1_direct_solver;
 }

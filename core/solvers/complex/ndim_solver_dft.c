@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file ndim_solver_dft.c
  *
@@ -39,21 +14,21 @@
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
 
-INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
+FFTZ_INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
                         aoclfftz_solution_t *n_minus1_sol,
                         aoclfftz_solution_t *outer_dim_sol)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    alloc_ndim_buffer(sol, &sol->dft_bufs->ct_buffer);
-    if (sol->dft_bufs->ct_buffer == NULL)
+    FFTZ_INT32 ret = alloc_ndim_buffer(sol, &sol->dft_bufs->ct_buffer);
+    if (ret != SOLVER_SUCCESS)
     {
-        AOCLFFTZ_ERROR("Failed to allocate buffer for ND solver");
+        AOCLFFTZ_ERROR("alloc_ndim_buffer failed: %s", get_status_string(ret));
         return SOLVER_FAILURE;
     }
 
-    COPY_SOLUTION_OBJ_WO_DIMS(n_minus1_sol, sol);
-    INT32 dim_rank = sol->decomp_scheme->dim_rank;
+    copy_solution_obj_wo_dims(n_minus1_sol, sol);
+    FFTZ_INT32 dim_rank = sol->decomp_scheme->dim_rank;
 
     // NOTE: since "innermost" or "not-innermost" apply only to the leaf nodes
     // of the ND problem, we don't need to set the flags for the n-1 dimension.
@@ -61,7 +36,7 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     // setup ND - 1 solution
     n_minus1_sol->decomp_scheme->dim_rank = dim_rank - 1;
 
-    for (INT32 i = 0; i < dim_rank - 1; i++)
+    for (FFTZ_INT32 i = 0; i < dim_rank - 1; i++)
     {
         n_minus1_sol->decomp_scheme->dims[i].n = sol->decomp_scheme->dims[i].n;
         n_minus1_sol->decomp_scheme->dims[i].in_stride =
@@ -78,18 +53,9 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     n_minus1_sol->decomp_scheme->vecs[0].out_stride =
                     sol->decomp_scheme->dims[dim_rank - 1].out_stride;
 
-    COPY_SOLUTION_OBJ_WO_DIMS(outer_dim_sol, sol);
+    copy_solution_obj_wo_dims(outer_dim_sol, sol);
 
     SET_NOT_INNERMOST_DIM(outer_dim_sol->decomp_scheme->flags);
-
-#if defined (PERFORM_INTER_STAGE_PERMUTE)
-    // In the context of an out-of-place problem, outer_dim_sol has to operate
-    // on the output buffer (populated by n_minus1_sol's result), perform
-    // computation and store the result back in same buffer, typically like an
-    // inplace problem. So, it is necessary to convert the the out-to-place
-    // problem to in-place, for the in & out strides to be properly set.
-    SET_INPLACE(outer_dim_sol->decomp_scheme->flags);
-#endif
 
     outer_dim_sol->decomp_scheme->dim_rank = 1;
     outer_dim_sol->decomp_scheme->dims[0].n =
@@ -103,7 +69,7 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
 
     outer_dim_sol->decomp_scheme->vec_rank = dim_rank - 1;
 
-    for (INT32 i = 0; i < dim_rank - 1; i++)
+    for (FFTZ_INT32 i = 0; i < dim_rank - 1; i++)
     {
         outer_dim_sol->decomp_scheme->vecs[i].n =
                 sol->decomp_scheme->dims[i].n;
@@ -125,64 +91,34 @@ INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
-static INT32 execute_ndim_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_ndim_solver(aoclfftz_solution_t *sol,
+                                      aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     aoclfftz_solution_t *n_minus1_sol = sol->dft_bufs->nd_sol;
     aoclfftz_solution_t *outer_dim_sol = sol->next_sol[0];
 
-#if defined (PERFORM_INTER_STAGE_PERMUTE)
-
-    // update solution data pointers
-    n_minus1_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
-    n_minus1_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
-    n_minus1_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    n_minus1_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-
-    outer_dim_sol->decomp_scheme->in_real  = sol->decomp_scheme->out_real;
-    outer_dim_sol->decomp_scheme->in_imag  = sol->decomp_scheme->out_imag;
-    outer_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-
-#else
-
-    // update solution data pointers
-    n_minus1_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
-    n_minus1_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
-    n_minus1_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    n_minus1_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-
-    // propagate the pointers to next solution for it to set to the solution
-    // after it ie., n_minus1_sol->next_sol->next_sol
-    // only required for n_minus1_sol sub-problem since outer_dim_sol
-    // will not have an NDim sub-problem
-    n_minus1_sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buf_real;
-    n_minus1_sol->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
-
-    // outer_dim_sol pointer updates
-    outer_dim_sol->decomp_scheme->in_real  =
-        n_minus1_sol->decomp_scheme->out_real;
-    outer_dim_sol->decomp_scheme->in_imag  =
-        n_minus1_sol->decomp_scheme->out_imag;
-    outer_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-    outer_dim_sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buf_real;
-    outer_dim_sol->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
-#endif
+    // Build child ctx for n_minus1_sol: same in/out as parent
+    aoclfftz_mutable_ctx_t n_minus1_ctx = *ctx;
 
     // execute nd sub-problem
-    n_minus1_sol->solver->execute_solver(n_minus1_sol);
+    n_minus1_sol->solver->execute_solver(n_minus1_sol, &n_minus1_ctx);
+
+    // Build child ctx for outer_dim_sol: input = n_minus1's output, output = parent's output
+    aoclfftz_mutable_ctx_t outer_ctx = *ctx;
+    outer_ctx.in_real = n_minus1_ctx.out_real;
+    outer_ctx.in_imag = n_minus1_ctx.out_imag;
 
     // execute 1d sub-problem
-    outer_dim_sol->solver->execute_solver(outer_dim_sol);
+    outer_dim_sol->solver->execute_solver(outer_dim_sol, &outer_ctx);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
     return SOLVER_SUCCESS;
 }
 
-dft_solver_ register_execute_ndim_solver(VOID)
+dft_solver_ register_execute_ndim_solver(FFTZ_VOID)
 {
     return execute_ndim_solver;
 }

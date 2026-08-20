@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file generic_kernels_common.h
  *
@@ -110,6 +85,15 @@
     // Cost: {fma: 0, mul: 0, add: 1, move: 0, perm: 2, other: 0}
     #define SUBADD_SWAPA_D SUBADD_SWAPA_128_D
 
+    #define GATHER_NOTW_S GATHER_NOTW_128_S
+    #define GATHER_NOTW_D GATHER_NOTW_128_D
+    #define SCATTER_NOTW_S SCATTER_NOTW_128_S
+    #define SCATTER_NOTW_D SCATTER_NOTW_128_D
+    #define TW_SCATTER_S TW_SCATTER_128_S
+    #define TW_SCATTER_D TW_SCATTER_128_D
+    #define ITW_SCATTER_S ITW_SCATTER_128_S
+    #define ITW_SCATTER_D ITW_SCATTER_128_D
+
     #define NEG_ZERO_S(flag) _neg_128_f[flag].s
     #define NEG_ZERO_D(flag) _neg_128_d[flag].d
 
@@ -119,13 +103,17 @@
     #define BROADCAST_D(ptr) _mm_loadu_pd((ptr))
 
     // Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 1, other: 0}
-    #define TW_PRELOADED_D TW_PRELOADED_128_D
+    #define TW_PRELOADED_GATHER_D TW_PRELOADED_GATHER_128_D
     // Cost: {fma: 0, mul: 2, add: 1, move: 1, perm: 2, other: 0}
-    #define ITW_PRELOADED_D ITW_PRELOADED_128_D
+    #define ITW_PRELOADED_GATHER_D ITW_PRELOADED_GATHER_128_D
 
     // Variants that take stride value directly (for hoisting optimization)
-    #define TW_PRELOADED_D_V TW_PRELOADED_128_D_V
-    #define ITW_PRELOADED_D_V ITW_PRELOADED_128_D_V
+    #define TW_PRELOADED_GATHER_D_V TW_PRELOADED_GATHER_128_D_V
+    #define ITW_PRELOADED_GATHER_D_V ITW_PRELOADED_GATHER_128_D_V
+
+    #define TW_PRELOADED_SCATTER_D TW_PRELOADED_SCATTER_128_D
+    #define PRELOADED_GATHER_NOTW_D PRELOADED_GATHER_NOTW_128_D
+    #define PRELOADED_SCATTER_NOTW_D PRELOADED_SCATTER_NOTW_128_D
 #endif
 
 #ifdef KERNEL_USE_AVX256
@@ -205,6 +193,15 @@
     // Cost: {fma: 0, mul: 0, add: 1, move: 0, perm: 2, other: 0}
     #define SUBADD_SWAPA_D SUBADD_SWAPA_256_D
 
+    #define GATHER_NOTW_S GATHER_NOTW_256_S
+    #define GATHER_NOTW_D GATHER_NOTW_256_D
+    #define SCATTER_NOTW_S SCATTER_NOTW_256_S
+    #define SCATTER_NOTW_D SCATTER_NOTW_256_D
+    #define TW_SCATTER_S TW_SCATTER_256_S
+    #define TW_SCATTER_D TW_SCATTER_256_D
+    #define ITW_SCATTER_S ITW_SCATTER_256_S
+    #define ITW_SCATTER_D ITW_SCATTER_256_D
+
     #define NEG_ZERO_S(flag) _neg_256_f[flag].s
     #define NEG_ZERO_D(flag) _neg_256_d[flag].d
 
@@ -214,13 +211,17 @@
     #define BROADCAST_D(ptr) _mm256_broadcast_pd((__m128d *)(ptr))
 
     // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 3, other: 1}
-    #define TW_PRELOADED_D TW_PRELOADED_256_D
+    #define TW_PRELOADED_GATHER_D TW_PRELOADED_GATHER_256_D
     // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 4, other: 1}
-    #define ITW_PRELOADED_D ITW_PRELOADED_256_D
+    #define ITW_PRELOADED_GATHER_D ITW_PRELOADED_GATHER_256_D
 
     // Variants that take stride value directly (for hoisting optimization)
-    #define TW_PRELOADED_D_V TW_PRELOADED_256_D_V
-    #define ITW_PRELOADED_D_V ITW_PRELOADED_256_D_V
+    #define TW_PRELOADED_GATHER_D_V TW_PRELOADED_GATHER_256_D_V
+    #define ITW_PRELOADED_GATHER_D_V ITW_PRELOADED_GATHER_256_D_V
+
+    #define TW_PRELOADED_SCATTER_D TW_PRELOADED_SCATTER_256_D
+    #define PRELOADED_GATHER_NOTW_D PRELOADED_GATHER_NOTW_256_D
+    #define PRELOADED_SCATTER_NOTW_D PRELOADED_SCATTER_NOTW_256_D
 #endif
 
 #ifdef KERNEL_USE_AVX512
@@ -305,6 +306,15 @@
     // Cost: {fma: 1, mul: 0, add: 0, move: 0, perm: 2, other: 0}
     #define SUBADD_SWAPA_D SUBADD_SWAPA_512_D
 
+    #define GATHER_NOTW_S GATHER_NOTW_512_S
+    #define GATHER_NOTW_D GATHER_NOTW_512_D
+    #define SCATTER_NOTW_S SCATTER_NOTW_512_S
+    #define SCATTER_NOTW_D SCATTER_NOTW_512_D
+    #define TW_SCATTER_S TW_SCATTER_512_S
+    #define TW_SCATTER_D TW_SCATTER_512_D
+    #define ITW_SCATTER_S ITW_SCATTER_512_S
+    #define ITW_SCATTER_D ITW_SCATTER_512_D
+
     #define NEG_ZERO_S(flag) _neg_512_f[flag].s
     #define NEG_ZERO_D(flag) _neg_512_d[flag].d
 
@@ -314,13 +324,62 @@
     #define BROADCAST_D(ptr) _mm512_broadcast_f64x2(_mm_loadu_pd((ptr)))
 
     // Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 3, other: 0}
-    #define TW_PRELOADED_D TW_PRELOADED_512_D
+    #define TW_PRELOADED_GATHER_D TW_PRELOADED_GATHER_512_D
     // Cost: {fma: 1, mul: 2, add: 0, move: 5, perm: 4, other: 0}
-    #define ITW_PRELOADED_D ITW_PRELOADED_512_D
+    #define ITW_PRELOADED_GATHER_D ITW_PRELOADED_GATHER_512_D
 
     // Variants that take stride value directly (for hoisting optimization)
-    #define TW_PRELOADED_D_V TW_PRELOADED_512_D_V
-    #define ITW_PRELOADED_D_V ITW_PRELOADED_512_D_V
+    #define TW_PRELOADED_GATHER_D_V TW_PRELOADED_GATHER_512_D_V
+    #define ITW_PRELOADED_GATHER_D_V ITW_PRELOADED_GATHER_512_D_V
+
+    #define TW_PRELOADED_SCATTER_D TW_PRELOADED_SCATTER_512_D
+    #define PRELOADED_GATHER_NOTW_D PRELOADED_GATHER_NOTW_512_D
+    #define PRELOADED_SCATTER_NOTW_D PRELOADED_SCATTER_NOTW_512_D
+#endif
+
+// Identity macros for 2nd-half input/output points
+// These will be overridden by R2C/C2R twiddle kernel variants
+#ifndef OUT_H2_S
+#define OUT_H2_S(val) (val)
+#endif
+#ifndef IN_H2_S
+#define IN_H2_S(val) (val)
+#endif
+#ifndef OUT_H2_D
+#define OUT_H2_D(val) (val)
+#endif
+#ifndef IN_H2_D
+#define IN_H2_D(val) (val)
+#endif
+#ifndef OUT_H2_256_S
+#define OUT_H2_256_S(val) (val)
+#endif
+#ifndef IN_H2_256_S
+#define IN_H2_256_S(val) (val)
+#endif
+#ifndef OUT_H2_128_S
+#define OUT_H2_128_S(val) (val)
+#endif
+#ifndef IN_H2_128_S
+#define IN_H2_128_S(val) (val)
+#endif
+#ifndef OUT_H2_LOW_128_S
+#define OUT_H2_LOW_128_S(val) (val)
+#endif
+#ifndef IN_H2_LOW_128_S
+#define IN_H2_LOW_128_S(val) (val)
+#endif
+#ifndef OUT_H2_256_D
+#define OUT_H2_256_D(val) (val)
+#endif
+#ifndef IN_H2_256_D
+#define IN_H2_256_D(val) (val)
+#endif
+#ifndef OUT_H2_128_D
+#define OUT_H2_128_D(val) (val)
+#endif
+#ifndef IN_H2_128_D
+#define IN_H2_128_D(val) (val)
 #endif
 
 #endif // GENERIC_KERNELS_COMMON_H

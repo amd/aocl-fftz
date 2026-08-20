@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2024-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file compare.h
  *
@@ -73,7 +48,7 @@
  */
 #define INCREMENT_ND_COUNTER(cur_dims, max_dims, rank)                         \
     {                                                                          \
-        for (INT32 i = 0; i < rank; i++)                                       \
+        for (FFTZ_INT32 i = 0; i < rank; i++) \
         {                                                                      \
             if (++cur_dims[i] < max_dims[i].n) {                               \
                 break;                                                         \
@@ -88,7 +63,7 @@
  */
 #define RESET_ND_COUNTER(cur_dims, rank)                                       \
     {                                                                          \
-        for (INT32 i = 0; i < rank; i++)                                       \
+        for (FFTZ_INT32 i = 0; i < rank; i++) \
         {                                                                      \
             cur_dims[i] = 0;                                                   \
         }                                                                      \
@@ -100,7 +75,7 @@
  */
 #define COPY_ND_COORDS(dst, src, rank)                                         \
     {                                                                          \
-        for (INTP i = 0; i < rank; i++)                                        \
+        for (FFTZ_INTP i = 0; i < rank; i++) \
         {                                                                      \
             dst[i] = src[i];                                                   \
         }                                                                      \
@@ -114,7 +89,7 @@
     {                                                                          \
         /* vecs */                                                             \
         fprintf(stderr, "[");                                                  \
-        for (INT32 j = vec_rank - 1; j >= 0; j--)                              \
+        for (FFTZ_INT32 j = vec_rank - 1; j >= 0; j--) \
         {                                                                      \
             if (j < vec_rank - 1)                                              \
                 fprintf(stderr, ",");                                          \
@@ -122,7 +97,7 @@
         }                                                                      \
         fprintf(stderr, "]v[");                                                \
         /* dims */                                                             \
-        for (INT32 j = dim_rank - 1; j >= 0; j--)                              \
+        for (FFTZ_INT32 j = dim_rank - 1; j >= 0; j--) \
         {                                                                      \
             if (j < dim_rank - 1)                                              \
                 fprintf(stderr, ",");                                          \
@@ -139,7 +114,7 @@
     {                                                                          \
         /* vecs */                                                             \
         fprintf(out_file, "[");                                                \
-        for (INT32 j = vec_rank - 1; j >= 0; j--)                              \
+        for (FFTZ_INT32 j = vec_rank - 1; j >= 0; j--) \
         {                                                                      \
             if (j < vec_rank - 1)                                              \
                 fprintf(out_file, ",");                                        \
@@ -147,7 +122,7 @@
         }                                                                      \
         fprintf(out_file, "]v[");                                              \
         /* dims */                                                             \
-        for (INT32 j = dim_rank - 1; j >= 0; j--)                              \
+        for (FFTZ_INT32 j = dim_rank - 1; j >= 0; j--) \
         {                                                                      \
             if (j < dim_rank - 1)                                              \
                 fprintf(out_file, ",");                                        \
@@ -157,9 +132,13 @@
     }
 
 
-INT32 compare_f(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *a_map, INTP *b_map, INT32 data_stride);
-INT32 compare_d(aoclfftz_bench_params_t *params, VOID *a, VOID *b, INTP batches,
-                INTP n, INTP *a_map, INTP *b_map, INT32 data_stride);
+FFTZ_INT32 compare_f(aoclfftz_bench_params_t *params, FFTZ_VOID *a,
+                     FFTZ_VOID *b, FFTZ_INTP batches, FFTZ_INTP n,
+                     FFTZ_INTP *a_map, FFTZ_INTP *b_map,
+                     FFTZ_INT32 data_stride);
+FFTZ_INT32 compare_d(aoclfftz_bench_params_t *params, FFTZ_VOID *a,
+                     FFTZ_VOID *b, FFTZ_INTP batches, FFTZ_INTP n,
+                     FFTZ_INTP *a_map, FFTZ_INTP *b_map,
+                     FFTZ_INT32 data_stride);
 
 #endif // COMPARE_H

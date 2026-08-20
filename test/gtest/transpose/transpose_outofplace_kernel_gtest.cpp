@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2024-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file transpose_outofplace_kernel_gtest.cpp
  *
@@ -48,14 +23,14 @@
  *
  */
 auto name_generator =
-    [](const ::testing::TestParamInfo<
-        std::tuple<std::tuple<INTP, INTP>, INTP, INTP, INT32>> &info)
+    [](const ::testing::TestParamInfo< std::tuple<std::tuple<FFTZ_INTP,
+       FFTZ_INTP>, FFTZ_INTP, FFTZ_INTP, FFTZ_INT32>> &info)
 {
-    INTP rows = std::get<0>(std::get<0>(info.param));
-    INTP cols = std::get<1>(std::get<0>(info.param));
-    INTP in_stride = std::get<1>(info.param);
-    INTP out_stride = std::get<2>(info.param);
-    INT32 kernel_idx = std::get<3>(info.param);
+    FFTZ_INTP rows = std::get<0>(std::get<0>(info.param));
+    FFTZ_INTP cols = std::get<1>(std::get<0>(info.param));
+    FFTZ_INTP in_stride = std::get<1>(info.param);
+    FFTZ_INTP out_stride = std::get<2>(info.param);
+    FFTZ_INT32 kernel_idx = std::get<3>(info.param);
     std::string kernel_name = transpose_kernel_names_table[kernel_idx];
 
     std::string test_name = std::to_string(rows) + "x" + std::to_string(cols);
@@ -85,11 +60,11 @@ TEST_P(AoclfftzOutOfPlaceTransposeKernelTestF64C, TEST_DOUBLE_COMPLEX_KERNEL)
     test_kernel();
 }
 
-std::vector<std::tuple<INTP, INTP>> dims = {
+std::vector<std::tuple<FFTZ_INTP, FFTZ_INTP>> dims = {
     {10, 10}, {69, 69}, {360, 360}, {512, 512},
     {10, 40}, {82, 69}, {341, 3},   {16, 1024}};
 
-std::vector<INTP> strides = {1, 35, 102};
+std::vector<FFTZ_INTP> strides = {1, 35, 102};
 
 // Arbitrarily (General) strided, out-of-place matrix transpose
 // -----------------------------------------------------------------------------

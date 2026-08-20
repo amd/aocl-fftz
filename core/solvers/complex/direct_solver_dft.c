@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file direct_solver_dft.c
  *
@@ -40,7 +15,7 @@
 
 #include "core/common/memory_manager.h"
 
-INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
+FFTZ_INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                           kernel_t *kernel)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
@@ -48,15 +23,15 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
     // TODO: Update the batch to batched_vecs[0].n if batched_vecs is not NULL
-    INTP batch = sol->decomp_scheme->vecs[0].n;
-    INTP radix = sol->decomp_scheme->dims[0].n;
-    UINT8 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
-    INT32 status = SOLVER_SUCCESS;
+    FFTZ_INTP batch = sol->decomp_scheme->vecs[0].n;
+    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
+    FFTZ_UINT8 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_INT32 status = SOLVER_SUCCESS;
 
     if (strides->in_strides == NULL)
     {
-        INT32 ret = alloc_and_fill_stride_arrays(strides, radix,
+        FFTZ_INT32 ret = alloc_and_fill_stride_arrays(strides, radix,
                         sol->decomp_scheme->dims[0].in_stride,
                         sol->decomp_scheme->dims[0].out_stride);
         if (ret != SOLVER_SUCCESS)
@@ -67,16 +42,16 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
     if (sol->decomp_scheme->batched_vecs != NULL)
     {
-        strides->v_in_stride =
+        strides->v_in_h2_stride = strides->v_in_stride =
             sol->decomp_scheme->batched_vecs[0].in_stride * DATA_STRIDE;
-        strides->v_out_stride =
+        strides->v_out_h2_stride = strides->v_out_stride =
             sol->decomp_scheme->batched_vecs[0].out_stride * DATA_STRIDE;
     }
     else
     {
-        strides->v_in_stride =
+        strides->v_in_h2_stride = strides->v_in_stride =
             sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
-        strides->v_out_stride =
+        strides->v_out_h2_stride = strides->v_out_stride =
             sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
     }
 
@@ -86,6 +61,7 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         cost->time = 0;
         cost->ops = compute_kernel_cost(kernel, precision, direction, batch);
     }
+#ifdef AOCLFFTZ_AUTO_SELECTOR_MODE
     else
     {
         /** Auto tuner mode **/
@@ -97,33 +73,34 @@ INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
         getTime(startTime);
 
         // execute the direct kernel
-        kernel->kfft(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
-                     sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
-                     batch, strides, sol->twiddle, direction);
+        kfft_ kfft = sol->solver->kernel_c2c->kfft[direction];
+        kfft(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
+             sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag, batch,
+             strides, sol->twiddle, direction);
 
         getTime(endTime);
         cost->time = diffTime(clkTick, startTime, endTime);
         cost->ops = compute_kernel_cost(kernel, precision, direction, batch);
     }
+#endif // AOCLFFTZ_AUTO_SELECTOR_MODE
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
     return status;
 }
 
-static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_direct_solver(aoclfftz_solution_t *sol,
+                                        aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    kfft_ kernel = sol->solver->kernel_c2c->kfft;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(ctx->flags);
 
-    // execute the direct kernel
-    kernel(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
-           sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
-           sol->decomp_scheme->vecs[0].n, strides, sol->twiddle, direction);
+    kfft_ kfft = sol->solver->kernel_c2c->kfft[direction];
+    kfft(ctx->in_real, ctx->in_imag, ctx->out_real, ctx->out_imag,
+         sol->decomp_scheme->vecs[0].n, strides, sol->twiddle, direction);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
@@ -145,35 +122,38 @@ static INT32 execute_direct_solver(aoclfftz_solution_t *sol)
  * executing all problem batches (batched_vecs) for each CT batch. This access
  * pattern is optimal when problem batch stride < elemental stride.
  */
-static INT32 execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_direct_batched_colmajor_solver(
+                                                    aoclfftz_solution_t *sol,
+                                                    aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
-    kfft_ kernel = sol->solver->kernel_c2c->kfft;
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(ctx->flags);
+    kfft_ kernel = sol->solver->kernel_c2c->kfft[direction];
 
-    VOID *in_real = sol->decomp_scheme->in_real;
-    VOID *in_imag = sol->decomp_scheme->in_imag;
-    VOID *out_real = sol->decomp_scheme->out_real;
-    VOID *out_imag = sol->decomp_scheme->out_imag;
-
-    UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(ctx);
+    FFTZ_VOID *in_real  = ctx->in_real;
+    FFTZ_VOID *in_imag  = ctx->in_imag;
+    FFTZ_VOID *out_real = ctx->out_real;
+    FFTZ_VOID *out_imag = ctx->out_imag;
 
     // vec-strides across DFT butterflies of the same CT problem
-    INTP ct_in_stride =
+    FFTZ_INTP ct_in_stride =
         sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE * dt_bytes;
-    INTP ct_out_stride =
+    FFTZ_INTP ct_out_stride =
         sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE * dt_bytes;
 
+    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP tw_per_butterfly = (radix - 1) * DATA_STRIDE * (FFTZ_INTP)dt_bytes;
+
     // execute the direct kernel
-    for (INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
+    for (FFTZ_INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
     {
         aoclfftz_twiddle_t tw_local = {
             .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
-            .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
-            .cols = sol->twiddle->cols,
+            .TW = MOVE_ADDR(sol->twiddle->TW, i * tw_per_butterfly),
             .load_multi_cols = 0, // use same twiddle values across batches
         };                        // since different batches solve the same
                                   // DFT butterfly of different problems
@@ -191,12 +171,12 @@ static INT32 execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
     return SOLVER_SUCCESS;
 }
 
-dft_solver_ register_execute_direct_solver(VOID)
+dft_solver_ register_execute_direct_solver(FFTZ_VOID)
 {
     return execute_direct_solver;
 }
 
-dft_solver_ register_execute_direct_batched_colmajor_solver(VOID)
+dft_solver_ register_execute_direct_batched_colmajor_solver(FFTZ_VOID)
 {
     return execute_direct_batched_colmajor_solver;
 }

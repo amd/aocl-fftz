@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2024-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file performance.h
  *
@@ -47,20 +22,20 @@
 // Structures for test bench
 typedef struct perf_stats
 {
-    DOUBLE min_time;
-    DOUBLE avg_time;
-    DOUBLE avg_mflops;
-    DOUBLE max_mflops;
+    FFTZ_DOUBLE min_time;
+    FFTZ_DOUBLE avg_time;
+    FFTZ_DOUBLE avg_mflops;
+    FFTZ_DOUBLE max_mflops;
 } perf_stats_t;
 
 
-INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params);
-INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
-                                      VOID *handle, perf_stats_t *stats);
-INT32 calibrate_iterations(VOID *handle, DOUBLE min_bench_time,
+FFTZ_INT32 run_bench_on_performance_mode(aoclfftz_bench_params_t *params);
+FFTZ_INT32 run_problem_on_performance_mode(aoclfftz_bench_params_t *params,
+                                      FFTZ_VOID *handle, perf_stats_t *stats);
+FFTZ_INT32 calibrate_iterations(FFTZ_VOID *handle, FFTZ_DOUBLE min_bench_time,
                             aoclfftz_bench_params_t *params);
-VOID bench_sleep(INT64 nano_seconds);
-VOID print_perf_stats(perf_stats_t *stats);
-VOID calculate_and_print_scaling(perf_stats_t single, perf_stats_t multi);
+FFTZ_VOID bench_sleep(FFTZ_INT64 nano_seconds);
+FFTZ_VOID print_perf_stats(perf_stats_t *stats);
+FFTZ_VOID calculate_and_print_scaling(perf_stats_t single, perf_stats_t multi);
 
 #endif // PERFORMANCE_H

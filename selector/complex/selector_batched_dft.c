@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file selector_batched_dft.c
  *
@@ -40,7 +15,7 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
+FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -54,24 +29,23 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     aoclfftz_selector_t *cur_sel = NULL;
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
+    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
                        measure_stats;
     aoclfftz_solution_t *sol = sel->solution;
-    INT32 rnk = 0;
-    INTP batch_size = 1;
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 rnk = 0;
+    FFTZ_INTP batch_size = 1;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                             sel->kernel_tables, 0 /*unused*/);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (cur_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_batched_dft;
     }
 
-    UINT8 is_col_major = check_col_major(sol->decomp_scheme);
+    FFTZ_UINT8 is_col_major = check_col_major(sol->decomp_scheme);
     // Bluestein problems are excluded from the batched direct optimization
     // because the memory layout of bluestein buffer allocated is always row
     // major
@@ -104,7 +78,7 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
             {
                 // remove vecs[0] from batched solver
                 sol->decomp_scheme->vec_rank -= 1;
-                for (INT32 i = 0; i < sol->decomp_scheme->vec_rank; i++)
+                for (FFTZ_INT32 i = 0; i < sol->decomp_scheme->vec_rank; i++)
                 {
                     vecs[i].n = vecs[i + 1].n;
                     vecs[i].in_stride = vecs[i + 1].in_stride;
@@ -115,15 +89,21 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     // copy solution object from sel to cur_sel
-    COPY_SOLUTION_OBJ(cur_sel->solution, sel->solution);
+    ret = copy_solution_obj(cur_sel->solution, sel->solution);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        goto exit_batched_dft;
+    }
 
-    INT32 n_threads = 1;
+    FFTZ_INT32 n_threads = 1;
 #ifdef MULTI_THREADING
     // TODO: Multi-threaded parallelism has been applied only to the inner most
     // dimension of a Multi-Dimensional batched problem, need to support other
     // dimensions later with CPUPL-6843
-    INT32 avl_threads = sel->solution->decomp_scheme->thread_info->avl_threads;
-    INT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
+    FFTZ_INT32 avl_threads =
+        sel->solution->decomp_scheme->thread_info->avl_threads;
+    FFTZ_INT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
     if (sol->decomp_scheme->batched_vecs)
     {
         // Avoid nested parallelism: use 1 thread if inner_batch is small,
@@ -138,7 +118,7 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     sel->solution->decomp_scheme->thread_info->n_threads = n_threads;
 #endif
 
-    if (n_threads <= 1)
+    if (n_threads == 1)
     {
         // Setup batched solver to find the next solution for a single set/unit
         // of the vector problem
@@ -171,6 +151,74 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_batched_dft;
     }
 
+    /*
+    * ndim_concurrency rules:
+    *     - This variable is used when the problem type is NDIM.
+    *     - It first takes effect at an MT_BATCHED -> NDIM boundary, where it is
+    *       initialised to the MT_BATCHED node's n_threads.
+    *     - At every subsequent MT_BATCHED -> NDIM boundary, it is scaled up by that
+    *       MT_BATCHED node's n_threads.
+    *
+    * ct_buf_size rules:
+    *     Setup time can be broken down into two phases:
+    *         - Phase 1: Solver tree construction phase
+    *             Base setters (allocate ct_buffer, set ct_buf_size to a per-slice base size):
+    *                 - BUFFERED solver
+    *                 - CTL1D solver
+    *                 - NDIM solver
+    *                 Any other solver which is a child of these solvers
+    *                 simply copies its parent's ct_buf_size down to its child.
+    *
+    *         - Phase 2: Unwinding phase, here two selectors propagate ct_buf_size
+    *             from the child to the parent:
+    *             - CT selector: copies the radix-m child's ct_buf_size as-is (the
+    *               radix-r child never touches ct_buffer).
+    *             - Batched selector: Scales up ct_buf_size based on the need for concurrent slots
+    *                 1. NDIM child: scale the child's ct_buf_size by ndim_concurrency,
+    *                    and set this [mt_]batched node's own ct_buf_size to
+    *                    n_threads * child_ct_buf_size. This propagated value is
+    *                    consumed only by a real NDIM solver sitting above this
+    *                    [mt_]batched node.
+    *                 2. non-NDIM child: multiply ct_buf_size by n_threads.
+    *
+    *     Execution time responsibilities:
+    *         - MT_BATCHED advances each thread's ct_offset by tid * next_sol_ct_buf_size,
+    *           then handsover ct_buf_size to the next solver.
+    */
+    if (cur_sel->solution->solver->solver_type == SOLVER_NDIM)
+    {
+        FFTZ_INT32 child_ndim_conc =
+            cur_sel->solution->decomp_scheme->thread_info->ndim_concurrency;
+        if(child_ndim_conc)
+        {
+            // This value is used by MT_BATCHED solver to advance the
+            // ct_offset by `tid * ct_buf_size`
+            cur_sel->solution->dft_bufs->ct_buf_size =
+                child_ndim_conc * cur_sel->solution->dft_bufs->ct_buf_size;
+            // This propagated ct_buf_size is consumed only when a real NDIM
+            // solver sits above this batched node.
+            sel->solution->dft_bufs->ct_buf_size =
+                (FFTZ_INTP)n_threads * cur_sel->solution->dft_bufs->ct_buf_size;
+            sel->solution->decomp_scheme->thread_info->ndim_concurrency =
+                child_ndim_conc * n_threads;
+        }
+        else
+        {
+            // This propagated ct_buf_size is consumed only when a real NDIM
+            // solver sits above this batched node.
+            sel->solution->dft_bufs->ct_buf_size =
+                (FFTZ_INTP)n_threads * cur_sel->solution->dft_bufs->ct_buf_size;
+            sel->solution->decomp_scheme->thread_info->ndim_concurrency =
+                n_threads;
+        }
+    }
+    else
+    {
+        // Handles the case of multi-level CT problem and also real NDIM problem
+        sel->solution->dft_bufs->ct_buf_size =
+            (FFTZ_INTP)n_threads * cur_sel->solution->dft_bufs->ct_buf_size;
+    }
+
     // Calculate the batch size of all the sub-problems in the vector problem
     for (rnk = 0; rnk < vec_rank; rnk++)
     {
@@ -184,7 +232,14 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     {
         // capture stats
     }
-    sel->solution->next_sol = alloc_sol_array(n_threads);
+    // TODO: Instead of allocating an array of solutions (one sized), just allocate a single solution
+    sel->solution->next_sol = alloc_sol_array(1);
+    if (sel->solution->next_sol == NULL)
+    {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
+        AOCLFFTZ_ERROR("alloc_sol_array failed: %s", get_status_string(ret));
+        goto exit_batched_dft;
+    }
     sel->solution->next_sol[0] = cur_sel->solution;
 
     // destroy only the selector not the solution within it
@@ -194,7 +249,7 @@ INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     return SELECTOR_SUCCESS;
 
 exit_batched_dft:
-    destroy_selector_without_scratch_space(cur_sel);
+    destroy_selector(cur_sel);
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
 

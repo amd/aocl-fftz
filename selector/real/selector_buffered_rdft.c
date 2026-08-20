@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file selector_buffered_rdft.c
  *
@@ -41,7 +16,7 @@
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
 
-INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                              aoclfftz_realhelper_t *realhelper)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
@@ -56,12 +31,11 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     }
 
     aoclfftz_selector_t *cur_sel = NULL;
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                             sel->kernel_tables, 0 /*unused*/);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (cur_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -69,7 +43,12 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     }
 
     // copy solution object from sel to cur_sel
-    COPY_SOLUTION_OBJ(cur_sel->solution, sel->solution);
+    ret = copy_solution_obj(cur_sel->solution, sel->solution);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        goto exit_batched_dft;
+    }
 
     // Setup buffered solver
     ret = setup_real_buffered_solver(sel->solution, realhelper);
@@ -83,6 +62,9 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         sel->solution->dft_bufs->buffered->aux_buffer_1;
     cur_sel->solution->dft_bufs->buffered->aux_buffer_2 =
         sel->solution->dft_bufs->buffered->aux_buffer_2;
+    cur_sel->solution->dft_bufs->buffered->is_aux_buffer_allocated = 0;
+    cur_sel->solution->dft_bufs->buffered->aux_buf_size_per_thread =
+        sel->solution->dft_bufs->buffered->aux_buf_size_per_thread;
 
     // Call selector for solving it as a non-buffered problem
     ret = selector_model_rdft_(cur_sel, realhelper);
@@ -92,6 +74,12 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     }
 
     sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
+    if (sel->solution->next_sol == NULL)
+    {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
+        AOCLFFTZ_ERROR("alloc_sol_array failed: %s", get_status_string(ret));
+        goto exit_batched_dft;
+    }
     sel->solution->next_sol[0] = cur_sel->solution;
 
     // Set the out_ptr to last direct solution's output
@@ -100,7 +88,8 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     {
         temp_sol = temp_sol->next_sol[0];
     }
-    sel->solution->dft_bufs->buffered->out_ptr = &temp_sol->decomp_scheme->out_real;
+    sel->solution->dft_bufs->buffered->out_ptr =
+        &temp_sol->decomp_scheme->out_real;
 
     // destroy only the selector not the solution within it
     destroy_selector_without_solution(cur_sel);
@@ -108,7 +97,7 @@ INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     return SELECTOR_SUCCESS;
 
 exit_batched_dft:
-    destroy_selector_without_scratch_space(cur_sel);
+    destroy_selector(cur_sel);
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
     return ret;

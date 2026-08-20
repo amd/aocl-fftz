@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2024-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file bench_problem.c
  *
@@ -45,9 +20,9 @@
  * @brief init bench params with default values
  *
  * @param bench_params aoclfftz_bench_params_t struct to store the values
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID init_bench_params(aoclfftz_bench_params_t *bench_params)
+FFTZ_VOID init_bench_params(aoclfftz_bench_params_t *bench_params)
 {
     bench_params->in = NULL;
     bench_params->out = NULL;
@@ -83,35 +58,36 @@ VOID init_bench_params(aoclfftz_bench_params_t *bench_params)
  * @param argc command-line argument count
  * @param argv command-line argument value as a char array
  * @param bench_params aoclfftz_bench_params_t struct to store the values
- * @return INT32 aoclfftz_bench_parser_status_t type
+ * @return FFTZ_INT32 aoclfftz_bench_parser_status_t type
  */
-INT32 prepare_bench_params(INT32 argc, CHAR **argv,
+FFTZ_INT32 prepare_bench_params(FFTZ_INT32 argc, FFTZ_CHAR **argv,
                            aoclfftz_bench_params_t *bench_params)
 {
     init_bench_params(bench_params);
-    INT32 c = -1;
+    FFTZ_INT32 c = -1;
 
-    UCHAR use_cust_tolerance = 0;
+    FFTZ_UCHAR use_cust_tolerance = 0;
     // setting the data strides based on complex type and will be modified
     // later for real problems
     bench_params->sz_info.in_data_stride = 2;
     bench_params->sz_info.out_data_stride = 2;
 
-    INT32 status = PARSER_SUCCESS;
-    INT32 ret = PARSER_SUCCESS;
+    FFTZ_INT32 status = PARSER_SUCCESS;
+    FFTZ_INT32 ret = PARSER_SUCCESS;
     // check for the dependent arguments
-    UCHAR valid_iters_arg_found = 0;
+    FFTZ_UCHAR valid_iters_arg_found = 0;
 
-    CHAR *str_buff = NULL;
-    ALLOC_ALIGN_UNINIT(str_buff, CHAR, sizeof(CHAR) * 50);
-    CHAR *optarg = NULL;
+    FFTZ_CHAR *str_buff = NULL;
+    ALLOC_ALIGN_UNINIT(str_buff, FFTZ_CHAR, sizeof(FFTZ_CHAR) * 50);
+    FFTZ_CHAR *optarg = NULL;
 
-    INT32 arg_idx = 1;
-    INT32 non_opt_arg_cnt = 0;
+    FFTZ_INT32 arg_idx = 1;
+    FFTZ_INT32 non_opt_arg_cnt = 0;
     while (arg_idx < argc)
     {
         c = get_option(argv, arg_idx);
-        // this prevents optarg from retaining stale values from previous iterations.
+        // this prevents optarg from retaining stale values from previous
+        // iterations.
         optarg = "";
         // Check if there is at least one more command-line argument available
         // before accessing it.
@@ -421,7 +397,8 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     if (bench_params->selector_time != 0 &&
         bench_params->bench_type != PERFORMANCE)
     {
-        printf("WARNING: selector-time is applicable only in PERFORMANCE mode\n");
+        printf(
+            "WARNING: selector-time is applicable only in PERFORMANCE mode\n");
         bench_params->selector_time = 0;
     }
     if (!bench_params->use_random_seed && bench_params->num_iterations != 1 &&
@@ -480,11 +457,12 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                           bench_params->logger_mode);
 
     bench_params->sz_info.dt_bytes =
-        (bench_params->precision == FLOAT_P) ? sizeof(FLOAT) : sizeof(DOUBLE);
+        (bench_params->precision == FLOAT_P) ? sizeof(FFTZ_FLOAT) : sizeof(
+            FFTZ_DOUBLE);
 
     // get size info
-    UINTP in_buffer_size = 0;
-    UINTP out_buffer_size = 0;
+    FFTZ_UINTP in_buffer_size = 0;
+    FFTZ_UINTP out_buffer_size = 0;
     calculate_buffer_sizes(bench_params->dim_rank, bench_params->vec_rank,
                            bench_params->dims, bench_params->vecs,
                            &in_buffer_size, &out_buffer_size,
@@ -500,14 +478,14 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
                                          bench_params->sz_info.dt_bytes;
 
     // create input and output buffers
-    UINT32 is_align = bench_params->aligned_alloc;
-    INTP input_bytes = bench_params->sz_info.input_bytes;
-    INTP output_bytes = bench_params->sz_info.output_bytes;
+    FFTZ_UINT32 is_align = bench_params->aligned_alloc;
+    FFTZ_INTP input_bytes = bench_params->sz_info.input_bytes;
+    FFTZ_INTP output_bytes = bench_params->sz_info.output_bytes;
 
     // Adjust buffer sizes for real FFT types (R2C/C2R)
     EXPAND_REAL_BUFFER_SIZES(bench_params, input_bytes, output_bytes);
 
-    ALLOC_UNINIT(bench_params->in, VOID, input_bytes, is_align);
+    ALLOC_UNINIT(bench_params->in, FFTZ_VOID, input_bytes, is_align);
     if (bench_params->in == NULL)
     {
         printf("ERROR: Memory allocation failed for input buffer\n");
@@ -522,7 +500,7 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
     }
     else
     {
-        ALLOC_INIT(bench_params->out, VOID, output_bytes, is_align);
+        ALLOC_INIT(bench_params->out, FFTZ_VOID, output_bytes, is_align);
         if (bench_params->out == NULL)
         {
             printf("ERROR: Memory allocation failed for output buffer\n");
@@ -540,12 +518,12 @@ INT32 prepare_bench_params(INT32 argc, CHAR **argv,
 }
 
 /**
- * @brief Setup FFT problem of FLOAT LP64 type
+ * @brief Setup FFT problem of FFTZ_FLOAT LP64 type
  *
  * @param params aoclfftz_bench_params_t type contains parsed arguments
- * @return VOID* handle object
+ * @return FFTZ_VOID* handle object
  */
-VOID *setup_problem_f(aoclfftz_bench_params_t *params)
+FFTZ_VOID *setup_problem_f(aoclfftz_bench_params_t *params)
 {
     AOCLFFTZ_LOG(TRACE, params->logger_mode, "ENTER");
 
@@ -553,29 +531,29 @@ VOID *setup_problem_f(aoclfftz_bench_params_t *params)
     timer clk_tick;
 #endif
     timeVal start_time, end_time;
-    DOUBLE time_taken = 0.0;
-    UINT32 is_align = params->aligned_alloc;
+    FFTZ_DOUBLE time_taken = 0.0;
+    FFTZ_UINT32 is_align = params->aligned_alloc;
 
     aoclfftz_prob_desc_f *p_desc = NULL;
     ALLOC_UNINIT(p_desc, aoclfftz_prob_desc_f, sizeof(aoclfftz_prob_desc_f),
                  is_align);
-    INIT_PD(params, p_desc, INT32, aoclfftz_dim_t);
+    INIT_PD(params, p_desc, FFTZ_INT32, aoclfftz_dim_t);
 
-    p_desc->in = (FLOAT *)params->in;
-    p_desc->out = (FLOAT *)params->out;
+    p_desc->in = (FFTZ_FLOAT *)params->in;
+    p_desc->out = (FFTZ_FLOAT *)params->out;
 
     // call setup
-    VOID *handle;
+    FFTZ_VOID *handle;
     if (params->selector_time != 0)
     {
         initTimer(clk_tick);
         getTime(start_time);
         handle = aoclfftz_setup_f(p_desc);
         getTime(end_time);
-        time_taken = (DOUBLE)diffTime(clk_tick, start_time, end_time);
+        time_taken = (FFTZ_DOUBLE)diffTime(clk_tick, start_time, end_time);
         if (handle != NULL)
         {
-            CHAR time_unit[3];
+            FFTZ_CHAR time_unit[3];
             ADJUST_SELECTOR_TIME_UNIT(time_taken, time_unit);
             printf("\n\n=====================================\n");
             printf("      Selector time : %6.3lf %s\n", time_taken, time_unit);
@@ -593,12 +571,12 @@ VOID *setup_problem_f(aoclfftz_bench_params_t *params)
 }
 
 /**
- * @brief Setup FFT problem of DOUBLE LP64 type
+ * @brief Setup FFT problem of FFTZ_DOUBLE LP64 type
  *
  * @param params aoclfftz_bench_params_t type contains parsed arguments
- * @return VOID* handle object
+ * @return FFTZ_VOID* handle object
  */
-VOID *setup_problem_d(aoclfftz_bench_params_t *params)
+FFTZ_VOID *setup_problem_d(aoclfftz_bench_params_t *params)
 {
     AOCLFFTZ_LOG(TRACE, params->logger_mode, "ENTER");
 
@@ -606,29 +584,29 @@ VOID *setup_problem_d(aoclfftz_bench_params_t *params)
     timer clk_tick;
 #endif
     timeVal start_time, end_time;
-    DOUBLE time_taken = 0.0;
-    UINT32 is_align = params->aligned_alloc;
+    FFTZ_DOUBLE time_taken = 0.0;
+    FFTZ_UINT32 is_align = params->aligned_alloc;
 
     aoclfftz_prob_desc_d *p_desc = NULL;
     ALLOC_UNINIT(p_desc, aoclfftz_prob_desc_d, sizeof(aoclfftz_prob_desc_d),
                  is_align);
-    INIT_PD(params, p_desc, INT32, aoclfftz_dim_t);
+    INIT_PD(params, p_desc, FFTZ_INT32, aoclfftz_dim_t);
 
-    p_desc->in = (DOUBLE *)params->in;
-    p_desc->out = (DOUBLE *)params->out;
+    p_desc->in = (FFTZ_DOUBLE *)params->in;
+    p_desc->out = (FFTZ_DOUBLE *)params->out;
 
     // call setup
-    VOID *handle;
+    FFTZ_VOID *handle;
     if (params->selector_time != 0)
     {
         initTimer(clk_tick);
         getTime(start_time);
         handle = aoclfftz_setup_d(p_desc);
         getTime(end_time);
-        time_taken = (DOUBLE)diffTime(clk_tick, start_time, end_time);
+        time_taken = (FFTZ_DOUBLE)diffTime(clk_tick, start_time, end_time);
         if (handle != NULL)
         {
-            CHAR time_unit[3];
+            FFTZ_CHAR time_unit[3];
             ADJUST_SELECTOR_TIME_UNIT(time_taken, time_unit);
             printf("\n\n=====================================\n");
             printf("      Selector time : %6.3lf %s\n", time_taken, time_unit);
@@ -646,12 +624,12 @@ VOID *setup_problem_d(aoclfftz_bench_params_t *params)
 }
 
 /**
- * @brief Setup FFT problem of FLOAT ILP64 type
+ * @brief Setup FFT problem of FFTZ_FLOAT ILP64 type
  *
  * @param params aoclfftz_bench_params_t type contains parsed arguments
- * @return VOID* handle object
+ * @return FFTZ_VOID* handle object
  */
-VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
+FFTZ_VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
 {
     AOCLFFTZ_LOG(TRACE, params->logger_mode, "ENTER");
 
@@ -659,29 +637,29 @@ VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
     timer clk_tick;
 #endif
     timeVal start_time, end_time;
-    DOUBLE time_taken = 0.0;
-    UINT32 is_align = params->aligned_alloc;
+    FFTZ_DOUBLE time_taken = 0.0;
+    FFTZ_UINT32 is_align = params->aligned_alloc;
 
     aoclfftz_prob_desc_f_64_ *p_desc = NULL;
     ALLOC_UNINIT(p_desc, aoclfftz_prob_desc_f_64_,
                  sizeof(aoclfftz_prob_desc_f_64_), is_align);
-    INIT_PD(params, p_desc, INTP, aoclfftz_dim_t_64_);
+    INIT_PD(params, p_desc, FFTZ_INTP, aoclfftz_dim_t_64_);
 
-    p_desc->in = (FLOAT *)params->in;
-    p_desc->out = (FLOAT *)params->out;
+    p_desc->in = (FFTZ_FLOAT *)params->in;
+    p_desc->out = (FFTZ_FLOAT *)params->out;
 
     // call setup
-    VOID *handle;
+    FFTZ_VOID *handle;
     if (params->selector_time != 0)
     {
         initTimer(clk_tick);
         getTime(start_time);
         handle = aoclfftz_setup_f_64_(p_desc);
         getTime(end_time);
-        time_taken = (DOUBLE)diffTime(clk_tick, start_time, end_time);
+        time_taken = (FFTZ_DOUBLE)diffTime(clk_tick, start_time, end_time);
         if (handle != NULL)
         {
-            CHAR time_unit[3];
+            FFTZ_CHAR time_unit[3];
             ADJUST_SELECTOR_TIME_UNIT(time_taken, time_unit);
             printf("\n\n=====================================\n");
             printf("      Selector time : %6.3lf %s\n", time_taken, time_unit);
@@ -699,12 +677,12 @@ VOID *setup_problem_f_64_(aoclfftz_bench_params_t *params)
 }
 
 /**
- * @brief Setup FFT problem of DOUBLE ILP64 type
+ * @brief Setup FFT problem of FFTZ_DOUBLE ILP64 type
  *
  * @param params aoclfftz_bench_params_t type contains parsed arguments
- * @return VOID* handle object
+ * @return FFTZ_VOID* handle object
  */
-VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params)
+FFTZ_VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params)
 {
     AOCLFFTZ_LOG(TRACE, params->logger_mode, "ENTER");
 
@@ -712,29 +690,29 @@ VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params)
     timer clk_tick;
 #endif
     timeVal start_time, end_time;
-    DOUBLE time_taken = 0.0;
-    UINT32 is_align = params->aligned_alloc;
+    FFTZ_DOUBLE time_taken = 0.0;
+    FFTZ_UINT32 is_align = params->aligned_alloc;
 
     aoclfftz_prob_desc_d_64_ *p_desc = NULL;
     ALLOC_UNINIT(p_desc, aoclfftz_prob_desc_d_64_,
                  sizeof(aoclfftz_prob_desc_d_64_), params->aligned_alloc);
-    INIT_PD(params, p_desc, INTP, aoclfftz_dim_t_64_);
+    INIT_PD(params, p_desc, FFTZ_INTP, aoclfftz_dim_t_64_);
 
-    p_desc->in = (DOUBLE *)params->in;
-    p_desc->out = (DOUBLE *)params->out;
+    p_desc->in = (FFTZ_DOUBLE *)params->in;
+    p_desc->out = (FFTZ_DOUBLE *)params->out;
 
     // call setup
-    VOID *handle;
+    FFTZ_VOID *handle;
     if (params->selector_time != 0)
     {
         initTimer(clk_tick);
         getTime(start_time);
         handle = aoclfftz_setup_d_64_(p_desc);
         getTime(end_time);
-        time_taken = (DOUBLE)diffTime(clk_tick, start_time, end_time);
+        time_taken = (FFTZ_DOUBLE)diffTime(clk_tick, start_time, end_time);
         if (handle != NULL)
         {
-            CHAR time_unit[3];
+            FFTZ_CHAR time_unit[3];
             ADJUST_SELECTOR_TIME_UNIT(time_taken, time_unit);
             printf("\n\n=====================================\n");
             printf("      Selector time : %6.3lf %s\n", time_taken, time_unit);
@@ -755,13 +733,13 @@ VOID *setup_problem_d_64_(aoclfftz_bench_params_t *params)
  * @brief Free the structures used for FFT problem
  *
  * @param params aoclfftz_bench_params_t type contains parsed arguments
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID destroy_bench_param(aoclfftz_bench_params_t *params)
+FFTZ_VOID destroy_bench_param(aoclfftz_bench_params_t *params)
 {
     if (params != NULL)
     {
-        UINT32 is_align = params->aligned_alloc;
+        FFTZ_UINT32 is_align = params->aligned_alloc;
         FREE_ALLOCATED_MEM(params->in, is_align);
         if (params->res_placement == OUT_OF_PLACE)
         {
@@ -773,9 +751,9 @@ VOID destroy_bench_param(aoclfftz_bench_params_t *params)
     }
 }
 
-INT32 get_option(CHAR **argv, INT32 arg_idx)
+FFTZ_INT32 get_option(FFTZ_CHAR **argv, FFTZ_INT32 arg_idx)
 {
-    CHAR *arg = argv[arg_idx];
+    FFTZ_CHAR *arg = argv[arg_idx];
     if (arg[0] == '-')
     {
         if (strcmp(arg, "--help") == 0 || arg[1] == 'h')
@@ -924,9 +902,9 @@ aoclfftz_flags_t set_flag(aoclfftz_bench_params_t *params)
 /**
  * @brief print the help menu contents to the output
  *
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID show_help_menu(VOID)
+FFTZ_VOID show_help_menu(FFTZ_VOID)
 {
     printf(
         "\nUSAGE: aocl_fftz_bench [OPTIONS]... PROBLEM_SIZE\n\n"

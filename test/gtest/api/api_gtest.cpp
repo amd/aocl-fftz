@@ -1,30 +1,5 @@
-/*
- * Copyright (C) 2024-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 #include "test/gtest/api/api_gtest.h"
 
@@ -34,13 +9,13 @@ TYPED_TEST_SUITE_P(AoclfftzAPITest);
 // Setup API test cases
 TYPED_TEST_P(AoclfftzAPITest, PTEST_CNTRL_PARAMETERS)
 {
-    for (auto optOff : {0,1})
+    for (auto opt_off : {0,1})
     {
         // Invalid optlevel -2 to ensure setup doesn't fail on invalid inputs
-        for (auto optLevel : {-2, -1, 0, 1, 2, 3})
+        for (auto opt_level : {-2, -1, 0, 1, 2, 3})
         {
-            this->problem->cntrl_params.opt_off = optOff;
-            this->problem->cntrl_params.opt_level = optLevel;
+            this->problem->cntrl_params.opt_off = opt_off;
+            this->problem->cntrl_params.opt_level = opt_level;
             this->run_setup_and_validate(VALID); // Run setup with valid case
         }
     }
@@ -82,9 +57,9 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_THREADS)
 // Test with all valid combinations of opt_off, opt_level, flags, pthr_fft
 TYPED_TEST_P(AoclfftzAPITest, PTEST_COMBINE)
 {
-    for (auto optOff : {0,1})
+    for (auto opt_off : {0,1})
     {
-        for (auto optLevel : this->get_supported_optlevels())
+        for (auto opt_level : this->get_supported_optlevels())
         {
             for (auto flags : this->get_supported_flags())
             {
@@ -100,8 +75,8 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_COMBINE)
                         this->cleanup_problem();
                         this->problem->flags = flags;
                         this->create_default_pdesc(is_fwd, is_inplace);
-                        this->problem->cntrl_params.opt_off = optOff;
-                        this->problem->cntrl_params.opt_level = optLevel;
+                        this->problem->cntrl_params.opt_off = opt_off;
+                        this->problem->cntrl_params.opt_level = opt_level;
                         this->problem->pthr_fft.num_threads = num_threads;
                         this->problem->pthr_fft.dynamic_load_model =
                                                             dynamic_load_model;
@@ -148,11 +123,12 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_OUT_BUFFER)
 TYPED_TEST_P(AoclfftzAPITest, NTEST_CNTRL_PARAMS)
 {
     INIT_RANDOM_NUM_GEN();
-    for (INT32 i = 0; i < 100; i++) // Fuzzing range
+    for (FFTZ_INT32 i = 0; i < 100; i++) // Fuzzing range
     {
         this->problem->cntrl_params.opt_level = dist_invalid(prng);
         this->problem->cntrl_params.opt_off = dist_invalid(prng);
-        this->problem->cntrl_params.logger_mode = (aoclfftz_logger_mode)(dist_invalid(prng));
+        this->problem->cntrl_params.logger_mode =
+            (aoclfftz_logger_mode)(dist_invalid(prng));
         this->problem->cntrl_params.measure_stats = dist_invalid(prng);
         this->run_setup_and_validate(VALID);
     }
@@ -231,7 +207,7 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_VECS)
 TYPED_TEST_P(AoclfftzAPITest, NTEST_DIMS_STRIDES)
 {
     INIT_RANDOM_NUM_GEN(); // Initialize random number generator
-    for (INT32 i = 0; i < 100; i++)
+    for (FFTZ_INT32 i = 0; i < 100; i++)
     {
         if (this->problem->dims != NULL)
         {
@@ -246,7 +222,7 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_DIMS_STRIDES)
 TYPED_TEST_P(AoclfftzAPITest, NTEST_VECS_STRIDES)
 {
     INIT_RANDOM_NUM_GEN(); // Initialize random number generator
-    for (INT32 i = 0; i < 100; i++)
+    for (FFTZ_INT32 i = 0; i < 100; i++)
     {
         if (this->problem->vecs != NULL)
         {
@@ -262,7 +238,7 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_VECS_STRIDES)
 TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_VALIDHANDLE)
 {
     this->handle = this->aoclfftz_setup(this->problem);
-    INT32 exe = aoclfftz_execute(this->handle);
+    FFTZ_INT32 exe = aoclfftz_execute(this->handle);
     EXPECT_EQ(exe, 0); // Expect successful execution
     aoclfftz_destroy(this->handle);
 }
@@ -289,26 +265,36 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_VALIDHANDLE_BACKWARD)
     this->validate_execute_io(false);
 }
 
-// Test execute_io with new buffers after freeing original - 1D case (ct_buffer == NULL)
-TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_1D_FORWARD)
+// Test execute_io with new buffers after freeing original - 1D case (ct_buffer
+// == NULL)
+TYPED_TEST_P(AoclfftzAPITest,
+             PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_1D_FORWARD)
 {
-    this->validate_execute_io_after_buffer_free_and_alloc(true, true);  // 1D forward
+    this->validate_execute_io_after_buffer_free_and_alloc(true,
+                                                          true); // 1D forward
 }
 
-TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_1D_BACKWARD)
+TYPED_TEST_P(AoclfftzAPITest,
+             PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_1D_BACKWARD)
 {
-    this->validate_execute_io_after_buffer_free_and_alloc(false, true); // 1D backward
+    this->validate_execute_io_after_buffer_free_and_alloc(false,
+                                                          true); // 1D backward
 }
 
-// Test execute_io with new buffers after freeing original - 3D case (ct_buffer != NULL)
-TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_3D_FORWARD)
+// Test execute_io with new buffers after freeing original - 3D case (ct_buffer
+// != NULL)
+TYPED_TEST_P(AoclfftzAPITest,
+             PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_3D_FORWARD)
 {
-    this->validate_execute_io_after_buffer_free_and_alloc(true, false);  // 3D forward
+    this->validate_execute_io_after_buffer_free_and_alloc(true,
+                                                          false); // 3D forward
 }
 
-TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_3D_BACKWARD)
+TYPED_TEST_P(AoclfftzAPITest,
+             PTEST_EXECUTE_IO_OOP_ALLOC_NEW_FREE_OLD_3D_BACKWARD)
 {
-    this->validate_execute_io_after_buffer_free_and_alloc(false, false); // 3D backward
+    this->validate_execute_io_after_buffer_free_and_alloc(false,
+                                                          false); // 3D backward
 }
 
 // Execute API test with near-edge values and output validation
@@ -326,22 +312,24 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_NEAR_EDGE_VALUES)
             EXPECT_NE(this->handle, nullptr);
 
             // Execute the FFT
-            INT32 exe = aoclfftz_execute(this->handle);
+            FFTZ_INT32 exe = aoclfftz_execute(this->handle);
 
             EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
 
-            // Validate that output values are reasonable (not NaN, Infinity, etc.)
-            UINTP output_size_bytes = 0;
-            UINTP input_size_bytes = 0;
+            // Validate that output values are reasonable (not NaN, Infinity,
+            // etc.)
+            FFTZ_UINTP output_size_bytes = 0;
+            FFTZ_UINTP input_size_bytes = 0;
             this->get_inout_size(&input_size_bytes, &output_size_bytes);
 
-            using DataType = std::remove_pointer_t<decltype(this->problem->out)>;
-            UINTP num_elements = output_size_bytes / sizeof(DataType);
+            using DataType =
+                std::remove_pointer_t<decltype(this->problem->out)>;
+            FFTZ_UINTP num_elements = output_size_bytes / sizeof(DataType);
             output_validation_stats stats =
                             validate_output_array<DataType>(this->problem->out,
                                                             num_elements);
 
-            UINTP invalid_count = stats.nan_count + stats.inf_count;
+            FFTZ_UINTP invalid_count = stats.nan_count + stats.inf_count;
             EXPECT_EQ(invalid_count, 0U)
                 << "Found " << invalid_count << " invalid values ("
                 << stats.nan_count << " NaN, " << stats.inf_count
@@ -354,11 +342,13 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_NEAR_EDGE_VALUES)
     }
 }
 
-// Robustness test with special values (NaN, Inf, MAX, MIN) - validates NaN propagation
+// Robustness test with special values (NaN, Inf, MAX, MIN) - validates NaN
+// propagation
 TYPED_TEST_P(AoclfftzAPITest, PTEST_ROBUSTNESS_WITH_NAN_VALUES)
 {
     // This test ensures the API doesn't crash with extreme inputs
-    // and validates that if input has NaN, output should be entirely filled with NaN
+    // and validates that if input has NaN, output should be entirely filled
+    // with NaN
     for (auto is_forward : {true, false})
     {
         for (auto is_inplace : {true, false})
@@ -367,14 +357,15 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_ROBUSTNESS_WITH_NAN_VALUES)
             this->create_default_1d_pdesc(is_forward, is_inplace,
                                           InputValueStrategy::SPECIAL_VALUES);
 
-            UINTP input_size_bytes = 0;
-            UINTP output_size_bytes = 0;
+            FFTZ_UINTP input_size_bytes = 0;
+            FFTZ_UINTP output_size_bytes = 0;
             this->get_inout_size(&input_size_bytes, &output_size_bytes);
 
             // Use decltype to automatically get the data type from problem->in
             using DataType = std::remove_pointer_t<decltype(this->problem->in)>;
-            UINTP num_input_elements = input_size_bytes / sizeof(DataType);
-            UINTP num_output_elements = output_size_bytes / sizeof(DataType);
+            FFTZ_UINTP num_input_elements = input_size_bytes / sizeof(DataType);
+            FFTZ_UINTP num_output_elements = output_size_bytes / sizeof(
+                DataType);
 
             // Analyze input array before execution
             output_validation_stats input_stats =
@@ -383,12 +374,13 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_ROBUSTNESS_WITH_NAN_VALUES)
 
             this->handle = this->aoclfftz_setup(this->problem);
             EXPECT_NE(this->handle, nullptr)
-                << "Setup should not return null handle even with special values"
-                << " [is_forward=" << is_forward << ", is_inplace="
-                << is_inplace << "]";
+                << "Setup should not return null handle even with special "
+                   "values"
+                << " [is_forward=" << is_forward
+                << ", is_inplace=" << is_inplace << "]";
 
             // Execute the FFT - it may succeed or fail, but should not crash
-            INT32 exe = aoclfftz_execute(this->handle);
+            FFTZ_INT32 exe = aoclfftz_execute(this->handle);
 
             EXPECT_EQ(exe, AOCLFFTZ_SUCCESS)
                 << "Execute should return AOCLFFTZ_SUCCESS"
@@ -400,7 +392,8 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_ROBUSTNESS_WITH_NAN_VALUES)
                         validate_output_array<DataType>(this->problem->out,
                                                         num_output_elements);
 
-            // Validate NaN propagation: if input has NaN, output MUST also have NaN
+            // Validate NaN propagation: if input has NaN, output MUST also have
+            // NaN
             if (input_stats.nan_count > 0)
             {
                 EXPECT_EQ(output_stats.nan_count, num_output_elements)
@@ -418,11 +411,13 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_ROBUSTNESS_WITH_NAN_VALUES)
     }
 }
 
-// Execute API test with special non-NaN values - output should only contain NaN or Inf
+// Execute API test with special non-NaN values - output should only contain NaN
+// or Inf
 TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_SPECIAL_EXCEPT_NAN_VALUES)
 {
     // Test FFT execution with special values excluding NaN (Inf, MAX, MIN)
-    // Output should only contain NaN or Infinity (no finite values including zeros)
+    // Output should only contain NaN or Infinity (no finite values including
+    // zeros)
     for (auto is_forward : {true, false})
     {
         for (auto is_inplace : {true, false})
@@ -435,22 +430,23 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_SPECIAL_EXCEPT_NAN_VALUES)
             EXPECT_NE(this->handle, nullptr);
 
             // Execute the FFT
-            INT32 exe = aoclfftz_execute(this->handle);
+            FFTZ_INT32 exe = aoclfftz_execute(this->handle);
 
             EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
 
             // Validate that output contains only NaN or Inf (no finite values)
-            UINTP output_size_bytes = 0;
-            UINTP input_size_bytes = 0;
+            FFTZ_UINTP output_size_bytes = 0;
+            FFTZ_UINTP input_size_bytes = 0;
             this->get_inout_size(&input_size_bytes, &output_size_bytes);
 
-            using DataType = std::remove_pointer_t<decltype(this->problem->out)>;
-            UINTP num_elements = output_size_bytes / sizeof(DataType);
+            using DataType =
+                std::remove_pointer_t<decltype(this->problem->out)>;
+            FFTZ_UINTP num_elements = output_size_bytes / sizeof(DataType);
             output_validation_stats stats =
                             validate_output_array<DataType>(this->problem->out,
                                                             num_elements);
 
-            UINTP special_count = stats.nan_count + stats.inf_count;
+            FFTZ_UINTP special_count = stats.nan_count + stats.inf_count;
             EXPECT_EQ(special_count, num_elements)
                 << "Output validation failed for special non-NaN inputs: "
                 << "Expected all " << num_elements
@@ -495,22 +491,23 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_ONLY_TINY_VALUES)
             EXPECT_NE(this->handle, nullptr);
 
             // Execute the FFT
-            INT32 exe = aoclfftz_execute(this->handle);
+            FFTZ_INT32 exe = aoclfftz_execute(this->handle);
 
             EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
 
             // Validate that output values are not entirely zero and not NaN/Inf
-            UINTP output_size_bytes = 0;
-            UINTP input_size_bytes = 0;
+            FFTZ_UINTP output_size_bytes = 0;
+            FFTZ_UINTP input_size_bytes = 0;
             this->get_inout_size(&input_size_bytes, &output_size_bytes);
 
-            using DataType = std::remove_pointer_t<decltype(this->problem->out)>;
-            UINTP num_elements = output_size_bytes / sizeof(DataType);
+            using DataType =
+                std::remove_pointer_t<decltype(this->problem->out)>;
+            FFTZ_UINTP num_elements = output_size_bytes / sizeof(DataType);
             output_validation_stats stats =
                             validate_output_array<DataType>(this->problem->out,
                                                             num_elements);
 
-            UINTP invalid_count = stats.nan_count + stats.inf_count;
+            FFTZ_UINTP invalid_count = stats.nan_count + stats.inf_count;
             EXPECT_EQ(invalid_count, 0U)
                 << "Output validation failed for tiny inputs: Found "
                 << invalid_count << " invalid values (" << stats.nan_count
@@ -519,19 +516,22 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_ONLY_TINY_VALUES)
                 << is_forward << ", is_inplace=" << is_inplace << "]";
 
             EXPECT_GT(stats.nonzero_count, 0U)
-                << "Output validation failed for tiny inputs: All outputs are zero"
-                << " [is_forward=" << is_forward << ", is_inplace="
-                << is_inplace << "]";
+                << "Output validation failed for tiny inputs: All outputs are "
+                   "zero"
+                << " [is_forward=" << is_forward
+                << ", is_inplace=" << is_inplace << "]";
 
             aoclfftz_destroy(this->handle);
         }
     }
 }
 
-// Execute API test with only large values - output should not be infinity or NaN
+// Execute API test with only large values - output should not be infinity or
+// NaN
 TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_ONLY_LARGE_VALUES)
 {
-    // Test FFT execution with only large values (close to but not exceeding MAX)
+    // Test FFT execution with only large values (close to but not exceeding
+    // MAX)
     for (auto is_forward : {true, false})
     {
         for (auto is_inplace : {true, false})
@@ -544,22 +544,23 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_ONLY_LARGE_VALUES)
             EXPECT_NE(this->handle, nullptr);
 
             // Execute the FFT
-            INT32 exe = aoclfftz_execute(this->handle);
+            FFTZ_INT32 exe = aoclfftz_execute(this->handle);
 
             EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
 
             // Validate that output values are not infinity or NaN
-            UINTP output_size_bytes = 0;
-            UINTP input_size_bytes = 0;
+            FFTZ_UINTP output_size_bytes = 0;
+            FFTZ_UINTP input_size_bytes = 0;
             this->get_inout_size(&input_size_bytes, &output_size_bytes);
 
-            using DataType = std::remove_pointer_t<decltype(this->problem->out)>;
-            UINTP num_elements = output_size_bytes / sizeof(DataType);
+            using DataType =
+                std::remove_pointer_t<decltype(this->problem->out)>;
+            FFTZ_UINTP num_elements = output_size_bytes / sizeof(DataType);
             output_validation_stats stats =
                             validate_output_array<DataType>(this->problem->out,
                                                             num_elements);
 
-            UINTP invalid_count = stats.nan_count + stats.inf_count;
+            FFTZ_UINTP invalid_count = stats.nan_count + stats.inf_count;
             EXPECT_EQ(invalid_count, 0U)
                 << "Output validation failed for large inputs: Found "
                 << invalid_count << " invalid values (" << stats.nan_count
@@ -588,17 +589,18 @@ TYPED_TEST_P(AoclfftzAPITest, PTEST_EXECUTE_WITH_ONLY_ZERO_VALUES)
             EXPECT_NE(this->handle, nullptr);
 
             // Execute the FFT
-            INT32 exe = aoclfftz_execute(this->handle);
+            FFTZ_INT32 exe = aoclfftz_execute(this->handle);
 
             EXPECT_EQ(exe, AOCLFFTZ_SUCCESS);
 
             // Validate that all output values are zero
-            UINTP output_size_bytes = 0;
-            UINTP input_size_bytes = 0;
+            FFTZ_UINTP output_size_bytes = 0;
+            FFTZ_UINTP input_size_bytes = 0;
             this->get_inout_size(&input_size_bytes, &output_size_bytes);
 
-            using DataType = std::remove_pointer_t<decltype(this->problem->out)>;
-            UINTP num_elements = output_size_bytes / sizeof(DataType);
+            using DataType =
+                std::remove_pointer_t<decltype(this->problem->out)>;
+            FFTZ_UINTP num_elements = output_size_bytes / sizeof(DataType);
             output_validation_stats stats =
                             validate_output_array<DataType>(this->problem->out,
                                                             num_elements);
@@ -678,23 +680,158 @@ INSTANTIATE_TYPED_TEST_SUITE_P(FFTZ_tests_setup_API,
 
 TEST(AoclfftzAPITest, NTEST_EXECUTE_INVALIDHANDLE)
 {
-    VOID *handle = NULL;
-    INT32 exe = aoclfftz_execute(handle);
+    FFTZ_VOID *handle = NULL;
+    FFTZ_INT32 exe = aoclfftz_execute(handle);
     EXPECT_EQ(exe, AOCLFFTZ_EXECUTION_FAILURE)
                 << "Execution return run_setup_and_validate failure";
 }
 
 TEST(AoclfftzAPITest, NTEST_EXECUTE_IO_INVALIDHANDLE)
 {
-    VOID* handle = NULL;
-    VOID *in = NULL, *out = NULL;
-    INT32 exe = aoclfftz_execute_io(handle, in, out);
+    FFTZ_VOID* handle = NULL;
+    FFTZ_VOID *in = NULL, *out = NULL;
+    FFTZ_INT32 exe = aoclfftz_execute_io(handle, in, out);
     EXPECT_EQ(exe, -1) << "Execution failure for aoclfftz_execute_io API";
 }
 
 TEST(AoclfftzAPITest, NTEST_DESTROY_NULL_HANDLE)
 {
-    VOID *handle = NULL;
+    FFTZ_VOID *handle = NULL;
     aoclfftz_destroy(handle);
     EXPECT_TRUE(is_handle_null(handle));
 }
+
+#ifdef AOCLFFTZ_API_CONCURRENCY_TESTS
+// ===========================================================================
+// Concurrent aoclfftz_execute_io tests (C2C)
+// ---------------------------------------------------------------------------
+// Verifies that aoclfftz_execute_io is safe to call from multiple application
+// threads simultaneously on a single shared handle. The cases below cover the
+// solvers that exercise the per-call scratch surface introduced for MT-safety:
+//   * Bluestein  -> bs_in_base / bs_out_base
+//   * Split-radix -> sr_input_copy_base
+//   * NDim/CTL1D -> ct_buffer
+// ===========================================================================
+
+namespace concurrent_exec_io
+{
+    // Stress one problem across both inplace & out-of-place over a range of internal
+    // thread counts, with the number of application threads calling execute_io
+    // concurrently such that internal_threads * app_threads ~= cores
+    template<typename Fixture>
+    void sweep(Fixture *f, const std::vector<FFTZ_INT32> &dims,
+               FFTZ_INT32 batch)
+    {
+        const FFTZ_INT32 max_procs = omp_get_num_procs();
+        // App threads always run concurrently; internal threads only matter in
+        // a multi-threaded library, so a single-thread build sweeps just 1.
+#ifdef MULTI_THREADING
+        const std::vector<FFTZ_INT32> internal_thread_counts =
+            {1, 3, 8, 40, 90, max_procs};
+#else
+        const std::vector<FFTZ_INT32> internal_thread_counts = {1};
+#endif
+
+        for (bool inplace : {false, true})
+        {
+            for (FFTZ_INT32 num_threads : internal_thread_counts)
+            {
+                if (num_threads > max_procs)
+                {
+                    continue;
+                }
+                const FFTZ_INT32 concurrent_api_count = max_procs / num_threads;
+                f->run_concurrent_execute_io(dims, batch, inplace,
+                                             /*is_forward=*/true,
+                                             concurrent_api_count, num_threads);
+                if (::testing::Test::HasFatalFailure())
+                {
+                    return;
+                }
+            }
+        }
+    }
+} // namespace concurrent_exec_io
+
+template<typename ProblemType>
+class AoclfftzConcurrentTest : public AoclfftzAPITest<ProblemType>
+{
+};
+
+TYPED_TEST_SUITE_P(AoclfftzConcurrentTest);
+
+// Each test runs both placements (OOP + in-place) via sweep();
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_DIRECT)
+{
+    concurrent_exec_io::sweep(this, {15}, 1);
+}
+
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_BATCHED_DIRECT)
+{
+    concurrent_exec_io::sweep(this, {16}, 8);
+}
+
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_CTL1D)
+{
+    concurrent_exec_io::sweep(this, {256}, 32);
+}
+
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_NDIM)
+{
+    concurrent_exec_io::sweep(this, {21, 25, 32}, 1);
+}
+
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_BATCHED_NDIM)
+{
+    concurrent_exec_io::sweep(this, {5, 25, 32}, 7);
+}
+
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_SPLIT_RADIX)
+{
+    concurrent_exec_io::sweep(this, {4096}, 1);
+}
+
+// Bluestein: prime size > 16 (not kernel-supported, not CT-solvable).
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_BLUESTEIN)
+{
+    concurrent_exec_io::sweep(this, {199}, 1);
+}
+
+// Batched Bluestein: batched parent with Bluestein child.
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_BATCHED_BLUESTEIN)
+{
+    concurrent_exec_io::sweep(this, {53}, 10);
+}
+
+// Batched NDim Bluestein with (outer dim < inner dim).
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_BATCHED_NDIM_BS_1)
+{
+    concurrent_exec_io::sweep(this, {19, 97}, 5);
+}
+
+// Batched NDim Bluestein with (outer dim > inner dim).
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_BATCHED_NDIM_BS_2)
+{
+    concurrent_exec_io::sweep(this, {97, 19}, 3);
+}
+
+REGISTER_TYPED_TEST_SUITE_P(
+    AoclfftzConcurrentTest,
+    C2C_DIRECT,
+    C2C_BATCHED_DIRECT,
+    C2C_CTL1D,
+    C2C_NDIM,
+    C2C_BATCHED_NDIM,
+    C2C_SPLIT_RADIX,
+    C2C_BLUESTEIN,
+    C2C_BATCHED_BLUESTEIN,
+    C2C_BATCHED_NDIM_BS_1,
+    C2C_BATCHED_NDIM_BS_2
+);
+
+// Concurrency is the focus here, not type coverage, so run a single type
+// (double) to keep the heavy stress suite fast.
+using ConcurrentTestTypes = ::testing::Types<aoclfftz_prob_desc_d>;
+INSTANTIATE_TYPED_TEST_SUITE_P(FFTZ_tests_concurrent_execute_io,
+                                AoclfftzConcurrentTest, ConcurrentTestTypes);
+#endif // AOCLFFTZ_API_CONCURRENCY_TESTS

@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file fftw_wrapper.h
  *
@@ -66,244 +41,204 @@ extern "C" {
 #define API_NAME_MANGLE_DOUBLE(name) API_NAME_CONCAT(fftw_, name)
 #define API_NAME_MANGLE_FLOAT(name) API_NAME_CONCAT(fftwf_, name)
 
-#define FFTW_WRAPPER_API(GEN, Real, Complex)                                        \
-                                                                                    \
-COMPLEX_TYPE(Real, Complex);                                                        \
-                                                                                    \
-typedef VOID* GEN(plan);                                                            \
-                                                                                    \
-typedef struct { INT32 n; INT32 is; INT32 os; } GEN(iodim);                         \
-typedef struct { INTP n; INTP is; INTP os; } GEN(iodim64);                          \
-                                                                                    \
-typedef VOID (*GEN(write_char_func))(CHAR c, VOID *);                               \
-typedef INT32 (*GEN(read_char_func))(VOID *);                                       \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(execute)(const GEN(plan) sol);                                              \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_dft)(INT32 rdims, const INT32* ndim,                                   \
-    Complex* idata, Complex* odata, INT32 dir, UINT32 options);                     \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_dft_1d)(INT32 ndim, Complex* idata, Complex* odata, INT32 dir,         \
-    UINT32 options);                                                                \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_dft_2d)(INT32 ndim0, INT32 ndim1,                                      \
-    Complex* idata, Complex* odata, INT32 dir, UINT32 options);                     \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_dft_3d)(INT32 ndim0, INT32 ndim1, INT32 ndim2,                         \
-    Complex* idata, Complex* odata, INT32 dir, UINT32 options);                     \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_many_dft)(INT32 rdims, const INT32* ndim,                              \
-    INT32 nproblems,                                                                \
-    Complex* idata, const INT32* inoffset,                                          \
-    INT32 instride, INT32 inaddr,                                                   \
-    Complex* odata, const INT32* onoffset,                                          \
-    INT32 outstride, INT32 outaddr,                                                 \
-    INT32 dir, UINT32 options);                                                     \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_guru_dft)(INT32 rdims, const GEN(iodim)* dims,                         \
-    INT32 num_problems,                                                             \
-    const GEN(iodim)* pdims,                                                        \
-    Complex* idata, Complex* odata,                                                 \
-    INT32 dir, UINT32 options);                                                     \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_guru64_dft)(INT32 rdims,                                               \
-    const GEN(iodim64)* dims,                                                       \
-    INT32 num_problems,                                                             \
-    const GEN(iodim64)* pdims,                                                      \
-    Complex* idata, Complex* odata,                                                 \
-    INT32 dir, UINT32 options);                                                     \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(execute_dft)(const GEN(plan) sol, Complex* idata, Complex* odata);          \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_many_dft_r2c)(INT32 rdims, const INT32* ndim,                          \
-    INT32 nproblems,                                                                \
-    Real* idata, const INT32* inoffset,                                             \
-    INT32 instride, INT32 inaddr,                                                   \
-    Complex* odata, const INT32* onoffset,                                          \
-    INT32 outstride, INT32 outaddr,                                                 \
-    UINT32 options);                                                                \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_dft_r2c)(INT32 rdims, const INT32* ndim,                               \
-    Real* idata, Complex* odata, UINT32 options);                                   \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_dft_r2c_1d)(INT32 ndim, Real* idata, Complex* odata, UINT32 options);  \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_dft_r2c_2d)(INT32 ndim0, INT32 ndim1,                                  \
-    Real* idata, Complex* odata, UINT32 options);                                   \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_dft_r2c_3d)(INT32 ndim0, INT32 ndim1,                                  \
-    INT32 ndim2,                                                                    \
-    Real* idata, Complex* odata, UINT32 options);                                   \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_many_dft_c2r)(INT32 rdims, const INT32* ndim,                          \
-    INT32 nproblems,                                                                \
-    Complex* idata, const INT32* inoffset,                                          \
-    INT32 instride, INT32 inaddr,                                                   \
-    Real* odata, const INT32* onoffset,                                             \
-    INT32 outstride, INT32 outaddr,                                                 \
-    UINT32 options);                                                                \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_dft_c2r)(INT32 rdims, const INT32* ndim,                               \
-    Complex* idata, Real* odata, UINT32 options);                                   \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_dft_c2r_1d)(INT32 ndim, Complex* idata, Real* odata, UINT32 options);  \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_dft_c2r_2d)(INT32 ndim0, INT32 ndim1,                                  \
-    Complex* idata, Real* odata, UINT32 options);                                   \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_dft_c2r_3d)(INT32 ndim0, INT32 ndim1,                                  \
-    INT32 ndim2,                                                                    \
-    Complex* idata, Real* odata, UINT32 options);                                   \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_guru_dft_r2c)(INT32 rdims, const GEN(iodim)* dims,                     \
-    INT32 num_problems,                                                             \
-    const GEN(iodim)* pdims,                                                        \
-    Real* idata, Complex* odata,                                                    \
-    UINT32 options);                                                                \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_guru_dft_c2r)(INT32 rdims, const GEN(iodim)* dims,                     \
-    INT32 num_problems,                                                             \
-    const GEN(iodim)* pdims,                                                        \
-    Complex* idata, Real* odata,                                                    \
-    UINT32 options);                                                                \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_guru64_dft_r2c)(INT32 rdims,                                           \
-    const GEN(iodim64)* dims,                                                       \
-    INT32 num_problems,                                                             \
-    const GEN(iodim64)* pdims,                                                      \
-    Real* idata, Complex* odata,                                                    \
-    UINT32 options);                                                                \
-                                                                                    \
-EXPORT_SYM_DYN GEN(plan)                                                            \
-    GEN(plan_guru64_dft_c2r)(INT32 rdims,                                           \
-    const GEN(iodim64)* dims,                                                       \
-    INT32 num_problems,                                                             \
-    const GEN(iodim64)* pdims,                                                      \
-    Complex* idata, Real* odata,                                                    \
-    UINT32 options);                                                                \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(execute_dft_r2c)(const GEN(plan) sol, Real* idata, Complex* odata);         \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(execute_dft_c2r)(const GEN(plan) sol, Complex* idata, Real* odata);         \
-                                                                                    \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(destroy_plan)(GEN(plan) sol);                                               \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(cleanup)(VOID);                                                             \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(set_timelimit)(DOUBLE t);                                                   \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(plan_with_nthreads)(INT32 nthreads);                                        \
-                                                                                    \
-EXPORT_SYM_DYN INT32                                                                \
-    GEN(planner_nthreads)(VOID);                                                    \
-                                                                                    \
-EXPORT_SYM_DYN INT32                                                                \
-    GEN(init_threads)(VOID);                                                        \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(cleanup_threads)(VOID);                                                     \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(threads_set_callback)(                                                      \
-    VOID (*parallel_loop)(VOID *(*work)(CHAR *),                                    \
-    CHAR *jobdata, size_t elsize, INT32 njobs, VOID *data), VOID *data);            \
-                                                                                    \
-EXPORT_SYM_DYN VOID*                                                                \
-    GEN(malloc)(size_t ndim);                                                       \
-                                                                                    \
-EXPORT_SYM_DYN Real*                                                                \
-    GEN(alloc_real)(size_t ndim);                                                   \
-EXPORT_SYM_DYN Complex*                                                             \
-    GEN(alloc_complex)(size_t ndim);                                                \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(free)(VOID* sol);                                                           \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(flops)(const GEN(plan) sol,                                                 \
-    DOUBLE* add, DOUBLE* mul, DOUBLE* fmas);                                        \
-EXPORT_SYM_DYN DOUBLE                                                               \
-    GEN(estimate_cost)(const GEN(plan) sol);                                        \
-                                                                                    \
-EXPORT_SYM_DYN DOUBLE                                                               \
-    GEN(cost)(const GEN(plan) sol);                                                 \
-                                                                                    \
-EXPORT_SYM_DYN INT32                                                                \
-    GEN(alignment_of)(Real* sol);                                                   \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(fprint_plan)(const GEN(plan) sol, FILE *f);                                 \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(print_plan)(const GEN(plan) sol);                                           \
-                                                                                    \
-EXPORT_SYM_DYN CHAR*                                                                \
-    GEN(sprint_plan)(const GEN(plan) sol);                                          \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(make_planner_thread_safe)(VOID);                                            \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(forget_wisdom)(VOID);                                                       \
-                                                                                    \
-EXPORT_SYM_DYN INT32                                                                \
-    GEN(export_wisdom_to_filename)(const CHAR *f);                                  \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(export_wisdom_to_file)(FILE *f);                                            \
-                                                                                    \
-EXPORT_SYM_DYN CHAR*                                                                \
-    GEN(export_wisdom_to_string)(VOID);                                             \
-                                                                                    \
-EXPORT_SYM_DYN VOID                                                                 \
-    GEN(export_wisdom)(GEN(write_char_func) write_char, VOID *data);                \
-                                                                                    \
-EXPORT_SYM_DYN INT32                                                                \
-    GEN(import_system_wisdom)(VOID);                                                \
-                                                                                    \
-EXPORT_SYM_DYN INT32                                                                \
-    GEN(import_wisdom_from_filename)(const CHAR *f);                                \
-                                                                                    \
-EXPORT_SYM_DYN INT32                                                                \
-    GEN(import_wisdom_from_file)(FILE *f);                                          \
-                                                                                    \
-EXPORT_SYM_DYN INT32                                                                \
-    GEN(import_wisdom_from_string)(const CHAR *s);                                  \
-                                                                                    \
-EXPORT_SYM_DYN INT32                                                                \
-    GEN(import_wisdom)(GEN(read_char_func) read_char, VOID *data);                  \
-                                                                                    \
-EXPORT_SYM_DYN extern const CHAR GEN(version)[];
+#define FFTW_WRAPPER_API(GEN, Real, Complex)                                   \
+                                                                               \
+    COMPLEX_TYPE(Real, Complex);                                               \
+                                                                               \
+    typedef FFTZ_VOID *GEN(plan);                                              \
+                                                                               \
+    typedef struct                                                             \
+    {                                                                          \
+        FFTZ_INT32 n;                                                          \
+        FFTZ_INT32 is;                                                         \
+        FFTZ_INT32 os;                                                         \
+    } GEN(iodim);                                                              \
+    typedef struct                                                             \
+    {                                                                          \
+        FFTZ_INTP n;                                                           \
+        FFTZ_INTP is;                                                          \
+        FFTZ_INTP os;                                                          \
+    } GEN(iodim64);                                                            \
+                                                                               \
+    typedef FFTZ_VOID (*GEN(write_char_func))(FFTZ_CHAR c, FFTZ_VOID *);       \
+    typedef FFTZ_INT32 (*GEN(read_char_func))(FFTZ_VOID *);                    \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(execute)(const GEN(plan) sol);                \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_dft)(                                    \
+        FFTZ_INT32 rdims, const FFTZ_INT32 *ndim, Complex *idata,              \
+        Complex *odata, FFTZ_INT32 dir, FFTZ_UINT32 options);                  \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan)                                                   \
+        GEN(plan_dft_1d)(FFTZ_INT32 ndim, Complex * idata, Complex * odata,    \
+                         FFTZ_INT32 dir, FFTZ_UINT32 options);                 \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_dft_2d)(                                 \
+        FFTZ_INT32 ndim0, FFTZ_INT32 ndim1, Complex * idata, Complex * odata,  \
+        FFTZ_INT32 dir, FFTZ_UINT32 options);                                  \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_dft_3d)(                                 \
+        FFTZ_INT32 ndim0, FFTZ_INT32 ndim1, FFTZ_INT32 ndim2, Complex * idata, \
+        Complex * odata, FFTZ_INT32 dir, FFTZ_UINT32 options);                 \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_many_dft)(                               \
+        FFTZ_INT32 rdims, const FFTZ_INT32 *ndim, FFTZ_INT32 nproblems,        \
+        Complex *idata, const FFTZ_INT32 *inoffset, FFTZ_INT32 instride,       \
+        FFTZ_INT32 inaddr, Complex *odata, const FFTZ_INT32 *onoffset,         \
+        FFTZ_INT32 outstride, FFTZ_INT32 outaddr, FFTZ_INT32 dir,              \
+        FFTZ_UINT32 options);                                                  \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_guru_dft)(                               \
+        FFTZ_INT32 rdims, const GEN(iodim) * dims, FFTZ_INT32 num_problems,    \
+        const GEN(iodim) * pdims, Complex * idata, Complex * odata,            \
+        FFTZ_INT32 dir, FFTZ_UINT32 options);                                  \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_guru64_dft)(                             \
+        FFTZ_INT32 rdims, const GEN(iodim64) * dims, FFTZ_INT32 num_problems,  \
+        const GEN(iodim64) * pdims, Complex * idata, Complex * odata,          \
+        FFTZ_INT32 dir, FFTZ_UINT32 options);                                  \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(execute_dft)(const GEN(plan) sol,             \
+                                              Complex *idata, Complex *odata); \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_many_dft_r2c)(                           \
+        FFTZ_INT32 rdims, const FFTZ_INT32 *ndim, FFTZ_INT32 nproblems,        \
+        Real *idata, const FFTZ_INT32 *inoffset, FFTZ_INT32 instride,          \
+        FFTZ_INT32 inaddr, Complex *odata, const FFTZ_INT32 *onoffset,         \
+        FFTZ_INT32 outstride, FFTZ_INT32 outaddr, FFTZ_UINT32 options);        \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan)                                                   \
+        GEN(plan_dft_r2c)(FFTZ_INT32 rdims, const FFTZ_INT32 *ndim,            \
+                          Real *idata, Complex *odata, FFTZ_UINT32 options);   \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_dft_r2c_1d)(                             \
+        FFTZ_INT32 ndim, Real * idata, Complex * odata, FFTZ_UINT32 options);  \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan)                                                   \
+        GEN(plan_dft_r2c_2d)(FFTZ_INT32 ndim0, FFTZ_INT32 ndim1, Real * idata, \
+                             Complex * odata, FFTZ_UINT32 options);            \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_dft_r2c_3d)(                             \
+        FFTZ_INT32 ndim0, FFTZ_INT32 ndim1, FFTZ_INT32 ndim2, Real * idata,    \
+        Complex * odata, FFTZ_UINT32 options);                                 \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_many_dft_c2r)(                           \
+        FFTZ_INT32 rdims, const FFTZ_INT32 *ndim, FFTZ_INT32 nproblems,        \
+        Complex *idata, const FFTZ_INT32 *inoffset, FFTZ_INT32 instride,       \
+        FFTZ_INT32 inaddr, Real *odata, const FFTZ_INT32 *onoffset,            \
+        FFTZ_INT32 outstride, FFTZ_INT32 outaddr, FFTZ_UINT32 options);        \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan)                                                   \
+        GEN(plan_dft_c2r)(FFTZ_INT32 rdims, const FFTZ_INT32 *ndim,            \
+                          Complex *idata, Real *odata, FFTZ_UINT32 options);   \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_dft_c2r_1d)(                             \
+        FFTZ_INT32 ndim, Complex * idata, Real * odata, FFTZ_UINT32 options);  \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_dft_c2r_2d)(                             \
+        FFTZ_INT32 ndim0, FFTZ_INT32 ndim1, Complex * idata, Real * odata,     \
+        FFTZ_UINT32 options);                                                  \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_dft_c2r_3d)(                             \
+        FFTZ_INT32 ndim0, FFTZ_INT32 ndim1, FFTZ_INT32 ndim2, Complex * idata, \
+        Real * odata, FFTZ_UINT32 options);                                    \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_guru_dft_r2c)(                           \
+        FFTZ_INT32 rdims, const GEN(iodim) * dims, FFTZ_INT32 num_problems,    \
+        const GEN(iodim) * pdims, Real * idata, Complex * odata,               \
+        FFTZ_UINT32 options);                                                  \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_guru_dft_c2r)(                           \
+        FFTZ_INT32 rdims, const GEN(iodim) * dims, FFTZ_INT32 num_problems,    \
+        const GEN(iodim) * pdims, Complex * idata, Real * odata,               \
+        FFTZ_UINT32 options);                                                  \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_guru64_dft_r2c)(                         \
+        FFTZ_INT32 rdims, const GEN(iodim64) * dims, FFTZ_INT32 num_problems,  \
+        const GEN(iodim64) * pdims, Real * idata, Complex * odata,             \
+        FFTZ_UINT32 options);                                                  \
+                                                                               \
+    EXPORT_SYM_DYN GEN(plan) GEN(plan_guru64_dft_c2r)(                         \
+        FFTZ_INT32 rdims, const GEN(iodim64) * dims, FFTZ_INT32 num_problems,  \
+        const GEN(iodim64) * pdims, Complex * idata, Real * odata,             \
+        FFTZ_UINT32 options);                                                  \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(execute_dft_r2c)(                             \
+        const GEN(plan) sol, Real *idata, Complex *odata);                     \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(execute_dft_c2r)(                             \
+        const GEN(plan) sol, Complex *idata, Real *odata);                     \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(destroy_plan)(GEN(plan) sol);                 \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(cleanup)(FFTZ_VOID);                          \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(set_timelimit)(FFTZ_DOUBLE t);                \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(plan_with_nthreads)(FFTZ_INT32 nthreads);     \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_INT32 GEN(planner_nthreads)(FFTZ_VOID);                \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_INT32 GEN(init_threads)(FFTZ_VOID);                    \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(cleanup_threads)(FFTZ_VOID);                  \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(threads_set_callback)(                        \
+        FFTZ_VOID(*parallel_loop)(FFTZ_VOID * (*work)(FFTZ_CHAR *),            \
+                                  FFTZ_CHAR * jobdata, size_t elsize,          \
+                                  FFTZ_INT32 njobs, FFTZ_VOID * data),         \
+        FFTZ_VOID * data);                                                     \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID *GEN(malloc)(size_t ndim);                        \
+                                                                               \
+    EXPORT_SYM_DYN Real *GEN(alloc_real)(size_t ndim);                         \
+    EXPORT_SYM_DYN Complex *GEN(alloc_complex)(size_t ndim);                   \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(free)(FFTZ_VOID * sol);                       \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(flops)(const GEN(plan) sol, FFTZ_DOUBLE *add, \
+                                        FFTZ_DOUBLE *mul, FFTZ_DOUBLE *fmas);  \
+    EXPORT_SYM_DYN FFTZ_DOUBLE GEN(estimate_cost)(const GEN(plan) sol);        \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_DOUBLE GEN(cost)(const GEN(plan) sol);                 \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_INT32 GEN(alignment_of)(Real * sol);                   \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(fprint_plan)(const GEN(plan) sol, FILE *f);   \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(print_plan)(const GEN(plan) sol);             \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_CHAR *GEN(sprint_plan)(const GEN(plan) sol);           \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(make_planner_thread_safe)(FFTZ_VOID);         \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(forget_wisdom)(FFTZ_VOID);                    \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_INT32 GEN(export_wisdom_to_filename)(                  \
+        const FFTZ_CHAR *f);                                                   \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(export_wisdom_to_file)(FILE * f);             \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_CHAR *GEN(export_wisdom_to_string)(FFTZ_VOID);         \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_VOID GEN(export_wisdom)(                               \
+        GEN(write_char_func) write_char, FFTZ_VOID * data);                    \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_INT32 GEN(import_system_wisdom)(FFTZ_VOID);            \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_INT32 GEN(import_wisdom_from_filename)(                \
+        const FFTZ_CHAR *f);                                                   \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_INT32 GEN(import_wisdom_from_file)(FILE * f);          \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_INT32 GEN(import_wisdom_from_string)(                  \
+        const FFTZ_CHAR *s);                                                   \
+                                                                               \
+    EXPORT_SYM_DYN FFTZ_INT32 GEN(import_wisdom)(                              \
+        GEN(read_char_func) read_char, FFTZ_VOID * data);                      \
+                                                                               \
+    EXPORT_SYM_DYN extern const FFTZ_CHAR GEN(version)[];
 
-FFTW_WRAPPER_API(API_NAME_MANGLE_DOUBLE, DOUBLE, fftw_complex)
-FFTW_WRAPPER_API(API_NAME_MANGLE_FLOAT, FLOAT, fftwf_complex)
+    FFTW_WRAPPER_API(API_NAME_MANGLE_DOUBLE, FFTZ_DOUBLE, fftw_complex)
+    FFTW_WRAPPER_API(API_NAME_MANGLE_FLOAT, FFTZ_FLOAT, fftwf_complex)
 
 #define FFTW_FORWARD DIR_FORWARD
 #define FFTW_BACKWARD DIR_BACKWARD

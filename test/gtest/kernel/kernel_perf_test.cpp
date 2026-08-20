@@ -1,30 +1,5 @@
-/*
- * Copyright (C) 2024-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file kernel_perf_gtest.cpp
  *
@@ -57,18 +32,18 @@ class PerformanceTest : public benchmark::Fixture {
     void TearDown(::benchmark::State& state) {}
     void kernel_profile(::benchmark::State& state)
     {
-        UINT32 radix = state.range(0);
-        INTP batches = state.range(1);
-        UINT8 kernel_type = state.range(2);
-        INTP in_stride = state.range(3);
-        INTP out_stride = state.range(4);
-        INTP v_in_stride = state.range(5) != 1 ? state.range(5) :
+        FFTZ_UINT32 radix = state.range(0);
+        FFTZ_INTP batches = state.range(1);
+        FFTZ_UINT8 kernel_type = state.range(2);
+        FFTZ_INTP in_stride = state.range(3);
+        FFTZ_INTP out_stride = state.range(4);
+        FFTZ_INTP v_in_stride = state.range(5) != 1 ? state.range(5) :
                            radix * in_stride;
-        INTP v_out_stride = state.range(6) != 1 ? state.range(6) :
+        FFTZ_INTP v_out_stride = state.range(6) != 1 ? state.range(6) :
                             radix * out_stride;
-        UINT8 is_bwd = false;
-        UINT8 is_real = state.range(7);
-        INT32 data_stride = is_real ? 1 : 2;
+        FFTZ_UINT8 is_bwd = false;
+        FFTZ_UINT8 is_real = state.range(7);
+        FFTZ_INT32 data_stride = is_real ? 1 : 2;
 
         wrapper_kernel_fp_list *table = get_kernel_table(kernel_type);
         kfft_ fft_kernel = get_kernel<T>(table, is_bwd, radix);
@@ -81,12 +56,12 @@ class PerformanceTest : public benchmark::Fixture {
         }
 
         // ---------- prepare random input and output ----------
-        INTP input_length  = radix * batches * in_stride;
-        INTP output_length = radix * batches * out_stride;
+        FFTZ_INTP input_length  = radix * batches * in_stride;
+        FFTZ_INTP output_length = radix * batches * out_stride;
 
         T *in = NULL;
         ALLOC_ALIGN_UNINIT(in, T, sizeof(T) * input_length * DATA_STRIDE);
-        for (INTP idx = 0; idx < input_length * DATA_STRIDE; ++idx)
+        for (FFTZ_INTP idx = 0; idx < input_length * DATA_STRIDE; ++idx)
         {
             // range: [-10.0, 10.0) with 3 decimal precision
             in[idx] = (T)((rand() % 20000) / 1000.0) - 10.0;
@@ -99,10 +74,12 @@ class PerformanceTest : public benchmark::Fixture {
         T *out_i = out + 1;
 
         aoclfftz_strides_t strides;
-        ALLOC_ALIGN_UNINIT(strides.in_strides, INTP, radix * sizeof(INTP));
-        ALLOC_ALIGN_UNINIT(strides.out_strides, INTP, radix * sizeof(INTP));
+        ALLOC_ALIGN_UNINIT(strides.in_strides, FFTZ_INTP,
+                           radix * sizeof(FFTZ_INTP));
+        ALLOC_ALIGN_UNINIT(strides.out_strides, FFTZ_INTP,
+                           radix * sizeof(FFTZ_INTP));
 
-        for (INTP i = 0; i < radix; i++)
+        for (FFTZ_INTP i = 0; i < radix; i++)
         {
             strides.in_strides[i] = i * data_stride * in_stride;
             strides.out_strides[i] = i * data_stride * out_stride;
@@ -110,12 +87,15 @@ class PerformanceTest : public benchmark::Fixture {
 
         strides.v_in_stride = v_in_stride * data_stride;
         strides.v_out_stride = v_out_stride * data_stride;
+        strides.v_in_h2_stride = strides.v_in_stride;
+        strides.v_out_h2_stride = strides.v_out_stride;
 
         for (auto _ : state)
         {
             benchmark::DoNotOptimize(out_r);
             benchmark::DoNotOptimize(out_i);
-            fft_kernel(in_r, in_i, out_r, out_i, batches, &strides, NULL, is_bwd);
+            fft_kernel(in_r, in_i, out_r, out_i, batches, &strides, NULL,
+                       is_bwd);
             benchmark::ClobberMemory();
         }
 
@@ -127,18 +107,18 @@ class PerformanceTest : public benchmark::Fixture {
 
     void twiddle_kernel_profile(::benchmark::State& state)
     {
-        UINT32 radix = state.range(0);
-        INTP batches = state.range(1);
-        UINT8 kernel_type = state.range(2);
-        INTP in_stride = state.range(3);
-        INTP out_stride = state.range(4);
-        INTP v_in_stride = state.range(5) != 1 ? state.range(5) :
+        FFTZ_UINT32 radix = state.range(0);
+        FFTZ_INTP batches = state.range(1);
+        FFTZ_UINT8 kernel_type = state.range(2);
+        FFTZ_INTP in_stride = state.range(3);
+        FFTZ_INTP out_stride = state.range(4);
+        FFTZ_INTP v_in_stride = state.range(5) != 1 ? state.range(5) :
                            radix * in_stride;
-        INTP v_out_stride = state.range(6) != 1 ? state.range(6) :
+        FFTZ_INTP v_out_stride = state.range(6) != 1 ? state.range(6) :
                             radix * out_stride;
-        UINT8 is_bwd = false;
-        UINT8 is_real = state.range(7);
-        INT32 data_stride = is_real ? 1 : 2;
+        FFTZ_UINT8 is_bwd = false;
+        FFTZ_UINT8 is_real = state.range(7);
+        FFTZ_INT32 data_stride = is_real ? 1 : 2;
         aoclfftz_twiddle_t tws;
 
         if (kernel_type < aocl_fftz_kernel_type::C2C_TWID_C ||
@@ -161,12 +141,12 @@ class PerformanceTest : public benchmark::Fixture {
         }
 
         // ---------- prepare random input and output ----------
-        INTP input_length  = radix * batches * in_stride;
-        INTP output_length = radix * batches * out_stride;
+        FFTZ_INTP input_length  = radix * batches * in_stride;
+        FFTZ_INTP output_length = radix * batches * out_stride;
 
         T *in = NULL;
         ALLOC_ALIGN_UNINIT(in, T, sizeof(T) * input_length * DATA_STRIDE);
-        for (INTP idx = 0; idx < input_length * DATA_STRIDE; ++idx)
+        for (FFTZ_INTP idx = 0; idx < input_length * DATA_STRIDE; ++idx)
         {
             // range: [-10.0, 10.0) with 3 decimal precision
             in[idx] = (T)((rand() % 20000) / 1000.0) - 10.0;
@@ -179,10 +159,12 @@ class PerformanceTest : public benchmark::Fixture {
         T *out_i = out + 1;
 
         aoclfftz_strides_t strides;
-        ALLOC_ALIGN_UNINIT(strides.in_strides, INTP, radix * sizeof(INTP));
-        ALLOC_ALIGN_UNINIT(strides.out_strides, INTP, radix * sizeof(INTP));
+        ALLOC_ALIGN_UNINIT(strides.in_strides, FFTZ_INTP,
+                           radix * sizeof(FFTZ_INTP));
+        ALLOC_ALIGN_UNINIT(strides.out_strides, FFTZ_INTP,
+                           radix * sizeof(FFTZ_INTP));
 
-        for (INTP i = 0; i < radix; i++)
+        for (FFTZ_INTP i = 0; i < radix; i++)
         {
             strides.in_strides[i] = i * data_stride * in_stride;
             strides.out_strides[i] = i * data_stride * out_stride;
@@ -190,10 +172,12 @@ class PerformanceTest : public benchmark::Fixture {
 
         strides.v_in_stride = v_in_stride * data_stride;
         strides.v_out_stride = v_out_stride * data_stride;
+        strides.v_in_h2_stride = strides.v_in_stride;
+        strides.v_out_h2_stride = strides.v_out_stride;
 
-        VOID *twiddle_buffer = NULL;
+        FFTZ_VOID *twiddle_buffer = NULL;
         // setup the twiddle buffer
-        ALLOC_ALIGN_UNINIT(twiddle_buffer, VOID,
+        ALLOC_ALIGN_UNINIT(twiddle_buffer, FFTZ_VOID,
                            data_stride * sizeof(T) * batches * radix);
         if (twiddle_buffer == nullptr)
         {
@@ -203,11 +187,15 @@ class PerformanceTest : public benchmark::Fixture {
                     .c_str());
             goto cleanup;
         }
-        compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, batches);
+        {
+            FFTZ_INTP rw = twiddle_kernel_register_width<T>(
+                static_cast<aocl_fftz_kernel_type>(kernel_type));
+            compute_twiddle_buffer_wrapper<T>(twiddle_buffer, radix, batches,
+                                              rw, /*load_multi_cols=*/1);
+        }
 
         tws.TW = twiddle_buffer;
         tws.twiddle_buf_ptr = twiddle_buffer;
-        tws.cols = batches;
         tws.load_multi_cols = 1; // true by default
 
         for (auto _ : state)
@@ -228,166 +216,223 @@ cleanup:
     }
 };
 
-BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_d, DOUBLE)
+BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_d, FFTZ_DOUBLE)
                            (benchmark::State& state)
 {
     kernel_profile(state);
 }
 
-BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_f, FLOAT)
+BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_f, FFTZ_FLOAT)
                            (benchmark::State& state)
 {
     kernel_profile(state);
 }
 
-BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_twiddle_d, DOUBLE)
+BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_twiddle_d, FFTZ_DOUBLE)
                            (benchmark::State& state)
 {
     twiddle_kernel_profile(state);
 }
 
-BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_twiddle_f, FLOAT)
+BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_twiddle_f, FFTZ_FLOAT)
                            (benchmark::State& state)
 {
     twiddle_kernel_profile(state);
 }
 
-BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_real_d, DOUBLE)
+BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_real_d, FFTZ_DOUBLE)
                            (benchmark::State& state)
 {
     kernel_profile(state);
 }
 
-BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_real_f, FLOAT)
+BENCHMARK_TEMPLATE_DEFINE_F(PerformanceTest, Kernel_real_f, FFTZ_FLOAT)
                            (benchmark::State& state)
 {
     kernel_profile(state);
 }
 
-// filter to benchmark specific test case : --benchmark_filter=
-// "DOUBLE.*radix:6/batch:1/kernel_type:0/*" which runs Radix-6 C Double kernel
-// with batch size of 1
-BENCHMARK_REGISTER_F(PerformanceTest, Kernel_d)
-    ->ComputeStatistics("min", [](const std::vector<double>& v) -> double {
-        return *(std::min_element(std::begin(v), std::end(v)));
-    })
-    ->ArgsProduct({
-                // Covers all direct kernels from 2-16, 48
-                {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 48},
-                // Batch sizes to cover all possible cases in C & AVX kernels
-                benchmark::CreateDenseRange(1, 15, 1),
-                // aocl_fftz_kernel_type -> C/AVX
-                benchmark::CreateDenseRange(
-                    aocl_fftz_kernel_type::C2C_C,
-                    aocl_fftz_kernel_type::C2C_AVX512, 1),
-                {IN_STRIDE}, {OUT_STRIDE},
-                {VEC_IN_STRIDE}, {VEC_OUT_STRIDE}, {COMPLEX},
-    })
-    ->ArgNames({"radix", "batch", "kernel_type", "in_stride", "out_stride",
-                "v_in_stride", "v_out_stride", "is_real"});
+                           // filter to benchmark specific test case :
+                           // --benchmark_filter=
+                           // "FFTZ_DOUBLE.*radix:6/batch:1/kernel_type:0/*"
+                           // which runs Radix-6 C Double kernel with batch size
+                           // of 1
+                           BENCHMARK_REGISTER_F(PerformanceTest, Kernel_d)
+                               ->ComputeStatistics(
+                                   "min",
+                                   [](const std::vector<double> &v) -> double {
+                                       return *(std::min_element(std::begin(v),
+                                                                 std::end(v)));
+                                   })
+                               ->ArgsProduct({
+                                   // Covers all direct kernels from 2-16, 48
+                                   {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+                                    15, 16, 48},
+                                   // Batch sizes to cover all possible cases in
+                                   // C & AVX kernels
+                                   benchmark::CreateDenseRange(1, 15, 1),
+                                   // aocl_fftz_kernel_type -> C/AVX
+                                   benchmark::CreateDenseRange(
+                                       aocl_fftz_kernel_type::C2C_C,
+                                       aocl_fftz_kernel_type::C2C_AVX512, 1),
+                                   {IN_STRIDE},
+                                   {OUT_STRIDE},
+                                   {VEC_IN_STRIDE},
+                                   {VEC_OUT_STRIDE},
+                                   {COMPLEX},
+                               })
+                               ->ArgNames({"radix", "batch", "kernel_type",
+                                           "in_stride", "out_stride",
+                                           "v_in_stride", "v_out_stride",
+                                           "is_real"});
 
-BENCHMARK_REGISTER_F(PerformanceTest, Kernel_f)
-    ->ComputeStatistics("min", [](const std::vector<double>& v) -> double {
-        return *(std::min_element(std::begin(v), std::end(v)));
-    })
-    ->ArgsProduct({
-                // Covers all direct kernels from 2-16, 48
-                {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 48},
-                // Batch sizes to cover all possible cases in C & AVX kernels
-                benchmark::CreateDenseRange(1, 15, 1),
-                // aocl_fftz_kernel_type -> C/AVX
-                benchmark::CreateDenseRange(
-                    aocl_fftz_kernel_type::C2C_C,
-                    aocl_fftz_kernel_type::C2C_AVX512, 1),
-                {IN_STRIDE}, {OUT_STRIDE},
-                {VEC_IN_STRIDE}, {VEC_OUT_STRIDE}, {COMPLEX},
-    })
-    ->ArgNames({"radix", "batch", "kernel_type", "in_stride", "out_stride",
-                "v_in_stride", "v_out_stride", "is_real"});
+                           BENCHMARK_REGISTER_F(PerformanceTest, Kernel_f)
+                               ->ComputeStatistics(
+                                   "min",
+                                   [](const std::vector<double> &v) -> double {
+                                       return *(std::min_element(std::begin(v),
+                                                                 std::end(v)));
+                                   })
+                               ->ArgsProduct({
+                                   // Covers all direct kernels from 2-16, 48
+                                   {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+                                    15, 16, 48},
+                                   // Batch sizes to cover all possible cases in
+                                   // C & AVX kernels
+                                   benchmark::CreateDenseRange(1, 15, 1),
+                                   // aocl_fftz_kernel_type -> C/AVX
+                                   benchmark::CreateDenseRange(
+                                       aocl_fftz_kernel_type::C2C_C,
+                                       aocl_fftz_kernel_type::C2C_AVX512, 1),
+                                   {IN_STRIDE},
+                                   {OUT_STRIDE},
+                                   {VEC_IN_STRIDE},
+                                   {VEC_OUT_STRIDE},
+                                   {COMPLEX},
+                               })
+                               ->ArgNames({"radix", "batch", "kernel_type",
+                                           "in_stride", "out_stride",
+                                           "v_in_stride", "v_out_stride",
+                                           "is_real"});
 
-BENCHMARK_REGISTER_F(PerformanceTest, Kernel_twiddle_d)
-    ->ComputeStatistics("min",
-                        [](const std::vector<double> &v) -> double {
-                            return *(
-                                std::min_element(std::begin(v), std::end(v)));
-                        })
-    ->ArgsProduct({
-        // Covers all direct kernels from 2-16
-        benchmark::CreateDenseRange(2, 16, 1),
-        {31},
-        // Batch sizes to cover all possible cases in C & AVX kernels
-        // benchmark::CreateDenseRange(1, 15, 1),
-        // aocl_fftz_kernel_type -> C/AVX
-        benchmark::CreateDenseRange(
-            aocl_fftz_kernel_type::C2C_TWID_C,
-            aocl_fftz_kernel_type::C2C_TWID_AVX512, 1),
-        {IN_STRIDE},
-        {OUT_STRIDE},
-        {VEC_IN_STRIDE},
-        {VEC_OUT_STRIDE},
-        {COMPLEX},
-    })
-    ->ArgNames({"radix", "batch", "kernel_type", "in_stride", "out_stride",
-                "v_in_stride", "v_out_stride", "is_real"});
+                           BENCHMARK_REGISTER_F(PerformanceTest,
+                                                Kernel_twiddle_d)
+                               ->ComputeStatistics(
+                                   "min",
+                                   [](const std::vector<double> &v) -> double {
+                                       return *(std::min_element(std::begin(v),
+                                                                 std::end(v)));
+                                   })
+                               ->ArgsProduct({
+                                   // Covers all direct kernels from 2-16
+                                   benchmark::CreateDenseRange(2, 16, 1),
+                                   {31},
+                                   // Batch sizes to cover all possible cases in
+                                   // C & AVX kernels
+                                   // benchmark::CreateDenseRange(1, 15, 1),
+                                   // aocl_fftz_kernel_type -> C/AVX
+                                   benchmark::CreateDenseRange(
+                                       aocl_fftz_kernel_type::C2C_TWID_C,
+                                       aocl_fftz_kernel_type::C2C_TWID_AVX512,
+                                       1),
+                                   {IN_STRIDE},
+                                   {OUT_STRIDE},
+                                   {VEC_IN_STRIDE},
+                                   {VEC_OUT_STRIDE},
+                                   {COMPLEX},
+                               })
+                               ->ArgNames({"radix", "batch", "kernel_type",
+                                           "in_stride", "out_stride",
+                                           "v_in_stride", "v_out_stride",
+                                           "is_real"});
 
-BENCHMARK_REGISTER_F(PerformanceTest, Kernel_twiddle_f)
-    ->ComputeStatistics("min", [](const std::vector<double>& v) -> double {
-        return *(std::min_element(std::begin(v), std::end(v)));
-    })
-    ->ComputeStatistics("min", [](const std::vector<double> &v) -> double {
-            return *(std::min_element(std::begin(v), std::end(v)));
-                        })
-    ->ArgsProduct({
-        // Covers all direct kernels from 2-16
-        benchmark::CreateDenseRange(2, 16, 1),
-        {31},
-        // Batch sizes to cover all possible cases in C & AVX kernels
-        // benchmark::CreateDenseRange(1, 15, 1),
-        // aocl_fftz_kernel_type -> C/AVX
-        benchmark::CreateDenseRange(
-            aocl_fftz_kernel_type::C2C_TWID_C,
-            aocl_fftz_kernel_type::C2C_TWID_AVX512, 1),
-        {IN_STRIDE},
-        {OUT_STRIDE},
-        {VEC_IN_STRIDE},
-        {VEC_OUT_STRIDE},
-        {COMPLEX},
-    })
-    ->ArgNames({"radix", "batch", "kernel_type", "in_stride", "out_stride",
-                "v_in_stride", "v_out_stride", "is_real"});
+                           BENCHMARK_REGISTER_F(PerformanceTest,
+                                                Kernel_twiddle_f)
+                               ->ComputeStatistics(
+                                   "min",
+                                   [](const std::vector<double> &v) -> double {
+                                       return *(std::min_element(std::begin(v),
+                                                                 std::end(v)));
+                                   })
+                               ->ComputeStatistics(
+                                   "min",
+                                   [](const std::vector<double> &v) -> double {
+                                       return *(std::min_element(std::begin(v),
+                                                                 std::end(v)));
+                                   })
+                               ->ArgsProduct({
+                                   // Covers all direct kernels from 2-16
+                                   benchmark::CreateDenseRange(2, 16, 1),
+                                   {31},
+                                   // Batch sizes to cover all possible cases in
+                                   // C & AVX kernels
+                                   // benchmark::CreateDenseRange(1, 15, 1),
+                                   // aocl_fftz_kernel_type -> C/AVX
+                                   benchmark::CreateDenseRange(
+                                       aocl_fftz_kernel_type::C2C_TWID_C,
+                                       aocl_fftz_kernel_type::C2C_TWID_AVX512,
+                                       1),
+                                   {IN_STRIDE},
+                                   {OUT_STRIDE},
+                                   {VEC_IN_STRIDE},
+                                   {VEC_OUT_STRIDE},
+                                   {COMPLEX},
+                               })
+                               ->ArgNames({"radix", "batch", "kernel_type",
+                                           "in_stride", "out_stride",
+                                           "v_in_stride", "v_out_stride",
+                                           "is_real"});
 
-BENCHMARK_REGISTER_F(PerformanceTest, Kernel_real_d)
-    ->ComputeStatistics("min", [](const std::vector<double>& v) -> double {
-        return *(std::min_element(std::begin(v), std::end(v)));
-    })
-    ->ArgsProduct({
-                benchmark::CreateDenseRange(2, 4, 1),
-                // Batch sizes to cover all possible cases in C & AVX
-                benchmark::CreateDenseRange(1, 31, 1),
-                benchmark::CreateDenseRange(
-                    aocl_fftz_kernel_type::R2HC_C,
-                    aocl_fftz_kernel_type::R2HCF_AVX512, 1),
-                {IN_STRIDE}, {OUT_STRIDE},
-                {VEC_IN_STRIDE}, {VEC_OUT_STRIDE}, {REAL},
-    })
-    ->ArgNames({"radix", "batch", "kernel_type", "in_stride", "out_stride",
-                "v_in_stride", "v_out_stride", "is_real"});
+                           BENCHMARK_REGISTER_F(PerformanceTest, Kernel_real_d)
+                               ->ComputeStatistics(
+                                   "min",
+                                   [](const std::vector<double> &v) -> double {
+                                       return *(std::min_element(std::begin(v),
+                                                                 std::end(v)));
+                                   })
+                               ->ArgsProduct({
+                                   benchmark::CreateDenseRange(2, 4, 1),
+                                   // Batch sizes to cover all possible cases in
+                                   // C & AVX
+                                   benchmark::CreateDenseRange(1, 31, 1),
+                                   benchmark::CreateDenseRange(
+                                       aocl_fftz_kernel_type::R2HC_C,
+                                       aocl_fftz_kernel_type::R2HCF_AVX512, 1),
+                                   {IN_STRIDE},
+                                   {OUT_STRIDE},
+                                   {VEC_IN_STRIDE},
+                                   {VEC_OUT_STRIDE},
+                                   {REAL},
+                               })
+                               ->ArgNames({"radix", "batch", "kernel_type",
+                                           "in_stride", "out_stride",
+                                           "v_in_stride", "v_out_stride",
+                                           "is_real"});
 
-BENCHMARK_REGISTER_F(PerformanceTest, Kernel_real_f)
-    ->ComputeStatistics("min", [](const std::vector<double>& v) -> double {
-        return *(std::min_element(std::begin(v), std::end(v)));
-    })
-    ->ArgsProduct({
-                benchmark::CreateDenseRange(2, 4, 1),
-                // Batch sizes to cover all possible cases in C & AVX
-                benchmark::CreateDenseRange(1, 31, 1),
-                benchmark::CreateDenseRange(
-                    aocl_fftz_kernel_type::R2HC_C,
-                    aocl_fftz_kernel_type::R2HCF_AVX512, 1),
-                {IN_STRIDE}, {OUT_STRIDE},
-                {VEC_IN_STRIDE}, {VEC_OUT_STRIDE}, {REAL},
-    })
-    ->ArgNames({"radix", "batch", "kernel_type", "in_stride", "out_stride",
-                "v_in_stride", "v_out_stride", "is_real"});
+                           BENCHMARK_REGISTER_F(PerformanceTest, Kernel_real_f)
+                               ->ComputeStatistics(
+                                   "min",
+                                   [](const std::vector<double> &v) -> double {
+                                       return *(std::min_element(std::begin(v),
+                                                                 std::end(v)));
+                                   })
+                               ->ArgsProduct({
+                                   benchmark::CreateDenseRange(2, 4, 1),
+                                   // Batch sizes to cover all possible cases in
+                                   // C & AVX
+                                   benchmark::CreateDenseRange(1, 31, 1),
+                                   benchmark::CreateDenseRange(
+                                       aocl_fftz_kernel_type::R2HC_C,
+                                       aocl_fftz_kernel_type::R2HCF_AVX512, 1),
+                                   {IN_STRIDE},
+                                   {OUT_STRIDE},
+                                   {VEC_IN_STRIDE},
+                                   {VEC_OUT_STRIDE},
+                                   {REAL},
+                               })
+                               ->ArgNames({"radix", "batch", "kernel_type",
+                                           "in_stride", "out_stride",
+                                           "v_in_stride", "v_out_stride",
+                                           "is_real"});
 
-BENCHMARK_MAIN();
+                           BENCHMARK_MAIN();

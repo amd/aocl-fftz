@@ -1,35 +1,11 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 // A test program to validate the bit-reproducibility mode of AOCL-FFTZ library
 //
 // To build:
-// gcc -o test_bit_repro test_bit_repro.c -I<path/to/api/headers> -Wl,-rpath=<path/to/lib/dir> -L<path/to/lib/dir> -laocl_fftz -lm
+// gcc -o test_bit_repro test_bit_repro.c -I<path/to/api/headers>
+// -Wl,-rpath=<path/to/lib/dir> -L<path/to/lib/dir> -laocl_fftz -lm
 //
 // author: Ashwin K. Godbole
 
@@ -45,8 +21,10 @@
 void usage(char* program_name)
 {
     printf("Usage:\n");
-    printf("This program validates the bit-reproducibility mode of AOCL-FFTZ library\n");
-    printf("%s <signal_type> <size> <nthreads> <check_n_times>\n", program_name);
+    printf("This program validates the bit-reproducibility mode of AOCL-FFTZ "
+           "library\n");
+    printf("%s <signal_type> <size> <nthreads> <check_n_times>\n",
+           program_name);
     printf("\nWhere:\n");
     printf("<signal_datatype>: 'D' or 'd' for double\n");
     printf("                  'F' or 'f' for float\n");
@@ -56,9 +34,12 @@ void usage(char* program_name)
     printf("                  For 1D FFT: <D1>\n");
     printf("                  For ND FFT: <D1>x<D2>x...<DN>\n");
     printf("<nthreads>      : Number of threads to use\n");
-    printf("<check_n_times> : Number of times to run the FFT and check for bit-reproducibility\n");
+    printf("<check_n_times> : Number of times to run the FFT and check for "
+           "bit-reproducibility\n");
     printf("\nbuild instructions:\n");
-    printf("gcc -o test_bit_repro test_bit_repro.c -I<path/to/api/headers> -Wl,-rpath=<path/to/lib/dir> -L<path/to/lib/dir> -laocl_fftz -lm\n");
+    printf(
+        "gcc -o test_bit_repro test_bit_repro.c -I<path/to/api/headers> "
+        "-Wl,-rpath=<path/to/lib/dir> -L<path/to/lib/dir> -laocl_fftz -lm\n");
 }
 
 #define ALLOC(ptr, type, n_ele)                                                \
@@ -72,19 +53,20 @@ void usage(char* program_name)
     }
 
 // TODO: may overallocate for real sizes, verify
-VOID calculate_buffer_sizes(aoclfftz_dim_t_64_ *dims, INT32 dim_rank,
-                            aoclfftz_dim_t_64_ *vecs, INT32 vec_rank,
-                            UINTP *in_buffer_size, UINTP *out_buffer_size,
-                            UINT8 is_real)
+FFTZ_VOID calculate_buffer_sizes(aoclfftz_dim_t_64_ *dims, FFTZ_INT32 dim_rank,
+                                 aoclfftz_dim_t_64_ *vecs, FFTZ_INT32 vec_rank,
+                                 FFTZ_UINTP *in_buffer_size,
+                                 FFTZ_UINTP *out_buffer_size,
+                                 FFTZ_UINT8 is_real)
 {
-    UINTP in_size = 1;
-    UINTP out_size = 1;
-    for (INT32 i = 0; i < dim_rank; i++)
+    FFTZ_UINTP in_size = 1;
+    FFTZ_UINTP out_size = 1;
+    for (FFTZ_INT32 i = 0; i < dim_rank; i++)
     {
         in_size += ((dims[i].n - 1) * (dims[i].in_stride));
         out_size += ((dims[i].n - 1) * (dims[i].out_stride));
     }
-    for (INT32 i = 0; i < vec_rank; i++)
+    for (FFTZ_INT32 i = 0; i < vec_rank; i++)
     {
         in_size += ((vecs[i].n - 1) * (vecs[i].in_stride));
         out_size += ((vecs[i].n - 1) * (vecs[i].out_stride));
@@ -94,12 +76,12 @@ VOID calculate_buffer_sizes(aoclfftz_dim_t_64_ *dims, INT32 dim_rank,
 }
 
 // This function calculates the strides for complex inputs for (1D and ND)
-VOID calculate_vecs_n_dims_strides_for_complex(aoclfftz_dim_t_64_ *dims,
-                                               INT32 dim_rank,
+FFTZ_VOID calculate_vecs_n_dims_strides_for_complex(aoclfftz_dim_t_64_ *dims,
+                                               FFTZ_INT32 dim_rank,
                                                aoclfftz_dim_t_64_ *vecs,
-                                               INT32 vec_rank)
+                                               FFTZ_INT32 vec_rank)
 {
-    INT32 d;
+    FFTZ_INT32 d;
     for (d = 0; d < dim_rank; d++)
     {
         if (d == 0)
@@ -113,9 +95,9 @@ VOID calculate_vecs_n_dims_strides_for_complex(aoclfftz_dim_t_64_ *dims,
         dims[d].in_stride = dims[d - 1].in_stride * dims[d - 1].n;
         dims[d].out_stride = dims[d - 1].out_stride * dims[d - 1].n;
     }
-    UINT32 default_vec_in_stride =
+    FFTZ_UINT32 default_vec_in_stride =
         dims[dim_rank - 1].in_stride * dims[dim_rank - 1].n;
-    UINT32 default_vec_out_stride =
+    FFTZ_UINT32 default_vec_out_stride =
         dims[dim_rank - 1].out_stride * dims[dim_rank - 1].n;
     for (d = 0; d < vec_rank; d++)
     {
@@ -135,19 +117,20 @@ VOID calculate_vecs_n_dims_strides_for_complex(aoclfftz_dim_t_64_ *dims,
 
 // This function calculates the in_stride and out_strides for dims and vecs.
 // It assumes dim_rank and vec_rank to be 1.
-VOID calculate_1D_vecs_dims_strides_for_real(aoclfftz_dim_t_64_ *dims,
-                                             INT32 dim_rank,
-                                             aoclfftz_dim_t_64_ *vecs,
-                                             INT32 vec_rank, UINT8 direction,
-                                             UINT8 is_inplace)
+FFTZ_VOID calculate_1D_vecs_dims_strides_for_real(aoclfftz_dim_t_64_ *dims,
+                                                  FFTZ_INT32 dim_rank,
+                                                  aoclfftz_dim_t_64_ *vecs,
+                                                  FFTZ_INT32 vec_rank,
+                                                  FFTZ_UINT8 direction,
+                                                  FFTZ_UINT8 is_inplace)
 {
     // Initializing dims
     dims[0].in_stride = (dims[0].in_stride <= 1) ? 1 : dims[0].in_stride;
     dims[0].out_stride = (dims[0].out_stride <= 1) ? 1 : dims[0].out_stride;
 
     // Initializing vecs
-    INT32 def_vec_in_stride = 1;
-    INT32 def_vec_out_stride = 1;
+    FFTZ_INT32 def_vec_in_stride = 1;
+    FFTZ_INT32 def_vec_out_stride = 1;
 
     if (direction && !is_inplace)
     {
@@ -176,10 +159,13 @@ VOID calculate_1D_vecs_dims_strides_for_real(aoclfftz_dim_t_64_ *dims,
                             def_vec_out_stride : vecs[0].out_stride;
 }
 
-VOID calculate_vecs_n_dims_strides(aoclfftz_dim_t_64_ *dims, INT32 dim_rank,
-                                   aoclfftz_dim_t_64_ *vecs, INT32 vec_rank,
-                                   UINT8 direction, UINT8 is_out_place,
-                                   UINT8 is_real)
+FFTZ_VOID calculate_vecs_n_dims_strides(aoclfftz_dim_t_64_ *dims,
+                                        FFTZ_INT32 dim_rank,
+                                        aoclfftz_dim_t_64_ *vecs,
+                                        FFTZ_INT32 vec_rank,
+                                        FFTZ_UINT8 direction,
+                                        FFTZ_UINT8 is_out_place,
+                                        FFTZ_UINT8 is_real)
 {
     if (is_real)
     {
@@ -198,11 +184,11 @@ typedef struct cmd_args
 {
     char valid;
     char signal_datatype;
-    INT32 signal_type;
-    INT32 nthreads;
-    INT32 check_n_times;
-    INT32 dim_rank;
-    UINTP size[MAX_DIM_RANK];
+    FFTZ_INT32 signal_type;
+    FFTZ_INT32 nthreads;
+    FFTZ_INT32 check_n_times;
+    FFTZ_INT32 dim_rank;
+    FFTZ_UINTP size[MAX_DIM_RANK];
 } cmd_args;
 
 cmd_args parse_args(int argc, char** argv)
@@ -248,7 +234,7 @@ cmd_args parse_args(int argc, char** argv)
 
     char* token;
     char* rest = argv[3];
-    INT32 dim_index = 0;
+    FFTZ_INT32 dim_index = 0;
 
     // Parse the size argument to extract dimensions
     while ((token = strtok_r(rest, "x", &rest)))
@@ -259,7 +245,7 @@ cmd_args parse_args(int argc, char** argv)
         }
         else
         {
-            args.size[dim_index] = (UINTP)atoi(token);
+            args.size[dim_index] = (FFTZ_UINTP)atoi(token);
         }
         dim_index++;
     }
@@ -309,7 +295,7 @@ cmd_args parse_args(int argc, char** argv)
 #define print_complex_array_hex(name, type, arr, size)                         \
     {                                                                          \
         printf("%s = [", name);                                                \
-        for (UINTP i = 0; i < size; i++) {                                     \
+        for (FFTZ_UINTP i = 0; i < size; i++) { \
               printf("(" HEX(type) ", " HEX(type) ") ", (type)arr[2 * i],      \
                      (type)arr[2 * i + 1]);                                    \
         }                                                                      \
@@ -319,7 +305,7 @@ cmd_args parse_args(int argc, char** argv)
 // This function can be used for real (1D) and complex(1D and ND) problems
 #define prepare_random_input(in, input_size, datatype_char, signaltype_char)   \
     {                                                                          \
-        INTP idx = 0;                                                          \
+        FFTZ_INTP idx = 0; \
         for (idx = 0; idx < input_size * DATA_STRIDE(signaltype_char); ++idx)  \
         {                                                                      \
             in[idx] = (20.0 / RAND_MAX) * rand() - 10.0;                       \
@@ -328,16 +314,16 @@ cmd_args parse_args(int argc, char** argv)
 
 #define problem_type(datatype_char) aoclfftz_prob_desc_##datatype_char##_64_
 #define setup_api(datatype_char) aoclfftz_setup_##datatype_char##_64_
-#define type_d DOUBLE
-#define type_f FLOAT
+#define type_d FFTZ_DOUBLE
+#define type_f FFTZ_FLOAT
 #define data_type(datatype_char) type_##datatype_char
-#define int_type_d UINT64
-#define int_type_f UINT32
+#define int_type_d FFTZ_UINT64
+#define int_type_f FFTZ_UINT32
 #define int_type(datatype_char) int_type_##datatype_char
 
 #define check_bit_reproducibility(args, datatype_char, signaltype_char)        \
     {                                                                          \
-        /* Create and initialize prob_desc params (using DOUBLE ILP64) */      \
+        /* Create and initialize prob_desc params (using FFTZ_DOUBLE ILP64) */ \
         problem_type(datatype_char) * problem;                                 \
         ALLOC(problem, problem_type(datatype_char), 1);                        \
                                                                                \
@@ -370,7 +356,7 @@ cmd_args parse_args(int argc, char** argv)
         problem->vecs[0].n = 1;                                                \
                                                                                \
         /* Initialize the dims */                                              \
-        for (INT32 i = 0; i < problem->dim_rank; i++)                          \
+        for (FFTZ_INT32 i = 0; i < problem->dim_rank; i++) \
         {                                                                      \
             problem->dims[i].n = args.size[i];                                 \
         }                                                                      \
@@ -382,8 +368,8 @@ cmd_args parse_args(int argc, char** argv)
             problem->vec_rank, problem->flags.fft_direction,                   \
             problem->flags.fft_placement, args.signal_type);                   \
                                                                                \
-        UINTP in_buffer_size = 0;                                              \
-        UINTP out_buffer_size = 0;                                             \
+        FFTZ_UINTP in_buffer_size = 0; \
+        FFTZ_UINTP out_buffer_size = 0; \
         calculate_buffer_sizes(problem->dims, problem->dim_rank,               \
                                problem->vecs, problem->vec_rank,               \
                                &in_buffer_size, &out_buffer_size,              \
@@ -413,10 +399,10 @@ cmd_args parse_args(int argc, char** argv)
             problem->in = in;                                                  \
             problem->out = out;                                                \
                                                                                \
-            VOID *aoclfftz_handle = setup_api(datatype_char)(problem);         \
+            FFTZ_VOID *aoclfftz_handle = setup_api(datatype_char)(problem); \
             if (aoclfftz_handle)                                               \
             {                                                                  \
-                INT32 res = aoclfftz_execute(aoclfftz_handle);                 \
+                FFTZ_INT32 res = aoclfftz_execute(aoclfftz_handle); \
                                                                                \
                 if (res == AOCLFFTZ_EXECUTION_FAILURE)                         \
                 {                                                              \
@@ -434,15 +420,15 @@ cmd_args parse_args(int argc, char** argv)
         /* now run `n_check_times` runs and compare the output to the          \
          * reference */                                                        \
         /* output (out) */                                                     \
-        for (INT32 i = 0; i < args.check_n_times; i++)                         \
+        for (FFTZ_INT32 i = 0; i < args.check_n_times; i++) \
         {                                                                      \
             problem->in = in;                                                  \
             problem->out = out_i;                                              \
                                                                                \
-            VOID *aoclfftz_handle = setup_api(datatype_char)(problem);         \
+            FFTZ_VOID *aoclfftz_handle = setup_api(datatype_char)(problem); \
             if (aoclfftz_handle)                                               \
             {                                                                  \
-                INT32 res = aoclfftz_execute(aoclfftz_handle);                 \
+                FFTZ_INT32 res = aoclfftz_execute(aoclfftz_handle); \
                                                                                \
                 if (res == AOCLFFTZ_EXECUTION_FAILURE)                         \
                 {                                                              \
@@ -454,8 +440,8 @@ cmd_args parse_args(int argc, char** argv)
                      */                                                        \
                     /* this has to be done for both components of the complex  \
                      * number */                                               \
-                    INT32 mis_match = 0;                                       \
-                    for (UINTP j = 0;                                          \
+                    FFTZ_INT32 mis_match = 0; \
+                    for (FFTZ_UINTP j = 0; \
                          j < out_buffer_size * DATA_STRIDE(signaltype_char);   \
                          j++)                                                  \
                     {                                                          \
@@ -514,7 +500,8 @@ int main(int argc, char** argv)
 {
     if (argc != 6)
     {
-        printf("Invalid number of arguments (expected %d): %d\n\n", 6, argc - 1);
+        printf("Invalid number of arguments (expected %d): %d\n\n", 6,
+               argc - 1);
         usage(argv[0]);
         return -1;
     }

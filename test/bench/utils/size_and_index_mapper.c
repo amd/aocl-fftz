@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2024-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 /** @file size_and_index_mapper.c
  *
  *  @brief Problem size and dims related utility functions.
@@ -45,12 +20,12 @@
  *
  * @param dims holds dims related info
  * @param rank rank of the provided dims
- * @return INTP length of the input
+ * @return FFTZ_INTP length of the input
  */
-INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank)
+FFTZ_INTP calculate_size(aoclfftz_dim_t_64_ *dims, FFTZ_INT32 rank)
 {
-    INTP len = 1;
-    for (INT32 i = 0; i < rank; i++)
+    FFTZ_INTP len = 1;
+    for (FFTZ_INT32 i = 0; i < rank; i++)
     {
         len = len * dims[i].n;
     }
@@ -68,12 +43,14 @@ INTP calculate_size(aoclfftz_dim_t_64_ *dims, INT32 rank)
  * @param in_buffer_size register to store input buffer size
  * @param out_buffer_size register to store output buffer size
  * @param fft_type FFT type (C2C, R2C, or C2R)
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID calculate_buffer_sizes(INT32 dim_rank,  INT32 vec_rank,
-                            aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                            UINTP *in_buffer_size, UINTP *out_buffer_size,
-                            aoclfftz_bench_fft_type_t fft_type)
+FFTZ_VOID calculate_buffer_sizes(FFTZ_INT32 dim_rank, FFTZ_INT32 vec_rank,
+                                 aoclfftz_dim_t_64_ *dims,
+                                 aoclfftz_dim_t_64_ *vecs,
+                                 FFTZ_UINTP *in_buffer_size,
+                                 FFTZ_UINTP *out_buffer_size,
+                                 aoclfftz_bench_fft_type_t fft_type)
 {
     // Example: for an 1D problem with 1D batch
     // Problem size : 3:6:6v4:1:1
@@ -84,12 +61,12 @@ VOID calculate_buffer_sizes(INT32 dim_rank,  INT32 vec_rank,
     // ((Batches -1) * (vec_stride)) + (Problem size * dim stride)
     in_buffer_size[0] = 0;
     out_buffer_size[0] = 0;
-    UINTP in_size = 1;
-    UINTP out_size = 1;
-    for (INT32 i = 0; i < dim_rank; i++)
+    FFTZ_UINTP in_size = 1;
+    FFTZ_UINTP out_size = 1;
+    for (FFTZ_INT32 i = 0; i < dim_rank; i++)
     {
-        INTP in_len = dims[i].n;
-        INTP out_len = dims[i].n;
+        FFTZ_INTP in_len = dims[i].n;
+        FFTZ_INTP out_len = dims[i].n;
         // Half-complex format adjustment for innermost dimension (i=0):
         // - C2R: Input is half-complex with (n/2 + 1) complex values
         // - R2C: Output is half-complex with (n/2 + 1) complex values
@@ -107,7 +84,7 @@ VOID calculate_buffer_sizes(INT32 dim_rank,  INT32 vec_rank,
         in_size += ((in_len - 1) * (dims[i].in_stride));
         out_size += ((out_len - 1) * (dims[i].out_stride));
     }
-    for (INT32 i = 0; i < vec_rank; i++)
+    for (FFTZ_INT32 i = 0; i < vec_rank; i++)
     {
         in_size += ((vecs[i].n - 1) * (vecs[i].in_stride));
         out_size += ((vecs[i].n - 1) * (vecs[i].out_stride));
@@ -137,9 +114,9 @@ VOID calculate_buffer_sizes(INT32 dim_rank,  INT32 vec_rank,
  * index map for this configuration in key, value representation :
  * key : valid data index for the given problem without strides
  * value : valid data index for the given problem with strides
- * [(0,0), (1,1), (2,2), (3,3), (4,6), (5,7), (6,8), (7,9), (8,12), (9,13), (10,14), (11,15)]
- * simplified index map (in array representation, where array index is the key) :
- * [0, 1, 2, 3, 6, 7, 8, 9, 12, 13, 14, 15]
+ * [(0,0), (1,1), (2,2), (3,3), (4,6), (5,7), (6,8), (7,9), (8,12), (9,13),
+ * (10,14), (11,15)] simplified index map (in array representation, where array
+ * index is the key) : [0, 1, 2, 3, 6, 7, 8, 9, 12, 13, 14, 15]
  *
  * @param dim_rank rank of the dims array
  * @param vec_rank rank of the vecs array
@@ -149,12 +126,13 @@ VOID calculate_buffer_sizes(INT32 dim_rank,  INT32 vec_rank,
  * @param out_idx_map Buffer to store output index map
  * @param fft_type FFT type (C2C, R2C, or C2R)
  * @param is_aligned Flag indicating if memory allocation should be aligned
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID prepare_index_map(INT32 dim_rank, INT32 vec_rank, aoclfftz_dim_t_64_ *dims,
-                       aoclfftz_dim_t_64_ *vecs, INTP *in_idx_map,
-                       INTP *out_idx_map, aoclfftz_bench_fft_type_t fft_type,
-                       UINT32 is_aligned)
+FFTZ_VOID prepare_index_map(FFTZ_INT32 dim_rank, FFTZ_INT32 vec_rank,
+                            aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
+                            FFTZ_INTP *in_idx_map, FFTZ_INTP *out_idx_map,
+                            aoclfftz_bench_fft_type_t fft_type,
+                            FFTZ_UINT32 is_aligned)
 {
     // combine dims and vecs
     aoclfftz_dim_t_64_ *combined_dims = NULL;
@@ -163,14 +141,14 @@ VOID prepare_index_map(INT32 dim_rank, INT32 vec_rank, aoclfftz_dim_t_64_ *dims,
     memcpy(combined_dims, dims, (sizeof(aoclfftz_dim_t_64_) * dim_rank));
     memcpy((combined_dims + dim_rank), vecs,
            (sizeof(aoclfftz_dim_t_64_) * vec_rank));
-    INT32 combined_rank = dim_rank + vec_rank;
+    FFTZ_INT32 combined_rank = dim_rank + vec_rank;
 
-    UINT8 is_half_complex_input = fft_type == C2R ? 1 : 0;
-    UINT8 is_half_complex_output = fft_type == R2C ? 1 : 0;
+    FFTZ_UINT8 is_half_complex_input = fft_type == C2R ? 1 : 0;
+    FFTZ_UINT8 is_half_complex_output = fft_type == R2C ? 1 : 0;
 
     // Compute index map for input
-    INTP src_idx = 0;
-    INTP dst_idx = 0;
+    FFTZ_INTP src_idx = 0;
+    FFTZ_INTP dst_idx = 0;
     compute_index_map(in_idx_map, &src_idx, dst_idx, combined_dims,
                       combined_rank, 1 /* input */, is_half_complex_input);
     // Compute index map for output
@@ -191,11 +169,12 @@ VOID prepare_index_map(INT32 dim_rank, INT32 vec_rank, aoclfftz_dim_t_64_ *dims,
  * @param dst_out_idx destination index for output buffer
  * @param dims aoclfftz_dim_t_64_ struct which holds problem size and strides
  * @param rank current rank of the nD problem
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID compute_index_map(INTP *idx_map, INTP *src_idx, INTP dst_idx,
-                       aoclfftz_dim_t_64_ *dims, INT32 rank, UINT8 is_input,
-                       UINT8 is_half_complex)
+FFTZ_VOID compute_index_map(FFTZ_INTP *idx_map, FFTZ_INTP *src_idx,
+                            FFTZ_INTP dst_idx, aoclfftz_dim_t_64_ *dims,
+                            FFTZ_INT32 rank, FFTZ_UINT8 is_input,
+                            FFTZ_UINT8 is_half_complex)
 {
     if (rank == 0)
     {
@@ -204,7 +183,7 @@ VOID compute_index_map(INTP *idx_map, INTP *src_idx, INTP dst_idx,
     }
     else
     {
-        INTP n = dims[rank - 1].n;
+        FFTZ_INTP n = dims[rank - 1].n;
         // TODO: Check and update this logic for Real ND problems
         // Here rank = 1 represents the innermost dimension of the problem
         // which should be treated as half-complex for C2R and R2C transforms
@@ -212,9 +191,9 @@ VOID compute_index_map(INTP *idx_map, INTP *src_idx, INTP dst_idx,
         {
             n = (n / 2) + 1;
         }
-        INTP stride =
+        FFTZ_INTP stride =
             is_input ? dims[rank - 1].in_stride : dims[rank - 1].out_stride;
-        for (INTP i = 0; i < n; i++)
+        for (FFTZ_INTP i = 0; i < n; i++)
         {
             compute_index_map(idx_map, src_idx, dst_idx, dims, rank - 1,
                               is_input, is_half_complex);

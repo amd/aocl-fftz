@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file direct_solver_rdft_utils.h
  *
@@ -48,18 +23,18 @@
  */
 typedef struct base_strides
 {
-    INTP in_stride;  /**< Stride for input buffer access */
-    INTP out_stride; /**< Stride for output buffer access */
-}base_strides_t;
+    FFTZ_INTP in_stride;  /**< Stride for input buffer access */
+    FFTZ_INTP out_stride; /**< Stride for output buffer access */
+} base_strides_t;
 
 /**
  * @brief In RFFT, output can be the real problem input buffer or a temp buffer.
  * This function checks if the output is the real problem output buffer.
  */
-static inline UINT8 is_output_prob_buffer(aoclfftz_solution_t *sol)
+static inline FFTZ_UINT8 is_output_prob_buffer(aoclfftz_solution_t *sol)
 {
-    UINT32 is_fwd = FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR;
-    UINT32 is_last_stage = sol->next_sol == NULL;
+    FFTZ_UINT32 is_fwd = FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR;
+    FFTZ_UINT32 is_last_stage = sol->next_sol == NULL;
     return (is_fwd && is_last_stage);
 }
 
@@ -67,7 +42,7 @@ static inline UINT8 is_output_prob_buffer(aoclfftz_solution_t *sol)
  * @brief In RFFT, input can be the real problem input buffer or a temp buffer.
  * This function checks if the input is the real problem input buffer.
  */
-static inline UINT8 is_input_prob_buffer(aoclfftz_solution_t *sol)
+static inline FFTZ_UINT8 is_input_prob_buffer(aoclfftz_solution_t *sol)
 {
     return (FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR &&
             NUM_RFFT_GROUPS(sol->solver) == 1);
@@ -78,34 +53,106 @@ static inline UINT8 is_input_prob_buffer(aoclfftz_solution_t *sol)
  * It subtracts the stride_offset from each stride value to properly address
  * memory locations in the next iteration of C2C kernel execution.
  */
-static inline VOID update_asymmetric_strides(INTP *strides, INTP radix,
-                                     INTP batch_stride)
+static inline FFTZ_VOID update_asymmetric_strides(FFTZ_INTP *strides,
+                                                  FFTZ_INTP radix,
+                                                  FFTZ_INTP batch_stride)
 {
     // Since the, the second half of the batch wraps around at nyquist point,
     // the stride for second half is `-original_stride*2`
-    INTP h2_stride = batch_stride * 2;
-    INTP half_stride_start = (radix + 1) >> 1;
-    for (INTP i = half_stride_start; i < radix; i++)
+    FFTZ_INTP h2_stride = batch_stride * 2;
+    FFTZ_INTP half_stride_start = (radix + 1) >> 1;
+    for (FFTZ_INTP i = half_stride_start; i < radix; i++)
     {
         strides[i] -= h2_stride;
     }
 }
 
-VOID compute_conjugates(VOID *data, INTP radix, INTP n, INTP *strides,
-                        INTP vec_stride, UINT32 prec);
-VOID compute_conjugates_outplace(VOID *out, VOID *in, INTP radix, INTP n,
-                                 INTP *strides, INTP vec_stride, UINT32 prec);
+/**
+ * @brief Sets imaginary parts of DC and Nyquist frequencies to zero for
+ * batched R2C transforms.
+ *
+ * For R2C (real forward) problems, this function sets the imaginary part of
+ * the first complex number (DC component) and the complex number
+ * corresponding to the Nyquist frequency to zero. This is a property of the
+ * discrete Fourier transform of a real-valued signal. This function handles
+ * batched transforms.
+ *
+ * @param sol [in, out] The solution object containing problem details,
+ *            including the output buffer to be modified.
+ */
+static inline FFTZ_VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t *sol)
+{
+    FFTZ_UINTP transform_len = sol->decomp_scheme->dims[0].n;
+    FFTZ_UINTP num_batches = sol->decomp_scheme->vecs[0].n;
+    FFTZ_UINTP out_stride = sol->decomp_scheme->dims[0].out_stride;
+    FFTZ_UINTP v_out_stride = sol->decomp_scheme->vecs[0].out_stride * 2;
+    FFTZ_UINTP nyquist_im_offset =
+        transform_len % 2 == 0 ? transform_len * out_stride + 1 : 1;
+    if (DT_PRECISION_FLAG(sol->decomp_scheme->flags) == DT_FLOAT)
+    {
+        FFTZ_FLOAT *out = (FFTZ_FLOAT *)sol->decomp_scheme->out_real;
+        for (FFTZ_UINTP b = 0; b < num_batches; b++)
+        {
+            out[1] = 0.0f;
+            out[nyquist_im_offset] = 0.0f;
+            out += v_out_stride;
+        }
+    }
+    else
+    {
+        FFTZ_DOUBLE *out = (FFTZ_DOUBLE *)sol->decomp_scheme->out_real;
+        for (FFTZ_UINTP b = 0; b < num_batches; b++)
+        {
+            out[1] = 0.0;
+            out[nyquist_im_offset] = 0.0;
+            out += v_out_stride;
+        }
+    }
+}
 
-VOID set_zero_for_dc_and_nyquist_batched(aoclfftz_solution_t *sol);
-VOID set_zero_for_dc_and_nyquist(aoclfftz_solution_t *sol);
+/**
+ * @brief Sets imaginary parts of DC and Nyquist frequencies to zero for R2C
+ * transforms.
+ *
+ * For R2C (real forward) problems, this function sets the imaginary part of
+ * the first complex number (DC component) and the complex number
+ * corresponding to the Nyquist frequency to zero. This is a property of the
+ * discrete Fourier transform of a real-valued signal.
+ *
+ * @param sol [in, out] The solution object containing problem details,
+ *            including the output buffer to be modified.
+ */
+static inline FFTZ_VOID set_zero_for_dc_and_nyquist(aoclfftz_solution_t *sol)
+{
+    // For R2C (real forward) problems, set the imaginary part of first and
+    // last points in half-complex buffer to 0.
+    FFTZ_INTP transform_len =
+        sol->decomp_scheme->dims[0].n * sol->decomp_scheme->vecs[0].n;
+    FFTZ_INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
+    FFTZ_INTP nyquist_im_offset =
+        transform_len % 2 == 0 ? transform_len * out_stride + 1 : 1;
 
-VOID set_kernel_count_in_each_group(aoclfftz_solution_t *sol,
+    if (DT_PRECISION_FLAG(sol->decomp_scheme->flags) == DT_FLOAT)
+    {
+        FFTZ_FLOAT *out = (FFTZ_FLOAT *)sol->decomp_scheme->out_real;
+        out[1] = 0.0f;
+        out[nyquist_im_offset] = 0.0f;
+    }
+    else
+    {
+        FFTZ_DOUBLE *out = (FFTZ_DOUBLE *)sol->decomp_scheme->out_real;
+        out[1] = 0.0;
+        out[nyquist_im_offset] = 0.0;
+    }
+}
+
+FFTZ_VOID set_kernel_count_in_each_group(aoclfftz_solution_t *sol,
                              aoclfftz_realhelper_t *realhelper);
-VOID allocate_and_setup_stride(aoclfftz_solution_t *sol,
+FFTZ_INT32 allocate_and_setup_stride(aoclfftz_solution_t *sol,
                                aoclfftz_realhelper_t realhelper);
-VOID update_ct_buffers(aoclfftz_solution_t *sol,
+FFTZ_VOID update_ct_buffers(aoclfftz_solution_t *sol,
                        aoclfftz_realhelper_t *realhelper);
-VOID compute_cost(aoclfftz_solution_t *sol, cost_analysis_t *cost,
+FFTZ_VOID compute_cost(aoclfftz_solution_t *sol, cost_analysis_t *cost,
                   const kernel_t *kernel_c2c, const kernel_t *kernel_r2hc,
                   const kernel_t *kernel_r2hcf);
 

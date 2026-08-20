@@ -1,3 +1,6 @@
+..  Copyright Advanced Micro Devices, Inc.
+..  SPDX-License-Identifier: BSD-3-Clause
+
 Building on Linux
 ~~~~~~~~~~~~~~~~~
 

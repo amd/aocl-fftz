@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file gtest_types.h
  *
@@ -86,20 +61,22 @@ enum aocl_fftz_kernel_type
  * @brief A type used as the parameter for the parameterized tests (TEST_P)
  *
  * std::tuple<radix, aocl_fftz_kernel_type>
- * used UINT8 instead of aocl_fftz_kernel_type to perform bitwise operations
- * to make decisions.
+ * used FFTZ_UINT8 instead of aocl_fftz_kernel_type to perform bitwise
+ * operations to make decisions.
  */
-typedef std::tuple<UINT32, UINT8> aoclfftz_kernel_test_params_t;
+typedef std::tuple<FFTZ_UINT32, FFTZ_UINT8> aoclfftz_kernel_test_params_t;
 
 /**
  * @brief A type used as the parameter for the paraterized selector tests
  * (TEST_P)
  *
  */
-typedef std::tuple<std::string, INT32, INT32, std::vector<aoclfftz_solver_type>>
+typedef std::tuple<std::string, FFTZ_INT32, FFTZ_INT32,
+                   std::vector<aoclfftz_solver_type>>
     aoclfftz_selector_test_params_t;
 
 // function pointer to dft_solver
-typedef INT32 (*dft_solver_)(aoclfftz_solution_t *sol);
+typedef FFTZ_INT32 (*dft_solver_)(aoclfftz_solution_t *sol,
+                                  aoclfftz_mutable_ctx_t *ctx);
 
 #endif // AOCLFFTZ_GTEST_TYPES_H

@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2024-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file bench_utils.h
  *
@@ -96,7 +71,7 @@
  */
 #define ALLOC_AND_COPY_PARAMS(dst, src)                                        \
     {                                                                          \
-        UINT32 is_align = src->aligned_alloc;                                  \
+        FFTZ_UINT32 is_align = src->aligned_alloc; \
         ALLOC_UNINIT(dst, aoclfftz_bench_params_t,                             \
                         sizeof(aoclfftz_bench_params_t), is_align);            \
         if (dst != NULL) {                                                     \
@@ -122,8 +97,8 @@
 
 #define VALIDATE_AND_GET_DOUBLE(str, result, ret, min_val, max_val)            \
     {                                                                          \
-        INT32 length = 0;                                                      \
-        DOUBLE temp = 0.0;                                                     \
+        FFTZ_INT32 length = 0; \
+        FFTZ_DOUBLE temp = 0.0; \
         result = atof(str);                                                    \
         ret = SSCANF(str, "%lf %n", &temp, &length) != 1;                      \
         ret |= strlen(str) != length;                                          \
@@ -194,7 +169,7 @@
     {                                                                          \
         AOCLFFTZ_LOG(INFO, params->logger_mode,                                \
                                "dim_rank      : %d", params->dim_rank);        \
-        for (INT32 i = 0; i < params->dim_rank; i++)                           \
+        for (FFTZ_INT32 i = 0; i < params->dim_rank; i++) \
         {                                                                      \
             AOCLFFTZ_LOG(                                                      \
                 INFO, params->logger_mode, "    dims[%d]   : %td:%td:%td", i,  \
@@ -203,7 +178,7 @@
         }                                                                      \
         AOCLFFTZ_LOG(INFO, params->logger_mode,                                \
                                "vec_rank      : %d", params->vec_rank);        \
-        for (INT32 i = 0; i < params->vec_rank; i++)                           \
+        for (FFTZ_INT32 i = 0; i < params->vec_rank; i++) \
         {                                                                      \
             AOCLFFTZ_LOG(                                                      \
                 INFO, params->logger_mode, "    vecs[%d]   : %td:%td:%td", i,  \
@@ -212,7 +187,7 @@
         }                                                                      \
         AOCLFFTZ_LOG(                                                          \
             INFO, params->logger_mode, "precision     : %s",                   \
-            params->precision == FLOAT_P ? "FLOAT" : "DOUBLE");                \
+            params->precision == FLOAT_P ? "FFTZ_FLOAT" : "FFTZ_DOUBLE"); \
         AOCLFFTZ_LOG(                                                          \
             INFO, params->logger_mode, "data_model    : %s",                   \
             params->data_model == ILP64 ? "ILP64" : "LP64");                   \

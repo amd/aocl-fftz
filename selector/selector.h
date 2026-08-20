@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file selector.h
  *
@@ -42,24 +17,15 @@
 #include "core/solvers/solver.h"
 #include "core/executor.h"
 
-//#define AOCLFFTZ_FIXED_SELECTOR_MODE
-#define AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_MODE
-//#define AOCLFFTZ_FIXED_SELECTOR_TRANS_DFT_MODE
-//#define AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_PLUS_TRANS_DFT_MODE
+#define AOCLFFTZ_FIXED_SELECTOR_MODE
 //#define AOCLFFTZ_AUTO_SELECTOR_MODE
 
-/* !! Do not enable these macros for now !! */
-// #define PERFORM_INTER_STAGE_PERMUTE // Broken codepath, functional failure
-// #define DISABLE_OPTIMAL_BUFFERING_BATCHING
-// #define DISABLE_OPTIMAL_BUFFERING
-
-typedef enum {
-    AOCLFFTZ_FIXED_SELECTOR = 0,                            // Fixed decision logic
-    AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT,                 // Fixed decision logic + Fused Twiddle and DFT kernels
-    AOCLFFTZ_FIXED_SELECTOR_TRANS_DFT,                      // Fixed decision logic + Transpose operation before/after DFT
-    AOCLFFTZ_FIXED_SELECTOR_FUSED_TWID_DFT_PLUS_TRANS_DFT,  // Fixed decision logic + Fused Twiddle and DFT kernels + Transpose operation before/after DFT
-    AOCLFFTZ_AUTO_SELECTOR,                                 // Auto tuner mode
-    AOCLFFTZ_SELECTOR_MODELS                                // Total selector models
+typedef enum
+{
+    AOCLFFTZ_FIXED_SELECTOR, // Fixed decision logic + Fused Twiddle and DFT
+                             // kernels
+    AOCLFFTZ_AUTO_SELECTOR,  // Auto tuner mode
+    AOCLFFTZ_SELECTOR_MODELS // Total selector models
 } selector_model_t;
 
 // Error return codes related to selector
@@ -70,20 +36,14 @@ typedef enum
     SELECTOR_SUCCESS // Successful operation
 } aoclfftz_selector_status;
 
-// Note: The choice of size (16 KB) is completely arbitrary and can be
-//       experimented with.
-static const INTP scratch_space_capacity = 16 * 1024; // 16 KB
-
 // Selector data structure that is used to hold the solution and cost analysis
 // at each decomposition level for the associated sub-problem
 typedef struct aoclfftz_selector
 {
     aoclfftz_solution_t *solution;
     execute_ execute;
+    aoclfftz_immutable_metadata_t *exec_metadata;
     cost_analysis_t *cost_analysis;
-
-    // A global buffer to help with transposition of twiddle multiplied elements
-    void* scratch_space;
     kernel_tables_t *kernel_tables;
 } aoclfftz_selector_t;
 
@@ -110,7 +70,7 @@ typedef struct aoclfftz_selector
 {                                                                              \
     sel_obj->solution->decomp_scheme->vec_rank = problem->vec_rank;            \
     sel_obj->solution->decomp_scheme->dim_rank = dim_rank;                     \
-    UINT32 cnt, idx = 0;                                                       \
+    FFTZ_INT32 cnt, idx = 0; \
     for (cnt = 0; cnt < problem->dim_rank; cnt++)                              \
     {                                                                          \
         if (problem->dims[cnt].n != 1)                                         \
@@ -163,6 +123,7 @@ typedef struct aoclfftz_selector
     sel_obj->solution->decomp_scheme->thread_info->avl_threads =               \
     sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads;      \
     sel_obj->solution->decomp_scheme->thread_info->n_threads = 1;              \
+    sel_obj->solution->decomp_scheme->thread_info->active_threads = 1;         \
     sel_obj->solution->decomp_scheme->flags =                                  \
         (problem->flags.fft_placement       << 0) |                            \
         (problem->flags.storage_order       << 1) |                            \
@@ -172,86 +133,41 @@ typedef struct aoclfftz_selector
         (problem->flags.transpose_mode      << 8);                             \
 }
 
-#define COPY_DECOMP_SCHEME(to_decomp_scheme, from_decomp_scheme)               \
+/*
+ * @brief Overwrite the solution-side `opt_level` with the dispatcher-resolved
+ * level (cpu_flags = min(user opt_level, hw/build ISA level), or scalar when
+ * opt_off is set or the level is non-positive).
+ *
+ * Conceptually:
+ *   - `problem->cntrl_params.opt_level` holds the user request (unchanged).
+ *   - `sel_obj->solution->decomp_scheme->cntrl_params->opt_level` holds the
+ *     effective level the library will actually run at.
+ * The struct/field name is shared between the two; only the meaning of the
+ * value differs based on which side it lives on.
+ *
+ * Must be called after `INIT_DECOMP_SCHEME` (which initially copies the user
+ * value) and after `setup_dynamic_dispatcher` has produced `cpu_flags`.
+ */
+#define SET_EFFECTIVE_OPT_LEVEL(sel_obj, cpu_flags)                            \
 {                                                                              \
-    to_decomp_scheme->vec_rank = from_decomp_scheme->vec_rank;                 \
-    to_decomp_scheme->dim_rank = from_decomp_scheme->dim_rank;                 \
-    UINT32 cnt, idx = 0;                                                       \
-    for (cnt = 0; cnt < from_decomp_scheme->dim_rank; cnt++)                   \
-    {                                                                          \
-        if (from_decomp_scheme->dims[cnt].n != 1)                              \
-        {                                                                      \
-            to_decomp_scheme->dims[idx].n =                                    \
-                from_decomp_scheme->dims[cnt].n;                               \
-            to_decomp_scheme->dims[idx].in_stride =                            \
-                from_decomp_scheme->dims[cnt].in_stride;                       \
-            to_decomp_scheme->dims[idx].out_stride =                           \
-                from_decomp_scheme->dims[cnt].out_stride;                      \
-            idx++;                                                             \
-        }                                                                      \
-    }                                                                          \
-    /* Gets Executed in scenario where the shrinked dim_rank is one and        \
-       the problem size is also one.                                           \
-       Example: 1x1x1 or 1 */                                                  \
-    if (idx == 0)                                                              \
-    {                                                                          \
-        to_decomp_scheme->dims[0].n = from_decomp_scheme->dims[0].n;           \
-        to_decomp_scheme->dims[0].in_stride =                                  \
-            from_decomp_scheme->dims[0].in_stride;                             \
-        to_decomp_scheme->dims[0].out_stride =                                 \
-            from_decomp_scheme->dims[0].out_stride;                            \
-    }                                                                          \
-    for (cnt = 0; cnt < from_decomp_scheme->vec_rank; cnt++)                   \
-    {                                                                          \
-        to_decomp_scheme->vecs[cnt].n =                                        \
-            from_decomp_scheme->vecs[cnt].n;                                   \
-        to_decomp_scheme->vecs[cnt].in_stride =                                \
-            from_decomp_scheme->vecs[cnt].in_stride;                           \
-        to_decomp_scheme->vecs[cnt].out_stride =                               \
-            from_decomp_scheme->vecs[cnt].out_stride;                          \
-    }                                                                          \
-    if (from_decomp_scheme->batched_vecs != NULL)                              \
-    {                                                                          \
-        FREE_ALIGN_ALLOCATED_MEM(to_decomp_scheme->batched_vecs);              \
-        ALLOC_ALIGN_UNINIT(to_decomp_scheme->batched_vecs,                     \
-                           aoclfftz_dim_t_64_, sizeof(aoclfftz_dim_t_64_));    \
-        memcpy(to_decomp_scheme->batched_vecs,                                 \
-               from_decomp_scheme->batched_vecs,                               \
-               sizeof(aoclfftz_dim_t_64_));                                    \
-    }                                                                          \
-    to_decomp_scheme->in_real = from_decomp_scheme->in_real;                   \
-    to_decomp_scheme->in_imag = from_decomp_scheme->in_imag;                   \
-    to_decomp_scheme->out_real = from_decomp_scheme->out_real;                 \
-    to_decomp_scheme->out_imag = from_decomp_scheme->out_imag;                 \
-    to_decomp_scheme->cntrl_params->opt_level =                                \
-        from_decomp_scheme->cntrl_params->opt_level;                           \
-    to_decomp_scheme->cntrl_params->opt_off =                                  \
-        from_decomp_scheme->cntrl_params->opt_off;                             \
-    to_decomp_scheme->cntrl_params->logger_mode =                              \
-        from_decomp_scheme->cntrl_params->logger_mode;                         \
-    to_decomp_scheme->cntrl_params->measure_stats =                            \
-        from_decomp_scheme->cntrl_params->measure_stats;                       \
-    to_decomp_scheme->thread_info->pthr_fft->dynamic_load_model =              \
-        from_decomp_scheme->thread_info->pthr_fft->dynamic_load_model;         \
-    to_decomp_scheme->thread_info->pthr_fft->num_threads =                     \
-        from_decomp_scheme->thread_info->pthr_fft->num_threads;                \
-    to_decomp_scheme->thread_info->avl_threads =                               \
-        from_decomp_scheme->thread_info->avl_threads;                          \
-    to_decomp_scheme->thread_info->n_threads = 1;                              \
-    to_decomp_scheme->flags = from_decomp_scheme->flags;                       \
+    sel_obj->solution->decomp_scheme->cntrl_params->opt_level = (cpu_flags);   \
 }
 
 /*
  * @brief Check if the Root problem is a Direct Problem or not.
- * If a problem is not direct, it will be a multi stage with atleast one CT Problem.
+ * If a problem is not direct, it will be a multi stage with atleast one CT
+ * Problem.
  *
  * `sol` can be any solution in the hierarchy of solutions.
  *
  * NOTE:
  * Reasoning:
- * * In a generic solution plan, `TW` is `NULL` for all solutions before first CT. Hence `TW == NULL` ensures current solution isn't after a CT.
- * * `sol->next_sol == NULL` checks if the solution is the last one in the hierarchy.
- * * When both are true, it checks that we have walked the entire solution hierarchy and found no CT solution.
+ * * In a generic solution plan, `TW` is `NULL` for all solutions before first
+ * CT. Hence `TW == NULL` ensures current solution isn't after a CT.
+ * * `sol->next_sol == NULL` checks if the solution is the last one in the
+ * hierarchy.
+ * * When both are true, it checks that we have walked the entire solution
+ * hierarchy and found no CT solution.
  * * This is only possible for a Direct only porblem.
  *
  * @param sol Pointer to the solution structure.
@@ -261,603 +177,14 @@ typedef struct aoclfftz_selector
     (sol->twiddle->TW == NULL && sol->next_sol == NULL)
 
 /**
- * @brief Swap the CT and direct solution nodes for the iterative execution
- *
- * Before swap: CT -> Direct -> CT -> Direct -> CT -> Direct -> Direct
- * After swap : Direct -> CT -> Direct -> CT -> Direct -> CT -> Direct
- *
- */
-#define SWAP_REAL_CT_SOLUTIONS(sel)                                            \
-{                                                                              \
-    aoclfftz_solution_t *curr = sel->solution;                                 \
-    aoclfftz_solution_t *prev = NULL;                                          \
-    aoclfftz_solution_t *next = NULL;                                          \
-    if (sel->solution->next_sol != NULL) {                                     \
-      /* swap first CT node */                                                 \
-      if (sel->solution->solver->solver_type == SOLVER_REAL_CT &&              \
-          (sel->solution->next_sol[0]->solver->solver_type ==                  \
-           SOLVER_REAL_DIRECT ||                                               \
-           sel->solution->next_sol[0]->solver->solver_type ==                  \
-           SOLVER_REAL_DIRECT_TWIDDLE ||                                       \
-           sel->solution->next_sol[0]->solver->solver_type ==                  \
-           SOLVER_REAL_MT_DIRECT ||                                            \
-           sel->solution->next_sol[0]->solver->solver_type ==                  \
-           SOLVER_REAL_MT_DIRECT_TWIDDLE)) {                                   \
-        sel->solution = curr->next_sol[0];                                     \
-        curr->next_sol[0] = sel->solution->next_sol[0];                        \
-        sel->solution->next_sol[0] = curr;                                     \
-      }                                                                        \
-      /* swap remaining CT nodes */                                            \
-      prev = curr;                                                             \
-      curr = curr->next_sol[0];                                                \
-      while (curr && curr->next_sol && curr->next_sol[0]) {                    \
-        next = curr->next_sol[0];                                              \
-        if (curr->solver->solver_type == SOLVER_REAL_CT &&                     \
-            (next->solver->solver_type == SOLVER_REAL_DIRECT ||                \
-             next->solver->solver_type == SOLVER_REAL_DIRECT_TWIDDLE ||        \
-             next->solver->solver_type == SOLVER_REAL_MT_DIRECT ||             \
-             next->solver->solver_type == SOLVER_REAL_MT_DIRECT_TWIDDLE))      \
-        {                                                                      \
-          prev->next_sol[0] = next;                                            \
-          curr->next_sol[0] = next->next_sol[0];                               \
-          next->next_sol[0] = curr;                                            \
-        }                                                                      \
-        prev = curr;                                                           \
-        curr = curr->next_sol[0];                                              \
-      }                                                                        \
-    }                                                                          \
-}
-
-/**
  * @brief Swap the buffers of two pointers
  *
  */
 #define SWAP_BUFFERS(buf1, buf2)                                               \
 {                                                                              \
-    VOID *temp_buffer_for_swap = buf1;                                         \
+    FFTZ_VOID *temp_buffer_for_swap = buf1; \
     buf1 = buf2;                                                               \
     buf2 = temp_buffer_for_swap;                                               \
-}
-
-// Few additional steps are required for RealFFT problems before and after
-// the setup stages.
-#define PREPARE_AND_SETUP_DFT(sel_obj, ret)                                    \
-{                                                                              \
-    sel_obj->execute = register_execute_dft();                                 \
-    if (IS_REAL(sel_obj->solution->decomp_scheme->flags))                      \
-    {                                                                          \
-        aoclfftz_realhelper_t *realhelper;                                     \
-        ALLOC_ALIGN_UNINIT(realhelper, aoclfftz_realhelper_t,                  \
-            sizeof(aoclfftz_realhelper_t));                                    \
-        realhelper->stage = 0;                                                 \
-        realhelper->is_CT = 0;                                                 \
-        realhelper->is_buffered_invoked = 0;                                   \
-        realhelper->num_aux_buf = 1;                                           \
-        realhelper->problem_size = sel_obj->solution->decomp_scheme->dims[0].n;\
-        if (FFT_DIR(sel_obj->solution->decomp_scheme->flags) ==                \
-            FORWARD_FFT_DIR)                                                   \
-        {                                                                      \
-            realhelper->freq_factor = 1;                                       \
-        }                                                                      \
-        else                                                                   \
-        {                                                                      \
-            realhelper->freq_factor = realhelper->problem_size;                \
-        }                                                                      \
-        ret = selector_driver_rdft_(sel_obj, realhelper);                      \
-        SWAP_REAL_CT_SOLUTIONS(sel_obj);                                       \
-        setup_twiddle_buffer_real(sel_obj->solution);                          \
-        FREE_ALIGN_ALLOCATED_MEM(realhelper);                                  \
-    }                                                                          \
-    else                                                                       \
-    {                                                                          \
-        ret = selector_driver_dft_(sel_obj);                                   \
-        setup_twiddle_buffer_complex(sel_obj->solution);                       \
-    }                                                                          \
-}
-
-
-#define COPY_SOLUTION_OBJ(to_sol_obj, from_sol_obj)                            \
-{                                                                              \
-    to_sol_obj->solver->solver_type = from_sol_obj->solver->solver_type;       \
-    to_sol_obj->solver->execute_solver = from_sol_obj->solver->execute_solver; \
-    to_sol_obj->solver->destroy_solver = from_sol_obj->solver->destroy_solver; \
-    to_sol_obj->solver->kernel_c2c->kfft =                                     \
-        from_sol_obj->solver->kernel_c2c->kfft;                                \
-    to_sol_obj->solver->kernel_c2c->sets =                                     \
-        from_sol_obj->solver->kernel_c2c->sets;                                \
-    to_sol_obj->solver->kernel_c2c->count =                                    \
-        from_sol_obj->solver->kernel_c2c->count;                               \
-    to_sol_obj->solver->kernel_c2c_r->kfft =                                   \
-        from_sol_obj->solver->kernel_c2c_r->kfft;                              \
-    to_sol_obj->solver->kernel_c2c_r->sets =                                   \
-        from_sol_obj->solver->kernel_c2c_r->sets;                              \
-    to_sol_obj->solver->kernel_c2c_r->count =                                  \
-        from_sol_obj->solver->kernel_c2c_r->count;                             \
-    to_sol_obj->solver->kernel_r2hc->kfft =                                    \
-        from_sol_obj->solver->kernel_r2hc->kfft;                               \
-    to_sol_obj->solver->kernel_r2hc->sets =                                    \
-        from_sol_obj->solver->kernel_r2hc->sets;                               \
-    to_sol_obj->solver->kernel_r2hc->count =                                   \
-        from_sol_obj->solver->kernel_r2hc->count;                              \
-    to_sol_obj->solver->kernel_r2hcf->kfft =                                   \
-        from_sol_obj->solver->kernel_r2hcf->kfft;                              \
-    to_sol_obj->solver->kernel_r2hcf->sets =                                   \
-        from_sol_obj->solver->kernel_r2hcf->sets;                              \
-    to_sol_obj->solver->kernel_r2hcf->count =                                  \
-        from_sol_obj->solver->kernel_r2hcf->count;                             \
-    to_sol_obj->decomp_scheme->decomp_level =                                  \
-        from_sol_obj->decomp_scheme->decomp_level;                             \
-    to_sol_obj->decomp_scheme->vec_rank =                                      \
-        from_sol_obj->decomp_scheme->vec_rank;                                 \
-    to_sol_obj->decomp_scheme->dim_rank =                                      \
-        from_sol_obj->decomp_scheme->dim_rank;                                 \
-    INT32 cnt;                                                                 \
-    for (cnt = 0; cnt < to_sol_obj->decomp_scheme->dim_rank; cnt++)            \
-    {                                                                          \
-        to_sol_obj->decomp_scheme->dims[cnt].n =                               \
-            from_sol_obj->decomp_scheme->dims[cnt].n;                          \
-        to_sol_obj->decomp_scheme->dims[cnt].in_stride =                       \
-            from_sol_obj->decomp_scheme->dims[cnt].in_stride;                  \
-        to_sol_obj->decomp_scheme->dims[cnt].out_stride =                      \
-            from_sol_obj->decomp_scheme->dims[cnt].out_stride;                 \
-    }                                                                          \
-    for (cnt = 0; cnt < to_sol_obj->decomp_scheme->vec_rank; cnt++)            \
-    {                                                                          \
-        to_sol_obj->decomp_scheme->vecs[cnt].n =                               \
-            from_sol_obj->decomp_scheme->vecs[cnt].n;                          \
-        to_sol_obj->decomp_scheme->vecs[cnt].in_stride =                       \
-            from_sol_obj->decomp_scheme->vecs[cnt].in_stride;                  \
-        to_sol_obj->decomp_scheme->vecs[cnt].out_stride =                      \
-            from_sol_obj->decomp_scheme->vecs[cnt].out_stride;                 \
-    }                                                                          \
-    if (from_sol_obj->decomp_scheme->batched_vecs != NULL)                     \
-    {                                                                          \
-        FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->decomp_scheme->batched_vecs);     \
-        ALLOC_ALIGN_UNINIT(to_sol_obj->decomp_scheme->batched_vecs,            \
-                           aoclfftz_dim_t_64_, sizeof(aoclfftz_dim_t_64_));    \
-        memcpy(to_sol_obj->decomp_scheme->batched_vecs,                        \
-               from_sol_obj->decomp_scheme->batched_vecs,                      \
-               sizeof(aoclfftz_dim_t_64_));                                    \
-    }                                                                          \
-    to_sol_obj->decomp_scheme->in_real = from_sol_obj->decomp_scheme->in_real; \
-    to_sol_obj->decomp_scheme->in_imag = from_sol_obj->decomp_scheme->in_imag; \
-    to_sol_obj->decomp_scheme->out_real =                                      \
-        from_sol_obj->decomp_scheme->out_real;                                 \
-    to_sol_obj->decomp_scheme->out_imag =                                      \
-        from_sol_obj->decomp_scheme->out_imag;                                 \
-    to_sol_obj->decomp_scheme->cntrl_params->opt_level =                       \
-        from_sol_obj->decomp_scheme->cntrl_params->opt_level;                  \
-    to_sol_obj->decomp_scheme->cntrl_params->opt_off =                         \
-        from_sol_obj->decomp_scheme->cntrl_params->opt_off;                    \
-    to_sol_obj->decomp_scheme->cntrl_params->logger_mode =                     \
-        from_sol_obj->decomp_scheme->cntrl_params->logger_mode;                \
-    to_sol_obj->decomp_scheme->cntrl_params->measure_stats =                   \
-        from_sol_obj->decomp_scheme->cntrl_params->measure_stats;              \
-    to_sol_obj->decomp_scheme->thread_info->pthr_fft->num_threads =            \
-        from_sol_obj->decomp_scheme->thread_info->pthr_fft->num_threads;       \
-    to_sol_obj->decomp_scheme->thread_info->pthr_fft->dynamic_load_model =     \
-        from_sol_obj->decomp_scheme->thread_info->pthr_fft->dynamic_load_model;\
-    to_sol_obj->decomp_scheme->thread_info->avl_threads =                      \
-        from_sol_obj->decomp_scheme->thread_info->avl_threads;                 \
-    to_sol_obj->decomp_scheme->thread_info->n_threads =                        \
-        from_sol_obj->decomp_scheme->thread_info->n_threads;                   \
-    to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;     \
-    to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;                       \
-    to_sol_obj->twiddle->load_multi_cols =                                     \
-        from_sol_obj->twiddle->load_multi_cols;                                \
-    to_sol_obj->twiddle->cols = from_sol_obj->twiddle->cols;                   \
-    to_sol_obj->dft_bufs->bluestein->B =                                       \
-        from_sol_obj->dft_bufs->bluestein->B;                                  \
-    to_sol_obj->dft_bufs->bluestein->B_out =                                   \
-        from_sol_obj->dft_bufs->bluestein->B_out;                              \
-    to_sol_obj->dft_bufs->bluestein->in =                                      \
-        from_sol_obj->dft_bufs->bluestein->in;                                 \
-    to_sol_obj->dft_bufs->bluestein->out =                                     \
-        from_sol_obj->dft_bufs->bluestein->out;                                \
-    to_sol_obj->dft_bufs->bluestein->is_B_out_valid =                          \
-        from_sol_obj->dft_bufs->bluestein->is_B_out_valid;                     \
-    to_sol_obj->dft_bufs->buffered->aux_buffer_1 =                             \
-        from_sol_obj->dft_bufs->buffered->aux_buffer_1;                        \
-    to_sol_obj->dft_bufs->buffered->aux_buffer_2 =                             \
-        from_sol_obj->dft_bufs->buffered->aux_buffer_2;                        \
-    to_sol_obj->dft_bufs->buffered->out_ptr =                                  \
-        from_sol_obj->dft_bufs->buffered->out_ptr;                             \
-    to_sol_obj->dft_bufs->ct_buffer =                                          \
-        from_sol_obj->dft_bufs->ct_buffer;                                     \
-    to_sol_obj->dft_bufs->num_ct_buf =                                         \
-        from_sol_obj->dft_bufs->num_ct_buf;                                    \
-    to_sol_obj->dft_bufs->ct_buf_real =                                        \
-        from_sol_obj->dft_bufs->ct_buf_real;                                   \
-    to_sol_obj->dft_bufs->ct_buf_imag =                                        \
-        from_sol_obj->dft_bufs->ct_buf_imag;                                   \
-    to_sol_obj->dft_bufs->ct_buf_real_in =                                     \
-        from_sol_obj->dft_bufs->ct_buf_real_in;                                \
-    to_sol_obj->dft_bufs->ct_buf_size = from_sol_obj->dft_bufs->ct_buf_size;   \
-    if (from_sol_obj->dft_bufs->transpose &&                                   \
-        to_sol_obj->dft_bufs->transpose)                                       \
-    {                                                                          \
-        to_sol_obj->dft_bufs->transpose->row_info =                            \
-            from_sol_obj->dft_bufs->transpose->row_info;                       \
-        to_sol_obj->dft_bufs->transpose->col_info =                            \
-            from_sol_obj->dft_bufs->transpose->col_info;                       \
-        to_sol_obj->dft_bufs->transpose->kernel =                              \
-            from_sol_obj->dft_bufs->transpose->kernel;                         \
-        if (from_sol_obj->dft_bufs->transpose->aux_mem &&                      \
-            from_sol_obj->dft_bufs->transpose->aux_mem->data &&                \
-            from_sol_obj->dft_bufs->transpose->aux_mem->size > 0)              \
-        {                                                                      \
-            if (!to_sol_obj->dft_bufs->transpose->aux_mem->data)               \
-            {                                                                  \
-                ALLOC_ALIGN_INIT(                                              \
-                    to_sol_obj->dft_bufs->transpose->aux_mem->data, UINT8,     \
-                    from_sol_obj->dft_bufs->transpose->aux_mem->size);         \
-            }                                                                  \
-            else                                                               \
-            {                                                                  \
-                FREE_ALIGN_ALLOCATED_MEM(                                      \
-                    to_sol_obj->dft_bufs->transpose->aux_mem->data)            \
-                ALLOC_ALIGN_INIT(                                              \
-                    to_sol_obj->dft_bufs->transpose->aux_mem->data, UINT8,     \
-                    from_sol_obj->dft_bufs->transpose->aux_mem->size);         \
-            }                                                                  \
-            memcpy(to_sol_obj->dft_bufs->transpose->aux_mem->data,             \
-                    from_sol_obj->dft_bufs->transpose->aux_mem->data,          \
-                    from_sol_obj->dft_bufs->transpose->aux_mem->size);         \
-        }                                                                      \
-        to_sol_obj->dft_bufs->transpose->aux_mem->size =                       \
-            from_sol_obj->dft_bufs->transpose->aux_mem->size;                  \
-    }                                                                          \
-    to_sol_obj->next_sol = from_sol_obj->next_sol;                             \
-}
-
-// maps both in & out pointers to out pointer
-// incase of out-of-place problems, except the first DFT, other DFTs happen
-// in-place ie., in the output buffer.
-#define COPY_SOLUTION_OBJ_OUT_P(to_sol_obj, from_sol_obj)                      \
-{                                                                              \
-    COPY_SOLUTION_OBJ(to_sol_obj, from_sol_obj)                                \
-    UINT32 cnt;                                                                \
-    for (cnt = 0; cnt < to_sol_obj->decomp_scheme->dim_rank; cnt++)            \
-    {                                                                          \
-        to_sol_obj->decomp_scheme->dims[cnt].n =                               \
-            from_sol_obj->decomp_scheme->dims[cnt].n;                          \
-        to_sol_obj->decomp_scheme->dims[cnt].in_stride =                       \
-            from_sol_obj->decomp_scheme->dims[cnt].out_stride;                 \
-        to_sol_obj->decomp_scheme->dims[cnt].out_stride =                      \
-            from_sol_obj->decomp_scheme->dims[cnt].out_stride;                 \
-    }                                                                          \
-    for (cnt = 0; cnt < to_sol_obj->decomp_scheme->vec_rank; cnt++)            \
-    {                                                                          \
-        to_sol_obj->decomp_scheme->vecs[cnt].n =                               \
-            from_sol_obj->decomp_scheme->vecs[cnt].n;                          \
-        to_sol_obj->decomp_scheme->vecs[cnt].in_stride =                       \
-            from_sol_obj->decomp_scheme->vecs[cnt].out_stride;                 \
-        to_sol_obj->decomp_scheme->vecs[cnt].out_stride =                      \
-            from_sol_obj->decomp_scheme->vecs[cnt].out_stride;                 \
-    }                                                                          \
-    if (from_sol_obj->decomp_scheme->batched_vecs != NULL)                     \
-    {                                                                          \
-        FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->decomp_scheme->batched_vecs);     \
-        ALLOC_ALIGN_UNINIT(to_sol_obj->decomp_scheme->batched_vecs,            \
-                           aoclfftz_dim_t_64_, sizeof(aoclfftz_dim_t_64_));    \
-        memcpy(to_sol_obj->decomp_scheme->batched_vecs,                        \
-               from_sol_obj->decomp_scheme->batched_vecs,                      \
-               sizeof(aoclfftz_dim_t_64_));                                    \
-    }                                                                          \
-    to_sol_obj->decomp_scheme->in_real =                                       \
-        from_sol_obj->decomp_scheme->out_real;                                 \
-    to_sol_obj->decomp_scheme->in_imag =                                       \
-        from_sol_obj->decomp_scheme->out_imag;                                 \
-    to_sol_obj->decomp_scheme->out_real =                                      \
-        from_sol_obj->decomp_scheme->out_real;                                 \
-    to_sol_obj->decomp_scheme->out_imag =                                      \
-        from_sol_obj->decomp_scheme->out_imag;                                 \
-}
-
-// copy all contents except dims & vecs
-// necessary in ND setup where dim_rank & vec_rank will differ for the
-// sub-problem
-#define COPY_SOLUTION_OBJ_WO_DIMS(to_sol_obj, from_sol_obj)                    \
-{                                                                              \
-    to_sol_obj->solver->solver_type = from_sol_obj->solver->solver_type;       \
-    to_sol_obj->solver->execute_solver =                                       \
-        from_sol_obj->solver->execute_solver;                                  \
-    to_sol_obj->solver->destroy_solver =                                       \
-        from_sol_obj->solver->destroy_solver;                                  \
-    to_sol_obj->solver->kernel_c2c->kfft =                                     \
-        from_sol_obj->solver->kernel_c2c->kfft;                                \
-    to_sol_obj->solver->kernel_c2c->sets =                                     \
-        from_sol_obj->solver->kernel_c2c->sets;                                \
-    to_sol_obj->solver->kernel_c2c->count =                                    \
-        from_sol_obj->solver->kernel_c2c->count;                               \
-    to_sol_obj->solver->kernel_c2c_r->kfft =                                   \
-        from_sol_obj->solver->kernel_c2c_r->kfft;                              \
-    to_sol_obj->solver->kernel_c2c_r->sets =                                   \
-        from_sol_obj->solver->kernel_c2c_r->sets;                              \
-    to_sol_obj->solver->kernel_c2c_r->count =                                  \
-        from_sol_obj->solver->kernel_c2c_r->count;                             \
-    to_sol_obj->solver->kernel_r2hc->kfft =                                    \
-        from_sol_obj->solver->kernel_r2hc->kfft;                               \
-    to_sol_obj->solver->kernel_r2hc->sets =                                    \
-        from_sol_obj->solver->kernel_r2hc->sets;                               \
-    to_sol_obj->solver->kernel_r2hc->count =                                   \
-        from_sol_obj->solver->kernel_r2hc->count;                              \
-    to_sol_obj->solver->kernel_r2hcf->kfft =                                   \
-        from_sol_obj->solver->kernel_r2hcf->kfft;                              \
-    to_sol_obj->solver->kernel_r2hcf->sets =                                   \
-        from_sol_obj->solver->kernel_r2hcf->sets;                              \
-    to_sol_obj->solver->kernel_r2hcf->count =                                  \
-        from_sol_obj->solver->kernel_r2hcf->count;                             \
-    to_sol_obj->decomp_scheme->decomp_level =                                  \
-        from_sol_obj->decomp_scheme->decomp_level;                             \
-    to_sol_obj->decomp_scheme->in_real =                                       \
-        from_sol_obj->decomp_scheme->in_real;                                  \
-    to_sol_obj->decomp_scheme->in_imag =                                       \
-        from_sol_obj->decomp_scheme->in_imag;                                  \
-    to_sol_obj->decomp_scheme->out_real =                                      \
-        from_sol_obj->decomp_scheme->out_real;                                 \
-    to_sol_obj->decomp_scheme->out_imag =                                      \
-        from_sol_obj->decomp_scheme->out_imag;                                 \
-    to_sol_obj->decomp_scheme->cntrl_params->opt_level =                       \
-        from_sol_obj->decomp_scheme->cntrl_params->opt_level;                  \
-    to_sol_obj->decomp_scheme->cntrl_params->opt_off =                         \
-        from_sol_obj->decomp_scheme->cntrl_params->opt_off;                    \
-    to_sol_obj->decomp_scheme->cntrl_params->logger_mode =                     \
-        from_sol_obj->decomp_scheme->cntrl_params->logger_mode;                \
-    to_sol_obj->decomp_scheme->cntrl_params->measure_stats =                   \
-        from_sol_obj->decomp_scheme->cntrl_params->measure_stats;              \
-    to_sol_obj->decomp_scheme->thread_info->pthr_fft->num_threads =            \
-        from_sol_obj->decomp_scheme->thread_info->pthr_fft->num_threads;       \
-    to_sol_obj->decomp_scheme->thread_info->pthr_fft->dynamic_load_model =     \
-        from_sol_obj->decomp_scheme->thread_info->pthr_fft->dynamic_load_model;\
-    to_sol_obj->decomp_scheme->thread_info->avl_threads =                      \
-        from_sol_obj->decomp_scheme->thread_info->avl_threads;                 \
-    to_sol_obj->decomp_scheme->thread_info->n_threads =                        \
-        from_sol_obj->decomp_scheme->thread_info->n_threads;                   \
-    to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;     \
-    to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;                       \
-    to_sol_obj->twiddle->load_multi_cols =                                     \
-        from_sol_obj->twiddle->load_multi_cols;                                \
-    to_sol_obj->twiddle->cols = from_sol_obj->twiddle->cols;                   \
-    to_sol_obj->twiddle->twiddle_buf_ptr =                                     \
-        from_sol_obj->twiddle->twiddle_buf_ptr;                                \
-    to_sol_obj->dft_bufs->bluestein->B = from_sol_obj->dft_bufs->bluestein->B; \
-    to_sol_obj->dft_bufs->bluestein->B_out =                                   \
-        from_sol_obj->dft_bufs->bluestein->B_out;                              \
-    to_sol_obj->dft_bufs->bluestein->in =                                      \
-        from_sol_obj->dft_bufs->bluestein->in;                                 \
-    to_sol_obj->dft_bufs->bluestein->out =                                     \
-        from_sol_obj->dft_bufs->bluestein->out;                                \
-    to_sol_obj->dft_bufs->bluestein->is_B_out_valid =                          \
-        from_sol_obj->dft_bufs->bluestein->is_B_out_valid;                     \
-    to_sol_obj->dft_bufs->buffered->aux_buffer_1 =                             \
-        from_sol_obj->dft_bufs->buffered->aux_buffer_1;                        \
-    to_sol_obj->dft_bufs->buffered->aux_buffer_2 =                             \
-        from_sol_obj->dft_bufs->buffered->aux_buffer_2;                        \
-    to_sol_obj->dft_bufs->ct_buffer =                                          \
-        from_sol_obj->dft_bufs->ct_buffer;                                     \
-    to_sol_obj->dft_bufs->ct_buf_real =                                        \
-        from_sol_obj->dft_bufs->ct_buf_real;                                   \
-    to_sol_obj->dft_bufs->ct_buf_imag =                                        \
-        from_sol_obj->dft_bufs->ct_buf_imag;                                   \
-    to_sol_obj->dft_bufs->ct_buf_real_in =                                     \
-        from_sol_obj->dft_bufs->ct_buf_real_in;                                \
-    to_sol_obj->dft_bufs->ct_buf_size = from_sol_obj->dft_bufs->ct_buf_size;   \
-    to_sol_obj->dft_bufs->buffered->out_ptr =                                  \
-        from_sol_obj->dft_bufs->buffered->out_ptr;                             \
-    to_sol_obj->next_sol = from_sol_obj->next_sol;                             \
-}
-
-// Copy strides from one solution to another
-// except for the BATCHED_CT_L1_DIRECT solver
-#define COPY_STRIDES(to_sol_obj, from_sol_obj)                                 \
-{                                                                              \
-    if (from_sol_obj->strides_grp->strides->in_strides != NULL)                \
-    {                                                                          \
-        FREE_ALIGN_ALLOCATED_MEM(                                              \
-            to_sol_obj->strides_grp->strides->in_strides);                     \
-        ALLOC_ALIGN_UNINIT(                                                    \
-            to_sol_obj->strides_grp->strides->in_strides, INTP,                \
-            from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));            \
-        memcpy(to_sol_obj->strides_grp->strides->in_strides,                   \
-                from_sol_obj->strides_grp->strides->in_strides,                \
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));        \
-    }                                                                          \
-    if (from_sol_obj->strides_grp->strides->out_strides != NULL)               \
-    {                                                                          \
-        FREE_ALIGN_ALLOCATED_MEM(                                              \
-            to_sol_obj->strides_grp->strides->out_strides);                    \
-        ALLOC_ALIGN_UNINIT(                                                    \
-            to_sol_obj->strides_grp->strides->out_strides, INTP,               \
-            from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));            \
-        memcpy(to_sol_obj->strides_grp->strides->out_strides,                  \
-                from_sol_obj->strides_grp->strides->out_strides,               \
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));        \
-    }                                                                          \
-    to_sol_obj->strides_grp->strides->v_in_stride =                            \
-        from_sol_obj->strides_grp->strides->v_in_stride;                       \
-    to_sol_obj->strides_grp->strides->v_out_stride =                           \
-        from_sol_obj->strides_grp->strides->v_out_stride;                      \
-                                                                               \
-    if (from_sol_obj->solver->kernel_c2c->count != 0)                          \
-    {                                                                          \
-        if (from_sol_obj->strides_grp->strides_c2c->in_strides != NULL)        \
-        {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(                                          \
-                to_sol_obj->strides_grp->strides_c2c->in_strides);             \
-            ALLOC_ALIGN_UNINIT(                                                \
-                to_sol_obj->strides_grp->strides_c2c->in_strides, INTP,        \
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));        \
-            memcpy(to_sol_obj->strides_grp->strides_c2c->in_strides,           \
-                    from_sol_obj->strides_grp->strides_c2c->in_strides,        \
-                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));    \
-        }                                                                      \
-        if (from_sol_obj->strides_grp->strides_c2c->out_strides != NULL)       \
-        {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(                                          \
-                to_sol_obj->strides_grp->strides_c2c->out_strides);            \
-            ALLOC_ALIGN_UNINIT(                                                \
-                to_sol_obj->strides_grp->strides_c2c->out_strides, INTP,       \
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));        \
-            memcpy(to_sol_obj->strides_grp->strides_c2c->out_strides,          \
-                    from_sol_obj->strides_grp->strides_c2c->out_strides,       \
-                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));    \
-        }                                                                      \
-        to_sol_obj->strides_grp->strides_c2c->v_in_stride =                    \
-            from_sol_obj->strides_grp->strides_c2c->v_in_stride;               \
-        to_sol_obj->strides_grp->strides_c2c->v_out_stride =                   \
-            from_sol_obj->strides_grp->strides_c2c->v_out_stride;              \
-    }                                                                          \
-                                                                               \
-    if (from_sol_obj->solver->kernel_r2hc->count != 0)                         \
-    {                                                                          \
-        if (from_sol_obj->strides_grp->strides_r2hc->in_strides != NULL)       \
-        {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(                                          \
-                to_sol_obj->strides_grp->strides_r2hc->in_strides);            \
-            ALLOC_ALIGN_UNINIT(                                                \
-                to_sol_obj->strides_grp->strides_r2hc->in_strides, INTP,       \
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));        \
-            memcpy(to_sol_obj->strides_grp->strides_r2hc->in_strides,          \
-                    from_sol_obj->strides_grp->strides_r2hc->in_strides,       \
-                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));    \
-        }                                                                      \
-        if (from_sol_obj->strides_grp->strides_r2hc->out_strides != NULL)      \
-        {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(                                          \
-                to_sol_obj->strides_grp->strides_r2hc->out_strides);           \
-            ALLOC_ALIGN_UNINIT(                                                \
-                to_sol_obj->strides_grp->strides_r2hc->out_strides, INTP,      \
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));        \
-            memcpy(to_sol_obj->strides_grp->strides_r2hc->out_strides,         \
-                    from_sol_obj->strides_grp->strides_r2hc->out_strides,      \
-                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));    \
-        }                                                                      \
-        to_sol_obj->strides_grp->strides_r2hc->v_in_stride =                   \
-            from_sol_obj->strides_grp->strides_r2hc->v_in_stride;              \
-        to_sol_obj->strides_grp->strides_r2hc->v_out_stride =                  \
-            from_sol_obj->strides_grp->strides_r2hc->v_out_stride;             \
-    }                                                                          \
-                                                                               \
-    if (from_sol_obj->solver->kernel_r2hcf->count != 0)                        \
-    {                                                                          \
-        if (from_sol_obj->strides_grp->strides_r2hcf->in_strides != NULL)      \
-        {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(                                          \
-                to_sol_obj->strides_grp->strides_r2hcf->in_strides);           \
-            ALLOC_ALIGN_UNINIT(                                                \
-                to_sol_obj->strides_grp->strides_r2hcf->in_strides, INTP,      \
-                from_sol_obj->decomp_scheme->dims[0].n * 2 *                   \
-                    sizeof(INTP));                                             \
-            memcpy(to_sol_obj->strides_grp->strides_r2hcf->in_strides,         \
-                    from_sol_obj->strides_grp->strides_r2hcf->in_strides,      \
-                    from_sol_obj->decomp_scheme->dims[0].n * 2 *               \
-                        sizeof(INTP));                                         \
-        }                                                                      \
-        if (from_sol_obj->strides_grp->strides_r2hcf->out_strides != NULL)     \
-        {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(                                          \
-                to_sol_obj->strides_grp->strides_r2hcf->out_strides);          \
-            ALLOC_ALIGN_UNINIT(                                                \
-                to_sol_obj->strides_grp->strides_r2hcf->out_strides, INTP,     \
-                from_sol_obj->decomp_scheme->dims[0].n * 2 *                   \
-                    sizeof(INTP));                                             \
-            memcpy(to_sol_obj->strides_grp->strides_r2hcf->out_strides,        \
-                    from_sol_obj->strides_grp->strides_r2hcf->out_strides,     \
-                    from_sol_obj->decomp_scheme->dims[0].n * 2 *               \
-                        sizeof(INTP));                                         \
-        }                                                                      \
-        to_sol_obj->strides_grp->strides_r2hcf->v_in_stride =                  \
-            from_sol_obj->strides_grp->strides_r2hcf->v_in_stride;             \
-        to_sol_obj->strides_grp->strides_r2hcf->v_out_stride =                 \
-            from_sol_obj->strides_grp->strides_r2hcf->v_out_stride;            \
-    }                                                                          \
-                                                                               \
-    if (from_sol_obj->strides_grp->strides_c2r_ct_op != NULL)                  \
-    {                                                                          \
-        if (to_sol_obj->strides_grp->strides_c2r_ct_op != NULL)                \
-        {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(                                          \
-                to_sol_obj->strides_grp->strides_c2r_ct_op->in_strides);       \
-            FREE_ALIGN_ALLOCATED_MEM(                                          \
-                to_sol_obj->strides_grp->strides_c2r_ct_op->out_strides);      \
-            FREE_ALIGN_ALLOCATED_MEM(                                          \
-                to_sol_obj->strides_grp->strides_c2r_ct_op);                   \
-        }                                                                      \
-        ALLOC_ALIGN_INIT(to_sol_obj->strides_grp->strides_c2r_ct_op,           \
-                         aoclfftz_strides_t, sizeof(aoclfftz_strides_t));      \
-        if (from_sol_obj->strides_grp->strides_c2r_ct_op->in_strides != NULL)  \
-        {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(                                          \
-                to_sol_obj->strides_grp->strides_c2r_ct_op->in_strides);       \
-            ALLOC_ALIGN_UNINIT(                                                \
-                to_sol_obj->strides_grp->strides_c2r_ct_op->in_strides, INTP,  \
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));        \
-            memcpy(to_sol_obj->strides_grp->strides_c2r_ct_op->in_strides,     \
-                    from_sol_obj->strides_grp->strides_c2r_ct_op->in_strides,  \
-                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));    \
-        }                                                                      \
-        if (from_sol_obj->strides_grp->strides_c2r_ct_op->out_strides != NULL) \
-        {                                                                      \
-            FREE_ALIGN_ALLOCATED_MEM(                                          \
-                to_sol_obj->strides_grp->strides_c2r_ct_op->out_strides);      \
-            ALLOC_ALIGN_UNINIT(                                                \
-                to_sol_obj->strides_grp->strides_c2r_ct_op->out_strides, INTP, \
-                from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));        \
-            memcpy(to_sol_obj->strides_grp->strides_c2r_ct_op->out_strides,    \
-                    from_sol_obj->strides_grp->strides_c2r_ct_op->out_strides, \
-                    from_sol_obj->decomp_scheme->dims[0].n * sizeof(INTP));    \
-        }                                                                      \
-        to_sol_obj->strides_grp->strides_c2r_ct_op->v_in_stride =              \
-            from_sol_obj->strides_grp->strides_c2r_ct_op->v_in_stride;         \
-        to_sol_obj->strides_grp->strides_c2r_ct_op->v_out_stride =             \
-            from_sol_obj->strides_grp->strides_c2r_ct_op->v_out_stride;        \
-    }                                                                          \
-}
-
-// Copy strides from one solution to another for the BATCHED_CT_L1_DIRECT solver
-#define COPY_STRIDES_BATCHED_CT_L1_DIRECT(to_sol_obj, from_sol_obj)            \
-{                                                                              \
-    /* strides (radix_m kernel): radix_m entries, count = kernel_c2c_r */      \
-    FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_grp->strides->in_strides);    \
-    FREE_ALIGN_ALLOCATED_MEM(to_sol_obj->strides_grp->strides->out_strides);   \
-    ALLOC_ALIGN_UNINIT(to_sol_obj->strides_grp->strides->in_strides, INTP,     \
-                        from_sol_obj->solver->kernel_c2c_r->count *            \
-                            sizeof(INTP));                                     \
-    ALLOC_ALIGN_UNINIT(to_sol_obj->strides_grp->strides->out_strides, INTP,    \
-                        from_sol_obj->solver->kernel_c2c_r->count *            \
-                            sizeof(INTP));                                     \
-    memcpy(to_sol_obj->strides_grp->strides->in_strides,                       \
-            from_sol_obj->strides_grp->strides->in_strides,                    \
-            from_sol_obj->solver->kernel_c2c_r->count * sizeof(INTP));         \
-    memcpy(to_sol_obj->strides_grp->strides->out_strides,                      \
-            from_sol_obj->strides_grp->strides->out_strides,                   \
-            from_sol_obj->solver->kernel_c2c_r->count * sizeof(INTP));         \
-    /* strides_c2c (radix_r kernel): radix_r entries, count = kernel_c2c */    \
-    FREE_ALIGN_ALLOCATED_MEM(                                                  \
-        to_sol_obj->strides_grp->strides_c2c->in_strides);                     \
-    FREE_ALIGN_ALLOCATED_MEM(                                                  \
-        to_sol_obj->strides_grp->strides_c2c->out_strides);                    \
-    ALLOC_ALIGN_UNINIT(                                                        \
-        to_sol_obj->strides_grp->strides_c2c->in_strides, INTP,                \
-        from_sol_obj->solver->kernel_c2c->count * sizeof(INTP));               \
-    ALLOC_ALIGN_UNINIT(                                                        \
-        to_sol_obj->strides_grp->strides_c2c->out_strides, INTP,               \
-        from_sol_obj->solver->kernel_c2c->count * sizeof(INTP));               \
-    memcpy(to_sol_obj->strides_grp->strides_c2c->in_strides,                   \
-            from_sol_obj->strides_grp->strides_c2c->in_strides,                \
-            from_sol_obj->solver->kernel_c2c->count * sizeof(INTP));           \
-    memcpy(to_sol_obj->strides_grp->strides_c2c->out_strides,                  \
-            from_sol_obj->strides_grp->strides_c2c->out_strides,               \
-            from_sol_obj->solver->kernel_c2c->count * sizeof(INTP));           \
-    to_sol_obj->strides_grp->strides->v_in_stride =                            \
-        from_sol_obj->strides_grp->strides->v_in_stride;                       \
-    to_sol_obj->strides_grp->strides->v_out_stride =                           \
-        from_sol_obj->strides_grp->strides->v_out_stride;                      \
-    to_sol_obj->strides_grp->strides_c2c->v_in_stride =                        \
-        from_sol_obj->strides_grp->strides_c2c->v_in_stride;                   \
-    to_sol_obj->strides_grp->strides_c2c->v_out_stride =                       \
-        from_sol_obj->strides_grp->strides_c2c->v_out_stride;                  \
 }
 
 #define RESET_COST(sol)                                                        \
@@ -877,8 +204,8 @@ typedef struct aoclfftz_selector
     }                                                                          \
     else                                                                       \
     {                                                                          \
-        INT32 dim_rank_counter = 0;                                            \
-        for (INT32 i = 0; i < dim_rank; i++)                                   \
+        FFTZ_INT32 dim_rank_counter = 0; \
+        for (FFTZ_INT32 i = 0; i < dim_rank; i++) \
         {                                                                      \
             if (dims[i].n != 1)                                                \
             {                                                                  \
@@ -890,53 +217,82 @@ typedef struct aoclfftz_selector
 }
 
 // Function declarations
-INT32 register_solvers_kernels(kernel_tables_t *kernel_tables, INT32 dt,
-                               INT32 dir, INT32 is_real, INT32 cpu_flags);
-INT32 selector_driver_dft_(aoclfftz_selector_t *sel);
-INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
+FFTZ_INT32 copy_decomp_scheme(
+    aoclfftz_decomp_scheme_t *to_ds,
+    aoclfftz_decomp_scheme_t *from_ds);
+FFTZ_INT32 copy_solution_obj(aoclfftz_solution_t *to_sol_obj,
+                        aoclfftz_solution_t *from_sol_obj);
+// maps both in & out pointers to out pointer
+// incase of out-of-place problems, except the first DFT, other DFTs happen
+// in-place ie., in the output buffer.
+FFTZ_INT32 copy_solution_obj_out_p(aoclfftz_solution_t *to_sol_obj,
+                             aoclfftz_solution_t *from_sol_obj);
+// Copy strides from one solution to another
+// except for the BATCHED_CT_L1_DIRECT solver
+FFTZ_INT32 copy_strides(aoclfftz_solution_t *to_sol_obj,
+                   aoclfftz_solution_t *from_sol_obj);
+// Copy strides from one solution to another for the BATCHED_CT_L1_DIRECT solver
+FFTZ_INT32 copy_strides_batched_ct_l1_direct(
+    aoclfftz_solution_t *to_sol_obj,
+    aoclfftz_solution_t *from_sol_obj);
+// copy all contents except dims & vecs
+// necessary in ND setup where dim_rank & vec_rank will differ for the
+// sub-problem
+FFTZ_VOID copy_solution_obj_wo_dims(aoclfftz_solution_t *to_sol_obj,
+                               aoclfftz_solution_t *from_sol_obj);
+// Reorder the Real FFT CT/Direct nodes for iterative execution only.
+//   Before swap: CT -> Direct -> CT -> Direct -> ... -> Direct
+//   After swap : Direct -> CT -> Direct -> ... -> CT -> Direct
+// In recursive mode the natural CT-first tree is kept (see prepare_and_setup_dft),
+// so this is invoked only when SELECT_REAL_FFT_EXECUTION_ORDER == ITERATIVE.
+FFTZ_VOID swap_real_ct_solutions(aoclfftz_selector_t *sel);
+FFTZ_INT32 register_solvers_kernels(kernel_tables_t *kernel_tables,
+                                    FFTZ_INT32 dt, FFTZ_INT32 dir,
+                                    FFTZ_INT32 is_real, FFTZ_INT32 cpu_flags);
+FFTZ_INT32 selector_driver_dft_(aoclfftz_selector_t *sel);
+FFTZ_INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
                             aoclfftz_realhelper_t *realhelper);
-INT32 selector_model_dft_(aoclfftz_selector_t *sel);
-INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
+FFTZ_INT32 selector_model_dft_(aoclfftz_selector_t *sel);
+FFTZ_INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
                            aoclfftz_realhelper_t *realhelper);
-VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *sol);
-VOID setup_twiddle_buffer_real(aoclfftz_solution_t *sol);
-INT32 setup_dft_f_(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 setup_dft_d_(aoclfftz_selector_t *sel, kernel_t *kertab);
-VOID *setup_dft_f(aoclfftz_prob_desc_f *problem);
-VOID *setup_dft_d(aoclfftz_prob_desc_d *problem);
-VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem);
-VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem);
-INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_permuted_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel);
-INT32 selector_sizeone_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-INT32 selector_transpose(aoclfftz_selector_t *sel);
-INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *sol);
+FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *sol);
+FFTZ_VOID *setup_dft_f(aoclfftz_prob_desc_f *problem);
+FFTZ_VOID *setup_dft_d(aoclfftz_prob_desc_d *problem);
+FFTZ_VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem);
+FFTZ_VOID *setup_dft_d_64_(aoclfftz_prob_desc_d_64_ *problem);
+FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_permuted_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel);
+FFTZ_INT32 selector_sizeone_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_transpose(aoclfftz_selector_t *sel);
+FFTZ_INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 
-INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                            aoclfftz_realhelper_t *realhelper);
-INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                              aoclfftz_realhelper_t *realhelper);
-INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                              aoclfftz_realhelper_t *realhelper);
-INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                        aoclfftz_realhelper_t *realhelper);
-INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                          aoclfftz_realhelper_t *realhelper);
-VOID destroy_handle(VOID *handle);
-VOID fuse_vecs(aoclfftz_solution_t *sol, INT32 is_FFT_ker_supported);
-INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);
-INT32 check_FFT_kernel_support(INTP n, kernel_t *kernels_table,
-                               INT32 is_innermost_dim);
-DOUBLE get_kernel_weightage(INTP radix, kernel_t *kertab,
+FFTZ_VOID destroy_handle(FFTZ_VOID *handle);
+FFTZ_VOID fuse_vecs(aoclfftz_solution_t *sol, FFTZ_INT32 is_FFT_ker_supported);
+FFTZ_INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);
+FFTZ_INT32 check_FFT_kernel_support(FFTZ_INTP n, kernel_t *kernels_table,
+                               FFTZ_INT32 is_innermost_dim);
+FFTZ_DOUBLE get_kernel_weightage(FFTZ_INTP radix, kernel_t *kertab,
                             aoclfftz_solution_t *sol);
-UINT8 should_use_colmajor_batched_solver(aoclfftz_solution_t *solution,
-                                         kernel_t *kertab, INT32 avl_threads);
-UINT8 check_col_major(aoclfftz_decomp_scheme_t *decomp_scheme);
+FFTZ_UINT8 should_use_colmajor_batched_solver(aoclfftz_solution_t *solution,
+                                              kernel_t *kertab,
+                                              FFTZ_INT32 avl_threads);
+FFTZ_UINT8 check_col_major(aoclfftz_decomp_scheme_t *decomp_scheme);
 
 #endif // AOCLFFTZ_SELECTOR_H

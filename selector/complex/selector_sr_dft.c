@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2026, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file selector_sr_dft.c
  *
@@ -41,7 +16,7 @@
 #include "utils/utils.h"
 #include "core/common/twiddle.h"
 
-INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
+FFTZ_INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -59,13 +34,13 @@ INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     aoclfftz_solution_t *org_sol = NULL;
 
-    INTP n = sel->solution->decomp_scheme->dims[0].n;
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INTP n = sel->solution->decomp_scheme->dims[0].n;
+    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    INTP n_even = n / 2;
-    INTP n_odd = n / 4;
+    FFTZ_INTP n_even = n / 2;
+    FFTZ_INTP n_odd = n / 4;
 
     org_sol = alloc_solution(vec_rank, dim_rank);
     if (org_sol == NULL)
@@ -78,12 +53,9 @@ INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     /* Allocate 3 sub-selectors for even, odd1, and odd3 parts */
     /* nthreads is set to 0 for all recursive SR sub-problems. */
-    cur_sel_even = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                  sel->kernel_tables, 0);
-    cur_sel_odd1 = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                  sel->kernel_tables, 0);
-    cur_sel_odd3 = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                                  sel->kernel_tables, 0);
+    cur_sel_even = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel_odd1 = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel_odd3 = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
 
     if (cur_sel_even == NULL || cur_sel_odd1 == NULL || cur_sel_odd3 == NULL)
     {
@@ -91,7 +63,12 @@ INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_sr_dft;
     }
 
-    COPY_SOLUTION_OBJ(org_sol, sel->solution);
+    ret = copy_solution_obj(org_sol, sel->solution);
+    if (ret != AOCLFFTZ_SUCCESS)
+    {
+        AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
+        goto exit_sr_dft;
+    }
     org_sol->next_sol = NULL;
 
     /* Setup SR solver using sub-selector solutions */
@@ -106,15 +83,18 @@ INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     /* Allocate input copy buffer for in-place transforms */
     if (!IS_OUT_OF_PLACE(org_sol->decomp_scheme->flags))
     {
-        INTP in_stride = org_sol->decomp_scheme->dims[0].in_stride;
-        UINT32 precision = DT_PRECISION_FLAG(org_sol->decomp_scheme->flags);
-        UINT32 dt_bytes = DT_PRECISION_BYTES(precision);
-        INTP elem_size = DATA_STRIDE * dt_bytes; /* Complex: 2 * sizeof(type) */
+        FFTZ_INTP in_stride = org_sol->decomp_scheme->dims[0].in_stride;
+        FFTZ_UINT32 precision = DT_PRECISION_FLAG(
+            org_sol->decomp_scheme->flags);
+        FFTZ_UINT32 dt_bytes = DT_PRECISION_BYTES(precision);
+        /* Complex: 2 * sizeof(type) */
+        FFTZ_INTP elem_size = DATA_STRIDE * dt_bytes;
 
-        INTP sr_input_copy_size = strided_buffer_size(n, in_stride, elem_size);
+        FFTZ_INTP sr_input_copy_size = strided_buffer_size(n, in_stride,
+                                                           elem_size);
         sel->solution->dft_bufs->sr->input_copy_size = sr_input_copy_size;
 
-        ALLOC_ALIGN_UNINIT(sel->solution->dft_bufs->sr->input_copy, VOID,
+        ALLOC_ALIGN_UNINIT(sel->solution->dft_bufs->sr->input_copy, FFTZ_VOID,
                            sr_input_copy_size);
         if (sel->solution->dft_bufs->sr->input_copy == NULL)
         {
@@ -174,28 +154,24 @@ INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     cur_sel_even = NULL;
     cur_sel_odd1 = NULL;
     cur_sel_odd3 = NULL;
-    destroy_solution(org_sol, 0);
+    destroy_solution(org_sol);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return SELECTOR_SUCCESS;
 
 exit_sr_dft:
     /* Clean up SR input copy buffer if allocated */
-    if (sel->solution && sel->solution->dft_bufs)
+    if (sel->solution->dft_bufs)
     {
         FREE_ALIGN_ALLOCATED_MEM(sel->solution->dft_bufs->sr->input_copy);
         sel->solution->dft_bufs->sr->input_copy = NULL;
         sel->solution->dft_bufs->sr->input_copy_size = 0;
     }
 
-    /*
-     * Sub-selectors share the parent's scratch_space, so use
-     * destroy_selector_without_scratch_space to avoid double-free.
-     */
-    destroy_selector_without_scratch_space(cur_sel_even);
-    destroy_selector_without_scratch_space(cur_sel_odd1);
-    destroy_selector_without_scratch_space(cur_sel_odd3);
-    destroy_solution(org_sol, 0);
+    destroy_selector(cur_sel_even);
+    destroy_selector(cur_sel_odd1);
+    destroy_selector(cur_sel_odd3);
+    destroy_solution(org_sol);
 
     return ret;
 }

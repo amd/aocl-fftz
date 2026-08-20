@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file selector_bluestein_dft.c
  *
@@ -40,14 +15,18 @@
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
 #include "core/common/bluestein_utils.h"
+#include "core/solvers/solver.h"
 #include "utils/utils.h"
 
-INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
+FFTZ_INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     if (sel == NULL || sel->solution == NULL ||
-        sel->solution->decomp_scheme == NULL)
+        sel->solution->decomp_scheme == NULL || sel->kernel_tables == NULL ||
+        sel->kernel_tables->ele_mul[FORWARD_FFT_DIR] == NULL ||
+        sel->kernel_tables->ele_mul[BACKWARD_FFT_DIR] == NULL ||
+        sel->kernel_tables->normalize == NULL)
     {
         AOCLFFTZ_LOG(INFO, global_logger_mode,
                      "Invalid selector or solution passed to "
@@ -55,13 +34,13 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         return SELECTOR_FAILURE;
     }
 
-    INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
-    INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
-    INTP n = sel->solution->decomp_scheme->dims[0].n;
-    INT32 ret = SELECTOR_FAILURE;
+    FFTZ_INT32 vec_rank = sel->solution->decomp_scheme->vec_rank;
+    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    FFTZ_INTP n = sel->solution->decomp_scheme->dims[0].n;
+    FFTZ_INT32 ret = SELECTOR_FAILURE;
 
     // Get the extended length
-    INTP m = get_extended_length(n);
+    FFTZ_INTP m = get_extended_length(n);
     AOCLFFTZ_LOG(INFO, global_logger_mode,
                            "Problem length %td, extended Bluestein length %td",
                            n, m);
@@ -69,24 +48,42 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     // To hold the selector to perform FFT with extended length m
     aoclfftz_selector_t *next_sel = NULL;
-    next_sel = alloc_selector(vec_rank, dim_rank, sel->scratch_space,
-                              sel->kernel_tables, 0 /*unused*/);
+    next_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
     if (next_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_bluestein_dft;
     }
 
-    // Allocate in, out buffers for next sol and
-    // Bluestein sequence B buffers for cur sol
-    ret = setup_bluestein_solver(sel->solution, next_sel->solution, m);
+    // Allocate in, out buffers for next sol and Bluestein chirp buffers for
+    // cur sol. The MT and ST variants each carry their own setup function
+    // (mirroring the ST/MT pairing of other solver families in the library).
+#ifdef MULTI_THREADING
+    if (sel->solution->solver->solver_type == SOLVER_MT_BLUESTEIN)
+    {
+        ret = setup_mt_bluestein_solver(sel->solution, next_sel->solution, m);
+    }
+    else
+#endif
+    {
+        ret = setup_bluestein_solver(sel->solution, next_sel->solution, m);
+    }
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_bluestein_dft;
     }
 
+    // Bind the elementwise multiplication and normalization kernels registered
+    // for the plan onto this Bluestein solution
+    sel->solution->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR] =
+        sel->kernel_tables->ele_mul[FORWARD_FFT_DIR];
+    sel->solution->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] =
+        sel->kernel_tables->ele_mul[BACKWARD_FFT_DIR];
+    sel->solution->dft_bufs->bluestein->normalize =
+        sel->kernel_tables->normalize;
+
     // Initialize Bluestein sequence B
-    ret = prepare_bluestein_sequence(sel->solution, m);
+    ret = compute_chirp_sequence(sel->solution, m);
     if (ret != BLUESTEIN_SUCCESS)
     {
         goto exit_bluestein_dft;
@@ -100,6 +97,12 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
+    if (sel->solution->next_sol == NULL)
+    {
+        ret = AOCLFFTZ_MEMORY_FAILURE;
+        AOCLFFTZ_ERROR("alloc_sol_array failed: %s", get_status_string(ret));
+        goto exit_bluestein_dft;
+    }
     sel->solution->next_sol[0] = next_sel->solution;
 
     // destroy only the selector not the solution within it
@@ -109,7 +112,7 @@ INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     return SELECTOR_SUCCESS;
 
 exit_bluestein_dft:
-    destroy_selector_without_scratch_space(next_sel);
+    destroy_selector(next_sel);
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit with failure");
 
     return ret;

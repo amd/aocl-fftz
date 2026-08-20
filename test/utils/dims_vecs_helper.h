@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2024-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file dims_vecs_helper.h
  *
@@ -47,17 +22,20 @@
 #include "utils/allocator.h"
 
 EXPORT_SYM_DYN
-INT32 allocate_and_fill_dims_vecs(CHAR *arg, INT32 dim_rank, INT32 vec_rank,
-                                  aoclfftz_dim_t_64_ **dims,
-                                  aoclfftz_dim_t_64_ **vecs,
-                                  INTP default_stride);
+FFTZ_INT32 allocate_and_fill_dims_vecs(FFTZ_CHAR *arg, FFTZ_INT32 dim_rank,
+                                       FFTZ_INT32 vec_rank,
+                                       aoclfftz_dim_t_64_ **dims,
+                                       aoclfftz_dim_t_64_ **vecs,
+                                       FFTZ_INTP default_stride);
 EXPORT_SYM_DYN
-VOID set_default_dims_vecs(INT32 dim_rank, INT32 vec_rank,
-                           aoclfftz_dim_t_64_ *dims, aoclfftz_dim_t_64_ *vecs,
-                           aoclfftz_bench_fft_type_t type, UINT8 is_in_place,
-                           UINT8 logger_mode);
+FFTZ_VOID set_default_dims_vecs(FFTZ_INT32 dim_rank, FFTZ_INT32 vec_rank,
+                                aoclfftz_dim_t_64_ *dims,
+                                aoclfftz_dim_t_64_ *vecs,
+                                aoclfftz_bench_fft_type_t type,
+                                FFTZ_UINT8 is_in_place, FFTZ_UINT8 logger_mode);
 
 EXPORT_SYM_DYN
-INT32 find_dim_vec_ranks(CHAR *arg, INT32 *dim_rank, INT32 *vec_rank);
+FFTZ_INT32 find_dim_vec_ranks(FFTZ_CHAR *arg, FFTZ_INT32 *dim_rank,
+                              FFTZ_INT32 *vec_rank);
 
 #endif // DIMS_VECS_HELPER_H

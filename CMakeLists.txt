@@ -1,28 +1,5 @@
-# Copyright (C) 2023-2026 Advanced Micro Devices. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright notice,
-# this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-# 3. Neither the name of the copyright holder nor the names of its
-# contributors may be used to endorse or promote products derived from this
-# software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
+# Copyright Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
 
 # @file CMakeLists.txt
 #
@@ -42,7 +19,7 @@ cmake_minimum_required(VERSION 3.26.0)
 project(AOCL-FFTZ)
 message(STATUS "Building AOCL-FFTZ LIBRARY AND TEST SUITE")
 # Version used by pkg-config and CMake config
-set(FFTZ_VERSION "5.3.0")
+set(FFTZ_VERSION "5.3.2")
 
 string(TIMESTAMP TODAY "%Y%m%d")
 add_compile_definitions(AOCL_BUILD_VERSION="Build ${TODAY}")
@@ -80,6 +57,8 @@ option(ENABLE_FMA "Enables -ffp-contract=fast (forces FMA generation). Required 
 option(ENABLE_MULTI_THREADING "Compiles library with multi-threading support using OpenMP (Disabled by default)" OFF)
 option(ENABLE_STRICT_WARNINGS "Enables compiler flags to treat all warnings as errors (Enabled by default)" ON)
 option(FUZZTEST "Enables Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)" OFF)
+set(SELECT_REAL_FFT_EXECUTION_ORDER "TRUE_RECURSION" CACHE STRING "Real FFT CT execution order: ITERATIVE (legacy Direct-first with SWAP), PARTIAL_RECURSION (recursive CT-first tree with Direct tail-chaining), TRUE_RECURSION (CT-orchestrated recurse-then-combine mirroring Complex FFT; default)")
+set_property(CACHE SELECT_REAL_FFT_EXECUTION_ORDER PROPERTY STRINGS "ITERATIVE" "PARTIAL_RECURSION" "TRUE_RECURSION")
 option(VALGRIND "Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)" OFF)
 if(WIN32)
     set(OpenMP_libomp_LIBRARY "C:/Program Files/LLVM/lib/libomp.lib" CACHE FILEPATH "Path to the custom OpenMP library")
@@ -94,16 +73,21 @@ file(GLOB API_SRC_FILES api/*.c api/*.cpp api/*.h)
 file(GLOB CORE_SRC_FILES CONFIGURE_DEPENDS ${CORE_PATH}/*.c ${CORE_PATH}/*.h
                         ${CORE_PATH}/common/*.c ${CORE_PATH}/common/*.h
                         ${CORE_PATH}/kernels/*.c ${CORE_PATH}/kernels/*.h
-                        ${CORE_PATH}/kernels/transpose/*.c ${CORE_PATH}/kernels/transpose/*.h
-                        ${CORE_PATH}/kernels/transpose/c/*.c ${CORE_PATH}/kernels/transpose/c/*.h
+                        ${CORE_PATH}/kernels/non_dft/transpose/*.c ${CORE_PATH}/kernels/non_dft/transpose/*.h
+                        ${CORE_PATH}/kernels/non_dft/transpose/c/*.c ${CORE_PATH}/kernels/non_dft/transpose/c/*.h
                         ${CORE_PATH}/solvers/*.c ${CORE_PATH}/solvers/*.h
                         ${CORE_PATH}/solvers/complex/*.c ${CORE_PATH}/solvers/complex/*.h
                         ${CORE_PATH}/solvers/real/*.c ${CORE_PATH}/solvers/real/*.h)
 file(GLOB CORE_C_FILES CONFIGURE_DEPENDS
-                        ${CORE_PATH}/kernels/c2c/c/*.c ${CORE_PATH}/kernels/c2c/c/*.h
-                        ${CORE_PATH}/kernels/r2hc/c/*.c ${CORE_PATH}/kernels/r2hc/c/*.h
-                        ${CORE_PATH}/kernels/r2hc_fused/c/*.c ${CORE_PATH}/kernels/r2hc_fused/c/*.h
-                        ${CORE_PATH}/kernels/tw_c2c/c/*.c)
+                        ${CORE_PATH}/kernels/dft/c2c/c/*.c ${CORE_PATH}/kernels/dft/c2c/c/*.h
+                        ${CORE_PATH}/kernels/non_dft/ele_mul/c/*.c
+                        ${CORE_PATH}/kernels/non_dft/perm_copy/c/*.c
+                        ${CORE_PATH}/kernels/dft/r2hc/c/*.c ${CORE_PATH}/kernels/dft/r2hc/c/*.h
+                        ${CORE_PATH}/kernels/dft/r2hc_fused/c/*.c ${CORE_PATH}/kernels/dft/r2hc_fused/c/*.h
+                        ${CORE_PATH}/kernels/dft/tw_c2c_fwd/c/*.c
+                        ${CORE_PATH}/kernels/dft/tw_c2c_bwd/c/*.c
+                        ${CORE_PATH}/kernels/dft/tw_c2c_r2c/c/*.c
+                        ${CORE_PATH}/kernels/dft/tw_c2c_c2r/c/*.c)
 list(APPEND CORE_SRC_FILES ${CORE_C_FILES})
 
 #Add AVX Kernels based on the flags ENABLE_AVX128, ENABLE_AVX256 & ENABLE_AVX512
@@ -111,30 +95,42 @@ if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX512")
     set(ENABLE_AVX512 ON)
     add_compile_definitions(ENABLE_AVX512)
     file(GLOB CORE_AVX512_FILES CONFIGURE_DEPENDS
-                            ${CORE_PATH}/kernels/c2c/avx512/*.c
-                            ${CORE_PATH}/kernels/r2hc/avx512/*.c
-                            ${CORE_PATH}/kernels/r2hc_fused/avx512/*.c
-                            ${CORE_PATH}/kernels/tw_c2c/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/c2c/avx512/*.c
+                            ${CORE_PATH}/kernels/non_dft/ele_mul/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/r2hc/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/r2hc_fused/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/tw_c2c_fwd/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/tw_c2c_bwd/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/tw_c2c_r2c/avx512/*.c
+                            ${CORE_PATH}/kernels/dft/tw_c2c_c2r/avx512/*.c
                             ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx512.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX512_FILES})
 endif()
 if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX256|AVX512")
     set(ENABLE_AVX256 ON)
     add_compile_definitions(ENABLE_AVX256)
-    file(GLOB CORE_AVX256_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/c2c/avx256/*.c
-                                                  ${CORE_PATH}/kernels/r2hc/avx256/*.c
-                                                  ${CORE_PATH}/kernels/r2hc_fused/avx256/*.c
-                                                  ${CORE_PATH}/kernels/tw_c2c/avx256/*.c
+    file(GLOB CORE_AVX256_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/dft/c2c/avx256/*.c
+                                                  ${CORE_PATH}/kernels/non_dft/ele_mul/avx256/*.c
+                                                  ${CORE_PATH}/kernels/dft/r2hc/avx256/*.c
+                                                  ${CORE_PATH}/kernels/dft/r2hc_fused/avx256/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_fwd/avx256/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_bwd/avx256/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_r2c/avx256/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_c2r/avx256/*.c
                                                   ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx256.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX256_FILES})
 endif()
 if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX128|AVX256|AVX512")
     set(ENABLE_AVX128 ON)
     add_compile_definitions(ENABLE_AVX128)
-    file(GLOB CORE_AVX128_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/c2c/avx128/*.c
-                                                  ${CORE_PATH}/kernels/r2hc/avx128/*.c
-                                                  ${CORE_PATH}/kernels/r2hc_fused/avx128/*.c
-                                                  ${CORE_PATH}/kernels/tw_c2c/avx128/*.c
+    file(GLOB CORE_AVX128_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/dft/c2c/avx128/*.c
+                                                  ${CORE_PATH}/kernels/non_dft/ele_mul/avx128/*.c
+                                                  ${CORE_PATH}/kernels/dft/r2hc/avx128/*.c
+                                                  ${CORE_PATH}/kernels/dft/r2hc_fused/avx128/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_fwd/avx128/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_bwd/avx128/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_r2c/avx128/*.c
+                                                  ${CORE_PATH}/kernels/dft/tw_c2c_c2r/avx128/*.c
                                                   ${CORE_PATH}/kernels/simd_includes/r2hc_simd_avx128.h)
     list(APPEND CORE_SRC_FILES ${CORE_AVX128_FILES})
 endif()
@@ -169,6 +165,10 @@ endif()
 
 if (ENABLE_FMA AND (ENABLE_INSTRUCTIONS_UPTO MATCHES "None|AVX128"))
     set(ENABLE_FMA OFF)
+endif()
+
+if(ENABLE_FMA)
+    add_compile_definitions(ENABLE_FMA)
 endif()
 
 #set(USER_DEBUG_ON "-g")
@@ -207,22 +207,26 @@ if(WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USER_DEBUG_ON} /O2 /DNDEBUG /Oy")
 
 elseif(UNIX)
-    if(ENABLE_AVX512)
-        if(ENABLE_FMA)
+    if(ENABLE_FMA)
+        if(ENABLE_AVX512)
             set(AVX512_FLAG "-mavx512f -mavx512dq -ffp-contract=fast") # avx512dq for xor, insert and extract instructions
-        else()
+        endif()
+        if(ENABLE_AVX256)
+            set(AVX256_FLAG "-mavx -mfma -ffp-contract=fast")
+        endif()
+        if(ENABLE_AVX128)
+            set(AVX128_FLAG "-mavx -mfma -ffp-contract=fast")
+        endif()
+    else()
+        if(ENABLE_AVX512)
             set(AVX512_FLAG "-mavx512f -mavx512dq") # avx512dq for xor, insert and extract instructions
         endif()
-    endif()
-    if(ENABLE_AVX256)
-        if(ENABLE_FMA)
-            set(AVX256_FLAG "-mavx -mfma -ffp-contract=fast")
-        else()
-            set(AVX256_FLAG "-mavx -mfma")
+        if(ENABLE_AVX256)
+            set(AVX256_FLAG "-mavx")
         endif()
-    endif()
-    if(ENABLE_AVX128)
-        set(AVX128_FLAG "-mavx")
+        if(ENABLE_AVX128)
+            set(AVX128_FLAG "-mavx")
+        endif()
     endif()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${USER_DEBUG_ON} -fomit-frame-pointer -fstrict-aliasing")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USER_DEBUG_ON} -fomit-frame-pointer -fstrict-aliasing")
@@ -265,6 +269,17 @@ endif()
 if(ENABLE_APP_INFO_LOGS)
     add_compile_definitions(ENABLE_APP_INFO_LOGS)
 endif()
+
+if(SELECT_REAL_FFT_EXECUTION_ORDER STREQUAL "ITERATIVE")
+    add_compile_definitions(REAL_FFT_EXECUTION_ORDER=0)
+elseif(SELECT_REAL_FFT_EXECUTION_ORDER STREQUAL "PARTIAL_RECURSION")
+    add_compile_definitions(REAL_FFT_EXECUTION_ORDER=1)
+elseif(SELECT_REAL_FFT_EXECUTION_ORDER STREQUAL "TRUE_RECURSION")
+    add_compile_definitions(REAL_FFT_EXECUTION_ORDER=2)
+else()
+    message(FATAL_ERROR "Invalid SELECT_REAL_FFT_EXECUTION_ORDER='${SELECT_REAL_FFT_EXECUTION_ORDER}'. Allowed values: ITERATIVE, PARTIAL_RECURSION, TRUE_RECURSION.")
+endif()
+message(STATUS "Real FFT execution order: ${SELECT_REAL_FFT_EXECUTION_ORDER}")
 
 # set library and sources
 # Set target name as aocl_fftz on Linux (shared and static) and on Windows use aocl_fftz_static for static build.
@@ -433,19 +448,59 @@ if(ENABLE_STRICT_WARNINGS)
     endif()
 endif()
 
-# add library
+# ---------------------------------------------------------------------------
+# OBJECT library: compiles all FFTZ sources and exposes the public API headers
+# via target_include_directories PUBLIC.  A parent project can aggregate the
+# object files into any library using:
+#   add_library(<<PARENT>> SHARED $<TARGET_OBJECTS:fftz_objects>)
+#   target_link_libraries(<<PARENT>> PUBLIC fftz_objects)
+# ---------------------------------------------------------------------------
+add_library(fftz_objects OBJECT ${SRC_FILES})
+target_include_directories(fftz_objects PUBLIC .)
+
+# Build object files as PIC so they can be aggregated into either a SHARED
+# or STATIC library by a parent project, regardless of how this project's
+# own ${lib_name} is configured. Required for ELF platforms.
+# No-op on Windows (CMake silently ignores POSITION_INDEPENDENT_CODE there).
+set_target_properties(fftz_objects PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+# Standalone library built from the OBJECT target above.
+# Used when aocl-fftz is consumed directly (not aggregated by a parent project).
 if(BUILD_STATIC_LIBS)
-    add_library(${lib_name} STATIC ${SRC_FILES})
+    add_library(${lib_name} STATIC $<TARGET_OBJECTS:fftz_objects>)
     message(STATUS "Library type being built is: Static")
 else()
-    add_library(${lib_name} SHARED ${SRC_FILES})
+    add_library(${lib_name} SHARED $<TARGET_OBJECTS:fftz_objects>)
     message(STATUS "Library type being built is: Shared")
+endif()
+
+# ${lib_name}'s own usage requirements (include dir, libm, OpenMP, coverage,
+# ASAN) are set on ${lib_name} directly below; fftz_objects carries the same
+# as INTERFACE / PUBLIC props for parent-project aggregation via
+# $<TARGET_OBJECTS:fftz_objects> + target_link_libraries(parent PUBLIC fftz_objects).
+
+# Expose the FFTZ public headers to downstream consumers of ${lib_name}.
+# BUILD_INTERFACE: header dir inside the source tree during build.
+# INSTALL_INTERFACE: relative path under CMAKE_INSTALL_PREFIX after install.
+target_include_directories(${lib_name} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:${DEST_INC_PATH}>
+)
+
+# AOCL Build-It-Yourself unified build: compile the same sources into a sibling
+# OBJECT library whose objects are pulled directly into the single libaocl.
+if(AOCL_TB_UNIFIED_BUILD)
+    aocl_tb_objectify(${lib_name})
 endif()
 
 set_target_properties(${lib_name} PROPERTIES EXPORT_NAME ${FFTZ_EXPORTED_TARGET_NAME})
 
 # Link system deps like libm: PUBLIC for static (consumers need -lm), PRIVATE for shared.
+# Also expose them as INTERFACE on fftz_objects so a parent project that aggregates
+# $<TARGET_OBJECTS:fftz_objects> into its own library inherits them via
+# target_link_libraries(parent PUBLIC fftz_objects).
 if(lib_deps)
+    target_link_libraries(fftz_objects INTERFACE ${lib_deps})
     if(BUILD_STATIC_LIBS)
         target_link_libraries(${lib_name} PUBLIC ${lib_deps})
     else()
@@ -456,6 +511,9 @@ endif()
 # Add required OpenMP flags
 if(ENABLE_MULTI_THREADING)
     if(WIN32)
+        # PUBLIC on the OBJECT lib propagates OpenMP::OpenMP_C/CXX as INTERFACE
+        # link items to consumers (parent aggregation case).
+        target_link_libraries(fftz_objects PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
         if(BUILD_STATIC_LIBS)
             # Static libraries must link OpenMP PUBLIC so that apps that link us get the runtime too.
             target_link_libraries(${lib_name} PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
@@ -466,16 +524,24 @@ if(ENABLE_MULTI_THREADING)
         # On Unix: For custom path, link that file + -fopenmp and for system OpenMP, link OpenMP::OpenMP_C/OpenMP_CXX
         # pkg-config uses -lomp/-lgomp in Libs.private.
         if(OpenMP_libomp_LIBRARY)
+            # PUBLIC compile option so fftz_objects' own sources get -fopenmp AND
+            # the flag is propagated as INTERFACE_COMPILE_OPTIONS to consumers.
+            target_compile_options(fftz_objects PUBLIC -fopenmp)
+            # INTERFACE link options/libs on fftz_objects so parent aggregations
+            # get -fopenmp on the link line and the libomp runtime library.
+            target_link_options(fftz_objects INTERFACE -fopenmp)
+            target_link_libraries(fftz_objects INTERFACE ${OpenMP_libomp_LIBRARY})
             if(BUILD_STATIC_LIBS)
-                target_compile_options(${lib_name} PUBLIC -fopenmp)
                 target_link_options(${lib_name} PUBLIC -fopenmp)
                 target_link_libraries(${lib_name} PUBLIC ${OpenMP_libomp_LIBRARY})
             else()
-                target_compile_options(${lib_name} PRIVATE -fopenmp)
                 target_link_options(${lib_name} PRIVATE -fopenmp)
                 target_link_libraries(${lib_name} PRIVATE ${OpenMP_libomp_LIBRARY})
             endif()
         else()
+            # System OpenMP: PUBLIC on fftz_objects so OpenMP::OpenMP_C/CXX is
+            # propagated to consumers (compile flags + runtime link).
+            target_link_libraries(fftz_objects PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
             if(BUILD_STATIC_LIBS)
                 target_link_libraries(${lib_name} PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
             else()
@@ -486,19 +552,23 @@ if(ENABLE_MULTI_THREADING)
 endif()
 
 # add the compiler and linker flags for code coverage
+# Compile flags go on fftz_objects (PUBLIC, propagated to consumers).
+# Link flags go on both ${lib_name} (PUBLIC, for direct consumers via find_package)
+# and fftz_objects (INTERFACE, for parent aggregation of $<TARGET_OBJECTS:fftz_objects>).
 if(CODE_COVERAGE OR CODE_COVERAGE_FOR_ATG)
-    target_compile_options(${lib_name} PUBLIC --coverage)
-    # Check if the compiler supports -fprofile-abs-path
+    target_compile_options(fftz_objects PUBLIC --coverage)
     check_cxx_compiler_flag("-fprofile-abs-path" HAS_FPROFILE_ABS_PATH)
     if(HAS_FPROFILE_ABS_PATH)
-        target_compile_options(${lib_name} PUBLIC -fprofile-abs-path)
+        target_compile_options(fftz_objects PUBLIC -fprofile-abs-path)
     endif()
+    target_link_options(fftz_objects INTERFACE --coverage)
     target_link_options(${lib_name} PUBLIC --coverage)
 endif()
 
 # add the compiler and linker flags for AddressSanitizer
 if(ASAN)
-    target_compile_options(${lib_name} PUBLIC -fsanitize=address -O0 -gdwarf-5 -g3 )
+    target_compile_options(fftz_objects PUBLIC -fsanitize=address -O0 -gdwarf-5 -g3)
+    target_link_options(fftz_objects INTERFACE -fsanitize=address)
     target_link_options(${lib_name} PUBLIC -fsanitize=address)
 endif()
 
@@ -681,15 +751,19 @@ if((NOT BUILD_STATIC_LIBS) AND WIN32 AND (NOT AOCL_TEST_COVERAGE STREQUAL "OFF")
         )
 endif()
 
-#Uninstall the binary. library and header files using custom command
-add_custom_target("uninstall" COMMENT "Uninstalling the installed files from ${install_dir}")
-add_custom_command(
-    TARGET "uninstall"
-    POST_BUILD
-    COMMENT "Uninstall the installed files as per install_manifest.txt and from ${ROOT_DIR}/lib/"
-    COMMAND ${CMAKE_COMMAND} -E echo "Checking for install_manifest.txt..."
-    COMMAND [ -f install_manifest.txt ] && xargs rm -vf < install_manifest.txt || echo 'install_manifest.txt is not present, nothing to uninstall, install the library!'
-    )
+# Uninstall the binary, library and header files using custom command.
+# Guarded: when built as part of the unified AOCL project, another component
+# may already define a global "uninstall" target.
+if(NOT TARGET uninstall)
+    add_custom_target("uninstall" COMMENT "Uninstalling the installed files from ${CMAKE_INSTALL_PREFIX}")
+    add_custom_command(
+        TARGET "uninstall"
+        POST_BUILD
+        COMMENT "Uninstall the installed files as per install_manifest.txt and from ${ROOT_DIR}/lib/"
+        COMMAND ${CMAKE_COMMAND} -E echo "Checking for install_manifest.txt..."
+        COMMAND [ -f install_manifest.txt ] && xargs rm -vf < install_manifest.txt || echo 'install_manifest.txt is not present, nothing to uninstall, install the library!'
+        )
+endif()
 
 # copy library from build directory to lib directory
 add_custom_command(

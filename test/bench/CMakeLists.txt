@@ -1,28 +1,5 @@
-# Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright notice,
-# this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-# 3. Neither the name of the copyright holder nor the names of its
-# contributors may be used to endorse or promote products derived from this
-# software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
+# Copyright Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
 
 # @file CMakeLists.txt
 #
@@ -108,6 +85,11 @@ set(STANDARD_TEST_SUITE
     "C_C2C_MT_SIZEONE_IN_PLACE_BWD ./aocl_fftz_bench 1v1:5:5 -b a -r i --dir b -n 10"                         # accuracy | complex  | double   | LP64       | 1D  | yes      | sizeone   | inplace   | backward  | C       | MT sizeone backward accuracy
     "C_C2C_MT_BATCHED_DIRECT ./aocl_fftz_bench 8v16:8:4 -b a -n 8"                                            # accuracy | complex  | double   | LP64       | 1D  | yes      | direct    | outplace  | forward   | C       | MT batched direct forward accuracy
     "C_C2C_MT_BLUESTEIN ./aocl_fftz_bench 59:01:06 -b a -m i --dir b -n 16"                                   # accuracy | complex  | double   | ILP64      | 1D  |  no      | bluestein | outplace  | backward  | C       | MT Bluestein backward accuracy
+    "AVX512_C2C_MT_BLUESTEIN_BATCHED ./aocl_fftz_bench 4v89 -b a -o 3 -n 4"                                   # accuracy | complex  | double   | LP64       | 1D  | yes      | MT+BS     | outplace  | forward   | AVX512  | MT batched Bluestein, one thread per slot
+    "AVX512_C2C_MT_BLUESTEIN_BATCHED_IP_BWD ./aocl_fftz_bench 8v17 -b a -r i -o 3 -n 8 --dir b"               # accuracy | complex  | double   | LP64       | 1D  | yes      | MT+BS     | inplace   | backward  | AVX512  | MT batched Bluestein, inplace, backward
+    "AVX512_C2C_MT_BLUESTEIN_BATCHED_STRIDED ./aocl_fftz_bench 4v71:3:3 -b a -o 3 -n 8"                       # accuracy | complex  | double   | LP64       | 1D  | yes      | MT+BS     | outplace  | forward   | AVX512  | MT batched Bluestein, strided
+    "AVX512_C2C_MT_BLUESTEIN_IP ./aocl_fftz_bench 97 -b a -r i -o 3 -n 16"                                    # accuracy | complex  | double   | LP64       | 1D  |  no      | MT+BS     | inplace   | forward   | AVX512  | MT Bluestein, inplace, many threads
+    "AVX512_C2C_CT_MT_BLUESTEIN ./aocl_fftz_bench 194 -b a -o 3 -n 8"                                         # accuracy | complex  | double   | LP64       | 1D  |  no      | CT+MT+BS  | outplace  | forward   | AVX512  | CT (2*97) wrapping MT Bluestein on the prime leaf
     "C_C2C_COLMAJOR_CT_OP ./aocl_fftz_bench 100:1:1v120:100:100 -b a --dir f"                                 # accuracy | complex  | double   | LP64       | 1D  | yes      | CT        | outplace  | forward   | C       | C column major CT
     "C_C2C_COLMAJOR_CT_IP ./aocl_fftz_bench 150:1:1v128:150:150 -b a --dir f -r i"                            # accuracy | complex  | double   | LP64       | 1D  | yes      | CT        | inplace   | forward   | C       | C column major CT inplace
     "C_C2C_COLMAJOR_PRIME_OP ./aocl_fftz_bench 317:1:1v73:317:317 -b a --dir f"                               # accuracy | complex  | double   | LP64       | 1D  | yes      | CT+BS     | outplace  | forward   | C       | C column major BS prime
@@ -250,6 +232,8 @@ set(STANDARD_TEST_SUITE
     "AVX256_C2C_CT_OP ./aocl_fftz_bench 1440 -b a -o 2"                                                       # accuracy | complex  | double   | LP64       | 1D  |  no      | CT        | outplace  | forward   | AVX256  | 1D multi-level CT solver preferred over CTL1D, outplace
     "C_C2C_PRIME_STRIDED_2D_CT ./aocl_fftz_bench 4444:90:36x18:5:2 -b a -r o"                                 # accuracy | complex  | double   | LP64       | 2D  | yes      | NDIM+CT   | outplace  | forward   | C       | NDIM Strided CT for testing Split radix is not chosen, outplace
     "C_C2C_PRIME_PERMUTED_2D_CT ./aocl_fftz_bench 4444:1:1x100:4444:4444 -b a"                                # accuracy | complex  | double   | LP64       | 2D  | yes      | NDIM+CT   | outplace  | forward   | C       | NDIM Permuted CT for testing Split radix is not chosen, outplace
+    "AVX256_R2C_MT_2D_LARGE_OP ./aocl_fftz_bench 192x256 -b a -f r2c -o 2 -n 8"                               # accuracy | real     | double   | LP64       | 2D  |  no      | MT+NDim   | outplace  | forward   | AVX256  | MT 2D R2C out-of-place (non-batched)
+    "AVX512_R2C_MT_2D_BATCHED_IP ./aocl_fftz_bench 12v96x128:6:6 -b a -f r2c -r i -o 3 -n 20"                 # accuracy | real     | double   | LP64       | 2D  | yes      | MT+NDim   | inplace   | forward   | AVX512  | MT batched 2D R2C in-place
     "C_C2C_3D_CT_BWD ./aocl_fftz_bench 7x2x24 -b a -p f --dir b"                                              # accuracy | complex  | float    | LP64       | 3D  |  no      | NDim      | outplace  | backward  | C       | C 3D accuracy, backward
     "C_C2C_3D_CT_FWD ./aocl_fftz_bench 9x26x18 -b a -p f --dir f"                                             # accuracy | complex  | float    | LP64       | 3D  |  no      | NDim      | outplace  | forward   | C       | C 3D accuracy, forward
     "C_C2C_3D_WITH_STRIDES_GREATER_THAN_DIM ./aocl_fftz_bench 12x28:4:5x2 -b a -p f"                          # accuracy | complex  | float    | LP64       | 3D  |  no      | NDim      | outplace  | forward   | C       | C 3D FFT
@@ -263,6 +247,8 @@ set(STANDARD_TEST_SUITE
     "AVX512_C2C_MT_3D_IP ./aocl_fftz_bench 48x49x50 -b a -o 3 --dir b -n 8"                                   # accuracy | complex  | double   | LP64       | 3D  |  no      | MT+NDim   | inplace   | backward  | AVX512  | AVX512 MT 3D inplace accuracy
     "AVX512_C2C_2D_BATCH_3D_DIM ./aocl_fftz_bench 3x2v56x19x12 -b a --dir b -o 3 -m i"                        # accuracy | complex  | double   | ILP64      | 3D  | yes      | NDim      | outplace  | backward  | AVX512  | AVX512 Inverse FFT ILP64
     "AVX512_C2C_MT_3D ./aocl_fftz_bench 30x40x50 -b a -o 3 -n 8"                                              # accuracy | complex  | double   | LP64       | 3D  |  no      | MT+NDim   | outplace  | forward   | AVX512  | AVX512 MT 3D outofplace accuracy
+    "AVX512_C2R_MT_3D_BATCHED_OP ./aocl_fftz_bench 16v24x32x48 -b a -f c2r -o 3 -n 32"                        # accuracy | real     | double   | LP64       | 3D  | yes     | MT+NDim   | outplace  | backward  | AVX512  | MT larger batched 3D C2R out-of-place
+    "AVX512_C2R_MT_3D_BATCHED_IP ./aocl_fftz_bench 8v24x32x40:4:4 -b a -f c2r -r i -o 3 -n 24"                # accuracy | real     | double   | LP64       | 3D  | yes     | MT+NDim   | inplace   | backward  | AVX512  | MT larger batched 3D C2R in-place
     "C_C2C_4D_STRIDED ./aocl_fftz_bench 4x64x9x10:3:3 -b a -p f -r i"                                         # accuracy | complex  | float    | LP64       | 4D  |  no      | NDim      | inplace   | forward   | C       | C 4D FFT
     "AVX128_C2C_4D ./aocl_fftz_bench 2x21x3x60:1:1 -b a -p f -o 1"                                            # accuracy | complex  | float    | LP64       | 4D  |  no      | NDim      | outplace  | forward   | AVX128  | AVX128 4D CT
     "AVX512_C2C_4D_BATCHED ./aocl_fftz_bench 4v33x2x6x3:2:2 -b a -o 3 --dir b"                                # accuracy | complex  | double   | LP64       | 4D  | yes      | NDim      | outplace  | backward  | AVX512  | AVX512 batched 4D accuracy
@@ -271,6 +257,8 @@ set(STANDARD_TEST_SUITE
     "AVX256_C2C_5D_IP ./aocl_fftz_bench 2x3x4x5x6:2:2 -b a --dir f -p f -r i"                                 # accuracy | complex  | float    | LP64       | 5D  |  no      | NDim      | inplace   | forward   | AVX256  | AVX256 MT 5D
     "C_C2C_5D_CTBS ./aocl_fftz_bench 3x3x3x74x18:4:4 -b a --dir f -p f -o 0"                                  # accuracy | complex  | float    | LP64       | 5D  |  no      | NDimCT+BS | outplace  | forward   | C       | 5D CT+BS, float, outplace, forward
     "AVX512_C2C_5D_CTBS_BATCHED ./aocl_fftz_bench 3v6x3x3x18x18:4:4 -b a -p d -o 3 --dir b"                   # accuracy | complex  | double   | LP64       | 5D  | yes      | NDimCT+BS | outplace  | backward  | AVX512  | 5D batched CT+BS, double, outplace, backward
+    "AVX512_R2C_MT_4D_OP ./aocl_fftz_bench 10x12x16x20 -b a -f r2c -o 3 -n 12"                               # accuracy | real     | double   | LP64       | 4D  |  no     | MT+NDim   | outplace  | forward   | AVX512  | MT 4D R2C out-of-place (non-batched)
+    "AVX512_R2C_MT_4D_BATCHED_IP ./aocl_fftz_bench 4v8x12x16x20:4:4 -b a -f r2c -r i -o 3 -n 16"             # accuracy | real     | double   | LP64       | 4D  | yes     | MT+NDim   | inplace   | forward   | AVX512  | MT batched 4D R2C in-place
     "R2C_C_3D_WITH_STRIDE_GREATER_THAN_DIM ./aocl_fftz_bench 12x28:4:5x2 -b a -f r2c -p f"                    # accuracy | real     | float    | LP64       | 3D  |  no      | NDim      | outplace  | forward   | C       | C 3D real FFT
     "R2C_C_4D_WITH_STRIDE ./aocl_fftz_bench 4x6x18x20:3:4 -b a -f r2c -p f"                                   # accuracy | real     | float    | LP64       | 4D  |  no      | NDim      | outplace  | forward   | C       | C 4D real FFT
     "R2C_C_3D_WITH_BATCH ./aocl_fftz_bench 6v9x19x24 -b a -f r2c -o 3 -m i"                                   # accuracy | real     | double   | ILP64      | 3D  | yes      | NDim      | outplace  | forward   | C       | C 3D real batched FFT ILP64
@@ -401,6 +389,13 @@ set(STANDARD_TEST_SUITE
     "EXT_C2R_AVX128_MULTI_BATCHED_CT ./aocl_fftz_bench 13x17v17x13x25:7:7 -b a -f c2r -o 1 -m i -p f"         # accuracy | real     | float    | ILP64      | 3D  | yes     | CT        | outplace  | backward  | AVX128  | AVX128 multibatched 3D real CT, backward
     "EXT_C2R_AVX256_STRIDED_IP_BWD ./aocl_fftz_bench 32:544:1088x32:17:34x32:1:1 -b a -f c2r -p f -r i -o 2"  # accuracy | real     | float    | LP64       | 3D  |  no     | CT        | inplace   | backward  | AVX256  | AVX256 3D strided real CT, inplace, backward
     "EXT_C2R_C_BATCHED_CT_IP_BWD ./aocl_fftz_bench 9x18v16x21x24:5:5 -b a -f c2r -p f -r i"                   # accuracy | real     | float    | LP64       | 3D  | yes     | CT        | inplace   | backward  | C       | Large batched mixed-size 3D real CT, inplace, backward
+    "EXT_R2C_AVX256_MT_3D_STRIDED_OP ./aocl_fftz_bench 30:1020:510x30:32:16x30:1:1 -b a -f r2c -o 2 -n 8"     # accuracy | real     | double   | LP64       | 3D  |  no     | MT+NDim   | outplace  | forward   | AVX256  | non batched R2C 3D strided layout
+    "EXT_R2C_AVX256_MT_3D_IP_FWD ./aocl_fftz_bench 30x28x32:3:3 -b a -f r2c -p d -r i -o 2 -n 31"             # accuracy | real     | double   | LP64       | 3D  |  no     | MT+NDim   | inplace   | forward   | AVX256  | non batched R2C 3D in-place strided
+    "EXT_C2R_AVX128_MT_3D_WITH_2D_BATCHED_CT_BWD ./aocl_fftz_bench 14x18v18x14x28:7:7 -b a -f c2r -o 1 -n 8"  # accuracy | real     | double   | LP64       | 3D  | yes     | MT+NDim   | outplace  | backward  | AVX128  | C2R 2D×2D batch plane (14×18) over 3D 18×14×28, strided
+    "EXT_C2R_AVX128_MT_3D_BATCHED_BWD ./aocl_fftz_bench 24v16x20x24:7:7 -b a -f c2r -o 1 -n 4"                # accuracy | real     | double   | LP64       | 3D  | yes     | MT+NDim   | outplace  | backward  | AVX128  | C2R single-vector batched 3D, strided
+    "EXT_C2R_AVX512_MT_3D_BATCHED_BWD ./aocl_fftz_bench 20v8x10x16 -b a -f c2r -o 3 -n 24"                    # accuracy | real     | double   | LP64       | 3D  | yes     | MT+NDim   | outplace  | backward  | AVX512  | C2R single-vector batched 3D
+    "EXT_R2C_AVX512_MT_4D_BATCH_OP_FWD ./aocl_fftz_bench 3v6x8x10x14 -b a -f r2c -o 3 -n 8"                   # accuracy | real     | double   | LP64       | 4D  | yes     | MT+NDim   | outplace  | forward   | AVX512  | R2C batched 4D
+    "EXT_R2C_AVX512_MT_4D_BATCH_IP_FWD ./aocl_fftz_bench 2x4v6x8x10x12:3:3 -b a -f r2c -r i -o 3 -n 6"        # accuracy | real     | double   | LP64       | 4D  | yes     | MT+NDim   | inplace   | forward   | AVX512  | R2C 2×4 batched vec-rank over 4D
     "EXT_C2C_C_SR_MIN_SIZE_IP ./aocl_fftz_bench 4096 -b a -r i -p d"                                          # accuracy | complex  | double   | LP64       | 1D  |  no     | SR        | inplace   | forward   | C       | SR solver, min qualifying size, inplace
     "EXT_C2C_C_SR_DEEP_RECURSION_OP ./aocl_fftz_bench 16384 -b a -r o -p f"                                   # accuracy | complex  | float    | LP64       | 1D  |  no     | SR        | outplace  | forward   | C       | SR solver, deep recursion, outplace
     "EXT_C2C_C_CT_NON_POW2_IP ./aocl_fftz_bench 5000 -b a -r i -p d"                                          # accuracy | complex  | double   | LP64       | 1D  |  no     | CT        | inplace   | forward   | C       | CT solver for non-power-of-2 size, inplace
@@ -408,6 +403,15 @@ set(STANDARD_TEST_SUITE
     "EXT_C2C_AVX512_MT_BATCHED_CT_IP ./aocl_fftz_bench 2v32768 -b a -r i -p d -o 3 -n 2"                      # accuracy | complex  | double   | LP64       | 1D  | yes     | MT+CT     | inplace   | forward   | AVX512  | MT AVX512 batched CT solver, inplace
     "EXT_C2C_AVX512_MT_BATCHED_CT_NON_POW2_OP ./aocl_fftz_bench 10v5000 -b a -r o -p f -o 3 -n 4"             # accuracy | complex  | float    | LP64       | 1D  | yes     | MT+CT     | outplace  | forward   | AVX512  | MT AVX512 batched CT solver, non-pow2, outplace
     "EXT_C2C_AVX512_MT_BATCHED_CT_OP ./aocl_fftz_bench 8v16384 -b a -r o -p d -o 3 -n 8"                      # accuracy | complex  | double   | LP64       | 1D  | yes     | MT+CT     | outplace  | forward   | AVX512  | MT AVX512 batched CT solver, outplace
+    "EXT_AVX512_C2C_MT_BLUESTEIN_LARGE_PRIME ./aocl_fftz_bench 997 -b a -o 3 -n 16"                           # accuracy | complex  | double   | LP64       | 1D  |  no     | MT+BS     | outplace  | forward   | AVX512  | MT Bluestein, large prime
+    "EXT_AVX512_C2C_MT_BLUESTEIN_BATCHED_LARGE ./aocl_fftz_bench 8v991 -b a -o 3 -n 16"                       # accuracy | complex  | double   | LP64       | 1D  | yes     | MT+BS     | outplace  | forward   | AVX512  | MT batched Bluestein, large prime
+    "EXT_AVX512_C2C_MT_BLUESTEIN_BATCHED_STRIDED_LARGE ./aocl_fftz_bench 4v983:3:3 -b a -o 3 -n 16 --dir b"   # accuracy | complex  | double   | LP64       | 1D  | yes     | MT+BS     | outplace  | backward  | AVX512  | MT batched Bluestein, strided, large prime, backward
+    "EXT_AVX512_C2C_MT_BLUESTEIN_LARGE_PRIME_BWD_IP ./aocl_fftz_bench 977 -b a -r i -o 3 --dir b -p f -n 16"  # accuracy | complex  | float    | LP64       | 1D  |  no     | MT+BS     | inplace   | backward  | AVX512  | MT Bluestein, large prime, inplace, backward, float
+    "EXT_C2C_AVX512_MT_CTL1D_HALF_THREADS_OCCUPIED_572_IP ./aocl_fftz_bench 11v572 -b a -r i -o 3 -n 87"      # accuracy | complex  | double   | LP64       | 1D  | yes     | MT+CTL1D  | inplace   | forward   | AVX512  | Nested MT where batch (11) does not evenly divide thread count (87): only 44 threads are used, inplace
+    "EXT_C2C_C_MT_BATCHED_CT_CTL1D_1000_OP ./aocl_fftz_bench 2v1000 -b a -n 10 -r o"                          # accuracy | complex  | double   | LP64       | 1D  | yes     | MT+CT+L1D | outplace  | forward   | C       | MT AVX512 multi-level MT batched, propagating ct size from ctl1d to top mt_batched, outplace
+    "EXT_C2C_C_MT_NDIM_CTL1D_INHERITED_CT_IP ./aocl_fftz_bench 64x21 -b a -r i -n 64"                         # accuracy | complex  | double   | LP64       | 2D  |  no     | MT+ND+L1D | inplace   | forward   | C       | CTL1D consumes an NDIM-allocated ct_buffer; verifies unpadded slice stride stays in bounds in MT case
+    "EXT_C2R_C_MT_REAL_NDIM_MULTILEVEL_COMPLEX_CT_CHILD_IP ./aocl_fftz_bench 2v300x5 -f c2r -b a -r i -n 100" # accuracy | real     | double   | LP64       | 2D  | yes     | MT+ND+CT  | inplace   | backward  | C       | Real MT batched where the (N-1)D complex child is a multi-level CT problem
+    "EXT_AVX512_C2C_MT_BLUESTEIN_BATCHED_PERFORMANCE ./aocl_fftz_bench 64v971 -b p -o 3 -n 16"                # perf     | complex  | double   | LP64       | 1D  | yes     | MT+BS     | outplace  | forward   | AVX512  | MT batched Bluestein performance, large prime
 
     # TODO: Add more test cases with different combinations. This list is expected to be larger than TEST_SUITE.
     )

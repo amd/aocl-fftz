@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2024-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file accuracy.c
  *
@@ -61,22 +36,24 @@
  * @param out_idx_map output index mapping for strided access
  * @param handle FFT plan handle
  * @param input_buffer optional pre-allocated input buffer
- * @return INT32 BENCH_SUCCESS if linearity property holds, error code otherwise
+ * @return FFTZ_INT32 BENCH_SUCCESS if linearity property holds, error code
+ * otherwise
  */
-INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                         INTP *out_idx_map, VOID *handle, VOID *input_buffer)
+FFTZ_INT32 run_linearity_test(aoclfftz_bench_params_t *params,
+                              FFTZ_INTP *in_idx_map, FFTZ_INTP *out_idx_map,
+                              FFTZ_VOID *handle, FFTZ_VOID *input_buffer)
 {
-    INT32 logger_mode = params->logger_mode;
+    FFTZ_INT32 logger_mode = params->logger_mode;
     AOCLFFTZ_LOG(TRACE, logger_mode, "ENTER");
-    INT32 status = BENCH_SUCCESS;
-    INT32 ret = AOCLFFTZ_SUCCESS;
-    UINT32 is_align = params->aligned_alloc;
-    INTP input_bytes = params->sz_info.input_bytes;
-    INTP output_bytes = params->sz_info.output_bytes;
+    FFTZ_INT32 status = BENCH_SUCCESS;
+    FFTZ_INT32 ret = AOCLFFTZ_SUCCESS;
+    FFTZ_UINT32 is_align = params->aligned_alloc;
+    FFTZ_INTP input_bytes = params->sz_info.input_bytes;
+    FFTZ_INTP output_bytes = params->sz_info.output_bytes;
 
     EXPAND_REAL_BUFFER_SIZES(params, input_bytes, output_bytes);
 
-    VOID *constants, *in1, *in2, *out1, *out2, *out_combined;
+    FFTZ_VOID *constants, *in1, *in2, *out1, *out2, *out_combined;
     constants = in1 = in2 = out1 = out2 = out_combined = NULL;
 
     // Allocate buffers for linearity test:
@@ -84,9 +61,9 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     // in1, in2: input signals x[n], y[n]
     // out1, out2: DFT(x), DFT(y)
     // out_combined: DFT(a*x + b*y)
-    ALLOC_INIT(constants, VOID, 4 * params->sz_info.dt_bytes, is_align);
-    ALLOC_INIT(in1, VOID, input_bytes, is_align);
-    ALLOC_INIT(in2, VOID, input_bytes, is_align);
+    ALLOC_INIT(constants, FFTZ_VOID, 4 * params->sz_info.dt_bytes, is_align);
+    ALLOC_INIT(in1, FFTZ_VOID, input_bytes, is_align);
+    ALLOC_INIT(in2, FFTZ_VOID, input_bytes, is_align);
     if (constants == NULL || in1 == NULL || in2 == NULL)
     {
         AOCLFFTZ_ERROR("MEMORY_FAILURE : "
@@ -94,9 +71,9 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
         status = MEMORY_FAILURE;
         goto exit_linearity_test;
     }
-    ALLOC_INIT(out1, VOID, output_bytes, is_align);
-    ALLOC_INIT(out2, VOID, output_bytes, is_align);
-    ALLOC_INIT(out_combined, VOID, output_bytes, is_align);
+    ALLOC_INIT(out1, FFTZ_VOID, output_bytes, is_align);
+    ALLOC_INIT(out2, FFTZ_VOID, output_bytes, is_align);
+    ALLOC_INIT(out_combined, FFTZ_VOID, output_bytes, is_align);
     if (out1 == NULL || out2 == NULL || out_combined == NULL)
     {
        AOCLFFTZ_ERROR("MEMORY_FAILURE : "
@@ -111,7 +88,7 @@ INT32 run_linearity_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     }
 
     // Run linearity test over multiple iterations with different random data
-    for (INT32 i = 0; i < params->num_iterations; i++)
+    for (FFTZ_INT32 i = 0; i < params->num_iterations; i++)
     {
         if (params->use_random_seed)
         {
@@ -218,24 +195,25 @@ exit_linearity_test:
  * @param out_idx_map output index mapping for strided access
  * @param handle FFT plan handle
  * @param input_buffer optional pre-allocated input buffer
- * @return INT32 BENCH_SUCCESS if transformation property holds, error code otherwise
+ * @return FFTZ_INT32 BENCH_SUCCESS if transformation property holds, error code
+ * otherwise
  */
-INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
-                                 INTP *in_idx_map, INTP *out_idx_map,
-                                 VOID *handle, VOID *input_buffer)
+FFTZ_INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
+                                 FFTZ_INTP *in_idx_map, FFTZ_INTP *out_idx_map,
+                                 FFTZ_VOID *handle, FFTZ_VOID *input_buffer)
 {
-    INT32 status = BENCH_SUCCESS;
-    INT32 ret = AOCLFFTZ_SUCCESS;
-    UINT32 is_align = params->aligned_alloc;
-    INTP input_bytes = params->sz_info.input_bytes;
-    INTP output_bytes = params->sz_info.output_bytes;
-    INT32 logger_mode = params->logger_mode;
+    FFTZ_INT32 status = BENCH_SUCCESS;
+    FFTZ_INT32 ret = AOCLFFTZ_SUCCESS;
+    FFTZ_UINT32 is_align = params->aligned_alloc;
+    FFTZ_INTP input_bytes = params->sz_info.input_bytes;
+    FFTZ_INTP output_bytes = params->sz_info.output_bytes;
+    FFTZ_INT32 logger_mode = params->logger_mode;
 
     EXPAND_REAL_BUFFER_SIZES(params, input_bytes, output_bytes);
 
     // Create reverse transform parameters for IDFT operation
     aoclfftz_bench_params_t *params_reverse = NULL;
-    VOID *in, *handle_reverse;
+    FFTZ_VOID *in, *handle_reverse;
     handle_reverse = in = NULL;
 
     ALLOC_AND_COPY_PARAMS(params_reverse, params);
@@ -248,7 +226,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
     }
 
     // Allocate input buffer for impulse signal generation
-    ALLOC_INIT(in, VOID, input_bytes, is_align);
+    ALLOC_INIT(in, FFTZ_VOID, input_bytes, is_align);
     if (in == NULL)
     {
         AOCLFFTZ_ERROR("MEMORY_FAILURE : "
@@ -279,7 +257,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
 
     // Allocate buffers for reverse transform
     // (output of forward becomes input of reverse)
-    ALLOC_INIT(params_reverse->in, VOID, output_bytes, is_align);
+    ALLOC_INIT(params_reverse->in, FFTZ_VOID, output_bytes, is_align);
     if (params_reverse->in == NULL)
     {
         AOCLFFTZ_ERROR("MEMORY_FAILURE : "
@@ -294,7 +272,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
     }
     else
     {
-        ALLOC_INIT(params_reverse->out, VOID, input_bytes, is_align);
+        ALLOC_INIT(params_reverse->out, FFTZ_VOID, input_bytes, is_align);
         if (params_reverse->out == NULL)
         {
             AOCLFFTZ_ERROR("MEMORY_FAILURE : "
@@ -305,13 +283,13 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
     }
 
     // Swap stride configuration for reverse transform to match data layout
-    for (INT32 i = 0; i < params->dim_rank; i++)
+    for (FFTZ_INT32 i = 0; i < params->dim_rank; i++)
     {
         params_reverse->dims[i].in_stride = params->dims[i].out_stride;
         params_reverse->dims[i].out_stride = params->dims[i].in_stride;
     }
 
-    for (INT32 i = 0; i < params->vec_rank; i++)
+    for (FFTZ_INT32 i = 0; i < params->vec_rank; i++)
     {
         params_reverse->vecs[i].in_stride = params->vecs[i].out_stride;
         params_reverse->vecs[i].out_stride = params->vecs[i].in_stride;
@@ -331,7 +309,7 @@ INT32 run_impulse_transform_test(aoclfftz_bench_params_t *params,
     }
 
     // Test impulse response over multiple iterations
-    for (INT32 i = 0; i < params->num_iterations; i++)
+    for (FFTZ_INT32 i = 0; i < params->num_iterations; i++)
     {
         if (params->use_random_seed)
         {
@@ -412,20 +390,21 @@ exit_impulse_transform_test:
 /**
  * @brief Macro for time-domain shifting: x(n-m) for input signals
  *
- * Applies circular time shift to input data for timeshift property verification.
- * For ND transforms, shifts are applied per dimension maintaining data structure.
+ * Applies circular time shift to input data for timeshift property
+ * verification. For ND transforms, shifts are applied per dimension maintaining
+ * data structure.
  */
 #define TIME_SHIFT(in, out, idx_map, data_stride)                              \
     do                                                                         \
     {                                                                          \
-        for (INTP b = 0; b < batches; b++)                                     \
+        for (FFTZ_INTP b = 0; b < batches; b++) \
         {                                                                      \
             /* Apply time shift per outer dimension                       */   \
             /* Example: 3x4x5 ND problem, dim=2 processing:               */   \
             /* shifts input m times in each 4x5 matrix, repeated 3 times  */   \
             if (idx_map == NULL)                                               \
             {                                                                  \
-                for (INTP o = 0; o < outer_n; o++)                             \
+                for (FFTZ_INTP o = 0; o < outer_n; o++) \
                 {                                                              \
                     PREPARE_TIMESHIFT_TEST_INPUTS(                             \
                         in + (b * n + o * inner_n) * data_stride,              \
@@ -435,8 +414,8 @@ exit_impulse_transform_test:
             }                                                                  \
             else                                                               \
             {                                                                  \
-                INTP *idx_map_t = (INTP *)idx_map;                             \
-                for (INTP o = 0; o < outer_n; o++)                             \
+                FFTZ_INTP *idx_map_t = (FFTZ_INTP *)idx_map; \
+                for (FFTZ_INTP o = 0; o < outer_n; o++) \
                 {                                                              \
                     PREPARE_TIMESHIFT_TEST_INPUTS(                             \
                         in + idx_map_t[b * n + o * inner_n] * data_stride,     \
@@ -452,16 +431,17 @@ exit_impulse_transform_test:
  * @brief Macro for frequency-domain phase shift: X[k] * e^(-j2πkm/N)
  *
  * Applies phase shift in frequency domain equivalent to time domain shift.
- * Phase shift formula: φ = -2πkm/N where k=frequency bin, m=shift amount, N=size
+ * Phase shift formula: φ = -2πkm/N where k=frequency bin, m=shift amount,
+ * N=size
  */
 #define PHASE_SHIFT(in, out, idx_map, data_stride)                             \
     do                                                                         \
     {                                                                          \
-        for (INTP b = 0; b < batches; b++)                                     \
+        for (FFTZ_INTP b = 0; b < batches; b++) \
         {                                                                      \
             if (idx_map == NULL)                                               \
             {                                                                  \
-                for (INTP o = 0; o < outer_n; o++)                             \
+                for (FFTZ_INTP o = 0; o < outer_n; o++) \
                 {                                                              \
                     PREPARE_TIMESHIFT_TEST_OUTPUTS(                            \
                         in + (b * n_in + o * inner_n) * data_stride,           \
@@ -472,8 +452,8 @@ exit_impulse_transform_test:
             }                                                                  \
             else                                                               \
             {                                                                  \
-                INTP *idx_map_t = (INTP *)idx_map;                             \
-                for (INTP o = 0; o < outer_n; o++)                             \
+                FFTZ_INTP *idx_map_t = (FFTZ_INTP *)idx_map; \
+                for (FFTZ_INTP o = 0; o < outer_n; o++) \
                 {                                                              \
                     PREPARE_TIMESHIFT_TEST_OUTPUTS(                            \
                         in + idx_map_t[b * n_in + o * inner_n] * data_stride,  \
@@ -487,10 +467,11 @@ exit_impulse_transform_test:
     } while (0)
 
 /**
- * @brief Verifies DFT timeshift property: DFT{x(n-m)} = DFT{x(n)} * e^(-j2πkm/N)
+ * @brief Verifies DFT timeshift property: DFT{x(n-m)} = DFT{x(n)} *
+ * e^(-j2πkm/N)
  *
- * Tests the timeshift theorem stating that a shift in time domain corresponds to
- * a linear phase shift in frequency domain. For each dimension d:
+ * Tests the timeshift theorem stating that a shift in time domain corresponds
+ * to a linear phase shift in frequency domain. For each dimension d:
  * - Time shift: x(n-m) → circular shift by m samples
  * - Frequency shift: X[k] * exp(-j2πkm/N) → phase rotation
  * Both should produce identical results.
@@ -500,24 +481,26 @@ exit_impulse_transform_test:
  * @param out_idx_map output index mapping for strided access
  * @param handle FFT plan handle
  * @param input_buffer optional pre-allocated input buffer
- * @return INT32 BENCH_SUCCESS if timeshift property holds, error code otherwise
+ * @return FFTZ_INT32 BENCH_SUCCESS if timeshift property holds, error code
+ * otherwise
  */
-INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
-                         INTP *out_idx_map, VOID *handle, VOID *input_buffer)
+FFTZ_INT32 run_timeshift_test(aoclfftz_bench_params_t *params,
+                              FFTZ_INTP *in_idx_map, FFTZ_INTP *out_idx_map,
+                              FFTZ_VOID *handle, FFTZ_VOID *input_buffer)
 {
-    INT32 logger_mode = params->logger_mode;
+    FFTZ_INT32 logger_mode = params->logger_mode;
     AOCLFFTZ_LOG(TRACE, logger_mode, "ENTER");
-    INT32 status = BENCH_SUCCESS;
-    INT32 ret = AOCLFFTZ_SUCCESS;
-    INTP n = params->sz_info.n;
-    INTP batches = params->sz_info.batches;
-    UINT32 is_align = params->aligned_alloc;
+    FFTZ_INT32 status = BENCH_SUCCESS;
+    FFTZ_INT32 ret = AOCLFFTZ_SUCCESS;
+    FFTZ_INTP n = params->sz_info.n;
+    FFTZ_INTP batches = params->sz_info.batches;
+    FFTZ_UINT32 is_align = params->aligned_alloc;
 
-    VOID *in1, *in2, *out1, *out2, *out1_fc, *out2_fc, *out_temp;
+    FFTZ_VOID *in1, *in2, *out1, *out2, *out1_fc, *out2_fc, *out_temp;
     in1 = in2 = out1 = out2 = out_temp = out1_fc = out2_fc = NULL;
-    INTP input_bytes = params->sz_info.input_bytes;
-    INTP output_bytes = params->sz_info.output_bytes;
-    INTP full_complex_bytes =
+    FFTZ_INTP input_bytes = params->sz_info.input_bytes;
+    FFTZ_INTP output_bytes = params->sz_info.output_bytes;
+    FFTZ_INTP full_complex_bytes =
         n * batches * DATA_STRIDE * params->sz_info.dt_bytes;
 
     EXPAND_REAL_BUFFER_SIZES(params, input_bytes, output_bytes);
@@ -526,8 +509,8 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     // in1, in2: original and time-shifted input signals
     // out1, out2: DFT outputs from both signals
     // out1_fc, out2_fc: full complex representations for comparison
-    ALLOC_UNINIT(in1, VOID, input_bytes, is_align);
-    ALLOC_UNINIT(in2, VOID, input_bytes, is_align);
+    ALLOC_UNINIT(in1, FFTZ_VOID, input_bytes, is_align);
+    ALLOC_UNINIT(in2, FFTZ_VOID, input_bytes, is_align);
     if (in1 == NULL || in2 == NULL)
     {
         AOCLFFTZ_ERROR("MEMORY_FAILURE : "
@@ -535,10 +518,10 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
         status = MEMORY_FAILURE;
         goto exit_timeshift_test;
     }
-    ALLOC_INIT(out1, VOID, output_bytes, is_align);
-    ALLOC_INIT(out2, VOID, output_bytes, is_align);
-    ALLOC_INIT(out1_fc, VOID, full_complex_bytes, is_align);
-    ALLOC_INIT(out2_fc, VOID, full_complex_bytes, is_align);
+    ALLOC_INIT(out1, FFTZ_VOID, output_bytes, is_align);
+    ALLOC_INIT(out2, FFTZ_VOID, output_bytes, is_align);
+    ALLOC_INIT(out1_fc, FFTZ_VOID, full_complex_bytes, is_align);
+    ALLOC_INIT(out2_fc, FFTZ_VOID, full_complex_bytes, is_align);
     if (out1 == NULL || out2 == NULL || out1_fc == NULL || out2_fc == NULL)
     {
         AOCLFFTZ_ERROR("MEMORY_FAILURE : "
@@ -553,7 +536,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
     }
 
     // Test timeshift property over multiple iterations
-    for (INT32 i = 0; i < params->num_iterations; i++)
+    for (FFTZ_INT32 i = 0; i < params->num_iterations; i++)
     {
         if (params->use_random_seed)
         {
@@ -578,16 +561,16 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
         // Initialize dimension parameters for ND timeshift testing.
         // For C2R, input is half-complex (n0/2+1), so scale total input size
         // accordingly. For R2C/C2C, input uses full dimension size.
-        INTP cur_n;
-        INTP outer_n = 1;
-        INTP n0 = params->dims[0].n;
-        INTP n0_in = params->fft_type == C2R ? n0 / 2 + 1 : n0;
-        INTP n_in = (n * n0_in) / n0;
-        INTP inner_n = n_in;
-        INTP unit_m = n_in;
+        FFTZ_INTP cur_n;
+        FFTZ_INTP outer_n = 1;
+        FFTZ_INTP n0 = params->dims[0].n;
+        FFTZ_INTP n0_in = params->fft_type == C2R ? n0 / 2 + 1 : n0;
+        FFTZ_INTP n_in = (n * n0_in) / n0;
+        FFTZ_INTP inner_n = n_in;
+        FFTZ_INTP unit_m = n_in;
 
         // Test timeshift property for each dimension (outermost to innermost)
-        for (INTP d = params->dim_rank - 1; d >= 0; d--)
+        for (FFTZ_INTP d = params->dim_rank - 1; d >= 0; d--)
         {
             cur_n = params->dims[d].n;
             // Adjust dimension size for C2R half-complex format
@@ -598,7 +581,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             unit_m /= cur_n;
 
             // Generate random shift amount m ∈ [0, cur_n)
-            INTP m = rand() % cur_n;
+            FFTZ_INTP m = rand() % cur_n;
 
             // Apply timeshift based on transform direction:
             // Forward/R2C: shift in time domain, verify in frequency domain
@@ -609,7 +592,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                 // Time domain shift: x(n-m) - circular shift by m samples
                 // Linear shift amount for ND: m * unit_m
                 // Example: 3x4x5 ND, dim=2, m=2 → shift = 2*20 = 40 elements
-                INTP shifts = m * unit_m;
+                FFTZ_INTP shifts = m * unit_m;
                 TIME_SHIFT(in1, in2, in_idx_map,
                            params->sz_info.in_data_stride);
             }
@@ -657,7 +640,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             else
             {
                 // Apply time domain shift to match frequency domain phase shift
-                ALLOC_INIT(out_temp, VOID, full_complex_bytes, is_align);
+                ALLOC_INIT(out_temp, FFTZ_VOID, full_complex_bytes, is_align);
                 if (out_temp == NULL)
                 {
                     AOCLFFTZ_ERROR("MEMORY_FAILURE : "
@@ -665,7 +648,7 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
                     status = MEMORY_FAILURE;
                     goto exit_timeshift_test;
                 }
-                INTP shifts = m * unit_m;
+                FFTZ_INTP shifts = m * unit_m;
                 TIME_SHIFT(out1_fc, out_temp, NULL,
                            params->sz_info.out_data_stride);
                 FREE_ALLOCATED_MEM(out1_fc, is_align);
@@ -676,7 +659,8 @@ INT32 run_timeshift_test(aoclfftz_bench_params_t *params, INTP *in_idx_map,
             inner_n /= cur_n;
             outer_n *= cur_n;
 
-            // Verify timeshift property: both paths should yield identical results
+            // Verify timeshift property: both paths should yield identical
+            // results
             status = params->compare(params, out1_fc, out2_fc, batches,
                                      params->sz_info.n_out, NULL, NULL,
                                      params->sz_info.out_data_stride);
@@ -706,25 +690,28 @@ exit_timeshift_test:
 /**
  * @brief Main accuracy test coordinator - verifies fundamental DFT properties
  *
- * Orchestrates comprehensive accuracy testing by running three core DFT property tests:
+ * Orchestrates comprehensive accuracy testing by running three core DFT
+ * property tests:
  * 1. Linearity: DFT(a*x + b*y) = a*DFT(x) + b*DFT(y)
  * 2. Impulse Response: IDFT(DFT(x)) = x (reversibility)
  * 3. Timeshift: DFT{x(n-m)} = DFT{x(n)} * e^(-j2πkm/N)
  *
- * These properties are fundamental to any correct DFT implementation and provide
- * robust validation across all transform types (C2C, R2C, C2R) and dimensions.
+ * These properties are fundamental to any correct DFT implementation and
+ * provide robust validation across all transform types (C2C, R2C, C2R) and
+ * dimensions.
  *
  * @param params bench params object containing complete test configuration
- * @return INT32 BENCH_SUCCESS if all properties verified, error code otherwise
+ * @return FFTZ_INT32 BENCH_SUCCESS if all properties verified, error code
+ * otherwise
  */
-INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
+FFTZ_INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
 {
-    INT32 logger_mode = params->logger_mode;
+    FFTZ_INT32 logger_mode = params->logger_mode;
     AOCLFFTZ_LOG(TRACE, logger_mode, "ENTER");
-    INT32 status = BENCH_SUCCESS;
-    VOID *handle = NULL;
+    FFTZ_INT32 status = BENCH_SUCCESS;
+    FFTZ_VOID *handle = NULL;
 
-    UINT32 is_align = params->aligned_alloc;
+    FFTZ_UINT32 is_align = params->aligned_alloc;
 
     // Calculate transform dimensions and batch sizes
     params->sz_info.n = calculate_size(params->dims, params->dim_rank);
@@ -733,8 +720,8 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     // Initialize input/output sizes for different transform types
     params->sz_info.n_in = params->sz_info.n;
     params->sz_info.n_out = params->sz_info.n;
-    INTP n0 = params->dims[0].n;
-    INTP n0_hc = n0 / 2 + 1; // half-complex size for R2C/C2R
+    FFTZ_INTP n0 = params->dims[0].n;
+    FFTZ_INTP n0_hc = n0 / 2 + 1; // half-complex size for R2C/C2R
 
     // Adjust sizes for half-complex transforms:
     // R2C: N real → (N/2+1) complex (Hermitian symmetry reduces storage)
@@ -749,14 +736,14 @@ INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     }
 
     // Allocate index mapping arrays for strided data access
-    INTP *in_idx_map = NULL;
-    ALLOC_UNINIT(in_idx_map, INTP,
-                 params->sz_info.n * params->sz_info.batches * sizeof(INTP),
-                 is_align);
-    INTP *out_idx_map = NULL;
-    ALLOC_UNINIT(out_idx_map, INTP,
-                 params->sz_info.n * params->sz_info.batches * sizeof(INTP),
-                 is_align);
+    FFTZ_INTP *in_idx_map = NULL;
+    ALLOC_UNINIT(in_idx_map, FFTZ_INTP,
+        params->sz_info.n * params->sz_info.batches * sizeof(FFTZ_INTP),
+        is_align);
+    FFTZ_INTP *out_idx_map = NULL;
+    ALLOC_UNINIT(out_idx_map, FFTZ_INTP,
+        params->sz_info.n * params->sz_info.batches * sizeof(FFTZ_INTP),
+        is_align);
     if (in_idx_map == NULL || out_idx_map == NULL)
     {
         AOCLFFTZ_ERROR("MEMORY_FAILURE : "

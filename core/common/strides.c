@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file strides.c
  *
@@ -44,7 +19,8 @@
  *
  * Example with stride_val = 2 and n = 6
  *
- * Case 1: With compute_half_complex = 0 (adjust_to_full_complex doesn't matter):
+ * Case 1: With compute_half_complex = 0 (adjust_to_full_complex doesn't
+ * matter):
  *
  * strides array values: 0, 2, 4, 6, 8, 10
  * which represents: 0, x, 2, x, 4, x, 6, x, 8, x, 10
@@ -74,24 +50,24 @@
  *                               full complex format, 0 otherwise
  *                               adjust_to_full_complex needs to be set for the
  *                               direct sizes and final level of CT
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID populate_stride_array(INTP *strides, INTP stride_val, INTP n,
-                           UINT8 compute_half_complex,
-                           UINT8 adjust_to_full_complex)
+FFTZ_VOID populate_stride_array(FFTZ_INTP *strides, FFTZ_INTP stride_val,
+                                FFTZ_INTP n, FFTZ_UINT8 compute_half_complex,
+                                FFTZ_UINT8 adjust_to_full_complex)
 {
     if (compute_half_complex)
     {
-        INTP offset = adjust_to_full_complex ? 1 : 0;
-        INTP nby2_ceil = (n + 1) / 2;
+        FFTZ_INTP offset = adjust_to_full_complex ? 1 : 0;
+        FFTZ_INTP nby2_ceil = (n + 1) / 2;
 
         // first stride value
         strides[0] = 0;
 
         // inbetween stride values
-        for (INTP i = 1; i < nby2_ceil; i++)
+        for (FFTZ_INTP i = 1; i < nby2_ceil; i++)
         {
-            INTP cur_stride = i * stride_val * 2 + offset;
+            FFTZ_INTP cur_stride = i * stride_val * 2 + offset;
             strides[i * 2 - 1] = cur_stride - 1;
             strides[i * 2] = cur_stride;
         }
@@ -104,7 +80,7 @@ VOID populate_stride_array(INTP *strides, INTP stride_val, INTP n,
     }
     else
     {
-        for (INTP i = 0; i < n; i++)
+        for (FFTZ_INTP i = 0; i < n; i++)
         {
             strides[i] = i * stride_val;
         }
@@ -122,11 +98,13 @@ VOID populate_stride_array(INTP *strides, INTP stride_val, INTP n,
  * CT stage and for the remaining iterations, the strides will be adjusted by
  * subtracting a constant value during execution.
  *
- * Example for radix 6 C2C kernel with stride complex stride 4 (i.e. stride in data = 8):
+ * Example for radix 6 C2C kernel with stride complex stride 4 (i.e. stride in
+ * data = 8):
  *
  * full complex data    : x1------x2------x3------x4------x5------x6
  * half complex buffer  : |----------------------|
- * half complex data    : x1--y6--x2--y4--x3--y3-- (here y refers to complex conjugate of x)
+ * half complex data    : x1--y6--x2--y4--x3--y3-- (here y refers to complex
+ * conjugate of x)
  *
  * full complex strides : 0, 8, 16, 24, 32, 40
  * half complex strides : 0, 8, 16, 20, 12, 4
@@ -135,16 +113,17 @@ VOID populate_stride_array(INTP *strides, INTP stride_val, INTP n,
  * @param radix radix value i.e. length of the stride array
  * @param n length of the data buffer
  * @param stride stride value for the given buffer
- * @return VOID
+ * @return FFTZ_VOID
  */
-VOID prepare_real_c2c_kernel_strides(INTP *in, INTP *out, INTP radix,
-                                     INTP n, INTP stride)
+FFTZ_VOID prepare_real_c2c_kernel_strides(FFTZ_INTP *in, FFTZ_INTP *out,
+                                          FFTZ_INTP radix, FFTZ_INTP n,
+                                          FFTZ_INTP stride)
 {
     // align stride to complex points
     stride *= 2;
-    for (INTP i = 0; i < radix; i++)
+    for (FFTZ_INTP i = 0; i < radix; i++)
     {
-        INTP a = in[i] / stride + 1;
+        FFTZ_INTP a = in[i] / stride + 1;
         if (a > n / 2)
         {
             a = n - a;
@@ -171,17 +150,18 @@ VOID prepare_real_c2c_kernel_strides(INTP *in, INTP *out, INTP radix,
  * @param radix radix of the kernel
  * @param offset distance between the data point of standard and shifted kernels
  *               within one R2HCF kernel
- * @return VOID
+ * @return FFTZ_VOID
  */
 
 // TODO: change the order of fused strides from interleaved to split order
 //       i.e. 0, 2, 3, 5, 6, 8, 9, 11 ---> 0, 3, 6, 9, 2, 5, 8, 11
 //       it is required since the fused kernels work in this format
-VOID prepare_fused_kernel_strides(INTP *strides, INTP radix, INTP offset)
+FFTZ_VOID prepare_fused_kernel_strides(FFTZ_INTP *strides, FFTZ_INTP radix,
+                                       FFTZ_INTP offset)
 {
-    for (INTP i = radix - 1; i >= 0; i--)
+    for (FFTZ_INTP i = radix - 1; i >= 0; i--)
     {
-        INTP stride = strides[i];
+        FFTZ_INTP stride = strides[i];
         strides[i * 2] = stride;
         strides[i * 2 + 1] = stride + offset;
     }

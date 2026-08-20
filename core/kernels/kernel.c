@@ -1,30 +1,5 @@
-/**
- * Copyright (C) 2023-2025, Advanced Micro Devices. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * 3. Neither the name of the copyright holder nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright Advanced Micro Devices, Inc.
+// SPDX-License-Identifier: BSD-3-Clause
 
 /** @file kernel.c
  *
@@ -39,6 +14,7 @@
  */
 
 #include "core/kernels/kernel.h"
+#include "utils/dispatcher.h"
 
 #ifdef ENABLE_AVX128
 #define ACCESS_AVX128 1
@@ -58,14 +34,14 @@
 #define ACCESS_AVX512 0
 #endif
 
-static INTP real_variant_limits[NUM_KERNEL_CATEGORIES] =
+static FFTZ_INTP real_variant_limits[NUM_KERNEL_CATEGORIES] =
 {
     NUM_KERNELS_IN_EACH_DFT_VARIANT,
     2 * NUM_KERNELS_IN_EACH_DFT_VARIANT,
     3 * NUM_KERNELS_IN_EACH_DFT_VARIANT,
 };
 
-static INTP limits[NUM_KERNEL_CATEGORIES] =
+static FFTZ_INTP limits[NUM_KERNEL_CATEGORIES] =
 {
     NUM_KERNELS_IN_EACH_CATEGORY,
     2 * NUM_KERNELS_IN_EACH_CATEGORY,
@@ -73,7 +49,7 @@ static INTP limits[NUM_KERNEL_CATEGORIES] =
     4 * NUM_KERNELS_IN_EACH_CATEGORY
 };
 
-static INTP sets_complex_s[NUM_KERNEL_CATEGORIES] =
+static FFTZ_INTP sets_complex_s[NUM_KERNEL_CATEGORIES] =
 {
     NUM_SETS_C_S,
     NUM_SETS_128_S,
@@ -81,7 +57,7 @@ static INTP sets_complex_s[NUM_KERNEL_CATEGORIES] =
     NUM_SETS_512_S
 };
 
-static INTP sets_complex_d[NUM_KERNEL_CATEGORIES] =
+static FFTZ_INTP sets_complex_d[NUM_KERNEL_CATEGORIES] =
 {
     NUM_SETS_C_D,
     NUM_SETS_128_D,
@@ -89,7 +65,7 @@ static INTP sets_complex_d[NUM_KERNEL_CATEGORIES] =
     NUM_SETS_512_D
 };
 
-static INTP sets_real_s[NUM_KERNEL_CATEGORIES] =
+static FFTZ_INTP sets_real_s[NUM_KERNEL_CATEGORIES] =
 {
     NUM_SETS_REAL_C_S,
     NUM_SETS_REAL_128_S,
@@ -97,7 +73,7 @@ static INTP sets_real_s[NUM_KERNEL_CATEGORIES] =
     NUM_SETS_REAL_512_S
 };
 
-static INTP sets_real_d[NUM_KERNEL_CATEGORIES] =
+static FFTZ_INTP sets_real_d[NUM_KERNEL_CATEGORIES] =
 {
     NUM_SETS_REAL_C_D,
     NUM_SETS_REAL_128_D,
@@ -105,14 +81,14 @@ static INTP sets_real_d[NUM_KERNEL_CATEGORIES] =
     NUM_SETS_REAL_512_D
 };
 
-INT32 register_kernels_real(
+FFTZ_INT32 register_kernels_real(
     kernel_t kertab[NUM_KERNELS_IN_TABLE_REAL],
     kernel_fp_list_t static_kernel_table[NUM_REAL_KERNELS_VARIANTS]
                                         [NUM_KERNELS_IN_EACH_CATEGORY]
                                         [NUM_KERNEL_CATEGORIES],
-    INT32 dt, INT32 dir, INT32 cpu_flags)
+    FFTZ_INT32 dt, FFTZ_INT32 dir, FFTZ_INT32 cpu_flags)
 {
-    INTP kcat_register_available[NUM_KERNEL_CATEGORIES] =
+    FFTZ_INTP kcat_register_available[NUM_KERNEL_CATEGORIES] =
     {
         1, // C kernels are always registered
         ACCESS_AVX128 && (cpu_flags > 0),
@@ -120,16 +96,16 @@ INT32 register_kernels_real(
         ACCESS_AVX512 && (cpu_flags > 2),
     };
 
-    INTP row_offset = 0;
+    FFTZ_INTP row_offset = 0;
 
-    for (INTP rkvar = 0; rkvar < NUM_REAL_KERNELS_VARIANTS; rkvar++)
+    for (FFTZ_INTP rkvar = 0; rkvar < NUM_REAL_KERNELS_VARIANTS; rkvar++)
     {
-        INTP offset = row_offset;
-        for (INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
+        FFTZ_INTP offset = row_offset;
+        for (FFTZ_INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
         {
             if (kcat_register_available[kcat])
             {
-                for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY;
+                for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY;
                      i++, offset++)
                 {
                     if (static_kernel_table[rkvar][i][kcat].k_register_kernel !=
@@ -137,9 +113,11 @@ INT32 register_kernels_real(
                     {
                         kertab[offset].radix =
                             static_kernel_table[rkvar][i][kcat].radix;
-                        kertab[offset].kfft =
-                            static_kernel_table[rkvar][i][kcat]
-                                .k_register_kernel(dt, dir);
+                        kfft_ kfft = static_kernel_table[rkvar][i][kcat]
+                                         .k_register_kernel(dt, dir);
+                        // Real kernels are bidirectional; alias both slots.
+                        kertab[offset].kfft[FORWARD_FFT_DIR] = kfft;
+                        kertab[offset].kfft[BACKWARD_FFT_DIR] = kfft;
                         kertab[offset].k_ops_cnt =
                             static_kernel_table[rkvar][i][kcat].k_ops_cnt;
                         if (rkvar == C2C_KERNEL) // c2c variant
@@ -167,13 +145,15 @@ INT32 register_kernels_real(
     return KERNEL_SUCCESS;
 }
 
-INT32 register_kernels_complex(
+FFTZ_INT32 register_kernels_complex(
     kernel_t kertab[NUM_KERNELS_IN_TABLE_COMPLEX],
     kernel_fp_list_t static_kernel_table[NUM_KERNELS_IN_EACH_CATEGORY]
                                         [NUM_KERNEL_CATEGORIES],
-    INT32 dt, INT32 dir, INT32 cpu_flags)
+    kernel_fp_list_t static_kernel_table_bwd[NUM_KERNELS_IN_EACH_CATEGORY]
+                                            [NUM_KERNEL_CATEGORIES],
+    FFTZ_INT32 dt, FFTZ_INT32 dir, FFTZ_INT32 cpu_flags)
 {
-    INTP kcat_register_available[NUM_KERNEL_CATEGORIES] =
+    FFTZ_INTP kcat_register_available[NUM_KERNEL_CATEGORIES] =
     {
         1, // C kernels are always registered
         ACCESS_AVX128 && (cpu_flags > 0),
@@ -181,19 +161,36 @@ INT32 register_kernels_complex(
         ACCESS_AVX512 && (cpu_flags > 2),
     };
 
-    INTP offset = 0;
+    FFTZ_INTP offset = 0;
 
-    for (INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
+    for (FFTZ_INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
     {
         if (kcat_register_available[kcat])
         {
-            for (INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++, offset++)
+            for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY;
+                 i++, offset++)
             {
                 if (static_kernel_table[i][kcat].k_register_kernel != NULL)
                 {
+                    // static_kernel_table may contain bidrectional kernels (for
+                    // standard kernels) or forward-specialized kernels (for
+                    // twiddle kernels).
                     kertab[offset].radix = static_kernel_table[i][kcat].radix;
-                    kertab[offset].kfft =
+                    kfft_ kfft_fwd =
                         static_kernel_table[i][kcat].k_register_kernel(dt, dir);
+                    kertab[offset].kfft[FORWARD_FFT_DIR] = kfft_fwd;
+                    // Backward slot: use the bwd-specialized pointer when
+                    // available; otherwise alias the forward slot.
+                    kfft_ kfft_bwd = kfft_fwd;
+                    if (static_kernel_table_bwd != NULL &&
+                        static_kernel_table_bwd[i][kcat].k_register_kernel !=
+                            NULL)
+                    {
+                        kfft_bwd =
+                            static_kernel_table_bwd[i][kcat].k_register_kernel(
+                                dt, dir);
+                    }
+                    kertab[offset].kfft[BACKWARD_FFT_DIR] = kfft_bwd;
                     kertab[offset].k_ops_cnt =
                         static_kernel_table[i][kcat].k_ops_cnt;
                     kertab[offset].sets[DT_FLOAT - 2] = sets_complex_s[kcat];
@@ -208,7 +205,8 @@ INT32 register_kernels_complex(
                     }
                     else
                     {
-                        kertab[offset].sets[DT_DOUBLE - 2] = sets_complex_d[kcat];
+                        kertab[offset].sets[DT_DOUBLE - 2] =
+                            sets_complex_d[kcat];
                     }
                 }
             }
@@ -219,7 +217,94 @@ INT32 register_kernels_complex(
     return KERNEL_SUCCESS;
 }
 
+/**
+ * @brief Registers the appropriate elementwise multiplication kernel.
+ *
+ * Selects the best available SIMD implementation based on the optimization
+ * level and data type:
+ * - optlevel_avx512 (3): AVX512 implementation
+ * - optlevel_avx256 (2): AVX256 implementation
+ * - optlevel_avx128 (1): AVX128 implementation
+ * - optlevel_scalar (0): Scalar C implementation
+ *
+ * @param[in] cpu_flags Optimization level (optimization_level_t) obtained
+ *                      from get_max_build_isa_level()
+ * @param[in] dt        Data type (DT_FLOAT or DT_DOUBLE)
+ * @param[in] direction FORWARD_FFT_DIR  -> forward  (a .* conj(b)),
+ *                      BACKWARD_FFT_DIR -> backward (a .* b)
+ * @return Function pointer to the selected elementwise multiplication kernel
+ */
+elementwise_mul_ register_elementwise_mul_kernel(FFTZ_INT32 cpu_flags,
+                                                 FFTZ_INT32 dt,
+                                                 FFTZ_UINT8 direction)
+{
+#ifdef ENABLE_AVX512
+    if (cpu_flags >= optlevel_avx512)
+    {
+        return register_elementwise_mul_avx512(dt, direction);
+    }
+#endif
+
+#ifdef ENABLE_AVX256
+    if (cpu_flags >= optlevel_avx256)
+    {
+        return register_elementwise_mul_avx256(dt, direction);
+    }
+#endif
+
+#ifdef ENABLE_AVX128
+    if (cpu_flags >= optlevel_avx128)
+    {
+        return register_elementwise_mul_avx128(dt, direction);
+    }
+#endif
+
+    /* Default to C implementation */
+    return register_elementwise_mul_c(dt, direction);
+}
+
+/**
+ * @brief Registers the appropriate normalization kernel.
+ *
+ * Selects the best available SIMD implementation based on the optimization
+ * level and data type:
+ * - optlevel_avx512 (3): AVX512 implementation
+ * - optlevel_avx256 (2): AVX256 implementation
+ * - optlevel_avx128 (1): AVX128 implementation
+ * - optlevel_scalar (0): Scalar C implementation
+ *
+ * @param[in] cpu_flags Optimization level (optimization_level_t) obtained
+ *                      from get_max_build_isa_level()
+ * @param[in] dt        Data type (DT_FLOAT or DT_DOUBLE)
+ * @return Function pointer to the selected normalization kernel
+ */
+normalize_ register_normalize_kernel(FFTZ_INT32 cpu_flags, FFTZ_INT32 dt)
+{
+#ifdef ENABLE_AVX512
+    if (cpu_flags >= optlevel_avx512)
+    {
+        return register_normalize_avx512(dt);
+    }
+#endif
+
+#ifdef ENABLE_AVX256
+    if (cpu_flags >= optlevel_avx256)
+    {
+        return register_normalize_avx256(dt);
+    }
+#endif
+
+#ifdef ENABLE_AVX128
+    if (cpu_flags >= optlevel_avx128)
+    {
+        return register_normalize_avx128(dt);
+    }
+#endif
+
+    /* Default to C implementation */
+    return register_normalize_c(dt);
+}
+
 #undef ACCESS_AVX128
 #undef ACCESS_AVX256
 #undef ACCESS_AVX512
-
