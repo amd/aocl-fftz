@@ -60,7 +60,9 @@ FFTZ_VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem)
 }
 
 // Execute function for Single-threaded and multi-threaded FFT.
-// Uses the cached setup-time execution context.
+// Uses the cached setup-time execution context. Hence requires
+// non-NULL input and output buffers supplied at setup-time.
+// Otherwise, use aoclfftz_execute_io with non-NULL buffers.
 aoclfftz_error_type aoclfftz_execute(FFTZ_VOID *handle)
 {
     if (handle == NULL)
@@ -70,6 +72,12 @@ aoclfftz_error_type aoclfftz_execute(FFTZ_VOID *handle)
 
     aoclfftz_executor_t *executor_obj = (aoclfftz_executor_t *)handle;
     aoclfftz_mutable_ctx_t *base_ctx = &executor_obj->exec_metadata->base_ctx;
+    if ((base_ctx->in_real == NULL) || (base_ctx->out_real == NULL))
+    {
+        AOCLFFTZ_ERROR(
+            "One or both setup-time buffers are NULL; use aoclfftz_execute_io");
+        return AOCLFFTZ_EXECUTION_FAILURE;
+    }
     return executor_obj->execute(executor_obj, base_ctx);
 }
 

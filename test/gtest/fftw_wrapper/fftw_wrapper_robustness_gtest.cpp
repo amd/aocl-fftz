@@ -8,7 +8,6 @@
 
 #include <climits>
 #include <cstdint>
-#include <vector>
 #include "fftw_wrapper_test_utils.h"
 
 /* AddressSanitizer intercepts oversized allocations and ABORTS the process
@@ -40,62 +39,88 @@ class FftwWrapperRobustnessTest : public FftwWrapperTestBase<T>
 TYPED_TEST_SUITE(FftwWrapperRobustnessTest, FftwTestTypes);
 
 /* ===== Section 1 -- Robustness: NULL pointer inputs (TYPED_TEST) ===== */
-
-/* R2C with NULL real input - FFTZ validates NULL in, should return NULL plan */
-TYPED_TEST(FftwWrapperRobustnessTest, NTEST_PLAN_DFT_R2C_1D_NULL_INPUT)
-{
-    using F = FftwTypes<TypeParam>;
-    auto *out = F::alloc_complex(16);
-    auto p = F::plan_dft_r2c_1d(16, nullptr, out, FFTW_ESTIMATE);
-    EXPECT_EQ(p, nullptr);
-    if (p)
-    {
-        F::destroy_plan(p);
-    }
-    F::free_fn(out);
-}
-
 /* R2C with NULL complex output */
-TYPED_TEST(FftwWrapperRobustnessTest, NTEST_PLAN_DFT_R2C_1D_NULL_OUTPUT)
+TYPED_TEST(FftwWrapperRobustnessTest, PTEST_PLAN_DFT_R2C_1D_NULL_OUTPUT)
 {
     using F = FftwTypes<TypeParam>;
     auto *in = F::alloc_real(16);
     auto p = F::plan_dft_r2c_1d(16, in, nullptr, FFTW_ESTIMATE);
-    EXPECT_EQ(p, nullptr);
+    EXPECT_NE(p, nullptr);
     if (p)
     {
+        /* fftw_execute returns void; no segfault is expected. */
+        F::execute(p);
         F::destroy_plan(p);
     }
     F::free_fn(in);
 }
 
 /* C2R with NULL complex input */
-TYPED_TEST(FftwWrapperRobustnessTest, NTEST_PLAN_DFT_C2R_1D_NULL_INPUT)
+TYPED_TEST(FftwWrapperRobustnessTest, PTEST_PLAN_DFT_C2R_1D_NULL_INPUT)
 {
     using F = FftwTypes<TypeParam>;
     auto *out = F::alloc_real(16);
     auto p = F::plan_dft_c2r_1d(16, nullptr, out, FFTW_ESTIMATE);
-    EXPECT_EQ(p, nullptr);
+    EXPECT_NE(p, nullptr);
     if (p)
     {
+        /* fftw_execute returns void; no segfault is expected. */
+        F::execute(p);
         F::destroy_plan(p);
     }
     F::free_fn(out);
 }
 
-/* C2R with NULL real output */
-TYPED_TEST(FftwWrapperRobustnessTest, NTEST_PLAN_DFT_C2R_1D_NULL_OUTPUT)
+/* In-place C2C planned with both buffers NULL. */
+TYPED_TEST(FftwWrapperRobustnessTest,
+           PTEST_EXECUTE_DFT_INPLACE_NULL_BUFFERS_AT_SETUP)
 {
     using F = FftwTypes<TypeParam>;
-    int nc = 16 / 2 + 1;
-    auto *in = F::alloc_complex(nc);
-    auto p = F::plan_dft_c2r_1d(16, in, nullptr, FFTW_ESTIMATE);
-    EXPECT_EQ(p, nullptr);
-    if (p)
-    {
-        F::destroy_plan(p);
-    }
+    const int N = 16;
+    auto *buf = F::alloc_complex(N);
+    auto *expected_output = F::alloc_complex(N);
+
+    this->init_complex(buf, N);
+    /* Compute the expected output before in-place execution overwrites the input. */
+    dft_reference_1d(buf, expected_output, N, FFTW_FORWARD);
+
+    /* NULL == NULL, so the plan is in-place */
+    auto p = F::plan_dft_1d(N, nullptr, nullptr, FFTW_FORWARD, FFTW_ESTIMATE);
+    ASSERT_NE(p, nullptr);
+
+    F::execute_dft(p, buf, buf);
+    compare_complex_arrays(expected_output, buf, N, dft_tolerance<F>(N));
+
+    F::destroy_plan(p);
+    F::free_fn(buf);
+    F::free_fn(expected_output);
+}
+
+/* Out-of-place C2C planned with a NULL output. */
+TYPED_TEST(FftwWrapperRobustnessTest,
+           PTEST_EXECUTE_DFT_OUTOFPLACE_NULL_OUTPUT_AT_SETUP)
+{
+    using F = FftwTypes<TypeParam>;
+    const int N = 16;
+    auto *in = F::alloc_complex(N);
+    auto *out = F::alloc_complex(N);
+    auto *expected_output = F::alloc_complex(N);
+
+    this->init_complex(in, N);
+    /* Compute the expected output using the reference DFT. */
+    dft_reference_1d(in, expected_output, N, FFTW_FORWARD);
+
+    /* in != NULL; out == NULL, so the plan is out-of-place. */
+    auto p = F::plan_dft_1d(N, in, nullptr, FFTW_FORWARD, FFTW_ESTIMATE);
+    ASSERT_NE(p, nullptr);
+
+    F::execute_dft(p, in, out);
+    compare_complex_arrays(expected_output, out, N, dft_tolerance<F>(N));
+
+    F::destroy_plan(p);
     F::free_fn(in);
+    F::free_fn(out);
+    F::free_fn(expected_output);
 }
 
 /* execute_dft_r2c with NULL plan - aoclfftz_execute_io guards NULL */
@@ -263,35 +288,6 @@ TYPED_TEST(FftwWrapperRobustnessTest, PTEST_PLAN_DFT_1D_SIZE_3)
     F::destroy_plan(p);
     F::free_fn(in);
     F::free_fn(out);
-}
-
-/* Huge size with NULL buffers. The descriptor is built without allocating
- * n-sized storage, so validation is reached and the NULL-buffer check makes
- * the result deterministic: a NULL plan (not a crash). */
-TYPED_TEST(FftwWrapperRobustnessTest, NTEST_PLAN_DFT_1D_HUGE_SIZE)
-{
-    using F = FftwTypes<TypeParam>;
-    auto p = F::plan_dft_1d(
-        INT_MAX, nullptr, nullptr, FFTW_FORWARD, FFTW_ESTIMATE);
-    EXPECT_EQ(p, nullptr);
-    if (p)
-    {
-        F::destroy_plan(p);
-    }
-}
-
-/* 2D huge size, NULL buffers -> NULL plan via the buffer check. */
-TYPED_TEST(FftwWrapperRobustnessTest, NTEST_PLAN_DFT_2D_HUGE_SIZE)
-{
-    using F = FftwTypes<TypeParam>;
-    auto p = F::plan_dft_2d(
-        INT_MAX, INT_MAX,
-        nullptr, nullptr, FFTW_FORWARD, FFTW_ESTIMATE);
-    EXPECT_EQ(p, nullptr);
-    if (p)
-    {
-        F::destroy_plan(p);
-    }
 }
 
 /* ===== Section 3 -- BVA: Stride/batch boundaries (TYPED_TEST) ===== */
@@ -582,25 +578,6 @@ TYPED_TEST(FftwWrapperRobustnessTest, NTEST_GURU_DFT_NULL_HOWMANY_DIMS)
     }
     F::free_fn(in);
     F::free_fn(out);
-}
-
-/* rank=1000 with NULL buffers: the descriptor is built (each dim is valid)
- * but the NULL-buffer check then rejects the problem, so the result is a
- * deterministic NULL plan rather than an unbounded allocation or crash. */
-TYPED_TEST(FftwWrapperRobustnessTest, NTEST_GURU_DFT_LARGE_RANK)
-{
-    using F = FftwTypes<TypeParam>;
-    using iodim_t = typename F::iodim_t;
-    std::vector<iodim_t> dims(1000, {2, 1, 1});
-    iodim_t howmany[1] = {{1, 1, 1}};
-    auto p = F::plan_guru_dft(
-        1000, dims.data(), 1, howmany,
-        nullptr, nullptr, FFTW_FORWARD, FFTW_ESTIMATE);
-    EXPECT_EQ(p, nullptr);
-    if (p)
-    {
-        F::destroy_plan(p);
-    }
 }
 
 /* ===== Section 5 -- Robustness: Memory (non-typed TEST_F) ===== */
