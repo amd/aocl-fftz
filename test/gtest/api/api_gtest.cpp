@@ -100,24 +100,131 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_PROBLEM_DESCRIPTOR)
     this->run_setup_and_validate(INVALID); // Run setup with invalid case
 }
 
-TYPED_TEST_P(AoclfftzAPITest, NTEST_IN_BUFFER)
+/* Verify aoclfftz_execute rejects a handle created with a NULL input. */
+TYPED_TEST_P(AoclfftzAPITest, NTEST_NULL_INPUT_AT_SETUP)
 {
-    if (this->problem != NULL && this->problem->in != NULL)
+    auto *saved_in = this->problem->in;
+    this->problem->in = NULL;
+
+    this->handle = this->aoclfftz_setup(this->problem);
+    EXPECT_NE(this->handle, nullptr);
+    if (this->handle != NULL)
     {
-        delete[] this->problem->in;
-        this->problem->in = NULL;
+        EXPECT_EQ(aoclfftz_execute(this->handle), AOCLFFTZ_EXECUTION_FAILURE);
+        aoclfftz_destroy(this->handle);
+        this->handle = NULL;
     }
-    this->run_setup_and_validate(INVALID);
+
+    this->problem->in = saved_in;
 }
 
-TYPED_TEST_P(AoclfftzAPITest, NTEST_OUT_BUFFER)
+/* Verify aoclfftz_execute_io runs successfully a handle created with a NULL input. */
+TYPED_TEST_P(AoclfftzAPITest, PTEST_NULL_INPUT_AT_SETUP)
 {
-    if (this->problem->out != NULL)
+    auto *saved_in = this->problem->in;
+    this->problem->in = NULL;
+
+    this->handle = this->aoclfftz_setup(this->problem);
+    EXPECT_NE(this->handle, nullptr);
+    if (this->handle != NULL)
     {
-        delete[] this->problem->out;
-        this->problem->out = NULL;
+        EXPECT_EQ(aoclfftz_execute_io(this->handle, saved_in,
+                                      this->problem->out), AOCLFFTZ_SUCCESS);
+        aoclfftz_destroy(this->handle);
+        this->handle = NULL;
     }
-    this->run_setup_and_validate(INVALID);
+
+    this->problem->in = saved_in;
+}
+
+/* Verify aoclfftz_execute rejects a handle created with a NULL output. */
+TYPED_TEST_P(AoclfftzAPITest, NTEST_NULL_OUTPUT_AT_SETUP)
+{
+    auto *saved_out = this->problem->out;
+    this->problem->out = NULL;
+
+    this->handle = this->aoclfftz_setup(this->problem);
+    EXPECT_NE(this->handle, nullptr);
+    if (this->handle != NULL)
+    {
+        EXPECT_EQ(aoclfftz_execute(this->handle), AOCLFFTZ_EXECUTION_FAILURE);
+        aoclfftz_destroy(this->handle);
+        this->handle = NULL;
+    }
+
+    this->problem->out = saved_out;
+}
+
+/* Verify aoclfftz_execute_io runs successfully a handle created with a NULL output. */
+TYPED_TEST_P(AoclfftzAPITest, PTEST_NULL_OUTPUT_AT_SETUP)
+{
+    auto *saved_out = this->problem->out;
+    this->problem->out = NULL;
+
+    this->handle = this->aoclfftz_setup(this->problem);
+    EXPECT_NE(this->handle, nullptr);
+    if (this->handle != NULL)
+    {
+        EXPECT_EQ(aoclfftz_execute_io(this->handle, this->problem->in,
+                                      saved_out), AOCLFFTZ_SUCCESS);
+        aoclfftz_destroy(this->handle);
+        this->handle = NULL;
+    }
+
+    this->problem->out = saved_out;
+}
+
+/* Verify aoclfftz_execute rejects a handle created with NULL buffers. */
+TYPED_TEST_P(AoclfftzAPITest, NTEST_NULL_INOUT_AT_SETUP)
+{
+    this->cleanup_problem();
+    this->create_default_custom_pdesc(
+        {32768}, 2, true, true, InputValueStrategy::MID_RANGE, 2);
+    this->problem->cntrl_params.opt_level = 3;
+    this->problem->cntrl_params.opt_off = 0;
+    auto *saved_buffer = this->problem->in;
+    this->problem->in  = NULL;
+    this->problem->out = NULL;
+
+    this->handle = this->aoclfftz_setup(this->problem);
+    EXPECT_NE(this->handle, nullptr);
+    if (this->handle != NULL)
+    {
+        EXPECT_EQ(aoclfftz_execute(this->handle), AOCLFFTZ_EXECUTION_FAILURE);
+        aoclfftz_destroy(this->handle);
+        this->handle = NULL;
+    }
+
+    // Restore the in-place alias so teardown frees the allocation once.
+    this->problem->in  = saved_buffer;
+    this->problem->out = saved_buffer;
+}
+
+/* Verify execute_io runs an in-place CT handle created with NULL buffers. */
+TYPED_TEST_P(AoclfftzAPITest, PTEST_NULL_INOUT_AT_SETUP)
+{
+    this->cleanup_problem();
+    this->create_default_custom_pdesc(
+        {32768}, 2, true, true, InputValueStrategy::MID_RANGE, 2);
+    this->problem->cntrl_params.opt_level = 3;
+    this->problem->cntrl_params.opt_off = 0;
+    auto *saved_buffer = this->problem->in;
+    this->problem->in  = NULL;
+    this->problem->out = NULL;
+
+    this->handle = this->aoclfftz_setup(this->problem);
+    EXPECT_NE(this->handle, nullptr);
+    if (this->handle != NULL)
+    {
+        EXPECT_EQ(aoclfftz_execute_io(this->handle, saved_buffer,
+                                      saved_buffer), AOCLFFTZ_SUCCESS);
+        aoclfftz_destroy(this->handle);
+        this->handle = NULL;
+    }
+
+    // Restore the in-place alias so teardown frees the allocation once.
+    this->problem->in  = saved_buffer;
+    this->problem->out = saved_buffer;
 }
 
 TYPED_TEST_P(AoclfftzAPITest, NTEST_CNTRL_PARAMS)
@@ -164,6 +271,18 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_INPLACE_IO_STRIDES)
     this->problem->dims[2].in_stride = 200;
     this->problem->dims[2].out_stride = 250;
     this->run_setup_and_validate(INVALID);
+}
+
+TYPED_TEST_P(AoclfftzAPITest, NTEST_PLACEMENT_BUFFER_IDENTITY)
+{
+    /* The fixture default is out-of-place with two distinct buffers. Aliasing
+     * them contradicts the placement flag and must be rejected. */
+    auto *distinct_out = this->problem->out;
+    this->problem->out = this->problem->in;
+    this->run_setup_and_validate(INVALID);
+    /* Restored before teardown, which frees `out` only when it does not
+     * alias `in`. */
+    this->problem->out = distinct_out;
 }
 
 TYPED_TEST_P(AoclfftzAPITest, NTEST_DIM_RANK)
@@ -648,11 +767,16 @@ REGISTER_TYPED_TEST_SUITE_P(
     PTEST_THREADS,
     PTEST_COMBINE,
     NTEST_PROBLEM_DESCRIPTOR,
-    NTEST_IN_BUFFER,
-    NTEST_OUT_BUFFER,
+    NTEST_NULL_INPUT_AT_SETUP,
+    PTEST_NULL_INPUT_AT_SETUP,
+    NTEST_NULL_OUTPUT_AT_SETUP,
+    PTEST_NULL_OUTPUT_AT_SETUP,
+    NTEST_NULL_INOUT_AT_SETUP,
+    PTEST_NULL_INOUT_AT_SETUP,
     NTEST_CNTRL_PARAMS,
     NTEST_FLAGS,
     NTEST_INPLACE_IO_STRIDES,
+    NTEST_PLACEMENT_BUFFER_IDENTITY,
     NTEST_DIM_RANK,
     NTEST_VEC_RANK,
     NTEST_DIMS,

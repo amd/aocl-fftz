@@ -472,6 +472,7 @@ set(STANDARD_TEST_SUITE
     "EXT_C2R_C_SIZE_ONE_NON_FUSABLE_ND_BATCHED_OP ./aocl_fftz_bench 3:16:16x4:64:64v1 -f c2r -b a -r o -i 5"  # accuracy | real     | double   | LP64       | 1D  | yes     | sizeone   | outplace  | backward  | C       | Strided 3x4 vec rank cannot fuse; covers complex-side stride scaling in the real size-one outer vec loop
     "EXT_R2C_C_3D_OUTER_INPUT_STRIDED_OP_F ./aocl_fftz_bench 32x3:35:17x4 -f r2c -b a -r o -p f -o 0"         # accuracy | real     | float    | LP64       | 3D  | no      | NDim      | outplace  | forward   | C       | 3D C R2C with non-contiguous outer input stride
     "EXT_C2R_AVX512_3D_OUTER_OUTPUT_STRIDED_OP ./aocl_fftz_bench 32x3:17:33x4 -f c2r -b a -r o -o 3"          # accuracy | real     | double   | LP64       | 3D  | no      | NDim      | outplace  | backward  | AVX512  | 3D AVX512 C2R with non-contiguous outer output stride
+    "EXT_C2C_C_MT_BATCHED_NDIM_CT_OP ./aocl_fftz_bench 2v384x384 -b a -f c2c -n 4"                            # accuracy | complex  | double   | LP64       | 2D  | yes     | MT+ND+CT  | outplace  | forward   | C       | MT 2D C with 2-level CT on both dimensions
     # TODO: Add more test cases with different combinations. This list is expected to be larger than TEST_SUITE.
     )
 

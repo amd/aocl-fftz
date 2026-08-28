@@ -69,6 +69,8 @@ FFTZ_INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
         return ret;
     }
 
+    // Bluestein's child solver always runs out-of-place.
+    SET_OUTOFPLACE(next_sol->decomp_scheme->flags);
     next_sol->decomp_scheme->in_real = NULL;
     next_sol->decomp_scheme->in_imag = NULL;
     next_sol->decomp_scheme->out_real = NULL;

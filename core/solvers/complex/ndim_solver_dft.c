@@ -85,6 +85,8 @@ FFTZ_INT32 setup_ndim_solver(aoclfftz_solution_t *sol,
         n_minus1_sol->decomp_scheme->out_imag;
     outer_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
     outer_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    // The outer dimension reads and writes the parent output buffer in-place.
+    SET_INPLACE(outer_dim_sol->decomp_scheme->flags);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 

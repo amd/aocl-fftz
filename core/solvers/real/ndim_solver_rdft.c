@@ -87,6 +87,9 @@ FFTZ_INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
             sol->decomp_scheme->out_real;
         complex_dims_sol->decomp_scheme->out_imag =
             sol->decomp_scheme->out_imag;
+        // The R2C result is already in the output buffer, so reuse it for the
+        // remaining dimensions.
+        SET_INPLACE(complex_dims_sol->decomp_scheme->flags);
     }
     else
     {
@@ -96,6 +99,9 @@ FFTZ_INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
             sol->dft_bufs->buffered->aux_buffer_1;
         complex_dims_sol->decomp_scheme->out_imag =
             MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_1, dt_bytes);
+        // Backward uses out-of-place C2C because its packed intermediate has
+        // different strides from the input; aux holds that result for C2R.
+        SET_OUTOFPLACE(complex_dims_sol->decomp_scheme->flags);
     }
 
 
