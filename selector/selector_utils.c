@@ -15,6 +15,7 @@
 
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
+#include "core/solvers/real/direct_solver_rdft_utils.h"
 
 // to_ds, from_ds: short for to/from decomp_scheme
 FFTZ_INT32 copy_decomp_scheme( aoclfftz_decomp_scheme_t *to_ds,
@@ -95,8 +96,10 @@ FFTZ_INT32 copy_decomp_scheme( aoclfftz_decomp_scheme_t *to_ds,
     to_ds->thread_info->avl_threads =
         from_ds->thread_info->avl_threads;
     to_ds->thread_info->n_threads = 1;
-    to_ds->outer_buf_cnt = from_ds->outer_buf_cnt;
+    to_ds->thread_info->active_threads = from_ds->thread_info->active_threads;
     to_ds->flags = from_ds->flags;
+    to_ds->real_in_role = from_ds->real_in_role;
+    to_ds->real_out_role = from_ds->real_out_role;
     return AOCLFFTZ_SUCCESS;
 }
 
@@ -200,53 +203,59 @@ FFTZ_INT32 copy_solution_obj( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->decomp_scheme->thread_info->avl_threads;
     to_sol_obj->decomp_scheme->thread_info->n_threads =
         from_sol_obj->decomp_scheme->thread_info->n_threads;
-    to_sol_obj->decomp_scheme->outer_buf_cnt =
-        from_sol_obj->decomp_scheme->outer_buf_cnt;
     to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;
+    setup_rdft_dc_nyquist_offsets_ds(to_sol_obj->decomp_scheme);
+    to_sol_obj->decomp_scheme->real_in_role =
+        from_sol_obj->decomp_scheme->real_in_role;
+    to_sol_obj->decomp_scheme->real_out_role =
+        from_sol_obj->decomp_scheme->real_out_role;
 
     // twiddle
     to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;
     to_sol_obj->twiddle->load_multi_cols =
         from_sol_obj->twiddle->load_multi_cols;
-    to_sol_obj->twiddle->cols = from_sol_obj->twiddle->cols;
 
     // dft_bufs
     to_sol_obj->dft_bufs->bluestein->B =
         from_sol_obj->dft_bufs->bluestein->B;
     to_sol_obj->dft_bufs->bluestein->B_out =
         from_sol_obj->dft_bufs->bluestein->B_out;
-    to_sol_obj->dft_bufs->bluestein->in =
-        from_sol_obj->dft_bufs->bluestein->in;
-    to_sol_obj->dft_bufs->bluestein->out =
-        from_sol_obj->dft_bufs->bluestein->out;
     to_sol_obj->dft_bufs->bluestein->bs_buf_size =
         from_sol_obj->dft_bufs->bluestein->bs_buf_size;
-    to_sol_obj->dft_bufs->bluestein->num_bs_buf =
-        from_sol_obj->dft_bufs->bluestein->num_bs_buf;
-    to_sol_obj->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR] =
-        from_sol_obj->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR];
-    to_sol_obj->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] =
-        from_sol_obj->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR];
-    to_sol_obj->dft_bufs->bluestein->normalize =
-        from_sol_obj->dft_bufs->bluestein->normalize;
+    to_sol_obj->dft_bufs->bluestein->bs_dim_offset =
+        from_sol_obj->dft_bufs->bluestein->bs_dim_offset;
+    to_sol_obj->dft_bufs->bluestein->pre_mul[FORWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->pre_mul[FORWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->pre_mul[BACKWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->pre_mul[BACKWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->mul[FORWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->mul[FORWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->mul[BACKWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->mul[BACKWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->post_mul[FORWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->post_mul[FORWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->cast_to_complex =
+        from_sol_obj->dft_bufs->bluestein->cast_to_complex;
+    to_sol_obj->dft_bufs->bluestein->cast_from_complex =
+        from_sol_obj->dft_bufs->bluestein->cast_from_complex;
     to_sol_obj->dft_bufs->buffered->aux_buffer_1 =
         from_sol_obj->dft_bufs->buffered->aux_buffer_1;
     to_sol_obj->dft_bufs->buffered->aux_buffer_2 =
         from_sol_obj->dft_bufs->buffered->aux_buffer_2;
     to_sol_obj->dft_bufs->buffered->aux_buf_size_per_thread =
         from_sol_obj->dft_bufs->buffered->aux_buf_size_per_thread;
-    to_sol_obj->dft_bufs->buffered->out_ptr =
-        from_sol_obj->dft_bufs->buffered->out_ptr;
+    // Borrower after copy; only the node that malloc'd the pool keeps ownership.
+    to_sol_obj->dft_bufs->buffered->is_aux_buffer_allocated = 0;
     to_sol_obj->dft_bufs->ct_buffer =
         from_sol_obj->dft_bufs->ct_buffer;
-    to_sol_obj->dft_bufs->num_ct_buf =
-        from_sol_obj->dft_bufs->num_ct_buf;
+    to_sol_obj->decomp_scheme->thread_info->active_threads =
+        from_sol_obj->decomp_scheme->thread_info->active_threads;
     to_sol_obj->dft_bufs->ct_buf_real =
         from_sol_obj->dft_bufs->ct_buf_real;
     to_sol_obj->dft_bufs->ct_buf_imag =
         from_sol_obj->dft_bufs->ct_buf_imag;
-    to_sol_obj->dft_bufs->ct_buf_real_in =
-        from_sol_obj->dft_bufs->ct_buf_real_in;
     to_sol_obj->dft_bufs->ct_buf_size = from_sol_obj->dft_bufs->ct_buf_size;
     if (from_sol_obj->dft_bufs->transpose &&
         to_sol_obj->dft_bufs->transpose)
@@ -344,6 +353,7 @@ FFTZ_INT32 copy_solution_obj_out_p( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->decomp_scheme->out_real;
     to_sol_obj->decomp_scheme->out_imag =
         from_sol_obj->decomp_scheme->out_imag;
+    setup_rdft_dc_nyquist_offsets_ds(to_sol_obj->decomp_scheme);
     return AOCLFFTZ_SUCCESS;
 }
 
@@ -388,10 +398,10 @@ FFTZ_INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->strides_grp->strides->v_in_stride;
     to_sol_obj->strides_grp->strides->v_out_stride =
         from_sol_obj->strides_grp->strides->v_out_stride;
-    to_sol_obj->strides_grp->strides->v_in_h2_stride =
-        from_sol_obj->strides_grp->strides->v_in_h2_stride;
-    to_sol_obj->strides_grp->strides->v_out_h2_stride =
-        from_sol_obj->strides_grp->strides->v_out_h2_stride;
+    to_sol_obj->strides_grp->strides->v_in_sym_stride =
+        from_sol_obj->strides_grp->strides->v_in_sym_stride;
+    to_sol_obj->strides_grp->strides->v_out_sym_stride =
+        from_sol_obj->strides_grp->strides->v_out_sym_stride;
 
     if (from_sol_obj->solver->kernel_c2c->count != 0)
     {
@@ -431,10 +441,10 @@ FFTZ_INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             from_sol_obj->strides_grp->strides_c2c->v_in_stride;
         to_sol_obj->strides_grp->strides_c2c->v_out_stride =
             from_sol_obj->strides_grp->strides_c2c->v_out_stride;
-        to_sol_obj->strides_grp->strides_c2c->v_in_h2_stride =
-            from_sol_obj->strides_grp->strides_c2c->v_in_h2_stride;
-        to_sol_obj->strides_grp->strides_c2c->v_out_h2_stride =
-            from_sol_obj->strides_grp->strides_c2c->v_out_h2_stride;
+        to_sol_obj->strides_grp->strides_c2c->v_in_sym_stride =
+            from_sol_obj->strides_grp->strides_c2c->v_in_sym_stride;
+        to_sol_obj->strides_grp->strides_c2c->v_out_sym_stride =
+            from_sol_obj->strides_grp->strides_c2c->v_out_sym_stride;
     }
 
     if (from_sol_obj->solver->kernel_r2hc->count != 0)
@@ -475,10 +485,10 @@ FFTZ_INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             from_sol_obj->strides_grp->strides_r2hc->v_in_stride;
         to_sol_obj->strides_grp->strides_r2hc->v_out_stride =
             from_sol_obj->strides_grp->strides_r2hc->v_out_stride;
-        to_sol_obj->strides_grp->strides_r2hc->v_in_h2_stride =
-            from_sol_obj->strides_grp->strides_r2hc->v_in_h2_stride;
-        to_sol_obj->strides_grp->strides_r2hc->v_out_h2_stride =
-            from_sol_obj->strides_grp->strides_r2hc->v_out_h2_stride;
+        to_sol_obj->strides_grp->strides_r2hc->v_in_sym_stride =
+            from_sol_obj->strides_grp->strides_r2hc->v_in_sym_stride;
+        to_sol_obj->strides_grp->strides_r2hc->v_out_sym_stride =
+            from_sol_obj->strides_grp->strides_r2hc->v_out_sym_stride;
     }
 
     if (from_sol_obj->solver->kernel_r2hcf->count != 0)
@@ -523,10 +533,10 @@ FFTZ_INT32 copy_strides( aoclfftz_solution_t *to_sol_obj,
             from_sol_obj->strides_grp->strides_r2hcf->v_in_stride;
         to_sol_obj->strides_grp->strides_r2hcf->v_out_stride =
             from_sol_obj->strides_grp->strides_r2hcf->v_out_stride;
-        to_sol_obj->strides_grp->strides_r2hcf->v_in_h2_stride =
-            from_sol_obj->strides_grp->strides_r2hcf->v_in_h2_stride;
-        to_sol_obj->strides_grp->strides_r2hcf->v_out_h2_stride =
-            from_sol_obj->strides_grp->strides_r2hcf->v_out_h2_stride;
+        to_sol_obj->strides_grp->strides_r2hcf->v_in_sym_stride =
+            from_sol_obj->strides_grp->strides_r2hcf->v_in_sym_stride;
+        to_sol_obj->strides_grp->strides_r2hcf->v_out_sym_stride =
+            from_sol_obj->strides_grp->strides_r2hcf->v_out_sym_stride;
     }
 
     return AOCLFFTZ_SUCCESS;
@@ -594,18 +604,18 @@ FFTZ_INT32 copy_strides_batched_ct_l1_direct( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->strides_grp->strides->v_in_stride;
     to_sol_obj->strides_grp->strides->v_out_stride =
         from_sol_obj->strides_grp->strides->v_out_stride;
-    to_sol_obj->strides_grp->strides->v_in_h2_stride =
-        from_sol_obj->strides_grp->strides->v_in_h2_stride;
-    to_sol_obj->strides_grp->strides->v_out_h2_stride =
-        from_sol_obj->strides_grp->strides->v_out_h2_stride;
+    to_sol_obj->strides_grp->strides->v_in_sym_stride =
+        from_sol_obj->strides_grp->strides->v_in_sym_stride;
+    to_sol_obj->strides_grp->strides->v_out_sym_stride =
+        from_sol_obj->strides_grp->strides->v_out_sym_stride;
     to_sol_obj->strides_grp->strides_c2c->v_in_stride =
         from_sol_obj->strides_grp->strides_c2c->v_in_stride;
     to_sol_obj->strides_grp->strides_c2c->v_out_stride =
         from_sol_obj->strides_grp->strides_c2c->v_out_stride;
-    to_sol_obj->strides_grp->strides_c2c->v_in_h2_stride =
-        from_sol_obj->strides_grp->strides_c2c->v_in_h2_stride;
-    to_sol_obj->strides_grp->strides_c2c->v_out_h2_stride =
-        from_sol_obj->strides_grp->strides_c2c->v_out_h2_stride;
+    to_sol_obj->strides_grp->strides_c2c->v_in_sym_stride =
+        from_sol_obj->strides_grp->strides_c2c->v_in_sym_stride;
+    to_sol_obj->strides_grp->strides_c2c->v_out_sym_stride =
+        from_sol_obj->strides_grp->strides_c2c->v_out_sym_stride;
     return AOCLFFTZ_SUCCESS;
 }
 
@@ -679,15 +689,16 @@ FFTZ_VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
         from_sol_obj->decomp_scheme->thread_info->avl_threads;
     to_sol_obj->decomp_scheme->thread_info->n_threads =
         from_sol_obj->decomp_scheme->thread_info->n_threads;
-    to_sol_obj->decomp_scheme->outer_buf_cnt =
-        from_sol_obj->decomp_scheme->outer_buf_cnt;
     to_sol_obj->decomp_scheme->flags = from_sol_obj->decomp_scheme->flags;
+    to_sol_obj->decomp_scheme->real_in_role =
+        from_sol_obj->decomp_scheme->real_in_role;
+    to_sol_obj->decomp_scheme->real_out_role =
+        from_sol_obj->decomp_scheme->real_out_role;
 
     // twiddle
     to_sol_obj->twiddle->TW = from_sol_obj->twiddle->TW;
     to_sol_obj->twiddle->load_multi_cols =
         from_sol_obj->twiddle->load_multi_cols;
-    to_sol_obj->twiddle->cols = from_sol_obj->twiddle->cols;
     to_sol_obj->twiddle->twiddle_buf_ptr =
         from_sol_obj->twiddle->twiddle_buf_ptr;
 
@@ -695,20 +706,26 @@ FFTZ_VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
     to_sol_obj->dft_bufs->bluestein->B = from_sol_obj->dft_bufs->bluestein->B;
     to_sol_obj->dft_bufs->bluestein->B_out =
         from_sol_obj->dft_bufs->bluestein->B_out;
-    to_sol_obj->dft_bufs->bluestein->in =
-        from_sol_obj->dft_bufs->bluestein->in;
-    to_sol_obj->dft_bufs->bluestein->out =
-        from_sol_obj->dft_bufs->bluestein->out;
     to_sol_obj->dft_bufs->bluestein->bs_buf_size =
         from_sol_obj->dft_bufs->bluestein->bs_buf_size;
-    to_sol_obj->dft_bufs->bluestein->num_bs_buf =
-        from_sol_obj->dft_bufs->bluestein->num_bs_buf;
-    to_sol_obj->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR] =
-        from_sol_obj->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR];
-    to_sol_obj->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] =
-        from_sol_obj->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR];
-    to_sol_obj->dft_bufs->bluestein->normalize =
-        from_sol_obj->dft_bufs->bluestein->normalize;
+    to_sol_obj->dft_bufs->bluestein->bs_dim_offset =
+        from_sol_obj->dft_bufs->bluestein->bs_dim_offset;
+    to_sol_obj->dft_bufs->bluestein->pre_mul[FORWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->pre_mul[FORWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->pre_mul[BACKWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->pre_mul[BACKWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->mul[FORWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->mul[FORWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->mul[BACKWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->mul[BACKWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->post_mul[FORWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->post_mul[FORWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR] =
+        from_sol_obj->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR];
+    to_sol_obj->dft_bufs->bluestein->cast_to_complex =
+        from_sol_obj->dft_bufs->bluestein->cast_to_complex;
+    to_sol_obj->dft_bufs->bluestein->cast_from_complex =
+        from_sol_obj->dft_bufs->bluestein->cast_from_complex;
     to_sol_obj->dft_bufs->buffered->aux_buffer_1 =
         from_sol_obj->dft_bufs->buffered->aux_buffer_1;
     to_sol_obj->dft_bufs->buffered->aux_buffer_2 =
@@ -722,9 +739,8 @@ FFTZ_VOID copy_solution_obj_wo_dims( aoclfftz_solution_t *to_sol_obj,
     to_sol_obj->dft_bufs->ct_buf_imag =
         from_sol_obj->dft_bufs->ct_buf_imag;
     to_sol_obj->dft_bufs->ct_buf_size = from_sol_obj->dft_bufs->ct_buf_size;
-    to_sol_obj->dft_bufs->num_ct_buf = from_sol_obj->dft_bufs->num_ct_buf;
-    to_sol_obj->dft_bufs->buffered->out_ptr =
-        from_sol_obj->dft_bufs->buffered->out_ptr;
+    to_sol_obj->decomp_scheme->thread_info->active_threads =
+        from_sol_obj->decomp_scheme->thread_info->active_threads;
     to_sol_obj->next_sol = from_sol_obj->next_sol;
 }
 
@@ -737,31 +753,28 @@ FFTZ_VOID swap_real_ct_solutions(aoclfftz_selector_t *sel)
     {
         /* swap first CT node */
         if (sel->solution->solver->solver_type == SOLVER_REAL_CT &&
-            (sel->solution->next_sol[0]->solver->solver_type ==
-                 SOLVER_REAL_DIRECT ||
-             sel->solution->next_sol[0]->solver->solver_type ==
-                 SOLVER_REAL_MT_DIRECT))
+            (is_solver_real_direct_family(
+                 sel->solution->next_sol->solver->solver_type)))
         {
-            sel->solution = curr->next_sol[0];
-            curr->next_sol[0] = sel->solution->next_sol[0];
-            sel->solution->next_sol[0] = curr;
+            sel->solution = curr->next_sol;
+            curr->next_sol = sel->solution->next_sol;
+            sel->solution->next_sol = curr;
         }
         /* swap remaining CT nodes */
         prev = curr;
-        curr = curr->next_sol[0];
-        while (curr && curr->next_sol && curr->next_sol[0])
+        curr = curr->next_sol;
+        while (curr && curr->next_sol)
         {
-            next = curr->next_sol[0];
+            next = curr->next_sol;
             if (curr->solver->solver_type == SOLVER_REAL_CT &&
-                (next->solver->solver_type == SOLVER_REAL_DIRECT ||
-                 next->solver->solver_type == SOLVER_REAL_MT_DIRECT))
+                is_solver_real_direct_family(next->solver->solver_type))
             {
-                prev->next_sol[0] = next;
-                curr->next_sol[0] = next->next_sol[0];
-                next->next_sol[0] = curr;
+                prev->next_sol = next;
+                curr->next_sol = next->next_sol;
+                next->next_sol = curr;
             }
             prev = curr;
-            curr = curr->next_sol[0];
+            curr = curr->next_sol;
         }
     }
 }

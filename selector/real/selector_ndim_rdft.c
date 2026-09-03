@@ -39,9 +39,11 @@ FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         sel->solution->decomp_scheme->cntrl_params->measure_stats;
     FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    real_dim_sol = alloc_selector(dim_rank - 1, 1, sel->kernel_tables);
+    real_dim_sol = alloc_selector(dim_rank - 1, 1, sel->kernel_tables,
+                                  sel->has_nested);
 
-    complex_dims_sol = alloc_selector(1, dim_rank - 1, sel->kernel_tables);
+    complex_dims_sol = alloc_selector(1, dim_rank - 1, sel->kernel_tables,
+                                      sel->has_nested);
 
     if (complex_dims_sol == NULL || real_dim_sol == NULL)
     {
@@ -62,11 +64,6 @@ FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         goto exit_nd_dft;
     }
 
-    // alloc_ndim_buffer and setup_buffered_solver (in complex subtree)
-    // allocate ct_buffer for all outer threads.
-    complex_dims_sol->solution->dft_bufs->num_ct_buf =
-        sel->solution->decomp_scheme->outer_buf_cnt;
-
     // Invoke selector for solving (N-1)D complex sub-problem
     ret = selector_model_dft_(complex_dims_sol);
     if (ret != SELECTOR_SUCCESS)
@@ -74,8 +71,11 @@ FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         goto exit_nd_dft;
     }
 
-    // Setup twiddle factors for the complex dimensions sub-problem
-    setup_twiddle_buffer_complex(complex_dims_sol->solution);
+    // Propagate the (N-1)D complex child's ct_buf_size up so a parent MT_BATCHED
+    // can stride ct_offset by it (tid * ct_buf_size) and give each concurrent
+    // NDIM complex child its own non-overlapping ct pool slice.
+    sel->solution->dft_bufs->ct_buf_size =
+        complex_dims_sol->solution->dft_bufs->ct_buf_size;
 
     sel->cost_analysis->ops =
         complex_dims_sol->cost_analysis->ops + real_dim_sol->cost_analysis->ops;
@@ -86,14 +86,7 @@ FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     {
         // capture stats
     }
-    sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
-    if (sel->solution->next_sol == NULL)
-    {
-        ret = AOCLFFTZ_MEMORY_FAILURE;
-        AOCLFFTZ_ERROR("alloc_sol_array failed: %s", get_status_string(ret));
-        goto exit_nd_dft;
-    }
-    sel->solution->next_sol[0] = real_dim_sol->solution;
+    sel->solution->next_sol = real_dim_sol->solution;
     sel->solution->dft_bufs->nd_sol = complex_dims_sol->solution;
 
     destroy_selector_without_solution(real_dim_sol);

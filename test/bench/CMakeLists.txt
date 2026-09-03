@@ -90,6 +90,17 @@ set(STANDARD_TEST_SUITE
     "AVX512_C2C_MT_BLUESTEIN_BATCHED_STRIDED ./aocl_fftz_bench 4v71:3:3 -b a -o 3 -n 8"                       # accuracy | complex  | double   | LP64       | 1D  | yes      | MT+BS     | outplace  | forward   | AVX512  | MT batched Bluestein, strided
     "AVX512_C2C_MT_BLUESTEIN_IP ./aocl_fftz_bench 97 -b a -r i -o 3 -n 16"                                    # accuracy | complex  | double   | LP64       | 1D  |  no      | MT+BS     | inplace   | forward   | AVX512  | MT Bluestein, inplace, many threads
     "AVX512_C2C_CT_MT_BLUESTEIN ./aocl_fftz_bench 194 -b a -o 3 -n 8"                                         # accuracy | complex  | double   | LP64       | 1D  |  no      | CT+MT+BS  | outplace  | forward   | AVX512  | CT (2*97) wrapping MT Bluestein on the prime leaf
+    # Pow2-iterative, one case per ISA level so the solver's per-stage kernel
+    # selection is exercised at each register width. The gate caps N at
+    # 2*L1d/bytes_per_elem: 8192 float / 4096 double on a 32 KiB L1d. 512 and
+    # 2048 stay inside that on any part with at least that much L1d, so these
+    # keep landing on this solver. Between them the four cover both sizes,
+    # directions, placements, precisions and data models.
+    "C_C2C_POW2_ITERATIVE_512_FWD_OP ./aocl_fftz_bench 512 -b a -r o --dir f"                                 # accuracy | complex  | double   | LP64       | 1D  |  no      | pow2iter  | outplace  | forward   | C       | Pow2-iterative multi-stage, scalar kernels
+    "AVX128_C2C_POW2_ITERATIVE_512_BWD_IP ./aocl_fftz_bench 512 -b a -r i --dir b -p f -o 1"                  # accuracy | complex  | float    | LP64       | 1D  |  no      | pow2iter  | inplace   | backward  | AVX128  | Pow2-iterative multi-stage, AVX128 kernels, float
+    "AVX256_C2C_POW2_ITERATIVE_2048_FWD_IP ./aocl_fftz_bench 2048 -b a -r i --dir f -m i -o 2"                # accuracy | complex  | double   | ILP64      | 1D  |  no      | pow2iter  | inplace   | forward   | AVX256  | Pow2-iterative multi-stage, AVX256 kernels, ILP64
+    "AVX512_C2C_POW2_ITERATIVE_2048_BWD_OP ./aocl_fftz_bench 2048 -b a -r o --dir b -p f -o 3"                # accuracy | complex  | float    | LP64       | 1D  |  no      | pow2iter  | outplace  | backward  | AVX512  | Pow2-iterative multi-stage, AVX512 kernels, float
+    "AVX128_C2C_POW2_FOURSTEP_2_16_FWD_IP ./aocl_fftz_bench 65536 -b a -r i --dir f -p f -o 1"                # accuracy | complex  | float    | LP64       | 1D  |  no      | pow2four  | inplace   | forward   | AVX128  | Pow2-fourstep
     "C_C2C_COLMAJOR_CT_OP ./aocl_fftz_bench 100:1:1v120:100:100 -b a --dir f"                                 # accuracy | complex  | double   | LP64       | 1D  | yes      | CT        | outplace  | forward   | C       | C column major CT
     "C_C2C_COLMAJOR_CT_IP ./aocl_fftz_bench 150:1:1v128:150:150 -b a --dir f -r i"                            # accuracy | complex  | double   | LP64       | 1D  | yes      | CT        | inplace   | forward   | C       | C column major CT inplace
     "C_C2C_COLMAJOR_PRIME_OP ./aocl_fftz_bench 317:1:1v73:317:317 -b a --dir f"                               # accuracy | complex  | double   | LP64       | 1D  | yes      | CT+BS     | outplace  | forward   | C       | C column major BS prime
@@ -109,6 +120,13 @@ set(STANDARD_TEST_SUITE
     "C_R2C_MT_BATCHED_DIRECT_OP ./aocl_fftz_bench 17v5:4:5 -f r2c -b a -n 3"                                  # accuracy | real     | double   | LP64       | 1D  |  no      | direct    | outplace  | forward   | C       | C MT real Batched direct
     "C_R2C_MT_CT_OP ./aocl_fftz_bench 54 -f r2c -b a -n 3"                                                    # accuracy | real     | double   | LP64       | 1D  |  no      | CT        | outplace  | forward   | C       | C MT Batched CT
     "C_R2C_MT_BATCHED_CT_OP ./aocl_fftz_bench 4v54 -f r2c -b a -n 13"                                         # accuracy | real     | double   | LP64       | 1D  |  no      | CT        | outplace  | forward   | C       | C MT real Batched CT
+    "C_R2C_BLUESTEIN_PRIME ./aocl_fftz_bench 17 -f r2c -b a"                                                  # accuracy | real     | double   | LP64       | 1D  |  no      | bluestein | outplace  | forward   | C       | C real standalone prime Bluestein R2C
+    "C_R2C_BLUESTEIN_BATCHED_PRIME_IP ./aocl_fftz_bench 5v17 -f r2c -b a -r i"                                # accuracy | real     | double   | LP64       | 1D  | yes      | bluestein | inplace   | forward   | C       | C real batched prime Bluestein R2C, inplace
+    "C_R2C_BLUESTEIN_2D_PRIME_OP ./aocl_fftz_bench 4x31 -f r2c -b a"                                          # accuracy | real     | double   | LP64       | 2D  |  no      | bluestein | outplace  | forward   | C       | C real 2D with a prime real dim, Bluestein R2C
+    "C_R2C_BLUESTEIN_MT_BATCHED_PRIME_OP ./aocl_fftz_bench 5v17 -f r2c -b a -n 3"                             # accuracy | real     | double   | LP64       | 1D  | yes      | bluestein | outplace  | forward   | C       | C real batched prime Bluestein R2C; threads requested, plan stays serial
+    "C_C2R_BLUESTEIN_LARGE_PRIME_IP_F ./aocl_fftz_bench 251 -f c2r -b a -r i -p f"                            # accuracy | real     | float    | LP64       | 1D  |  no      | bluestein | inplace   | backward  | C       | C real large prime Bluestein C2R, inplace, float
+    "C_C2R_BLUESTEIN_BATCHED_PRIME_OP ./aocl_fftz_bench 3v251 -f c2r -b a"                                    # accuracy | real     | double   | LP64       | 1D  | yes      | bluestein | outplace  | backward  | C       | C real batched large prime Bluestein C2R
+    "C_C2R_BLUESTEIN_2D_PRIME_OP ./aocl_fftz_bench 17x17 -f c2r -b a"                                         # accuracy | real     | double   | LP64       | 2D  |  no      | bluestein | outplace  | backward  | C       | C real 2D with prime real and complex dims, Bluestein C2R
     "C_C2R_RADIX_2_IP ./aocl_fftz_bench 2 -b a -r i -f c2r"                                                   # accuracy | real     | double   | LP64       | 1D  |  no      | direct    | inplace   | backward  | C       | Size-2 real transform, in-place, backward
     "C_C2R_BATCHED_RADIX_2_REAL_OP ./aocl_fftz_bench 2v2 -b a -r o -f c2r"                                    # accuracy | real     | double   | LP64       | 1D  | yes      | direct    | outplace  | backward  | C       | Batched size-2 real transform, out-of-place, backward
     "C_C2R_BATCHED_DIRECT_OP ./aocl_fftz_bench 7v6:3:3 -f c2r -b a"                                           # accuracy | real     | double   | LP64       | 1D  | yes      | direct    | outplace  | backward  | C       | C real 1D Batched-direct
@@ -228,6 +246,11 @@ set(STANDARD_TEST_SUITE
     "AVX512_C2C_MT_CTL1D_THREADS_OCCUPIED_PARTIALLY_216_OP ./aocl_fftz_bench 68v216 -b a -r o -o 3 -n 8"      # accuracy | complex  | double   | LP64       | 1D  | yes      | MT+CTL1D  | outplace  | forward   | AVX512  | MT Batched CTL1D supported size, outplace
     "AVX512_C2C_MT_CTL1D_ALL_THREADS_OCCUPIED_572_IP ./aocl_fftz_bench 3v572 -b a -r i -o 3 -n 12"            # accuracy | complex  | double   | LP64       | 1D  | yes      | MT+CTL1D  | inplace   | forward   | AVX512  | Nested MT (N*M threads): N parent solvers each create M child CTL1D solvers, inplace
     "AVX512_C2C_MT_CTL1D_ALL_THREADS_OCCUPIED_572_OP ./aocl_fftz_bench 3v572 -b a -r o -o 3 -n 12"            # accuracy | complex  | double   | LP64       | 1D  | yes      | MT+CTL1D  | outplace  | forward   | AVX512  | Nested MT (N*M threads): N parent solvers each create M child CTL1D solvers, outplace
+    "C_R2C_BATCHED_REAL_CTL1D_FWD_OP ./aocl_fftz_bench 12v96 -f r2c -b a"                                     # accuracy | real     | double   | LP64       | 1D  | yes      | REAL_CTL1D| outplace  | forward   | C       | ST batched real CTL1D, outplace
+    "C_C2R_BATCHED_REAL_CTL1D_BWD_IP ./aocl_fftz_bench 8v48 -f c2r -b a -r i"                                 # accuracy | real     | double   | LP64       | 1D  | yes      | REAL_CTL1D| inplace   | backward  | C       | ST batched real CTL1D, inplace
+    "AVX512_R2C_BATCHED_REAL_CTL1D_FWD_IP ./aocl_fftz_bench 15v144:4:4 -f r2c -b a -r i -o 3"                 # accuracy | real     | double   | LP64       | 1D  | yes      | REAL_CTL1D| inplace   | forward   | AVX512  | ST batched real CTL1D, inplace
+    "AVX512_C2R_BATCHED_REAL_CTL1D_BWD_OP ./aocl_fftz_bench 4v81 -f c2r -b a -o 3"                            # accuracy | real     | double   | LP64       | 1D  | yes      | REAL_CTL1D| outplace  | backward  | AVX512  | ST batched real CTL1D, outplace
+    "AVX256_R2C_BATCHED_REAL_CTL1D_STRIDED ./aocl_fftz_bench 6v96:5:4 -f r2c -b a -o 2"                       # accuracy | real     | double   | LP64       | 1D  | yes      | REAL_CTL1D| outplace  | forward   | AVX256  | ST batched real CTL1D, strided batches
     "AVX512_C2C_MT_COLMAJOR_CT ./aocl_fftz_bench 3500:1:1v216:3500:3500 -b a -r o -o 3 -n 8"                  # accuracy | complex  | double   | LP64       | 1D  | yes      | MT+CT     | outplace  | forward   | AVX512  | Column major multi-level CT, outplace
     "AVX256_C2C_CT_OP ./aocl_fftz_bench 1440 -b a -o 2"                                                       # accuracy | complex  | double   | LP64       | 1D  |  no      | CT        | outplace  | forward   | AVX256  | 1D multi-level CT solver preferred over CTL1D, outplace
     "C_C2C_PRIME_STRIDED_2D_CT ./aocl_fftz_bench 4444:90:36x18:5:2 -b a -r o"                                 # accuracy | complex  | double   | LP64       | 2D  | yes      | NDIM+CT   | outplace  | forward   | C       | NDIM Strided CT for testing Split radix is not chosen, outplace
@@ -293,6 +316,7 @@ set(STANDARD_TEST_SUITE
     "EXT_C_C2C_BATCHED_RADIX_16_FWD_IP ./aocl_fftz_bench 2v16 -b a -r i --dir f"                              # accuracy | complex  | double   | LP64       | 1D  | yes     | direct    | inplace   | forward   | C       | Batched size-16 complex transform, in-place, forward
     "EXT_C_C2C_BATCHED_RADIX_16_BWD_OP ./aocl_fftz_bench 2v16 -b a -r o --dir b"                              # accuracy | complex  | double   | LP64       | 1D  | yes     | direct    | outplace  | backward  | C       | Batched size-16 complex transform, out-of-place, backward
     "EXT_C_C2C_LARGE_DIRECT_OUTPLACE_D ./aocl_fftz_bench 65536 -b a -p d --dir f"                             # accuracy | complex  | double   | LP64       | 1D  |  no     | direct    | outplace  | forward   | C       | Large 1D direct outplace double
+    "EXT_C_C2C_LARGE_PRIME_SIZE ./aocl_fftz_bench 8191 -b a"                                                  # accuracy | complex  | double   | LP64       | 1D  |  no     | bluestein | outplace  | forward   | C       | Large prime size in LP64 (uses split-radix)
     "EXT_C_C2C_MT_BATCHED_DIRECT_IP ./aocl_fftz_bench 64v15 -b a --dir f -p f -r i -n 32 -m i"                # accuracy | complex  | float    | ILP64      | 1D  | yes     | direct    | inplace   | forward   | C       | MT batched direct with equal thread distribution
     "EXT_C_C2C_MT_BATCHED_DIRECT_OP ./aocl_fftz_bench 30v15 -b a --dir b -p d -n 29"                          # accuracy | complex  | double   | LP64       | 1D  | yes     | direct    | outplace  | backward  | C       | MT batched direct with unequal thread distribution
     "EXT_C_C2C_LARGE_CT_INPLACE_F ./aocl_fftz_bench 32768 -b a -p f -r i --dir f"                             # accuracy | complex  | float    | LP64       | 1D  |  no     | CT        | inplace   | forward   | C       | Large 1D CT inplace float
@@ -407,14 +431,46 @@ set(STANDARD_TEST_SUITE
     "EXT_AVX512_C2C_MT_BLUESTEIN_BATCHED_LARGE ./aocl_fftz_bench 8v991 -b a -o 3 -n 16"                       # accuracy | complex  | double   | LP64       | 1D  | yes     | MT+BS     | outplace  | forward   | AVX512  | MT batched Bluestein, large prime
     "EXT_AVX512_C2C_MT_BLUESTEIN_BATCHED_STRIDED_LARGE ./aocl_fftz_bench 4v983:3:3 -b a -o 3 -n 16 --dir b"   # accuracy | complex  | double   | LP64       | 1D  | yes     | MT+BS     | outplace  | backward  | AVX512  | MT batched Bluestein, strided, large prime, backward
     "EXT_AVX512_C2C_MT_BLUESTEIN_LARGE_PRIME_BWD_IP ./aocl_fftz_bench 977 -b a -r i -o 3 --dir b -p f -n 16"  # accuracy | complex  | float    | LP64       | 1D  |  no     | MT+BS     | inplace   | backward  | AVX512  | MT Bluestein, large prime, inplace, backward, float
+    "EXT_AVX256_R2C_BATCHED_REAL_CTL1D_FWD ./aocl_fftz_bench 10v192 -f r2c -b a -o 2"                        # accuracy | real     | double   | LP64       | 1D  | yes     | REAL_CTL1D| outplace  | forward   | AVX256  | ST batched real CTL1D, outplace
+    "EXT_C2C_AVX512_MT_CTL1D_HALF_THREADS_OCCUPIED_572_IP ./aocl_fftz_bench 11v572 -b a -r i -o 3 -n 87"      # accuracy | complex  | double   | LP64       | 1D  | yes     | MT+CTL1D  | inplace   | forward   | AVX512  | Nested MT where batch (11) does not evenly divide thread count (87): only 44 threads are used, inplace
+    "EXT_C2C_C_MT_BATCHED_CT_CTL1D_1000_OP ./aocl_fftz_bench 2v1000 -b a -n 10 -r o"                          # accuracy | complex  | double   | LP64       | 1D  | yes     | MT+CT+L1D | outplace  | forward   | C       | MT AVX512 multi-level MT batched, propagating ct size from ctl1d to top mt_batched, outplace
+    "EXT_C2C_C_MT_NDIM_CTL1D_INHERITED_CT_IP ./aocl_fftz_bench 64x21 -b a -r i -n 64"                         # accuracy | complex  | double   | LP64       | 2D  |  no     | MT+ND+L1D | inplace   | forward   | C       | CTL1D consumes an NDIM-allocated ct_buffer; verifies unpadded slice stride stays in bounds in MT case
+    "EXT_C2R_C_MT_REAL_NDIM_MULTILEVEL_COMPLEX_CT_CHILD_IP ./aocl_fftz_bench 2v300x5 -f c2r -b a -r i -n 100" # accuracy | real     | double   | LP64       | 2D  | yes     | MT+ND+CT  | inplace   | backward  | C       | Real MT batched where the (N-1)D complex child is a multi-level CT problem
+    "EXT_R2C_AVX128_MT_BATCHED_REAL_DIRECT_C2C_STRIDES ./aocl_fftz_bench 64v4096 -b a -p d -o 1 -f r2c -n 4"  # accuracy | real     | double   | LP64       | 1D  | yes     | MT+CT     | outplace  | forward   | AVX128  | Concurrent MT batch threads descend into one shared REAL_DIRECT node; covers its C2C kernel stride state
     "EXT_AVX512_C2C_MT_BLUESTEIN_BATCHED_PERFORMANCE ./aocl_fftz_bench 64v971 -b p -o 3 -n 16"                # perf     | complex  | double   | LP64       | 1D  | yes     | MT+BS     | outplace  | forward   | AVX512  | MT batched Bluestein performance, large prime
 
     # TODO: Add more test cases with different combinations. This list is expected to be larger than TEST_SUITE.
     )
 
+# Pow2-fourstep, sampled across 2^18..2^23 at one size per ISA level. The gate
+# hands a pow2 N to this solver once N spills the iterative solver's
+# 2*L1d/bytes_per_elem budget and the larger factor n1 = 2^ceil(log2(N)/2) of
+# the balanced split still fits L2. On a 32 KiB L1d / 512 KiB L2 that admits
+# every N from 2^13 up in both precisions, so the sizes below are picked for
+# coverage rather than to sit on a boundary: between them the four cover both
+# directions, placements, precisions and data models. All are single-threaded
+# and unit-strided, as the gate requires.
+#
+# Held in their own list because ACCURACY_WITH_DFT compares against an O(N^2)
+# reference DFT, which at these sizes runs for hours (2^18) to days (2^23) --
+# for scale, the 2^17 case above already takes ~6 mins. They are therefore
+# registered only when that reference is off.
+set(POW2_FOURSTEP_TEST_SUITE
+    "EXT_C_C2C_POW2_FOURSTEP_2_18_FWD_OP ./aocl_fftz_bench 262144 -b a -r o --dir f"                          # accuracy | complex  | double   | LP64       | 1D  |  no     | pow2four  | outplace  | forward   | C       | Pow2-fourstep
+    "EXT_AVX256_C2C_POW2_FOURSTEP_2_20_BWD_IP ./aocl_fftz_bench 1048576 -b a -r i --dir b -m i -o 2"          # accuracy | complex  | double   | ILP64      | 1D  |  no     | pow2four  | inplace   | backward  | AVX256  | Pow2-fourstep
+    "EXT_AVX512_C2C_POW2_FOURSTEP_2_21_BWD_IP ./aocl_fftz_bench 2097152 -b a -r i --dir b -o 3"               # accuracy | complex  | double   | LP64       | 1D  |  no     | pow2four  | inplace   | backward  | AVX512  | Pow2-fourstep
+    "EXT_AVX512_C2C_POW2_FOURSTEP_2_23_FWD_OP ./aocl_fftz_bench 8388608 -b a -r o --dir f -p f -o 3"          # accuracy | complex  | float    | LP64       | 1D  |  no     | pow2four  | outplace  | forward   | AVX512  | Pow2-fourstep
+    )
+
 # Determine which test suites to use based on AOCL_TEST_COVERAGE
 if(AOCL_TEST_COVERAGE STREQUAL "EXHAUSTIVE")
     set(TEST_SUITE ${STANDARD_TEST_SUITE} ${EXHAUSTIVE_TEST_SUITE})
+    if(ACCURACY_WITH_DFT)
+        message(STATUS "DFT Reference enabled: skipping pow2-fourstep tests"
+                       " (2^18..2^23 against an O(N^2) reference)")
+    else()
+        list(APPEND TEST_SUITE ${POW2_FOURSTEP_TEST_SUITE})
+    endif()
 else()
     set(TEST_SUITE ${STANDARD_TEST_SUITE})
 endif()

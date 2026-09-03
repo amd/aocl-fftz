@@ -46,9 +46,11 @@ ops_cycles_t get_ops_cnt_r2hc_rfft14c(FFTZ_UINT8 precision,
     }
 }
 
-static FFTZ_VOID r2hc_rfft14c_fp32_fwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
-                                       FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
-                                       FFTZ_INTP n, aoclfftz_strides_t *strides,
+static FFTZ_VOID r2hc_rfft14c_fp32_fwd(FFTZ_VOID *in_real,
+                                       FFTZ_VOID *in_complex,
+                                       FFTZ_VOID *out_real,
+                                       FFTZ_VOID *out_complex, FFTZ_INTP n,
+                                       aoclfftz_strides_t *strides,
                                        FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
@@ -65,8 +67,10 @@ static FFTZ_VOID r2hc_rfft14c_fp32_fwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     const FFTZ_FLOAT CRTM_14_6 =
         0.974927912181823607018131682993931217232785801f;
 
-    FFTZ_FLOAT *in = (FFTZ_FLOAT *)in_real;
-    FFTZ_FLOAT *out = (FFTZ_FLOAT *)out_real;
+    FFTZ_FLOAT *in_r = (FFTZ_FLOAT *)in_real;
+    FFTZ_FLOAT *out_r = (FFTZ_FLOAT *)out_real;
+    FFTZ_FLOAT *out_cp = (FFTZ_FLOAT *)out_complex;
+
 #ifdef VOLATILE_STRIDE_ARRAY
     volatile FFTZ_INTP *in_strides = strides->in_strides;
     volatile FFTZ_INTP *out_strides = strides->out_strides;
@@ -76,6 +80,7 @@ static FFTZ_VOID r2hc_rfft14c_fp32_fwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 #endif
     FFTZ_INTP v_in_stride = strides->v_in_stride;
     FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP v_out_dc_nyq_stride = strides->v_out_sym_stride;
     FFTZ_INTP cnt;
 
     for (cnt = 0; cnt < n; cnt++)
@@ -89,33 +94,33 @@ static FFTZ_VOID r2hc_rfft14c_fp32_fwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
             t27, t28, t29, t30, t31, t32, t33, t34, t35;
 
         // Input point 1: x(0)
-        in0 = *in;
+        in0 = *in_r;
         // Input point 2: x(1)
-        in1 = in[in_strides[1]];
+        in1 = in_r[in_strides[1]];
         // Input point 3: x(2)
-        in2 = in[in_strides[2]];
+        in2 = in_r[in_strides[2]];
         // Input point 4: x(3)
-        in3 = in[in_strides[3]];
+        in3 = in_r[in_strides[3]];
         // Input point 5: x(4)
-        in4 = in[in_strides[4]];
+        in4 = in_r[in_strides[4]];
         // Input point 6: x(5)
-        in5 = in[in_strides[5]];
+        in5 = in_r[in_strides[5]];
         // Input point 7: x(6)
-        in6 = in[in_strides[6]];
+        in6 = in_r[in_strides[6]];
         // Input point 8: x(7)
-        in7 = in[in_strides[7]];
+        in7 = in_r[in_strides[7]];
         // Input point 9: x(8)
-        in8 = in[in_strides[8]];
+        in8 = in_r[in_strides[8]];
         // Input point 10: x(9)
-        in9 = in[in_strides[9]];
+        in9 = in_r[in_strides[9]];
         // Input point 11: x(10)
-        in10 = in[in_strides[10]];
+        in10 = in_r[in_strides[10]];
         // Input point 12: x(11)
-        in11 = in[in_strides[11]];
+        in11 = in_r[in_strides[11]];
         // Input point 13: x(12)
-        in12 = in[in_strides[12]];
+        in12 = in_r[in_strides[12]];
         // Input point 14: x(13)
-        in13 = in[in_strides[13]];
+        in13 = in_r[in_strides[13]];
 
         s0 = in0 - in7;
         s1 = in0 + in7;
@@ -141,16 +146,16 @@ static FFTZ_VOID r2hc_rfft14c_fp32_fwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         s19 = s9 - s7;
 
         // Output point 1: X(0)
-        *out = s1 + s14 + s15 + s16;
+        *out_r = s1 + s14 + s15 + s16;
         // Output point 13: X(14)
-        out[out_strides[13]] = s0 + s17 + s18 + s19;
+        out_r[out_strides[13]] = s0 + s17 + s18 + s19;
 
         t0 = CRTM_14_1 * s17;
         t1 = CRTM_14_3 * s18;
         t2 = CRTM_14_5 * s19;
 
         // Output point 2: X(1)
-        out[out_strides[1]] = s0 - t0 + t1 - t2;
+        out_cp[out_strides[1]] = s0 - t0 + t1 - t2;
 
         s20 = s2 + s12;
         s21 = s4 + s10;
@@ -161,14 +166,14 @@ static FFTZ_VOID r2hc_rfft14c_fp32_fwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         t5 = CRTM_14_6 * s22;
 
         // Output point 3: X(2)
-        out[out_strides[2]] = t3 + t4 + t5;
+        out_cp[out_strides[2]] = t3 + t4 + t5;
 
         t6 = CRTM_14_1 * s16;
         t7 = CRTM_14_3 * s14;
         t8 = CRTM_14_5 * s15;
 
         // Output point 4: X(3)
-        out[out_strides[3]] = s1 - t6 + t7 - t8;
+        out_cp[out_strides[3]] = s1 - t6 + t7 - t8;
 
         s23 = s2 - s12;
         s24 = s4 - s10;
@@ -179,61 +184,64 @@ static FFTZ_VOID r2hc_rfft14c_fp32_fwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         t11 = CRTM_14_6 * s24;
 
         // Output point 5: X(4)
-        out[out_strides[4]] = t9 + t10 + t11;
+        out_cp[out_strides[4]] = t9 + t10 + t11;
 
         t12 = CRTM_14_1 * s18;
         t13 = CRTM_14_3 * s19;
         t14 = CRTM_14_5 * s17;
         // Output point 6: X(5)
-        out[out_strides[5]] = s0 - t12 + t13 - t14;
+        out_cp[out_strides[5]] = s0 - t12 + t13 - t14;
         t15 = CRTM_14_2 * s21;
         t16 = CRTM_14_4 * s22;
         t17 = CRTM_14_6 * s20;
         // Output point 7: X(6)
-        out[out_strides[6]] = t15 - t16 + t17;
+        out_cp[out_strides[6]] = t15 - t16 + t17;
 
         t18 = CRTM_14_1 * s15;
         t19 = CRTM_14_3 * s16;
         t20 = CRTM_14_5 * s14;
         // Output point 8: X(7)
-        out[out_strides[7]] = s1 - t18 + t19 - t20;
+        out_cp[out_strides[7]] = s1 - t18 + t19 - t20;
         t21 = CRTM_14_2 * s24;
         t22 = CRTM_14_4 * s25;
         t23 = CRTM_14_6 * s23;
         // Output point 9: X(8)
-        out[out_strides[8]] = t23 - t22 - t21;
+        out_cp[out_strides[8]] = t23 - t22 - t21;
 
         t24 = CRTM_14_1 * s19;
         t25 = CRTM_14_3 * s17;
         t26 = CRTM_14_5 * s18;
         // Output point 10: X(9)
-        out[out_strides[9]] = s0 - t24 + t25 - t26;
+        out_cp[out_strides[9]] = s0 - t24 + t25 - t26;
         t27 = CRTM_14_2 * s22;
         t28 = CRTM_14_4 * s20;
         t29 = CRTM_14_6 * s21;
         // Output point 11: X(10)
-        out[out_strides[10]] = t27 + t28 - t29;
+        out_cp[out_strides[10]] = t27 + t28 - t29;
 
         t30 = CRTM_14_1 * s14;
         t31 = CRTM_14_3 * s15;
         t32 = CRTM_14_5 * s16;
         // Output point 5: X(4)
-        out[out_strides[11]] = s1 - t30 + t31 - t32;
+        out_cp[out_strides[11]] = s1 - t30 + t31 - t32;
         t33 = CRTM_14_2 * s23;
         t34 = CRTM_14_4 * s24;
         t35 = CRTM_14_6 * s25;
         // Output point 5: X(4)
-        out[out_strides[12]] = t33 - t34 + t35;
+        out_cp[out_strides[12]] = t33 - t34 + t35;
 
-        in = in + v_in_stride;
-        out = out + v_out_stride;
-    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
+        in_r = in_r + v_in_stride;
+        out_cp = out_cp + v_out_stride;
+        out_r = out_r + v_out_dc_nyq_stride;
     }
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-static FFTZ_VOID r2hc_rfft14c_fp32_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
-                                       FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
-                                       FFTZ_INTP n, aoclfftz_strides_t *strides,
+static FFTZ_VOID r2hc_rfft14c_fp32_bwd(FFTZ_VOID *in_real,
+                                       FFTZ_VOID *in_complex,
+                                       FFTZ_VOID *out_real,
+                                       FFTZ_VOID *out_complex, FFTZ_INTP n,
+                                       aoclfftz_strides_t *strides,
                                        FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
@@ -252,8 +260,9 @@ static FFTZ_VOID r2hc_rfft14c_fp32_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     const FFTZ_FLOAT CRTM_14_7 =
         2.000000000000000000000000000000000000000000000f;
 
-    FFTZ_FLOAT *in = (FFTZ_FLOAT *)in_real;
-    FFTZ_FLOAT *out = (FFTZ_FLOAT *)out_real;
+    FFTZ_FLOAT *in_r = (FFTZ_FLOAT *)in_real;
+    FFTZ_FLOAT *in_cp = (FFTZ_FLOAT *)in_complex;
+    FFTZ_FLOAT *out_r = (FFTZ_FLOAT *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
     volatile FFTZ_INTP *in_strides = strides->in_strides;
     volatile FFTZ_INTP *out_strides = strides->out_strides;
@@ -262,6 +271,7 @@ static FFTZ_VOID r2hc_rfft14c_fp32_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     FFTZ_INTP *out_strides = strides->out_strides;
 #endif
     FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_in_dc_nyq_stride = strides->v_in_sym_stride;
     FFTZ_INTP v_out_stride = strides->v_out_stride;
     FFTZ_INTP cnt;
 
@@ -274,36 +284,36 @@ static FFTZ_VOID r2hc_rfft14c_fp32_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         FFTZ_FLOAT t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13,
             t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26,
             t27, t28, t29, t30, t31, t32, t33, t34, t35;
-         
+
 
         // Input point 1: x(0)
-        in0 = *in;
+        in0 = *in_r;
         // Input point 2: x(1)
-        in1 = in[in_strides[1]];
+        in1 = in_cp[in_strides[1]];
         // Input point 3: x(2)
-        in2 = in[in_strides[2]];
+        in2 = in_cp[in_strides[2]];
         // Input point 4: x(3)
-        in3 = in[in_strides[3]];
+        in3 = in_cp[in_strides[3]];
         // Input point 5: x(4)
-        in4 = in[in_strides[4]];
+        in4 = in_cp[in_strides[4]];
         // Input point 6: x(5)
-        in5 = in[in_strides[5]];
+        in5 = in_cp[in_strides[5]];
         // Input point 7: x(6)
-        in6 = in[in_strides[6]];
+        in6 = in_cp[in_strides[6]];
         // Input point 8: x(7)
-        in7 = in[in_strides[7]];
+        in7 = in_cp[in_strides[7]];
         // Input point 9: x(8)
-        in8 = in[in_strides[8]];
+        in8 = in_cp[in_strides[8]];
         // Input point 10: x(9)
-        in9 = in[in_strides[9]];
+        in9 = in_cp[in_strides[9]];
         // Input point 11: x(10)
-        in10 = in[in_strides[10]];
+        in10 = in_cp[in_strides[10]];
         // Input point 12: x(11)
-        in11 = in[in_strides[11]];
+        in11 = in_cp[in_strides[11]];
         // Input point 13: x(12)
-        in12 = in[in_strides[12]];
+        in12 = in_cp[in_strides[12]];
         // Input point 14: x(13)
-        in13 = in[in_strides[13]];
+        in13 = in_r[in_strides[13]];
 
         s0 = in0 - in13;
         s1 = in0 + in13;
@@ -320,8 +330,8 @@ static FFTZ_VOID r2hc_rfft14c_fp32_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         s12 = in6 - in8;
         s13 = in6 + in8;
 
-        *out = CRTM_14_7 * (s11 + s3 + s7) + s1;
-        out[out_strides[7]] = CRTM_14_7 * (s2 + s6 + s10) + s0;
+        *out_r = CRTM_14_7 * (s11 + s3 + s7) + s1;
+        out_r[out_strides[7]] = CRTM_14_7 * (s2 + s6 + s10) + s0;
 
         t0 = CRTM_14_1 * s5;
         t1 = CRTM_14_3 * s9;
@@ -332,8 +342,8 @@ static FFTZ_VOID r2hc_rfft14c_fp32_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         s14 = t4 - t5 - t3 + s0;
         s15 = t0 + t1 + t2;
-        out[out_strides[1]] = s14 - s15;
-        out[out_strides[13]] = s14 + s15;
+        out_r[out_strides[1]] = s14 - s15;
+        out_r[out_strides[13]] = s14 + s15;
 
         t6 = CRTM_14_1 * s12;
         t7 = CRTM_14_3 * s4;
@@ -345,8 +355,8 @@ static FFTZ_VOID r2hc_rfft14c_fp32_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         s16 = t10 - t9 - t11 + s1;
         s17 = t6 + t7 + t8;
-        out[out_strides[2]] = s16 - s17;
-        out[out_strides[12]] = s16 + s17;
+        out_r[out_strides[2]] = s16 - s17;
+        out_r[out_strides[12]] = s16 + s17;
 
         t12 = CRTM_14_1 * s9;
         t13 = CRTM_14_3 * s13;
@@ -357,8 +367,8 @@ static FFTZ_VOID r2hc_rfft14c_fp32_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         s18 = t16 - t15 - t17 + s0;
         s19 = t13 - t12 - t14;
-        out[out_strides[3]] = s18 + s19;
-        out[out_strides[11]] = s18 - s19;
+        out_r[out_strides[3]] = s18 + s19;
+        out_r[out_strides[11]] = s18 - s19;
 
         t18 = CRTM_14_1 * s8;
         t19 = CRTM_14_3 * s12;
@@ -369,8 +379,8 @@ static FFTZ_VOID r2hc_rfft14c_fp32_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         s20 = t22 + t23 - t21 + s1;
         s21 = t18 + t19 - t20;
-        out[out_strides[4]] = s20 + s21;
-        out[out_strides[10]] = s20 - s21;
+        out_r[out_strides[4]] = s20 + s21;
+        out_r[out_strides[10]] = s20 - s21;
 
         t24 = CRTM_14_1 * s13;
         t25 = CRTM_14_3 * s5;
@@ -381,8 +391,8 @@ static FFTZ_VOID r2hc_rfft14c_fp32_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         s22 = t28 - t27 - t29 + s0;
         s23 = t26 - t24 - t25;
-        out[out_strides[5]] = s22 + s23;
-        out[out_strides[9]] = s22 - s23;
+        out_r[out_strides[5]] = s22 + s23;
+        out_r[out_strides[9]] = s22 - s23;
 
         t30 = CRTM_14_1 * s4;
         t31 = CRTM_14_3 * s8;
@@ -393,18 +403,21 @@ static FFTZ_VOID r2hc_rfft14c_fp32_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         s24 = t34 - t33 - t35 + s1;
         s25 = t31 - t30 - t32;
-        out[out_strides[6]] = s24 + s25;
-        out[out_strides[8]] = s24 - s25;
+        out_r[out_strides[6]] = s24 + s25;
+        out_r[out_strides[8]] = s24 - s25;
 
-        in = in + v_in_stride;
-        out = out + v_out_stride;
+        in_cp = in_cp + v_in_stride;
+        in_r = in_r + v_in_dc_nyq_stride;
+        out_r = out_r + v_out_stride;
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
     }
 }
 
-static FFTZ_VOID r2hc_rfft14c_fp64_fwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
-                                       FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
-                                       FFTZ_INTP n, aoclfftz_strides_t *strides,
+static FFTZ_VOID r2hc_rfft14c_fp64_fwd(FFTZ_VOID *in_real,
+                                       FFTZ_VOID *in_complex,
+                                       FFTZ_VOID *out_real,
+                                       FFTZ_VOID *out_complex, FFTZ_INTP n,
+                                       aoclfftz_strides_t *strides,
                                        FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
@@ -421,8 +434,10 @@ static FFTZ_VOID r2hc_rfft14c_fp64_fwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     const FFTZ_DOUBLE CRTM_14_6 =
         0.974927912181823607018131682993931217232785801;
 
-    FFTZ_DOUBLE *in = (FFTZ_DOUBLE *)in_real;
-    FFTZ_DOUBLE *out = (FFTZ_DOUBLE *)out_real;
+    FFTZ_DOUBLE *in_r = (FFTZ_DOUBLE *)in_real;
+    FFTZ_DOUBLE *out_r = (FFTZ_DOUBLE *)out_real;
+    FFTZ_DOUBLE *out_cp = (FFTZ_DOUBLE *)out_complex;
+
 #ifdef VOLATILE_STRIDE_ARRAY
     volatile FFTZ_INTP *in_strides = strides->in_strides;
     volatile FFTZ_INTP *out_strides = strides->out_strides;
@@ -432,6 +447,7 @@ static FFTZ_VOID r2hc_rfft14c_fp64_fwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 #endif
     FFTZ_INTP v_in_stride = strides->v_in_stride;
     FFTZ_INTP v_out_stride = strides->v_out_stride;
+    FFTZ_INTP v_out_dc_nyq_stride = strides->v_out_sym_stride;
     FFTZ_INTP cnt;
 
     for (cnt = 0; cnt < n; cnt++)
@@ -445,33 +461,33 @@ static FFTZ_VOID r2hc_rfft14c_fp64_fwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
             t27, t28, t29, t30, t31, t32, t33, t34, t35;
 
         // Input point 1: x(0)
-        in0 = *in;
+        in0 = *in_r;
         // Input point 2: x(1)
-        in1 = in[in_strides[1]];
+        in1 = in_r[in_strides[1]];
         // Input point 3: x(2)
-        in2 = in[in_strides[2]];
+        in2 = in_r[in_strides[2]];
         // Input point 4: x(3)
-        in3 = in[in_strides[3]];
+        in3 = in_r[in_strides[3]];
         // Input point 5: x(4)
-        in4 = in[in_strides[4]];
+        in4 = in_r[in_strides[4]];
         // Input point 6: x(5)
-        in5 = in[in_strides[5]];
+        in5 = in_r[in_strides[5]];
         // Input point 7: x(6)
-        in6 = in[in_strides[6]];
+        in6 = in_r[in_strides[6]];
         // Input point 8: x(7)
-        in7 = in[in_strides[7]];
+        in7 = in_r[in_strides[7]];
         // Input point 9: x(8)
-        in8 = in[in_strides[8]];
+        in8 = in_r[in_strides[8]];
         // Input point 10: x(9)
-        in9 = in[in_strides[9]];
+        in9 = in_r[in_strides[9]];
         // Input point 11: x(10)
-        in10 = in[in_strides[10]];
+        in10 = in_r[in_strides[10]];
         // Input point 12: x(11)
-        in11 = in[in_strides[11]];
+        in11 = in_r[in_strides[11]];
         // Input point 13: x(12)
-        in12 = in[in_strides[12]];
+        in12 = in_r[in_strides[12]];
         // Input point 14: x(13)
-        in13 = in[in_strides[13]];
+        in13 = in_r[in_strides[13]];
 
         s0 = in0 - in7;
         s1 = in0 + in7;
@@ -497,16 +513,16 @@ static FFTZ_VOID r2hc_rfft14c_fp64_fwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         s19 = s9 - s7;
 
         // Output point 1: X(0)
-        *out = s1 + s14 + s15 + s16;
+        *out_r = s1 + s14 + s15 + s16;
         // Output point 13: X(14)
-        out[out_strides[13]] = s0 + s17 + s18 + s19;
+        out_r[out_strides[13]] = s0 + s17 + s18 + s19;
 
         t0 = CRTM_14_1 * s17;
         t1 = CRTM_14_3 * s18;
         t2 = CRTM_14_5 * s19;
 
         // Output point 2: X(1)
-        out[out_strides[1]] = s0 - t0 + t1 - t2;
+        out_cp[out_strides[1]] = s0 - t0 + t1 - t2;
 
         s20 = s2 + s12;
         s21 = s4 + s10;
@@ -517,14 +533,14 @@ static FFTZ_VOID r2hc_rfft14c_fp64_fwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         t5 = CRTM_14_6 * s22;
 
         // Output point 3: X(2)
-        out[out_strides[2]] = t3 + t4 + t5;
+        out_cp[out_strides[2]] = t3 + t4 + t5;
 
         t6 = CRTM_14_1 * s16;
         t7 = CRTM_14_3 * s14;
         t8 = CRTM_14_5 * s15;
 
         // Output point 4: X(3)
-        out[out_strides[3]] = s1 - t6 + t7 - t8;
+        out_cp[out_strides[3]] = s1 - t6 + t7 - t8;
 
         s23 = s2 - s12;
         s24 = s4 - s10;
@@ -535,61 +551,64 @@ static FFTZ_VOID r2hc_rfft14c_fp64_fwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         t11 = CRTM_14_6 * s24;
 
         // Output point 5: X(4)
-        out[out_strides[4]] = t9 + t10 + t11;
+        out_cp[out_strides[4]] = t9 + t10 + t11;
 
         t12 = CRTM_14_1 * s18;
         t13 = CRTM_14_3 * s19;
         t14 = CRTM_14_5 * s17;
         // Output point 6: X(5)
-        out[out_strides[5]] = s0 - t12 + t13 - t14;
+        out_cp[out_strides[5]] = s0 - t12 + t13 - t14;
         t15 = CRTM_14_2 * s21;
         t16 = CRTM_14_4 * s22;
         t17 = CRTM_14_6 * s20;
         // Output point 7: X(6)
-        out[out_strides[6]] = t15 - t16 + t17;
+        out_cp[out_strides[6]] = t15 - t16 + t17;
 
         t18 = CRTM_14_1 * s15;
         t19 = CRTM_14_3 * s16;
         t20 = CRTM_14_5 * s14;
         // Output point 8: X(7)
-        out[out_strides[7]] = s1 - t18 + t19 - t20;
+        out_cp[out_strides[7]] = s1 - t18 + t19 - t20;
         t21 = CRTM_14_2 * s24;
         t22 = CRTM_14_4 * s25;
         t23 = CRTM_14_6 * s23;
         // Output point 9: X(8)
-        out[out_strides[8]] = t23 - t22 - t21;
+        out_cp[out_strides[8]] = t23 - t22 - t21;
 
         t24 = CRTM_14_1 * s19;
         t25 = CRTM_14_3 * s17;
         t26 = CRTM_14_5 * s18;
         // Output point 10: X(9)
-        out[out_strides[9]] = s0 - t24 + t25 - t26;
+        out_cp[out_strides[9]] = s0 - t24 + t25 - t26;
         t27 = CRTM_14_2 * s22;
         t28 = CRTM_14_4 * s20;
         t29 = CRTM_14_6 * s21;
         // Output point 11: X(10)
-        out[out_strides[10]] = t27 + t28 - t29;
+        out_cp[out_strides[10]] = t27 + t28 - t29;
 
         t30 = CRTM_14_1 * s14;
         t31 = CRTM_14_3 * s15;
         t32 = CRTM_14_5 * s16;
         // Output point 5: X(4)
-        out[out_strides[11]] = s1 - t30 + t31 - t32;
+        out_cp[out_strides[11]] = s1 - t30 + t31 - t32;
         t33 = CRTM_14_2 * s23;
         t34 = CRTM_14_4 * s24;
         t35 = CRTM_14_6 * s25;
         // Output point 5: X(4)
-        out[out_strides[12]] = t33 - t34 + t35;
+        out_cp[out_strides[12]] = t33 - t34 + t35;
 
-        in = in + v_in_stride;
-        out = out + v_out_stride;
-    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
+        in_r = in_r + v_in_stride;
+        out_cp = out_cp + v_out_stride;
+        out_r = out_r + v_out_dc_nyq_stride;
     }
+    AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
 }
 
-static FFTZ_VOID r2hc_rfft14c_fp64_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
-                                       FFTZ_VOID *out_real, FFTZ_VOID *out_imag,
-                                       FFTZ_INTP n, aoclfftz_strides_t *strides,
+static FFTZ_VOID r2hc_rfft14c_fp64_bwd(FFTZ_VOID *in_real,
+                                       FFTZ_VOID *in_complex,
+                                       FFTZ_VOID *out_real,
+                                       FFTZ_VOID *out_complex, FFTZ_INTP n,
+                                       aoclfftz_strides_t *strides,
                                        FFTZ_VOID *twd, FFTZ_UINT8 flag)
 {
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Enter");
@@ -608,8 +627,9 @@ static FFTZ_VOID r2hc_rfft14c_fp64_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     const FFTZ_DOUBLE CRTM_14_7 =
         2.000000000000000000000000000000000000000000000;
 
-    FFTZ_DOUBLE *in = (FFTZ_DOUBLE *)in_real;
-    FFTZ_DOUBLE *out = (FFTZ_DOUBLE *)out_real;
+    FFTZ_DOUBLE *in_r = (FFTZ_DOUBLE *)in_real;
+    FFTZ_DOUBLE *in_cp = (FFTZ_DOUBLE *)in_complex;
+    FFTZ_DOUBLE *out_r = (FFTZ_DOUBLE *)out_real;
 #ifdef VOLATILE_STRIDE_ARRAY
     volatile FFTZ_INTP *in_strides = strides->in_strides;
     volatile FFTZ_INTP *out_strides = strides->out_strides;
@@ -618,6 +638,7 @@ static FFTZ_VOID r2hc_rfft14c_fp64_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
     FFTZ_INTP *out_strides = strides->out_strides;
 #endif
     FFTZ_INTP v_in_stride = strides->v_in_stride;
+    FFTZ_INTP v_in_dc_nyq_stride = strides->v_in_sym_stride;
     FFTZ_INTP v_out_stride = strides->v_out_stride;
     FFTZ_INTP cnt;
 
@@ -630,36 +651,36 @@ static FFTZ_VOID r2hc_rfft14c_fp64_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         FFTZ_DOUBLE t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13,
             t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26,
             t27, t28, t29, t30, t31, t32, t33, t34, t35;
-         
+
 
         // Input point 1: x(0)
-        in0 = *in;
+        in0 = *in_r;
         // Input point 2: x(1)
-        in1 = in[in_strides[1]];
+        in1 = in_cp[in_strides[1]];
         // Input point 3: x(2)
-        in2 = in[in_strides[2]];
+        in2 = in_cp[in_strides[2]];
         // Input point 4: x(3)
-        in3 = in[in_strides[3]];
+        in3 = in_cp[in_strides[3]];
         // Input point 5: x(4)
-        in4 = in[in_strides[4]];
+        in4 = in_cp[in_strides[4]];
         // Input point 6: x(5)
-        in5 = in[in_strides[5]];
+        in5 = in_cp[in_strides[5]];
         // Input point 7: x(6)
-        in6 = in[in_strides[6]];
+        in6 = in_cp[in_strides[6]];
         // Input point 8: x(7)
-        in7 = in[in_strides[7]];
+        in7 = in_cp[in_strides[7]];
         // Input point 9: x(8)
-        in8 = in[in_strides[8]];
+        in8 = in_cp[in_strides[8]];
         // Input point 10: x(9)
-        in9 = in[in_strides[9]];
+        in9 = in_cp[in_strides[9]];
         // Input point 11: x(10)
-        in10 = in[in_strides[10]];
+        in10 = in_cp[in_strides[10]];
         // Input point 12: x(11)
-        in11 = in[in_strides[11]];
+        in11 = in_cp[in_strides[11]];
         // Input point 13: x(12)
-        in12 = in[in_strides[12]];
+        in12 = in_cp[in_strides[12]];
         // Input point 14: x(13)
-        in13 = in[in_strides[13]];
+        in13 = in_r[in_strides[13]];
 
         s0 = in0 - in13;
         s1 = in0 + in13;
@@ -676,8 +697,8 @@ static FFTZ_VOID r2hc_rfft14c_fp64_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
         s12 = in6 - in8;
         s13 = in6 + in8;
 
-        *out = CRTM_14_7 * (s11 + s3 + s7) + s1;
-        out[out_strides[7]] = CRTM_14_7 * (s2 + s6 + s10) + s0;
+        *out_r = CRTM_14_7 * (s11 + s3 + s7) + s1;
+        out_r[out_strides[7]] = CRTM_14_7 * (s2 + s6 + s10) + s0;
 
         t0 = CRTM_14_1 * s5;
         t1 = CRTM_14_3 * s9;
@@ -688,8 +709,8 @@ static FFTZ_VOID r2hc_rfft14c_fp64_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         s14 = t4 - t5 - t3 + s0;
         s15 = t0 + t1 + t2;
-        out[out_strides[1]] = s14 - s15;
-        out[out_strides[13]] = s14 + s15;
+        out_r[out_strides[1]] = s14 - s15;
+        out_r[out_strides[13]] = s14 + s15;
 
         t6 = CRTM_14_1 * s12;
         t7 = CRTM_14_3 * s4;
@@ -701,8 +722,8 @@ static FFTZ_VOID r2hc_rfft14c_fp64_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         s16 = t10 - t9 - t11 + s1;
         s17 = t6 + t7 + t8;
-        out[out_strides[2]] = s16 - s17;
-        out[out_strides[12]] = s16 + s17;
+        out_r[out_strides[2]] = s16 - s17;
+        out_r[out_strides[12]] = s16 + s17;
 
         t12 = CRTM_14_1 * s9;
         t13 = CRTM_14_3 * s13;
@@ -713,8 +734,8 @@ static FFTZ_VOID r2hc_rfft14c_fp64_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         s18 = t16 - t15 - t17 + s0;
         s19 = t13 - t12 - t14;
-        out[out_strides[3]] = s18 + s19;
-        out[out_strides[11]] = s18 - s19;
+        out_r[out_strides[3]] = s18 + s19;
+        out_r[out_strides[11]] = s18 - s19;
 
         t18 = CRTM_14_1 * s8;
         t19 = CRTM_14_3 * s12;
@@ -725,8 +746,8 @@ static FFTZ_VOID r2hc_rfft14c_fp64_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         s20 = t22 + t23 - t21 + s1;
         s21 = t18 + t19 - t20;
-        out[out_strides[4]] = s20 + s21;
-        out[out_strides[10]] = s20 - s21;
+        out_r[out_strides[4]] = s20 + s21;
+        out_r[out_strides[10]] = s20 - s21;
 
         t24 = CRTM_14_1 * s13;
         t25 = CRTM_14_3 * s5;
@@ -737,8 +758,8 @@ static FFTZ_VOID r2hc_rfft14c_fp64_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         s22 = t28 - t27 - t29 + s0;
         s23 = t26 - t24 - t25;
-        out[out_strides[5]] = s22 + s23;
-        out[out_strides[9]] = s22 - s23;
+        out_r[out_strides[5]] = s22 + s23;
+        out_r[out_strides[9]] = s22 - s23;
 
         t30 = CRTM_14_1 * s4;
         t31 = CRTM_14_3 * s8;
@@ -749,11 +770,12 @@ static FFTZ_VOID r2hc_rfft14c_fp64_bwd(FFTZ_VOID *in_real, FFTZ_VOID *in_imag,
 
         s24 = t34 - t33 - t35 + s1;
         s25 = t31 - t30 - t32;
-        out[out_strides[6]] = s24 + s25;
-        out[out_strides[8]] = s24 - s25;
+        out_r[out_strides[6]] = s24 + s25;
+        out_r[out_strides[8]] = s24 - s25;
 
-        in = in + v_in_stride;
-        out = out + v_out_stride;
+        in_cp = in_cp + v_in_stride;
+        in_r = in_r + v_in_dc_nyq_stride;
+        out_r = out_r + v_out_stride;
     AOCLFFTZ_LOG(DEBUG, global_logger_mode, "Exit");
     }
 }

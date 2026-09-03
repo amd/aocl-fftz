@@ -27,16 +27,37 @@ dft_solver_ solvers_table[NUM_SOLVERS_END] = { 0x0, };
 FFTZ_INT32 register_solvers(FFTZ_VOID)
 {
     // Real solvers
-    solvers_table[SOLVER_REAL_DIRECT] = register_execute_real_direct_solver();
+    solvers_table[SOLVER_REAL_DIRECT_R2C] =
+        register_execute_real_direct_r2c();
+    solvers_table[SOLVER_REAL_DIRECT_R2C_BATCHED] =
+        register_execute_real_direct_r2c_batched();
+    solvers_table[SOLVER_REAL_DIRECT_C2R] =
+        register_execute_real_direct_c2r();
+    solvers_table[SOLVER_REAL_DIRECT_CT_R2C] =
+        register_execute_real_direct_ct_r2c();
+    solvers_table[SOLVER_REAL_DIRECT_CT_C2R] =
+        register_execute_real_direct_ct_c2r();
     solvers_table[SOLVER_REAL_CT] = register_execute_real_ct_solver();
     solvers_table[SOLVER_REAL_BATCHED] = register_execute_real_batched_solver();
+    solvers_table[SOLVER_REAL_BATCHED_CT_L1_DIRECT] =
+        register_execute_real_batched_ct_l1_direct_solver();
+    solvers_table[SOLVER_REAL_BLUESTEIN] =
+        register_execute_real_bluestein_solver();
     solvers_table[SOLVER_REAL_BUFFERED] =
         register_execute_real_buffered_solver();
     solvers_table[SOLVER_REAL_NDIM] = register_execute_real_ndim_solver();
     solvers_table[SOLVER_REAL_SIZEONE] = register_execute_real_sizeone_solver();
 #ifdef MULTI_THREADING
-    solvers_table[SOLVER_REAL_MT_DIRECT] =
-        register_execute_real_mt_direct_solver();
+    solvers_table[SOLVER_REAL_MT_DIRECT_R2C] =
+        register_execute_real_mt_direct_r2c();
+    solvers_table[SOLVER_REAL_MT_DIRECT_R2C_BATCHED] =
+        register_execute_real_mt_direct_r2c_batched();
+    solvers_table[SOLVER_REAL_MT_DIRECT_C2R] =
+        register_execute_real_mt_direct_c2r();
+    solvers_table[SOLVER_REAL_MT_DIRECT_CT_R2C] =
+        register_execute_real_mt_direct_ct_r2c();
+    solvers_table[SOLVER_REAL_MT_DIRECT_CT_C2R] =
+        register_execute_real_mt_direct_ct_c2r();
     solvers_table[SOLVER_REAL_MT_BATCHED] =
         register_execute_real_mt_batched_solver();
 #endif
@@ -56,6 +77,10 @@ FFTZ_INT32 register_solvers(FFTZ_VOID)
     // SR is registered unconditionally here. The selector decides whether
     // to actually dispatch SR based on per-call cpu_flags.
     solvers_table[SOLVER_SR] = register_execute_sr_solver();
+    solvers_table[SOLVER_POW2_ITERATIVE] =
+        register_execute_pow2_iterative_solver();
+    solvers_table[SOLVER_POW2_FOURSTEP] =
+        register_execute_pow2_fourstep_solver();
     solvers_table[SOLVER_TRANSPOSE] = register_execute_transpose_solver();
 #ifdef MULTI_THREADING
     solvers_table[SOLVER_MT_DIRECT] = register_execute_mt_direct_solver();
@@ -107,4 +132,49 @@ FFTZ_INT64 compute_kernel_cost(const kernel_t *ker, FFTZ_UINT8 precision,
         ops = (ops + sets - 1) / sets;
     }
     return ops * batch;
+}
+
+FFTZ_INTP find_radix_base_idx(kernel_t *kertab, FFTZ_INTP radix)
+{
+    for (FFTZ_INTP base_idx = 0; base_idx < NUM_KERNELS_IN_EACH_CATEGORY;
+         base_idx++)
+    {
+        if (kertab[base_idx].radix == 0) // End of suitable kernels in the list
+        {
+            break;
+        }
+
+        if ((FFTZ_INTP)kertab[base_idx].radix == radix)
+        {
+            return base_idx;
+        }
+    }
+    return -1;
+}
+
+kernel_choice_t find_best_kernel(kernel_t *kertab,
+                                 FFTZ_INTP base_idx,
+                                 FFTZ_UINT8 precision,
+                                 FFTZ_UINT8 direction,
+                                 FFTZ_INTP batch)
+{
+    kernel_choice_t optimal = {-1, INT64_MAX};
+
+    for (FFTZ_INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
+    {
+        FFTZ_INTP kloc = kcat * NUM_KERNELS_IN_EACH_CATEGORY + base_idx;
+        if (kertab[kloc].kfft[direction] == NULL)
+        {
+            continue;
+        }
+
+        FFTZ_INT64 cost = compute_kernel_cost(&kertab[kloc], precision,
+                                         direction, batch);
+        if (cost < optimal.cost)
+        {
+            optimal.idx  = kloc;
+            optimal.cost = cost;
+        }
+    }
+    return optimal;
 }

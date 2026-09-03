@@ -136,11 +136,31 @@ foreach(FILE ${GTEST_SRC_FILES})
         endif()
     endif()
 
+    # Only api_gtest's concurrency suite needs OpenMP, so api_gtest always
+    # builds. Probe OpenMP softly: if found, define AOCLFFTZ_API_CONCURRENCY_TESTS
+    # to compile in that suite; otherwise the rest of api_gtest still builds and runs.
+    set(API_GTEST_HAS_OPENMP FALSE)
+    if("${TNAME}" STREQUAL "api_gtest")
+        if(WIN32 OR NOT OpenMP_libomp_LIBRARY)
+            if(NOT TARGET OpenMP::OpenMP_C)
+                find_package(OpenMP)
+            endif()
+            if(TARGET OpenMP::OpenMP_C)
+                set(API_GTEST_HAS_OPENMP TRUE)
+            else()
+                message(STATUS "OpenMP not found: api_gtest built"
+                               " without concurrency suite")
+            endif()
+        else()
+            set(API_GTEST_HAS_OPENMP TRUE)
+        endif()
+    endif()
+
     add_executable(${TNAME} ${FILE})
     add_dependencies(${TNAME} ${deps_googletest})
     target_link_libraries(${TNAME} PRIVATE ${gtest_lib_name} gtest gtest_main Threads::Threads)
 
-    if("${FILE}" MATCHES ".*/concurrency/.*")
+    if("${FILE}" MATCHES ".*/concurrency/.*" OR API_GTEST_HAS_OPENMP)
         if(WIN32 OR NOT OpenMP_libomp_LIBRARY)
             target_link_libraries(${TNAME} PRIVATE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
         else()
@@ -148,6 +168,11 @@ foreach(FILE ${GTEST_SRC_FILES})
             target_link_options(${TNAME} PRIVATE -fopenmp)
             target_link_libraries(${TNAME} PRIVATE ${OpenMP_libomp_LIBRARY})
         endif()
+    endif()
+
+    if(API_GTEST_HAS_OPENMP)
+        target_compile_definitions(${TNAME}
+            PRIVATE AOCLFFTZ_API_CONCURRENCY_TESTS)
     endif()
 
     gtest_discover_tests(${TNAME})

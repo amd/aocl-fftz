@@ -19,7 +19,7 @@ cmake_minimum_required(VERSION 3.26.0)
 project(AOCL-FFTZ)
 message(STATUS "Building AOCL-FFTZ LIBRARY AND TEST SUITE")
 # Version used by pkg-config and CMake config
-set(FFTZ_VERSION "5.3.1")
+set(FFTZ_VERSION "5.3.2")
 
 string(TIMESTAMP TODAY "%Y%m%d")
 add_compile_definitions(AOCL_BUILD_VERSION="Build ${TODAY}")
@@ -57,6 +57,8 @@ option(ENABLE_FMA "Enables -ffp-contract=fast (forces FMA generation). Required 
 option(ENABLE_MULTI_THREADING "Compiles library with multi-threading support using OpenMP (Disabled by default)" OFF)
 option(ENABLE_STRICT_WARNINGS "Enables compiler flags to treat all warnings as errors (Enabled by default)" ON)
 option(FUZZTEST "Enables Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)" OFF)
+set(SELECT_REAL_FFT_EXECUTION_ORDER "TRUE_RECURSION" CACHE STRING "Real FFT CT execution order: ITERATIVE (legacy Direct-first with SWAP), PARTIAL_RECURSION (recursive CT-first tree with Direct tail-chaining), TRUE_RECURSION (CT-orchestrated recurse-then-combine mirroring Complex FFT; default)")
+set_property(CACHE SELECT_REAL_FFT_EXECUTION_ORDER PROPERTY STRINGS "ITERATIVE" "PARTIAL_RECURSION" "TRUE_RECURSION")
 option(VALGRIND "Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)" OFF)
 if(WIN32)
     set(OpenMP_libomp_LIBRARY "C:/Program Files/LLVM/lib/libomp.lib" CACHE FILEPATH "Path to the custom OpenMP library")
@@ -79,6 +81,8 @@ file(GLOB CORE_SRC_FILES CONFIGURE_DEPENDS ${CORE_PATH}/*.c ${CORE_PATH}/*.h
 file(GLOB CORE_C_FILES CONFIGURE_DEPENDS
                         ${CORE_PATH}/kernels/dft/c2c/c/*.c ${CORE_PATH}/kernels/dft/c2c/c/*.h
                         ${CORE_PATH}/kernels/non_dft/ele_mul/c/*.c
+                        ${CORE_PATH}/kernels/non_dft/type_convert/c/*.c
+                        ${CORE_PATH}/kernels/non_dft/fused_twiddle_transpose/c/*.c
                         ${CORE_PATH}/kernels/non_dft/perm_copy/c/*.c
                         ${CORE_PATH}/kernels/dft/r2hc/c/*.c ${CORE_PATH}/kernels/dft/r2hc/c/*.h
                         ${CORE_PATH}/kernels/dft/r2hc_fused/c/*.c ${CORE_PATH}/kernels/dft/r2hc_fused/c/*.h
@@ -95,6 +99,7 @@ if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX512")
     file(GLOB CORE_AVX512_FILES CONFIGURE_DEPENDS
                             ${CORE_PATH}/kernels/dft/c2c/avx512/*.c
                             ${CORE_PATH}/kernels/non_dft/ele_mul/avx512/*.c
+                            ${CORE_PATH}/kernels/non_dft/fused_twiddle_transpose/avx512/*.c
                             ${CORE_PATH}/kernels/dft/r2hc/avx512/*.c
                             ${CORE_PATH}/kernels/dft/r2hc_fused/avx512/*.c
                             ${CORE_PATH}/kernels/dft/tw_c2c_fwd/avx512/*.c
@@ -109,6 +114,7 @@ if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX256|AVX512")
     add_compile_definitions(ENABLE_AVX256)
     file(GLOB CORE_AVX256_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/dft/c2c/avx256/*.c
                                                   ${CORE_PATH}/kernels/non_dft/ele_mul/avx256/*.c
+                                                  ${CORE_PATH}/kernels/non_dft/fused_twiddle_transpose/avx256/*.c
                                                   ${CORE_PATH}/kernels/dft/r2hc/avx256/*.c
                                                   ${CORE_PATH}/kernels/dft/r2hc_fused/avx256/*.c
                                                   ${CORE_PATH}/kernels/dft/tw_c2c_fwd/avx256/*.c
@@ -123,6 +129,7 @@ if(ENABLE_INSTRUCTIONS_UPTO MATCHES "AVX128|AVX256|AVX512")
     add_compile_definitions(ENABLE_AVX128)
     file(GLOB CORE_AVX128_FILES CONFIGURE_DEPENDS ${CORE_PATH}/kernels/dft/c2c/avx128/*.c
                                                   ${CORE_PATH}/kernels/non_dft/ele_mul/avx128/*.c
+                                                  ${CORE_PATH}/kernels/non_dft/fused_twiddle_transpose/avx128/*.c
                                                   ${CORE_PATH}/kernels/dft/r2hc/avx128/*.c
                                                   ${CORE_PATH}/kernels/dft/r2hc_fused/avx128/*.c
                                                   ${CORE_PATH}/kernels/dft/tw_c2c_fwd/avx128/*.c
@@ -267,6 +274,17 @@ endif()
 if(ENABLE_APP_INFO_LOGS)
     add_compile_definitions(ENABLE_APP_INFO_LOGS)
 endif()
+
+if(SELECT_REAL_FFT_EXECUTION_ORDER STREQUAL "ITERATIVE")
+    add_compile_definitions(REAL_FFT_EXECUTION_ORDER=0)
+elseif(SELECT_REAL_FFT_EXECUTION_ORDER STREQUAL "PARTIAL_RECURSION")
+    add_compile_definitions(REAL_FFT_EXECUTION_ORDER=1)
+elseif(SELECT_REAL_FFT_EXECUTION_ORDER STREQUAL "TRUE_RECURSION")
+    add_compile_definitions(REAL_FFT_EXECUTION_ORDER=2)
+else()
+    message(FATAL_ERROR "Invalid SELECT_REAL_FFT_EXECUTION_ORDER='${SELECT_REAL_FFT_EXECUTION_ORDER}'. Allowed values: ITERATIVE, PARTIAL_RECURSION, TRUE_RECURSION.")
+endif()
+message(STATUS "Real FFT execution order: ${SELECT_REAL_FFT_EXECUTION_ORDER}")
 
 # set library and sources
 # Set target name as aocl_fftz on Linux (shared and static) and on Windows use aocl_fftz_static for static build.

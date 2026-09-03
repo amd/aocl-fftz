@@ -1,7 +1,7 @@
 // Copyright Advanced Micro Devices, Inc.
 // SPDX-License-Identifier: BSD-3-Clause
 
-/** @file ndim_solver.c
+/** @file ndim_solver_rdft.c
  *
  *  @brief N-Dimensional solver that solves an ND real problem
  *
@@ -36,11 +36,9 @@ FFTZ_INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
     copy_solution_obj_wo_dims(complex_dims_sol, sol);
     copy_solution_obj_wo_dims(real_dim_sol, sol);
 
-    // For inplace R2C/C2R problems and out-of-place C2R problems,
-    // allocate an auxiliary buffer for intermediate storage.
-    if (!IS_OUT_OF_PLACE(sol->decomp_scheme->flags) ||
-        (IS_REAL(sol->decomp_scheme->flags) &&
-         FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR))
+    // Only C2R needs an auxiliary buffer, to hold the intermediate output of
+    // the (N-1)D complex stage, for both in-place and out-of-place problems.
+    if (FFT_DIR(sol->decomp_scheme->flags) == BACKWARD_FFT_DIR)
     {
         if (sol->dft_bufs->buffered == NULL)
         {
@@ -55,13 +53,15 @@ FFTZ_INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
         }
         FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
         ALLOC_ALIGN_INIT(sol->dft_bufs->buffered->aux_buffer_1, FFTZ_VOID,
-            sol->decomp_scheme->outer_buf_cnt * padded_aux_buf_size);
+            sol->decomp_scheme->thread_info->active_threads *
+            padded_aux_buf_size);
         if (sol->dft_bufs->buffered->aux_buffer_1 == NULL)
         {
             AOCLFFTZ_ERROR("allocate aux buffer failed: %s",
                            get_status_string(AOCLFFTZ_MEMORY_FAILURE));
             return AOCLFFTZ_MEMORY_FAILURE;
         }
+        sol->dft_bufs->buffered->is_aux_buffer_allocated = 1;
         sol->dft_bufs->buffered->aux_buf_size_per_thread = padded_aux_buf_size;
     }
     else
@@ -79,10 +79,6 @@ FFTZ_INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
     // Assign buffer pointers
     if (is_forward)
     {
-        real_dim_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
-        real_dim_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
-        real_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-        real_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
         complex_dims_sol->decomp_scheme->in_real =
             real_dim_sol->decomp_scheme->out_real;
         complex_dims_sol->decomp_scheme->in_imag =
@@ -100,12 +96,6 @@ FFTZ_INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
             sol->dft_bufs->buffered->aux_buffer_1;
         complex_dims_sol->decomp_scheme->out_imag =
             MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_1, dt_bytes);
-        real_dim_sol->decomp_scheme->in_real =
-            complex_dims_sol->decomp_scheme->out_real;
-        real_dim_sol->decomp_scheme->in_imag =
-            complex_dims_sol->decomp_scheme->out_imag;
-        real_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-        real_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
     }
 
 
@@ -168,18 +158,24 @@ FFTZ_INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
-static FFTZ_INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol,
+                                           aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     aoclfftz_solution_t *complex_dims_sol = sol->dft_bufs->nd_sol;
-    aoclfftz_solution_t *real_dim_sol = sol->next_sol[0];
+    aoclfftz_solution_t *real_dim_sol = sol->next_sol;
 
     FFTZ_INT32 dt_prec, dt_bytes;
     dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     dt_bytes = DT_PRECISION_BYTES(dt_prec);
     FFTZ_UINT8 is_forward = (
         FFT_DIR(sol->decomp_scheme->flags) == FORWARD_FFT_DIR);
+
+    // A private ctx copy per sub-solver. Each branch below fills in the in/out
+    // pointers its sub-solver should run on, leaving the caller's ctx untouched.
+    aoclfftz_mutable_ctx_t c2c_child_ctx = *ctx;
+    aoclfftz_mutable_ctx_t real_child_ctx = *ctx;
 
     if (is_forward)
     {
@@ -190,52 +186,49 @@ static FFTZ_INT32 execute_real_ndim_solver(aoclfftz_solution_t *sol)
         // 2. complex_dims_sol ((N-1)D C2C):
         //    in: output buffer
         //    out: output buffer
-        real_dim_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
-        real_dim_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
-        real_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-        real_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-        complex_dims_sol->decomp_scheme->in_real =
-            real_dim_sol->decomp_scheme->out_real;
-        complex_dims_sol->decomp_scheme->in_imag =
-            real_dim_sol->decomp_scheme->out_imag;
-        complex_dims_sol->decomp_scheme->out_real =
-            sol->decomp_scheme->out_real;
-        complex_dims_sol->decomp_scheme->out_imag =
-            sol->decomp_scheme->out_imag;
 
-        // execute 1d sub-problem
-        real_dim_sol->solver->execute_solver(real_dim_sol);
+        // The 1D R2C runs on the plan's own in/out, i.e. an unmodified copy.
+        real_dim_sol->solver->execute_solver(real_dim_sol, &real_child_ctx);
 
+        c2c_child_ctx.in_real  = ctx->out_real;
+        c2c_child_ctx.in_imag  = ctx->out_imag;
+        c2c_child_ctx.out_real = ctx->out_real;
+        c2c_child_ctx.out_imag = ctx->out_imag;
+        c2c_child_ctx.flags    = complex_dims_sol->decomp_scheme->flags;
         // execute (n-1)d sub-problem
-        complex_dims_sol->solver->execute_solver(complex_dims_sol);
+        complex_dims_sol->solver->execute_solver(complex_dims_sol,
+                                                 &c2c_child_ctx);
     }
     else
     {
         // C2R (backward) Execution Flow:
         // 1. complex_dims_sol ((N-1)D C2C):
-        //    in: input buffer, out: aux_buffer_1
+        //    in: input buffer, out: aux (per-thread slice of the ndim pool)
         // 2. real_dim_sol (1D C2R):
-        //    in: aux_buffer_1, out: output buffer
-        complex_dims_sol->decomp_scheme->in_real =
-            sol->decomp_scheme->in_real;
-        complex_dims_sol->decomp_scheme->in_imag =
-            sol->decomp_scheme->in_imag;
-        complex_dims_sol->decomp_scheme->out_real =
-            sol->dft_bufs->buffered->aux_buffer_1;
-        complex_dims_sol->decomp_scheme->out_imag =
-            MOVE_ADDR(sol->dft_bufs->buffered->aux_buffer_1, dt_bytes);
-        real_dim_sol->decomp_scheme->in_real =
-            complex_dims_sol->decomp_scheme->out_real;
-        real_dim_sol->decomp_scheme->in_imag =
-            complex_dims_sol->decomp_scheme->out_imag;
-        real_dim_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-        real_dim_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+        //    in: aux, out: output buffer
 
+        // `slot_idx` hands each concurrent caller a disjoint slot of the ndim aux
+        // pool, so no two threads share the same C2R intermediate.
+        FFTZ_INTP aux_size = sol->dft_bufs->buffered->aux_buf_size_per_thread;
+        FFTZ_INTP aux_off = (FFTZ_INTP)ctx->slot_idx * aux_size;
+        FFTZ_VOID *aux_real = MOVE_ADDR(ctx->aux_pool_base_ndim, aux_off);
+        FFTZ_VOID *aux_imag = MOVE_ADDR(aux_real, dt_bytes);
+
+        c2c_child_ctx.in_real  = ctx->in_real;
+        c2c_child_ctx.in_imag  = ctx->in_imag;
+        c2c_child_ctx.out_real = aux_real;
+        c2c_child_ctx.out_imag = aux_imag;
+        c2c_child_ctx.flags    = complex_dims_sol->decomp_scheme->flags;
+
+        real_child_ctx.in_real  = aux_real;
+        real_child_ctx.in_imag  = aux_imag;
+        real_child_ctx.out_real = ctx->out_real;
+        real_child_ctx.out_imag = ctx->out_imag;
         // execute (n-1)d sub-problem
-        complex_dims_sol->solver->execute_solver(complex_dims_sol);
-
+        complex_dims_sol->solver->execute_solver(complex_dims_sol,
+                                                 &c2c_child_ctx);
         // execute 1d sub-problem
-        real_dim_sol->solver->execute_solver(real_dim_sol);
+        real_dim_sol->solver->execute_solver(real_dim_sol, &real_child_ctx);
     }
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");

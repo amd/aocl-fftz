@@ -31,7 +31,8 @@ FFTZ_INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
     }
     // Set buffered flag for radix-m sub-problem if the original problem is
     // in-place.
-    if (sol->decomp_scheme->in_real == sol->decomp_scheme->out_real)
+    if (sol->decomp_scheme->in_real != NULL &&
+        sol->decomp_scheme->in_real == sol->decomp_scheme->out_real)
     {
         SET_BUFFERED(sol_m->decomp_scheme->flags);
     }
@@ -73,32 +74,29 @@ FFTZ_INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
 }
 
 
-static FFTZ_INT32 execute_ct_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_ct_solver(aoclfftz_solution_t *sol,
+                                    aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     FFTZ_INT32 status = SOLVER_SUCCESS;
-    aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
-    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
+    aoclfftz_solution_t *radix_r_sol = sol->next_sol;
+    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol;
 
-    radix_m_sol->decomp_scheme->in_real  = sol->decomp_scheme->in_real;
-    radix_m_sol->decomp_scheme->in_imag  = sol->decomp_scheme->in_imag;
-    radix_m_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    radix_m_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-    radix_m_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
+    // Build child ctx for radix-m: same in/out as parent
+    aoclfftz_mutable_ctx_t m_ctx = *ctx;
 
-    radix_m_sol->solver->execute_solver(radix_m_sol);
+    // execute radix-m sub-problem
+    radix_m_sol->solver->execute_solver(radix_m_sol, &m_ctx);
 
-    // execute radix-r DFT
-    // Note: radix-r input strides are precomputed at setup time in
-    // selector_ct_dft.
-    radix_r_sol->decomp_scheme->in_real  = radix_m_sol->decomp_scheme->out_real;
-    radix_r_sol->decomp_scheme->in_imag  = radix_m_sol->decomp_scheme->out_imag;
-    radix_r_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    radix_r_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-    radix_r_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
+    // Build child ctx for radix-r: input is radix-m's (modified) output.
+    aoclfftz_mutable_ctx_t r_ctx = *ctx;
+    // Depending on radix-m being a buffered solver or not, m_ctx.out_real/out_imag
+    // may point to a ct_buf slice or remain unchanged from the parent ctx.
+    r_ctx.in_real = m_ctx.out_real;
+    r_ctx.in_imag = m_ctx.out_imag;
 
-    radix_r_sol->solver->execute_solver(radix_r_sol);
+    radix_r_sol->solver->execute_solver(radix_r_sol, &r_ctx);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 

@@ -58,15 +58,6 @@ FFTZ_INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
     // Buffer allocated at NDIM level can be reused by any solution subtree
     // under the NDIM node (both next_sol and nd_sol paths), avoiding
     // reallocation.
-    if (sol->dft_bufs->ct_buffer != NULL)
-    {
-        // Buffer already allocated, reuse it
-        AOCLFFTZ_LOG(TRACE, global_logger_mode,
-                     "Buffer already allocated, reusing it");
-        setup_buffered_output_strides(sol, next_sol);
-        AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
-        return SOLVER_SUCCESS;
-    }
 
     FFTZ_INT32 dim_rank = sol->decomp_scheme->dim_rank;
     FFTZ_INT32 vec_rank = sol->decomp_scheme->vec_rank;
@@ -93,13 +84,26 @@ FFTZ_INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
                          (sol->decomp_scheme->batched_vecs[0].out_stride);
     }
 
+    if (sol->dft_bufs->ct_buffer != NULL)
+    {
+        // Unpadded: mt_batched uses ct_buf_size as the per-thread slice stride
+        // (ct_offset += tid * ct_buf_size). Padding it would push the slice of
+        // each higher thread past its assigned region in the shared pool.
+        buffer_size = buffer_length * DATA_STRIDE * dt_bytes;
+        sol->dft_bufs->ct_buf_size = buffer_size;
+        setup_buffered_output_strides(sol, next_sol);
+        next_sol->dft_bufs->ct_buf_size = sol->dft_bufs->ct_buf_size;
+        return SOLVER_SUCCESS;
+    }
+
     buffer_size = GET_PADDED_SIZE(buffer_length * DATA_STRIDE * dt_bytes);
+    FFTZ_INT32 active_threads = sol->decomp_scheme->thread_info->active_threads;
     ALLOC_ALIGN_UNINIT(sol->dft_bufs->ct_buffer, FFTZ_VOID,
-        buffer_size * sol->dft_bufs->num_ct_buf);
+        buffer_size * active_threads);
     if (sol->dft_bufs->ct_buffer == NULL)
     {
         AOCLFFTZ_ERROR("Failed to allocate ct_buffer of size %ld",
-                       (long)(buffer_size * sol->dft_bufs->num_ct_buf));
+                       (long)(buffer_size * active_threads));
         return SOLVER_FAILURE;
     }
 
@@ -109,32 +113,42 @@ FFTZ_INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
     sol->dft_bufs->ct_buf_imag =
         MOVE_ADDR(sol->dft_bufs->ct_buffer, SOL_DT_SIZE(sol));
     setup_buffered_output_strides(sol, next_sol);
+
     next_sol->dft_bufs->ct_buffer = sol->dft_bufs->ct_buffer;
+    next_sol->dft_bufs->ct_buf_allocated = 0;
+    next_sol->dft_bufs->ct_buf_size = sol->dft_bufs->ct_buf_size;
+    next_sol->dft_bufs->ct_buf_real = sol->dft_bufs->ct_buffer;
+    next_sol->dft_bufs->ct_buf_imag = sol->dft_bufs->ct_buf_imag;
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
     return SOLVER_SUCCESS;
 }
 
-static FFTZ_INT32 execute_buffered_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_buffered_solver(aoclfftz_solution_t *sol,
+                                          aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
-    FFTZ_INT32 status = SOLVER_SUCCESS;
-    aoclfftz_solution_t *next_sol = sol->next_sol[0];
+    FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(ctx);
+    aoclfftz_solution_t *next_sol = sol->next_sol;
+    aoclfftz_mutable_ctx_t child_ctx = *ctx;
+    // Reroute the child's output into a private CT-buffer slot.
+#ifdef MULTI_THREADING
+    // Pick this thread's slot within the shared ct_buffer.
+    child_ctx.out_real = MOVE_ADDR(ctx->ct_buf_base, ctx->ct_offset);
+    child_ctx.out_imag = MOVE_ADDR(child_ctx.out_real, dt_bytes);
+#else
+    child_ctx.out_real = ctx->ct_buf_base;
+    child_ctx.out_imag = MOVE_ADDR(ctx->ct_buf_base, dt_bytes);
+#endif
+    ctx->out_real = child_ctx.out_real;
+    ctx->out_imag = child_ctx.out_imag;
+    // Alias ct_buf_base to out so the inner CTL1D takes its in-place path:
+    // (m) in -> out, then (r) out -> out.
+    child_ctx.ct_buf_base = child_ctx.out_real;
 
-    // Update sol and next_sol's output pointers to the buffer.
-    next_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
-    next_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
-    // For inplace CT, reroute buf node output to ct_buf; Radix-m writes here,
-    // Radix-r reads.
-    sol->decomp_scheme->out_real = sol->dft_bufs->ct_buf_real;
-    sol->decomp_scheme->out_imag = sol->dft_bufs->ct_buf_imag;
-
-    next_sol->decomp_scheme->out_real = sol->dft_bufs->ct_buf_real;
-    next_sol->decomp_scheme->out_imag = sol->dft_bufs->ct_buf_imag;
-    next_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
-    next_sol->solver->execute_solver(next_sol);
+    FFTZ_INT32 status = next_sol->solver->execute_solver(next_sol, &child_ctx);
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
     return status;

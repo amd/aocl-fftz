@@ -55,8 +55,10 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_ct_dft;
     }
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
-    cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                             sel->has_nested);
+    cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                               sel->has_nested);
 
     if (cur_sel == NULL || cur_sel_m == NULL)
     {
@@ -65,29 +67,16 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     // Create empty solutions to copy cur_sel & cur_sel_m
-    sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
+    sel->solution->next_sol = alloc_solution(vec_rank, dim_rank);
     if (sel->solution->next_sol == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_ct_dft;
     }
-    sel->solution->next_sol[0] = alloc_solution(vec_rank, dim_rank);
-    if (sel->solution->next_sol[0] == NULL)
-    {
-        ret = AOCLFFTZ_MEMORY_FAILURE;
-        goto exit_ct_dft;
-    }
 
-    aoclfftz_solution_t *next_sol = sel->solution->next_sol[0];
-    next_sol->next_sol = alloc_sol_array(1 /*n_threads*/);
-
+    aoclfftz_solution_t *next_sol = sel->solution->next_sol;
+    next_sol->next_sol = alloc_solution(vec_rank, dim_rank);
     if (next_sol->next_sol == NULL)
-    {
-        ret = AOCLFFTZ_MEMORY_FAILURE;
-        goto exit_ct_dft;
-    }
-    next_sol->next_sol[0] = alloc_solution(vec_rank, dim_rank);
-    if (next_sol->next_sol[0] == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_ct_dft;
@@ -104,6 +93,13 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     // Flag to store whether the previous solution is selected
     // based on minimum ops cost
     FFTZ_UINT8 is_previous_solution_selected = 0;
+
+    // Radix candidates below are speculative: the losing ones are thrown away,
+    // so their sub-solvers must not leave the plan-wide nested-parallel flag
+    // set. Every candidate starts from the same baseline and only the winning
+    // candidate's contribution survives the loop.
+    FFTZ_UINT8 nested_on_entry = *(sel->has_nested);
+    FFTZ_UINT8 nested_selected = nested_on_entry;
 
     for (FFTZ_INTP i = 0; i < NUM_KERNELS_IN_EACH_CATEGORY; i++)
     {
@@ -129,8 +125,10 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         {
             destroy_selector(cur_sel);
             destroy_selector(cur_sel_m);
-            cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
-            cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+            cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                                     sel->has_nested);
+            cur_sel_m = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                                       sel->has_nested);
             if (cur_sel == NULL || cur_sel_m == NULL)
             {
                 ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -138,6 +136,8 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
             }
             is_previous_solution_selected = 0;
         }
+
+        *(sel->has_nested) = nested_on_entry;
 
         ret = setup_ct_solver(org_sol, cur_sel->solution, cur_sel_m->solution,
                               radix_r, radix_m);
@@ -168,46 +168,19 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         radix_r_sol->decomp_scheme->vecs[0].in_stride =
             radix_m_sol->decomp_scheme->dims[0].out_stride;
 
-        aoclfftz_generic_solver_t* solver_obj = cur_sel->solution->solver;
-        FFTZ_INT32 avl_threads =
-            cur_sel->solution->decomp_scheme->thread_info->avl_threads;
-        if (avl_threads == 1)
-        {
-            if (sel->solution->decomp_scheme->batched_vecs == NULL)
-            {
-                solver_obj->solver_type = SOLVER_DIRECT;
-            }
-            else
-            {
-                solver_obj->solver_type = SOLVER_DIRECT_BATCHED_COLMAJOR;
-            }
-        }
-        else
-        {
-            if (sel->solution->decomp_scheme->batched_vecs == NULL)
-            {
-                solver_obj->solver_type = SOLVER_MT_DIRECT;
-            }
-            else
-            {
-                if (should_use_colmajor_batched_solver(cur_sel->solution,
-                                                       kertab, avl_threads))
-                {
-                    solver_obj->solver_type = SOLVER_MT_DIRECT_BATCHED_COLMAJOR;
-                }
-                else
-                {
-                    solver_obj->solver_type = SOLVER_MT_DIRECT_BATCHED_ROWMAJOR;
-                }
-            }
-        }
-        if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)
-        {
-            goto exit_ct_dft;
-        }
         ret = selector_direct_dft(cur_sel, kertab);
         if (ret != SELECTOR_SUCCESS)
         {
+            goto exit_ct_dft;
+        }
+
+        // Bind the radix-r leaf's execute fp here, at its parent (this CT
+        // selector), now that the direct family selector has chosen the
+        // concrete variant. Keeps binding with the solver higher up in the
+        // linked list, per the solver hierarchy.
+        if (set_solver_fp(radix_r_sol->solver) != SOLVER_SUCCESS)
+        {
+            ret = SELECTOR_FAILURE;
             goto exit_ct_dft;
         }
 #endif
@@ -232,12 +205,10 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
                 // Destroy the solutions except the first 3 objects
                 // since it points to current CT, CT-R, CT-M respectively
-                if (next_sol->next_sol[0] != NULL)
-                {
-                    destroy_solutions(next_sol->next_sol[0]->next_sol, 1);
-                }
+                destroy_solution(next_sol->next_sol->next_sol);
+                next_sol->next_sol->next_sol = NULL;
 
-                aoclfftz_solution_t **sel_next_sol = next_sol->next_sol;
+                aoclfftz_solution_t *sel_next_sol = next_sol->next_sol;
                 ret = copy_solution_obj(next_sol, cur_sel->solution);
                 if (ret != AOCLFFTZ_SUCCESS)
                 {
@@ -256,16 +227,16 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 // Restore the original next_sol after copy
                 next_sol->next_sol = sel_next_sol;
 
-                // Free the ct_buffer if next_sol->next_sol[0] owns it
-                if (next_sol->next_sol[0]->dft_bufs->ct_buf_allocated)
+                // Free the ct_buffer if next_sol->next_sol owns it
+                if (next_sol->next_sol->dft_bufs->ct_buf_allocated)
                 {
                     FREE_ALIGN_ALLOCATED_MEM(
-                        next_sol->next_sol[0]->dft_bufs->ct_buffer);
-                    next_sol->next_sol[0]->dft_bufs->ct_buf_allocated = 0;
+                        next_sol->next_sol->dft_bufs->ct_buffer);
+                    next_sol->next_sol->dft_bufs->ct_buf_allocated = 0;
                 }
 
                 ret = copy_solution_obj(
-                    next_sol->next_sol[0], cur_sel_m->solution);
+                    next_sol->next_sol, cur_sel_m->solution);
                 if (ret != AOCLFFTZ_SUCCESS)
                 {
                     AOCLFFTZ_ERROR("copy_solution_obj failed: %s",
@@ -276,7 +247,7 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                     SOLVER_BATCHED_CT_L1_DIRECT)
                 {
                     ret = copy_strides_batched_ct_l1_direct(
-                        next_sol->next_sol[0],
+                        next_sol->next_sol,
                         cur_sel_m->solution);
                     if (ret != AOCLFFTZ_SUCCESS)
                     {
@@ -289,7 +260,7 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                 else
                 {
                     ret = copy_strides(
-                        next_sol->next_sol[0], cur_sel_m->solution);
+                        next_sol->next_sol, cur_sel_m->solution);
                     if (ret != AOCLFFTZ_SUCCESS)
                     {
                         AOCLFFTZ_ERROR("copy_strides failed: %s",
@@ -300,23 +271,29 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
                 if (cur_sel_m->solution->dft_bufs->ct_buf_allocated)
                 {
-                    next_sol->next_sol[0]->dft_bufs->ct_buf_allocated = 1;
+                    next_sol->next_sol->dft_bufs->ct_buf_allocated = 1;
                 }
                 cur_sel_m->solution->dft_bufs->ct_buf_allocated = 0;
+
+                // Only the radix-m sub-solver uses the ct_buffer, so take the CT
+                // node's ct_buf_size from it (ignore radix-r solver).
+                sel->solution->dft_bufs->ct_buf_size =
+                    cur_sel_m->solution->dft_bufs->ct_buf_size;
 
                 // Break the link from cur_sel and cur_sel_m
                 // it can be still accessed through sel object
                 cur_sel->solution->next_sol = NULL;
                 cur_sel_m->solution->next_sol = NULL;
                 is_previous_solution_selected = 1;
+                nested_selected = *(sel->has_nested);
             }
             else
             {
                 // Destroy the solutions of cur_sel and cur_sel_m
                 // except first solution
-                destroy_solutions(cur_sel->solution->next_sol, 1);
+                destroy_solution(cur_sel->solution->next_sol);
                 cur_sel->solution->next_sol = NULL;
-                destroy_solutions(cur_sel_m->solution->next_sol, 1);
+                destroy_solution(cur_sel_m->solution->next_sol);
                 cur_sel_m->solution->next_sol = NULL;
                 is_previous_solution_selected = 0;
                 // The solution is being discarded
@@ -339,6 +316,8 @@ FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
             // capture stats
         }
     }
+
+    *(sel->has_nested) = nested_selected;
 
 exit_ct_dft:
     destroy_selector(cur_sel);

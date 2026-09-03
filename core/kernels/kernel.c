@@ -217,6 +217,48 @@ FFTZ_INT32 register_kernels_complex(
     return KERNEL_SUCCESS;
 }
 
+/* ISA dispatch for ele_mul kernel registration. prefix##_c / prefix##_avx*
+ * are resolved at compile time; disabled ISAs expand to empty macros. */
+
+#ifdef ENABLE_AVX512
+#define DISPATCH_REG_AVX512(cpu_flags, dt, dir, prefix)                        \
+    if ((cpu_flags) >= optlevel_avx512)                                        \
+    {                                                                          \
+        return prefix##_avx512((FFTZ_UINT8)(dt), (dir));                       \
+    }
+#else
+#define DISPATCH_REG_AVX512(cpu_flags, dt, dir, prefix)
+#endif
+
+#ifdef ENABLE_AVX256
+#define DISPATCH_REG_AVX256(cpu_flags, dt, dir, prefix)                        \
+    if ((cpu_flags) >= optlevel_avx256)                                        \
+    {                                                                          \
+        return prefix##_avx256((FFTZ_UINT8)(dt), (dir));                       \
+    }
+#else
+#define DISPATCH_REG_AVX256(cpu_flags, dt, dir, prefix)
+#endif
+
+#ifdef ENABLE_AVX128
+#define DISPATCH_REG_AVX128(cpu_flags, dt, dir, prefix)                        \
+    if ((cpu_flags) >= optlevel_avx128)                                        \
+    {                                                                          \
+        return prefix##_avx128((FFTZ_UINT8)(dt), (dir));                       \
+    }
+#else
+#define DISPATCH_REG_AVX128(cpu_flags, dt, dir, prefix)
+#endif
+
+#define DISPATCH_REG_KERNEL(cpu_flags, dt, direction, prefix)                  \
+    do                                                                         \
+    {                                                                          \
+        DISPATCH_REG_AVX512((cpu_flags), (dt), (direction), prefix);           \
+        DISPATCH_REG_AVX256((cpu_flags), (dt), (direction), prefix);           \
+        DISPATCH_REG_AVX128((cpu_flags), (dt), (direction), prefix);           \
+        return prefix##_c((FFTZ_UINT8)(dt), (direction));                      \
+    } while (0)
+
 /**
  * @brief Registers the appropriate elementwise multiplication kernel.
  *
@@ -238,36 +280,21 @@ elementwise_mul_ register_elementwise_mul_kernel(FFTZ_INT32 cpu_flags,
                                                  FFTZ_INT32 dt,
                                                  FFTZ_UINT8 direction)
 {
-#ifdef ENABLE_AVX512
-    if (cpu_flags >= optlevel_avx512)
-    {
-        return register_elementwise_mul_avx512(dt, direction);
-    }
-#endif
+    DISPATCH_REG_KERNEL(cpu_flags, dt, direction, register_elementwise_mul);
+}
 
-#ifdef ENABLE_AVX256
-    if (cpu_flags >= optlevel_avx256)
-    {
-        return register_elementwise_mul_avx256(dt, direction);
-    }
-#endif
-
-#ifdef ENABLE_AVX128
-    if (cpu_flags >= optlevel_avx128)
-    {
-        return register_elementwise_mul_avx128(dt, direction);
-    }
-#endif
-
-    /* Default to C implementation */
-    return register_elementwise_mul_c(dt, direction);
+elementwise_mul_ register_elementwise_mul_strided_in_kernel(
+    FFTZ_INT32 cpu_flags, FFTZ_INT32 dt, FFTZ_UINT8 direction)
+{
+    DISPATCH_REG_KERNEL(cpu_flags, dt, direction,
+                        register_elementwise_mul_strided_in);
 }
 
 /**
- * @brief Registers the appropriate normalization kernel.
+ * @brief Registers the appropriate fused normalize-then-multiply kernel.
  *
  * Selects the best available SIMD implementation based on the optimization
- * level and data type:
+ * level, data type and direction:
  * - optlevel_avx512 (3): AVX512 implementation
  * - optlevel_avx256 (2): AVX256 implementation
  * - optlevel_avx128 (1): AVX128 implementation
@@ -276,33 +303,97 @@ elementwise_mul_ register_elementwise_mul_kernel(FFTZ_INT32 cpu_flags,
  * @param[in] cpu_flags Optimization level (optimization_level_t) obtained
  *                      from get_max_build_isa_level()
  * @param[in] dt        Data type (DT_FLOAT or DT_DOUBLE)
- * @return Function pointer to the selected normalization kernel
+ * @param[in] direction FORWARD_FFT_DIR  -> forward  (a .* conj(b)),
+ *                      BACKWARD_FFT_DIR -> backward (a .* b)
+ * @return Function pointer to the selected fused kernel
  */
-normalize_ register_normalize_kernel(FFTZ_INT32 cpu_flags, FFTZ_INT32 dt)
+elementwise_mul_fused_norm_
+register_elementwise_mul_fused_norm_kernel(FFTZ_INT32 cpu_flags, FFTZ_INT32 dt,
+                                           FFTZ_UINT8 direction)
 {
-#ifdef ENABLE_AVX512
-    if (cpu_flags >= optlevel_avx512)
-    {
-        return register_normalize_avx512(dt);
-    }
-#endif
+    DISPATCH_REG_KERNEL(cpu_flags, dt, direction,
+                        register_elementwise_mul_fused_norm);
+}
 
-#ifdef ENABLE_AVX256
-    if (cpu_flags >= optlevel_avx256)
-    {
-        return register_normalize_avx256(dt);
-    }
-#endif
+elementwise_mul_fused_norm_
+register_elementwise_mul_fused_norm_strided_out_kernel(FFTZ_INT32 cpu_flags,
+                                                       FFTZ_INT32 dt,
+                                                       FFTZ_UINT8 direction)
+{
+    DISPATCH_REG_KERNEL(cpu_flags, dt, direction,
+                        register_elementwise_mul_fused_norm_strided_out);
+}
 
-#ifdef ENABLE_AVX128
-    if (cpu_flags >= optlevel_avx128)
-    {
-        return register_normalize_avx128(dt);
-    }
-#endif
+/**
+ * @brief Registers the fused four-step twiddle + transpose kernel.
+ *
+ * Selects the best available implementation based on the optimization level
+ * and data type, falling back to the portable scalar C variant when no SIMD
+ * variant is available (scalar build / optlevel_scalar), so the four-step
+ * solver can run at every optimization level.
+ * - optlevel_avx512 (3): AVX512 implementation
+ * - optlevel_avx256 (2): AVX256 implementation
+ * - optlevel_avx128 (1): AVX128 implementation
+ * - optlevel_scalar (0): scalar C implementation
+ *
+ * @param[in] cpu_flags Optimization level (optimization_level_t) obtained
+ *                      from get_max_build_isa_level()
+ * @param[in] dt        Data type (DT_FLOAT or DT_DOUBLE)
+ * @param[in] direction FORWARD_FFT_DIR  -> data .* tw,
+ *                      otherwise        -> data .* conj(tw)
+ * @return Function pointer to the selected fused kernel, or NULL if none.
+ */
+fused_twiddle_transpose_
+register_fused_twiddle_transpose_kernel(FFTZ_INT32 cpu_flags, FFTZ_INT32 dt,
+                                        FFTZ_UINT8 direction)
+{
+    /* Falls through to the portable scalar C variant on a scalar build. */
+    DISPATCH_REG_KERNEL(cpu_flags, dt, direction,
+                        register_fused_twiddle_transpose);
+}
 
-    /* Default to C implementation */
-    return register_normalize_c(dt);
+#undef DISPATCH_REG_KERNEL
+#undef DISPATCH_REG_AVX512
+#undef DISPATCH_REG_AVX256
+#undef DISPATCH_REG_AVX128
+
+/**
+ * @brief Registers the real Bluestein real<->complex type conversion kernels.
+ *
+ * Selects the best available implementation based on the optimization level
+ * and data type. AVX512/AVX256/AVX128 variants slot into the same ifdef
+ * structure once implemented; the scalar C path is the current default.
+ *
+ * @param[in] cpu_flags Optimization level (optimization_level_t)
+ * @param[in] dt        Data type (DT_FLOAT or DT_DOUBLE)
+ * @return Function pointer to the selected type conversion kernel
+ */
+type_convert_ register_r2c_type_convert_kernel(FFTZ_INT32 cpu_flags,
+                                               FFTZ_INT32 dt)
+{
+    /* TODO: add AVX512/AVX256/AVX128 variants here. */
+    return register_r2c_type_convert_c(dt);
+}
+
+type_convert_ register_c2hc_type_convert_kernel(FFTZ_INT32 cpu_flags,
+                                                FFTZ_INT32 dt)
+{
+    /* TODO: add AVX512/AVX256/AVX128 variants here. */
+    return register_c2hc_type_convert_c(dt);
+}
+
+type_convert_ register_hc2c_type_convert_kernel(FFTZ_INT32 cpu_flags,
+                                                FFTZ_INT32 dt)
+{
+    /* TODO: add AVX512/AVX256/AVX128 variants here. */
+    return register_hc2c_type_convert_c(dt);
+}
+
+type_convert_ register_c2r_type_convert_kernel(FFTZ_INT32 cpu_flags,
+                                               FFTZ_INT32 dt)
+{
+    /* TODO: add AVX512/AVX256/AVX128 variants here. */
+    return register_c2r_type_convert_c(dt);
 }
 
 #undef ACCESS_AVX128

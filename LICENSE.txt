@@ -6,7 +6,7 @@ License: BSD-3-Clause (SPDX: BSD-3-Clause)
 See full license text in Section 3.
 
 SECTION 2: Third-Party Components
-No third-party components are listed for AOCL-FFTZ v5.2.2. This library consists solely of AMD code under BSD-3-Clause.
+No third-party components are listed for AOCL-FFTZ v5.3.2. This library consists solely of AMD code under BSD-3-Clause.
 
 SECTION 3: Full License Text
 BSD-3-Clause License

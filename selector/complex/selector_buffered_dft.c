@@ -33,7 +33,8 @@ FFTZ_INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                             sel->has_nested);
     if (cur_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -70,13 +71,7 @@ FFTZ_INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     sel->cost_analysis->ops = cur_sel->cost_analysis->ops;
     sel->cost_analysis->time = cur_sel->cost_analysis->time;
 
-    sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
-    if (sel->solution->next_sol == NULL)
-    {
-        ret = AOCLFFTZ_MEMORY_FAILURE;
-        goto exit_buffered_dft;
-    }
-    sel->solution->next_sol[0] = cur_sel->solution;
+    sel->solution->next_sol = cur_sel->solution;
 
     // destroy only the selector not the solution within it
     destroy_selector_without_solution(cur_sel);

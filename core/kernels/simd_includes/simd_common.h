@@ -283,6 +283,161 @@
 }
 
 /**
+ * @brief H2 reverse-contiguous gather/scatter helpers.
+ *
+ * H2 (the conjugate/mirror half of a Hermitian-symmetric r2c/c2r spectrum)
+ * is naturally indexed in decreasing memory order, so a unit-stride H2 run
+ * has `offset == -DATA_STRIDE` instead of `+DATA_STRIDE`. In that case the
+ * points are still one contiguous block in memory, just traversed
+ * backwards, so each macro below issues a single wide load/store over that
+ * block and then permutes lanes to swap the memory (descending) order back
+ * to the ascending point order the registers must hold. Any other offset
+ * falls back to the existing strided gather/scatter macro with
+ * `is_contiguous` forced to 0.
+ */
+
+/**
+ * @brief Load two H2 32-bit single precision complex points into a 128-bit
+ * register, restoring ascending point order.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 1, other: 0}
+#define GATHER2_H2_128_S(base, offset, dest)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        dest = _mm_permute_ps(_mm_loadu_ps((base) + (offset)), 0x4E);          \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        GATHER2_128_S(base, offset, dest, 0);                                  \
+    }                                                                          \
+}
+
+/**
+ * @brief Store two H2 32-bit single precision complex points from a 128-bit
+ * register, writing them back in descending (reverse-contiguous) order.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 1, other: 0}
+#define SCATTER2_H2_128_S(base, offset, src)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        _mm_storeu_ps((base) + (offset), _mm_permute_ps(src, 0x4E));           \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        SCATTER2_128_S(base, offset, src, 0);                                  \
+    }                                                                          \
+}
+
+/**
+ * @brief Load one H2 64-bit double precision complex point into a 128-bit
+ * register.
+ *
+ * A single point has no lane order to reverse, so this is simply an alias
+ * for the plain (non-H2) 128-bit double offset load.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+#define GATHER_H2_128_D(base, offset, dest)                                    \
+    LD_128_OFFSET_D(base, offset, dest, 0)
+
+/**
+ * @brief Store one H2 64-bit double precision complex point from a 128-bit
+ * register.
+ *
+ * A single point has no lane order to reverse, so this is simply an alias
+ * for the plain (non-H2) 128-bit double offset store.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 0, other: 0}
+#define SCATTER_H2_128_D(base, offset, src)                                    \
+    ST_128_OFFSET_D(base, offset, src, 0)
+
+/**
+ * @brief Load four H2 32-bit single precision complex points into a 256-bit
+ * register, restoring ascending point order.
+ *
+ * The reverse-contiguous run starts 3 points below `base`, so it is loaded
+ * from `base + 3 * offset`. The two 128-bit lanes are swapped
+ * (permute2f128) and then the two points within each lane are swapped
+ * (permute) to turn the descending memory order into ascending point order.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 2, other: 0}
+#define GATHER4_H2_256_S(base, offset, dest)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        const __m256 _load = _mm256_loadu_ps((base) + 3 * (offset));           \
+        const __m256 _tmp = _mm256_permute2f128_ps(                            \
+            _load, _load, 0x01);                                               \
+        dest = _mm256_permute_ps(_tmp, 0x4E);                                  \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        GATHER4_256_S(base, offset, dest, 0);                                  \
+    }                                                                          \
+}
+
+/**
+ * @brief Store four H2 32-bit single precision complex points from a
+ * 256-bit register, writing them back in descending (reverse-contiguous)
+ * order starting at `base + 3 * offset`.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 2, other: 0}
+#define SCATTER4_H2_256_S(base, offset, src)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        const __m256 _tmp = _mm256_permute2f128_ps(src, src, 0x01);            \
+        _mm256_storeu_ps((base) + 3 * (offset),                                \
+                         _mm256_permute_ps(_tmp, 0x4E));                       \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        SCATTER4_256_S(base, offset, src, 0);                                  \
+    }                                                                          \
+}
+
+/**
+ * @brief Load two H2 64-bit double precision complex points into a 256-bit
+ * register, restoring ascending point order.
+ *
+ * The two points form one contiguous 256-bit run; a single lane swap
+ * (permute2f128_pd) is enough to turn descending memory order into
+ * ascending point order.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 1, other: 0}
+#define GATHER2_H2_256_D(base, offset, dest)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        const __m256d _tmp = _mm256_loadu_pd((base) + (offset));               \
+        dest = _mm256_permute2f128_pd(_tmp, _tmp, 0x01);                       \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        GATHER2_256_D(base, offset, dest, 0);                                  \
+    }                                                                          \
+}
+
+/**
+ * @brief Store two H2 64-bit double precision complex points from a 256-bit
+ * register, writing them back in descending (reverse-contiguous) order.
+ */
+// Cost: {fma: 0, mul: 0, add: 0, move: 1, perm: 1, other: 0}
+#define SCATTER2_H2_256_D(base, offset, src)                                   \
+{                                                                              \
+    if ((offset) == -DATA_STRIDE)                                              \
+    {                                                                          \
+        _mm256_storeu_pd((base) + (offset),                                    \
+                         _mm256_permute2f128_pd(src, src, 0x01));              \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        SCATTER2_256_D(base, offset, src, 0);                                  \
+    }                                                                          \
+}
+
+/**
  * @brief Store two 256-bit double-precision vectors that hold two consecutive
  * complex output points (src0, src1), each laid out as one complex (128-bit)
  * lane per set across NUM_SETS_256_D sets, into contiguous output memory.
@@ -299,10 +454,10 @@
 // Cost: {fma: 0, mul: 0, add: 0, move: 2, perm: 2, other: 0}
 #define TRANSPOSE_ST2_256_D(base, offset, src0, src1)                          \
 {                                                                              \
-        _mm256_storeu_pd(base,                                                 \
-                         _mm256_permute2f128_pd((src0), (src1), 0x20));        \
-        _mm256_storeu_pd(base + offset,                                        \
-                         _mm256_permute2f128_pd((src0), (src1), 0x31));        \
+    _mm256_storeu_pd(base,                                                     \
+        _mm256_permute2f128_pd((src0), (src1), 0x20));                         \
+    _mm256_storeu_pd(base + offset,                                            \
+        _mm256_permute2f128_pd((src0), (src1), 0x31));                         \
 }
 
 /**
@@ -322,22 +477,22 @@
 // Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 8, other: 0}
 #define TRANSPOSE_ST4_256_S(base, offset, src0, src1, src2, src3)              \
 {                                                                              \
-        __m256d _s0 = _mm256_castps_pd(src0);                                  \
-        __m256d _s1 = _mm256_castps_pd(src1);                                  \
-        __m256d _s2 = _mm256_castps_pd(src2);                                  \
-        __m256d _s3 = _mm256_castps_pd(src3);                                  \
-        __m256d _t0 = _mm256_unpacklo_pd(_s0, _s1);                            \
-        __m256d _t1 = _mm256_unpackhi_pd(_s0, _s1);                            \
-        __m256d _t2 = _mm256_unpacklo_pd(_s2, _s3);                            \
-        __m256d _t3 = _mm256_unpackhi_pd(_s2, _s3);                            \
-        _mm256_storeu_ps(base,                                                 \
-            _mm256_castpd_ps(_mm256_permute2f128_pd(_t0, _t2, 0x20)));         \
-        _mm256_storeu_ps(base + offset,                                        \
-            _mm256_castpd_ps(_mm256_permute2f128_pd(_t1, _t3, 0x20)));         \
-        _mm256_storeu_ps(base + 2 * offset,                                    \
-            _mm256_castpd_ps(_mm256_permute2f128_pd(_t0, _t2, 0x31)));         \
-        _mm256_storeu_ps(base + 3 * offset,                                    \
-            _mm256_castpd_ps(_mm256_permute2f128_pd(_t1, _t3, 0x31)));         \
+    __m256d _s0 = _mm256_castps_pd(src0);                                      \
+    __m256d _s1 = _mm256_castps_pd(src1);                                      \
+    __m256d _s2 = _mm256_castps_pd(src2);                                      \
+    __m256d _s3 = _mm256_castps_pd(src3);                                      \
+    __m256d _t0 = _mm256_unpacklo_pd(_s0, _s1);                                \
+    __m256d _t1 = _mm256_unpackhi_pd(_s0, _s1);                                \
+    __m256d _t2 = _mm256_unpacklo_pd(_s2, _s3);                                \
+    __m256d _t3 = _mm256_unpackhi_pd(_s2, _s3);                                \
+    _mm256_storeu_ps(base,                                                     \
+        _mm256_castpd_ps(_mm256_permute2f128_pd(_t0, _t2, 0x20)));             \
+    _mm256_storeu_ps(base + offset,                                            \
+        _mm256_castpd_ps(_mm256_permute2f128_pd(_t1, _t3, 0x20)));             \
+    _mm256_storeu_ps(base + 2 * offset,                                        \
+        _mm256_castpd_ps(_mm256_permute2f128_pd(_t0, _t2, 0x31)));             \
+    _mm256_storeu_ps(base + 3 * offset,                                        \
+        _mm256_castpd_ps(_mm256_permute2f128_pd(_t1, _t3, 0x31)));             \
 }
 
 /**
@@ -350,18 +505,18 @@
 // Cost: {fma: 0, mul: 0, add: 0, move: 4, perm: 2, other: 2}
 #define TRANSPOSE_ST2_256_S(base, offset, src0, src1)                          \
 {                                                                              \
-        __m256d _s0 = _mm256_castps_pd(src0);                                  \
-        __m256d _s1 = _mm256_castps_pd(src1);                                  \
-        __m256d _zlo = _mm256_unpacklo_pd(_s0, _s1);                           \
-        __m256d _zhi = _mm256_unpackhi_pd(_s0, _s1);                           \
-        _mm_storeu_ps(base,                                                    \
-            _mm_castpd_ps(_mm256_castpd256_pd128(_zlo)));                      \
-        _mm_storeu_ps(base + offset,                                           \
-            _mm_castpd_ps(_mm256_castpd256_pd128(_zhi)));                      \
-        _mm_storeu_ps(base + 2 * offset,                                       \
-            _mm_castpd_ps(_mm256_extractf128_pd(_zlo, 1)));                    \
-        _mm_storeu_ps(base + 3 * offset,                                       \
-            _mm_castpd_ps(_mm256_extractf128_pd(_zhi, 1)));                    \
+    __m256d _s0 = _mm256_castps_pd(src0);                                      \
+    __m256d _s1 = _mm256_castps_pd(src1);                                      \
+    __m256d _zlo = _mm256_unpacklo_pd(_s0, _s1);                               \
+    __m256d _zhi = _mm256_unpackhi_pd(_s0, _s1);                               \
+    _mm_storeu_ps(base,                                                        \
+        _mm_castpd_ps(_mm256_castpd256_pd128(_zlo)));                          \
+    _mm_storeu_ps(base + offset,                                               \
+        _mm_castpd_ps(_mm256_castpd256_pd128(_zhi)));                          \
+    _mm_storeu_ps(base + 2 * offset,                                           \
+        _mm_castpd_ps(_mm256_extractf128_pd(_zlo, 1)));                        \
+    _mm_storeu_ps(base + 3 * offset,                                           \
+        _mm_castpd_ps(_mm256_extractf128_pd(_zhi, 1)));                        \
 }
 
 /**
@@ -378,15 +533,17 @@
 // Cost: {fma: 0, mul: 0, add: 0, move: 2, perm: 2, other: 0}
 #define TRANSPOSE_ST2_128_S(base, offset, src0, src1)                          \
 {                                                                              \
-        __m128d _s0 = _mm_castps_pd(src0);                                     \
-        __m128d _s1 = _mm_castps_pd(src1);                                     \
-        _mm_storeu_ps(base,                                                    \
-            _mm_castpd_ps(_mm_unpacklo_pd(_s0, _s1)));                         \
-        _mm_storeu_ps(base + offset,                                           \
-            _mm_castpd_ps(_mm_unpackhi_pd(_s0, _s1)));                         \
+    __m128d _s0 = _mm_castps_pd(src0);                                         \
+    __m128d _s1 = _mm_castps_pd(src1);                                         \
+    _mm_storeu_ps(base,                                                        \
+        _mm_castpd_ps(_mm_unpacklo_pd(_s0, _s1)));                             \
+    _mm_storeu_ps(base + offset,                                               \
+        _mm_castpd_ps(_mm_unpackhi_pd(_s0, _s1)));                             \
 }
 
-#ifdef ENABLE_FMA
+// MSVC cannot combine /arch:AVX with FMA, and AVX128/AVX256 build under /arch:AVX
+// alone, so FMA emission is gated off on Windows.
+#if defined(ENABLE_FMA) && !defined(_WIN32)
 
 // FMADD: (a * b) + c
 #define FMADD_128_S(a, b, c) _mm_fmadd_ps((a), (b), (c))
@@ -550,13 +707,13 @@
         _mm256_xor_pd((c), _neg_256_d[1].d)                                    \
     )
 
-#endif // ENABLE_FMA
+#endif // ENABLE_FMA && !_WIN32
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 2, other: 0}
-#define ITW_GATHER_128_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
+#define ITW_GATHER_128_D(gbase, starr, stidx, offset, gdest, twbuf,            \
                          load_multi_cols /* unused */, is_contiguous)          \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
+    const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                         \
     const __m128d cd = _mm_load_pd((twbuf) + addr);                            \
     const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)]);               \
     const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);           \
@@ -567,10 +724,10 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 1, other: 0}
-#define TW_GATHER_128_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
+#define TW_GATHER_128_D(gbase, starr, stidx, offset, gdest, twbuf,             \
                         load_multi_cols /* unused */, is_contiguous)           \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
+    const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                         \
     const __m128d cd = _mm_load_pd((twbuf) + addr);                            \
     const __m128d aa = _mm_loaddup_pd((gbase) + starr[(stidx)]);               \
     const __m128d bb = _mm_loaddup_pd((gbase) + starr[(stidx)] + 1);           \
@@ -581,21 +738,23 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 4, other: 1}
-#define ITW_GATHER_256_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
+#define ITW_GATHER_256_D(gbase, starr, stidx, offset, gdest, twbuf,            \
                          load_multi_cols, is_contiguous)                       \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m256d twv;                                                               \
     if ((load_multi_cols))                                                     \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_256_D;                        \
         twv = _mm256_loadu_pd((twbuf) + addr);                                 \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = _mm256_broadcast_pd((__m128d *)((twbuf) + addr));                \
     }                                                                          \
     __m256d tmp_in;                                                            \
-    GATHER2_256_D((gbase) + starr[(stidx)], offset, tmp_in, is_contiguous);    \
+    GATHER2_256_D((gbase) + starr[stidx], offset, tmp_in, is_contiguous);      \
     const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
     const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
     const __m256d lo_1 = _mm256_unpacklo_pd(tmp_1, tmp_0);                     \
@@ -604,21 +763,23 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 3, other: 1}
-#define TW_GATHER_256_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
+#define TW_GATHER_256_D(gbase, starr, stidx, offset, gdest, twbuf,             \
                         load_multi_cols, is_contiguous)                        \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m256d twv;                                                               \
     if ((load_multi_cols))                                                     \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_256_D;                        \
         twv = _mm256_loadu_pd((twbuf) + addr);                                 \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = _mm256_broadcast_pd((__m128d *)((twbuf) + addr));                \
     }                                                                          \
     __m256d tmp_in;                                                            \
-    GATHER2_256_D((gbase) + starr[(stidx)], offset, tmp_in, is_contiguous);    \
+    GATHER2_256_D((gbase) + starr[stidx], offset, tmp_in, is_contiguous);      \
     const __m256d tmp_0 = _mm256_mul_pd(tmp_in, twv);                          \
     const __m256d tmp_1 = _mm256_mul_pd(SWAP_RI_256_D(tmp_in), twv);           \
     const __m256d lo_1 = _mm256_unpacklo_pd(tmp_0, tmp_1);                     \
@@ -627,21 +788,23 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 5, perm: 7, other: 1}
-#define ITW_GATHER_256_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
+#define ITW_GATHER_256_S(gbase, starr, stidx, offset, gdest, twbuf,            \
                          load_multi_cols, is_contiguous)                       \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m256 twv;                                                                \
     if ((load_multi_cols))                                                     \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_256_S;                        \
         twv = _mm256_loadu_ps((twbuf) + addr);                                 \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = (__m256)(_mm256_broadcast_sd((FFTZ_DOUBLE *)((twbuf) + addr)));  \
     }                                                                          \
     __m256 tmp_in;                                                             \
-    GATHER4_256_S((gbase) + starr[(stidx)], offset, tmp_in, is_contiguous);    \
+    GATHER4_256_S((gbase) + starr[stidx], offset, tmp_in, is_contiguous);      \
     __m256 tmp_0 = _mm256_mul_ps(tmp_in, twv);                                 \
     __m256 tmp_1 = _mm256_mul_ps(SWAP_RI_256_S(tmp_in), twv);                  \
     tmp_0 = _mm256_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                     \
@@ -652,21 +815,23 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 5, perm: 6, other: 1}
-#define TW_GATHER_256_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
+#define TW_GATHER_256_S(gbase, starr, stidx, offset, gdest, twbuf,             \
                         load_multi_cols, is_contiguous)                        \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m256 twv;                                                                \
     if ((load_multi_cols))                                                     \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_256_S;                        \
         twv = _mm256_loadu_ps((twbuf) + addr);                                 \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = (__m256)(_mm256_broadcast_sd((FFTZ_DOUBLE *)((twbuf) + addr)));  \
     }                                                                          \
     __m256 tmp_in;                                                             \
-    GATHER4_256_S((gbase) + starr[(stidx)], offset, tmp_in, is_contiguous);    \
+    GATHER4_256_S((gbase) + starr[stidx], offset, tmp_in, is_contiguous);      \
     __m256 tmp_0 = _mm256_mul_ps(tmp_in, twv);                                 \
     __m256 tmp_1 = _mm256_mul_ps(SWAP_RI_256_S(tmp_in), twv);                  \
     tmp_0 = _mm256_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                     \
@@ -677,21 +842,24 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 6, other: 0}
-#define ITW_GATHER_128_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,    \
+#define ITW_GATHER_128_S(gbase, starr, stidx, offset, gdest, twbuf,            \
                          load_multi_cols, is_contiguous)                       \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m128 twv;                                                                \
     if ((load_multi_cols))                                                     \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_128_S;                        \
         twv = _mm_loadu_ps((twbuf) + addr);                                    \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = (__m128)(_mm_loaddup_pd((FFTZ_DOUBLE *)((twbuf) + addr)));       \
     }                                                                          \
     __m128 tmp_in;                                                             \
-    GATHER2_128_S((gbase) + starr[(stidx)], offset, tmp_in, is_contiguous);    \
+    GATHER2_128_S((gbase) + starr[(stidx)], offset, tmp_in,                    \
+        is_contiguous);                                                        \
     __m128 tmp_0 = _mm_mul_ps(tmp_in, twv);                                    \
     __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(tmp_in), twv);                     \
     tmp_0 = _mm_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                        \
@@ -702,21 +870,24 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 3, perm: 5, other: 0}
-#define TW_GATHER_128_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,     \
+#define TW_GATHER_128_S(gbase, starr, stidx, offset, gdest, twbuf,             \
                         load_multi_cols, is_contiguous)                        \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m128 twv;                                                                \
     if ((load_multi_cols))                                                     \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_128_S;                        \
         twv = _mm_loadu_ps((twbuf) + addr);                                    \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = (__m128)(_mm_loaddup_pd((FFTZ_DOUBLE *)((twbuf) + addr)));       \
     }                                                                          \
     __m128 tmp_in;                                                             \
-    GATHER2_128_S((gbase) + starr[(stidx)], offset, tmp_in, is_contiguous);    \
+    GATHER2_128_S((gbase) + starr[(stidx)], offset, tmp_in,                    \
+        is_contiguous);                                                        \
     __m128 tmp_0 = _mm_mul_ps(tmp_in, twv);                                    \
     __m128 tmp_1 = _mm_mul_ps(SWAP_RI_128_S(tmp_in), twv);                     \
     tmp_0 = _mm_permute_ps(tmp_0, 0xD8 /*0b11011000*/);                        \
@@ -727,11 +898,11 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 6, other: 0}
-#define ITW_GATHER_LOW_128_S(gbase, starr, stidx, gdest, twbuf, n, col,        \
+#define ITW_GATHER_LOW_128_S(gbase, starr, stidx, gdest, twbuf,                \
                              load_multi_cols /* unused */, is_contiguous)      \
 {                                                                              \
-    (FFTZ_VOID)is_contiguous;                                                  \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
+    (FFTZ_VOID)(is_contiguous);                                                \
+    const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                         \
     __m128 tmp_in, twv;                                                        \
     LD_LOW_128_S((twbuf) + addr, twv);                                         \
     LD_LOW_128_S((gbase) + starr[(stidx)], tmp_in);                            \
@@ -745,11 +916,11 @@
 }
 
 // Cost: {fma: 0, mul: 2, add: 1, move: 2, perm: 5, other: 0}
-#define TW_GATHER_LOW_128_S(gbase, starr, stidx, gdest, twbuf, n, col,         \
+#define TW_GATHER_LOW_128_S(gbase, starr, stidx, gdest, twbuf,                 \
                             load_multi_cols /* unused */, is_contiguous)       \
 {                                                                              \
-    (FFTZ_VOID)is_contiguous;                                                  \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
+    (FFTZ_VOID)(is_contiguous);                                                \
+    const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                         \
     __m128 tmp_in, twv;                                                        \
     LD_LOW_128_S((twbuf) + addr, twv);                                         \
     LD_LOW_128_S((gbase) + starr[(stidx)], tmp_in);                            \
@@ -1114,28 +1285,28 @@ static const union data_union_256 _neg_256_d[2] = {
 #define PRELOADED_GATHER_NOTW_256_D(gbase, stride, offset, gdest, twv,         \
                                     is_contiguous)                             \
 {                                                                              \
-    (FFTZ_VOID)twv;                                                            \
+    (FFTZ_VOID) twv;                                                           \
     GATHER2_256_D((gbase) + (stride), offset, (gdest), is_contiguous);         \
 }
 
 #define PRELOADED_SCATTER_NOTW_256_D(sbase, stride, offset, ssrc, twv,         \
                                      is_contiguous)                            \
 {                                                                              \
-    (FFTZ_VOID)twv;                                                            \
+    (FFTZ_VOID) twv;                                                           \
     SCATTER2_256_D((sbase) + (stride), offset, (ssrc), is_contiguous);         \
 }
 
 #define PRELOADED_GATHER_NOTW_128_D(gbase, stride, offset, gdest, twv,         \
                                     is_contiguous)                             \
 {                                                                              \
-    (FFTZ_VOID)twv;                                                            \
+    (FFTZ_VOID) twv;                                                           \
     LD_128_OFFSET_D((gbase) + (stride), offset, (gdest), is_contiguous);       \
 }
 
 #define PRELOADED_SCATTER_NOTW_128_D(sbase, stride, offset, ssrc, twv,         \
                                      is_contiguous)                            \
 {                                                                              \
-    (FFTZ_VOID)twv;                                                            \
+    (FFTZ_VOID) twv;                                                           \
     ST_128_OFFSET_D((sbase) + (stride), offset, (ssrc), is_contiguous);        \
 }
 
@@ -1145,95 +1316,159 @@ static const union data_union_256 _neg_256_d[2] = {
  * but perform plain load/store, ignoring twiddle arguments.
  *****************************************************************************/
 
-#define GATHER_NOTW_128_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
-                          lmc, is_contiguous)                                  \
+#define GATHER_NOTW_128_D(gbase, starr, stidx, offset, gdest, twbuf, lmc,      \
+                          is_contiguous)                                       \
     LD_128_OFFSET_D((gbase) + starr[(stidx)], offset, gdest, is_contiguous)
 
-#define GATHER_NOTW_256_D(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
-                          lmc, is_contiguous)                                  \
+#define GATHER_NOTW_256_D(gbase, starr, stidx, offset, gdest, twbuf, lmc,      \
+                          is_contiguous)                                       \
     GATHER2_256_D((gbase) + starr[(stidx)], offset, gdest, is_contiguous)
 
-#define GATHER_NOTW_256_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
-                          lmc, is_contiguous)                                  \
+#define GATHER_NOTW_256_S(gbase, starr, stidx, offset, gdest, twbuf, lmc,      \
+                          is_contiguous)                                       \
     GATHER4_256_S((gbase) + starr[(stidx)], offset, gdest, is_contiguous)
 
-#define GATHER_NOTW_128_S(gbase, starr, stidx, offset, gdest, twbuf, n, col,   \
-                          lmc, is_contiguous)                                  \
+#define GATHER_NOTW_128_S(gbase, starr, stidx, offset, gdest, twbuf, lmc,      \
+                          is_contiguous)                                       \
     GATHER2_128_S((gbase) + starr[(stidx)], offset, gdest, is_contiguous)
 
-#define GATHER_NOTW_LOW_128_S(gbase, starr, stidx, gdest, twbuf, n, col, lmc,  \
+#define GATHER_NOTW_LOW_128_S(gbase, starr, stidx, gdest, twbuf, lmc,          \
                               is_contiguous)                                   \
 {                                                                              \
     (FFTZ_VOID)is_contiguous;                                                  \
     LD_LOW_128_S((gbase) + starr[(stidx)], gdest);                             \
 }
 
-#define SCATTER_NOTW_128_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
-                           lmc, is_contiguous)                                 \
+/**
+ * @brief H2 (conjugate-half) counterparts of GATHER_NOTW_* above.
+ * Same signature-compatible, twiddle-ignoring interface, but route through
+ * the reverse-contiguous H2 gather primitives defined earlier in this file.
+ */
+#define GATHER_NOTW_H2_128_D(gbase, starr, stidx, offset, gdest, twbuf, lmc,   \
+                             is_contiguous)                                    \
+    GATHER_H2_128_D((gbase) + starr[(stidx)], offset, gdest)
+
+#define GATHER_NOTW_H2_256_D(gbase, starr, stidx, offset, gdest, twbuf, lmc,   \
+                             is_contiguous)                                    \
+    GATHER2_H2_256_D((gbase) + starr[(stidx)], offset, gdest)
+
+#define GATHER_NOTW_H2_256_S(gbase, starr, stidx, offset, gdest, twbuf, lmc,   \
+                             is_contiguous)                                    \
+    GATHER4_H2_256_S((gbase) + starr[(stidx)], offset, gdest)
+
+#define GATHER_NOTW_H2_128_S(gbase, starr, stidx, offset, gdest, twbuf, lmc,   \
+                             is_contiguous)                                    \
+    GATHER2_H2_128_S((gbase) + starr[(stidx)], offset, gdest)
+
+/**
+ * @brief H2 low-lane leftover-point gather. A single leftover point has no
+ * lane order to reverse, so this aliases directly to
+ * GATHER_NOTW_LOW_128_S.
+ */
+#define GATHER_NOTW_H2_LOW_128_S(gbase, starr, stidx, gdest, twbuf, lmc,       \
+                                 is_contiguous)                                \
+    GATHER_NOTW_LOW_128_S(gbase, starr, stidx, gdest, twbuf, lmc,              \
+                          is_contiguous)
+
+#define SCATTER_NOTW_128_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,      \
+                           is_contiguous)                                      \
     ST_128_OFFSET_D((sbase) + starr[(stidx)], offset, ssrc, is_contiguous)
 
-#define SCATTER_NOTW_256_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
-                           lmc, is_contiguous)                                 \
+#define SCATTER_NOTW_256_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,      \
+                           is_contiguous)                                      \
     SCATTER2_256_D((sbase) + starr[(stidx)], offset, ssrc, is_contiguous)
 
-#define SCATTER_NOTW_256_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
-                           lmc, is_contiguous)                                 \
+#define SCATTER_NOTW_256_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,      \
+                           is_contiguous)                                      \
     SCATTER4_256_S((sbase) + starr[(stidx)], offset, ssrc, is_contiguous)
 
-#define SCATTER_NOTW_128_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,   \
-                           lmc, is_contiguous)                                 \
+#define SCATTER_NOTW_128_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,      \
+                           is_contiguous)                                      \
     SCATTER2_128_S((sbase) + starr[(stidx)], offset, ssrc, is_contiguous)
 
-#define SCATTER_NOTW_LOW_128_S(sbase, starr, stidx, ssrc, twbuf, n, col, lmc,  \
-                              is_contiguous)                                   \
+#define SCATTER_NOTW_LOW_128_S(sbase, starr, stidx, ssrc, twbuf, lmc,          \
+                               is_contiguous)                                  \
 {                                                                              \
     (FFTZ_VOID)is_contiguous;                                                  \
     ST_LOW_128_S((sbase) + starr[(stidx)], ssrc);                              \
 }
+
+/**
+ * @brief H2 (conjugate-half) counterparts of SCATTER_NOTW_* above.
+ * Same signature-compatible, twiddle-ignoring interface, but route through
+ * the reverse-contiguous H2 scatter primitives defined earlier in this
+ * file.
+ */
+#define SCATTER_NOTW_H2_128_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,   \
+                              is_contiguous)                                   \
+    SCATTER_H2_128_D((sbase) + starr[(stidx)], offset, ssrc)
+
+#define SCATTER_NOTW_H2_256_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,   \
+                              is_contiguous)                                   \
+    SCATTER2_H2_256_D((sbase) + starr[(stidx)], offset, ssrc)
+
+#define SCATTER_NOTW_H2_256_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,   \
+                              is_contiguous)                                   \
+    SCATTER4_H2_256_S((sbase) + starr[(stidx)], offset, ssrc)
+
+#define SCATTER_NOTW_H2_128_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,   \
+                              is_contiguous)                                   \
+    SCATTER2_H2_128_S((sbase) + starr[(stidx)], offset, ssrc)
+
+/**
+ * @brief H2 low-lane leftover-point scatter. A single leftover point has no
+ * lane order to reverse, so this aliases directly to
+ * SCATTER_NOTW_LOW_128_S.
+ */
+#define SCATTER_NOTW_H2_LOW_128_S(sbase, starr, stidx, ssrc, twbuf, lmc,       \
+                                  is_contiguous)                               \
+    SCATTER_NOTW_LOW_128_S(sbase, starr, stidx, ssrc, twbuf, lmc,              \
+                           is_contiguous)
 
 /*****************************************************************************
  * TW_SCATTER / ITW_SCATTER -- twiddle multiply then store.
  * Mirrors TW_GATHER / ITW_GATHER with same signature but store side.
  *****************************************************************************/
 
-#define TW_SCATTER_128_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,     \
-                         lmc, is_contiguous)                                   \
+#define TW_SCATTER_128_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,        \
+                         is_contiguous)                                        \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
+    const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                         \
     const __m128d cd = _mm_loadu_pd((twbuf) + addr);                           \
     const __m128d _tw_t0 = _mm_mul_pd(ssrc, cd);                               \
     const __m128d _tw_t1 = _mm_mul_pd(SWAP_RI_128_D(ssrc), cd);                \
     const __m128d _tw_lo = _mm_unpacklo_pd(_tw_t0, _tw_t1);                    \
     const __m128d _tw_hi = _mm_unpackhi_pd(_tw_t0, _tw_t1);                    \
     __m128d _result = _mm_addsub_pd(_tw_lo, _tw_hi);                           \
-    ST_128_OFFSET_D((sbase) + starr[(stidx)], offset, _result,                 \
-                    is_contiguous);                                            \
+    ST_128_OFFSET_D((sbase) + starr[stidx], offset, _result, is_contiguous);   \
 }
 
-#define ITW_SCATTER_128_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,    \
-                          lmc, is_contiguous)                                  \
+#define ITW_SCATTER_128_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,       \
+                          is_contiguous)                                       \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
+    const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                         \
     const __m128d cd = _mm_loadu_pd((twbuf) + addr);                           \
     const __m128d _tw_t0 = _mm_mul_pd(ssrc, cd);                               \
     const __m128d _tw_t1 = _mm_mul_pd(SWAP_RI_128_D(ssrc), cd);                \
     const __m128d _tw_lo = _mm_unpacklo_pd(_tw_t1, _tw_t0);                    \
     const __m128d _tw_hi = _mm_unpackhi_pd(_tw_t1, _tw_t0);                    \
     __m128d _result = SWAP_RI_128_D(_mm_addsub_pd(_tw_lo, _tw_hi));            \
-    ST_128_OFFSET_D((sbase) + starr[(stidx)], offset, _result, is_contiguous); \
+    ST_128_OFFSET_D((sbase) + starr[stidx], offset, _result, is_contiguous);   \
 }
 
-#define TW_SCATTER_256_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,     \
-                         lmc, is_contiguous)                                   \
+#define TW_SCATTER_256_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,        \
+                         is_contiguous)                                        \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m256d twv;                                                               \
     if ((lmc))                                                                 \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_256_D;                        \
         twv = _mm256_loadu_pd((twbuf) + addr);                                 \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = _mm256_broadcast_pd((__m128d *)((twbuf) + addr));                \
     }                                                                          \
     const __m256d tmp_0 = _mm256_mul_pd(ssrc, twv);                            \
@@ -1241,20 +1476,22 @@ static const union data_union_256 _neg_256_d[2] = {
     const __m256d lo_1 = _mm256_unpacklo_pd(tmp_0, tmp_1);                     \
     const __m256d hi_1 = _mm256_unpackhi_pd(tmp_0, tmp_1);                     \
     __m256d _result = _mm256_addsub_pd(lo_1, hi_1);                            \
-    SCATTER2_256_D((sbase) + starr[(stidx)], offset, _result, is_contiguous);  \
+    SCATTER2_256_D((sbase) + starr[stidx], offset, _result, is_contiguous);    \
 }
 
-#define ITW_SCATTER_256_D(sbase, starr, stidx, offset, ssrc, twbuf, n, col,    \
-                          lmc, is_contiguous)                                  \
+#define ITW_SCATTER_256_D(sbase, starr, stidx, offset, ssrc, twbuf, lmc,       \
+                          is_contiguous)                                       \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m256d twv;                                                               \
     if ((lmc))                                                                 \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_256_D;                        \
         twv = _mm256_loadu_pd((twbuf) + addr);                                 \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = _mm256_broadcast_pd((__m128d *)((twbuf) + addr));                \
     }                                                                          \
     const __m256d tmp_0 = _mm256_mul_pd(ssrc, twv);                            \
@@ -1262,20 +1499,22 @@ static const union data_union_256 _neg_256_d[2] = {
     const __m256d lo_1 = _mm256_unpacklo_pd(tmp_1, tmp_0);                     \
     const __m256d hi_1 = _mm256_unpackhi_pd(tmp_1, tmp_0);                     \
     __m256d _result = SWAP_RI_256_D(_mm256_addsub_pd(lo_1, hi_1));             \
-    SCATTER2_256_D((sbase) + starr[(stidx)], offset, _result, is_contiguous);  \
+    SCATTER2_256_D((sbase) + starr[stidx], offset, _result, is_contiguous);    \
 }
 
-#define TW_SCATTER_256_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,     \
-                         lmc, is_contiguous)                                   \
+#define TW_SCATTER_256_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,        \
+                         is_contiguous)                                        \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m256 twv;                                                                \
     if ((lmc))                                                                 \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_256_S;                        \
         twv = _mm256_loadu_ps((twbuf) + addr);                                 \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = (__m256)(_mm256_broadcast_sd((FFTZ_DOUBLE *)((twbuf) + addr)));  \
     }                                                                          \
     __m256 tmp_0 = _mm256_mul_ps(ssrc, twv);                                   \
@@ -1285,20 +1524,22 @@ static const union data_union_256 _neg_256_d[2] = {
     const __m256 lo_1 = _mm256_unpacklo_ps(tmp_0, tmp_1);                      \
     const __m256 hi_1 = _mm256_unpackhi_ps(tmp_0, tmp_1);                      \
     __m256 _result = _mm256_addsub_ps(lo_1, hi_1);                             \
-    SCATTER4_256_S((sbase) + starr[(stidx)], offset, _result, is_contiguous);  \
+    SCATTER4_256_S((sbase) + starr[stidx], offset, _result, is_contiguous);    \
 }
 
-#define ITW_SCATTER_256_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,    \
-                          lmc, is_contiguous)                                  \
+#define ITW_SCATTER_256_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,       \
+                          is_contiguous)                                       \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m256 twv;                                                                \
     if ((lmc))                                                                 \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_256_S;                        \
         twv = _mm256_loadu_ps((twbuf) + addr);                                 \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = (__m256)(_mm256_broadcast_sd((FFTZ_DOUBLE *)((twbuf) + addr)));  \
     }                                                                          \
     __m256 tmp_0 = _mm256_mul_ps(ssrc, twv);                                   \
@@ -1308,20 +1549,22 @@ static const union data_union_256 _neg_256_d[2] = {
     const __m256 lo_1 = _mm256_unpacklo_ps(tmp_1, tmp_0);                      \
     const __m256 hi_1 = _mm256_unpackhi_ps(tmp_1, tmp_0);                      \
     __m256 _result = SWAP_RI_256_S(_mm256_addsub_ps(lo_1, hi_1));              \
-    SCATTER4_256_S((sbase) + starr[(stidx)], offset, _result, is_contiguous);  \
+    SCATTER4_256_S((sbase) + starr[stidx], offset, _result, is_contiguous);    \
 }
 
-#define TW_SCATTER_128_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,     \
-                         lmc, is_contiguous)                                   \
+#define TW_SCATTER_128_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,        \
+                         is_contiguous)                                        \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m128 twv;                                                                \
     if ((lmc))                                                                 \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_128_S;                        \
         twv = _mm_loadu_ps((twbuf) + addr);                                    \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = (__m128)(_mm_loaddup_pd((FFTZ_DOUBLE *)((twbuf) + addr)));       \
     }                                                                          \
     __m128 tmp_0 = _mm_mul_ps(ssrc, twv);                                      \
@@ -1331,20 +1574,22 @@ static const union data_union_256 _neg_256_d[2] = {
     const __m128 lo_1 = _mm_unpacklo_ps(tmp_0, tmp_1);                         \
     const __m128 hi_1 = _mm_unpackhi_ps(tmp_0, tmp_1);                         \
     __m128 _result = _mm_addsub_ps(lo_1, hi_1);                                \
-    SCATTER2_128_S((sbase) + starr[(stidx)], offset, _result, is_contiguous);  \
+    SCATTER2_128_S((sbase) + starr[stidx], offset, _result, is_contiguous);    \
 }
 
-#define ITW_SCATTER_128_S(sbase, starr, stidx, offset, ssrc, twbuf, n, col,    \
-                          lmc, is_contiguous)                                  \
+#define ITW_SCATTER_128_S(sbase, starr, stidx, offset, ssrc, twbuf, lmc,       \
+                          is_contiguous)                                       \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
     __m128 twv;                                                                \
     if ((lmc))                                                                 \
     {                                                                          \
+        const FFTZ_UINTP addr =                                                \
+            DATA_STRIDE * (stidx - 1) * NUM_SETS_128_S;                        \
         twv = _mm_loadu_ps((twbuf) + addr);                                    \
     }                                                                          \
     else                                                                       \
     {                                                                          \
+        const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                     \
         twv = (__m128)(_mm_loaddup_pd((FFTZ_DOUBLE *)((twbuf) + addr)));       \
     }                                                                          \
     __m128 tmp_0 = _mm_mul_ps(ssrc, twv);                                      \
@@ -1354,13 +1599,13 @@ static const union data_union_256 _neg_256_d[2] = {
     const __m128 lo_1 = _mm_unpacklo_ps(tmp_1, tmp_0);                         \
     const __m128 hi_1 = _mm_unpackhi_ps(tmp_1, tmp_0);                         \
     __m128 _result = SWAP_RI_128_S(_mm_addsub_ps(lo_1, hi_1));                 \
-    SCATTER2_128_S((sbase) + starr[(stidx)], offset, _result, is_contiguous);  \
+    SCATTER2_128_S((sbase) + starr[stidx], offset, _result, is_contiguous);    \
 }
 
-#define TW_SCATTER_LOW_128_S(sbase, starr, stidx, ssrc, twbuf, n, col, lmc,    \
+#define TW_SCATTER_LOW_128_S(sbase, starr, stidx, ssrc, twbuf, lmc,            \
                              is_contiguous)                                    \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
+    const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                         \
     __m128 twv;                                                                \
     LD_LOW_128_S((twbuf) + addr, twv);                                         \
     __m128 tmp_0 = _mm_mul_ps(ssrc, twv);                                      \
@@ -1370,13 +1615,13 @@ static const union data_union_256 _neg_256_d[2] = {
     const __m128 lo_1 = _mm_unpacklo_ps(tmp_0, tmp_1);                         \
     const __m128 hi_1 = _mm_unpackhi_ps(tmp_0, tmp_1);                         \
     __m128 _result = _mm_addsub_ps(lo_1, hi_1);                                \
-    ST_LOW_128_S((sbase) + starr[(stidx)], _result);                           \
+    ST_LOW_128_S((sbase) + starr[stidx], _result);                             \
 }
 
-#define ITW_SCATTER_LOW_128_S(sbase, starr, stidx, ssrc, twbuf, n, col, lmc,   \
+#define ITW_SCATTER_LOW_128_S(sbase, starr, stidx, ssrc, twbuf, lmc,           \
                               is_contiguous)                                   \
 {                                                                              \
-    const FFTZ_UINTP addr = DATA_STRIDE * ((stidx) * (n) + (col));             \
+    const FFTZ_UINTP addr = DATA_STRIDE * (stidx - 1);                         \
     __m128 twv;                                                                \
     LD_LOW_128_S((twbuf) + addr, twv);                                         \
     __m128 tmp_0 = _mm_mul_ps(ssrc, twv);                                      \

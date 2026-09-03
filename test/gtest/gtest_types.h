@@ -15,6 +15,11 @@
 #define AOCLFFTZ_GTEST_TYPES_H
 
 #include <tuple>
+
+#ifdef MULTI_THREADING
+#include <omp.h>
+#endif
+
 extern "C"
 {
 #include "core/solvers/solver.h"
@@ -43,10 +48,14 @@ enum aocl_fftz_kernel_type
     C2C_AVX128,
     C2C_AVX256,
     C2C_AVX512,
-    C2C_TWID_C,
-    C2C_TWID_AVX128,
-    C2C_TWID_AVX256,
-    C2C_TWID_AVX512,
+    C2C_TWID_FWD_C,
+    C2C_TWID_FWD_AVX128,
+    C2C_TWID_FWD_AVX256,
+    C2C_TWID_FWD_AVX512,
+    C2C_TWID_BWD_C,
+    C2C_TWID_BWD_AVX128,
+    C2C_TWID_BWD_AVX256,
+    C2C_TWID_BWD_AVX512,
     R2HC_C,
     R2HCF_C,
     R2HC_AVX128,
@@ -55,6 +64,14 @@ enum aocl_fftz_kernel_type
     R2HCF_AVX256,
     R2HC_AVX512,
     R2HCF_AVX512,
+    C2C_TWID_R2C_C,
+    C2C_TWID_R2C_AVX128,
+    C2C_TWID_R2C_AVX256,
+    C2C_TWID_R2C_AVX512,
+    C2C_TWID_C2R_C,
+    C2C_TWID_C2R_AVX128,
+    C2C_TWID_C2R_AVX256,
+    C2C_TWID_C2R_AVX512,
 };
 
 /**
@@ -76,6 +93,7 @@ typedef std::tuple<std::string, FFTZ_INT32, FFTZ_INT32,
     aoclfftz_selector_test_params_t;
 
 // function pointer to dft_solver
-typedef FFTZ_INT32 (*dft_solver_)(aoclfftz_solution_t *sol);
+typedef FFTZ_INT32 (*dft_solver_)(aoclfftz_solution_t *sol,
+                                  aoclfftz_mutable_ctx_t *ctx);
 
 #endif // AOCLFFTZ_GTEST_TYPES_H

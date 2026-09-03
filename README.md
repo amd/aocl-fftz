@@ -5,9 +5,9 @@ AOCL-FFTZ is a high performance Fast Fourier Transform (FFT) library developed
 by AMD supporting advanced optimizations for AMD’s "Zen"-based CPUs.
 The library computes FFTs of (i) complex data of any size and dimension in
 both forward and backward directions, and (ii) real data of any
-size and dimension, excluding prime sizes greater than 7 and their multiples,
-in both forward and backward directions with support for in-place and
-out-of-place result placements.
+size and dimension, excluding sizes that mix a prime factor larger than 13
+with smaller ones, in both forward and backward directions with support for
+in-place and out-of-place result placements.
 
 The kernels in this library are vectorized to speed-up the single-threaded core
 performance. The library supports the computations of parallel FFTs by taking
@@ -121,6 +121,7 @@ CODE_COVERAGE_FOR_ATG               |  Enables source code coverage instrumentat
 ENABLE_APP_INFO_LOGS                |  Enables info logging for FFT problems used by the application (Independent of AOCL_ENABLE_LOG, Disabled by default)
 ENABLE_INSTRUCTIONS_UPTO            |  Specifies maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)
 ENABLE_FMA                          |  Enables -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)
+SELECT_REAL_FFT_EXECUTION_ORDER     |  Selects the Real FFT Cooley-Tukey execution order (all modes are numerically identical): ITERATIVE (legacy Direct-first traversal with SWAP reordering), PARTIAL_RECURSION (recursive CT-first tree with Direct tail-chaining via HAS_NEXT), TRUE_RECURSION (CT-orchestrated recurse-then-combine mirroring the Complex FFT CT solver traversal). Default: TRUE_RECURSION
 ENABLE_MULTI_THREADING              |  Compiles library with multi-threading support using OpenMP (Disabled by default)
 ENABLE_STRICT_WARNINGS              |  Enables compiler flags to treat all warnings as errors (Enabled by default)
 FUZZTEST                            |  Enables Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)
@@ -154,7 +155,8 @@ Multi-threading with OpenMP
 AOCL-FFTZ currently supports Multi-threading through OpenMP. To enable it, turn on the CMake option `ENABLE_MULTI_THREADING`.
 Additionally, you can also provide a custom OpenMP library through the `OpenMP_libomp_LIBRARY` option to override system OpenMP.
 
-Note: When reusing an already computed solution handle with `execute_io` API, make sure that the multiple application threads calling it maintain separate copies of the solution handle.
+Note: `aoclfftz_execute_io` is safe to call concurrently on a shared handle.
+`aoclfftz_execute` is not; call it from a single thread per handle.
 
 Running Test Bench On Linux & Windows
 -------------------------------------

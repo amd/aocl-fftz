@@ -38,28 +38,38 @@
  * dest = |--Ar---|--Br---|--Cr---|--Dr---|--Er---|--Fr---|--Gr---|--Hr---|
  * Operation : 8 MOV(load), 3 OTHERS
  */
-#define LDR_512_D(base, offset, dest)                                          \
+#define LDR_512_D(base, offset, dest, is_contiguous)                           \
     {                                                                          \
-        __m128d _low, _high;                                                   \
-        __m256d _low256, _high256;                                             \
-        _low = _mm_load_sd(base);                                              \
-        base += offset;                                                        \
-        _low = _mm_loadh_pd(_low, base);                                       \
-        base += offset;                                                        \
-        _high = _mm_load_sd(base);                                             \
-        base += offset;                                                        \
-        _high = _mm_loadh_pd(_high, base);                                     \
-        _low256 = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low), _high, 1);\
-        base += offset;                                                        \
-        _low = _mm_load_sd(base);                                              \
-        base += offset;                                                        \
-        _low = _mm_loadh_pd(_low, base);                                       \
-        base += offset;                                                        \
-        _high = _mm_load_sd(base);                                             \
-        base += offset;                                                        \
-        _high = _mm_loadh_pd(_high, base);                                     \
-        _high256 = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low) ,_high,1);\
-        dest = _mm512_insertf64x4(_mm512_castpd256_pd512(_low256), _high256,1);\
+        if (is_contiguous)                                                     \
+        {                                                                      \
+            dest = _mm512_loadu_pd(base);                                      \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
+            __m128d _low, _high;                                               \
+            __m256d _low256, _high256;                                         \
+            _low = _mm_load_sd(base);                                          \
+            base += offset;                                                    \
+            _low = _mm_loadh_pd(_low, base);                                   \
+            base += offset;                                                    \
+            _high = _mm_load_sd(base);                                         \
+            base += offset;                                                    \
+            _high = _mm_loadh_pd(_high, base);                                 \
+            _low256 = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low),       \
+                                           _high, 1);                          \
+            base += offset;                                                    \
+            _low = _mm_load_sd(base);                                          \
+            base += offset;                                                    \
+            _low = _mm_loadh_pd(_low, base);                                   \
+            base += offset;                                                    \
+            _high = _mm_load_sd(base);                                         \
+            base += offset;                                                    \
+            _high = _mm_loadh_pd(_high, base);                                 \
+            _high256 = _mm256_insertf128_pd(_mm256_castpd128_pd256(_low),      \
+                                            _high, 1);                         \
+            dest = _mm512_insertf64x4(_mm512_castpd256_pd512(_low256),         \
+                                      _high256, 1);                            \
+        }                                                                      \
     }
 
 /**
@@ -135,42 +145,52 @@
  * dest = |Ar-|Br-|Cr-|Dr-|Er-|Fr-|Gr-|Hr-|Ir-|Jr-|Kr-|Lr-|Mr-|Nr-|Or-|Pr-|
  * Operation : 16 MOV(load), 3 OTHERS, 12 PERM
  */
-#define LDR_512_S(base, offset, dest)                                          \
+#define LDR_512_S(base, offset, dest, is_contiguous)                           \
     {                                                                          \
-        __m128 _low, _high, _tmp, _tmp2;                                       \
-        __m256 _low256, _high256;                                              \
-        _low = _mm_load_ss(base);                                              \
-        _high = _mm_load_ss(base + (offset));                                  \
-        _low = _mm_shuffle_ps(_low, _high, 0x44);                              \
-        _tmp = _mm_load_ss(base + (offset << 1));                              \
-        _high = _mm_load_ss(base + (offset * 3));                              \
-        _tmp = _mm_shuffle_ps(_tmp, _high, 0x44);                              \
-        _low = _mm_shuffle_ps(_low, _tmp, 0x88);                               \
-        _high = _mm_load_ss(base + (offset << 2));                             \
-        _tmp = _mm_load_ss(base + (offset * 5));                               \
-        _high = _mm_shuffle_ps(_high, _tmp, 0x44);                             \
-        _tmp2 = _mm_load_ss(base + (offset * 6));                              \
-        _tmp = _mm_load_ss(base + (offset * 7));                               \
-        _tmp2 = _mm_shuffle_ps(_tmp2, _tmp, 0x44);                             \
-        _tmp = _mm_shuffle_ps(_high, _tmp2, 0x88);                             \
-        _low256 = _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _tmp, 1); \
-        base = base + (offset << 3);                                           \
-        _low = _mm_load_ss(base);                                              \
-        _high = _mm_load_ss(base + (offset));                                  \
-        _low = _mm_shuffle_ps(_low, _high, 0x44);                              \
-        _tmp = _mm_load_ss(base + (offset << 1));                              \
-        _high = _mm_load_ss(base + (offset * 3));                              \
-        _tmp = _mm_shuffle_ps(_tmp, _high, 0x44);                              \
-        _low = _mm_shuffle_ps(_low, _tmp, 0x88);                               \
-        _high = _mm_load_ss(base + (offset << 2));                             \
-        _tmp = _mm_load_ss(base + (offset * 5));                               \
-        _high = _mm_shuffle_ps(_high, _tmp, 0x44);                             \
-        _tmp2 = _mm_load_ss(base + (offset * 6));                              \
-        _tmp = _mm_load_ss(base + (offset * 7));                               \
-        _tmp2 = _mm_shuffle_ps(_tmp2, _tmp, 0x44);                             \
-        _tmp = _mm_shuffle_ps(_high, _tmp2, 0x88);                             \
-        _high256 = _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _tmp, 1);\
-        dest = _mm512_insertf32x8(_mm512_castps256_ps512(_low256),_high256, 1);\
+        if (is_contiguous)                                                     \
+        {                                                                      \
+            dest = _mm512_loadu_ps(base);                                      \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
+            __m128 _low, _high, _tmp, _tmp2;                                   \
+            __m256 _low256, _high256;                                          \
+            _low = _mm_load_ss(base);                                          \
+            _high = _mm_load_ss(base + (offset));                              \
+            _low = _mm_shuffle_ps(_low, _high, 0x44);                          \
+            _tmp = _mm_load_ss(base + (offset << 1));                          \
+            _high = _mm_load_ss(base + (offset * 3));                          \
+            _tmp = _mm_shuffle_ps(_tmp, _high, 0x44);                          \
+            _low = _mm_shuffle_ps(_low, _tmp, 0x88);                           \
+            _high = _mm_load_ss(base + (offset << 2));                         \
+            _tmp = _mm_load_ss(base + (offset * 5));                           \
+            _high = _mm_shuffle_ps(_high, _tmp, 0x44);                         \
+            _tmp2 = _mm_load_ss(base + (offset * 6));                          \
+            _tmp = _mm_load_ss(base + (offset * 7));                           \
+            _tmp2 = _mm_shuffle_ps(_tmp2, _tmp, 0x44);                         \
+            _tmp = _mm_shuffle_ps(_high, _tmp2, 0x88);                         \
+            _low256 =                                                          \
+                _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _tmp, 1);   \
+            base = base + (offset << 3);                                       \
+            _low = _mm_load_ss(base);                                          \
+            _high = _mm_load_ss(base + (offset));                              \
+            _low = _mm_shuffle_ps(_low, _high, 0x44);                          \
+            _tmp = _mm_load_ss(base + (offset << 1));                          \
+            _high = _mm_load_ss(base + (offset * 3));                          \
+            _tmp = _mm_shuffle_ps(_tmp, _high, 0x44);                          \
+            _low = _mm_shuffle_ps(_low, _tmp, 0x88);                           \
+            _high = _mm_load_ss(base + (offset << 2));                         \
+            _tmp = _mm_load_ss(base + (offset * 5));                           \
+            _high = _mm_shuffle_ps(_high, _tmp, 0x44);                         \
+            _tmp2 = _mm_load_ss(base + (offset * 6));                          \
+            _tmp = _mm_load_ss(base + (offset * 7));                           \
+            _tmp2 = _mm_shuffle_ps(_tmp2, _tmp, 0x44);                         \
+            _tmp = _mm_shuffle_ps(_high, _tmp2, 0x88);                         \
+            _high256 =                                                         \
+                _mm256_insertf128_ps(_mm256_castps128_ps256(_low), _tmp, 1);   \
+            dest = _mm512_insertf32x8(_mm512_castps256_ps512(_low256),         \
+                                      _high256, 1);                            \
+        }                                                                      \
     }
 
 /**
@@ -223,32 +243,35 @@
         _tmp4 = _mm_loadu_ps(base);                                            \
         _tmp3 = _mm_shuffle_ps(_tmp3, _tmp4, 0x44);                            \
         base += offset;                                                        \
-         _r1 = _mm256_insertf128_ps(_mm256_castps128_ps256(_tmp), _tmp2, 1);   \
-         _r2 = _mm256_insertf128_ps(_mm256_castps128_ps256(_tmp1), _tmp3, 1);  \
-         _tmp4 = _mm_loadu_ps(base);                                           \
-         base += offset;                                                       \
-         _tmp5 = _mm_loadu_ps(base);                                           \
-         _tmp4 = _mm_shuffle_ps(_tmp4, _tmp5, 0x44);                           \
-         base += offset;                                                       \
-         _tmp5 = _mm_loadu_ps(base);                                           \
-         base += offset;                                                       \
-         _tmp6 = _mm_loadu_ps(base);                                           \
-         _tmp5 = _mm_shuffle_ps(_tmp5, _tmp6, 0x44);                           \
-         base += offset;                                                       \
-         _tmp6 = _mm_loadu_ps(base);                                           \
-         base += offset;                                                       \
-         _tmp7 = _mm_loadu_ps(base);                                           \
-         _tmp6 = _mm_shuffle_ps(_tmp6, _tmp7, 0x44);                           \
-         base += offset;                                                       \
-         _tmp7 = _mm_loadu_ps(base);                                           \
-         base += offset;                                                       \
-         _tmp7 = _mm_loadh_pi(_tmp7, (__m64 *)base);                           \
-         _r3 = _mm256_insertf128_ps(_mm256_castps128_ps256(_tmp4), _tmp6, 1);  \
-         _r4 = _mm256_insertf128_ps(_mm256_castps128_ps256(_tmp5), _tmp7, 1);  \
-         _c1 = _mm512_insertf32x8(_mm512_castps256_ps512(_r1), _r3, 1);        \
-         _c2 = _mm512_insertf32x8(_mm512_castps256_ps512(_r2), _r4, 1);        \
-         dest1 = _mm512_shuffle_ps(_c1, _c2, 0x88);                            \
-         dest2 = _mm512_shuffle_ps(_c1, _c2, 0xDD);                            \
+        _r1 = _mm256_insertf128_ps(_mm256_castps128_ps256(_tmp), _tmp2, 1);    \
+        _r2 = _mm256_insertf128_ps(_mm256_castps128_ps256(_tmp1),              \
+                                   _tmp3, 1);                                  \
+        _tmp4 = _mm_loadu_ps(base);                                            \
+        base += offset;                                                        \
+        _tmp5 = _mm_loadu_ps(base);                                            \
+        _tmp4 = _mm_shuffle_ps(_tmp4, _tmp5, 0x44);                            \
+        base += offset;                                                        \
+        _tmp5 = _mm_loadu_ps(base);                                            \
+        base += offset;                                                        \
+        _tmp6 = _mm_loadu_ps(base);                                            \
+        _tmp5 = _mm_shuffle_ps(_tmp5, _tmp6, 0x44);                            \
+        base += offset;                                                        \
+        _tmp6 = _mm_loadu_ps(base);                                            \
+        base += offset;                                                        \
+        _tmp7 = _mm_loadu_ps(base);                                            \
+        _tmp6 = _mm_shuffle_ps(_tmp6, _tmp7, 0x44);                            \
+        base += offset;                                                        \
+        _tmp7 = _mm_loadu_ps(base);                                            \
+        base += offset;                                                        \
+        _tmp7 = _mm_loadh_pi(_tmp7, (__m64 *)base);                            \
+        _r3 = _mm256_insertf128_ps(_mm256_castps128_ps256(_tmp4),              \
+                                   _tmp6, 1);                                  \
+        _r4 = _mm256_insertf128_ps(_mm256_castps128_ps256(_tmp5),              \
+                                   _tmp7, 1);                                  \
+        _c1 = _mm512_insertf32x8(_mm512_castps256_ps512(_r1), _r3, 1);         \
+        _c2 = _mm512_insertf32x8(_mm512_castps256_ps512(_r2), _r4, 1);         \
+        dest1 = _mm512_shuffle_ps(_c1, _c2, 0x88);                             \
+        dest2 = _mm512_shuffle_ps(_c1, _c2, 0xDD);                             \
     }
 
 /**
@@ -267,30 +290,37 @@
  * src = |--Ar---|--Br---|--Cr---|--Dr---|--Er---|--Fr---|--Gr---|--Hr---|
  * Operation : 8 MOV(store), 3 OTHERS
  */
-#define STR_512_D(base, offset, src)                                           \
+#define STR_512_D(base, offset, src, is_contiguous)                            \
     {                                                                          \
-        __m256d _256high = _mm512_extractf64x4_pd(src, 1);                     \
-        __m256d _256low = _mm512_castpd512_pd256(src);                         \
-        __m128d _low, _high;                                                   \
-        _high = _mm256_extractf128_pd(_256low, 1);                             \
-        _low = _mm256_castpd256_pd128(_256low);                                \
-        _mm_storel_pd(base, _low);                                             \
-        base += offset;                                                        \
-        _mm_storeh_pd(base, _low);                                             \
-        base += offset;                                                        \
-        _mm_storel_pd(base, _high);                                            \
-        base += offset;                                                        \
-        _mm_storeh_pd(base, _high);                                            \
-        base += offset;                                                        \
-        _high = _mm256_extractf128_pd(_256high, 1);                            \
-        _low = _mm256_castpd256_pd128(_256high);                               \
-        _mm_storel_pd(base, _low);                                             \
-        base += offset;                                                        \
-        _mm_storeh_pd(base, _low);                                             \
-        base += offset;                                                        \
-        _mm_storel_pd(base, _high);                                            \
-        base += offset;                                                        \
-        _mm_storeh_pd(base, _high);                                            \
+        if (is_contiguous)                                                     \
+        {                                                                      \
+            _mm512_storeu_pd(base, src);                                       \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
+            __m256d _256high = _mm512_extractf64x4_pd(src, 1);                 \
+            __m256d _256low = _mm512_castpd512_pd256(src);                     \
+            __m128d _low, _high;                                               \
+            _high = _mm256_extractf128_pd(_256low, 1);                         \
+            _low = _mm256_castpd256_pd128(_256low);                            \
+            _mm_storel_pd(base, _low);                                         \
+            base += offset;                                                    \
+            _mm_storeh_pd(base, _low);                                         \
+            base += offset;                                                    \
+            _mm_storel_pd(base, _high);                                        \
+            base += offset;                                                    \
+            _mm_storeh_pd(base, _high);                                        \
+            base += offset;                                                    \
+            _high = _mm256_extractf128_pd(_256high, 1);                        \
+            _low = _mm256_castpd256_pd128(_256high);                           \
+            _mm_storel_pd(base, _low);                                         \
+            base += offset;                                                    \
+            _mm_storeh_pd(base, _low);                                         \
+            base += offset;                                                    \
+            _mm_storel_pd(base, _high);                                        \
+            base += offset;                                                    \
+            _mm_storeh_pd(base, _high);                                        \
+        }                                                                      \
     }
 
 /**
@@ -314,6 +344,7 @@
     {                                                                          \
         __m512d _s1_s3__s5_s7c, _s2_s4__s6_s8c;                                \
         _s1_s3__s5_s7c = _mm512_shuffle_pd(src1, src2, 0x0);                   \
+        _s2_s4__s6_s8c = _mm512_shuffle_pd(src1, src2, 0xFF);                  \
         __m256d _s1_s3c, _s2_s4c, _s5_s7c, _s6_s8c;                            \
         _s5_s7c = _mm512_extractf64x4_pd(_s1_s3__s5_s7c, 0x1);                 \
         _s1_s3c = _mm512_castpd512_pd256(_s1_s3__s5_s7c);                      \
@@ -322,7 +353,6 @@
         __m128d _s3c = _mm256_extractf128_pd(_s1_s3c, 1);                      \
         __m128d _s1c = _mm256_castpd256_pd128(_s1_s3c);                        \
         _mm_storeu_pd(base, _s1c);                                             \
-        _s2_s4__s6_s8c = _mm512_shuffle_pd(src1, src2, 0xFF);                  \
         _s6_s8c = _mm512_extractf64x4_pd(_s2_s4__s6_s8c, 1);                   \
         _s2_s4c = _mm512_castpd512_pd256(_s2_s4__s6_s8c);                      \
         __m128d _s8c = _mm256_extractf128_pd(_s6_s8c, 1);                      \
@@ -369,58 +399,65 @@
  * src = |Ar-|Br-|Cr-|Dr-|Er-|Fr-|Gr-|Hr-|Ir-|Jr-|Kr-|Lr-|Mr-|Nr-|Or-|Pr-|
  * Operation : 16 MOV(store), 3 OTHERS, 12 PERM
  */
-#define STR_512_S(base, offset, src)                                           \
+#define STR_512_S(base, offset, src, is_contiguous)                            \
     {                                                                          \
-        __m256 _high256 = _mm512_extractf32x8_ps(src, 1);                      \
-        __m256 _low256= _mm512_castps512_ps256(src);                           \
-        __m128 _high, _low;                                                    \
-        _high = _mm256_extractf128_ps(_low256, 1);                             \
-        _low = _mm256_castps256_ps128(_low256);                                \
-        _mm_store_ss(base, _low);                                              \
-        base += offset;                                                        \
-        __m128 _tmp = _mm_shuffle_ps(_low,_low, 0xE1);                         \
-        _mm_store_ss(base, _tmp);                                              \
-        base += offset;                                                        \
-        _tmp = _mm_shuffle_ps(_low,_low, 0xD2);                                \
-        _mm_store_ss(base, _tmp);                                              \
-        base += offset;                                                        \
-        _tmp = _mm_shuffle_ps(_low,_low, 0x93);                                \
-        _mm_store_ss(base, _tmp);                                              \
-        base += offset;                                                        \
-        _mm_store_ss(base, _high);                                             \
-        base += offset;                                                        \
-        _tmp = _mm_shuffle_ps(_high,_high, 0xE1);                              \
-        _mm_store_ss(base, _tmp);                                              \
-        base += offset;                                                        \
-        _tmp = _mm_shuffle_ps(_high,_high, 0XD2);                              \
-        _mm_store_ss(base, _tmp);                                              \
-        base += offset;                                                        \
-        _tmp = _mm_shuffle_ps(_high, _high,0X93);                              \
-        _mm_store_ss(base, _tmp);                                              \
-        base += offset;                                                        \
-        _high = _mm256_extractf128_ps(_high256, 1);                            \
-        _low = _mm256_castps256_ps128(_high256);                               \
-        _mm_store_ss(base, _low);                                              \
-        base += offset;                                                        \
-        _tmp = _mm_shuffle_ps(_low,_low, 0xE1);                                \
-        _mm_store_ss(base, _tmp);                                              \
-        base += offset;                                                        \
-        _tmp = _mm_shuffle_ps(_low,_low, 0xD2);                                \
-        _mm_store_ss(base, _tmp);                                              \
-        base += offset;                                                        \
-        _tmp = _mm_shuffle_ps(_low,_low, 0x93);                                \
-        _mm_store_ss(base, _tmp);                                              \
-        base += offset;                                                        \
-        _mm_store_ss(base, _high);                                             \
-        base += offset;                                                        \
-        _tmp = _mm_shuffle_ps(_high,_high, 0xE1);                              \
-        _mm_store_ss(base, _tmp);                                              \
-        base += offset;                                                        \
-        _tmp = _mm_shuffle_ps(_high,_high, 0XD2);                              \
-        _mm_store_ss(base, _tmp);                                              \
-        base += offset;                                                        \
-        _tmp = _mm_shuffle_ps(_high,_high, 0X93);                              \
-        _mm_store_ss(base, _tmp);                                              \
+        if (is_contiguous)                                                     \
+        {                                                                      \
+            _mm512_storeu_ps(base, src);                                       \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
+            __m256 _high256 = _mm512_extractf32x8_ps(src, 1);                  \
+            __m256 _low256= _mm512_castps512_ps256(src);                       \
+            __m128 _high, _low;                                                \
+            _high = _mm256_extractf128_ps(_low256, 1);                         \
+            _low = _mm256_castps256_ps128(_low256);                            \
+            _mm_store_ss(base, _low);                                          \
+            base += offset;                                                    \
+            __m128 _tmp = _mm_shuffle_ps(_low,_low, 0xE1);                     \
+            _mm_store_ss(base, _tmp);                                          \
+            base += offset;                                                    \
+            _tmp = _mm_shuffle_ps(_low,_low, 0xD2);                            \
+            _mm_store_ss(base, _tmp);                                          \
+            base += offset;                                                    \
+            _tmp = _mm_shuffle_ps(_low,_low, 0x93);                            \
+            _mm_store_ss(base, _tmp);                                          \
+            base += offset;                                                    \
+            _mm_store_ss(base, _high);                                         \
+            base += offset;                                                    \
+            _tmp = _mm_shuffle_ps(_high,_high, 0xE1);                          \
+            _mm_store_ss(base, _tmp);                                          \
+            base += offset;                                                    \
+            _tmp = _mm_shuffle_ps(_high,_high, 0XD2);                          \
+            _mm_store_ss(base, _tmp);                                          \
+            base += offset;                                                    \
+            _tmp = _mm_shuffle_ps(_high, _high,0X93);                          \
+            _mm_store_ss(base, _tmp);                                          \
+            base += offset;                                                    \
+            _high = _mm256_extractf128_ps(_high256, 1);                        \
+            _low = _mm256_castps256_ps128(_high256);                           \
+            _mm_store_ss(base, _low);                                          \
+            base += offset;                                                    \
+            _tmp = _mm_shuffle_ps(_low,_low, 0xE1);                            \
+            _mm_store_ss(base, _tmp);                                          \
+            base += offset;                                                    \
+            _tmp = _mm_shuffle_ps(_low,_low, 0xD2);                            \
+            _mm_store_ss(base, _tmp);                                          \
+            base += offset;                                                    \
+            _tmp = _mm_shuffle_ps(_low,_low, 0x93);                            \
+            _mm_store_ss(base, _tmp);                                          \
+            base += offset;                                                    \
+            _mm_store_ss(base, _high);                                         \
+            base += offset;                                                    \
+            _tmp = _mm_shuffle_ps(_high,_high, 0xE1);                          \
+            _mm_store_ss(base, _tmp);                                          \
+            base += offset;                                                    \
+            _tmp = _mm_shuffle_ps(_high,_high, 0XD2);                          \
+            _mm_store_ss(base, _tmp);                                          \
+            base += offset;                                                    \
+            _tmp = _mm_shuffle_ps(_high,_high, 0X93);                          \
+            _mm_store_ss(base, _tmp);                                          \
+        }                                                                      \
     }
 
 /**

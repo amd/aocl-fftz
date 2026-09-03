@@ -42,16 +42,16 @@ FFTZ_INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
 
     if (sol->decomp_scheme->batched_vecs != NULL)
     {
-        strides->v_in_h2_stride = strides->v_in_stride =
+        strides->v_in_sym_stride = strides->v_in_stride =
             sol->decomp_scheme->batched_vecs[0].in_stride * DATA_STRIDE;
-        strides->v_out_h2_stride = strides->v_out_stride =
+        strides->v_out_sym_stride = strides->v_out_stride =
             sol->decomp_scheme->batched_vecs[0].out_stride * DATA_STRIDE;
     }
     else
     {
-        strides->v_in_h2_stride = strides->v_in_stride =
+        strides->v_in_sym_stride = strides->v_in_stride =
             sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
-        strides->v_out_h2_stride = strides->v_out_stride =
+        strides->v_out_sym_stride = strides->v_out_stride =
             sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
     }
 
@@ -89,17 +89,17 @@ FFTZ_INT32 setup_direct_solver(aoclfftz_solution_t *sol, cost_analysis_t *cost,
     return status;
 }
 
-static FFTZ_INT32 execute_direct_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_direct_solver(aoclfftz_solution_t *sol,
+                                        aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(ctx->flags);
 
     kfft_ kfft = sol->solver->kernel_c2c->kfft[direction];
-    kfft(sol->decomp_scheme->in_real, sol->decomp_scheme->in_imag,
-         sol->decomp_scheme->out_real, sol->decomp_scheme->out_imag,
+    kfft(ctx->in_real, ctx->in_imag, ctx->out_real, ctx->out_imag,
          sol->decomp_scheme->vecs[0].n, strides, sol->twiddle, direction);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
@@ -122,22 +122,22 @@ static FFTZ_INT32 execute_direct_solver(aoclfftz_solution_t *sol)
  * executing all problem batches (batched_vecs) for each CT batch. This access
  * pattern is optimal when problem batch stride < elemental stride.
  */
-static FFTZ_INT32
-execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
+static FFTZ_INT32 execute_direct_batched_colmajor_solver(
+                                                    aoclfftz_solution_t *sol,
+                                                    aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_UINT8 direction = FFT_DIR(ctx->flags);
     kfft_ kernel = sol->solver->kernel_c2c->kfft[direction];
 
-    FFTZ_VOID *in_real = sol->decomp_scheme->in_real;
-    FFTZ_VOID *in_imag = sol->decomp_scheme->in_imag;
-    FFTZ_VOID *out_real = sol->decomp_scheme->out_real;
-    FFTZ_VOID *out_imag = sol->decomp_scheme->out_imag;
-
-    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(ctx);
+    FFTZ_VOID *in_real  = ctx->in_real;
+    FFTZ_VOID *in_imag  = ctx->in_imag;
+    FFTZ_VOID *out_real = ctx->out_real;
+    FFTZ_VOID *out_imag = ctx->out_imag;
 
     // vec-strides across DFT butterflies of the same CT problem
     FFTZ_INTP ct_in_stride =
@@ -145,13 +145,15 @@ execute_direct_batched_colmajor_solver(aoclfftz_solution_t *sol)
     FFTZ_INTP ct_out_stride =
         sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE * dt_bytes;
 
+    FFTZ_INTP radix = sol->decomp_scheme->dims[0].n;
+    FFTZ_INTP tw_per_butterfly = (radix - 1) * DATA_STRIDE * (FFTZ_INTP)dt_bytes;
+
     // execute the direct kernel
     for (FFTZ_INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
     {
         aoclfftz_twiddle_t tw_local = {
             .twiddle_buf_ptr = sol->twiddle->twiddle_buf_ptr,
-            .TW = MOVE_ADDR(sol->twiddle->TW, i * DATA_STRIDE * dt_bytes),
-            .cols = sol->twiddle->cols,
+            .TW = MOVE_ADDR(sol->twiddle->TW, i * tw_per_butterfly),
             .load_multi_cols = 0, // use same twiddle values across batches
         };                        // since different batches solve the same
                                   // DFT butterfly of different problems

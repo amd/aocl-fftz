@@ -35,6 +35,18 @@ FFTZ_VOID initialize_cpuid_cache(FFTZ_UINT32 *max_cpuid_leaf,
 // CPUID helpers
 cpuid_result_t cpuid(FFTZ_UINT32 leaf, FFTZ_UINT32 subleaf);
 
+// Cache line size assumed when CPUID reports none. Unrelated to MIN_ALIGNMENT
+// (utils/allocator.h), which only happens to carry the same value.
+#define DEFAULT_CACHE_LINE_BYTES 64
+
+// Size in bytes of the cache at the given level (1=L1d, 2=L2, 3=L3), or 0 when
+// unavailable. Walks the CPUID cache leaf on every call; ask once and reuse.
+FFTZ_UINTP cpuid_cache_size(FFTZ_UINT32 cache_level);
+
+// Cache line size in bytes, DEFAULT_CACHE_LINE_BYTES when CPUID reports none.
+// Walks the CPUID cache leaf on every call; ask once and reuse.
+FFTZ_INTP cpuid_cache_line_size(FFTZ_VOID);
+
 // XGETBV / XCR0 helpers
 FFTZ_UINT64 get_xcr0(FFTZ_VOID);
 FFTZ_INT32 is_xgetbv_supported(cpuid_result_t cpuid_leaf1);

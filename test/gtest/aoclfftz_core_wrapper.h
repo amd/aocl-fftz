@@ -16,7 +16,7 @@
 #define AOCLFFTZ_CORE_WRAPPER_H
 
 #include "core/common/memory_manager.h"
-#include "core/common/strides.h"
+#include "core/solvers/real/strides_rdft.h"
 #include "core/kernels/kernel.h"
 #include "core/solvers/solver.h"
 #include "selector/selector.h"
@@ -253,15 +253,13 @@ EXPORT_SYM_DYN FFTZ_VOID permuted_copy_c_fp64_wrapper(
 
 /* ---------------- memory allocators/destroys ---------------- */
 
-EXPORT_SYM_DYN
-aoclfftz_decomp_scheme_t *alloc_decomp_scheme_wrapper(FFTZ_INT32 vec_rank,
-                                                      FFTZ_INT32 dim_rank);
 EXPORT_SYM_DYN aoclfftz_solution_t *alloc_solution_wrapper(FFTZ_INT32 vec_rank,
                                                            FFTZ_INT32 dim_rank);
 EXPORT_SYM_DYN
 aoclfftz_selector_t *alloc_selector_wrapper(FFTZ_INT32 vec_rank,
                                             FFTZ_INT32 dim_rank,
-                                            kernel_tables_t *kernel_tables);
+                                            kernel_tables_t *kernel_tables,
+                                            FFTZ_UINT8 *has_nested);
 EXPORT_SYM_DYN FFTZ_VOID *
 alloc_twiddle_for_solution_wrapper(FFTZ_UINT8 rad_size, FFTZ_UINT8 dt_prec);
 EXPORT_SYM_DYN FFTZ_VOID destroy_selector_wrapper(aoclfftz_selector_t *sel);
@@ -272,13 +270,10 @@ destroy_decomp_scheme_wrapper(aoclfftz_decomp_scheme_t *decomp_scheme);
 EXPORT_SYM_DYN FFTZ_VOID destroy_handle_wrapper(FFTZ_VOID *handle);
 
 /* ---------------- strides wrapper ---------------- */
-EXPORT_SYM_DYN FFTZ_VOID populate_stride_array_wrapper(
-    FFTZ_INTP *strides, FFTZ_INTP stride_val, FFTZ_INTP n,
-    FFTZ_UINT8 compute_half_complex, FFTZ_UINT8 adjust_to_full_complex);
-
-/* ---------------- fused strides wrapper ---------------- */
-EXPORT_SYM_DYN FFTZ_VOID prepare_fused_kernel_strides_wrapper(
-    FFTZ_INTP *strides, FFTZ_INTP radix, FFTZ_INTP offset);
+EXPORT_SYM_DYN FFTZ_VOID populate_stride_array_wrapper(FFTZ_INTP *strides,
+                                        FFTZ_INTP stride_val, FFTZ_INTP n,
+                                        FFTZ_UINT8 compute_half_complex,
+                                        FFTZ_UINT8 adjust_to_full_complex);
 
 /* ---------------- wrapper kernel tables ---------------- */
 
@@ -446,10 +441,32 @@ TRANSPOSE_WRAPPER_ALL_TYPES_DECL(tisr_cycles, c)
 TRANSPOSE_WRAPPER_ALL_TYPES_DECL(tos_iterative, c)
 TRANSPOSE_WRAPPER_ALL_TYPES_DECL(tos_blocked, c)
 
+// Fused four-step twiddle + transpose register wrappers; scalar (c) always
+// available, AVX variants gated on the ENABLE_AVX* macros.
+EXPORT_SYM_DYN fused_twiddle_transpose_
+register_fused_twiddle_transpose_c_wrapper(FFTZ_UINT8 prec, FFTZ_UINT8 dir);
+#ifdef ENABLE_AVX128
+EXPORT_SYM_DYN fused_twiddle_transpose_
+register_fused_twiddle_transpose_avx128_wrapper(FFTZ_UINT8 prec,
+                                                FFTZ_UINT8 dir);
+#endif
+#ifdef ENABLE_AVX256
+EXPORT_SYM_DYN fused_twiddle_transpose_
+register_fused_twiddle_transpose_avx256_wrapper(FFTZ_UINT8 prec,
+                                                FFTZ_UINT8 dir);
+#endif
+#ifdef ENABLE_AVX512
+EXPORT_SYM_DYN fused_twiddle_transpose_
+register_fused_twiddle_transpose_avx512_wrapper(FFTZ_UINT8 prec,
+                                                FFTZ_UINT8 dir);
+#endif
+
 // twiddle buffer setup wrappers
 EXPORT_SYM_DYN FFTZ_VOID compute_twiddle_buffer_float_wrapper(
-    FFTZ_VOID *twiddle_buffer, FFTZ_INTP r, FFTZ_INTP m);
+    FFTZ_VOID *twiddle_buffer, FFTZ_INTP r, FFTZ_INTP m,
+    FFTZ_INTP register_width, FFTZ_INTP load_multi_cols);
 EXPORT_SYM_DYN FFTZ_VOID compute_twiddle_buffer_double_wrapper(
-    FFTZ_VOID *twiddle_buffer, FFTZ_INTP r, FFTZ_INTP m);
+    FFTZ_VOID *twiddle_buffer, FFTZ_INTP r, FFTZ_INTP m,
+    FFTZ_INTP register_width, FFTZ_INTP load_multi_cols);
 
 #endif // AOCLFFTZ_CORE_WRAPPER_H

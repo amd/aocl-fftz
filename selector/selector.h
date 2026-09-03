@@ -37,11 +37,13 @@ typedef enum
 } aoclfftz_selector_status;
 
 // Selector data structure that is used to hold the solution and cost analysis
-// at each decomposition level for the associated sub-problem
+// at each decomposition level for the associated sub-problem.
 typedef struct aoclfftz_selector
 {
     aoclfftz_solution_t *solution;
     execute_ execute;
+    aoclfftz_immutable_metadata_t *exec_metadata;
+    FFTZ_UINT8 *has_nested;
     cost_analysis_t *cost_analysis;
     kernel_tables_t *kernel_tables;
 } aoclfftz_selector_t;
@@ -57,12 +59,12 @@ typedef struct aoclfftz_selector
  */
 #define FOR_EACH_SOLUTION(var, start_solution)                                 \
     for (aoclfftz_solution_t *var = start_solution; var != NULL;               \
-         var = (var != NULL && var->next_sol) ? *(var->next_sol) : NULL)
+         var = var->next_sol)
 
 /*
  * @brief Macro to check if there is a next solution
  */
-#define HAS_NEXT(sol) (sol->next_sol != NULL && sol->next_sol[0] != NULL)
+#define HAS_NEXT(sol) ((sol)->next_sol != NULL)
 
 // macro functions
 #define INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank)                         \
@@ -122,7 +124,7 @@ typedef struct aoclfftz_selector
     sel_obj->solution->decomp_scheme->thread_info->avl_threads =               \
     sel_obj->solution->decomp_scheme->thread_info->pthr_fft->num_threads;      \
     sel_obj->solution->decomp_scheme->thread_info->n_threads = 1;              \
-    sel_obj->solution->decomp_scheme->outer_buf_cnt = 1;                       \
+    sel_obj->solution->decomp_scheme->thread_info->active_threads = 1;         \
     sel_obj->solution->decomp_scheme->flags =                                  \
         (problem->flags.fft_placement       << 0) |                            \
         (problem->flags.storage_order       << 1) |                            \
@@ -181,7 +183,7 @@ typedef struct aoclfftz_selector
  */
 #define SWAP_BUFFERS(buf1, buf2)                                               \
 {                                                                              \
-    FFTZ_VOID *temp_buffer_for_swap = buf1; \
+    FFTZ_VOID *temp_buffer_for_swap = buf1;                                    \
     buf1 = buf2;                                                               \
     buf2 = temp_buffer_for_swap;                                               \
 }
@@ -239,6 +241,11 @@ FFTZ_INT32 copy_strides_batched_ct_l1_direct(
 // sub-problem
 FFTZ_VOID copy_solution_obj_wo_dims(aoclfftz_solution_t *to_sol_obj,
                                aoclfftz_solution_t *from_sol_obj);
+// Reorder the Real FFT CT/Direct nodes for iterative execution only.
+//   Before swap: CT -> Direct -> CT -> Direct -> ... -> Direct
+//   After swap : Direct -> CT -> Direct -> ... -> CT -> Direct
+// In recursive mode the natural CT-first tree is kept (see prepare_and_setup_dft),
+// so this is invoked only when SELECT_REAL_FFT_EXECUTION_ORDER == ITERATIVE.
 FFTZ_VOID swap_real_ct_solutions(aoclfftz_selector_t *sel);
 FFTZ_INT32 register_solvers_kernels(kernel_tables_t *kernel_tables,
                                     FFTZ_INT32 dt, FFTZ_INT32 dir,
@@ -249,8 +256,6 @@ FFTZ_INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
 FFTZ_INT32 selector_model_dft_(aoclfftz_selector_t *sel);
 FFTZ_INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
                            aoclfftz_realhelper_t *realhelper);
-FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *sol);
-FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *sol);
 FFTZ_VOID *setup_dft_f(aoclfftz_prob_desc_f *problem);
 FFTZ_VOID *setup_dft_d(aoclfftz_prob_desc_d *problem);
 FFTZ_VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem);
@@ -263,10 +268,11 @@ FFTZ_INT32 selector_permuted_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 FFTZ_INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 FFTZ_INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel);
+FFTZ_INT32 selector_pow2_iterative_dft(aoclfftz_selector_t *sel);
+FFTZ_INT32 selector_pow2_fourstep_dft(aoclfftz_selector_t *sel);
 FFTZ_INT32 selector_sizeone_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 FFTZ_INT32 selector_transpose(aoclfftz_selector_t *sel);
 FFTZ_INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-
 FFTZ_INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                            aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
@@ -275,8 +281,16 @@ FFTZ_INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                              aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                        aoclfftz_realhelper_t *realhelper);
+FFTZ_INT32 check_batched_ct_l1_direct_rdft_solvability(
+    aoclfftz_decomp_scheme_t *decomp_scheme, aoclfftz_realhelper_t *realhelper,
+    kernel_t *kertab_rdft);
+FFTZ_INT32
+selector_batched_ct_l1_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+                                   aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                          aoclfftz_realhelper_t *realhelper);
+FFTZ_INT32 selector_bluestein_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+                                   aoclfftz_realhelper_t *realhelper);
 FFTZ_VOID destroy_handle(FFTZ_VOID *handle);
 FFTZ_VOID fuse_vecs(aoclfftz_solution_t *sol, FFTZ_INT32 is_FFT_ker_supported);
 FFTZ_INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);

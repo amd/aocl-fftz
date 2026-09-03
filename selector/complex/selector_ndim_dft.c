@@ -36,8 +36,10 @@ FFTZ_INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                        measure_stats;
     FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    n_minus1_sel = alloc_selector(1, dim_rank - 1, sel->kernel_tables);
-    outer_dim_sel = alloc_selector(dim_rank - 1, 1, sel->kernel_tables);
+    n_minus1_sel = alloc_selector(1, dim_rank - 1, sel->kernel_tables,
+                                  sel->has_nested);
+    outer_dim_sel = alloc_selector(dim_rank - 1, 1, sel->kernel_tables,
+                                   sel->has_nested);
 
     if (n_minus1_sel == NULL || outer_dim_sel == NULL)
     {
@@ -50,15 +52,6 @@ FFTZ_INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     if (ret != SELECTOR_SUCCESS)
     {
         goto exit_nd_dft;
-    }
-
-    // Propagate num_ct_buf to (N-1)D so inner NDIM nodes allocate enough slots
-    // when under REAL_NDIM with MT (e.g. 5v30x60x2 -n 30).
-    if (sel->solution->dft_bufs->num_ct_buf > 1 &&
-        n_minus1_sel->solution->dft_bufs)
-    {
-        n_minus1_sel->solution->dft_bufs->num_ct_buf =
-            sel->solution->dft_bufs->num_ct_buf;
     }
 
     // Invoke selector for solving ND-1 sub-problem
@@ -75,6 +68,11 @@ FFTZ_INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_nd_dft;
     }
 
+    // Propagate ndim_concurrency upward from n_minus1_sel only: the outer-dim child
+    // is always 1D, so a nested ndim node can arise solely in the (N-1)D subtree.
+    sel->solution->decomp_scheme->thread_info->ndim_concurrency =
+        n_minus1_sel->solution->decomp_scheme->thread_info->ndim_concurrency;
+
     sel->cost_analysis->ops = n_minus1_sel->cost_analysis->ops +
                               outer_dim_sel->cost_analysis->ops;
     sel->cost_analysis->time = n_minus1_sel->cost_analysis->time +
@@ -84,14 +82,7 @@ FFTZ_INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     {
         // capture stats
     }
-    sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
-    if (sel->solution->next_sol == NULL)
-    {
-        ret = AOCLFFTZ_MEMORY_FAILURE;
-        AOCLFFTZ_ERROR("alloc_sol_array failed: %s", get_status_string(ret));
-        goto exit_nd_dft;
-    }
-    sel->solution->next_sol[0] = outer_dim_sel->solution;
+    sel->solution->next_sol = outer_dim_sel->solution;
     sel->solution->dft_bufs->nd_sol = n_minus1_sel->solution;
 
     destroy_selector_without_solution(n_minus1_sel);

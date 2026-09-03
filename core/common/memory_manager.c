@@ -43,43 +43,6 @@ FFTZ_UINTP calculate_max_buffer_size(aoclfftz_solution_t *sol)
     return max_size;
 }
 
-aoclfftz_decomp_scheme_t *alloc_decomp_scheme(FFTZ_INT32 vec_rank,
-                                              FFTZ_INT32 dim_rank)
-{
-    aoclfftz_decomp_scheme_t *decomp_scheme = NULL;
-
-    ALLOC_ALIGN_UNINIT(decomp_scheme, aoclfftz_decomp_scheme_t,
-                       sizeof(aoclfftz_decomp_scheme_t));
-    if (decomp_scheme)
-    {
-        ALLOC_ALIGN_UNINIT(decomp_scheme->dims, aoclfftz_dim_t_64_,
-                           dim_rank * sizeof(aoclfftz_dim_t_64_));
-        ALLOC_ALIGN_UNINIT(decomp_scheme->vecs, aoclfftz_dim_t_64_,
-                           vec_rank * sizeof(aoclfftz_dim_t_64_));
-        ALLOC_ALIGN_UNINIT(decomp_scheme->cntrl_params, aoclfftz_cntrl_params_t,
-                           sizeof(aoclfftz_cntrl_params_t));
-        ALLOC_ALIGN_UNINIT(decomp_scheme->thread_info, thread_info_t,
-                           sizeof(thread_info_t));
-        ALLOC_ALIGN_UNINIT(decomp_scheme->thread_info->pthr_fft,
-                           aoclfftz_smp_pfft_t, sizeof(aoclfftz_smp_pfft_t));
-        decomp_scheme->batched_vecs = NULL;
-        if (decomp_scheme->dims == NULL || decomp_scheme->vecs == NULL ||
-            decomp_scheme->cntrl_params == NULL ||
-            decomp_scheme->thread_info == NULL ||
-            decomp_scheme->thread_info->pthr_fft == NULL)
-        {
-            destroy_decomp_scheme(decomp_scheme);
-            FREE_ALIGN_ALLOCATED_MEM(decomp_scheme);
-            return NULL;
-        }
-        return decomp_scheme;
-    }
-    else
-    {
-        return NULL;
-    }
-}
-
 aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
 {
     aoclfftz_solution_t *sol = NULL;
@@ -154,6 +117,8 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
         sol->dft_bufs->sr->input_copy = NULL;
         sol->dft_bufs->sr->input_copy_size = 0;
         sol->next_sol = NULL;
+        sol->decomp_scheme->nyquist_im_offset_direct = 1;
+        sol->decomp_scheme->nyquist_im_offset_ct = 1;
 
         ALLOC_ALIGN_UNINIT(sol->decomp_scheme->dims, aoclfftz_dim_t_64_,
             dim_rank * sizeof(aoclfftz_dim_t_64_));
@@ -175,54 +140,58 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
             FREE_ALIGN_ALLOCATED_MEM(sol);
             return NULL;
         }
-
+        sol->decomp_scheme->thread_info->active_threads = 1;
         sol->next_sol = NULL;
         sol->decomp_scheme->batched_vecs = NULL;
         sol->dft_bufs->nd_sol = NULL;
+        sol->dft_bufs->pow2_iterative = NULL;
+        sol->dft_bufs->pow2_fourstep = NULL;
         sol->strides_grp->strides->in_strides = NULL;
         sol->strides_grp->strides->out_strides = NULL;
         sol->strides_grp->strides->v_in_stride = 0;
         sol->strides_grp->strides->v_out_stride = 0;
-        sol->strides_grp->strides->v_in_h2_stride = 0;
-        sol->strides_grp->strides->v_out_h2_stride = 0;
+        sol->strides_grp->strides->v_in_sym_stride = 0;
+        sol->strides_grp->strides->v_out_sym_stride = 0;
         sol->strides_grp->strides_c2c->in_strides = NULL;
         sol->strides_grp->strides_c2c->out_strides = NULL;
         sol->strides_grp->strides_c2c->v_in_stride = 0;
         sol->strides_grp->strides_c2c->v_out_stride = 0;
-        sol->strides_grp->strides_c2c->v_in_h2_stride = 0;
-        sol->strides_grp->strides_c2c->v_out_h2_stride = 0;
+        sol->strides_grp->strides_c2c->v_in_sym_stride = 0;
+        sol->strides_grp->strides_c2c->v_out_sym_stride = 0;
         sol->strides_grp->strides_r2hc->in_strides = NULL;
         sol->strides_grp->strides_r2hc->out_strides = NULL;
         sol->strides_grp->strides_r2hc->v_in_stride = 0;
         sol->strides_grp->strides_r2hc->v_out_stride = 0;
-        sol->strides_grp->strides_r2hc->v_in_h2_stride = 0;
-        sol->strides_grp->strides_r2hc->v_out_h2_stride = 0;
+        sol->strides_grp->strides_r2hc->v_in_sym_stride = 0;
+        sol->strides_grp->strides_r2hc->v_out_sym_stride = 0;
         sol->strides_grp->strides_r2hcf->in_strides = NULL;
         sol->strides_grp->strides_r2hcf->out_strides = NULL;
         sol->strides_grp->strides_r2hcf->v_in_stride = 0;
         sol->strides_grp->strides_r2hcf->v_out_stride = 0;
-        sol->strides_grp->strides_r2hcf->v_in_h2_stride = 0;
-        sol->strides_grp->strides_r2hcf->v_out_h2_stride = 0;
+        sol->strides_grp->strides_r2hcf->v_in_sym_stride = 0;
+        sol->strides_grp->strides_r2hcf->v_out_sym_stride = 0;
         sol->twiddle->load_multi_cols = 1; // true by default
-        sol->twiddle->cols = 0;
         sol->twiddle->TW = NULL;
         sol->twiddle->twiddle_buf_ptr = NULL;
         sol->dft_bufs->bluestein->B = NULL;
         sol->dft_bufs->bluestein->B_out = NULL;
-        sol->dft_bufs->bluestein->in = NULL;
-        sol->dft_bufs->bluestein->out = NULL;
         sol->dft_bufs->bluestein->bs_buf_size = 0;
-        sol->dft_bufs->bluestein->num_bs_buf = 0;
-        sol->dft_bufs->bluestein->bs_buf_allocated = 0;
-        sol->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR]  = NULL;
-        sol->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] = NULL;
-        sol->dft_bufs->bluestein->normalize = NULL;
+        sol->dft_bufs->bluestein->bs_dim_offset = 0;
+        sol->dft_bufs->bluestein->pre_mul[FORWARD_FFT_DIR]  = NULL;
+        sol->dft_bufs->bluestein->pre_mul[BACKWARD_FFT_DIR] = NULL;
+        sol->dft_bufs->bluestein->mul[FORWARD_FFT_DIR]  = NULL;
+        sol->dft_bufs->bluestein->mul[BACKWARD_FFT_DIR] = NULL;
+        sol->dft_bufs->bluestein->post_mul[FORWARD_FFT_DIR]  = NULL;
+        sol->dft_bufs->bluestein->post_mul[BACKWARD_FFT_DIR] = NULL;
+        sol->dft_bufs->bluestein->cast_to_complex = NULL;
+        sol->dft_bufs->bluestein->cast_from_complex = NULL;
         sol->dft_bufs->buffered->aux_buffer_1 = NULL;
         sol->dft_bufs->buffered->aux_buffer_2 = NULL;
         sol->dft_bufs->buffered->is_aux_buffer_allocated = 0;
         sol->dft_bufs->buffered->aux_buf_size_per_thread = 0;
-        sol->dft_bufs->buffered->out_ptr = NULL;
-        sol->decomp_scheme->outer_buf_cnt = 1;
+        sol->decomp_scheme->thread_info->ndim_concurrency = 0;
+        sol->decomp_scheme->real_in_role = REAL_USE_IO_BUF;
+        sol->decomp_scheme->real_out_role = REAL_USE_IO_BUF;
         sol->dft_bufs->transpose->row_info = (aoclfftz_dim_t_64_){0};
         sol->dft_bufs->transpose->col_info = (aoclfftz_dim_t_64_){0};
         sol->dft_bufs->transpose->aux_mem->size = 0;
@@ -231,7 +200,6 @@ aoclfftz_solution_t *alloc_solution(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank)
         sol->dft_bufs->ct_buf_real = NULL;
         sol->dft_bufs->ct_buf_imag = NULL;
         sol->dft_bufs->ct_buf_size = 0;
-        sol->dft_bufs->num_ct_buf = 1;
         sol->dft_bufs->ct_buf_allocated = 0;
         sol->solver->kernel_c2c->count = 0;
         sol->solver->kernel_c2c_r->count = 0;
@@ -292,30 +260,9 @@ FFTZ_INT32 alloc_and_fill_stride_arrays(aoclfftz_strides_t *strides,
     return AOCLFFTZ_SUCCESS;
 }
 
-// Allocate n placeholders for next solution
-aoclfftz_solution_t **alloc_sol_array(FFTZ_INT32 n)
-{
-    aoclfftz_solution_t **sol = NULL;
-    if (n > 0)
-    {
-        ALLOC_ALIGN_UNINIT(sol, aoclfftz_solution_t*,
-                        n * sizeof(aoclfftz_solution_t*));
-        if (sol == NULL)
-        {
-            AOCLFFTZ_ERROR("alloc_sol_array failed: %s",
-                           get_status_string(AOCLFFTZ_MEMORY_FAILURE));
-            return NULL;
-        }
-        for (FFTZ_INT32 i = 0; i < n; i++)
-        {
-            sol[i] = NULL;
-        }
-    }
-    return sol;
-}
-
 aoclfftz_selector_t *alloc_selector(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank,
-                                    kernel_tables_t *kernel_tables)
+                                    kernel_tables_t *kernel_tables,
+                                    FFTZ_UINT8 *has_nested)
 {
     aoclfftz_selector_t *selector = NULL;
 
@@ -324,6 +271,8 @@ aoclfftz_selector_t *alloc_selector(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank,
     if (selector)
     {
         selector->kernel_tables = NULL;
+        selector->exec_metadata = NULL;
+        selector->has_nested = has_nested;
 
         selector->solution = alloc_solution(vec_rank, dim_rank);
         ALLOC_ALIGN_UNINIT(selector->cost_analysis, cost_analysis_t,
@@ -355,7 +304,28 @@ aoclfftz_selector_t *alloc_selector(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank,
                 kernel_tables->ele_mul[FORWARD_FFT_DIR];
             selector->kernel_tables->ele_mul[BACKWARD_FFT_DIR] =
                 kernel_tables->ele_mul[BACKWARD_FFT_DIR];
-            selector->kernel_tables->normalize = kernel_tables->normalize;
+            selector->kernel_tables
+                ->ele_mul_strided_in[FORWARD_FFT_DIR] =
+                kernel_tables->ele_mul_strided_in[FORWARD_FFT_DIR];
+            selector->kernel_tables
+                ->ele_mul_strided_in[BACKWARD_FFT_DIR] =
+                kernel_tables->ele_mul_strided_in[BACKWARD_FFT_DIR];
+            selector->kernel_tables->ele_mul_fused_norm[FORWARD_FFT_DIR] =
+                kernel_tables->ele_mul_fused_norm[FORWARD_FFT_DIR];
+            selector->kernel_tables->ele_mul_fused_norm[BACKWARD_FFT_DIR] =
+                kernel_tables->ele_mul_fused_norm[BACKWARD_FFT_DIR];
+            selector->kernel_tables->ele_mul_fused_norm_strided_out[FORWARD_FFT_DIR] =
+                kernel_tables->ele_mul_fused_norm_strided_out[FORWARD_FFT_DIR];
+            selector->kernel_tables->ele_mul_fused_norm_strided_out[BACKWARD_FFT_DIR] =
+                kernel_tables->ele_mul_fused_norm_strided_out[BACKWARD_FFT_DIR];
+            selector->kernel_tables->type_convert_r2c =
+                kernel_tables->type_convert_r2c;
+            selector->kernel_tables->type_convert_c2hc =
+                kernel_tables->type_convert_c2hc;
+            selector->kernel_tables->type_convert_hc2c =
+                kernel_tables->type_convert_hc2c;
+            selector->kernel_tables->type_convert_c2r =
+                kernel_tables->type_convert_c2r;
         }
 
         return selector;
@@ -367,28 +337,17 @@ aoclfftz_selector_t *alloc_selector(FFTZ_INT32 vec_rank, FFTZ_INT32 dim_rank,
 }
 
 /**
- * Allocates the 64-byte aligned Bluestein working buffers: shared chirp
- * buffers B/B_out, plus in/out scratch split into num_bs_buf per-thread slots
- * of bs_buf_size bytes. Frees any partial allocation on failure.
+ * Allocates the 64-byte aligned shared Bluestein chirp buffers B/B_out
+ * (bs_buf_size bytes each). Frees any partial allocation on failure.
  *
  * @return AOCLFFTZ_SUCCESS on success, or AOCLFFTZ_MEMORY_FAILURE if any
  *         allocation fails.
  */
 FFTZ_INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein,
-                              FFTZ_INTP bs_buf_size, FFTZ_INT32 num_bs_buf)
+                                   FFTZ_INTP bs_buf_size)
 {
-    // A non-MT plan still consumes one slot, so clamp to at least one.
-    if (num_bs_buf < 1)
-    {
-        num_bs_buf = 1;
-    }
-
-    FFTZ_INTP pool_size = bs_buf_size * (FFTZ_INTP)num_bs_buf;
-
     bluestein->B = NULL;
     bluestein->B_out = NULL;
-    bluestein->in = NULL;
-    bluestein->out = NULL;
 
     ALLOC_ALIGN_UNINIT(bluestein->B, FFTZ_VOID, bs_buf_size);
     if (bluestein->B == NULL)
@@ -402,26 +361,10 @@ FFTZ_INT32 alloc_bluestein_buffers(aoclfftz_bluestein_t *bluestein,
         goto exit_alloc_bluestein_buffers;
     }
 
-    ALLOC_ALIGN_UNINIT(bluestein->in, FFTZ_VOID, pool_size);
-    if (bluestein->in == NULL)
-    {
-        goto exit_alloc_bluestein_buffers;
-    }
-
-    ALLOC_ALIGN_UNINIT(bluestein->out, FFTZ_VOID, pool_size);
-    if (bluestein->out == NULL)
-    {
-        goto exit_alloc_bluestein_buffers;
-    }
-
     bluestein->bs_buf_size = bs_buf_size;
-    bluestein->num_bs_buf = num_bs_buf;
-    bluestein->bs_buf_allocated = 1;
     return AOCLFFTZ_SUCCESS;
 
 exit_alloc_bluestein_buffers:
-    FREE_ALIGN_ALLOCATED_MEM(bluestein->out);
-    FREE_ALIGN_ALLOCATED_MEM(bluestein->in);
     FREE_ALIGN_ALLOCATED_MEM(bluestein->B_out);
     FREE_ALIGN_ALLOCATED_MEM(bluestein->B);
     return AOCLFFTZ_MEMORY_FAILURE;
@@ -437,7 +380,8 @@ FFTZ_VOID *alloc_twiddle_buffer(FFTZ_UINTP size, FFTZ_UINT32 dt_prec)
 
 /**
  * Allocates ct_buffer for complex NDIM (see ndim_solver_dft.c).
- * Uses num_ct_buf if set by parent (e.g. REAL_NDIM); otherwise one slot.
+ * Uses active_threads if set by parent (e.g. REAL_NDIM);
+ * otherwise one slot.
  */
 FFTZ_INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution,
                              FFTZ_VOID **buffer_ptr)
@@ -480,15 +424,24 @@ FFTZ_INT32 alloc_ndim_buffer(aoclfftz_solution_t *solution,
         buffer_length = buffer_length / min_dim_size;
     }
     buffer_size = GET_PADDED_SIZE(buffer_length * DATA_STRIDE * dt_bytes);
+
+    // for 2D problems, a 2D sized buffer is sufficient for avl_threads to run
+    // MT.
+    if (dim_rank == 2 && n_threads > 1)
+    {
+        n_threads = 1;
+    }
+
+    FFTZ_INT32 active_threads =
+        solution->decomp_scheme->thread_info->active_threads;
     ALLOC_ALIGN_UNINIT(*buffer_ptr, FFTZ_VOID,
-            buffer_size * solution->dft_bufs->num_ct_buf * n_threads);
+            buffer_size * active_threads * n_threads);
     if (*buffer_ptr == NULL)
     {
         AOCLFFTZ_ERROR("alloc_ndim_buffer (ct_buffer) failed: %s",
                        get_status_string(AOCLFFTZ_MEMORY_FAILURE));
         return AOCLFFTZ_MEMORY_FAILURE;
     }
-
     solution->dft_bufs->ct_buf_size = buffer_size;
     solution->dft_bufs->ct_buf_real = *buffer_ptr;
     solution->dft_bufs->ct_buf_imag = MOVE_ADDR(*buffer_ptr, dt_bytes);
@@ -523,17 +476,65 @@ FFTZ_VOID destroy_transpose(aoclfftz_transpose_t* transpose)
 
 FFTZ_VOID destroy_bluestein(aoclfftz_bluestein_t* bluestein)
 {
-    // Only the originating struct owns B / B_out / in / out (bs_buf_allocated
-    // is set by alloc_bluestein_buffers). Deep-copied solutions and the inner
-    // FFT(M) next_sol alias these pointers, so they must not free them.
-    if (bluestein != NULL && bluestein->bs_buf_allocated)
+    // Only the owning node has non-NULL B/B_out (next_sol is copied
+    // before allocation, so its pointers stay NULL)
+    if (bluestein != NULL)
     {
         FREE_ALIGN_ALLOCATED_MEM(bluestein->B);
         FREE_ALIGN_ALLOCATED_MEM(bluestein->B_out);
-        FREE_ALIGN_ALLOCATED_MEM(bluestein->in);
-        FREE_ALIGN_ALLOCATED_MEM(bluestein->out);
-        bluestein->bs_buf_allocated = 0;
     }
+}
+
+// Frees the pow2 iterative solver state: the ping-pong pool (both buffers, one
+// pair per slot), the per-stage stride arrays, the stage array and the struct.
+// The twiddle block is freed by the generic solution teardown.
+FFTZ_VOID destroy_pow2_iterative(aoclfftz_pow2_iterative_t *pow2_iterative)
+{
+    if (pow2_iterative == NULL)
+    {
+        return;
+    }
+    if (pow2_iterative->stages != NULL)
+    {
+        for (FFTZ_INT32 s = 0; s < pow2_iterative->num_stages; s++)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(
+                pow2_iterative->stages[s].stage_info.strides.in_strides);
+            FREE_ALIGN_ALLOCATED_MEM(
+                pow2_iterative->stages[s].stage_info.strides.out_strides);
+        }
+    }
+    FREE_ALIGN_ALLOCATED_MEM(pow2_iterative->pingpong_buf);
+    FREE_ALIGN_ALLOCATED_MEM(pow2_iterative->stages);
+    FREE_ALIGN_ALLOCATED_MEM(pow2_iterative);
+}
+
+// Frees the four-step state: scratch pool, per-sub-FFT stage and stride arrays,
+// and the struct. Twiddle tables are freed by the generic solution teardown.
+FFTZ_VOID destroy_pow2_fourstep(aoclfftz_pow2_fourstep_t *pow2_fourstep)
+{
+    if (pow2_fourstep == NULL)
+    {
+        return;
+    }
+    aoclfftz_pow2_fourstep_subfft_t *subffts[2] = {&pow2_fourstep->sub1,
+                                                   &pow2_fourstep->sub2};
+    for (FFTZ_INT32 sf = 0; sf < 2; sf++)
+    {
+        if (subffts[sf]->stages == NULL)
+        {
+            continue;
+        }
+        for (FFTZ_INT32 s = 0; s < subffts[sf]->num_stages; s++)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(subffts[sf]->stages[s].strides.in_strides);
+            FREE_ALIGN_ALLOCATED_MEM(subffts[sf]->stages[s].strides.out_strides);
+        }
+    }
+    FREE_ALIGN_ALLOCATED_MEM(pow2_fourstep->sub1.stages);
+    FREE_ALIGN_ALLOCATED_MEM(pow2_fourstep->sub2.stages);
+    FREE_ALIGN_ALLOCATED_MEM(pow2_fourstep->scratch);
+    FREE_ALIGN_ALLOCATED_MEM(pow2_fourstep);
 }
 
 FFTZ_VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp)
@@ -548,14 +549,48 @@ FFTZ_VOID destroy_strides_grp(aoclfftz_strides_grp_t *strides_grp)
     FREE_ALIGN_ALLOCATED_MEM(strides_grp->strides_r2hcf->out_strides);
 }
 
+/**
+ * Free aux scratch that this node allocated.
+ *
+ * In a real plan, one node mallocs the aux pool and everyone else borrows it.
+ * Child CT/Direct nodes just hold pointers into that pool, so we do nothing
+ * for them. We only free when is_aux_buffer_allocated is set on this node.
+ *
+ * REAL_BUFFERED gets two buffers. The buffered solver uses them as a
+ * ping-pong pair while data moves through the CT direct chain
+ * (see update_ct_buffers()). Both must be freed when the plan is torn down.
+ *
+ * REAL_BATCHED_CT_L1_DIRECT gets one buffer. Fused execute passes data from
+ * stage_r to stage_m through aux_buffer_1 only; aux_buffer_2 is never used.
+ *
+ * REAL_NDIM may allocate aux_buffer_1 for inplace/C2R cases (no
+ * is_aux_buffer_allocated flag; free when aux_buffer_1 is non-NULL).
+ *
+ */
+
+FFTZ_VOID release_owned_real_buffered_aux(aoclfftz_solution_t *sol)
+{
+    if (sol == NULL || sol->solver == NULL || sol->dft_bufs == NULL ||
+        sol->dft_bufs->buffered == NULL ||
+        sol->dft_bufs->buffered->is_aux_buffer_allocated == 0)
+    {
+        return;
+    }
+
+    FFTZ_INT32 solver_type = sol->solver->solver_type;
+    FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
+    if (solver_type == SOLVER_REAL_BUFFERED)
+    {
+        FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
+    }
+    sol->dft_bufs->buffered->aux_buffer_2 = NULL;
+    sol->dft_bufs->buffered->is_aux_buffer_allocated = 0;
+}
+
 FFTZ_VOID destroy_solution(aoclfftz_solution_t* sol)
 {
     if (sol != NULL)
     {
-        FFTZ_INT32 solver_type = sol->solver->solver_type;
-        FFTZ_INT32 n_sols = sol->decomp_scheme->thread_info->n_threads;
-        n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
-                  (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
         destroy_decomp_scheme(sol->decomp_scheme);
         destroy_strides_grp(sol->strides_grp);
 
@@ -570,112 +605,21 @@ FFTZ_VOID destroy_solution(aoclfftz_solution_t* sol)
             FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->ct_buffer);
             sol->dft_bufs->ct_buf_allocated = 0;
         }
+        destroy_pow2_iterative(sol->dft_bufs->pow2_iterative);
+        destroy_pow2_fourstep(sol->dft_bufs->pow2_fourstep);
         FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->sr->input_copy);
 
-        // Free auxiliary buffers based on solver type:
-        // 1. For 1D real problems, real buffered solver will create
-        //    aux_buffers and the same address will be used in other solvers
-        //    So free the aux_buffers only for real buffered solver.
-        // 2. For in-place ND real problem, real ND solver will create
-        //    aux_buffer, so free it.
-        // 3. SOLVER_REAL_NDIM root owns aux_buffer_1 for inplace/C2R cases,
-        //    so free it here (for non-batched Real NDIM problems).
-        //
-        // Clearing these buffers will happen only once (which will be from
-        // destroy_handle).
-        if (solver_type == SOLVER_REAL_BUFFERED &&
-            sol->dft_bufs->buffered->is_aux_buffer_allocated &&
-            (sol->dft_bufs->buffered->aux_buffer_1 ||
-             sol->dft_bufs->buffered->aux_buffer_2))
-        {
-            FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
-            sol->dft_bufs->buffered->aux_buffer_1 = NULL;
-            FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_2);
-            sol->dft_bufs->buffered->aux_buffer_2 = NULL;
-        }
-        else if (solver_type == SOLVER_REAL_NDIM && sol->dft_bufs->buffered &&
-                 sol->dft_bufs->buffered->aux_buffer_1)
-        {
-            FREE_ALIGN_ALLOCATED_MEM(sol->dft_bufs->buffered->aux_buffer_1);
-            sol->dft_bufs->buffered->aux_buffer_1 = NULL;
-        }
+        release_owned_real_buffered_aux(sol);
         destroy_solution(sol->dft_bufs->nd_sol);
         destroy_solution(sol->dft_bufs->sr->odd1_sol);
         destroy_solution(sol->dft_bufs->sr->odd3_sol);
-        destroy_solutions(sol->next_sol, n_sols);
+        destroy_solution(sol->next_sol);
 
         FREE_ALIGN_ALLOCATED_MEM(sol);
     }
     return;
 }
 
-FFTZ_VOID destroy_solutions(aoclfftz_solution_t **sol, FFTZ_INT32 n)
-{
-    if (sol != NULL)
-    {
-        for (FFTZ_INT32 i = 0; i < n; i++)
-        {
-            aoclfftz_solution_t *cur_sol = sol[i];
-            if (cur_sol != NULL)
-            {
-                FFTZ_INT32 solver_type = cur_sol->solver->solver_type;
-                FFTZ_INT32 n_sols =
-                    cur_sol->decomp_scheme->thread_info->n_threads;
-                // All other solvers (CT, SR, BLUESTEIN, NDIM, etc.) use next_sol[0] only
-                n_sols = ((solver_type == SOLVER_MT_BATCHED) ||
-                          (solver_type == SOLVER_REAL_MT_BATCHED)) ? n_sols : 1;
-
-                destroy_solutions(cur_sol->next_sol, n_sols);
-                destroy_decomp_scheme(cur_sol->decomp_scheme);
-                destroy_strides_grp(cur_sol->strides_grp);
-
-                FREE_ALIGN_ALLOCATED_MEM(cur_sol->twiddle->twiddle_buf_ptr);
-                cur_sol->twiddle->TW = NULL;
-                if (cur_sol->dft_bufs->ct_buf_allocated)
-                {
-                    FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->ct_buffer);
-                    cur_sol->dft_bufs->ct_buf_allocated = 0;
-                }
-
-                destroy_bluestein(cur_sol->dft_bufs->bluestein);
-                destroy_transpose(cur_sol->dft_bufs->transpose);
-
-                FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->sr->input_copy);
-
-                if (i == 0 && solver_type == SOLVER_REAL_NDIM)
-                {
-                    // SOLVER_REAL_NDIM: Only has aux_buffer_1 for inplace/C2R cases
-                    if (cur_sol->dft_bufs->buffered &&
-                        cur_sol->dft_bufs->buffered->aux_buffer_1)
-                    {
-                        FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_1);
-                        cur_sol->dft_bufs->buffered->aux_buffer_1 = NULL;
-                    }
-                }
-
-                // SOLVER_REAL_BUFFERED: Has both aux_buffer_1 and aux_buffer_2,
-                // only the node that allocated frees aux_buffer_1/2
-                else if (solver_type == SOLVER_REAL_BUFFERED &&
-                         cur_sol->dft_bufs->buffered &&
-                         cur_sol->dft_bufs->buffered->is_aux_buffer_allocated &&
-                         (cur_sol->dft_bufs->buffered->aux_buffer_1 ||
-                          cur_sol->dft_bufs->buffered->aux_buffer_2))
-                {
-                    FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_1);
-                    cur_sol->dft_bufs->buffered->aux_buffer_1 = NULL;
-                    FREE_ALIGN_ALLOCATED_MEM(cur_sol->dft_bufs->buffered->aux_buffer_2);
-                    cur_sol->dft_bufs->buffered->aux_buffer_2 = NULL;
-                }
-                destroy_solution(cur_sol->dft_bufs->nd_sol);
-                destroy_solution(cur_sol->dft_bufs->sr->odd1_sol);
-                destroy_solution(cur_sol->dft_bufs->sr->odd3_sol);
-
-                FREE_ALIGN_ALLOCATED_MEM(cur_sol);
-            }
-        }
-        FREE_ALIGN_ALLOCATED_MEM(sol);
-    }
-}
 // Note: Since the use case for this function is primarily to free "temporary"
 //       selectors, and since temporary selectors are expected to be allocated
 //       using `alloc_selector_without_scratch_space`, this function does not
@@ -686,6 +630,14 @@ FFTZ_VOID destroy_selector_without_solution(aoclfftz_selector_t *sel)
     {
         FREE_ALIGN_ALLOCATED_MEM(sel->cost_analysis);
         FREE_ALIGN_ALLOCATED_MEM(sel->kernel_tables);
+        if (sel->exec_metadata != NULL)
+        {
+            FREE_ALIGN_ALLOCATED_MEM(sel->exec_metadata->base_ctx.bs_in_base);
+            FREE_ALIGN_ALLOCATED_MEM(sel->exec_metadata->base_ctx.bs_out_base);
+            FREE_ALIGN_ALLOCATED_MEM(
+                sel->exec_metadata->base_ctx.c2c_strides_base);
+        }
+        FREE_ALIGN_ALLOCATED_MEM(sel->exec_metadata);
         FREE_ALIGN_ALLOCATED_MEM(sel);
     }
     return;

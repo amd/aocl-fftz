@@ -27,7 +27,8 @@
  *
  * @return SOLVER_SUCCESS on success, SOLVER_FAILURE on error
  */
-static FFTZ_INT32 split_radix_butterfly(aoclfftz_solution_t *sol);
+static FFTZ_INT32 split_radix_butterfly(aoclfftz_solution_t *sol,
+                                        aoclfftz_mutable_ctx_t *ctx);
 
 /* Setup: configure the three SR sub-problems */
 
@@ -86,7 +87,8 @@ FFTZ_INT32 setup_sr_solver(aoclfftz_solution_t *sol,
     return SOLVER_SUCCESS;
 }
 
-FFTZ_INT32 execute_sr_solver(aoclfftz_solution_t *sol)
+FFTZ_INT32 execute_sr_solver(aoclfftz_solution_t *sol,
+                             aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -100,7 +102,7 @@ FFTZ_INT32 execute_sr_solver(aoclfftz_solution_t *sol)
     }
 
     /* Get sub-problems */
-    aoclfftz_solution_t *even_sol = sol->next_sol[0];
+    aoclfftz_solution_t *even_sol = sol->next_sol;
     aoclfftz_solution_t *odd1_sol = sol->dft_bufs->sr->odd1_sol;
     aoclfftz_solution_t *odd3_sol = sol->dft_bufs->sr->odd3_sol;
 
@@ -108,8 +110,7 @@ FFTZ_INT32 execute_sr_solver(aoclfftz_solution_t *sol)
     FFTZ_INTP n2 = n >> 1;  /* n/2 */
     FFTZ_INTP n4 = n >> 2;  /* n/4 */
 
-    FFTZ_UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    FFTZ_UINT32 dt_bytes = DT_PRECISION_BYTES(precision);
+    FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(ctx);
     FFTZ_INTP elem_size = DATA_STRIDE * dt_bytes;
     FFTZ_INTP in_stride = sol->decomp_scheme->dims[0].in_stride;
     FFTZ_INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
@@ -118,88 +119,78 @@ FFTZ_INT32 execute_sr_solver(aoclfftz_solution_t *sol)
      * Check addresses (not flags) to decide in-place vs out-of-place.
      * NDIM solver may set same buffer even with OUT_OF_PLACE flag.
      */
-    FFTZ_VOID *input_base_real = sol->decomp_scheme->in_real;
-    FFTZ_VOID *input_base_imag = sol->decomp_scheme->in_imag;
-    FFTZ_UINT8 need_input_copy =
-        (sol->decomp_scheme->in_real == sol->decomp_scheme->out_real);
+    FFTZ_VOID *input_base_real = ctx->in_real;
+    FFTZ_UINT8 need_input_copy = (ctx->in_real == ctx->out_real);
 
     if (need_input_copy)
     {
         /* Input and output share the same buffer. Copy the input
-         * into a separate buffer(sr_input_copy) before sub-FFTs overwrite it.
-         */
-        if (sol->dft_bufs->sr->input_copy == NULL)
+         * into a separate buffer(sr_input_copy) before sub-FFTs overwrite it. */
+        if (ctx->sr_input_copy_base == NULL)
         {
             /* Buffer was not allocated because the plan was
              * created as out-of-place, but execute got same in/out. */
-            AOCLFFTZ_LOG(
-                INFO, global_logger_mode,
-                "SR input copy buffer not allocated for in-place execution");
+            AOCLFFTZ_LOG(INFO, global_logger_mode,
+                         "SR input copy buffer not allocated"
+                         " for in-place execution");
             return SOLVER_FAILURE;
         }
         FFTZ_INTP buffer_size = sol->dft_bufs->sr->input_copy_size;
-        memcpy(sol->dft_bufs->sr->input_copy,
-               sol->decomp_scheme->in_real, buffer_size);
-
-        input_base_real = sol->dft_bufs->sr->input_copy;
-        input_base_imag =
-            MOVE_ADDR(sol->dft_bufs->sr->input_copy, dt_bytes);
+        memcpy(ctx->sr_input_copy_base, ctx->in_real, buffer_size);
+        input_base_real = ctx->sr_input_copy_base;
     }
 
     /* Execute even sub-problem */
-    even_sol->decomp_scheme->in_real  = input_base_real;
-    even_sol->decomp_scheme->in_imag  = input_base_imag;
-    even_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    even_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
-    even_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
-    SET_OUTOFPLACE(even_sol->decomp_scheme->flags);
+    aoclfftz_mutable_ctx_t even_ctx = *ctx;
+    even_ctx.in_real  = input_base_real;
+    even_ctx.in_imag  = MOVE_ADDR(input_base_real, dt_bytes);
+    SET_OUTOFPLACE(even_ctx.flags);
 
-    FFTZ_INT32 status = even_sol->solver->execute_solver(even_sol);
+    FFTZ_INT32 status = even_sol->solver->execute_solver(even_sol, &even_ctx);
     if (status != SOLVER_SUCCESS)
     {
         return status;
     }
 
     /* Execute odd1 sub-problem */
-    odd1_sol->decomp_scheme->in_real  =
-        MOVE_ADDR(input_base_real, 1 * in_stride * elem_size);
-    odd1_sol->decomp_scheme->in_imag  =
-        MOVE_ADDR(input_base_imag, 1 * in_stride * elem_size);
-    odd1_sol->decomp_scheme->out_real =
-        MOVE_ADDR(sol->decomp_scheme->out_real, n2 * out_stride * elem_size);
-    odd1_sol->decomp_scheme->out_imag =
-        MOVE_ADDR(sol->decomp_scheme->out_imag, n2 * out_stride * elem_size);
-    odd1_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
-    SET_OUTOFPLACE(odd1_sol->decomp_scheme->flags);
+    aoclfftz_mutable_ctx_t odd1_ctx = *ctx;
+    odd1_ctx.in_real  = MOVE_ADDR(input_base_real, 1 * in_stride * elem_size);
+    odd1_ctx.in_imag  = MOVE_ADDR(odd1_ctx.in_real, dt_bytes);
+    odd1_ctx.out_real = MOVE_ADDR(ctx->out_real, n2 * out_stride * elem_size);
+    odd1_ctx.out_imag = MOVE_ADDR(odd1_ctx.out_real, dt_bytes);
+    SET_OUTOFPLACE(odd1_ctx.flags);
+    if (ctx->ct_buf_base == ctx->out_real)
+    {
+        odd1_ctx.ct_buf_base = odd1_ctx.out_real;
+    }
 
-    status = odd1_sol->solver->execute_solver(odd1_sol);
+    status = odd1_sol->solver->execute_solver(odd1_sol, &odd1_ctx);
     if (status != SOLVER_SUCCESS)
     {
         return status;
     }
 
     /* Execute odd3 sub-problem */
-    odd3_sol->decomp_scheme->in_real  =
-        MOVE_ADDR(input_base_real, 3 * in_stride * elem_size);
-    odd3_sol->decomp_scheme->in_imag  =
-        MOVE_ADDR(input_base_imag, 3 * in_stride * elem_size);
-    odd3_sol->decomp_scheme->out_real =
-        MOVE_ADDR(sol->decomp_scheme->out_real,
-                  (n2 + n4) * out_stride * elem_size);
-    odd3_sol->decomp_scheme->out_imag =
-        MOVE_ADDR(sol->decomp_scheme->out_imag,
-                  (n2 + n4) * out_stride * elem_size);
-    odd3_sol->decomp_scheme->flags = sol->decomp_scheme->flags;
-    SET_OUTOFPLACE(odd3_sol->decomp_scheme->flags);
+    aoclfftz_mutable_ctx_t odd3_ctx = *ctx;
+    odd3_ctx.in_real  = MOVE_ADDR(input_base_real, 3 * in_stride * elem_size);
+    odd3_ctx.in_imag  = MOVE_ADDR(odd3_ctx.in_real, dt_bytes);
+    odd3_ctx.out_real = MOVE_ADDR(ctx->out_real,
+                                 (n2 + n4) * out_stride * elem_size);
+    odd3_ctx.out_imag = MOVE_ADDR(odd3_ctx.out_real, dt_bytes);
+    SET_OUTOFPLACE(odd3_ctx.flags);
+    if (ctx->ct_buf_base == ctx->out_real)
+    {
+        odd3_ctx.ct_buf_base = odd3_ctx.out_real;
+    }
 
-    status = odd3_sol->solver->execute_solver(odd3_sol);
+    status = odd3_sol->solver->execute_solver(odd3_sol, &odd3_ctx);
     if (status != SOLVER_SUCCESS)
     {
         return status;
     }
 
     /* Combine results with butterfly */
-    status = split_radix_butterfly(sol);
+    status = split_radix_butterfly(sol, ctx);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return status;
@@ -213,14 +204,15 @@ FFTZ_INT32 execute_sr_solver(aoclfftz_solution_t *sol)
  *
  * TODO: Vectorize the butterfly loop using SIMD intrinsics.
  */
-static FFTZ_INT32 split_radix_butterfly(aoclfftz_solution_t *sol)
+static FFTZ_INT32 split_radix_butterfly(aoclfftz_solution_t *sol,
+                                        aoclfftz_mutable_ctx_t *ctx)
 {
     FFTZ_INTP n = sol->decomp_scheme->dims[0].n;
     FFTZ_INTP n2 = n >> 1;  /* n/2 */
     FFTZ_INTP n4 = n >> 2;  /* n/4 */
 
-    FFTZ_UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
-    FFTZ_UINT8 direction = FFT_DIR(sol->decomp_scheme->flags);
+    FFTZ_UINT32 precision = DT_PRECISION_FLAG(ctx->flags);
+    FFTZ_UINT8 direction = FFT_DIR(ctx->flags);
 
     FFTZ_INTP out_stride = sol->decomp_scheme->dims[0].out_stride;
 
@@ -259,7 +251,7 @@ static FFTZ_INT32 split_radix_butterfly(aoclfftz_solution_t *sol)
 
     if (precision == DT_FLOAT)
     {
-        FFTZ_FLOAT *data = (FFTZ_FLOAT *)sol->decomp_scheme->out_real;
+        FFTZ_FLOAT *data = (FFTZ_FLOAT *)ctx->out_real;
         aoclfftz_complex_f_t *tw = (aoclfftz_complex_f_t *)sol->twiddle->TW;
         FFTZ_FLOAT fdir = (FFTZ_FLOAT)dir_sign;
 
@@ -350,7 +342,7 @@ static FFTZ_INT32 split_radix_butterfly(aoclfftz_solution_t *sol)
     }
     else /* FFTZ_DOUBLE precision */
     {
-        FFTZ_DOUBLE *data = (FFTZ_DOUBLE *)sol->decomp_scheme->out_real;
+        FFTZ_DOUBLE *data = (FFTZ_DOUBLE *)ctx->out_real;
         aoclfftz_complex_d_t *tw = (aoclfftz_complex_d_t *)sol->twiddle->TW;
         FFTZ_DOUBLE ddir = (FFTZ_DOUBLE)dir_sign;
 

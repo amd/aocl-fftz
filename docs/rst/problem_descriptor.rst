@@ -79,7 +79,7 @@ Member-by-Member Guide
 **5. Parallel FFT (``pthr_fft``)**
 
 - *num_threads*: Number of threads (:math:`\geq 1`). If greater than available CPUs, defaults to max CPUs. If less than 1, defaults to single-threaded execution.
-- *dynamic_load_model*: 0 (fixed threads) or 1 (dynamic threads - not supported in this release). Invalid values default to 0.
+- *dynamic_load_model*: 0 (fixed threads - *num_threads* is spent as given) or 1 (dynamic threads - *num_threads* remains the maximum, and fewer may be used when the problem is too small to keep them busy). Invalid values default to 0.
 
 **6. Control Parameters (``cntrl_params``)**
 
