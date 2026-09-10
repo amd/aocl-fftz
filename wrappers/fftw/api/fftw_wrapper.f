@@ -1,6 +1,3 @@
-C     Copyright Advanced Micro Devices, Inc.
-C     SPDX-License-Identifier: BSD-3-Clause
-C
       INTEGER FFTW_R2HC
       PARAMETER (FFTW_R2HC=0)
       INTEGER FFTW_HC2R
