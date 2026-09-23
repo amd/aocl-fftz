@@ -81,7 +81,7 @@ check_batched_ct_l1_direct_rdft_solvability(
         return 0;
     }
 
-    if (check_col_major(decomp_scheme))
+    if (is_col_major(decomp_scheme))
     {
         return 0;
     }

@@ -36,7 +36,6 @@ FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
     FFTZ_INT32 stats_mode = sel->solution->decomp_scheme->cntrl_params->
                        measure_stats;
-    aoclfftz_solution_t *sol = sel->solution;
     FFTZ_INT32 rnk = 0;
     FFTZ_INTP batch_size = 1;
     FFTZ_INT32 ret = SELECTOR_FAILURE;
@@ -47,49 +46,6 @@ FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
         goto exit_batched_dft;
-    }
-
-    FFTZ_UINT8 is_col_major = check_col_major(sol->decomp_scheme);
-    // Bluestein problems are excluded from the batched direct optimization
-    // because the memory layout of bluestein buffer allocated is always row
-    // major
-    if (is_col_major && !check_bluestein_problem(sol->decomp_scheme) &&
-        dim_rank == 1)
-    {
-        // allocate a new struct in the direct solver to hold the
-        // vecs[0] from batched solver
-        ALLOC_ALIGN_UNINIT(sol->decomp_scheme->batched_vecs, aoclfftz_dim_t_64_,
-                           sizeof(aoclfftz_dim_t_64_));
-        if (sol->decomp_scheme->batched_vecs != NULL)
-        {
-            sol->decomp_scheme->batched_vecs[0].n =
-                sol->decomp_scheme->vecs[0].n;
-            sol->decomp_scheme->batched_vecs[0].in_stride =
-                sol->decomp_scheme->vecs[0].in_stride;
-            sol->decomp_scheme->batched_vecs[0].out_stride =
-                sol->decomp_scheme->vecs[0].out_stride;
-
-            aoclfftz_dim_t_64_ *vecs = sol->decomp_scheme->vecs;
-            if (vec_rank == 1)
-            {
-                // vec_rank must be at least 1, so set vecs[0].n = 1 to make it
-                // non-batched
-                sol->decomp_scheme->vecs[0].n = 1;
-                sol->decomp_scheme->vecs[0].in_stride = 1;
-                sol->decomp_scheme->vecs[0].out_stride = 1;
-            }
-            else
-            {
-                // remove vecs[0] from batched solver
-                sol->decomp_scheme->vec_rank -= 1;
-                for (FFTZ_INT32 i = 0; i < sol->decomp_scheme->vec_rank; i++)
-                {
-                    vecs[i].n = vecs[i + 1].n;
-                    vecs[i].in_stride = vecs[i + 1].in_stride;
-                    vecs[i].out_stride = vecs[i + 1].out_stride;
-                }
-            }
-        }
     }
 
     // copy solution object from sel to cur_sel
@@ -108,7 +64,7 @@ FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     FFTZ_INT32 avl_threads =
         sel->solution->decomp_scheme->thread_info->avl_threads;
     FFTZ_INT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
-    if (sol->decomp_scheme->batched_vecs)
+    if (sel->solution->decomp_scheme->batched_vecs)
     {
         // batched_vecs means the problem batch is carried further down and
         // vecs[0] holds only the CT sub-batch, which deep in the recursion is

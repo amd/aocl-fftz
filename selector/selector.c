@@ -186,20 +186,20 @@ FFTZ_INT32 check_FFT_kernel_support(FFTZ_INTP n, kernel_t *kernels_table,
 
 // Column-major iff multiple batches exist and vec-stride < dim-stride
 // for both input and output.
-FFTZ_UINT8 check_col_major(aoclfftz_decomp_scheme_t *decomp_scheme)
+FFTZ_UINT8 is_col_major(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
-    FFTZ_UINT8 is_col_major = (decomp_scheme->vecs[0].in_stride <
+    FFTZ_UINT8 col_major = (decomp_scheme->vecs[0].in_stride <
         decomp_scheme->dims[0].in_stride) &&
         (decomp_scheme->vecs[0].out_stride < decomp_scheme->dims[0].out_stride)
         && (decomp_scheme->vecs[0].n > 1);
-    return is_col_major;
+    return col_major;
 }
 
 static FFTZ_INT32
 is_split_radix_applicable(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
     FFTZ_INTP n = decomp_scheme->dims[0].n;
-    FFTZ_UINT8 is_col_major = check_col_major(decomp_scheme);
+    FFTZ_UINT8 col_major = is_col_major(decomp_scheme);
     // Split-radix is applicable for complex, 1D, row-major, non-batched
     // transforms, innermost dimension where the problem size is a power of 2,
     // >= 4096, and single-threaded only.
@@ -208,7 +208,7 @@ is_split_radix_applicable(aoclfftz_decomp_scheme_t *decomp_scheme)
     return (!IS_REAL(decomp_scheme->flags) && (n >= 4096) &&
             ((n & (n - 1)) == 0) && (decomp_scheme->vec_rank == 1) &&
             (decomp_scheme->dim_rank == 1) &&
-            (decomp_scheme->batched_vecs == NULL) && (!is_col_major) &&
+            (decomp_scheme->batched_vecs == NULL) && (!col_major) &&
             !IS_NOT_INNERMOST_DIM(decomp_scheme->flags) &&
             (decomp_scheme->thread_info->pthr_fft->num_threads == 1));
 }
@@ -265,7 +265,7 @@ static FFTZ_INT32 is_pow2_solvable(aoclfftz_decomp_scheme_t *decomp_scheme,
           && (decomp_scheme->dim_rank == 1)
           && (decomp_scheme->vec_rank == 1)
           && (decomp_scheme->batched_vecs == NULL)
-          && (!check_col_major(decomp_scheme))
+          && (!is_col_major(decomp_scheme))
           && !IS_NOT_INNERMOST_DIM(decomp_scheme->flags)
           && (decomp_scheme->dims[0].in_stride == 1)
           && (decomp_scheme->thread_info->pthr_fft->num_threads == 1)))
@@ -347,7 +347,7 @@ FFTZ_INT32 is_prime(FFTZ_INTP n)
 
 // Check if the input problem contains a prime factor that requires a
 // bluestein solver to solve.
-FFTZ_INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme)
+FFTZ_INT32 is_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme)
 {
     FFTZ_INT32 dim_rank = decomp_scheme->dim_rank;
     for (FFTZ_INT32 i = 0; i < dim_rank; i++)
@@ -503,6 +503,62 @@ static FFTZ_INT32 is_packed_rdft_applicable(aoclfftz_selector_t *sel,
            has_rank_kernels && is_packed_rdft_layout_contiguous(decomp);
 }
 
+static FFTZ_INT32 requires_batched_solver(
+    aoclfftz_decomp_scheme_t *decomp_scheme,
+    FFTZ_INT32 is_FFT_ker_supported)
+{
+    FFTZ_INT32 is_not_size_one = (decomp_scheme->dims[0].n != 1);
+    FFTZ_INT32 has_nd_batches = (decomp_scheme->vec_rank > 1);
+    FFTZ_INT32 has_1d_batches = (decomp_scheme->vecs[0].n > 1);
+    FFTZ_INT32 is_non_direct = !is_FFT_ker_supported;
+    FFTZ_INT32 is_nd = (decomp_scheme->dim_rank > 1);
+
+    return is_not_size_one &&
+           (has_nd_batches || (has_1d_batches && (is_non_direct || is_nd)));
+}
+
+// Move the batches from vecs to batched vecs for column major 1D non direct
+// & non prime sizes so only the vector dimensions that still need a
+// batched solver remain.
+// Returns 1 if a batched solver is still required, 0 if it can be skipped, or
+// AOCLFFTZ_MEMORY_FAILURE if memory allocation fails.
+static FFTZ_INT32 move_inner_colmaj_batch_to_direct_solver(
+    aoclfftz_decomp_scheme_t *decomp_scheme)
+{
+    if (!is_col_major(decomp_scheme) || is_bluestein_problem(decomp_scheme) ||
+        decomp_scheme->dim_rank != 1)
+    {
+        return 1;
+    }
+
+    FREE_ALIGN_ALLOCATED_MEM(decomp_scheme->batched_vecs);
+    ALLOC_ALIGN_UNINIT(decomp_scheme->batched_vecs, aoclfftz_dim_t_64_,
+                       sizeof(aoclfftz_dim_t_64_));
+    if (decomp_scheme->batched_vecs == NULL)
+    {
+        return AOCLFFTZ_MEMORY_FAILURE;
+    }
+
+    // Hand the innermost batch to the direct solver via batched_vecs.
+    decomp_scheme->batched_vecs[0] = decomp_scheme->vecs[0];
+    if (decomp_scheme->vec_rank == 1)
+    {
+        decomp_scheme->vecs[0].n = 1;
+        decomp_scheme->vecs[0].in_stride = 1;
+        decomp_scheme->vecs[0].out_stride = 1;
+        return 0;
+    }
+
+    // The innermost vector is handed to the direct solver via batched_vecs.
+    decomp_scheme->vec_rank--;
+    for (FFTZ_INT32 i = 0; i < decomp_scheme->vec_rank; i++)
+    {
+        decomp_scheme->vecs[i] = decomp_scheme->vecs[i + 1];
+    }
+
+    return 1;
+}
+
 // Fixed decision logic and CPI based selector mode execution for the
 // input problem based on the applicable tables of solvers and kernels
 // wherein the successive stage dfts are fused with twiddle multiplications
@@ -511,75 +567,70 @@ FFTZ_INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     aoclfftz_generic_solver_t *solver_obj = sel->solution->solver;
     kernel_t *kertab = sel->kernel_tables->kt_dft;
     FFTZ_INT32 ret = SELECTOR_FAILURE;
-    FFTZ_INT32 dim_rank = sel->solution->decomp_scheme->dim_rank;
+    aoclfftz_decomp_scheme_t *decomp_scheme = sel->solution->decomp_scheme;
+    FFTZ_INT32 dim_rank = decomp_scheme->dim_rank;
     FFTZ_INT32 avl_threads =
-        sel->solution->decomp_scheme->thread_info->avl_threads;
+        decomp_scheme->thread_info->avl_threads;
 
     FFTZ_INT32 is_FFT_ker_supported = check_FFT_kernel_support(
-        sel->solution->decomp_scheme->dims[0].n, kertab,
-        !IS_NOT_INNERMOST_DIM(sel->solution->decomp_scheme->flags));
+        decomp_scheme->dims[0].n, kertab,
+        !IS_NOT_INNERMOST_DIM(decomp_scheme->flags));
 
     FFTZ_INT32 is_solvable_by_bluestein = check_prime_solvability_bluestein(
-        sel->solution->decomp_scheme, is_FFT_ker_supported, kertab);
+        decomp_scheme, is_FFT_ker_supported, kertab);
     FFTZ_INT32 level1_cond1 = 0;
     FFTZ_INT32 level1_cond2 = 0;
     FFTZ_INT32 level2_cond = 0;
     FFTZ_INT32 standalone_transpose_cond = 0;
 
-    SET_SELECTOR_MODE(sel->solution->decomp_scheme->flags,
+    SET_SELECTOR_MODE(decomp_scheme->flags,
                       AOCLFFTZ_FIXED_SELECTOR);
 
-    if (sel->solution->decomp_scheme->vec_rank > 1)
+    if (decomp_scheme->vec_rank > 1)
     {
         fuse_vecs(sel->solution, is_FFT_ker_supported);
     }
+
+    FFTZ_UINT8 col_major = is_col_major(decomp_scheme);
+
     // SOLVER_BATCHED
-    level1_cond1 =
-        ((sel->solution->decomp_scheme->dims[0].n != 1) && /* non-size-one */
-         ((sel->solution->decomp_scheme->vec_rank > 1) ||  /* ND Batched */
-          /* 1D Batched 1D Non-direct cases*/
-          ((sel->solution->decomp_scheme->vecs[0].n > 1) &&
-           !is_FFT_ker_supported) ||
-          /* 1D Batched ND case*/
-          (dim_rank > 1 && sel->solution->decomp_scheme->vecs[0].n > 1)));
+    level1_cond1 = requires_batched_solver(decomp_scheme, is_FFT_ker_supported);
     // SOLVER_NDIM
     level1_cond1 |= ((dim_rank > 1) << 1);
     // SOLVER_BLUESTEIN
     level1_cond1 |= (is_solvable_by_bluestein << 2);
     // SOLVER_BUFFERED
     // Future work: GENERALIZE THE SCOPE OF BUFFERED SOLVER
-    // level1_cond2 = !(IS_OUT_OF_PLACE(sel->solution->decomp_scheme->flags));
-    // level1_cond2 &= ((sel->solution->decomp_scheme->dims[0].n >
+    // level1_cond2 = !(IS_OUT_OF_PLACE(decomp_scheme->flags));
+    // level1_cond2 &= ((decomp_scheme->dims[0].n >
     //                   MAX_GUARANTEED_CACHEABLE_SIZE) &&
-    //                  (GET_SELECTOR_MODE(sel->solution->decomp_scheme->flags)
+    //                  (GET_SELECTOR_MODE(decomp_scheme->flags)
     //                  ==
     //                   AOCLFFTZ_AUTO_SELECTOR));
-    level1_cond2 = IS_BUFFERED(sel->solution->decomp_scheme->flags);
+    level1_cond2 = IS_BUFFERED(decomp_scheme->flags);
     // SOLVER_PERM_KER
-    level1_cond2 |= (IS_OUT_OF_ORDER(sel->solution->decomp_scheme->flags) << 1);
+    level1_cond2 |= (IS_OUT_OF_ORDER(decomp_scheme->flags) << 1);
     // SOLVER_DIRECT
     level2_cond = is_FFT_ker_supported;
     // SOLVER_SR
-    aoclfftz_cntrl_params_t *cp = sel->solution->decomp_scheme->cntrl_params;
+    aoclfftz_cntrl_params_t *cp = decomp_scheme->cntrl_params;
     FFTZ_INT32 is_scalar_only =
         (cp != NULL) && (cp->opt_level == optlevel_scalar);
     level2_cond |=
         ((is_scalar_only
-         && is_split_radix_applicable(sel->solution->decomp_scheme)) << 1);
+         && is_split_radix_applicable(decomp_scheme)) << 1);
     // SOLVER_PFA
     // SOLVER_RADER
 
     // SOLVER_TRANSPOSE
     standalone_transpose_cond =
-        GET_STANDALONE_TRANSPOSE(sel->solution->decomp_scheme->flags);
+        GET_STANDALONE_TRANSPOSE(decomp_scheme->flags);
 
     // SOLVER_BATCHED_CT_L1_DIRECT
     FFTZ_INT32 is_batched_ct_l1_direct = check_batched_ct_l1_direct_solvability(
-        sel->solution->decomp_scheme->dims[0].n,
+        decomp_scheme->dims[0].n,
         sel->kernel_tables->kt_twid_dft,
         sel->kernel_tables->kt_dft);
-
-    FFTZ_UINT8 is_col_major = check_col_major(sel->solution->decomp_scheme);
 
     /** Level 1 decisions : Solvers **/
     // Buffered FFT Solver
@@ -601,7 +652,7 @@ FFTZ_INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     // SR/CT chain; falls through if the gate or solver setup (e.g. <= 2 stages)
     // declines.
     FFTZ_INTP l1d_bytes = get_l1d_bytes();
-    if (is_pow2_solvable(sel->solution->decomp_scheme, l1d_bytes,
+    if (is_pow2_solvable(decomp_scheme, l1d_bytes,
                          POW2_REGIME_ITERATIVE))
     {
         solver_obj->solver_type = SOLVER_POW2_ITERATIVE;
@@ -618,7 +669,7 @@ FFTZ_INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     // Power-of-2 four-step (Regime 2): the array spills the iterative solver's
     // 2x L1D budget but the sub-FFTs stay within L2. Falls through to the
     // generic chain when setup declines.
-    if (is_pow2_solvable(sel->solution->decomp_scheme, l1d_bytes,
+    if (is_pow2_solvable(decomp_scheme, l1d_bytes,
                          POW2_REGIME_FOURSTEP))
     {
         solver_obj->solver_type = SOLVER_POW2_FOURSTEP;
@@ -639,10 +690,10 @@ FFTZ_INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     // single batch dimension (vec_rank == 1) and innermost ndim dimension.
     if (avl_threads == 1 &&
         !is_FFT_ker_supported && dim_rank == 1 &&
-        sel->solution->decomp_scheme->vec_rank == 1 &&
-        sel->solution->decomp_scheme->batched_vecs == NULL &&
-        !is_col_major &&
-        !IS_NOT_INNERMOST_DIM(sel->solution->decomp_scheme->flags) &&
+        decomp_scheme->vec_rank == 1 &&
+        decomp_scheme->batched_vecs == NULL &&
+        !col_major &&
+        !IS_NOT_INNERMOST_DIM(decomp_scheme->flags) &&
         is_batched_ct_l1_direct)
     {
         solver_obj->solver_type = SOLVER_BATCHED_CT_L1_DIRECT;
@@ -659,16 +710,24 @@ FFTZ_INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     // Batched/vector FFT Solver
     if (level1_cond1 & 0x1)
     {
-        // The batched family selector decides the ST/MT variant (it needs the
-        // effective thread count); the execute fp is bound here, at the
-        // selector level, once that decision is made.
-        ret = selector_batched_dft(sel, kertab);
-        if (ret == SELECTOR_SUCCESS &&
-            set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+        ret = move_inner_colmaj_batch_to_direct_solver(decomp_scheme);
+        if (ret < 0)
         {
-            return SELECTOR_FAILURE;
+            return ret;
         }
-        return ret;
+        if (ret)
+        {
+            // The batched family selector decides the ST/MT variant (it needs
+            // the effective thread count); the execute fp is bound here, at
+            // the selector level, once that decision is made.
+            ret = selector_batched_dft(sel, kertab);
+            if (ret == SELECTOR_SUCCESS &&
+                set_solver_fp(solver_obj) != SOLVER_SUCCESS)
+            {
+                return SELECTOR_FAILURE;
+            }
+            return ret;
+        }
     }
     // Transpose Solver (Standalone)
     if (standalone_transpose_cond)
@@ -729,7 +788,7 @@ FFTZ_INT32 selector_fixed_mode_dft_(aoclfftz_selector_t *sel)
     }
     /** Level 2 decisions : CT Solver and Kernels **/
     // SizeOne FFT Solver
-    if (sel->solution->decomp_scheme->dims[0].n == 1)
+    if (decomp_scheme->dims[0].n == 1)
     {
         solver_obj->solver_type = SOLVER_SIZEONE;
         if (set_solver_fp(solver_obj) != SOLVER_SUCCESS)

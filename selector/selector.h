@@ -303,7 +303,7 @@ FFTZ_INT32 selector_real_packed_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                                      aoclfftz_realhelper_t *realhelper);
 FFTZ_VOID destroy_handle(FFTZ_VOID *handle);
 FFTZ_VOID fuse_vecs(aoclfftz_solution_t *sol, FFTZ_INT32 is_FFT_ker_supported);
-FFTZ_INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);
+FFTZ_INT32 is_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);
 FFTZ_INTP check_CT_solvability(FFTZ_INTP n, kernel_t *kertab);
 FFTZ_INT32 check_FFT_kernel_support(FFTZ_INTP n, kernel_t *kernels_table,
                                FFTZ_INT32 is_innermost_dim);
@@ -312,6 +312,6 @@ FFTZ_DOUBLE get_kernel_weightage(FFTZ_INTP radix, kernel_t *kertab,
 FFTZ_UINT8 should_use_colmajor_batched_solver(aoclfftz_solution_t *solution,
                                               kernel_t *kertab,
                                               FFTZ_INT32 avl_threads);
-FFTZ_UINT8 check_col_major(aoclfftz_decomp_scheme_t *decomp_scheme);
+FFTZ_UINT8 is_col_major(aoclfftz_decomp_scheme_t *decomp_scheme);
 
 #endif // AOCLFFTZ_SELECTOR_H

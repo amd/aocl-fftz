@@ -403,8 +403,10 @@ typedef struct aoclfftz_decomp_scheme
     FFTZ_INT32 vec_rank;
     FFTZ_INT32 dim_rank;
     aoclfftz_dim_t_64_ *dims;
+    // Input problem batch (or vector) axes looped by a batched solver.
     aoclfftz_dim_t_64_ *vecs;
-    // used in batched-direct solver, otherwise NULL
+    // Innermost col-major batch handed to the direct/CT leaf (strided),
+    // not looped by a batched solver; NULL otherwise.
     aoclfftz_dim_t_64_ *batched_vecs;
     // FFTZ_VOID *in;
     FFTZ_VOID *in_real;
