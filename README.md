@@ -219,16 +219,16 @@ cmake --build <build directory> --parallel
 ```
 
 The test names use `KNOWN_DIVERGENCE` for explicit AOCL-vs-FFTW differences
-and `PRODUCTION_BLOCKED` for disabled regressions that depend on production
-fixes. The wisdom and miscellaneous suites also pin documented wrapper stubs.
+and `NTEST` for robustness regressions (null, overflow, and invalid-rank
+cases). The wisdom and miscellaneous suites also pin documented wrapper stubs.
 These groups can be selected directly by test-name regular expressions:
 ```
 ctest --test-dir <build directory> --output-on-failure \
   -R "^FftwWrapper" \
-  -E "KNOWN_DIVERGENCE|FftwWrapperWisdomTest|FftwWrapperMiscTest|PRODUCTION_BLOCKED"
+  -E "KNOWN_DIVERGENCE|FftwWrapperWisdomTest|FftwWrapperMiscTest|NTEST"
 ctest --test-dir <build directory> --output-on-failure \
   -R "KNOWN_DIVERGENCE|FftwWrapperWisdomTest|FftwWrapperMiscTest"
-ctest --test-dir <build directory> -N -R PRODUCTION_BLOCKED
+ctest --test-dir <build directory> -N -R "^FftwWrapper.*NTEST"
 ```
 
 Running source code coverage using GCOV
