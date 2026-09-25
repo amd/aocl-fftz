@@ -225,10 +225,10 @@ These groups can be selected directly by test-name regular expressions:
 ```
 ctest --test-dir <build directory> --output-on-failure \
   -R "^FftwWrapper" \
-  -E "KNOWN_DIVERGENCE|FftwWrapperWisdomTest|FftwWrapperMiscTest|NTEST"
+  -E "KNOWN_DIVERGENCE|FftwWrapperWisdomTest|FftwWrapperMiscTest"
 ctest --test-dir <build directory> --output-on-failure \
   -R "KNOWN_DIVERGENCE|FftwWrapperWisdomTest|FftwWrapperMiscTest"
-ctest --test-dir <build directory> -N -R "^FftwWrapper.*NTEST"
+ctest --test-dir <build directory> --output-on-failure -R "^FftwWrapper.*NTEST"
 ```
 
 Running source code coverage using GCOV
