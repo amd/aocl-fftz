@@ -88,7 +88,12 @@ typedef struct aoclfftz_flags
     FFTZ_UINT8 fft_type; /**< Complex(0) or Real(1) > */
     FFTZ_UINT8 fft_direction; /**< Forward(0) or Backward(1) > */
     FFTZ_UINT8 storage_order; /**< In-order(0) or Out-of-order(1)> */
-    FFTZ_UINT8 fft_placement; /**< In-place(0) or Out-of-place(1) */
+    /** FFT placement:
+     *  - In-place (0): input and output use the same buffer. When both are
+     *    NULL during setup, supply I/O buffers through aoclfftz_execute_io.
+     *  - Out-of-place (1): input and output use distinct buffers. When exactly
+     *    one is NULL during setup, supply I/O buffers through aoclfftz_execute_io. */
+    FFTZ_UINT8 fft_placement;
     /** fft(0) or standalone transpose(1) (Not supported, must be default value
      * `0`) */
     FFTZ_UINT8 transpose_mode;
@@ -169,10 +174,12 @@ typedef struct aoclfftz_cntrl_params
 typedef struct
 {
     /** input buffer: Points to signal points for forward FFT and frequency
-     * points for backward FFT */
+     * points for backward FFT. May be NULL during setup; supply a valid input
+     * buffer to @ref aoclfftz_execute_io in that case. */
     FFTZ_FLOAT *in;
-    /** output buffer: Points frequency points for forward FFT and signal points
-     * for backward FFT */
+    /** output buffer: Points to frequency points for forward FFT and signal points
+     * for backward FFT. May be NULL during setup; supply a valid output buffer
+     * to @ref aoclfftz_execute_io in that case. */
     FFTZ_FLOAT *out;
     /** `vec_rank` is the number of batch/vector dimensions. length of `vecs`
      * array(must be >= 1). */
@@ -203,10 +210,12 @@ typedef struct
 typedef struct
 {
     /** input buffer: Points to signal points for forward FFT and frequency
-     * points for backward FFT */
+     * points for backward FFT. May be NULL during setup; supply a valid input
+     * buffer to @ref aoclfftz_execute_io in that case. */
     FFTZ_DOUBLE *in;
     /** output buffer: Points frequency points for forward FFT and signal points
-     * for backward FFT */
+     * for backward FFT. May be NULL during setup; supply a valid output buffer
+     * to @ref aoclfftz_execute_io in that case. */
     FFTZ_DOUBLE *out;
     /** `vec_rank` is the number of batch/vector dimensions. length of `vecs`
      * array(must be >= 1). */
@@ -237,10 +246,12 @@ typedef struct
 typedef struct
 {
     /** input buffer: Points to signal points for forward FFT and frequency
-     * points for backward FFT */
+     * points for backward FFT. May be NULL during setup; supply a valid input
+     * buffer to @ref aoclfftz_execute_io in that case. */
     FFTZ_FLOAT *in;
     /** output buffer: Points to frequency points for forward FFT and signal
-     * points for backward FFT */
+     * points for backward FFT. May be NULL during setup; supply a valid output
+     * buffer to @ref aoclfftz_execute_io in that case. */
     FFTZ_FLOAT *out;
     /** `vec_rank` is the number of batch/vector dimensions. length of `vecs`
      * array(must be >= 1). */
@@ -272,10 +283,12 @@ typedef struct
 typedef struct
 {
     /** input buffer: Points to signal points for forward FFT and frequency
-     * points for backward FFT */
+     * points for backward FFT. May be NULL during setup; supply a valid input
+     * buffer to @ref aoclfftz_execute_io in that case. */
     FFTZ_DOUBLE *in;
     /** output buffer: Points to frequency points for forward FFT and signal
-     * points for backward FFT */
+     * points for backward FFT. May be NULL during setup; supply a valid output
+     * buffer to @ref aoclfftz_execute_io in that case. */
     FFTZ_DOUBLE *out;
     /** `vec_rank` is the number of batch/vector dimensions. length of `vecs`
      * array(must be >= 1). */
@@ -309,10 +322,13 @@ typedef struct
  * for the given input problem.
  * The problem descriptor parameters must be fully initialized prior to invocation,
  * including:
- *   - Allocation of memory for input/output buffers
  *   - Allocation and initialization of dims/vecs tensor dimensions
  *   - Configuration of all fields within the relevant problem descriptor
  *     structure @ref aoclfftz_prob_desc_f
+ *
+ * @note Input/output buffers may be NULL during setup. Such a handle must be
+ * run with @ref aoclfftz_execute_io using non-NULL buffers rather than
+ * @ref aoclfftz_execute.
  *
  * This generated handle is passed to the execute APIs to perform FFT
  * computation and should be destroyed by @ref aoclfftz_destroy.
@@ -334,10 +350,13 @@ EXPORT_SYM_DYN FFTZ_VOID *aoclfftz_setup_f(aoclfftz_prob_desc_f *problem);
  * for the given input problem.
  * The problem descriptor parameters must be fully initialized prior to invocation,
  * including:
- *   - Allocation of memory for input/output buffers
  *   - Allocation and initialization of dims/vecs tensor dimensions
  *   - Configuration of all fields within the relevant problem descriptor
  *     structure @ref aoclfftz_prob_desc_d
+ *
+ * @note Input/output buffers may be NULL during setup. Such a handle must be
+ * run with @ref aoclfftz_execute_io using non-NULL buffers rather than
+ * @ref aoclfftz_execute.
  *
  * This generated handle is passed to the execute APIs to perform FFT
  * computation and should be destroyed by @ref aoclfftz_destroy.
@@ -359,10 +378,13 @@ EXPORT_SYM_DYN FFTZ_VOID *aoclfftz_setup_d(aoclfftz_prob_desc_d *problem);
  * for the given input problem.
  * The problem descriptor parameters must be fully initialized prior to invocation,
  * including:
- *   - Allocation of memory for input/output buffers
  *   - Allocation and initialization of dims/vecs tensor dimensions
  *   - Configuration of all fields within the relevant problem descriptor
  *     structure @ref aoclfftz_prob_desc_f_64_
+ *
+ * @note Input/output buffers may be NULL during setup. Such a handle must be
+ * run with @ref aoclfftz_execute_io using non-NULL buffers rather than
+ * @ref aoclfftz_execute.
  *
  * This generated handle is passed to the execute APIs to perform FFT
  * computation and should be destroyed by @ref aoclfftz_destroy.
@@ -385,10 +407,13 @@ EXPORT_SYM_DYN FFTZ_VOID *aoclfftz_setup_f_64_(
  * for the given input problem.
  * The problem descriptor parameters must be fully initialized prior to invocation,
  * including:
- *   - Allocation of memory for input/output buffers
  *   - Allocation and initialization of dims/vecs tensor dimensions
  *   - Configuration of all fields within the relevant problem descriptor
  *     structure @ref aoclfftz_prob_desc_d_64_
+ *
+ * @note Input/output buffers may be NULL during setup. Such a handle must be
+ * run with @ref aoclfftz_execute_io using non-NULL buffers rather than
+ * @ref aoclfftz_execute.
  *
  * This generated handle is passed to the execute APIs to perform FFT
  * computation and should be destroyed by @ref aoclfftz_destroy.
@@ -411,7 +436,10 @@ EXPORT_SYM_DYN FFTZ_VOID *aoclfftz_setup_d_64_(
  * The input and output buffers defined in the setup stage will be used for
  * computation without requiring additional buffer specification.
  * Setup API `aoclfftz_setup_*` must be invoked before calling this execute API.
- * 
+ * If the problem descriptor left `in` or `out` NULL, this API rejects the
+ * handle with @ref AOCLFFTZ_EXECUTION_FAILURE; run it with
+ * @ref aoclfftz_execute_io instead.
+ *
  * @note This API is not thread-safe and must not be called concurrently on a shared handle.
  *
  * @param handle solution handle
@@ -437,6 +465,10 @@ EXPORT_SYM_DYN aoclfftz_error_type aoclfftz_execute(FFTZ_VOID *handle);
  * Setup API `aoclfftz_setup_*` must have been invoked in the past to acquire
  * a valid solution handle before calling this execute API with any new set
  * of input and output buffers.
+ * This is the only way to run a handle whose problem descriptor left `in`
+ * or `out` NULL.
+ * The runtime buffers must use the same in-place or out-of-place mode
+ * established during setup.
  *
  * @note Thread-safe API, and can be called concurrently on a shared handle.
  *

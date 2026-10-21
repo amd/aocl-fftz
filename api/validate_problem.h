@@ -338,23 +338,16 @@ static inline FFTZ_INT32 validate_control_params(
     return AOCLFFTZ_SUCCESS;
 }
 
+ /* Input/output buffers are validated only for placement (pointer identity):
+  *   - In-place requires in == out
+  *   - Out-of-place requires in != out
+  * NULL is permitted at setup; aoclfftz_execute requires non-NULL setup-time buffers,
+  * otherwise use aoclfftz_execute_io with non-NULL buffers. */
 #define VALIDATE_PROBLEM_DESCRIPTOR(problem)                                   \
 {                                                                              \
     FFTZ_INT32 ret = AOCLFFTZ_SUCCESS; \
     if (problem == NULL)                                                       \
     {                                                                          \
-        ret = AOCLFFTZ_INVALID_INPUT;                                          \
-        goto validation_exit;                                                  \
-    }                                                                          \
-    if (problem->out == NULL)                                                  \
-    {                                                                          \
-        AOCLFFTZ_ERROR("Output buffer cannot be NULL");                        \
-        ret = AOCLFFTZ_INVALID_INPUT;                                          \
-        goto validation_exit;                                                  \
-    }                                                                          \
-    if (problem->in == NULL)                                                   \
-    {                                                                          \
-        AOCLFFTZ_ERROR("Input buffer cannot be NULL");                         \
         ret = AOCLFFTZ_INVALID_INPUT;                                          \
         goto validation_exit;                                                  \
     }                                                                          \

@@ -492,12 +492,12 @@ TYPED_TEST(FftwWrapperPlanTest, NTEST_PLAN_DFT_1D_NEGATIVE_SIZE)
     F::free_fn(out);
 }
 
-TYPED_TEST(FftwWrapperPlanTest, NTEST_PLAN_DFT_1D_NULL_INPUT)
+TYPED_TEST(FftwWrapperPlanTest, PTEST_PLAN_DFT_1D_NULL_INPUT)
 {
     using F = FftwTypes<TypeParam>;
     auto *out = F::alloc_complex(16);
     auto p = F::plan_dft_1d(16, nullptr, out, FFTW_FORWARD, FFTW_ESTIMATE);
-    EXPECT_EQ(p, nullptr);
+    EXPECT_NE(p, nullptr);
     if (p)
     {
         F::destroy_plan(p);
@@ -505,12 +505,12 @@ TYPED_TEST(FftwWrapperPlanTest, NTEST_PLAN_DFT_1D_NULL_INPUT)
     F::free_fn(out);
 }
 
-TYPED_TEST(FftwWrapperPlanTest, NTEST_PLAN_DFT_1D_NULL_OUTPUT)
+TYPED_TEST(FftwWrapperPlanTest, PTEST_PLAN_DFT_1D_NULL_OUTPUT)
 {
     using F = FftwTypes<TypeParam>;
     auto *in = F::alloc_complex(16);
     auto p = F::plan_dft_1d(16, in, nullptr, FFTW_FORWARD, FFTW_ESTIMATE);
-    EXPECT_EQ(p, nullptr);
+    EXPECT_NE(p, nullptr);
     if (p)
     {
         F::destroy_plan(p);
@@ -533,12 +533,12 @@ TYPED_TEST(FftwWrapperPlanTest, NTEST_PLAN_R2C_1D_ZERO_SIZE)
     F::free_fn(out);
 }
 
-TYPED_TEST(FftwWrapperPlanTest, NTEST_PLAN_R2C_1D_NULL_INPUT)
+TYPED_TEST(FftwWrapperPlanTest, PTEST_PLAN_R2C_1D_NULL_INPUT)
 {
     using F = FftwTypes<TypeParam>;
     auto *out = F::alloc_complex(9);
     auto p = F::plan_dft_r2c_1d(16, nullptr, out, FFTW_ESTIMATE);
-    EXPECT_EQ(p, nullptr);
+    EXPECT_NE(p, nullptr);
     if (p)
     {
         F::destroy_plan(p);
@@ -561,12 +561,12 @@ TYPED_TEST(FftwWrapperPlanTest, NTEST_PLAN_C2R_1D_ZERO_SIZE)
     F::free_fn(out);
 }
 
-TYPED_TEST(FftwWrapperPlanTest, NTEST_PLAN_C2R_1D_NULL_OUTPUT)
+TYPED_TEST(FftwWrapperPlanTest, PTEST_PLAN_C2R_1D_NULL_OUTPUT)
 {
     using F = FftwTypes<TypeParam>;
     auto *in = F::alloc_complex(9);
     auto p = F::plan_dft_c2r_1d(16, in, nullptr, FFTW_ESTIMATE);
-    EXPECT_EQ(p, nullptr);
+    EXPECT_NE(p, nullptr);
     if (p)
     {
         F::destroy_plan(p);
@@ -574,14 +574,14 @@ TYPED_TEST(FftwWrapperPlanTest, NTEST_PLAN_C2R_1D_NULL_OUTPUT)
     F::free_fn(in);
 }
 
-TYPED_TEST(FftwWrapperPlanTest, NTEST_PLAN_MANY_DFT_NULL_INPUT)
+TYPED_TEST(FftwWrapperPlanTest, PTEST_PLAN_MANY_DFT_NULL_INPUT)
 {
     using F = FftwTypes<TypeParam>;
     int n[] = {8};
     auto *out = F::alloc_complex(8);
     auto p = F::plan_many_dft(1, n, 1, nullptr, nullptr, 1, 8,
                               out, nullptr, 1, 8, FFTW_FORWARD, FFTW_ESTIMATE);
-    EXPECT_EQ(p, nullptr);
+    EXPECT_NE(p, nullptr);
     if (p)
     {
         F::destroy_plan(p);

@@ -61,10 +61,14 @@ FFTZ_INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    // The buffered solver and its child read from input and write to ct_buffer,
+    // so both run out-of-place.
+    SET_OUTOFPLACE(sol->decomp_scheme->flags);
+    SET_OUTOFPLACE(next_sol->decomp_scheme->flags);
+
     // Buffer allocated at NDIM level can be reused by any solution subtree
     // under the NDIM node (both next_sol and nd_sol paths), avoiding
     // reallocation.
-
     FFTZ_INT32 dim_rank = sol->decomp_scheme->dim_rank;
     FFTZ_INT32 vec_rank = sol->decomp_scheme->vec_rank;
     aoclfftz_dim_t_64_ *dims = sol->decomp_scheme->dims;

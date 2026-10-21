@@ -29,13 +29,8 @@ FFTZ_INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
         AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
         return ret;
     }
-    // Set buffered for an in-place parent. A non-innermost ND child also needs
-    // it: ndim_solver runs the inner dimensions first, then uses their output
-    // as both input and output for the outer child. That child therefore runs
-    // in-place even when the ND parent itself is out-of-place.
-    if ((sol->decomp_scheme->in_real != NULL &&
-         sol->decomp_scheme->in_real == sol->decomp_scheme->out_real) ||
-        IS_NOT_INNERMOST_DIM(sol->decomp_scheme->flags))
+    // Set buffered flag for radix-m sub-problem if it runs in-place.
+    if (!IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
     {
         SET_BUFFERED(sol_m->decomp_scheme->flags);
     }
@@ -70,6 +65,20 @@ FFTZ_INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
         sol->decomp_scheme->dims[0].out_stride;
     sol_r->decomp_scheme->vecs[0].out_stride =
         sol->decomp_scheme->dims[0].out_stride;
+    // Radix-m is buffered iff its parent is in-place.
+    if (IS_BUFFERED(sol_m->decomp_scheme->flags))
+    {
+        // For an in-place parent, radix-m (buffered solver) writes to the CT buffer.
+        // Radix-r then reads from that CT buffer and writes to the parent's output,
+        // so its input and output are distinct.
+        SET_OUTOFPLACE(sol_r->decomp_scheme->flags);
+    }
+    else
+    {
+        // For an out-of-place parent, radix-m writes directly to the parent's
+        // output. Radix-r consumes and updates that same buffer in-place.
+        SET_INPLACE(sol_r->decomp_scheme->flags);
+    }
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 

@@ -253,6 +253,8 @@ FFTZ_INT32 setup_mt_bluestein_solver(aoclfftz_solution_t *sol,
     sol->decomp_scheme->thread_info->n_threads =
         sol->decomp_scheme->thread_info->avl_threads;
 
+    // Bluestein's child solver always runs out-of-place.
+    SET_OUTOFPLACE(next_sol->decomp_scheme->flags);
     next_sol->decomp_scheme->in_real = NULL;
     next_sol->decomp_scheme->in_imag = NULL;
     next_sol->decomp_scheme->out_real = NULL;

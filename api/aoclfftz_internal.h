@@ -77,6 +77,8 @@
 // Set Flags
 #define SET_PRECISION(flags, val)                                              \
     (flags = (flags & 0x3FFFFFFF) | ((FFTZ_UINT32)(val) << 30))
+// When a parent rewires a child's I/O, update its placement using the macros
+// below depending on whether the input and output buffers are the same or distinct.
 #define SET_INPLACE(flags) SET_BIT_FLAG32(flags, 0, 0)
 #define SET_OUTOFPLACE(flags) SET_BIT_FLAG32(flags, 0, 1)
 
