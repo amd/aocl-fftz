@@ -19,31 +19,6 @@
 #include "core/common/bluestein_utils.h"
 #include "core/kernels/kernel.h"
 
-FFTZ_VOID bluestein_copy_data(FFTZ_VOID *src, FFTZ_VOID *dst, FFTZ_INTP n,
-                              FFTZ_INTP src_stride, FFTZ_INTP dst_stride,
-                              FFTZ_UINT8 dt_prec, FFTZ_UINT32 dt_bytes)
-{
-    if (src_stride > 1 || dst_stride > 1)
-    {
-        FFTZ_INTP scaled_src_stride = src_stride * DATA_STRIDE;
-        FFTZ_INTP scaled_dst_stride = dst_stride * DATA_STRIDE;
-        if (dt_prec == DT_FLOAT)
-        {
-            permuted_copy_c_fp32(src, dst, 1, n, scaled_src_stride,
-                                 scaled_dst_stride, 1, 1);
-        }
-        else
-        {
-            permuted_copy_c_fp64(src, dst, 1, n, scaled_src_stride,
-                                 scaled_dst_stride, 1, 1);
-        }
-    }
-    else
-    {
-        memcpy(dst, src, n * DATA_STRIDE * dt_bytes);
-    }
-}
-
 /**
  * Supported prime factors for efficient FFT computation.
  * These correspond to available prime radix kernels in the library.
@@ -115,10 +90,11 @@ FFTZ_INT32 compute_chirp_sequence(aoclfftz_solution_t *sol, FFTZ_INTP m)
     FFTZ_UINT32 precision = DT_PRECISION_FLAG(sol->decomp_scheme->flags);
     FFTZ_INTP n = sol->decomp_scheme->dims[0].n;
     FFTZ_INTP n2 = n * 2;
+    aoclfftz_bluestein_t *bluestein = sol->dft_bufs->bluestein;
 
     if (precision == DT_FLOAT)
     {
-        FFTZ_FLOAT *B = (FFTZ_FLOAT *)sol->dft_bufs->bluestein->B;
+        FFTZ_FLOAT *B = (FFTZ_FLOAT *)bluestein->B;
 
         for (FFTZ_INTP i = 0; i < n; i++)
         {
@@ -149,7 +125,7 @@ FFTZ_INT32 compute_chirp_sequence(aoclfftz_solution_t *sol, FFTZ_INTP m)
     }
     else
     {
-        FFTZ_DOUBLE *B = (FFTZ_DOUBLE *)sol->dft_bufs->bluestein->B;
+        FFTZ_DOUBLE *B = (FFTZ_DOUBLE *)bluestein->B;
 
         for (FFTZ_INTP i = 0; i < n; i++)
         {
@@ -181,4 +157,3 @@ FFTZ_INT32 compute_chirp_sequence(aoclfftz_solution_t *sol, FFTZ_INTP m)
 
     return BLUESTEIN_SUCCESS;
 }
-

@@ -5,7 +5,6 @@
 #define AOCLFFTZ_API_GTEST_H
 
 #include <string>
-#include <limits>
 #include <vector>
 #include <memory>
 #include <type_traits>
@@ -28,6 +27,7 @@ extern "C"
 #include "api/aoclfftz.h"
 #include "api/types.h"
 #include "api/aoclfftz_internal.h"
+#include "test/utils/dims_vecs_helper.h"
 }
 
 // Enum to define valid and invalid test cases
@@ -53,11 +53,12 @@ const std::vector<aoclfftz_flags_t> unsupported_flags = {
 
 const std::vector<FFTZ_INT32> unsupported_rank = { INT32_MIN, -1 };
 
-// Random number generator setup for generating invalid test values
+// dist_invalid: zero/negative strides; dist_negative: negative vec size only.
 #define INIT_RANDOM_NUM_GEN() \
     std::random_device rd; \
     std::mt19937 prng(rd()); \
     std::uniform_int_distribution<> dist_invalid(INT32_MIN, 0); \
+    std::uniform_int_distribution<> dist_negative(INT32_MIN, -1); \
     prng.seed(42);
 
 // Function to check if the handle is destroyed
@@ -116,10 +117,8 @@ public:
         {
             return;
         }
-        /* Default value of is_inplace is 0,
-         * If problem->flags are invalid, free the memory buffer based on default flags */
-        bool is_inplace = is_valid_flags(problem->flags) ?
-                          !problem->flags.fft_placement : 0;
+        // Free `out` separately only when it does not alias `in`.
+        const bool is_inplace = (problem->out == problem->in);
         if (problem->in)
         {
             delete[] problem->in;
@@ -140,15 +139,6 @@ public:
             delete[] problem->vecs;
             problem->vecs = NULL;
         }
-    }
-
-    bool is_valid_flags(aoclfftz_flags_t flags)
-    {
-        if (flags.storage_order || flags.transpose_mode || flags.fft_type)
-        {
-            return 0;
-        }
-        return 1;
     }
 
     FFTZ_VOID get_inout_size(FFTZ_UINTP *in_size, FFTZ_UINTP *out_size)
@@ -532,6 +522,32 @@ public:
         out = NULL;
     }
 
+    FFTZ_VOID validate_zero_batch_is_nop()
+    {
+        using DataType = std::remove_pointer_t<decltype(problem->in)>;
+        cleanup_problem();
+        create_default_custom_pdesc({64}, 1, true, false);
+        problem->vecs[0].n = 0;
+
+        const DataType sentinel = static_cast<DataType>(-999.0);
+        std::fill(problem->out, problem->out + output_size / sizeof(DataType),
+                  sentinel);
+
+        handle = aoclfftz_setup(problem);
+        ASSERT_NE(handle, nullptr);
+        EXPECT_EQ(aoclfftz_execute(handle), AOCLFFTZ_SUCCESS);
+        EXPECT_EQ(aoclfftz_execute_io(handle, problem->in, problem->out),
+                  AOCLFFTZ_SUCCESS);
+
+        for (FFTZ_UINTP i = 0; i < output_size / sizeof(DataType); i++)
+        {
+            ASSERT_EQ(problem->out[i], sentinel);
+        }
+
+        aoclfftz_destroy(handle);
+        handle = nullptr;
+    }
+
     // Tests aoclfftz_execute_io after freeing original buffers and passing new
     // ones.
     FFTZ_VOID
@@ -617,9 +633,9 @@ public:
         FFTZ_VOID  *in;
         FFTZ_VOID  *out;
         FFTZ_INT32  iters;
-        bool   inplace;
+        FFTZ_UCHAR  inplace;
         FFTZ_INTP   buf_elems;
-        FFTZ_INT32  final_in_out; // out: where the chained result landed (0=in, 1=out)
+        FFTZ_UCHAR  result_buffer; // out: where the chained result landed (0=in, 1=out)
         FFTZ_INT32  ret;
     };
 
@@ -633,10 +649,11 @@ public:
      * chain, so cross-thread scratch contamination shows up as a divergence.
      */
     FFTZ_VOID run_concurrent_execute_io(
-                                    const std::vector<FFTZ_INT32> &dim_sizes,
+                                    std::vector<FFTZ_INT32> dim_sizes,
                                     FFTZ_INT32 batch, bool is_inplace,
                                     bool is_forward, FFTZ_INT32 app_threads,
-                                    FFTZ_INT32 internal_threads)
+                                    FFTZ_INT32 internal_threads,
+                                    bool is_real = false)
     {
         using DataType = std::remove_pointer_t<decltype(problem->in)>;
 
@@ -644,25 +661,49 @@ public:
         const FFTZ_INT32 iters = 5;
 
         cleanup_problem();
+        // reverse dim_sizes vector to match our API
+        std::reverse(dim_sizes.begin(), dim_sizes.end());
         create_default_custom_pdesc(dim_sizes, batch, is_forward, is_inplace,
                                     InputValueStrategy::MID_RANGE,
                                     internal_threads);
+        if (is_real)
+        {
+            problem->flags.fft_type = 1;
+            set_real_strides(is_forward, is_inplace);
+        }
 
         handle = aoclfftz_setup(problem);
         ASSERT_NE(handle, nullptr) << "setup failed";
 
-        // Destroy the handle on every exit path (including early ASSERT returns)
+        // Destroy the handle on every exit path (including early ASSERT returns).
+        // The guard owns it from here on, so the member is cleared immediately
+        // to keep it from dangling when an ASSERT below returns early.
         std::unique_ptr<void, void(*)(void *)> handle_guard(handle,
             [](void *h){ aoclfftz_destroy(h); });
+        handle = nullptr;
+        FFTZ_VOID *const shared_handle = handle_guard.get();
 
-        const FFTZ_INTP buf_elems = (FFTZ_INTP)(input_size / sizeof(DataType));
+        // create_custom_pdesc sizes both buffers with COMPLEX_DATA_STRIDE, so
+        // the larger of the two is an upper bound that covers the real and the
+        // half-complex side of a real transform as well.
+        // For real the bound is loose and part of the tail stays untouched. Fine for
+        // now: out-of-place buffers are zero-initialized so the tail reads as zero,
+        // not garbage, and in-place compares copies of the same input, so not an issue.
+        const FFTZ_INTP buf_elems = (FFTZ_INTP)(((output_size > input_size) ?
+                                                output_size : input_size) /
+                                                sizeof(DataType));
 
         auto build_args = [&](FFTZ_VOID *input, FFTZ_VOID *output) {
-            concurrent_args cargs;
-            cargs.handle = handle; cargs.in = input; cargs.out = output;
-            cargs.iters = iters; cargs.inplace = is_inplace;
-            cargs.buf_elems = buf_elems;
-            cargs.ret = AOCLFFTZ_EXECUTION_FAILURE;
+            concurrent_args cargs = {
+                shared_handle,
+                input,
+                output,
+                iters,
+                is_inplace,
+                buf_elems,
+                0, // result_buffer; set by execute_io_loop.
+                AOCLFFTZ_EXECUTION_FAILURE
+            };
             return cargs;
         };
 
@@ -704,7 +745,7 @@ public:
                     << (t + 1);
                 // If the chain ended in ref_input (in-place, or an even
                 // out-of-place ping-pong count), copy it into expected_outputs.
-                if (is_inplace || ref_args.final_in_out == 0)
+                if (is_inplace || ref_args.result_buffer == 0)
                 {
                     std::copy(ref_input.begin(), ref_input.end(),
                               expected_outputs[t].begin());
@@ -735,23 +776,59 @@ public:
             ASSERT_EQ(thread_args[t].ret, AOCLFFTZ_SUCCESS)
                 << "execute_io failed on thread " << t;
             const DataType *concurrent_result =
-                (is_inplace || thread_args[t].final_in_out == 0)
+                (is_inplace || thread_args[t].result_buffer == 0)
                     ? concurrent_inputs[t].data()
                     : concurrent_outputs[t].data();
             for (FFTZ_INTP i = 0; i < buf_elems; i++)
             {
                 ASSERT_EQ(concurrent_result[i], expected_outputs[t][i])
-                    << "thread " << t << " output[" << i << "] diverged";
+                    << "thread " << t << " output[" << i << "] diverged"
+                    << " [real=" << is_real << " fwd=" << is_forward
+                    << " inplace=" << is_inplace
+                    << " app_threads=" << app_threads
+                    << " internal=" << internal_threads << "]";
             }
         }
-
-        // handle_guard owns its own copy of the pointer and frees the handle on
-        // scope exit;
-        handle = nullptr;
     }
 
 private:
-    // Deterministic per-thread random values in [-1, 1];
+    // Set REAL (R2C/C2R) half-complex strides for dims and vecs.
+    FFTZ_VOID set_real_strides(bool is_forward, bool is_inplace)
+    {
+        const FFTZ_INT32 dim_rank = problem->dim_rank;
+        const FFTZ_INT32 vec_rank = problem->vec_rank;
+        std::vector<aoclfftz_dim_t_64_> dims(dim_rank);
+        std::vector<aoclfftz_dim_t_64_> vecs(vec_rank);
+
+        // Zero strides mark "not explicitly provided", which is what makes
+        // set_default_dims_vecs derive them.
+        for (FFTZ_INT32 d = 0; d < dim_rank; d++)
+        {
+            dims[d] = {problem->dims[d].n, 0, 0};
+        }
+        for (FFTZ_INT32 v = 0; v < vec_rank; v++)
+        {
+            vecs[v] = {problem->vecs[v].n, 0, 0};
+        }
+
+        set_default_dims_vecs(dim_rank, vec_rank, dims.data(), vecs.data(),
+                              is_forward ? R2C : C2R, is_inplace,
+                              AOCLFFTZ_LOG_NONE);
+
+        using StrideT = decltype(problem->dims[0].in_stride);
+        for (FFTZ_INT32 d = 0; d < dim_rank; d++)
+        {
+            problem->dims[d].in_stride = (StrideT)dims[d].in_stride;
+            problem->dims[d].out_stride = (StrideT)dims[d].out_stride;
+        }
+        for (FFTZ_INT32 v = 0; v < vec_rank; v++)
+        {
+            problem->vecs[v].in_stride = (StrideT)vecs[v].in_stride;
+            problem->vecs[v].out_stride = (StrideT)vecs[v].out_stride;
+        }
+    }
+
+    // Deterministic per-thread random values in [-1, 1]
     template<typename DataType>
     static void fill_concurrent_input(std::vector<DataType> &buf,
                                       FFTZ_INT32 seed)
@@ -766,7 +843,7 @@ private:
 
     // Run `iters` chained transforms on the shared handle, widening the window
     // for a concurrency bug. Out-of-place ping-pongs in/out; in-place reuses one
-    // buffer. final_in_out: 0=in, 1=out.
+    // buffer. result_buffer: 0=in, 1=out.
     template<typename DataType>
     static void execute_io_loop(concurrent_args *args)
     {
@@ -791,7 +868,7 @@ private:
             }
         }
         // Out-of-place result is in `out` after an odd number of transforms.
-        args->final_in_out = (!args->inplace && (completed % 2 == 1)) ? 1 : 0;
+        args->result_buffer = (!args->inplace && (completed % 2 == 1)) ? 1 : 0;
         args->ret = status;
     }
 };

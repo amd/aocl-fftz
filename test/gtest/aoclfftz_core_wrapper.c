@@ -322,9 +322,11 @@ aoclfftz_solution_t *alloc_solution_wrapper(FFTZ_INT32 vec_rank,
 }
 aoclfftz_selector_t *alloc_selector_wrapper(FFTZ_INT32 vec_rank,
                                             FFTZ_INT32 dim_rank,
-                                            kernel_tables_t *kernel_tables)
+                                            kernel_tables_t *kernel_tables,
+                                            FFTZ_UINT8 *has_nested)
 {
-    return alloc_selector(vec_rank, dim_rank, kernel_tables);
+    return alloc_selector(vec_rank, dim_rank, kernel_tables,
+                          has_nested);
 }
 FFTZ_VOID *alloc_twiddle_buffer_wrapper(FFTZ_INTP size, FFTZ_UINT32 dt_prec)
 {
@@ -358,14 +360,6 @@ FFTZ_VOID populate_stride_array_wrapper(FFTZ_INTP *strides,
                           adjust_to_full_complex);
 }
 
-/* ---------------- fused strides wrapper ---------------- */
-FFTZ_VOID prepare_fused_kernel_strides_wrapper(FFTZ_INTP *strides,
-                                               FFTZ_INTP radix,
-                                               FFTZ_INTP offset)
-{
-    prepare_fused_kernel_strides(strides, radix, offset);
-}
-
 // Transpose wrappers
 #define TRANSPOSE_WRAPPER_DEFN(kernel_name, TYPE, isa)                         \
     FFTZ_VOID CONCAT(FUNC(kernel_name, TYPE, isa),                             \
@@ -388,6 +382,34 @@ TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tir_cycles, c)
 TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tisr_cycles, c)
 TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tos_iterative, c)
 TRANSPOSE_WRAPPER_ALL_TYPES_DEFN(tos_blocked, c)
+
+// Fused four-step twiddle + transpose register wrappers.
+fused_twiddle_transpose_
+register_fused_twiddle_transpose_c_wrapper(FFTZ_UINT8 prec, FFTZ_UINT8 dir)
+{
+    return register_fused_twiddle_transpose_c(prec, dir);
+}
+#ifdef ENABLE_AVX128
+fused_twiddle_transpose_
+register_fused_twiddle_transpose_avx128_wrapper(FFTZ_UINT8 prec, FFTZ_UINT8 dir)
+{
+    return register_fused_twiddle_transpose_avx128(prec, dir);
+}
+#endif
+#ifdef ENABLE_AVX256
+fused_twiddle_transpose_
+register_fused_twiddle_transpose_avx256_wrapper(FFTZ_UINT8 prec, FFTZ_UINT8 dir)
+{
+    return register_fused_twiddle_transpose_avx256(prec, dir);
+}
+#endif
+#ifdef ENABLE_AVX512
+fused_twiddle_transpose_
+register_fused_twiddle_transpose_avx512_wrapper(FFTZ_UINT8 prec, FFTZ_UINT8 dir)
+{
+    return register_fused_twiddle_transpose_avx512(prec, dir);
+}
+#endif
 
 // for the gtests, we want to use the in-memory twiddle factors
 // so we define IN_MEMORY_TWIDDLE_FACTORS to 1 if not explicitly set/defined

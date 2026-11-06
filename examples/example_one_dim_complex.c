@@ -62,7 +62,7 @@ int main()
               * multithreading execution)
               */
              .num_threads = 1,
-             .dynamic_load_model = 0},
+             .dynamic_load_model = 1},
         .cntrl_params =
             {
                 .opt_level = 0,

@@ -215,21 +215,37 @@ FFTZ_VOID fuzz_problem_desc_test(const std::array<FFTZ_INTP, 8>& dims_and_vecs,
     // Extract dimension and vector ranks
     FFTZ_INT32 dim_rank = dims_and_vecs[0];
     FFTZ_INT32 vec_rank = dims_and_vecs[1];
+
+    // Derive direction, placement and FFT type from the fuzzed flags. This must
+    // happen before constructing dims/vecs so that real (R2C/C2R) problems get
+    // half-complex-aware strides. init_bench_params only sets the defaults
+    // (FORWARD/OUT_OF_PLACE/C2C), so without deriving these here the BACKWARD
+    // (C2R) and in-place real branches would never be reached.
+    aoclfftz_bench_direction_t dir = FFT_DIR(flags) ? BACKWARD : FORWARD;
+    aoclfftz_bench_res_placement_t res_placement =
+        IS_OUT_OF_PLACE(flags) ? OUT_OF_PLACE : IN_PLACE;
+    aoclfftz_bench_fft_type_t fft_type = C2C;
+    if (IS_REAL(flags))
+    {
+        fft_type = (dir == FORWARD) ? R2C : C2R;
+    }
+
     aoclfftz_dim_t_64_ *dims = NULL;
     aoclfftz_dim_t_64_ *vecs = NULL;
-    construct_dims_and_vecs(dims_and_vecs, &dims, &vecs);
+    construct_dims_and_vecs(dims_and_vecs, &dims, &vecs, fft_type);
 
     // Initialize benchmark parameters
     init_bench_params<dt_t, dm_t>(params, dim_rank, vec_rank, dims, vecs);
-    if (IS_REAL(flags) && params->dir == FORWARD)
+    params->dir = dir;
+    params->res_placement = res_placement;
+    params->fft_type = fft_type;
+    if (fft_type == R2C)
     {
-        params->fft_type = R2C;
         params->sz_info.in_data_stride = REAL_DATA_STRIDE;
         params->sz_info.out_data_stride = COMPLEX_DATA_STRIDE;
     }
-    else if (IS_REAL(flags) && params->dir == BACKWARD)
+    else if (fft_type == C2R)
     {
-        params->fft_type = C2R;
         params->sz_info.in_data_stride = COMPLEX_DATA_STRIDE;
         params->sz_info.out_data_stride = REAL_DATA_STRIDE;
     }
@@ -306,11 +322,10 @@ FFTZ_VOID fuzz_problem_desc_test(const std::array<FFTZ_INTP, 8>& dims_and_vecs,
     FFTZ_UINT32 is_align = params->aligned_alloc;
     FFTZ_INTP input_bytes = params->sz_info.input_bytes;
     FFTZ_INTP output_bytes = params->sz_info.output_bytes;
-    if (params->fft_type != C2C &&
-        params->res_placement == IN_PLACE)
-    {
-        input_bytes = MAX(input_bytes, output_bytes);
-    }
+    // In-place problems read and write through the same buffer, so it must be
+    // large enough for both sides. The accuracy tests copy this expanded size
+    // out of the caller's input buffer, so use it for every buffer below.
+    EXPAND_REAL_BUFFER_SIZES(params, input_bytes, output_bytes);
     ALLOC_UNINIT(params->in, FFTZ_VOID, input_bytes, is_align);
     if (params->in == NULL)
     {
@@ -354,7 +369,7 @@ FFTZ_VOID fuzz_problem_desc_test(const std::array<FFTZ_INTP, 8>& dims_and_vecs,
     dt_t *input = NULL;
     FFTZ_INT32 in_data_stride = params->sz_info.in_data_stride;
     FFTZ_INT32 out_data_stride = params->sz_info.out_data_stride;
-    ALLOC_ALIGN_UNINIT(input, dt_t, params->sz_info.input_bytes);
+    ALLOC_ALIGN_UNINIT(input, dt_t, input_bytes);
     if (input == NULL)
     {
         printf("Failed to allocate memory for input buffer\n");
@@ -391,7 +406,10 @@ FFTZ_VOID fuzz_problem_desc_test(const std::array<FFTZ_INTP, 8>& dims_and_vecs,
     FREE_ALIGN_ALLOCATED_MEM(in_idx_map);
     FREE_ALIGN_ALLOCATED_MEM(out_idx_map);
     FREE_ALLOCATED_MEM(params->in, params->aligned_alloc);
-    FREE_ALLOCATED_MEM(params->out, params->aligned_alloc);
+    if (params->res_placement == OUT_OF_PLACE)
+    {
+        FREE_ALLOCATED_MEM(params->out, params->aligned_alloc);
+    }
     FREE_ALIGN_ALLOCATED_MEM(input);
     FREE_ALIGN_ALLOCATED_MEM(params);
     FREE_ALIGN_ALLOCATED_MEM(dims);

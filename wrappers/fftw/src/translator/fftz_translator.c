@@ -31,6 +31,12 @@ aoclfftz_flags_t init_flag(FFTZ_INT32 sign, FFTZ_VOID *in, FFTZ_VOID *out,
 fftw_plan get_handle_d(dv_desc *dv_desc, FFTZ_INT32 sign, FFTZ_VOID *in,
                        FFTZ_VOID *out, fft_type_t ffttype)
 {
+    // Builder returned NULL (bad args); fail the plan, don't dereference it.
+    if (dv_desc == NULL)
+    {
+        return NULL;
+    }
+
     aoclfftz_prob_desc_d *problem = NULL;
     ALLOC_ALIGN_UNINIT(problem, aoclfftz_prob_desc_d,
                        sizeof(aoclfftz_prob_desc_d));
@@ -54,6 +60,12 @@ fftw_plan get_handle_d(dv_desc *dv_desc, FFTZ_INT32 sign, FFTZ_VOID *in,
 fftwf_plan get_handle_f(dv_desc *dv_desc, FFTZ_INT32 sign, FFTZ_VOID *in,
                         FFTZ_VOID *out, fft_type_t ffttype)
 {
+    // Builder returned NULL (bad args); fail the plan, don't dereference it.
+    if (dv_desc == NULL)
+    {
+        return NULL;
+    }
+
     aoclfftz_prob_desc_f *problem = NULL;
     ALLOC_ALIGN_UNINIT(problem, aoclfftz_prob_desc_f,
                        sizeof(aoclfftz_prob_desc_f));
@@ -75,6 +87,12 @@ fftwf_plan get_handle_f(dv_desc *dv_desc, FFTZ_INT32 sign, FFTZ_VOID *in,
 fftw_plan get_handle_d_64_(dv_desc_64_ *dv_desc, FFTZ_INT32 sign, FFTZ_VOID *in,
                            FFTZ_VOID *out, fft_type_t ffttype)
 {
+    // Builder returned NULL (bad args); fail the plan, don't dereference it.
+    if (dv_desc == NULL)
+    {
+        return NULL;
+    }
+
     aoclfftz_prob_desc_d_64_ *problem = NULL;
     ALLOC_ALIGN_UNINIT(problem, aoclfftz_prob_desc_d_64_,
                        sizeof(aoclfftz_prob_desc_d_64_));
@@ -97,6 +115,12 @@ fftw_plan get_handle_d_64_(dv_desc_64_ *dv_desc, FFTZ_INT32 sign, FFTZ_VOID *in,
 fftwf_plan get_handle_f_64_(dv_desc_64_ *dv_desc, FFTZ_INT32 sign,
                             FFTZ_VOID *in, FFTZ_VOID *out, fft_type_t ffttype)
 {
+    // Builder returned NULL (bad args); fail the plan, don't dereference it.
+    if (dv_desc == NULL)
+    {
+        return NULL;
+    }
+
     aoclfftz_prob_desc_f_64_ *problem = NULL;
     ALLOC_ALIGN_UNINIT(problem, aoclfftz_prob_desc_f_64_,
                        sizeof(aoclfftz_prob_desc_f_64_));
@@ -117,6 +141,13 @@ fftwf_plan get_handle_f_64_(dv_desc_64_ *dv_desc, FFTZ_INT32 sign,
 
 dv_desc *get_dv_desc(FFTZ_INT32 rank, const FFTZ_INT32 *n)
 {
+    // rank < 0 leaves dims[0] uninitialized (neither the rank==0 path nor the
+    // i<rank loop runs); a NULL n gets dereferenced below. Reject both.
+    if (rank < 0 || (rank > 0 && n == NULL))
+    {
+        return NULL;
+    }
+
     dv_desc *p_dv_desc = NULL;
     ALLOC_ALIGN_UNINIT(p_dv_desc, dv_desc, sizeof(dv_desc));
     if (p_dv_desc == NULL)
@@ -176,6 +207,12 @@ dv_desc *get_dv_desc(FFTZ_INT32 rank, const FFTZ_INT32 *n)
 dv_desc *get_r2c_dv_desc(FFTZ_INT32 rank, const FFTZ_INT32 *n,
                          FFTZ_INT32 is_inplace)
 {
+    // Reject rank < 0 and NULL n (see get_dv_desc()).
+    if (rank < 0 || (rank > 0 && n == NULL))
+    {
+        return NULL;
+    }
+
     dv_desc *p_dv_desc = NULL;
     ALLOC_ALIGN_UNINIT(p_dv_desc, dv_desc, sizeof(dv_desc));
     if (p_dv_desc == NULL)
@@ -256,6 +293,12 @@ dv_desc *get_r2c_dv_desc(FFTZ_INT32 rank, const FFTZ_INT32 *n,
 dv_desc *get_c2r_dv_desc(FFTZ_INT32 rank, const FFTZ_INT32 *n,
                          FFTZ_INT32 is_inplace)
 {
+    // Reject rank < 0 and NULL n (see get_dv_desc()).
+    if (rank < 0 || (rank > 0 && n == NULL))
+    {
+        return NULL;
+    }
+
     dv_desc *p_dv_desc = NULL;
     ALLOC_ALIGN_UNINIT(p_dv_desc, dv_desc, sizeof(dv_desc));
     if (p_dv_desc == NULL)
@@ -339,6 +382,12 @@ dv_desc *get_many_dv_desc(FFTZ_INT32 rank, const FFTZ_INT32 *n,
                           const FFTZ_INT32 *onembed, FFTZ_INT32 ostride,
                           FFTZ_INT32 odist)
 {
+    // Reject rank < 0 and NULL n (see get_dv_desc()).
+    if (rank < 0 || (rank > 0 && n == NULL))
+    {
+        return NULL;
+    }
+
     inembed = (inembed == NULL) ? n : inembed;
     onembed = (onembed == NULL) ? n : onembed;
 
@@ -406,6 +455,12 @@ dv_desc *get_many_r2c_dv_desc(FFTZ_INT32 rank, const FFTZ_INT32 *n,
                               const FFTZ_INT32 *onembed, FFTZ_INT32 ostride,
                               FFTZ_INT32 odist, FFTZ_INT32 is_inplace)
 {
+    // Reject rank < 0 and NULL n (see get_dv_desc()).
+    if (rank < 0 || (rank > 0 && n == NULL))
+    {
+        return NULL;
+    }
+
     istride = (istride == 0) ? 1 : istride;
     ostride = (ostride == 0) ? 1 : ostride;
 
@@ -529,6 +584,12 @@ dv_desc *get_many_c2r_dv_desc(FFTZ_INT32 rank, const FFTZ_INT32 *n,
                               const FFTZ_INT32 *onembed, FFTZ_INT32 ostride,
                               FFTZ_INT32 odist, FFTZ_INT32 is_inplace)
 {
+    // Reject rank < 0 and NULL n (see get_dv_desc()).
+    if (rank < 0 || (rank > 0 && n == NULL))
+    {
+        return NULL;
+    }
+
     istride = (istride == 0) ? 1 : istride;
     ostride = (ostride == 0) ? 1 : ostride;
 
@@ -652,6 +713,15 @@ dv_desc *get_guru_dv_desc(FFTZ_INT32 rank, const fftw_iodim *dims,
                           FFTZ_INT32 howmany_rank,
                           const fftw_iodim *howmany_dims)
 {
+    // Guru indexes dims[]/howmany_dims[] directly, so reject a NULL array with
+    // positive rank, plus rank < 0. rank/howmany_rank <= 0 use a unit dim and
+    // never read the arrays.
+    if (rank < 0 || (rank > 0 && dims == NULL) ||
+        (howmany_rank > 0 && howmany_dims == NULL))
+    {
+        return NULL;
+    }
+
     dv_desc *p_dv_desc = NULL;
     ALLOC_ALIGN_UNINIT(p_dv_desc, dv_desc, sizeof(dv_desc));
     if (p_dv_desc == NULL)
@@ -671,11 +741,16 @@ dv_desc *get_guru_dv_desc(FFTZ_INT32 rank, const fftw_iodim *dims,
         }
         for (FFTZ_INT32 i = 0; i < howmany_rank; i++)
         {
+            // FFTZ requires a positive stride on every batch dimension, so any
+            // 0 stride is normalized to 1 (as get_many_dv_desc does for
+            // idist/odist). A 0 stride is harmless for a length-1 batch
+            // dimension, where it carries no meaning and callers conventionally
+            // leave it unset.
+            FFTZ_INT32 is = howmany_dims[howmany_rank - i - 1].is;
+            FFTZ_INT32 os = howmany_dims[howmany_rank - i - 1].os;
             p_dv_desc->vecs[i].n = howmany_dims[howmany_rank - i - 1].n;
-            p_dv_desc->vecs[i].in_stride =
-                howmany_dims[howmany_rank - i - 1].is;
-            p_dv_desc->vecs[i].out_stride =
-                howmany_dims[howmany_rank - i - 1].os;
+            p_dv_desc->vecs[i].in_stride = (is == 0) ? 1 : is;
+            p_dv_desc->vecs[i].out_stride = (os == 0) ? 1 : os;
         }
     }
     else
@@ -734,6 +809,13 @@ dv_desc_64_ *get_guru_64_dv_desc(FFTZ_INT32 rank, const fftw_iodim64 *dims,
                                 FFTZ_INT32 howmany_rank,
                                 const fftw_iodim64 *howmany_dims)
 {
+    // See get_guru_dv_desc(): reject rank < 0 and NULL iodim arrays.
+    if (rank < 0 || (rank > 0 && dims == NULL) ||
+        (howmany_rank > 0 && howmany_dims == NULL))
+    {
+        return NULL;
+    }
+
     dv_desc_64_ *p_dv_desc = NULL;
     ALLOC_ALIGN_UNINIT(p_dv_desc, dv_desc_64_, sizeof(dv_desc_64_));
     if (p_dv_desc == NULL)
@@ -753,11 +835,13 @@ dv_desc_64_ *get_guru_64_dv_desc(FFTZ_INT32 rank, const fftw_iodim64 *dims,
         }
         for (FFTZ_INT32 i = 0; i < howmany_rank; i++)
         {
+            // See the note in get_guru_dv_desc(): FFTZ rejects a 0 stride, so
+            // every 0 batch stride is normalized to 1.
+            FFTZ_INTP is = howmany_dims[howmany_rank - i - 1].is;
+            FFTZ_INTP os = howmany_dims[howmany_rank - i - 1].os;
             p_dv_desc->vecs[i].n = howmany_dims[howmany_rank - i - 1].n;
-            p_dv_desc->vecs[i].in_stride =
-                howmany_dims[howmany_rank - i - 1].is;
-            p_dv_desc->vecs[i].out_stride =
-                howmany_dims[howmany_rank - i - 1].os;
+            p_dv_desc->vecs[i].in_stride = (is == 0) ? 1 : is;
+            p_dv_desc->vecs[i].out_stride = (os == 0) ? 1 : os;
         }
     }
     else
@@ -869,6 +953,14 @@ dv_desc *get_fortran_guru_dv_desc(FFTZ_INT32 rank, const FFTZ_INT32 *n,
                                   const FFTZ_INT32 *h_n, const FFTZ_INT32 *h_is,
                                   const FFTZ_INT32 *h_os)
 {
+    // Reject bad ranks and NULL size/stride arrays before indexing.
+    if (rank < 0 || howmany_rank < 0 ||
+        (rank > 0 && (n == NULL || is == NULL || os == NULL)) ||
+        (howmany_rank > 0 && (h_n == NULL || h_is == NULL || h_os == NULL)))
+    {
+        return NULL;
+    }
+
     dv_desc *p_dv_desc = NULL;
     ALLOC_ALIGN_UNINIT(p_dv_desc, dv_desc, sizeof(dv_desc));
     if (p_dv_desc == NULL)

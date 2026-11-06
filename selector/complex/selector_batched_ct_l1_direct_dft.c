@@ -24,59 +24,6 @@
 
 #include "selector/selector.h"
 
-/* Tracks a candidate kernel's table index and its estimated cost. */
-typedef struct
-{
-    FFTZ_INTP  idx;
-    FFTZ_INT64 cost;
-} kernel_choice_t;
-
-/* Return the base-category slot index whose radix matches, or -1 if none. */
-static FFTZ_INTP find_radix_base_idx(kernel_t *kertab, FFTZ_INTP radix)
-{
-    for (FFTZ_INTP base_idx = 0; base_idx < NUM_KERNELS_IN_EACH_CATEGORY;
-         base_idx++)
-    {
-        if (kertab[base_idx].radix == 0) // End of suitable kernels in the list
-        {
-            break;
-        }
-
-        if ((FFTZ_INTP)kertab[base_idx].radix == radix)
-        {
-            return base_idx;
-        }
-    }
-    return -1;
-}
-
-/* Pick the optimal kernel across all ISA categories for a given radix & batch
- * size. */
-static kernel_choice_t find_best_kernel(kernel_t *kertab, FFTZ_INTP base_idx,
-                                        FFTZ_UINT8 precision,
-                                        FFTZ_UINT8 direction, FFTZ_INTP batch)
-{
-    kernel_choice_t optimal = {-1, INT64_MAX};
-
-    for (FFTZ_INTP kcat = 0; kcat < NUM_KERNEL_CATEGORIES; kcat++)
-    {
-        FFTZ_INTP kloc = kcat * NUM_KERNELS_IN_EACH_CATEGORY + base_idx;
-        if (kertab[kloc].kfft[direction] == NULL)
-        {
-            continue;
-        }
-
-        FFTZ_INT64 cost = compute_kernel_cost(&kertab[kloc], precision,
-                                         direction, batch);
-        if (cost < optimal.cost)
-        {
-            optimal.idx  = kloc;
-            optimal.cost = cost;
-        }
-    }
-    return optimal;
-}
-
 FFTZ_INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
@@ -132,10 +79,12 @@ FFTZ_INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel)
             continue;
         }
 
-        kernel_choice_t kr = find_best_kernel(kertab_twid, kr_base, precision,
-                                            direction, radix_m);
-        kernel_choice_t km = find_best_kernel(kertab_dft, km_base, precision,
-                                            direction, radix_r);
+        kernel_choice_t kr = find_best_kernel(kertab_twid, kr_base,
+                                              precision, direction,
+                                                         radix_m);
+        kernel_choice_t km = find_best_kernel(kertab_dft, km_base,
+                                              precision, direction,
+                                              radix_r);
         if (kr.idx < 0 || km.idx < 0)
         {
             continue;

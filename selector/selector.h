@@ -37,12 +37,13 @@ typedef enum
 } aoclfftz_selector_status;
 
 // Selector data structure that is used to hold the solution and cost analysis
-// at each decomposition level for the associated sub-problem
+// at each decomposition level for the associated sub-problem.
 typedef struct aoclfftz_selector
 {
     aoclfftz_solution_t *solution;
     execute_ execute;
     aoclfftz_immutable_metadata_t *exec_metadata;
+    FFTZ_UINT8 *has_nested;
     cost_analysis_t *cost_analysis;
     kernel_tables_t *kernel_tables;
 } aoclfftz_selector_t;
@@ -58,22 +59,25 @@ typedef struct aoclfftz_selector
  */
 #define FOR_EACH_SOLUTION(var, start_solution)                                 \
     for (aoclfftz_solution_t *var = start_solution; var != NULL;               \
-         var = (var != NULL && var->next_sol) ? *(var->next_sol) : NULL)
+         var = var->next_sol)
 
 /*
  * @brief Macro to check if there is a next solution
  */
-#define HAS_NEXT(sol) (sol->next_sol != NULL && sol->next_sol[0] != NULL)
+#define HAS_NEXT(sol) ((sol)->next_sol != NULL)
 
 // macro functions
 #define INIT_DECOMP_SCHEME(sel_obj, problem, dim_rank)                         \
 {                                                                              \
     sel_obj->solution->decomp_scheme->vec_rank = problem->vec_rank;            \
     sel_obj->solution->decomp_scheme->dim_rank = dim_rank;                     \
-    FFTZ_INT32 cnt, idx = 0; \
+    FFTZ_INT32 cnt, idx = 0;                                                   \
     for (cnt = 0; cnt < problem->dim_rank; cnt++)                              \
     {                                                                          \
-        if (problem->dims[cnt].n != 1)                                         \
+        /* Copy a size-one dims[0] for real problems; the real solvers         \
+           handle that transform size themselves. */                           \
+        if (problem->dims[cnt].n != 1 ||                                       \
+            (problem->flags.fft_type && cnt == 0))                             \
         {                                                                      \
             sel_obj->solution->decomp_scheme->dims[idx].n =                    \
                 problem->dims[cnt].n;                                          \
@@ -176,17 +180,6 @@ typedef struct aoclfftz_selector
 #define IS_DIRECT_ONLY_PROBLEM(sol)                                            \
     (sol->twiddle->TW == NULL && sol->next_sol == NULL)
 
-/**
- * @brief Swap the buffers of two pointers
- *
- */
-#define SWAP_BUFFERS(buf1, buf2)                                               \
-{                                                                              \
-    FFTZ_VOID *temp_buffer_for_swap = buf1; \
-    buf1 = buf2;                                                               \
-    buf2 = temp_buffer_for_swap;                                               \
-}
-
 #define RESET_COST(sol)                                                        \
 {                                                                              \
     sol->cost_analysis->ops = 0;                                               \
@@ -195,8 +188,10 @@ typedef struct aoclfftz_selector
 
 // Shrink_dim_rank : returns the new dim rank by adding the number of dimensions
 // whose size is not equal to one.
-// Ex:- 2x1x3x1, returns 2
-#define SHRINK_DIM_RANK(dims, dim_rank, ret)                                   \
+// Ex:- 2x1x3x1:
+//  - returns 2 for complex problems
+//  - returns 3 for real problems (innermost size-one dims[0] is retained)
+#define SHRINK_DIM_RANK(dims, dim_rank, is_real, ret)                          \
 {                                                                              \
     if (dim_rank == 1)                                                         \
     {                                                                          \
@@ -204,10 +199,12 @@ typedef struct aoclfftz_selector
     }                                                                          \
     else                                                                       \
     {                                                                          \
-        FFTZ_INT32 dim_rank_counter = 0; \
-        for (FFTZ_INT32 i = 0; i < dim_rank; i++) \
+        FFTZ_INT32 dim_rank_counter = 0;                                       \
+        for (FFTZ_INT32 i = 0; i < dim_rank; i++)                              \
         {                                                                      \
-            if (dims[i].n != 1)                                                \
+            /* Count a size-one dims[0] for real problems; the real solvers    \
+               handle that transform size themselves. */                       \
+            if (dims[i].n != 1 || ((is_real) && i == 0))                       \
             {                                                                  \
                 dim_rank_counter++;                                            \
             }                                                                  \
@@ -239,12 +236,23 @@ FFTZ_INT32 copy_strides_batched_ct_l1_direct(
 // necessary in ND setup where dim_rank & vec_rank will differ for the
 // sub-problem
 FFTZ_VOID copy_solution_obj_wo_dims(aoclfftz_solution_t *to_sol_obj,
-                               aoclfftz_solution_t *from_sol_obj);
+                                    aoclfftz_solution_t *from_sol_obj);
+// True when this real solver owns a complex child on complex_sol (packed or
+// Bluestein), not a real CT/Direct chain. Iterative CT/Direct swap must skip it.
+static inline FFTZ_UINT8
+real_solver_has_complex_subproblem(aoclfftz_solver_type solver_type)
+{
+    return solver_type == SOLVER_REAL_PACKED_R2C ||
+           solver_type == SOLVER_REAL_PACKED_C2R ||
+           solver_type == SOLVER_REAL_BLUESTEIN;
+}
+
 // Reorder the Real FFT CT/Direct nodes for iterative execution only.
 //   Before swap: CT -> Direct -> CT -> Direct -> ... -> Direct
 //   After swap : Direct -> CT -> Direct -> ... -> CT -> Direct
 // In recursive mode the natural CT-first tree is kept (see prepare_and_setup_dft),
 // so this is invoked only when SELECT_REAL_FFT_EXECUTION_ORDER == ITERATIVE.
+// Packed and real-Bluestein roots are skipped
 FFTZ_VOID swap_real_ct_solutions(aoclfftz_selector_t *sel);
 FFTZ_INT32 register_solvers_kernels(kernel_tables_t *kernel_tables,
                                     FFTZ_INT32 dt, FFTZ_INT32 dir,
@@ -255,8 +263,6 @@ FFTZ_INT32 selector_driver_rdft_(aoclfftz_selector_t *sel,
 FFTZ_INT32 selector_model_dft_(aoclfftz_selector_t *sel);
 FFTZ_INT32 selector_model_rdft_(aoclfftz_selector_t *sel,
                            aoclfftz_realhelper_t *realhelper);
-FFTZ_VOID setup_twiddle_buffer_complex(aoclfftz_solution_t *sol);
-FFTZ_VOID setup_twiddle_buffer_real(aoclfftz_solution_t *sol);
 FFTZ_VOID *setup_dft_f(aoclfftz_prob_desc_f *problem);
 FFTZ_VOID *setup_dft_d(aoclfftz_prob_desc_d *problem);
 FFTZ_VOID *setup_dft_f_64_(aoclfftz_prob_desc_f_64_ *problem);
@@ -266,13 +272,15 @@ FFTZ_INT32 selector_ndim_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 FFTZ_INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 FFTZ_INT32 selector_buffered_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 FFTZ_INT32 selector_permuted_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
+FFTZ_INT32 selector_nop_dft(aoclfftz_selector_t *sel);
 FFTZ_INT32 selector_direct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 FFTZ_INT32 selector_ct_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 FFTZ_INT32 selector_batched_ct_l1_direct_dft(aoclfftz_selector_t *sel);
+FFTZ_INT32 selector_pow2_iterative_dft(aoclfftz_selector_t *sel);
+FFTZ_INT32 selector_pow2_fourstep_dft(aoclfftz_selector_t *sel);
 FFTZ_INT32 selector_sizeone_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
 FFTZ_INT32 selector_transpose(aoclfftz_selector_t *sel);
 FFTZ_INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab);
-
 FFTZ_INT32 selector_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                            aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 selector_batched_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
@@ -281,11 +289,22 @@ FFTZ_INT32 selector_buffered_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                              aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 selector_ct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                        aoclfftz_realhelper_t *realhelper);
+FFTZ_INT32 check_batched_ct_l1_direct_rdft_solvability(
+    aoclfftz_decomp_scheme_t *decomp_scheme, aoclfftz_realhelper_t *realhelper,
+    kernel_t *kertab_rdft);
+FFTZ_INT32
+selector_batched_ct_l1_direct_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+                                   aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
                          aoclfftz_realhelper_t *realhelper);
+FFTZ_INT32 selector_bluestein_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+                                   aoclfftz_realhelper_t *realhelper);
+FFTZ_INT32 selector_real_packed_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
+                                     aoclfftz_realhelper_t *realhelper);
 FFTZ_VOID destroy_handle(FFTZ_VOID *handle);
 FFTZ_VOID fuse_vecs(aoclfftz_solution_t *sol, FFTZ_INT32 is_FFT_ker_supported);
 FFTZ_INT32 check_bluestein_problem(aoclfftz_decomp_scheme_t *decomp_scheme);
+FFTZ_INTP check_CT_solvability(FFTZ_INTP n, kernel_t *kertab);
 FFTZ_INT32 check_FFT_kernel_support(FFTZ_INTP n, kernel_t *kernels_table,
                                FFTZ_INT32 is_innermost_dim);
 FFTZ_DOUBLE get_kernel_weightage(FFTZ_INTP radix, kernel_t *kertab,

@@ -39,9 +39,11 @@ FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
         sel->solution->decomp_scheme->cntrl_params->measure_stats;
     FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    real_dim_sol = alloc_selector(dim_rank - 1, 1, sel->kernel_tables);
+    real_dim_sol = alloc_selector(dim_rank - 1, 1, sel->kernel_tables,
+                                  sel->has_nested);
 
-    complex_dims_sol = alloc_selector(1, dim_rank - 1, sel->kernel_tables);
+    complex_dims_sol = alloc_selector(1, dim_rank - 1, sel->kernel_tables,
+                                      sel->has_nested);
 
     if (complex_dims_sol == NULL || real_dim_sol == NULL)
     {
@@ -75,9 +77,6 @@ FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     sel->solution->dft_bufs->ct_buf_size =
         complex_dims_sol->solution->dft_bufs->ct_buf_size;
 
-    // Setup twiddle factors for the complex dimensions sub-problem
-    setup_twiddle_buffer_complex(complex_dims_sol->solution);
-
     sel->cost_analysis->ops =
         complex_dims_sol->cost_analysis->ops + real_dim_sol->cost_analysis->ops;
     sel->cost_analysis->time = complex_dims_sol->cost_analysis->time +
@@ -87,15 +86,8 @@ FFTZ_INT32 selector_ndim_rdft(aoclfftz_selector_t *sel, kernel_t *kertab,
     {
         // capture stats
     }
-    sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
-    if (sel->solution->next_sol == NULL)
-    {
-        ret = AOCLFFTZ_MEMORY_FAILURE;
-        AOCLFFTZ_ERROR("alloc_sol_array failed: %s", get_status_string(ret));
-        goto exit_nd_dft;
-    }
-    sel->solution->next_sol[0] = real_dim_sol->solution;
-    sel->solution->dft_bufs->nd_sol = complex_dims_sol->solution;
+    sel->solution->next_sol = real_dim_sol->solution;
+    sel->solution->dft_bufs->complex_sol = complex_dims_sol->solution;
 
     destroy_selector_without_solution(real_dim_sol);
     destroy_selector_without_solution(complex_dims_sol);

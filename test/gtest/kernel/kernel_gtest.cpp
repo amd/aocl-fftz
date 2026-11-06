@@ -17,8 +17,8 @@
 #include "kernel_gtest_base.h"
 #include "dft_reference.h"
 
-// C2C - C Kernels - Float
-aoclfftz_kernel_test_params_t param_float_c2c_c_kernels[] =
+// C2C - C Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2c_c_kernels =
 {
     {2, aocl_fftz_kernel_type::C2C_C},
     {3, aocl_fftz_kernel_type::C2C_C},
@@ -39,30 +39,8 @@ aoclfftz_kernel_test_params_t param_float_c2c_c_kernels[] =
     {48, aocl_fftz_kernel_type::C2C_C},
 };
 
-// C2C - C Kernels - Double
-aoclfftz_kernel_test_params_t param_double_c2c_c_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::C2C_C},
-    {3, aocl_fftz_kernel_type::C2C_C},
-    {4, aocl_fftz_kernel_type::C2C_C},
-    {5, aocl_fftz_kernel_type::C2C_C},
-    {6, aocl_fftz_kernel_type::C2C_C},
-    {7, aocl_fftz_kernel_type::C2C_C},
-    {8, aocl_fftz_kernel_type::C2C_C},
-    {9, aocl_fftz_kernel_type::C2C_C},
-    {10, aocl_fftz_kernel_type::C2C_C},
-    {11, aocl_fftz_kernel_type::C2C_C},
-    {12, aocl_fftz_kernel_type::C2C_C},
-    {13, aocl_fftz_kernel_type::C2C_C},
-    {14, aocl_fftz_kernel_type::C2C_C},
-    {15, aocl_fftz_kernel_type::C2C_C},
-    {16, aocl_fftz_kernel_type::C2C_C},
-    {20, aocl_fftz_kernel_type::C2C_C},
-    {48, aocl_fftz_kernel_type::C2C_C},
-};
-
-// C2C - AVX128 Kernels - Float
-aoclfftz_kernel_test_params_t param_float_c2c_avx128_kernels[] =
+// C2C - AVX128 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2c_avx128_kernels =
 {
     {2, aocl_fftz_kernel_type::C2C_AVX128},
     {3, aocl_fftz_kernel_type::C2C_AVX128},
@@ -83,30 +61,8 @@ aoclfftz_kernel_test_params_t param_float_c2c_avx128_kernels[] =
     {48, aocl_fftz_kernel_type::C2C_AVX128},
 };
 
-// C2C - AVX128 Kernels - Double
-aoclfftz_kernel_test_params_t param_double_c2c_avx128_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::C2C_AVX128},
-    {3, aocl_fftz_kernel_type::C2C_AVX128},
-    {4, aocl_fftz_kernel_type::C2C_AVX128},
-    {5, aocl_fftz_kernel_type::C2C_AVX128},
-    {6, aocl_fftz_kernel_type::C2C_AVX128},
-    {7, aocl_fftz_kernel_type::C2C_AVX128},
-    {8, aocl_fftz_kernel_type::C2C_AVX128},
-    {9, aocl_fftz_kernel_type::C2C_AVX128},
-    {10, aocl_fftz_kernel_type::C2C_AVX128},
-    {11, aocl_fftz_kernel_type::C2C_AVX128},
-    {12, aocl_fftz_kernel_type::C2C_AVX128},
-    {13, aocl_fftz_kernel_type::C2C_AVX128},
-    {14, aocl_fftz_kernel_type::C2C_AVX128},
-    {15, aocl_fftz_kernel_type::C2C_AVX128},
-    {16, aocl_fftz_kernel_type::C2C_AVX128},
-    {20, aocl_fftz_kernel_type::C2C_AVX128},
-    {48, aocl_fftz_kernel_type::C2C_AVX128},
-};
-
-// C2C - AVX256 Kernels - Float
-aoclfftz_kernel_test_params_t param_float_c2c_avx256_kernels[] =
+// C2C - AVX256 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2c_avx256_kernels =
 {
     {2, aocl_fftz_kernel_type::C2C_AVX256},
     {3, aocl_fftz_kernel_type::C2C_AVX256},
@@ -127,30 +83,8 @@ aoclfftz_kernel_test_params_t param_float_c2c_avx256_kernels[] =
     {48, aocl_fftz_kernel_type::C2C_AVX256},
 };
 
-// C2C - AVX256 Kernels - Double
-aoclfftz_kernel_test_params_t param_double_c2c_avx256_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::C2C_AVX256},
-    {3, aocl_fftz_kernel_type::C2C_AVX256},
-    {4, aocl_fftz_kernel_type::C2C_AVX256},
-    {5, aocl_fftz_kernel_type::C2C_AVX256},
-    {6, aocl_fftz_kernel_type::C2C_AVX256},
-    {7, aocl_fftz_kernel_type::C2C_AVX256},
-    {8, aocl_fftz_kernel_type::C2C_AVX256},
-    {9, aocl_fftz_kernel_type::C2C_AVX256},
-    {10, aocl_fftz_kernel_type::C2C_AVX256},
-    {11, aocl_fftz_kernel_type::C2C_AVX256},
-    {12, aocl_fftz_kernel_type::C2C_AVX256},
-    {13, aocl_fftz_kernel_type::C2C_AVX256},
-    {14, aocl_fftz_kernel_type::C2C_AVX256},
-    {15, aocl_fftz_kernel_type::C2C_AVX256},
-    {16, aocl_fftz_kernel_type::C2C_AVX256},
-    {20, aocl_fftz_kernel_type::C2C_AVX256},
-    {48, aocl_fftz_kernel_type::C2C_AVX256},
-};
-
-// C2C - AVX512 Kernels - Float
-aoclfftz_kernel_test_params_t param_float_c2c_avx512_kernels[] =
+// C2C - AVX512 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2c_avx512_kernels =
 {
     {2, aocl_fftz_kernel_type::C2C_AVX512},
     {3, aocl_fftz_kernel_type::C2C_AVX512},
@@ -171,190 +105,168 @@ aoclfftz_kernel_test_params_t param_float_c2c_avx512_kernels[] =
     {48, aocl_fftz_kernel_type::C2C_AVX512},
 };
 
-// C2C - AVX512 Kernels - Double
-aoclfftz_kernel_test_params_t param_double_c2c_avx512_kernels[] =
+// C2C Twiddle Forward - C Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2c_twid_fwd_c_kernels =
 {
-    {2, aocl_fftz_kernel_type::C2C_AVX512},
-    {3, aocl_fftz_kernel_type::C2C_AVX512},
-    {4, aocl_fftz_kernel_type::C2C_AVX512},
-    {5, aocl_fftz_kernel_type::C2C_AVX512},
-    {6, aocl_fftz_kernel_type::C2C_AVX512},
-    {7, aocl_fftz_kernel_type::C2C_AVX512},
-    {8, aocl_fftz_kernel_type::C2C_AVX512},
-    {9, aocl_fftz_kernel_type::C2C_AVX512},
-    {10, aocl_fftz_kernel_type::C2C_AVX512},
-    {11, aocl_fftz_kernel_type::C2C_AVX512},
-    {12, aocl_fftz_kernel_type::C2C_AVX512},
-    {13, aocl_fftz_kernel_type::C2C_AVX512},
-    {14, aocl_fftz_kernel_type::C2C_AVX512},
-    {15, aocl_fftz_kernel_type::C2C_AVX512},
-    {16, aocl_fftz_kernel_type::C2C_AVX512},
-    {20, aocl_fftz_kernel_type::C2C_AVX512},
-    {48, aocl_fftz_kernel_type::C2C_AVX512},
+    {2, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
+    {3, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
+    {4, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
+    {5, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
+    {6, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
+    {7, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
+    {8, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
+    {9, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
+    {10, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
+    {11, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
+    {12, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
+    {13, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
+    {14, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
+    {15, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
+    {16, aocl_fftz_kernel_type::C2C_TWID_FWD_C},
 };
 
-// C2C Twiddle - C Kernels - Float
-aoclfftz_kernel_test_params_t param_float_c2c_twid_c_kernels[] =
+// C2C Twiddle Backward - C Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2c_twid_bwd_c_kernels =
 {
-    {2, aocl_fftz_kernel_type::C2C_TWID_C},
-    {3, aocl_fftz_kernel_type::C2C_TWID_C},
-    {4, aocl_fftz_kernel_type::C2C_TWID_C},
-    {5, aocl_fftz_kernel_type::C2C_TWID_C},
-    {6, aocl_fftz_kernel_type::C2C_TWID_C},
-    {7, aocl_fftz_kernel_type::C2C_TWID_C},
-    {8, aocl_fftz_kernel_type::C2C_TWID_C},
-    {9, aocl_fftz_kernel_type::C2C_TWID_C},
-    {10, aocl_fftz_kernel_type::C2C_TWID_C},
-    {11, aocl_fftz_kernel_type::C2C_TWID_C},
-    {12, aocl_fftz_kernel_type::C2C_TWID_C},
-    {13, aocl_fftz_kernel_type::C2C_TWID_C},
-    {14, aocl_fftz_kernel_type::C2C_TWID_C},
-    {15, aocl_fftz_kernel_type::C2C_TWID_C},
-    {16, aocl_fftz_kernel_type::C2C_TWID_C}
+    {2, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
+    {3, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
+    {4, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
+    {5, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
+    {6, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
+    {7, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
+    {8, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
+    {9, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
+    {10, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
+    {11, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
+    {12, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
+    {13, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
+    {14, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
+    {15, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
+    {16, aocl_fftz_kernel_type::C2C_TWID_BWD_C},
 };
 
-// C2C Twiddle - C Kernels - Double
-aoclfftz_kernel_test_params_t param_double_c2c_twid_c_kernels[] =
+// C2C Twiddle Forward - AVX128 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2c_twid_fwd_avx128_kernels =
 {
-    {2, aocl_fftz_kernel_type::C2C_TWID_C},
-    {3, aocl_fftz_kernel_type::C2C_TWID_C},
-    {4, aocl_fftz_kernel_type::C2C_TWID_C},
-    {5, aocl_fftz_kernel_type::C2C_TWID_C},
-    {6, aocl_fftz_kernel_type::C2C_TWID_C},
-    {7, aocl_fftz_kernel_type::C2C_TWID_C},
-    {8, aocl_fftz_kernel_type::C2C_TWID_C},
-    {9, aocl_fftz_kernel_type::C2C_TWID_C},
-    {10, aocl_fftz_kernel_type::C2C_TWID_C},
-    {11, aocl_fftz_kernel_type::C2C_TWID_C},
-    {12, aocl_fftz_kernel_type::C2C_TWID_C},
-    {13, aocl_fftz_kernel_type::C2C_TWID_C},
-    {14, aocl_fftz_kernel_type::C2C_TWID_C},
-    {15, aocl_fftz_kernel_type::C2C_TWID_C},
-    {16, aocl_fftz_kernel_type::C2C_TWID_C}
+    {2, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
+    {3, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
+    {4, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
+    {5, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
+    {6, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
+    {7, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
+    {8, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
+    {9, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
+    {10, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
+    {11, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
+    {12, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
+    {13, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
+    {14, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
+    {15, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
+    {16, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX128},
 };
 
-// C2C Twiddle - AVX128 Kernels - Float
-aoclfftz_kernel_test_params_t param_float_c2c_twid_avx128_kernels[] =
+// C2C Twiddle Backward - AVX128 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2c_twid_bwd_avx128_kernels =
 {
-    {2, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {3, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {4, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {5, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {6, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {7, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {8, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {9, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {10, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {11, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {12, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {13, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {14, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {15, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {16, aocl_fftz_kernel_type::C2C_TWID_AVX128}
+    {2, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
+    {3, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
+    {4, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
+    {5, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
+    {6, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
+    {7, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
+    {8, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
+    {9, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
+    {10, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
+    {11, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
+    {12, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
+    {13, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
+    {14, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
+    {15, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
+    {16, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX128},
 };
 
-// C2C Twiddle - AVX128 Kernels - Double
-aoclfftz_kernel_test_params_t param_double_c2c_twid_avx128_kernels[] =
+// C2C Twiddle Forward - AVX256 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2c_twid_fwd_avx256_kernels =
 {
-    {2, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {3, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {4, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {5, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {6, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {7, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {8, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {9, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {10, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {11, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {12, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {13, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {14, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {15, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {16, aocl_fftz_kernel_type::C2C_TWID_AVX128}
+    {2, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
+    {3, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
+    {4, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
+    {5, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
+    {6, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
+    {7, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
+    {8, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
+    {9, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
+    {10, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
+    {11, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
+    {12, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
+    {13, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
+    {14, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
+    {15, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
+    {16, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX256},
 };
 
-// C2C Twiddle - AVX256 Kernels - Float
-aoclfftz_kernel_test_params_t param_float_c2c_twid_avx256_kernels[] =
+// C2C Twiddle Backward - AVX256 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2c_twid_bwd_avx256_kernels =
 {
-    {2, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {3, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {4, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {5, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {6, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {7, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {8, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {9, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {10, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {11, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {12, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {13, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {14, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {15, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {16, aocl_fftz_kernel_type::C2C_TWID_AVX256}
+    {2, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
+    {3, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
+    {4, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
+    {5, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
+    {6, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
+    {7, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
+    {8, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
+    {9, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
+    {10, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
+    {11, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
+    {12, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
+    {13, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
+    {14, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
+    {15, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
+    {16, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX256},
 };
 
-// C2C Twiddle - AVX256 Kernels - Double
-aoclfftz_kernel_test_params_t param_double_c2c_twid_avx256_kernels[] =
+// C2C Twiddle Forward - AVX512 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2c_twid_fwd_avx512_kernels =
 {
-    {2, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {3, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {4, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {5, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {6, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {7, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {8, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {9, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {10, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {11, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {12, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {13, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {14, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {15, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {16, aocl_fftz_kernel_type::C2C_TWID_AVX256}
+    {2, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
+    {3, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
+    {4, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
+    {5, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
+    {6, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
+    {7, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
+    {8, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
+    {9, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
+    {10, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
+    {11, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
+    {12, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
+    {13, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
+    {14, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
+    {15, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
+    {16, aocl_fftz_kernel_type::C2C_TWID_FWD_AVX512},
 };
 
-// C2C Twiddle - AVX512 Kernels - Float
-aoclfftz_kernel_test_params_t param_float_c2c_twid_avx512_kernels[] =
+// C2C Twiddle Backward - AVX512 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2c_twid_bwd_avx512_kernels =
 {
-    {2, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {3, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {4, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {5, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {6, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {7, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {8, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {9, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {10, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {11, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {12, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {13, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {14, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {15, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {16, aocl_fftz_kernel_type::C2C_TWID_AVX512}
+    {2, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
+    {3, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
+    {4, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
+    {5, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
+    {6, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
+    {7, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
+    {8, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
+    {9, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
+    {10, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
+    {11, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
+    {12, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
+    {13, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
+    {14, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
+    {15, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
+    {16, aocl_fftz_kernel_type::C2C_TWID_BWD_AVX512},
 };
 
-// C2C Twiddle - AVX512 Kernels - Double
-aoclfftz_kernel_test_params_t param_double_c2c_twid_avx512_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {3, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {4, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {5, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {6, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {7, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {8, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {9, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {10, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {11, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {12, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {13, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {14, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {15, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {16, aocl_fftz_kernel_type::C2C_TWID_AVX512}
-};
-
-// R2HC - C Kernels - Float
-aoclfftz_kernel_test_params_t param_float_r2hc_c_kernels[] =
+// R2HC - C Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_r2hc_c_kernels =
 {
     {2, aocl_fftz_kernel_type::R2HC_C},
     {3, aocl_fftz_kernel_type::R2HC_C},
@@ -370,31 +282,11 @@ aoclfftz_kernel_test_params_t param_float_r2hc_c_kernels[] =
     {13, aocl_fftz_kernel_type::R2HC_C},
     {14, aocl_fftz_kernel_type::R2HC_C},
     {15, aocl_fftz_kernel_type::R2HC_C},
-    {16, aocl_fftz_kernel_type::R2HC_C}
+    {16, aocl_fftz_kernel_type::R2HC_C},
 };
 
-// R2HC - C Kernels - Double
-aoclfftz_kernel_test_params_t param_double_r2hc_c_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::R2HC_C},
-    {3, aocl_fftz_kernel_type::R2HC_C},
-    {4, aocl_fftz_kernel_type::R2HC_C},
-    {5, aocl_fftz_kernel_type::R2HC_C},
-    {6, aocl_fftz_kernel_type::R2HC_C},
-    {7, aocl_fftz_kernel_type::R2HC_C},
-    {8, aocl_fftz_kernel_type::R2HC_C},
-    {9, aocl_fftz_kernel_type::R2HC_C},
-    {10, aocl_fftz_kernel_type::R2HC_C},
-    {11, aocl_fftz_kernel_type::R2HC_C},
-    {12, aocl_fftz_kernel_type::R2HC_C},
-    {13, aocl_fftz_kernel_type::R2HC_C},
-    {14, aocl_fftz_kernel_type::R2HC_C},
-    {15, aocl_fftz_kernel_type::R2HC_C},
-    {16, aocl_fftz_kernel_type::R2HC_C}
-};
-
-// R2HC-Fused - C Kernels - Float
-aoclfftz_kernel_test_params_t param_float_r2hcf_c_kernels[] =
+// R2HC-Fused - C Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_r2hcf_c_kernels =
 {
     {2, aocl_fftz_kernel_type::R2HCF_C},
     {3, aocl_fftz_kernel_type::R2HCF_C},
@@ -410,32 +302,12 @@ aoclfftz_kernel_test_params_t param_float_r2hcf_c_kernels[] =
     {13, aocl_fftz_kernel_type::R2HCF_C},
     {14, aocl_fftz_kernel_type::R2HCF_C},
     {15, aocl_fftz_kernel_type::R2HCF_C},
-    {16, aocl_fftz_kernel_type::R2HCF_C}
-};
-
-// R2HC-Fused - C Kernels - Double
-aoclfftz_kernel_test_params_t param_double_r2hcf_c_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::R2HCF_C},
-    {3, aocl_fftz_kernel_type::R2HCF_C},
-    {4, aocl_fftz_kernel_type::R2HCF_C},
-    {5, aocl_fftz_kernel_type::R2HCF_C},
-    {6, aocl_fftz_kernel_type::R2HCF_C},
-    {7, aocl_fftz_kernel_type::R2HCF_C},
-    {8, aocl_fftz_kernel_type::R2HCF_C},
-    {9, aocl_fftz_kernel_type::R2HCF_C},
-    {10, aocl_fftz_kernel_type::R2HCF_C},
-    {11, aocl_fftz_kernel_type::R2HCF_C},
-    {12, aocl_fftz_kernel_type::R2HCF_C},
-    {13, aocl_fftz_kernel_type::R2HCF_C},
-    {14, aocl_fftz_kernel_type::R2HCF_C},
-    {15, aocl_fftz_kernel_type::R2HCF_C},
-    {16, aocl_fftz_kernel_type::R2HCF_C}
+    {16, aocl_fftz_kernel_type::R2HCF_C},
 };
 
 #ifdef ENABLE_AVX128
-// R2HC - AVX128 Kernels - Double
-aoclfftz_kernel_test_params_t param_double_r2hc_avx128_kernels[] =
+// R2HC - AVX128 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_r2hc_avx128_kernels =
 {
     {2, aocl_fftz_kernel_type::R2HC_AVX128},
     {3, aocl_fftz_kernel_type::R2HC_AVX128},
@@ -451,31 +323,11 @@ aoclfftz_kernel_test_params_t param_double_r2hc_avx128_kernels[] =
     {13, aocl_fftz_kernel_type::R2HC_AVX128},
     {14, aocl_fftz_kernel_type::R2HC_AVX128},
     {15, aocl_fftz_kernel_type::R2HC_AVX128},
-    {16, aocl_fftz_kernel_type::R2HC_AVX128}
+    {16, aocl_fftz_kernel_type::R2HC_AVX128},
 };
 
-// R2HC - AVX128 Kernels - Float
-aoclfftz_kernel_test_params_t param_float_r2hc_avx128_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::R2HC_AVX128},
-    {3, aocl_fftz_kernel_type::R2HC_AVX128},
-    {4, aocl_fftz_kernel_type::R2HC_AVX128},
-    {5, aocl_fftz_kernel_type::R2HC_AVX128},
-    {6, aocl_fftz_kernel_type::R2HC_AVX128},
-    {7, aocl_fftz_kernel_type::R2HC_AVX128},
-    {8, aocl_fftz_kernel_type::R2HC_AVX128},
-    {9, aocl_fftz_kernel_type::R2HC_AVX128},
-    {10, aocl_fftz_kernel_type::R2HC_AVX128},
-    {11, aocl_fftz_kernel_type::R2HC_AVX128},
-    {12, aocl_fftz_kernel_type::R2HC_AVX128},
-    {13, aocl_fftz_kernel_type::R2HC_AVX128},
-    {14, aocl_fftz_kernel_type::R2HC_AVX128},
-    {15, aocl_fftz_kernel_type::R2HC_AVX128},
-    {16, aocl_fftz_kernel_type::R2HC_AVX128}
-};
-
-// R2HC-Fused - AVX128 Kernels - Double
-aoclfftz_kernel_test_params_t param_double_r2hcf_avx128_kernels[] =
+// R2HC-Fused - AVX128 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_r2hcf_avx128_kernels =
 {
     {2, aocl_fftz_kernel_type::R2HCF_AVX128},
     {3, aocl_fftz_kernel_type::R2HCF_AVX128},
@@ -491,33 +343,13 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_avx128_kernels[] =
     {13, aocl_fftz_kernel_type::R2HCF_AVX128},
     {14, aocl_fftz_kernel_type::R2HCF_AVX128},
     {15, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {16, aocl_fftz_kernel_type::R2HCF_AVX128}
-};
-
-// R2HC-Fused - AVX128 Kernels - Float
-aoclfftz_kernel_test_params_t param_float_r2hcf_avx128_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {3, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {4, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {5, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {6, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {7, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {8, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {9, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {10, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {11, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {12, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {13, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {14, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {15, aocl_fftz_kernel_type::R2HCF_AVX128},
-    {16, aocl_fftz_kernel_type::R2HCF_AVX128}
+    {16, aocl_fftz_kernel_type::R2HCF_AVX128},
 };
 #endif
 
 #ifdef ENABLE_AVX256
-// R2HC - AVX256 Kernels - Double
-aoclfftz_kernel_test_params_t param_double_r2hc_avx256_kernels[] =
+// R2HC - AVX256 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_r2hc_avx256_kernels =
 {
     {2, aocl_fftz_kernel_type::R2HC_AVX256},
     {3, aocl_fftz_kernel_type::R2HC_AVX256},
@@ -533,31 +365,11 @@ aoclfftz_kernel_test_params_t param_double_r2hc_avx256_kernels[] =
     {13, aocl_fftz_kernel_type::R2HC_AVX256},
     {14, aocl_fftz_kernel_type::R2HC_AVX256},
     {15, aocl_fftz_kernel_type::R2HC_AVX256},
-    {16, aocl_fftz_kernel_type::R2HC_AVX256}
+    {16, aocl_fftz_kernel_type::R2HC_AVX256},
 };
 
-// R2HC - AVX256 Kernels - Float
-aoclfftz_kernel_test_params_t param_float_r2hc_avx256_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::R2HC_AVX256},
-    {3, aocl_fftz_kernel_type::R2HC_AVX256},
-    {4, aocl_fftz_kernel_type::R2HC_AVX256},
-    {5, aocl_fftz_kernel_type::R2HC_AVX256},
-    {6, aocl_fftz_kernel_type::R2HC_AVX256},
-    {7, aocl_fftz_kernel_type::R2HC_AVX256},
-    {8, aocl_fftz_kernel_type::R2HC_AVX256},
-    {9, aocl_fftz_kernel_type::R2HC_AVX256},
-    {10, aocl_fftz_kernel_type::R2HC_AVX256},
-    {11, aocl_fftz_kernel_type::R2HC_AVX256},
-    {12, aocl_fftz_kernel_type::R2HC_AVX256},
-    {13, aocl_fftz_kernel_type::R2HC_AVX256},
-    {14, aocl_fftz_kernel_type::R2HC_AVX256},
-    {15, aocl_fftz_kernel_type::R2HC_AVX256},
-    {16, aocl_fftz_kernel_type::R2HC_AVX256}
-};
-
-// R2HC-Fused - AVX256 Kernels - Double
-aoclfftz_kernel_test_params_t param_double_r2hcf_avx256_kernels[] =
+// R2HC-Fused - AVX256 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_r2hcf_avx256_kernels =
 {
     {2, aocl_fftz_kernel_type::R2HCF_AVX256},
     {3, aocl_fftz_kernel_type::R2HCF_AVX256},
@@ -573,33 +385,13 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_avx256_kernels[] =
     {13, aocl_fftz_kernel_type::R2HCF_AVX256},
     {14, aocl_fftz_kernel_type::R2HCF_AVX256},
     {15, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {16, aocl_fftz_kernel_type::R2HCF_AVX256}
-};
-
-// R2HC-Fused - AVX256 Kernels - Float
-aoclfftz_kernel_test_params_t param_float_r2hcf_avx256_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {3, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {4, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {5, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {6, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {7, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {8, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {9, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {10, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {11, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {12, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {13, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {14, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {15, aocl_fftz_kernel_type::R2HCF_AVX256},
-    {16, aocl_fftz_kernel_type::R2HCF_AVX256}
+    {16, aocl_fftz_kernel_type::R2HCF_AVX256},
 };
 #endif
 
 #ifdef ENABLE_AVX512
-// R2HC - AVX512 Kernels - Double
-aoclfftz_kernel_test_params_t param_double_r2hc_avx512_kernels[] =
+// R2HC - AVX512 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_r2hc_avx512_kernels =
 {
     {2, aocl_fftz_kernel_type::R2HC_AVX512},
     {3, aocl_fftz_kernel_type::R2HC_AVX512},
@@ -615,31 +407,11 @@ aoclfftz_kernel_test_params_t param_double_r2hc_avx512_kernels[] =
     {13, aocl_fftz_kernel_type::R2HC_AVX512},
     {14, aocl_fftz_kernel_type::R2HC_AVX512},
     {15, aocl_fftz_kernel_type::R2HC_AVX512},
-    {16, aocl_fftz_kernel_type::R2HC_AVX512}
+    {16, aocl_fftz_kernel_type::R2HC_AVX512},
 };
 
-// R2HC - AVX512 Kernels - Float
-aoclfftz_kernel_test_params_t param_float_r2hc_avx512_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::R2HC_AVX512},
-    {3, aocl_fftz_kernel_type::R2HC_AVX512},
-    {4, aocl_fftz_kernel_type::R2HC_AVX512},
-    {5, aocl_fftz_kernel_type::R2HC_AVX512},
-    {6, aocl_fftz_kernel_type::R2HC_AVX512},
-    {7, aocl_fftz_kernel_type::R2HC_AVX512},
-    {8, aocl_fftz_kernel_type::R2HC_AVX512},
-    {9, aocl_fftz_kernel_type::R2HC_AVX512},
-    {10, aocl_fftz_kernel_type::R2HC_AVX512},
-    {11, aocl_fftz_kernel_type::R2HC_AVX512},
-    {12, aocl_fftz_kernel_type::R2HC_AVX512},
-    {13, aocl_fftz_kernel_type::R2HC_AVX512},
-    {14, aocl_fftz_kernel_type::R2HC_AVX512},
-    {15, aocl_fftz_kernel_type::R2HC_AVX512},
-    {16, aocl_fftz_kernel_type::R2HC_AVX512}
-};
-
-// R2HC-Fused - AVX512 Kernels - Double
-aoclfftz_kernel_test_params_t param_double_r2hcf_avx512_kernels[] =
+// R2HC-Fused - AVX512 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_r2hcf_avx512_kernels =
 {
     {2, aocl_fftz_kernel_type::R2HCF_AVX512},
     {3, aocl_fftz_kernel_type::R2HCF_AVX512},
@@ -655,39 +427,19 @@ aoclfftz_kernel_test_params_t param_double_r2hcf_avx512_kernels[] =
     {13, aocl_fftz_kernel_type::R2HCF_AVX512},
     {14, aocl_fftz_kernel_type::R2HCF_AVX512},
     {15, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {16, aocl_fftz_kernel_type::R2HCF_AVX512}
-};
-
-// R2HC-Fused - AVX512 Kernels - Float
-aoclfftz_kernel_test_params_t param_float_r2hcf_avx512_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {3, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {4, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {5, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {6, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {7, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {8, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {9, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {10, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {11, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {12, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {13, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {14, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {15, aocl_fftz_kernel_type::R2HCF_AVX512},
-    {16, aocl_fftz_kernel_type::R2HCF_AVX512}
+    {16, aocl_fftz_kernel_type::R2HCF_AVX512},
 };
 #endif
 // IO params as {in-stride, out-stride , batch size, dir of FFT(0->FWD/1-> BWD),
 //               result placement(0 -> inplace, 1 -> out-of-place),
 //               load_multi_cols (0 -> broadcast same twiddle, 1 -> load
-//               different twiddles)}
-// Batch size set to cover all the tail case in AVX128 & AVX256 kernels
+//               different twiddles, used only for twiddle kernels)}
+// Batch size set to cover all the tail case in AVX128 & AVX256 kernels.
 std::vector<std::tuple<FFTZ_INTP, FFTZ_INTP, FFTZ_INTP, FFTZ_UINT8, FFTZ_UINT8,
                        FFTZ_UINT8>>
-    io_params = {{1, 1, 1, 0, 0, 1},  {2, 2, 2, 0, 1, 1},  {7, 3, 4, 0, 1, 1},
-                 {4, 4, 7, 1, 0, 1},  {11, 1, 8, 0, 1, 1}, {1, 6, 15, 1, 1, 1},
-                 {10, 5, 16, 0, 1, 1}};
+    io_params = {{1, 1, 1, 0, 0, 1},  {2, 2, 2, 0, 1, 1},  {7, 3, 4, 0, 1, 0},
+                 {4, 4, 7, 1, 0, 1},  {11, 1, 8, 0, 1, 0}, {1, 6, 15, 1, 1, 1},
+                 {10, 5, 31, 0, 1, 0}};
 
 TEST_P(AoclfftzKernelTestFloat, TEST_FLOAT_KERNEL)
 {
@@ -729,14 +481,34 @@ TEST_P(AoclfftzKernelTestDoubleFused, TEST_DOUBLE_REAL_KERNEL)
     run_kernel_test(); // run test with normal values
 }
 
-TEST_P(AoclfftzTwiddleKernelTestFloat, TEST_FLOAT_TWIDDLE_KERNEL)
+TEST_P(AoclfftzTwiddleKernelTestFloat, TEST_FLOAT_C2C_TWID_KERNEL)
 {
     run_twiddle_kernel_test(); // run test with normal values
 }
 
-TEST_P(AoclfftzTwiddleKernelTestDouble, TEST_DOUBLE_TWIDDLE_KERNEL)
+TEST_P(AoclfftzTwiddleKernelTestDouble, TEST_DOUBLE_C2C_TWID_KERNEL)
 {
     run_twiddle_kernel_test(); // run test with normal values
+}
+
+TEST_P(AoclfftzR2CTwiddleKernelTestFloat, TEST_FLOAT_R2C_TWIDDLE_KERNEL)
+{
+    run_twiddle_kernel_test();
+}
+
+TEST_P(AoclfftzR2CTwiddleKernelTestDouble, TEST_DOUBLE_R2C_TWIDDLE_KERNEL)
+{
+    run_twiddle_kernel_test();
+}
+
+TEST_P(AoclfftzC2RTwiddleKernelTestFloat, TEST_FLOAT_C2R_TWIDDLE_KERNEL)
+{
+    run_twiddle_kernel_test();
+}
+
+TEST_P(AoclfftzC2RTwiddleKernelTestDouble, TEST_DOUBLE_C2R_TWIDDLE_KERNEL)
+{
+    run_twiddle_kernel_test();
 }
 
 /**
@@ -759,6 +531,19 @@ auto name_generator =
         FFTZ_UINT32 radix  = std::get<0>(param);
         FFTZ_UINT8 kernel_type = std::get<1>(param);
 
+        // Twiddle kernels' direction is fixed by kernel_type itself (see
+        // twiddle_kind_from_kernel_type()); run_twiddle_kernel_test()
+        // ignores the IO tuple's `is_bwd` field for these, so name them by
+        // the kernel-derived direction instead, which is what actually
+        // ran. Standard/R2HC/R2HCF kernels keep using the tuple's value.
+        twiddle_kind kind;
+        bool is_twiddle_kernel =
+            twiddle_kind_from_kernel_type(kernel_type, kind);
+        if (is_twiddle_kernel)
+        {
+            is_bwd = twiddle_kind_is_bwd(kind);
+        }
+
         std::string test_name = std::to_string(radix);
         if (is_bwd)
         {
@@ -780,12 +565,7 @@ auto name_generator =
         test_name += "_OS_" + std::to_string(ostride);
         test_name += "_BATCH_" + std::to_string(batch_sz);
         // Only add BROADCAST suffix for twiddle kernels when load_multi_cols =
-        // 0 Non-twiddle kernels (C2C, R2C, etc.) don't use this parameter
-        bool is_twiddle_kernel =
-            (kernel_type == aocl_fftz_kernel_type::C2C_TWID_C ||
-             kernel_type == aocl_fftz_kernel_type::C2C_TWID_AVX128 ||
-             kernel_type == aocl_fftz_kernel_type::C2C_TWID_AVX256 ||
-             kernel_type == aocl_fftz_kernel_type::C2C_TWID_AVX512);
+        // 0. Non-twiddle kernels (C2C, R2C, etc.) don't use this parameter.
         if (is_twiddle_kernel && load_multi_cols == 0)
         {
             test_name += "_BROADCAST";
@@ -794,189 +574,158 @@ auto name_generator =
         return test_name;
     };
 
-// IO params for FP64 twiddle kernels with load_multi_cols = 0 (broadcast path)
-// These tests cover the broadcast code path used in production solvers where
-// the same twiddle is applied across batches (applies to all radices 2-16)
-// IO params as {in-stride, out-stride , batch size, dir of FFT(0->FWD/1-> BWD),
-//               result placement(0 -> inplace, 1 -> out-of-place),
-//               load_multi_cols (0 -> broadcast same twiddle)}
-// Batch sizes selected to cover tail cases for AVX128, AVX256, and AVX512
-std::vector<std::tuple<FFTZ_INTP, FFTZ_INTP, FFTZ_INTP, FFTZ_UINT8, FFTZ_UINT8,
-                       FFTZ_UINT8>>
-    io_params_fp64_broadcast = {
-        {1, 1, 1, 0, 0, 0},  {1, 1, 1, 1, 0, 0},  {1, 1, 2, 0, 1, 0},
-        {1, 1, 2, 1, 1, 0},  {2, 2, 3, 0, 0, 0},  {3, 3, 3, 1, 0, 0},
-        {1, 1, 4, 0, 1, 0},  {1, 1, 4, 1, 1, 0},  {2, 2, 5, 0, 1, 0},
-        {3, 3, 6, 1, 1, 0},  {1, 1, 7, 0, 1, 0},  {2, 2, 7, 1, 1, 0},
-        {4, 4, 8, 0, 0, 0},  {5, 5, 8, 1, 0, 0},  {1, 1, 15, 0, 1, 0},
-        {2, 2, 15, 1, 1, 0}, {1, 1, 16, 0, 1, 0}, {3, 3, 16, 1, 1, 0}};
-
 // C2C Kernels
 INSTANTIATE_TEST_SUITE_P(
     C2C_C_KernelTest, AoclfftzKernelTestFloat,
-    ::testing::Combine(::testing::ValuesIn(param_float_c2c_c_kernels),
-                       ::testing::ValuesIn(io_params)),
+    ::testing::Combine(
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_FLOAT>(param_c2c_c_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     C2C_C_KernelTest, AoclfftzKernelTestDouble,
-    ::testing::Combine(::testing::ValuesIn(param_double_c2c_c_kernels),
-                       ::testing::ValuesIn(io_params)),
+    ::testing::Combine(
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_DOUBLE>(param_c2c_c_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 
 #if defined(AVX128_SUPPORTED) && defined(ENABLE_AVX128)
 INSTANTIATE_TEST_SUITE_P(
     C2C_AVX128_KernelTest, AoclfftzKernelTestFloat,
-    ::testing::Combine(::testing::ValuesIn(param_float_c2c_avx128_kernels),
-                       ::testing::ValuesIn(io_params)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_c2c_avx128_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     C2C_AVX128_KernelTest, AoclfftzKernelTestDouble,
-    ::testing::Combine(::testing::ValuesIn(param_double_c2c_avx128_kernels),
-                       ::testing::ValuesIn(io_params)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_c2c_avx128_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 #endif
 
 #if defined(AVX256_SUPPORTED) && defined(ENABLE_AVX256)
 INSTANTIATE_TEST_SUITE_P(
     C2C_AVX256_KernelTest, AoclfftzKernelTestFloat,
-    ::testing::Combine(::testing::ValuesIn(param_float_c2c_avx256_kernels),
-                       ::testing::ValuesIn(io_params)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_c2c_avx256_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     C2C_AVX256_KernelTest, AoclfftzKernelTestDouble,
-    ::testing::Combine(::testing::ValuesIn(param_double_c2c_avx256_kernels),
-                       ::testing::ValuesIn(io_params)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_c2c_avx256_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 #endif
 
-// C2C Twiddle Kernels
+// C2C Twiddle Kernels (Forward and Backward)
 INSTANTIATE_TEST_SUITE_P(
-    C2C_TWID_C_KernelTest, AoclfftzTwiddleKernelTestFloat,
-    ::testing::Combine(::testing::ValuesIn(param_float_c2c_twid_c_kernels),
-                       ::testing::ValuesIn(io_params)),
-    name_generator);
-
-INSTANTIATE_TEST_SUITE_P(
-    C2C_TWID_C_KernelTest, AoclfftzTwiddleKernelTestDouble,
-    ::testing::Combine(::testing::ValuesIn(param_double_c2c_twid_c_kernels),
-                       ::testing::ValuesIn(io_params)),
-    name_generator);
-
-// FP64 twiddle kernels (all radices 2-16) with load_multi_cols = 0 (broadcast
-// path)
-aoclfftz_kernel_test_params_t param_double_c2c_twid_broadcast_c_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::C2C_TWID_C},
-    {3, aocl_fftz_kernel_type::C2C_TWID_C},
-    {4, aocl_fftz_kernel_type::C2C_TWID_C},
-    {5, aocl_fftz_kernel_type::C2C_TWID_C},
-    {6, aocl_fftz_kernel_type::C2C_TWID_C},
-    {7, aocl_fftz_kernel_type::C2C_TWID_C},
-    {8, aocl_fftz_kernel_type::C2C_TWID_C},
-    {9, aocl_fftz_kernel_type::C2C_TWID_C},
-    {10, aocl_fftz_kernel_type::C2C_TWID_C},
-    {11, aocl_fftz_kernel_type::C2C_TWID_C},
-    {12, aocl_fftz_kernel_type::C2C_TWID_C},
-    {13, aocl_fftz_kernel_type::C2C_TWID_C},
-    {14, aocl_fftz_kernel_type::C2C_TWID_C},
-    {15, aocl_fftz_kernel_type::C2C_TWID_C},
-    {16, aocl_fftz_kernel_type::C2C_TWID_C}
-};
-
-INSTANTIATE_TEST_SUITE_P(
-    C2C_TWID_C_Broadcast_KernelTest, AoclfftzTwiddleKernelTestDouble,
+    C2C_TWID_FWD_C_KernelTest, AoclfftzTwiddleKernelTestFloat,
     ::testing::Combine(
-        ::testing::ValuesIn(param_double_c2c_twid_broadcast_c_kernels),
-        ::testing::ValuesIn(io_params_fp64_broadcast)),
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_c2c_twid_fwd_c_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    C2C_TWID_FWD_C_KernelTest, AoclfftzTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_c2c_twid_fwd_c_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    C2C_TWID_BWD_C_KernelTest, AoclfftzTwiddleKernelTestFloat,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_c2c_twid_bwd_c_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    C2C_TWID_BWD_C_KernelTest, AoclfftzTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_c2c_twid_bwd_c_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 
 #if defined(AVX128_SUPPORTED) && defined(ENABLE_AVX128)
 INSTANTIATE_TEST_SUITE_P(
-    C2C_TWID_AVX128_KernelTest, AoclfftzTwiddleKernelTestFloat,
-    ::testing::Combine(::testing::ValuesIn(param_float_c2c_twid_avx128_kernels),
-                       ::testing::ValuesIn(io_params)),
-    name_generator);
-
-INSTANTIATE_TEST_SUITE_P(
-    C2C_TWID_AVX128_KernelTest, AoclfftzTwiddleKernelTestDouble,
+    C2C_TWID_FWD_AVX128_KernelTest, AoclfftzTwiddleKernelTestFloat,
     ::testing::Combine(
-        ::testing::ValuesIn(param_double_c2c_twid_avx128_kernels),
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_FLOAT>(
+            param_c2c_twid_fwd_avx128_kernels)),
         ::testing::ValuesIn(io_params)),
     name_generator);
 
-// FP64 AVX128 twiddle kernels (all radices) with load_multi_cols = 0 (broadcast
-// path)
-aoclfftz_kernel_test_params_t param_double_c2c_twid_broadcast_avx128_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {3, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {4, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {5, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {6, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {7, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {8, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {9, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {10, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {11, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {12, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {13, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {14, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {15, aocl_fftz_kernel_type::C2C_TWID_AVX128},
-    {16, aocl_fftz_kernel_type::C2C_TWID_AVX128}
-};
+INSTANTIATE_TEST_SUITE_P(
+    C2C_TWID_FWD_AVX128_KernelTest, AoclfftzTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_DOUBLE>(
+            param_c2c_twid_fwd_avx128_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
-    C2C_TWID_AVX128_Broadcast_KernelTest, AoclfftzTwiddleKernelTestDouble,
+    C2C_TWID_BWD_AVX128_KernelTest, AoclfftzTwiddleKernelTestFloat,
     ::testing::Combine(
-        ::testing::ValuesIn(param_double_c2c_twid_broadcast_avx128_kernels),
-        ::testing::ValuesIn(io_params_fp64_broadcast)),
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_FLOAT>(
+            param_c2c_twid_bwd_avx128_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    C2C_TWID_BWD_AVX128_KernelTest, AoclfftzTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_DOUBLE>(
+            param_c2c_twid_bwd_avx128_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
 #endif
 
 #if defined(AVX256_SUPPORTED) && defined(ENABLE_AVX256)
 INSTANTIATE_TEST_SUITE_P(
-    C2C_TWID_AVX256_KernelTest, AoclfftzTwiddleKernelTestFloat,
-    ::testing::Combine(::testing::ValuesIn(param_float_c2c_twid_avx256_kernels),
-                       ::testing::ValuesIn(io_params)),
-    name_generator);
-
-INSTANTIATE_TEST_SUITE_P(
-    C2C_TWID_AVX256_KernelTest, AoclfftzTwiddleKernelTestDouble,
+    C2C_TWID_FWD_AVX256_KernelTest, AoclfftzTwiddleKernelTestFloat,
     ::testing::Combine(
-        ::testing::ValuesIn(param_double_c2c_twid_avx256_kernels),
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_FLOAT>(
+            param_c2c_twid_fwd_avx256_kernels)),
         ::testing::ValuesIn(io_params)),
     name_generator);
 
-// FP64 AVX256 twiddle kernels (all radices) with load_multi_cols = 0 (broadcast
-// path)
-aoclfftz_kernel_test_params_t param_double_c2c_twid_broadcast_avx256_kernels[] =
-{
-    {2, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {3, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {4, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {5, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {6, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {7, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {8, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {9, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {10, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {11, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {12, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {13, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {14, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {15, aocl_fftz_kernel_type::C2C_TWID_AVX256},
-    {16, aocl_fftz_kernel_type::C2C_TWID_AVX256}
-};
+INSTANTIATE_TEST_SUITE_P(
+    C2C_TWID_FWD_AVX256_KernelTest, AoclfftzTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_DOUBLE>(
+            param_c2c_twid_fwd_avx256_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
-    C2C_TWID_AVX256_Broadcast_KernelTest, AoclfftzTwiddleKernelTestDouble,
+    C2C_TWID_BWD_AVX256_KernelTest, AoclfftzTwiddleKernelTestFloat,
     ::testing::Combine(
-        ::testing::ValuesIn(param_double_c2c_twid_broadcast_avx256_kernels),
-        ::testing::ValuesIn(io_params_fp64_broadcast)),
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_FLOAT>(
+            param_c2c_twid_bwd_avx256_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    C2C_TWID_BWD_AVX256_KernelTest, AoclfftzTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_DOUBLE>(
+            param_c2c_twid_bwd_avx256_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
 #endif
 
 // Separate io params for c2c AVX512 Kernels and r2hc AVX256 kernel onwards to
@@ -989,12 +738,12 @@ INSTANTIATE_TEST_SUITE_P(
 std::vector<std::tuple<FFTZ_INTP, FFTZ_INTP, FFTZ_INTP, FFTZ_UINT8, FFTZ_UINT8,
                        FFTZ_UINT8>>
     io_params_batch16 = {
-        {1, 1, 1, 0, 0, 1},   {1, 1, 1, 1, 0, 1},   {1, 1, 2, 1, 0, 1},
-        {5, 3, 3, 0, 1, 1},   {10, 15, 4, 1, 1, 1}, {11, 1, 5, 0, 1, 1},
-        {8, 1, 6, 1, 1, 1},   {1, 7, 7, 0, 1, 1},   {1, 13, 8, 1, 1, 1},
-        {7, 3, 9, 0, 1, 1},   {12, 4, 10, 1, 1, 1}, {11, 21, 11, 0, 1, 1},
-        {8, 15, 12, 1, 1, 1}, {10, 5, 13, 0, 1, 1}, {5, 5, 14, 1, 0, 1},
-        {15, 15, 15, 0, 0, 1}};
+        {1, 1, 1, 0, 0, 0},   {1, 1, 1, 1, 0, 1},   {1, 1, 2, 1, 0, 0},
+        {5, 3, 3, 0, 1, 1},   {10, 15, 4, 1, 1, 0}, {11, 1, 5, 0, 1, 1},
+        {8, 1, 6, 1, 1, 0},   {1, 7, 7, 0, 1, 1},   {1, 13, 8, 1, 1, 0},
+        {7, 3, 9, 0, 1, 1},   {12, 4, 10, 1, 1, 0}, {11, 21, 11, 0, 1, 1},
+        {8, 15, 12, 1, 1, 0}, {10, 5, 13, 0, 1, 1}, {5, 5, 14, 1, 0, 0},
+        {15, 15, 15, 0, 0, 1}, {6, 7, 31, 1, 1, 0}};
 
 // Separate io params for r2hc AVX512 Kernels to avoid batch-sizes 30-32
 // repetition in AVX128/AVX256 kernels
@@ -1018,109 +767,446 @@ std::vector<std::tuple<FFTZ_INTP, FFTZ_INTP, FFTZ_INTP, FFTZ_UINT8, FFTZ_UINT8,
 #if defined(AVX512_SUPPORTED) && defined(ENABLE_AVX512)
 INSTANTIATE_TEST_SUITE_P(
     C2C_AVX512_KernelTest, AoclfftzKernelTestFloat,
-    ::testing::Combine(::testing::ValuesIn(param_float_c2c_avx512_kernels),
-                       ::testing::ValuesIn(io_params_batch16)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_c2c_avx512_kernels)),
+        ::testing::ValuesIn(io_params_batch16)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     C2C_AVX512_KernelTest, AoclfftzKernelTestDouble,
-    ::testing::Combine(::testing::ValuesIn(param_double_c2c_avx512_kernels),
-                       ::testing::ValuesIn(io_params_batch16)),
-    name_generator);
-
-INSTANTIATE_TEST_SUITE_P(
-    C2C_TWID_AVX512_KernelTest, AoclfftzTwiddleKernelTestFloat,
-    ::testing::Combine(::testing::ValuesIn(param_float_c2c_twid_avx512_kernels),
-                       ::testing::ValuesIn(io_params_batch16)),
-    name_generator);
-
-INSTANTIATE_TEST_SUITE_P(
-    C2C_TWID_AVX512_KernelTest, AoclfftzTwiddleKernelTestDouble,
     ::testing::Combine(
-        ::testing::ValuesIn(param_double_c2c_twid_avx512_kernels),
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_c2c_avx512_kernels)),
         ::testing::ValuesIn(io_params_batch16)),
     name_generator);
 
-// FP64 AVX512 twiddle kernels (all radices) with load_multi_cols = 0 (broadcast
-// path)
-aoclfftz_kernel_test_params_t param_double_c2c_twid_broadcast_avx512_kernels[] =
+INSTANTIATE_TEST_SUITE_P(
+    C2C_TWID_FWD_AVX512_KernelTest, AoclfftzTwiddleKernelTestFloat,
+    ::testing::Combine(
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_FLOAT>(
+            param_c2c_twid_fwd_avx512_kernels)),
+        ::testing::ValuesIn(io_params_batch16)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    C2C_TWID_FWD_AVX512_KernelTest, AoclfftzTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_DOUBLE>(
+            param_c2c_twid_fwd_avx512_kernels)),
+        ::testing::ValuesIn(io_params_batch16)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    C2C_TWID_BWD_AVX512_KernelTest, AoclfftzTwiddleKernelTestFloat,
+    ::testing::Combine(
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_FLOAT>(
+            param_c2c_twid_bwd_avx512_kernels)),
+        ::testing::ValuesIn(io_params_batch16)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    C2C_TWID_BWD_AVX512_KernelTest, AoclfftzTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_DOUBLE>(
+            param_c2c_twid_bwd_avx512_kernels)),
+        ::testing::ValuesIn(io_params_batch16)),
+    name_generator);
+
+#endif
+
+// C2R Twiddle Kernels
+// C2R twiddle kernels implement the backward (inverse) direction only;
+// run_twiddle_kernel_test() always exercises the backward reference path
+// for these kernels regardless of the IO tuple's `is_bwd` field (kernel
+// direction is derived from kernel_type -- see twiddle_kind_from_kernel_type()
+// -- and the gtest name is generated the same way, so `is_bwd` in `io_params`
+// below is a documented no-op for this suite). C2R/R2C/C2C non-AVX512
+// twiddle suites all reuse the same shared `io_params` matrix since none of
+// them are sensitive to its `is_bwd` field.
+
+// C2R Twiddle - C Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2r_twid_c_kernels =
 {
-    {2, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {3, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {4, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {5, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {6, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {7, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {8, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {9, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {10, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {11, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {12, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {13, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {14, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {15, aocl_fftz_kernel_type::C2C_TWID_AVX512},
-    {16, aocl_fftz_kernel_type::C2C_TWID_AVX512}
+    {2, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
+    {3, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
+    {4, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
+    {5, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
+    {6, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
+    {7, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
+    {8, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
+    {9, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
+    {10, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
+    {11, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
+    {12, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
+    {13, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
+    {14, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
+    {15, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
+    {16, aocl_fftz_kernel_type::C2C_TWID_C2R_C},
 };
 
 INSTANTIATE_TEST_SUITE_P(
-    C2C_TWID_AVX512_Broadcast_KernelTest, AoclfftzTwiddleKernelTestDouble,
+    C2R_TWID_C_KernelTest, AoclfftzC2RTwiddleKernelTestFloat,
     ::testing::Combine(
-        ::testing::ValuesIn(param_double_c2c_twid_broadcast_avx512_kernels),
-        ::testing::ValuesIn(io_params_fp64_broadcast)),
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_c2r_twid_c_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    C2R_TWID_C_KernelTest, AoclfftzC2RTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_c2r_twid_c_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
+#if defined(AVX128_SUPPORTED) && defined(ENABLE_AVX128)
+// C2R Twiddle - AVX128 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2r_twid_avx128_kernels =
+{
+    {2, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+    {3, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+    {4, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+    {5, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+    {6, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+    {7, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+    {8, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+    {9, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+    {10, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+    {11, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+    {12, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+    {13, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+    {14, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+    {15, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+    {16, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX128},
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    C2R_TWID_AVX128_KernelTest, AoclfftzC2RTwiddleKernelTestFloat,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_c2r_twid_avx128_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    C2R_TWID_AVX128_KernelTest, AoclfftzC2RTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_c2r_twid_avx128_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
+#endif
+
+#if defined(AVX256_SUPPORTED) && defined(ENABLE_AVX256)
+// C2R Twiddle - AVX256 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_c2r_twid_avx256_kernels =
+{
+    {2, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+    {3, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+    {4, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+    {5, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+    {6, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+    {7, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+    {8, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+    {9, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+    {10, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+    {11, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+    {12, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+    {13, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+    {14, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+    {15, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+    {16, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX256},
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    C2R_TWID_AVX256_KernelTest, AoclfftzC2RTwiddleKernelTestFloat,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_c2r_twid_avx256_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    C2R_TWID_AVX256_KernelTest, AoclfftzC2RTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_c2r_twid_avx256_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
+#endif
+
+#if defined(AVX512_SUPPORTED) && defined(ENABLE_AVX512)
+// C2R Twiddle - AVX512 Kernels
+// Reuses io_params_batch16 (same table as C2C_TWID_FWD/BWD_AVX512): its
+// `is_bwd` (column 4) is a documented no-op for C2R -- see the non-AVX512
+// comment above.
+std::vector<aoclfftz_kernel_test_params_t> param_c2r_twid_avx512_kernels =
+{
+    {2, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+    {3, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+    {4, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+    {5, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+    {6, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+    {7, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+    {8, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+    {9, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+    {10, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+    {11, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+    {12, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+    {13, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+    {14, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+    {15, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+    {16, aocl_fftz_kernel_type::C2C_TWID_C2R_AVX512},
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    C2R_TWID_AVX512_KernelTest, AoclfftzC2RTwiddleKernelTestFloat,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_c2r_twid_avx512_kernels)),
+        ::testing::ValuesIn(io_params_batch16)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    C2R_TWID_AVX512_KernelTest, AoclfftzC2RTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_c2r_twid_avx512_kernels)),
+        ::testing::ValuesIn(io_params_batch16)),
+    name_generator);
+
+#endif
+
+// R2C Twiddle Kernels
+// R2C twiddle kernels implement the forward direction only;
+// run_twiddle_kernel_test() always exercises the forward reference path for
+// these kernels regardless of the IO tuple's `is_bwd` field (see the C2R
+// comment above -- the same reasoning applies here). Reuses the shared
+// `io_params` matrix.
+
+// R2C Twiddle - C Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_r2c_twid_c_kernels =
+{
+    {2, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+    {3, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+    {4, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+    {5, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+    {6, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+    {7, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+    {8, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+    {9, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+    {10, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+    {11, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+    {12, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+    {13, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+    {14, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+    {15, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+    {16, aocl_fftz_kernel_type::C2C_TWID_R2C_C},
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    R2C_TWID_C_KernelTest, AoclfftzR2CTwiddleKernelTestFloat,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_r2c_twid_c_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    R2C_TWID_C_KernelTest, AoclfftzR2CTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_r2c_twid_c_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
+#if defined(AVX128_SUPPORTED) && defined(ENABLE_AVX128)
+// R2C Twiddle - AVX128 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_r2c_twid_avx128_kernels =
+{
+    {2, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+    {3, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+    {4, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+    {5, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+    {6, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+    {7, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+    {8, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+    {9, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+    {10, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+    {11, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+    {12, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+    {13, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+    {14, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+    {15, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+    {16, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX128},
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    R2C_TWID_AVX128_KernelTest, AoclfftzR2CTwiddleKernelTestFloat,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_r2c_twid_avx128_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    R2C_TWID_AVX128_KernelTest, AoclfftzR2CTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_r2c_twid_avx128_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
+#endif
+
+#if defined(AVX256_SUPPORTED) && defined(ENABLE_AVX256)
+// R2C Twiddle - AVX256 Kernels
+std::vector<aoclfftz_kernel_test_params_t> param_r2c_twid_avx256_kernels =
+{
+    {2, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+    {3, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+    {4, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+    {5, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+    {6, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+    {7, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+    {8, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+    {9, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+    {10, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+    {11, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+    {12, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+    {13, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+    {14, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+    {15, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+    {16, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX256},
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    R2C_TWID_AVX256_KernelTest, AoclfftzR2CTwiddleKernelTestFloat,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_r2c_twid_avx256_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    R2C_TWID_AVX256_KernelTest, AoclfftzR2CTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_r2c_twid_avx256_kernels)),
+        ::testing::ValuesIn(io_params)),
+    name_generator);
+
+#endif
+
+#if defined(AVX512_SUPPORTED) && defined(ENABLE_AVX512)
+// R2C Twiddle - AVX512 Kernels
+// Reuses io_params_batch16 (same table as C2C_TWID_FWD/BWD_AVX512): its
+// `is_bwd` (column 4) is a documented no-op for R2C -- see the non-AVX512
+// comment above.
+std::vector<aoclfftz_kernel_test_params_t> param_r2c_twid_avx512_kernels =
+{
+    {2, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+    {3, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+    {4, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+    {5, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+    {6, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+    {7, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+    {8, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+    {9, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+    {10, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+    {11, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+    {12, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+    {13, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+    {14, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+    {15, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+    {16, aocl_fftz_kernel_type::C2C_TWID_R2C_AVX512},
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    R2C_TWID_AVX512_KernelTest, AoclfftzR2CTwiddleKernelTestFloat,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_r2c_twid_avx512_kernels)),
+        ::testing::ValuesIn(io_params_batch16)),
+    name_generator);
+
+INSTANTIATE_TEST_SUITE_P(
+    R2C_TWID_AVX512_KernelTest, AoclfftzR2CTwiddleKernelTestDouble,
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_r2c_twid_avx512_kernels)),
+        ::testing::ValuesIn(io_params_batch16)),
+    name_generator);
+
 #endif
 
 // R2HC Kernels
 INSTANTIATE_TEST_SUITE_P(
     R2HC_C_KernelTest, AoclfftzKernelTestFloatReal,
-    ::testing::Combine(::testing::ValuesIn(param_float_r2hc_c_kernels),
-                       ::testing::ValuesIn(io_params)),
+    ::testing::Combine(
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_FLOAT>(param_r2hc_c_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     R2HC_C_KernelTest, AoclfftzKernelTestDoubleReal,
-    ::testing::Combine(::testing::ValuesIn(param_double_r2hc_c_kernels),
-                       ::testing::ValuesIn(io_params)),
+    ::testing::Combine(
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_DOUBLE>(param_r2hc_c_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 
 // R2HC-Fused Kernels
 INSTANTIATE_TEST_SUITE_P(
     R2HCF_C_KernelTest, AoclfftzKernelTestFloatFused,
-    ::testing::Combine(::testing::ValuesIn(param_float_r2hcf_c_kernels),
-                       ::testing::ValuesIn(io_params)),
+    ::testing::Combine(
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_FLOAT>(param_r2hcf_c_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     R2HCF_C_KernelTest, AoclfftzKernelTestDoubleFused,
-    ::testing::Combine(::testing::ValuesIn(param_double_r2hcf_c_kernels),
-                       ::testing::ValuesIn(io_params)),
+    ::testing::Combine(
+        ::testing::ValuesIn(filter_kernels_for_type<FFTZ_DOUBLE>(param_r2hcf_c_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 
 #if defined(AVX128_SUPPORTED) && defined(ENABLE_AVX128)
 // R2HC AVX128 Kernels
 INSTANTIATE_TEST_SUITE_P(
     R2HC_AVX128_KernelTest, AoclfftzKernelTestFloatReal,
-    ::testing::Combine(::testing::ValuesIn(param_float_r2hc_avx128_kernels),
-                       ::testing::ValuesIn(io_params)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_r2hc_avx128_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     R2HC_AVX128_KernelTest, AoclfftzKernelTestDoubleReal,
-    ::testing::Combine(::testing::ValuesIn(param_double_r2hc_avx128_kernels),
-                       ::testing::ValuesIn(io_params)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_r2hc_avx128_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 
 // R2HC-Fused AVX128 Kernels
 INSTANTIATE_TEST_SUITE_P(
     R2HCF_AVX128_KernelTest, AoclfftzKernelTestFloatFused,
-    ::testing::Combine(::testing::ValuesIn(param_float_r2hcf_avx128_kernels),
-                       ::testing::ValuesIn(io_params)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_r2hcf_avx128_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     R2HCF_AVX128_KernelTest, AoclfftzKernelTestDoubleFused,
-    ::testing::Combine(::testing::ValuesIn(param_double_r2hcf_avx128_kernels),
-                       ::testing::ValuesIn(io_params)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_r2hcf_avx128_kernels)),
+        ::testing::ValuesIn(io_params)),
     name_generator);
 #endif
 
@@ -1128,27 +1214,35 @@ INSTANTIATE_TEST_SUITE_P(
 // R2HC AVX256 Kernels
 INSTANTIATE_TEST_SUITE_P(
     R2HC_AVX256_KernelTest, AoclfftzKernelTestFloatReal,
-    ::testing::Combine(::testing::ValuesIn(param_float_r2hc_avx256_kernels),
-                       ::testing::ValuesIn(io_params_batch16)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_r2hc_avx256_kernels)),
+        ::testing::ValuesIn(io_params_batch16)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     R2HC_AVX256_KernelTest, AoclfftzKernelTestDoubleReal,
-    ::testing::Combine(::testing::ValuesIn(param_double_r2hc_avx256_kernels),
-                       ::testing::ValuesIn(io_params_batch16)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_r2hc_avx256_kernels)),
+        ::testing::ValuesIn(io_params_batch16)),
     name_generator);
 
 // R2HC-Fused AVX256 Kernels
 INSTANTIATE_TEST_SUITE_P(
     R2HCF_AVX256_KernelTest, AoclfftzKernelTestFloatFused,
-    ::testing::Combine(::testing::ValuesIn(param_float_r2hcf_avx256_kernels),
-                       ::testing::ValuesIn(io_params_batch16)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_r2hcf_avx256_kernels)),
+        ::testing::ValuesIn(io_params_batch16)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     R2HCF_AVX256_KernelTest, AoclfftzKernelTestDoubleFused,
-    ::testing::Combine(::testing::ValuesIn(param_double_r2hcf_avx256_kernels),
-                       ::testing::ValuesIn(io_params_batch16)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_r2hcf_avx256_kernels)),
+        ::testing::ValuesIn(io_params_batch16)),
     name_generator);
 #endif
 
@@ -1156,25 +1250,33 @@ INSTANTIATE_TEST_SUITE_P(
 // R2HC AVX512 Kernels
 INSTANTIATE_TEST_SUITE_P(
     R2HC_AVX512_KernelTest, AoclfftzKernelTestFloatReal,
-    ::testing::Combine(::testing::ValuesIn(param_float_r2hc_avx512_kernels),
-                       ::testing::ValuesIn(io_params_batch32)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_r2hc_avx512_kernels)),
+        ::testing::ValuesIn(io_params_batch32)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     R2HC_AVX512_KernelTest, AoclfftzKernelTestDoubleReal,
-    ::testing::Combine(::testing::ValuesIn(param_double_r2hc_avx512_kernels),
-                       ::testing::ValuesIn(io_params_batch32)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_r2hc_avx512_kernels)),
+        ::testing::ValuesIn(io_params_batch32)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     R2HCF_AVX512_KernelTest, AoclfftzKernelTestFloatFused,
-    ::testing::Combine(::testing::ValuesIn(param_float_r2hcf_avx512_kernels),
-                       ::testing::ValuesIn(io_params_batch32)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_FLOAT>(param_r2hcf_avx512_kernels)),
+        ::testing::ValuesIn(io_params_batch32)),
     name_generator);
 
 INSTANTIATE_TEST_SUITE_P(
     R2HCF_AVX512_KernelTest, AoclfftzKernelTestDoubleFused,
-    ::testing::Combine(::testing::ValuesIn(param_double_r2hcf_avx512_kernels),
-                       ::testing::ValuesIn(io_params_batch32)),
+    ::testing::Combine(
+        ::testing::ValuesIn(
+            filter_kernels_for_type<FFTZ_DOUBLE>(param_r2hcf_avx512_kernels)),
+        ::testing::ValuesIn(io_params_batch32)),
     name_generator);
 #endif

@@ -3,11 +3,9 @@ AOCL-FFTZ
 
 AOCL-FFTZ is a high performance Fast Fourier Transform (FFT) library developed
 by AMD supporting advanced optimizations for AMD’s "Zen"-based CPUs.
-The library computes FFTs of (i) complex data of any size and dimension in
-both forward and backward directions, and (ii) real data of any
-size and dimension, excluding prime sizes greater than 7 and their multiples,
-in both forward and backward directions with support for in-place and
-out-of-place result placements.
+The library computes FFTs of both (i) complex and (ii) real data of any size
+and dimension, in both forward and backward directions, with support for
+in-place and out-of-place result placements.
 
 The kernels in this library are vectorized to speed-up the single-threaded core
 performance. The library supports the computations of parallel FFTs by taking
@@ -27,9 +25,9 @@ Prerequisites
 1. CMake - Version 3.26 or above
 2. Linux :
         GCC compiler - Version 8.0 or above (or)
-        AOCC compiler - Version 2.0 or above
+        Clang/AOCC compiler - Version 8.0 or above (AOCC 2.0 or above)
 3. Windows :
-        Visual Studio with Clang 12 or above
+        Visual Studio with Clang 12 or above (ClangCl toolset)
 
 Building on Linux
 -----------------
@@ -40,15 +38,15 @@ Building on Linux
 
 2. Run the following command in order to generate and configure build system.
    ```
-   cmake -B <build directory> <CMakeLists.txt filepath>
+   cmake -B <build directory> <CMakeLists.txt directory>
    ```
    Additional options that can be specified for build configuration are:
    ```
-   cmake -B <build directory> <CMakeLists.txt filepath>
-   -DAOCL_TEST_COVERAGE=<OFF/STANDARD/EXHAUSTIVE>
-   -DCMAKE_INSTALL_PREFIX=<install path>
-   -DCMAKE_BUILD_TYPE=<Debug or Release>
-   -DENABLE_STRICT_WARNINGS=<ON or OFF>
+   cmake -B <build directory> <CMakeLists.txt directory> \
+   -DAOCL_TEST_COVERAGE=<OFF/STANDARD/EXHAUSTIVE> \
+   -DCMAKE_INSTALL_PREFIX=<install path> \
+   -DCMAKE_BUILD_TYPE=<Debug or Release> \
+   -DENABLE_STRICT_WARNINGS=<ON or OFF> \
    <Additional Library Build Options>
    ```
    To use clang compiler for the build, specify `-DCMAKE_C_COMPILER=clang` as the option.
@@ -59,9 +57,9 @@ Building on Linux
    ```
    The library is generated in "lib" directory. <br>
    The test bench executable is generated in "build". <br>
-   The additional option `--target install` will install the library, binary, and <br>
-   interface header files in the installation path as specified with <br>
-   `-DCMAKE_INSTALL_PREFIX` option or in the local system path. <br>
+   The additional option `--target install` will install the library,<br>
+   interface header files, and the CMake package configuration and pkg-config files in the <br>
+   installation path as specified with `-DCMAKE_INSTALL_PREFIX` option or in the local system path. <br>
    The option `-j` will run the compilation process using multiple cores.
 
 4. To uninstall the installed files, run the following custom command:
@@ -112,16 +110,16 @@ Option                              |  Description
 AOCL_ENABLE_LOG                     |  Enables logging support within the library (Disabled by default)
 AOCL_TEST_COVERAGE                  |  Enables GTest and AOCL test bench based CTest suite (OFF / STANDARD / EXHAUSTIVE, default: OFF)
 ACCURACY_WITH_DFT                   |  Enables accuracy mode to run with DFT (Disabled by default)
-ASAN                                |  Enables address sanitizer checks. Supported only on Linux Debug build (Disabled by default)
+ASAN                                |  Enables address sanitizer checks. Supported only on Linux builds (Disabled by default)
 BUILD_DOC                           |  Builds documentation for library (Disabled by default)
 BUILD_STATIC_LIBS                   |  Builds static library (Default build type is shared library)
-BUILD_THIRD_PARTY_WRAPPERS          |  Builds all the supported FFTZ third party wrappers (Disabled by default)
+BUILD_THIRD_PARTY_WRAPPERS          |  Builds FFTZ third party wrappers along with the aocl_fftz library (Disabled by default)
 CODE_COVERAGE                       |  Enables source code coverage and generates coverage report. Supported only on Linux with GCC compiler (Disabled by default)
 CODE_COVERAGE_FOR_ATG               |  Enables source code coverage instrumentation for running coverage and parsing tools for use by AI Test case Generation (ATG) later. Supported only on Linux with GCC compiler (Disabled by default)
 ENABLE_APP_INFO_LOGS                |  Enables info logging for FFT problems used by the application (Independent of AOCL_ENABLE_LOG, Disabled by default)
 ENABLE_INSTRUCTIONS_UPTO            |  Specifies maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)
 ENABLE_FMA                          |  Enables -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)
-SELECT_REAL_FFT_EXECUTION_ORDER     |  Selects the Real FFT Cooley-Tukey execution order (all modes are numerically identical): ITERATIVE (legacy Direct-first traversal with SWAP reordering), PARTIAL_RECURSION (recursive CT-first tree with Direct tail-chaining via HAS_NEXT), TRUE_RECURSION (CT-orchestrated recurse-then-combine mirroring the Complex FFT CT solver traversal). Default: TRUE_RECURSION
+SELECT_REAL_FFT_EXECUTION_ORDER     |  Selects the Real FFT Cooley-Tukey execution order (all modes are numerically identical): ITERATIVE, PARTIAL_RECURSION, TRUE_RECURSION. Default: TRUE_RECURSION
 ENABLE_MULTI_THREADING              |  Compiles library with multi-threading support using OpenMP (Disabled by default)
 ENABLE_STRICT_WARNINGS              |  Enables compiler flags to treat all warnings as errors (Enabled by default)
 FUZZTEST                            |  Enables Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)
@@ -134,14 +132,16 @@ CPU Architecture Support and FMA Requirements
 AOCL-FFTZ leverages advanced CPU features for optimal performance:
 
 **FMA (Fused Multiply-Add) Support:**
-- The library uses FMA3 instructions when available
-- The FMA compiler flag is added only when compiling AVX512 and AVX256 optimized kernels
-- The FMA compiler flag is not added for AVX128 during compilation
+- The library uses FMA3 instructions in SIMD kernels when `ENABLE_FMA` is ON (default)
+- `ENABLE_FMA` is forced OFF regardless of the option when `ENABLE_INSTRUCTIONS_UPTO` is `None` or `AVX128` only.
+- On Linux, when FMA is enabled and `ENABLE_INSTRUCTIONS_UPTO` is `AVX256` or `AVX512`, AVX128 and AVX256 kernels are compiled with `-mfma -ffp-contract=fast`, and AVX512 kernels are compiled with `-ffp-contract=fast`.
+- On Windows, FMA intrinsics in AVX128/AVX256 kernels are gated off at compile time regardless of `ENABLE_FMA`
 
 **Runtime Behavior:**
-- Library automatically detects CPU capabilities at runtime
-- If FMA is not supported by the system, the library falls back to AVX128 kernels
-- If AVX is not supported, the library executes using standard C implementation
+- The library automatically detects CPU capabilities at runtime and selects the highest usable SIMD tier (AVX512 → AVX256 → AVX128 → scalar C).
+- On Linux with `ENABLE_FMA` enabled (default), AVX128 and AVX256 kernels require FMA at runtime; if FMA is unavailable, the library uses scalar C kernels.
+- On Windows, or when `ENABLE_FMA` is disabled, AVX128 kernels require only AVX support.
+- If AVX is not supported, the library executes using the standard C (scalar) implementation.
 
 **SIMD ISA Support:**
 - The library uses x86 SIMD AVX128, AVX256 and AVX512 instructions when available
@@ -153,37 +153,34 @@ Multi-threading with OpenMP
 ---------------------------
 
 AOCL-FFTZ currently supports Multi-threading through OpenMP. To enable it, turn on the CMake option `ENABLE_MULTI_THREADING`.
-Additionally, you can also provide a custom OpenMP library through the `OpenMP_libomp_LIBRARY` option to override system OpenMP.
+Additionally, you can also provide a custom OpenMP library through the `OpenMP_libomp_LIBRARY` option to override system OpenMP library.
 
-Note: Concurrent use of a shared handle is only supported for complex (C2C)
-plans via `aoclfftz_execute_io`.
-For real (R2C/C2R) plans, `aoclfftz_execute_io` is not thread-safe when a
-shared handle is used with custom `in`/`out` pointers.
-`aoclfftz_execute` is also not concurrency-safe on a shared handle; call it
-from a single thread per handle.
+Note: `aoclfftz_execute_io` is safe to call concurrently on a shared handle.
+`aoclfftz_execute` is not; call it from a single thread per handle.
 
 Running Test Bench On Linux & Windows
 -------------------------------------
 The AOCL-FFTZ test bench supports multiple options in order to compute, validate & benchmark FFT.<br>
+The test bench is a development tool and is not installed; run it from the build directory.<br>
 Following are a few sample commands to use and test with the test bench:
 
 * The test bench can be run by using the following syntax: <br>
-  `aocl_fftz_bench [OPTIONS]... PROBLEM_SIZE`
+  `./aocl_fftz_bench [OPTIONS]... PROBLEM_SIZE`
 
 * Use the following command to set the precision for FFT: <br>
-  `aocl_fftz_bench -p/--precision <d/f>`
+  `./aocl_fftz_bench -p/--precision <d/f>`
 
 * Use the following command to set the data model for FFT: <br>
   `./aocl_fftz_bench -m/--data-model <l/i>`
 
 * Use the following command to run the test bench with the requested bench type: <br>
-  `aocl_fftz_bench -b/--bench-type <p/a>`
+  `./aocl_fftz_bench -b/--bench-type <p/a>`
 
 * Use the following command to run the test bench with the requested FFT type:<br>
-  `aocl_fftz_bench -f/--fft-type <c2c>`
+  `./aocl_fftz_bench -f/--fft-type <c2c>`
 
 * To check other options for test bench use the following command:<br>
-  `aocl_fftz_bench -h/--help`
+  `./aocl_fftz_bench -h/--help`
 
 Running tests with CTest
 ------------------------
@@ -197,16 +194,42 @@ Note: `ACCURACY_WITH_DFT` enables running tests with DFT as an additional valida
 
 Here are a few sample commands that can be executed within the build directory to run test cases with CTest.
 
- To run all the tests<br>
- `ctest`
+To run all the tests<br>
+`ctest`
 
- To run only TestBench<br>
+To run only TestBench<br>
 
- Linux  : `ctest -R TESTBENCH`<br>
- Windows : `ctest -C <Release/Debug> -R TESTBENCH`
+Linux  : `ctest -R TESTBENCH`<br>
+Windows : `ctest -C <Release/Debug> -R TESTBENCH`
 
- To run GTest test cases for a specific test case<br>
- `ctest -R <TEST CASE>`
+To run GTest test cases for a specific test case<br>
+`ctest -R <TEST CASE>`
+
+FFTW wrapper tests
+-------------------------------
+Build the wrapper and its GTest suite with strict warnings enabled:
+```
+cmake -B <build directory> <CMakeLists.txt directory> \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DAOCL_TEST_COVERAGE=STANDARD \
+  -DBUILD_STATIC_LIBS=ON \
+  -DBUILD_THIRD_PARTY_WRAPPERS=ON \
+  -DENABLE_STRICT_WARNINGS=ON
+cmake --build <build directory> --parallel
+```
+
+The test names use `KNOWN_DIVERGENCE` for explicit AOCL-vs-FFTW differences
+and `PRODUCTION_BLOCKED` for disabled regressions that depend on production
+fixes. The wisdom and miscellaneous suites also pin documented wrapper stubs.
+These groups can be selected directly by test-name regular expressions:
+```
+ctest --test-dir <build directory> --output-on-failure \
+  -R "^FftwWrapper" \
+  -E "KNOWN_DIVERGENCE|FftwWrapperWisdomTest|FftwWrapperMiscTest|PRODUCTION_BLOCKED"
+ctest --test-dir <build directory> --output-on-failure \
+  -R "KNOWN_DIVERGENCE|FftwWrapperWisdomTest|FftwWrapperMiscTest"
+ctest --test-dir <build directory> -N -R PRODUCTION_BLOCKED
+```
 
 Running source code coverage using GCOV
 ---------------------------------------
@@ -225,17 +248,18 @@ Sample command to obtain code coverage report :
 cmake --build <build directory> --target install code-coverage
 ```
 
-Running Valgrind and ASAN memory checks using CTest
----------------------------------------------------
+Running Valgrind and sanitizer checks using CTest
+--------------------------------------------------
 
-To perform memory checks using Valgrind/ASAN, enable the relevant build options `VALGRIND` or `ASAN` while configuring CMake.<br>
-Please note that Valgrind and ASAN options cannot be enabled together and they are supported only in **Linux Debug build** mode.
+To perform memory checks using Valgrind or ASAN, enable the relevant build options on Linux while configuring CMake.
+`VALGRIND` and `ASAN` are supported only on Linux.
+Please note that `VALGRIND` requires `-DCMAKE_BUILD_TYPE=Debug` and cannot be combined with `ASAN`.
 
 Sample commands for Valgrind :
 
 Build :
 ```
-cmake -B <build directory> <CMakeList.txt filepath> -DCMAKE_BUILD_TYPE=Debug -DVALGRIND=ON
+cmake -B <build directory> <CMakeLists.txt directory> -DCMAKE_BUILD_TYPE=Debug -DVALGRIND=ON
 ```
 
 Run :
@@ -247,7 +271,7 @@ Sample commands for ASAN :
 
 Build :
 ```
-cmake -B <build directory> <CMakeList.txt filepath> -DCMAKE_BUILD_TYPE=Debug -DASAN=ON
+cmake -B <build directory> <CMakeLists.txt directory> -DASAN=ON
 ```
 
 Run :

@@ -53,9 +53,12 @@ FFTZ_INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     /* Allocate 3 sub-selectors for even, odd1, and odd3 parts */
     /* nthreads is set to 0 for all recursive SR sub-problems. */
-    cur_sel_even = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
-    cur_sel_odd1 = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
-    cur_sel_odd3 = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel_even = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                                  sel->has_nested);
+    cur_sel_odd1 = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                                  sel->has_nested);
+    cur_sel_odd3 = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                                  sel->has_nested);
 
     if (cur_sel_even == NULL || cur_sel_odd1 == NULL || cur_sel_odd3 == NULL)
     {
@@ -133,14 +136,7 @@ FFTZ_INT32 selector_sr_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     }
 
     /* Link sub-solutions to parent */
-    sel->solution->next_sol = alloc_sol_array(1);
-    if (!sel->solution->next_sol)
-    {
-        ret = SELECTOR_FAILURE;
-        goto exit_sr_dft;
-    }
-
-    sel->solution->next_sol[0] = cur_sel_even->solution;
+    sel->solution->next_sol = cur_sel_even->solution;
     sel->solution->dft_bufs->sr->odd1_sol = cur_sel_odd1->solution;
     sel->solution->dft_bufs->sr->odd3_sol = cur_sel_odd3->solution;
 

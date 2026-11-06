@@ -153,13 +153,6 @@ FFTZ_INT32 allocate_and_fill_dims_vecs(FFTZ_CHAR *arg, FFTZ_INT32 dim_rank,
             }
             if (is_stride == 0)
             {
-                if (val == 0)
-                {
-                    AOCLFFTZ_ERROR("Invalid dim/vec size (zero) at "
-                                             "rank : %d",rank_count);
-                    status = SIZE_PARSING_ERROR;
-                    goto exit_func;
-                }
                 desc[rank_count].n = val;
             }
             else if (is_stride == 1)
@@ -193,6 +186,16 @@ FFTZ_INT32 allocate_and_fill_dims_vecs(FFTZ_CHAR *arg, FFTZ_INT32 dim_rank,
         (*vecs)[0].n = 1;
         (*vecs)[0].in_stride = default_stride;
         (*vecs)[0].out_stride = default_stride;
+    }
+
+    for (FFTZ_INT32 i = 0; i < dim_rank; i++)
+    {
+        if ((*dims)[i].n == 0)
+        {
+            AOCLFFTZ_ERROR("Invalid dim size (zero) at rank : %d", i);
+            status = SIZE_PARSING_ERROR;
+            goto exit_func;
+        }
     }
 
 exit_func:

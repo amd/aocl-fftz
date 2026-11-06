@@ -10,13 +10,13 @@ Building on Linux
 
 .. code-block:: bash
 
-    cmake -B <build directory> <CMakeLists.txt filepath>
+    cmake -B <build directory> <CMakeLists.txt directory>
 
 Additional options that can be specified for build configuration:
 
 .. code-block:: bash
 
-    cmake -B <build directory> <CMakeLists.txt filepath> \
+    cmake -B <build directory> <CMakeLists.txt directory> \
             -DAOCL_TEST_COVERAGE=<OFF/STANDARD/EXHAUSTIVE> \
             -DCMAKE_INSTALL_PREFIX=<install path> \
             -DCMAKE_BUILD_TYPE=<Debug or Release> \
@@ -35,9 +35,10 @@ To use clang compiler for the build, specify ``-DCMAKE_C_COMPILER=clang`` as an 
 
 - The library is generated in the "lib" directory
 - The test bench executable is generated in the "build" directory
-- The additional option ``--target install`` will install the library, binary, and
-  interface header files in the installation path as specified with
-  ``-DCMAKE_INSTALL_PREFIX`` option or in the local system path
+- The additional option ``--target install`` will install the library, interface
+  header files, and the CMake package configuration and pkg-config files in the
+  installation path as specified with ``-DCMAKE_INSTALL_PREFIX`` option or in
+  the local system path.
 
 
 Building on Windows
@@ -91,13 +92,13 @@ Use the following additional options to configure your build:
    * - ACCURACY_WITH_DFT
      - Enables accuracy mode to run with DFT (Disabled by default)
    * - ASAN
-     - Enables address sanitizer checks. Supported only on Linux Debug build (Disabled by default)
+     - Enables address sanitizer checks. Supported only on Linux builds (Disabled by default)
    * - BUILD_DOC
      - Builds documentation for library (Disabled by default)
    * - BUILD_STATIC_LIBS
      - Builds static library (Default build type is shared library)
    * - BUILD_THIRD_PARTY_WRAPPERS
-     - Builds all the supported FFTZ third party wrappers (Disabled by default)
+     - Builds FFTZ third party wrapper libraries along with the aocl_fftz library (Disabled by default)
    * - CODE_COVERAGE
      - Enables source code coverage and generates coverage report. Supported only on Linux with GCC compiler (Disabled by default)
    * - CODE_COVERAGE_FOR_ATG
@@ -108,6 +109,8 @@ Use the following additional options to configure your build:
      - Specifies maximum AVX instruction set to compile (None / AVX128 / AVX256 / AVX512, default: AVX512)
    * - ENABLE_FMA
      - Enables -ffp-contract=fast (forces FMA generation). Required for Clang/AOCC, implied by GCC at -O3 (Enabled by default)
+   * - SELECT_REAL_FFT_EXECUTION_ORDER
+     - Selects the Real FFT Cooley-Tukey execution order (all modes are numerically identical): ITERATIVE, PARTIAL_RECURSION, TRUE_RECURSION. Default: TRUE_RECURSION
    * - ENABLE_MULTI_THREADING
      - Compiles library with multi-threading support using OpenMP (Disabled by default)
    * - ENABLE_STRICT_WARNINGS
@@ -116,6 +119,8 @@ Use the following additional options to configure your build:
      - Enables Compilation of fuzz test with fuzzing mode. Supported only on Linux Debug build with Clang compiler (Disabled by default)
    * - VALGRIND
      - Enables memory checks using Valgrind. Supported only on Linux Debug build. Incompatible with ASAN=ON (Disabled by default)
+   * - OpenMP_libomp_LIBRARY
+     - Path to the custom OpenMP library (System OpenMP is used if not provided)
 
 
 CPU Architecture Support and FMA Requirements
@@ -124,19 +129,33 @@ CPU Architecture Support and FMA Requirements
 AOCL-FFTZ leverages advanced CPU features for optimal performance:
 
 **FMA (Fused Multiply-Add) Support:**
-- The library uses FMA3 instructions when available
-- The FMA compiler flag is added only when compiling AVX512 and AVX256 optimized kernels
-- The FMA compiler flag is not added for AVX128 during compilation
+
+- The library uses FMA3 instructions in SIMD kernels when ``ENABLE_FMA`` is ON (default)
+- ``ENABLE_FMA`` is forced OFF regardless of the option when ``ENABLE_INSTRUCTIONS_UPTO`` is ``None`` or ``AVX128`` only.
+- On Linux, when FMA is enabled and ``ENABLE_INSTRUCTIONS_UPTO`` is ``AVX256`` or ``AVX512``, AVX128 and AVX256 kernels are compiled with ``-mfma -ffp-contract=fast``, and AVX512 kernels are compiled with ``-ffp-contract=fast``.
+- On Windows, FMA intrinsics in AVX128/AVX256 kernels are gated off at compile time regardless of ``ENABLE_FMA``
 
 **Runtime Behavior:**
-- Library automatically detects CPU capabilities at runtime
-- If FMA is not supported by the system, the library falls back to AVX128 kernels
-- If AVX is not supported, the library executes using standard C implementation
+
+- The library automatically detects CPU capabilities at runtime and selects the highest usable SIMD tier (AVX512 → AVX256 → AVX128 → scalar C).
+- On Linux with ``ENABLE_FMA`` enabled (default), AVX128 and AVX256 kernels require FMA at runtime; if FMA is unavailable, the library uses scalar C kernels.
+- On Windows, or when ``ENABLE_FMA`` is disabled, AVX128 kernels require only AVX support.
+- If AVX is not supported, the library executes using the standard C (scalar) implementation.
 
 **SIMD ISA Support:**
+
 - The library uses x86 SIMD AVX128, AVX256 and AVX512 instructions when available
 - Library uses dynamic dispatcher to automatically detect the CPU capabilities and dispatch the optimal ISA kernels based on selector model
 
+
+Multi-threading with OpenMP
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+AOCL-FFTZ currently supports Multi-threading through OpenMP. To enable it, turn on the CMake option ``ENABLE_MULTI_THREADING``.
+Additionally, you can also provide a custom OpenMP library through the ``OpenMP_libomp_LIBRARY`` option to override system OpenMP library.
+
+Note: ``aoclfftz_execute_io`` is safe to call concurrently on a shared handle.
+``aoclfftz_execute`` is not; call it from a single thread per handle.
 
 Testing and Benchmarking
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -145,6 +164,7 @@ Running Test Bench On Linux & Windows
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The AOCL-FFTZ test bench supports multiple options in order to compute, validate, and benchmark FFT.
+The test bench is a development tool and is not installed; run it from the build directory.
 
 Following are a few sample commands to use and test with the test bench:
 
@@ -222,8 +242,37 @@ Here are a few sample commands that can be executed within the build directory t
 
 .. code-block:: bash
 
-       ctest -R <TEST CASE>
+    ctest -R <TEST CASE>
 
+
+FFTW wrapper tests
+~~~~~~~~~~~~~~~~~~~
+
+Build the wrapper and its GTest suite with strict warnings enabled:
+
+.. code-block:: bash
+
+    cmake -B <build directory> <CMakeLists.txt directory> \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DAOCL_TEST_COVERAGE=STANDARD \
+      -DBUILD_STATIC_LIBS=ON \
+      -DBUILD_THIRD_PARTY_WRAPPERS=ON \
+      -DENABLE_STRICT_WARNINGS=ON
+    cmake --build <build directory> --parallel
+
+The test names use ``KNOWN_DIVERGENCE`` for explicit AOCL-vs-FFTW differences
+and ``PRODUCTION_BLOCKED`` for disabled regressions that depend on production
+fixes. The wisdom and miscellaneous suites also pin documented wrapper stubs.
+These groups can be selected directly by test-name regular expressions:
+
+.. code-block:: bash
+
+    ctest --test-dir <build directory> --output-on-failure \
+      -R "^FftwWrapper" \
+      -E "KNOWN_DIVERGENCE|FftwWrapperWisdomTest|FftwWrapperMiscTest|PRODUCTION_BLOCKED"
+    ctest --test-dir <build directory> --output-on-failure \
+      -R "KNOWN_DIVERGENCE|FftwWrapperWisdomTest|FftwWrapperMiscTest"
+    ctest --test-dir <build directory> -N -R PRODUCTION_BLOCKED
 
 Running source code coverage using GCOV
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -249,18 +298,19 @@ Sample command to obtain code coverage report:
     cmake --build <build directory> --target install code-coverage
 
 
-Running Valgrind and ASAN memory checks using CTest
+Running Valgrind and sanitizer checks using CTest
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To perform memory checks using Valgrind/ASAN, enable the relevant build options ``VALGRIND`` or ``ASAN`` while configuring CMake.
-Please note that Valgrind and ASAN options cannot be enabled together and they are supported only in **Linux Debug build** mode.
+To perform memory checks using Valgrind or ASAN, enable the relevant build options on Linux while configuring CMake.
+``VALGRIND`` and ``ASAN`` are supported only on Linux.
+Please note that ``VALGRIND`` requires ``-DCMAKE_BUILD_TYPE=Debug`` and cannot be combined with ``ASAN``.
 
 Sample commands for Valgrind:
 
 .. code-block:: bash
 
     # Build
-    cmake -B <build directory> <CMakeLists.txt filepath> -DCMAKE_BUILD_TYPE=Debug -DVALGRIND=ON
+    cmake -B <build directory> <CMakeLists.txt directory> -DCMAKE_BUILD_TYPE=Debug -DVALGRIND=ON
 
     # Run
     ctest -T memcheck
@@ -271,7 +321,7 @@ Sample commands for ASAN:
 .. code-block:: bash
 
     # Build
-    cmake -B <build directory> <CMakeLists.txt filepath> -DCMAKE_BUILD_TYPE=Debug -DASAN=ON
+    cmake -B <build directory> <CMakeLists.txt directory> -DASAN=ON
 
     # Run
     ctest

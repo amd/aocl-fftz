@@ -146,18 +146,20 @@ static FFTZ_INT32 execute_transpose_solver(aoclfftz_solution_t *sol,
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    aoclfftz_transpose_aux_mem_t aux_mem;
+    aux_mem.data = (FFTZ_UINT8 *)ctx->transpose_aux_base;
+    aux_mem.size = sol->dft_bufs->transpose->aux_mem->size;
 
-    if (sol->dft_bufs->transpose->aux_mem->size > 0)
+    if (aux_mem.size > 0)
     {
-        memset(sol->dft_bufs->transpose->aux_mem->data, 0,
-               sol->dft_bufs->transpose->aux_mem->size * sizeof(FFTZ_UINT8));
+        memset(aux_mem.data, 0, aux_mem.size * sizeof(FFTZ_UINT8));
     }
 
     sol->dft_bufs->transpose->kernel((FFTZ_VOID *)ctx->in_real,
                                      (FFTZ_VOID *)ctx->out_real,
                                      sol->dft_bufs->transpose->row_info,
                                      sol->dft_bufs->transpose->col_info,
-                                     sol->dft_bufs->transpose->aux_mem);
+                                     &aux_mem);
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return 0;

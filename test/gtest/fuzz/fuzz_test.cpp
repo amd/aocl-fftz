@@ -62,16 +62,16 @@ FUZZ_TEST_F(AoclfftzFuzzTestFloatILP64, fuzz_problem_desc_test)
 FUZZ_TEST_F(AoclfftzFuzzTestDoubleLP64, fuzz_problem_desc_test)
     .WithDomains(
         dims_and_vecs_2D(),
-        // TODO: Add flag combination of real FFT once ND real FFT is supported
-        // Flags: 0=C2C+Fwd+InPlace, 1=+OutPlace, 4=+Bwd, 5=+Bwd+OutPlace
-        fuzztest::ElementOf<FFTZ_UINT32>({0, 1, 4, 5}), //->flags
+        // Flags: 0=C2C+Fwd+InPlace, 1=+OutPlace, 4=+Bwd, 5=+Bwd+OutPlace,
+        // 8=Real+Fwd+InPlace, 9=+OutPlace, 12=+Bwd, 13=+Bwd+OutPlace
+        fuzztest::ElementOf<FFTZ_UINT32>({0, 1, 4, 5, 8, 9, 12, 13}),
         fuzztest::Arbitrary<aoclfftz_smp_pfft_t>(), arbitrary_cntrl_params());
 
 // Multi batched/N-Dim FFT problem
 FUZZ_TEST_F(AoclfftzFuzzTestDoubleILP64, fuzz_problem_desc_test)
     .WithDomains(
         dims_and_vecs_multi_batched_ND(),
-        // TODO: Add flag combination of real FFT once ND real FFT is supported
-        // Flags: 0=C2C+Fwd+InPlace, 1=+OutPlace, 4=+Bwd, 5=+Bwd+OutPlace
-        fuzztest::ElementOf<FFTZ_UINT32>({0, 1, 4, 5}), //->flags
+        // Flags: 0=C2C+Fwd+InPlace, 1=+OutPlace, 4=+Bwd, 5=+Bwd+OutPlace,
+        // 8=Real+Fwd+InPlace, 9=+OutPlace, 12=+Bwd, 13=+Bwd+OutPlace
+        fuzztest::ElementOf<FFTZ_UINT32>({0, 1, 4, 5, 8, 9, 12, 13}),
         fuzztest::Arbitrary<aoclfftz_smp_pfft_t>(), arbitrary_cntrl_params());

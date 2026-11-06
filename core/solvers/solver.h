@@ -44,22 +44,131 @@ typedef enum
     SOLVER_TRANSPOSE,
     SOLVER_SIZEONE,
     SOLVER_SR,
+    SOLVER_POW2_ITERATIVE,
+    SOLVER_POW2_FOURSTEP,
     SOLVER_MT_DIRECT,
     SOLVER_MT_DIRECT_BATCHED_COLMAJOR,
     SOLVER_MT_DIRECT_BATCHED_ROWMAJOR,
     SOLVER_MT_BATCHED,
     SOLVER_MT_BLUESTEIN,
-    SOLVER_REAL_DIRECT,
+    SOLVER_REAL_DIRECT_R2C,
+    SOLVER_REAL_DIRECT_R2C_BATCHED,
+    SOLVER_REAL_DIRECT_C2R,
+    SOLVER_REAL_DIRECT_CT_R2C,
+    SOLVER_REAL_DIRECT_CT_C2R,
     SOLVER_REAL_CT,
     SOLVER_REAL_NDIM,
     SOLVER_REAL_BUFFERED,
     SOLVER_REAL_BATCHED,
+    SOLVER_REAL_BATCHED_CT_L1_DIRECT,
+    SOLVER_REAL_BLUESTEIN,
     SOLVER_REAL_PERM_KER,
     SOLVER_REAL_SIZEONE,
-    SOLVER_REAL_MT_DIRECT,
+    SOLVER_REAL_PACKED_R2C,
+    SOLVER_REAL_PACKED_C2R,
+    SOLVER_REAL_MT_DIRECT_R2C,
+    SOLVER_REAL_MT_DIRECT_R2C_BATCHED,
+    SOLVER_REAL_MT_DIRECT_C2R,
+    SOLVER_REAL_MT_DIRECT_CT_R2C,
+    SOLVER_REAL_MT_DIRECT_CT_C2R,
     SOLVER_REAL_MT_BATCHED,
+    SOLVER_NOP,
     NUM_SOLVERS_END
 } aoclfftz_solver_type;
+
+static inline FFTZ_UINT8
+is_solver_real_direct_family(aoclfftz_solver_type solver_type)
+{
+    return (solver_type >= SOLVER_REAL_DIRECT_R2C &&
+            solver_type <= SOLVER_REAL_DIRECT_CT_C2R) ||
+           (solver_type >= SOLVER_REAL_MT_DIRECT_R2C &&
+            solver_type <= SOLVER_REAL_MT_DIRECT_CT_C2R);
+}
+
+// Takes FFTZ_INT32 rather than aoclfftz_solver_type (unlike
+// is_solver_real_direct_family) so it can be called with a plain int from the
+// C++ gtest sources without an explicit enum cast.
+static inline FFTZ_UINT8
+is_solver_real_batched_family(FFTZ_INT32 solver_type)
+{
+    return solver_type == SOLVER_REAL_BATCHED ||
+           solver_type == SOLVER_REAL_MT_BATCHED;
+}
+
+// Returns the next real FFT stage after 'stage', skipping a Batched node's
+// internal Bluestein worker so a caller can advance the chain without caring
+// whether the stage is a plain Direct or a Batched -> Bluestein pair:
+//   - Batched -> Bluestein: the worker is the Batched node's next_sol and the
+//     following stage is linked after it, so the next stage is
+//     next_sol->next_sol.
+//   - Direct: the usual flat chain, so the next stage is next_sol.
+static inline aoclfftz_solution_t *
+get_next_real_stage(aoclfftz_solution_t *stage)
+{
+    if (stage != NULL &&
+        is_solver_real_batched_family(stage->solver->solver_type))
+    {
+        // Skip the Bluestein worker on next_sol; radix_m is one hop further.
+        return (stage->next_sol != NULL) ? stage->next_sol->next_sol : NULL;
+    }
+    return (stage != NULL) ? stage->next_sol : NULL;
+}
+
+// Counterpart to get_next_real_stage(). A Batched node always has its Bluestein
+// worker attached as next_sol by the time this is called, so that link is
+// followed without a NULL check.
+static inline FFTZ_VOID
+set_next_real_stage(aoclfftz_solution_t *stage, aoclfftz_solution_t *next)
+{
+    if (stage == NULL)
+    {
+        return;
+    }
+    if (is_solver_real_batched_family(stage->solver->solver_type))
+    {
+        stage->next_sol->next_sol = next;
+    }
+    else
+    {
+        stage->next_sol = next;
+    }
+}
+
+// Stash the packed CT child's group count on the realhelper before the Batched
+// setup collapses its vecs[0].n to 1; the child's stride build reads it there.
+// Zero for non-packed stages. Shared by the ST and MT batched setups.
+static inline FFTZ_VOID
+set_packed_child_group_count(aoclfftz_solution_t *sol,
+                             aoclfftz_solution_t *next_sol,
+                             aoclfftz_realhelper_t *realhelper)
+{
+    realhelper->packed_group_count =
+        (IS_BLUESTEIN_CT_STAGE(next_sol->decomp_scheme->flags))
+            ? sol->decomp_scheme->vecs[0].n
+            : 0;
+}
+
+// Bind the Bluestein chirp-multiply kernels: pre_mul (input x chirp), mul
+// (spectrum product) and post_mul (normalize + chirp). pre_mul and post_mul
+// pick a strided variant when the caller's input or output is strided. Shared
+// by the ST and MT Bluestein setups.
+static inline FFTZ_VOID
+bind_bluestein_mul_kernels(aoclfftz_solution_t *sol, kernel_tables_t *kt)
+{
+    aoclfftz_bluestein_t *bluestein = sol->dft_bufs->bluestein;
+    FFTZ_UINT8 strided_in  = sol->decomp_scheme->dims[0].in_stride != 1;
+    FFTZ_UINT8 strided_out = sol->decomp_scheme->dims[0].out_stride != 1;
+
+    for (FFTZ_UINT32 dir = 0; dir < NUM_FFT_DIRS; dir++)
+    {
+        bluestein->mul[dir] = kt->bs.ele_mul[dir];
+        bluestein->pre_mul[dir] =
+            (strided_in) ? kt->bs.ele_mul_strided_in[dir] : kt->bs.ele_mul[dir];
+        bluestein->post_mul[dir] =
+            (strided_out) ? kt->bs.ele_mul_fused_norm_strided_out[dir]
+                          : kt->bs.ele_mul_fused_norm[dir];
+    }
+}
 
 FFTZ_INT32 register_solvers(FFTZ_VOID);
 FFTZ_INT32 set_solver_fp(aoclfftz_generic_solver_t *solver_obj);
@@ -79,7 +188,8 @@ FFTZ_INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
                             aoclfftz_solution_t *next_sol);
 FFTZ_INT32 setup_batched_solver(aoclfftz_solution_t *sol);
 FFTZ_INT32 setup_bluestein_solver(aoclfftz_solution_t *sol,
-                                  aoclfftz_solution_t *next_sol, FFTZ_INTP m);
+                                  aoclfftz_solution_t *next_sol, FFTZ_INTP m,
+                                  kernel_tables_t *kt);
 FFTZ_INT32 compute_chirp_fft(aoclfftz_solution_t *sol,
                              aoclfftz_solution_t *next_sol,
                              aoclfftz_mutable_ctx_t *ctx);
@@ -93,13 +203,23 @@ FFTZ_INT32 setup_sr_solver(aoclfftz_solution_t *sol,
                            aoclfftz_solution_t *sol_odd1,
                            aoclfftz_solution_t *sol_odd3, FFTZ_INTP n_even,
                            FFTZ_INTP n_odd);
+FFTZ_INT32 setup_pow2_iterative_solver(aoclfftz_solution_t *sol,
+                                       kernel_t *kt_dft, kernel_t *kt_twid,
+                                       FFTZ_INT64 *out_cost);
+FFTZ_INT32 setup_pow2_fourstep_solver(aoclfftz_solution_t *sol,
+                                      kernel_t *kt_dft, kernel_t *kt_twid,
+                                      FFTZ_INT64 *out_ops);
 #ifdef MULTI_THREADING
 FFTZ_INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol,
-                                  cost_analysis_t *cost, kernel_t *kernel);
+                                  cost_analysis_t *cost, kernel_t *kernel,
+                                  FFTZ_UINT8 *has_nested);
 FFTZ_INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol,
-                              FFTZ_INT32 num_threads_used);
+                                   FFTZ_INT32 num_threads_used,
+                                   FFTZ_UINT8 *has_nested);
 FFTZ_INT32 setup_mt_bluestein_solver(aoclfftz_solution_t *sol,
-                                aoclfftz_solution_t *next_sol, FFTZ_INTP m);
+                                     aoclfftz_solution_t *next_sol,
+                                     FFTZ_INTP m, kernel_tables_t *kt,
+                                     FFTZ_UINT8 *has_nested);
 #endif
 
 // RealFFT-Solvers
@@ -112,6 +232,10 @@ FFTZ_INT32 setup_real_direct_solver(aoclfftz_solution_t *sol,
 FFTZ_INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
                                 aoclfftz_solution_t *next_sol,
                                 aoclfftz_realhelper_t *realhelper);
+FFTZ_INT32 setup_real_bluestein_solver(aoclfftz_solution_t *sol,
+                                       aoclfftz_solution_t *complex_sol,
+                                       kernel_tables_t *kt,
+                                       aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 setup_real_buffered_solver(aoclfftz_solution_t *sol,
                                  aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 setup_real_ct_solver(aoclfftz_solution_t *sol,
@@ -120,22 +244,29 @@ FFTZ_INT32 setup_real_ct_solver(aoclfftz_solution_t *sol,
                                 FFTZ_UINT32 radix_m,
                                 aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 setup_real_ndim_solver(aoclfftz_solution_t *sol,
-                             aoclfftz_solution_t *real_dim_sol,
-                             aoclfftz_solution_t *complex_dims_sol,
-                             aoclfftz_realhelper_t *realhelper);
+                                  aoclfftz_solution_t *real_dim_sol,
+                                  aoclfftz_solution_t *complex_dims_sol,
+                                  aoclfftz_realhelper_t *realhelper);
 FFTZ_INT32 setup_real_sizeone_solver(aoclfftz_solution_t *sol);
+FFTZ_INT32 setup_batched_ct_l1_direct_real_solver(aoclfftz_solution_t *sol);
+FFTZ_INT32 setup_real_packed_solver(aoclfftz_solution_t *sol,
+                                    aoclfftz_solution_t *complex_sol,
+                                    kernel_tables_t *kernel_tables);
 #ifdef MULTI_THREADING
 FFTZ_INT32 setup_real_mt_direct_solver(aoclfftz_solution_t *sol,
                                   cost_analysis_t *cost,
                                   const kernel_t *kernel_c2c,
                                   const kernel_t *kernel_r2hc,
                                   const kernel_t *kernel_r2hcf,
-                                  aoclfftz_realhelper_t *realhelper);
+                                  aoclfftz_realhelper_t *realhelper,
+                                  FFTZ_UINT8 *has_nested);
 FFTZ_INT32 setup_real_mt_batched_solver(aoclfftz_solution_t *sol,
                                    aoclfftz_solution_t *next_sol,
-                                   aoclfftz_realhelper_t *realhelper);
+                                   aoclfftz_realhelper_t *realhelper,
+                                   FFTZ_UINT8 *has_nested);
 #endif
 
+dft_solver_ register_execute_nop_solver(FFTZ_VOID);
 dft_solver_ register_execute_direct_solver(FFTZ_VOID);
 dft_solver_ register_execute_direct_batched_colmajor_solver(FFTZ_VOID);
 dft_solver_ register_execute_ct_solver(FFTZ_VOID);
@@ -147,6 +278,8 @@ dft_solver_ register_execute_ndim_solver(FFTZ_VOID);
 dft_solver_ register_execute_sizeone_solver(FFTZ_VOID);
 dft_solver_ register_execute_transpose_solver(FFTZ_VOID);
 dft_solver_ register_execute_sr_solver(FFTZ_VOID);
+dft_solver_ register_execute_pow2_iterative_solver(FFTZ_VOID);
+dft_solver_ register_execute_pow2_fourstep_solver(FFTZ_VOID);
 #ifdef MULTI_THREADING
 dft_solver_ register_execute_mt_direct_solver(FFTZ_VOID);
 dft_solver_ register_execute_mt_direct_batched_rowmajor_solver(FFTZ_VOID);
@@ -155,18 +288,51 @@ dft_solver_ register_execute_mt_batched_solver(FFTZ_VOID);
 dft_solver_ register_execute_mt_bluestein_solver(FFTZ_VOID);
 #endif
 
-dft_solver_ register_execute_real_direct_solver(FFTZ_VOID);
+dft_solver_ register_execute_real_direct_r2c(FFTZ_VOID);
+dft_solver_ register_execute_real_direct_r2c_batched(FFTZ_VOID);
+dft_solver_ register_execute_real_direct_c2r(FFTZ_VOID);
+dft_solver_ register_execute_real_direct_ct_r2c(FFTZ_VOID);
+dft_solver_ register_execute_real_direct_ct_c2r(FFTZ_VOID);
 dft_solver_ register_execute_real_batched_solver(FFTZ_VOID);
+dft_solver_ register_execute_real_batched_ct_l1_direct_solver(FFTZ_VOID);
+dft_solver_ register_execute_real_bluestein_solver(FFTZ_VOID);
 dft_solver_ register_execute_real_buffered_solver(FFTZ_VOID);
 dft_solver_ register_execute_real_ct_solver(FFTZ_VOID);
 dft_solver_ register_execute_real_ndim_solver(FFTZ_VOID);
 dft_solver_ register_execute_real_sizeone_solver(FFTZ_VOID);
+dft_solver_ register_execute_real_packed_r2c(FFTZ_VOID);
+dft_solver_ register_execute_real_packed_c2r(FFTZ_VOID);
 
 #ifdef MULTI_THREADING
-dft_solver_ register_execute_real_mt_direct_solver(FFTZ_VOID);
+dft_solver_ register_execute_real_mt_direct_r2c(FFTZ_VOID);
+dft_solver_ register_execute_real_mt_direct_r2c_batched(FFTZ_VOID);
+dft_solver_ register_execute_real_mt_direct_c2r(FFTZ_VOID);
+dft_solver_ register_execute_real_mt_direct_ct_r2c(FFTZ_VOID);
+dft_solver_ register_execute_real_mt_direct_ct_c2r(FFTZ_VOID);
 dft_solver_ register_execute_real_mt_batched_solver(FFTZ_VOID);
 #endif
 FFTZ_INT64 compute_kernel_cost(const kernel_t *ker, FFTZ_UINT8 precision,
                           FFTZ_UINT8 direction, FFTZ_INTP batch);
+
+// Tracks a candidate kernel's table index and its estimated cost.
+typedef struct
+{
+    FFTZ_INTP  idx;
+    FFTZ_INT64 cost;
+} kernel_choice_t;
+
+// Return the base-category slot index in `kertab` whose radix matches `radix`,
+// or -1 if none is found.
+FFTZ_INTP find_radix_base_idx(kernel_t *kertab, FFTZ_INTP radix);
+
+// Pick the lowest-cost kernel across all ISA categories for the radix located
+// at `base_idx`, evaluated for `batch` invocations. Returns {idx, cost} where
+// idx is the table slot of the chosen variant, or {-1, INT64_MAX} if none has a
+// kernel for `direction`.
+kernel_choice_t find_best_kernel(kernel_t *kertab,
+                                 FFTZ_INTP base_idx,
+                                 FFTZ_UINT8 precision,
+                                 FFTZ_UINT8 direction,
+                                 FFTZ_INTP batch);
 
 #endif // AOCLFFTZ_SOLVER_H

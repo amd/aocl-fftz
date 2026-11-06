@@ -710,12 +710,35 @@ FFTZ_INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     AOCLFFTZ_LOG(TRACE, logger_mode, "ENTER");
     FFTZ_INT32 status = BENCH_SUCCESS;
     FFTZ_VOID *handle = NULL;
+    FFTZ_INTP *in_idx_map = NULL;
+    FFTZ_INTP *out_idx_map = NULL;
 
     FFTZ_UINT32 is_align = params->aligned_alloc;
 
     // Calculate transform dimensions and batch sizes
     params->sz_info.n = calculate_size(params->dims, params->dim_rank);
     params->sz_info.batches = calculate_size(params->vecs, params->vec_rank);
+
+    if (params->sz_info.batches == 0)
+    {
+        handle = params->setup_problem(params);
+        if (handle == NULL)
+        {
+            status = SETUP_FAILURE;
+            HANDLE_BENCH_STATUS(status);
+            goto exit_accuracy_mode;
+        }
+        if (aoclfftz_execute(handle) != AOCLFFTZ_SUCCESS)
+        {
+            status = EXECUTION_FAILURE;
+            HANDLE_BENCH_STATUS(status);
+        }
+        else
+        {
+            PRINT_SUCCESS("\nTest bench completed on accuracy mode\n\n");
+        }
+        goto exit_accuracy_mode;
+    }
 
     // Initialize input/output sizes for different transform types
     params->sz_info.n_in = params->sz_info.n;
@@ -736,11 +759,9 @@ FFTZ_INT32 run_bench_on_accuracy_mode(aoclfftz_bench_params_t *params)
     }
 
     // Allocate index mapping arrays for strided data access
-    FFTZ_INTP *in_idx_map = NULL;
     ALLOC_UNINIT(in_idx_map, FFTZ_INTP,
         params->sz_info.n * params->sz_info.batches * sizeof(FFTZ_INTP),
         is_align);
-    FFTZ_INTP *out_idx_map = NULL;
     ALLOC_UNINIT(out_idx_map, FFTZ_INTP,
         params->sz_info.n * params->sz_info.batches * sizeof(FFTZ_INTP),
         is_align);

@@ -453,3 +453,167 @@ fftwf_plan fftwf_plan_guru64_dft_c2r(FFTZ_INT32 rank,
                                                 howmany_dims);
     return get_handle_f_64_(p_dv_desc, FFTW_BACKWARD, in, out, REAL);
 }
+
+fftw_plan fftw_plan_r2r(FFTZ_INT32 rank, const FFTZ_INT32 *n, FFTZ_DOUBLE *in,
+                        FFTZ_DOUBLE *out, const fftw_r2r_kind *kind,
+                        unsigned flags)
+{
+    (FFTZ_VOID)rank; (FFTZ_VOID)n; (FFTZ_VOID)in; (FFTZ_VOID)out;
+    (FFTZ_VOID)kind; (FFTZ_VOID)flags;
+    FFTZ_WRAPPER_UNSUPPORTED();
+    return NULL;
+}
+
+fftwf_plan fftwf_plan_r2r(FFTZ_INT32 rank, const FFTZ_INT32 *n, FFTZ_FLOAT *in,
+                          FFTZ_FLOAT *out, const fftwf_r2r_kind *kind,
+                          unsigned flags)
+{
+    (FFTZ_VOID)rank; (FFTZ_VOID)n; (FFTZ_VOID)in; (FFTZ_VOID)out;
+    (FFTZ_VOID)kind; (FFTZ_VOID)flags;
+    FFTZ_WRAPPER_UNSUPPORTED();
+    return NULL;
+}
+
+fftw_plan fftw_plan_r2r_1d(FFTZ_INT32 n, FFTZ_DOUBLE *in, FFTZ_DOUBLE *out,
+                           fftw_r2r_kind kind, unsigned flags)
+{
+    (FFTZ_VOID)n; (FFTZ_VOID)in; (FFTZ_VOID)out; (FFTZ_VOID)kind;
+    (FFTZ_VOID)flags;
+    FFTZ_WRAPPER_UNSUPPORTED();
+    return NULL;
+}
+
+fftwf_plan fftwf_plan_r2r_1d(FFTZ_INT32 n, FFTZ_FLOAT *in, FFTZ_FLOAT *out,
+                             fftwf_r2r_kind kind, unsigned flags)
+{
+    (FFTZ_VOID)n; (FFTZ_VOID)in; (FFTZ_VOID)out; (FFTZ_VOID)kind;
+    (FFTZ_VOID)flags;
+    FFTZ_WRAPPER_UNSUPPORTED();
+    return NULL;
+}
+
+fftw_plan fftw_plan_r2r_2d(FFTZ_INT32 n0, FFTZ_INT32 n1, FFTZ_DOUBLE *in,
+                           FFTZ_DOUBLE *out, fftw_r2r_kind kind0,
+                           fftw_r2r_kind kind1, unsigned flags)
+{
+    (FFTZ_VOID)n0; (FFTZ_VOID)n1; (FFTZ_VOID)in; (FFTZ_VOID)out;
+    (FFTZ_VOID)kind0; (FFTZ_VOID)kind1; (FFTZ_VOID)flags;
+    FFTZ_WRAPPER_UNSUPPORTED();
+    return NULL;
+}
+
+fftwf_plan fftwf_plan_r2r_2d(FFTZ_INT32 n0, FFTZ_INT32 n1, FFTZ_FLOAT *in,
+                             FFTZ_FLOAT *out, fftwf_r2r_kind kind0,
+                             fftwf_r2r_kind kind1, unsigned flags)
+{
+    (FFTZ_VOID)n0; (FFTZ_VOID)n1; (FFTZ_VOID)in; (FFTZ_VOID)out;
+    (FFTZ_VOID)kind0; (FFTZ_VOID)kind1; (FFTZ_VOID)flags;
+    FFTZ_WRAPPER_UNSUPPORTED();
+    return NULL;
+}
+
+fftw_plan fftw_plan_r2r_3d(FFTZ_INT32 n0, FFTZ_INT32 n1, FFTZ_INT32 n2,
+                           FFTZ_DOUBLE *in, FFTZ_DOUBLE *out,
+                           fftw_r2r_kind kind0, fftw_r2r_kind kind1,
+                           fftw_r2r_kind kind2, unsigned flags)
+{
+    (FFTZ_VOID)n0; (FFTZ_VOID)n1; (FFTZ_VOID)n2; (FFTZ_VOID)in; (FFTZ_VOID)out;
+    (FFTZ_VOID)kind0; (FFTZ_VOID)kind1; (FFTZ_VOID)kind2; (FFTZ_VOID)flags;
+    FFTZ_WRAPPER_UNSUPPORTED();
+    return NULL;
+}
+
+fftwf_plan fftwf_plan_r2r_3d(FFTZ_INT32 n0, FFTZ_INT32 n1, FFTZ_INT32 n2,
+                             FFTZ_FLOAT *in, FFTZ_FLOAT *out,
+                             fftwf_r2r_kind kind0, fftwf_r2r_kind kind1,
+                             fftwf_r2r_kind kind2, unsigned flags)
+{
+    (FFTZ_VOID)n0; (FFTZ_VOID)n1; (FFTZ_VOID)n2; (FFTZ_VOID)in; (FFTZ_VOID)out;
+    (FFTZ_VOID)kind0; (FFTZ_VOID)kind1; (FFTZ_VOID)kind2; (FFTZ_VOID)flags;
+    FFTZ_WRAPPER_UNSUPPORTED();
+    return NULL;
+}
+
+fftw_plan fftw_plan_many_r2r(FFTZ_INT32 rank, const FFTZ_INT32 *n,
+                             FFTZ_INT32 howmany, FFTZ_DOUBLE *in,
+                             const FFTZ_INT32 *inembed, FFTZ_INT32 istride,
+                             FFTZ_INT32 idist, FFTZ_DOUBLE *out,
+                             const FFTZ_INT32 *onembed, FFTZ_INT32 ostride,
+                             FFTZ_INT32 odist, const fftw_r2r_kind *kind,
+                             unsigned flags)
+{
+    (FFTZ_VOID)rank; (FFTZ_VOID)n; (FFTZ_VOID)howmany; (FFTZ_VOID)in;
+    (FFTZ_VOID)inembed; (FFTZ_VOID)istride; (FFTZ_VOID)idist; (FFTZ_VOID)out;
+    (FFTZ_VOID)onembed; (FFTZ_VOID)ostride; (FFTZ_VOID)odist; (FFTZ_VOID)kind;
+    (FFTZ_VOID)flags;
+    FFTZ_WRAPPER_UNSUPPORTED();
+    return NULL;
+}
+
+fftwf_plan fftwf_plan_many_r2r(FFTZ_INT32 rank, const FFTZ_INT32 *n,
+                               FFTZ_INT32 howmany, FFTZ_FLOAT *in,
+                               const FFTZ_INT32 *inembed, FFTZ_INT32 istride,
+                               FFTZ_INT32 idist, FFTZ_FLOAT *out,
+                               const FFTZ_INT32 *onembed, FFTZ_INT32 ostride,
+                               FFTZ_INT32 odist, const fftwf_r2r_kind *kind,
+                               unsigned flags)
+{
+    (FFTZ_VOID)rank; (FFTZ_VOID)n; (FFTZ_VOID)howmany; (FFTZ_VOID)in;
+    (FFTZ_VOID)inembed; (FFTZ_VOID)istride; (FFTZ_VOID)idist; (FFTZ_VOID)out;
+    (FFTZ_VOID)onembed; (FFTZ_VOID)ostride; (FFTZ_VOID)odist; (FFTZ_VOID)kind;
+    (FFTZ_VOID)flags;
+    FFTZ_WRAPPER_UNSUPPORTED();
+    return NULL;
+}
+
+fftw_plan fftw_plan_guru_r2r(FFTZ_INT32 rank, const fftw_iodim *dims,
+                             FFTZ_INT32 howmany_rank,
+                             const fftw_iodim *howmany_dims, FFTZ_DOUBLE *in,
+                             FFTZ_DOUBLE *out, const fftw_r2r_kind *kind,
+                             unsigned flags)
+{
+    (FFTZ_VOID)rank; (FFTZ_VOID)dims; (FFTZ_VOID)howmany_rank;
+    (FFTZ_VOID)howmany_dims; (FFTZ_VOID)in; (FFTZ_VOID)out; (FFTZ_VOID)kind;
+    (FFTZ_VOID)flags;
+    FFTZ_WRAPPER_UNSUPPORTED();
+    return NULL;
+}
+
+fftwf_plan fftwf_plan_guru_r2r(FFTZ_INT32 rank, const fftwf_iodim *dims_f,
+                               FFTZ_INT32 howmany_rank,
+                               const fftwf_iodim *howmany_dims_f,
+                               FFTZ_FLOAT *in, FFTZ_FLOAT *out,
+                               const fftwf_r2r_kind *kind, unsigned flags)
+{
+    (FFTZ_VOID)rank; (FFTZ_VOID)dims_f; (FFTZ_VOID)howmany_rank;
+    (FFTZ_VOID)howmany_dims_f; (FFTZ_VOID)in; (FFTZ_VOID)out; (FFTZ_VOID)kind;
+    (FFTZ_VOID)flags;
+    FFTZ_WRAPPER_UNSUPPORTED();
+    return NULL;
+}
+
+fftw_plan fftw_plan_guru64_r2r(FFTZ_INT32 rank, const fftw_iodim64 *dims,
+                               FFTZ_INT32 howmany_rank,
+                               const fftw_iodim64 *howmany_dims,
+                               FFTZ_DOUBLE *in, FFTZ_DOUBLE *out,
+                               const fftw_r2r_kind *kind, unsigned flags)
+{
+    (FFTZ_VOID)rank; (FFTZ_VOID)dims; (FFTZ_VOID)howmany_rank;
+    (FFTZ_VOID)howmany_dims; (FFTZ_VOID)in; (FFTZ_VOID)out; (FFTZ_VOID)kind;
+    (FFTZ_VOID)flags;
+    FFTZ_WRAPPER_UNSUPPORTED();
+    return NULL;
+}
+
+fftwf_plan fftwf_plan_guru64_r2r(FFTZ_INT32 rank, const fftwf_iodim64 *dims_f,
+                                 FFTZ_INT32 howmany_rank,
+                                 const fftwf_iodim64 *howmany_dims_f,
+                                 FFTZ_FLOAT *in, FFTZ_FLOAT *out,
+                                 const fftwf_r2r_kind *kind, unsigned flags)
+{
+    (FFTZ_VOID)rank; (FFTZ_VOID)dims_f; (FFTZ_VOID)howmany_rank;
+    (FFTZ_VOID)howmany_dims_f; (FFTZ_VOID)in; (FFTZ_VOID)out; (FFTZ_VOID)kind;
+    (FFTZ_VOID)flags;
+    FFTZ_WRAPPER_UNSUPPORTED();
+    return NULL;
+}

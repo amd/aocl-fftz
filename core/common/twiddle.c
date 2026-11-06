@@ -432,4 +432,59 @@ FFTZ_VOID compute_sr_twiddle_buffer(FFTZ_VOID *twiddle_buffer, FFTZ_INTP n,
         compute_sr_twiddle_buffer_double(twiddle_buffer, n);
     }
 }
+
+// Fill two pre-broadcast blocks for k = 0..n0_by2/2: 0.5*cos first, then
+// -0.5*sin at offset 2*(n0_by2/2+1).
+static FFTZ_VOID compute_real_packed_twiddle_float(FFTZ_VOID *twiddle_buffer,
+                                                   FFTZ_INTP n)
+{
+    FFTZ_FLOAT *tw = (FFTZ_FLOAT *)twiddle_buffer;
+    FFTZ_INTP n0_by2 = n / 2;
+    FFTZ_INTP offset = 2 * (n0_by2 / 2 + 1);
+    FFTZ_FLOAT angle_base = AOCLFFTZ_2_PIf / (FFTZ_FLOAT)n;
+
+    for (FFTZ_INTP k = 0; k <= n0_by2 / 2; k++)
+    {
+        FFTZ_FLOAT angle = angle_base * (FFTZ_FLOAT)k;
+        FFTZ_FLOAT cos_angle = cosf(angle);
+        FFTZ_FLOAT sin_angle = sinf(angle);
+        tw[2 * k] = 0.5f * cos_angle;
+        tw[2 * k + 1] = 0.5f * cos_angle;
+        tw[offset + 2 * k] = -0.5f * sin_angle;
+        tw[offset + 2 * k + 1] = -0.5f * sin_angle;
+    }
+}
+
+static FFTZ_VOID compute_real_packed_twiddle_double(FFTZ_VOID *twiddle_buffer,
+                                                    FFTZ_INTP n)
+{
+    FFTZ_DOUBLE *tw = (FFTZ_DOUBLE *)twiddle_buffer;
+    FFTZ_INTP n0_by2 = n / 2;
+    FFTZ_INTP offset = 2 * (n0_by2 / 2 + 1);
+    FFTZ_DOUBLE angle_base = AOCLFFTZ_2_PI / (FFTZ_DOUBLE)n;
+
+    for (FFTZ_INTP k = 0; k <= n0_by2 / 2; k++)
+    {
+        FFTZ_DOUBLE angle = angle_base * (FFTZ_DOUBLE)k;
+        FFTZ_DOUBLE cos_angle = cos(angle);
+        FFTZ_DOUBLE sin_angle = sin(angle);
+        tw[2 * k] = 0.5 * cos_angle;
+        tw[2 * k + 1] = 0.5 * cos_angle;
+        tw[offset + 2 * k] = -0.5 * sin_angle;
+        tw[offset + 2 * k + 1] = -0.5 * sin_angle;
+    }
+}
+
+FFTZ_VOID compute_real_packed_twiddle(FFTZ_VOID *twiddle_buffer, FFTZ_INTP n,
+                                      FFTZ_UINT32 dt_prec)
+{
+    if (dt_prec == DT_FLOAT)
+    {
+        compute_real_packed_twiddle_float(twiddle_buffer, n);
+    }
+    else
+    {
+        compute_real_packed_twiddle_double(twiddle_buffer, n);
+    }
+}
 #endif

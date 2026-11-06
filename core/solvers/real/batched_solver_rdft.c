@@ -15,14 +15,15 @@
 #include "core/solvers/solver.h"
 
 FFTZ_INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
-                                aoclfftz_solution_t *next_sol,
-                                aoclfftz_realhelper_t *realhelper)
+                                     aoclfftz_solution_t *next_sol,
+                                     aoclfftz_realhelper_t *realhelper)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    set_packed_child_group_count(sol, next_sol, realhelper);
 
     // Turn the vector problem into a single set/unit problem to find its
-    // solution if it is not a direct problem
+    // solution if it is not a direct problem.
     next_sol->decomp_scheme->vec_rank = 1;
     next_sol->decomp_scheme->vecs[0].n = 1;
 
@@ -46,10 +47,9 @@ FFTZ_INT32 setup_real_batched_solver(aoclfftz_solution_t *sol,
 }
 
 // Recursively solves batched RFFT by handling the innermost dimension first.
-FFTZ_INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
-                                           aoclfftz_solution_t *next_sol,
-                                           FFTZ_INTP vec_rank,
-                                           aoclfftz_mutable_ctx_t *ctx)
+static FFTZ_INT32 execute_real_batched_solver_internal(
+    aoclfftz_solution_t *sol, aoclfftz_solution_t *next_sol,
+    FFTZ_INTP vec_rank, aoclfftz_mutable_ctx_t *ctx)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
@@ -59,7 +59,8 @@ FFTZ_INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
     FFTZ_INTP v_in_stride;
     FFTZ_INTP v_out_stride;
 
-    FFTZ_UINT32 dt_bytes = SOL_DT_SIZE(sol);
+    FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(ctx);
+    aoclfftz_mutable_ctx_t batch_ctx = *ctx;
 
     v_in_stride = sol->decomp_scheme->vecs[vec_rank - 1].in_stride * dt_bytes;
     v_out_stride = sol->decomp_scheme->vecs[vec_rank - 1].out_stride * dt_bytes;
@@ -72,20 +73,17 @@ FFTZ_INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
 
         for (FFTZ_INTP b = 0; b < batches; b++)
         {
-            status = next_sol->solver->execute_solver(next_sol, ctx);
+            batch_ctx.batch_idx = b;
+            status = next_sol->solver->execute_solver(next_sol, &batch_ctx);
             if (status != SOLVER_SUCCESS)
             {
                 return status;
             }
 
-            next_sol->decomp_scheme->in_real =
-                MOVE_ADDR(next_sol->decomp_scheme->in_real, v_in_stride);
-            next_sol->decomp_scheme->in_imag =
-                MOVE_ADDR(next_sol->decomp_scheme->in_imag, v_in_stride);
-            next_sol->decomp_scheme->out_real =
-                MOVE_ADDR(next_sol->decomp_scheme->out_real, v_out_stride);
-            next_sol->decomp_scheme->out_imag =
-                MOVE_ADDR(next_sol->decomp_scheme->out_imag, v_out_stride);
+            batch_ctx.in_real  = MOVE_ADDR(batch_ctx.in_real,  v_in_stride);
+            batch_ctx.in_imag  = MOVE_ADDR(batch_ctx.in_imag,  v_in_stride);
+            batch_ctx.out_real = MOVE_ADDR(batch_ctx.out_real, v_out_stride);
+            batch_ctx.out_imag = MOVE_ADDR(batch_ctx.out_imag, v_out_stride);
         }
     }
     else
@@ -94,28 +92,22 @@ FFTZ_INT32 execute_real_batched_solver_internal(aoclfftz_solution_t *sol,
              rnk_offset < sol->decomp_scheme->vecs[vec_rank - 1].n;
              rnk_offset++)
         {
-            // save pointer to restore it below since
-            // they will be moved while execution
-            FFTZ_VOID *in_real = next_sol->decomp_scheme->in_real;
-            FFTZ_VOID *in_imag = next_sol->decomp_scheme->in_imag;
-            FFTZ_VOID *out_real = next_sol->decomp_scheme->out_real;
-            FFTZ_VOID *out_imag = next_sol->decomp_scheme->out_imag;
+            aoclfftz_mutable_ctx_t inner_ctx = batch_ctx;
 
             // recursive call to solve the inner batches
             status = execute_real_batched_solver_internal(sol, next_sol,
-                                                          vec_rank - 1, ctx);
+                                                          vec_rank - 1,
+                                                          &inner_ctx);
             if (status != SOLVER_SUCCESS)
             {
                 return status;
             }
 
             // Adjust pointers for the next iteration
-            next_sol->decomp_scheme->in_real = MOVE_ADDR(in_real, v_in_stride);
-            next_sol->decomp_scheme->in_imag = MOVE_ADDR(in_imag, v_in_stride);
-            next_sol->decomp_scheme->out_real =
-                MOVE_ADDR(out_real, v_out_stride);
-            next_sol->decomp_scheme->out_imag =
-                MOVE_ADDR(out_imag, v_out_stride);
+            batch_ctx.in_real  = MOVE_ADDR(batch_ctx.in_real,  v_in_stride);
+            batch_ctx.in_imag  = MOVE_ADDR(batch_ctx.in_imag,  v_in_stride);
+            batch_ctx.out_real = MOVE_ADDR(batch_ctx.out_real, v_out_stride);
+            batch_ctx.out_imag = MOVE_ADDR(batch_ctx.out_imag, v_out_stride);
         }
     }
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
@@ -129,16 +121,27 @@ static FFTZ_INT32 execute_real_batched_solver(aoclfftz_solution_t *sol,
 
 
     FFTZ_INT32 status = SOLVER_SUCCESS;
-    aoclfftz_solution_t *next_sol = sol->next_sol[0];
-
-    next_sol->decomp_scheme->in_real = sol->decomp_scheme->in_real;
-    next_sol->decomp_scheme->in_imag = sol->decomp_scheme->in_imag;
-    next_sol->decomp_scheme->out_real = sol->decomp_scheme->out_real;
-    next_sol->decomp_scheme->out_imag = sol->decomp_scheme->out_imag;
+    aoclfftz_solution_t *next_sol = sol->next_sol;
 
     status = execute_real_batched_solver_internal(sol, next_sol,
                                                   sol->decomp_scheme->vec_rank,
                                                   ctx);
+
+    // A Batched -> Bluestein pair is one real CT stage. The loop above ran the
+    // Bluestein sub-solver once per batch; every batch must finish before the
+    // aux pools are swapped and the next stage starts.
+    if (status == SOLVER_SUCCESS &&
+        IS_BLUESTEIN_CT_STAGE(sol->decomp_scheme->flags))
+    {
+        SWAP_BUFFERS(ctx->aux_pool_base_1, ctx->aux_pool_base_2);
+#if REAL_FFT_EXECUTION_ORDER != REAL_FFT_ORDER_TRUE_RECURSION
+        aoclfftz_solution_t *next_stage = get_next_real_stage(sol);
+        if (next_stage != NULL)
+        {
+            status = next_stage->solver->execute_solver(next_stage, ctx);
+        }
+#endif
+    }
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
     return status;

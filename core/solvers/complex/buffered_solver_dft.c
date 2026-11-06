@@ -30,12 +30,18 @@ static FFTZ_VOID setup_buffered_output_strides(aoclfftz_solution_t *sol,
     sol->decomp_scheme->out_real = sol->dft_bufs->ct_buf_real;
     sol->decomp_scheme->out_imag = sol->dft_bufs->ct_buf_imag;
 
-    // Calculate stride factor from batched vectors
+    // The batch is spaced by the problem's stride in the problem's buffer, but
+    // this buffer is scratch the radix-r stage reads back immediately, so pack
+    // the batch instead of reproducing gaps nothing is written into.
     FFTZ_INTP batched_stride_factor = 1;
     if (sol->decomp_scheme->batched_vecs)
     {
-        batched_stride_factor = sol->decomp_scheme->batched_vecs[0].n *
-                                sol->decomp_scheme->batched_vecs[0].out_stride;
+        batched_stride_factor = sol->decomp_scheme->batched_vecs[0].n;
+        sol->decomp_scheme->batched_vecs[0].out_stride = 1;
+        if (next_sol->decomp_scheme->batched_vecs)
+        {
+            next_sol->decomp_scheme->batched_vecs[0].out_stride = 1;
+        }
     }
     sol->decomp_scheme->dims[0].out_stride = batched_stride_factor;
     sol->decomp_scheme->vecs[0].out_stride =
@@ -55,10 +61,14 @@ FFTZ_INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    // The buffered solver and its child read from input and write to ct_buffer,
+    // so both run out-of-place.
+    SET_OUTOFPLACE(sol->decomp_scheme->flags);
+    SET_OUTOFPLACE(next_sol->decomp_scheme->flags);
+
     // Buffer allocated at NDIM level can be reused by any solution subtree
     // under the NDIM node (both next_sol and nd_sol paths), avoiding
     // reallocation.
-
     FFTZ_INT32 dim_rank = sol->decomp_scheme->dim_rank;
     FFTZ_INT32 vec_rank = sol->decomp_scheme->vec_rank;
     aoclfftz_dim_t_64_ *dims = sol->decomp_scheme->dims;
@@ -79,9 +89,7 @@ FFTZ_INT32 setup_buffered_solver(aoclfftz_solution_t *sol,
     }
     if (sol->decomp_scheme->batched_vecs)
     {
-        // Multiply by both n and out_stride to account for strided access
-        buffer_length *= (sol->decomp_scheme->batched_vecs[0].n) *
-                         (sol->decomp_scheme->batched_vecs[0].out_stride);
+        buffer_length *= (sol->decomp_scheme->batched_vecs[0].n);
     }
 
     if (sol->dft_bufs->ct_buffer != NULL)
@@ -131,7 +139,7 @@ static FFTZ_INT32 execute_buffered_solver(aoclfftz_solution_t *sol,
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(ctx);
-    aoclfftz_solution_t *next_sol = sol->next_sol[0];
+    aoclfftz_solution_t *next_sol = sol->next_sol;
     aoclfftz_mutable_ctx_t child_ctx = *ctx;
     // Reroute the child's output into a private CT-buffer slot.
 #ifdef MULTI_THREADING

@@ -5,19 +5,16 @@ This directory contains sample source files showing usage of AOCL-FFTZ Library
 functions. Use the provided cmake script "CMakeLists.txt" to compile and
 run the programs. Same script may be used on Linux and Windows platforms.
 
-Note: The examples in this directory assume that AOCL-FFTZ has been built
-       with multi-threading enabled (`ENABLE_MULTI_THREADING=ON`).
-
 Building on Linux
 -----------------
 
 1. To create a build directory and configure the build system in it, run the following:
    ```
-    cmake -B <build directory> <CMakeLists.txt filepath>
+    cmake -B <build directory> <CMakeLists.txt directory>
    ```
    Additional options that can be specified for build configuration are:
    ```
-   cmake -B <build directory> <CMakeLists.txt filepath>
+   cmake -B <build directory> <CMakeLists.txt directory>
       -DAOCL_FFTZ_INSTALL_PATH=<Installed path of AOCL-FFTZ Library>
       -DCMAKE_INSTALL_PREFIX=<install path for examples binaries>
    ```

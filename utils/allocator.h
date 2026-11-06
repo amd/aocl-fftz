@@ -54,7 +54,7 @@
 
 #define ALLOC_ALIGN_UNINIT(ptr, type, num_bytes)                               \
 {                                                                              \
-    if (posix_memalign((FFTZ_VOID **)(&ptr), MIN_ALIGNMENT, num_bytes)) \
+    if (posix_memalign((FFTZ_VOID **)(&ptr), MIN_ALIGNMENT, num_bytes))        \
     {                                                                          \
         ptr = NULL;                                                            \
     }                                                                          \
@@ -62,7 +62,7 @@
 
 #define ALLOC_ALIGN_INIT(ptr, type, num_bytes)                                 \
 {                                                                              \
-    if (posix_memalign((FFTZ_VOID **)(&ptr), MIN_ALIGNMENT, num_bytes) == 0) \
+    if (posix_memalign((FFTZ_VOID **)(&ptr), MIN_ALIGNMENT, num_bytes) == 0)   \
     {                                                                          \
         memset(ptr, 0, (num_bytes));                                           \
     }                                                                          \

@@ -58,9 +58,9 @@ FFTZ_INT32 setup_sizeone_solver(aoclfftz_solution_t *sol)
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
-    strides->v_in_h2_stride = strides->v_in_stride =
+    strides->v_in_sym_stride = strides->v_in_stride =
         sol->decomp_scheme->vecs[0].in_stride;
-    strides->v_out_h2_stride = strides->v_out_stride =
+    strides->v_out_sym_stride = strides->v_out_stride =
         sol->decomp_scheme->vecs[0].out_stride;
 
     FFTZ_UINT8 dt_prec = DT_PRECISION_FLAG(sol->decomp_scheme->flags);

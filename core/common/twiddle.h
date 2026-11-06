@@ -42,6 +42,8 @@ FFTZ_VOID compute_twiddle_buffer_real(FFTZ_VOID *twiddle_buffer,
                                       FFTZ_UINT32 dt_prec);
 FFTZ_VOID compute_sr_twiddle_buffer(FFTZ_VOID *twiddle_buffer, FFTZ_INTP n,
                                     FFTZ_UINT32 dt_prec);
+FFTZ_VOID compute_real_packed_twiddle(FFTZ_VOID *twiddle_buffer, FFTZ_INTP n,
+                                      FFTZ_UINT32 dt_prec);
 #endif
 
 #endif // TWIDDLE_H

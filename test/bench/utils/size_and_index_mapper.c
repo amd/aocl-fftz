@@ -86,6 +86,10 @@ FFTZ_VOID calculate_buffer_sizes(FFTZ_INT32 dim_rank, FFTZ_INT32 vec_rank,
     }
     for (FFTZ_INT32 i = 0; i < vec_rank; i++)
     {
+        if (vecs[i].n == 0)
+        {
+            continue;
+        }
         in_size += ((vecs[i].n - 1) * (vecs[i].in_stride));
         out_size += ((vecs[i].n - 1) * (vecs[i].out_stride));
     }

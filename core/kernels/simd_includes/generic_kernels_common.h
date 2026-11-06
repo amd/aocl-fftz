@@ -89,6 +89,10 @@
     #define GATHER_NOTW_D GATHER_NOTW_128_D
     #define SCATTER_NOTW_S SCATTER_NOTW_128_S
     #define SCATTER_NOTW_D SCATTER_NOTW_128_D
+    #define GATHER_NOTW_H2_S GATHER_NOTW_H2_128_S
+    #define GATHER_NOTW_H2_D GATHER_NOTW_H2_128_D
+    #define SCATTER_NOTW_H2_S SCATTER_NOTW_H2_128_S
+    #define SCATTER_NOTW_H2_D SCATTER_NOTW_H2_128_D
     #define TW_SCATTER_S TW_SCATTER_128_S
     #define TW_SCATTER_D TW_SCATTER_128_D
     #define ITW_SCATTER_S ITW_SCATTER_128_S
@@ -197,6 +201,10 @@
     #define GATHER_NOTW_D GATHER_NOTW_256_D
     #define SCATTER_NOTW_S SCATTER_NOTW_256_S
     #define SCATTER_NOTW_D SCATTER_NOTW_256_D
+    #define GATHER_NOTW_H2_S GATHER_NOTW_H2_256_S
+    #define GATHER_NOTW_H2_D GATHER_NOTW_H2_256_D
+    #define SCATTER_NOTW_H2_S SCATTER_NOTW_H2_256_S
+    #define SCATTER_NOTW_H2_D SCATTER_NOTW_H2_256_D
     #define TW_SCATTER_S TW_SCATTER_256_S
     #define TW_SCATTER_D TW_SCATTER_256_D
     #define ITW_SCATTER_S ITW_SCATTER_256_S
@@ -310,6 +318,10 @@
     #define GATHER_NOTW_D GATHER_NOTW_512_D
     #define SCATTER_NOTW_S SCATTER_NOTW_512_S
     #define SCATTER_NOTW_D SCATTER_NOTW_512_D
+    #define GATHER_NOTW_H2_S GATHER_NOTW_H2_512_S
+    #define GATHER_NOTW_H2_D GATHER_NOTW_H2_512_D
+    #define SCATTER_NOTW_H2_S SCATTER_NOTW_H2_512_S
+    #define SCATTER_NOTW_H2_D SCATTER_NOTW_H2_512_D
     #define TW_SCATTER_S TW_SCATTER_512_S
     #define TW_SCATTER_D TW_SCATTER_512_D
     #define ITW_SCATTER_S ITW_SCATTER_512_S
@@ -335,51 +347,6 @@
     #define TW_PRELOADED_SCATTER_D TW_PRELOADED_SCATTER_512_D
     #define PRELOADED_GATHER_NOTW_D PRELOADED_GATHER_NOTW_512_D
     #define PRELOADED_SCATTER_NOTW_D PRELOADED_SCATTER_NOTW_512_D
-#endif
-
-// Identity macros for 2nd-half input/output points
-// These will be overridden by R2C/C2R twiddle kernel variants
-#ifndef OUT_H2_S
-#define OUT_H2_S(val) (val)
-#endif
-#ifndef IN_H2_S
-#define IN_H2_S(val) (val)
-#endif
-#ifndef OUT_H2_D
-#define OUT_H2_D(val) (val)
-#endif
-#ifndef IN_H2_D
-#define IN_H2_D(val) (val)
-#endif
-#ifndef OUT_H2_256_S
-#define OUT_H2_256_S(val) (val)
-#endif
-#ifndef IN_H2_256_S
-#define IN_H2_256_S(val) (val)
-#endif
-#ifndef OUT_H2_128_S
-#define OUT_H2_128_S(val) (val)
-#endif
-#ifndef IN_H2_128_S
-#define IN_H2_128_S(val) (val)
-#endif
-#ifndef OUT_H2_LOW_128_S
-#define OUT_H2_LOW_128_S(val) (val)
-#endif
-#ifndef IN_H2_LOW_128_S
-#define IN_H2_LOW_128_S(val) (val)
-#endif
-#ifndef OUT_H2_256_D
-#define OUT_H2_256_D(val) (val)
-#endif
-#ifndef IN_H2_256_D
-#define IN_H2_256_D(val) (val)
-#endif
-#ifndef OUT_H2_128_D
-#define OUT_H2_128_D(val) (val)
-#endif
-#ifndef IN_H2_128_D
-#define IN_H2_128_D(val) (val)
 #endif
 
 #endif // GENERIC_KERNELS_COMMON_H

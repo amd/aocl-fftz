@@ -16,10 +16,16 @@
 #include "core/common/memory_manager.h"
 
 FFTZ_INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol,
-                                  cost_analysis_t *cost, kernel_t *kernel)
+                                  cost_analysis_t *cost, kernel_t *kernel,
+                                  FFTZ_UINT8 *has_nested)
 {
     aoclfftz_decomp_scheme_t *decomp_scheme = sol->decomp_scheme;
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
+
+    if (decomp_scheme->thread_info->active_threads != 1)
+    {
+        *has_nested = 1;
+    }
 
     aoclfftz_strides_t *strides = sol->strides_grp->strides;
     FFTZ_INTP n = decomp_scheme->vecs[0].n;
@@ -41,16 +47,16 @@ FFTZ_INT32 setup_mt_direct_solver(aoclfftz_solution_t *sol,
 
     if (sol->decomp_scheme->batched_vecs != NULL)
     {
-        strides->v_in_h2_stride = strides->v_in_stride =
+        strides->v_in_sym_stride = strides->v_in_stride =
             sol->decomp_scheme->batched_vecs[0].in_stride * DATA_STRIDE;
-        strides->v_out_h2_stride = strides->v_out_stride =
+        strides->v_out_sym_stride = strides->v_out_stride =
             sol->decomp_scheme->batched_vecs[0].out_stride * DATA_STRIDE;
     }
     else
     {
-        strides->v_in_h2_stride = strides->v_in_stride =
+        strides->v_in_sym_stride = strides->v_in_stride =
             sol->decomp_scheme->vecs[0].in_stride * DATA_STRIDE;
-        strides->v_out_h2_stride = strides->v_out_stride =
+        strides->v_out_sym_stride = strides->v_out_stride =
             sol->decomp_scheme->vecs[0].out_stride * DATA_STRIDE;
     }
 
@@ -362,21 +368,15 @@ static FFTZ_INT32 execute_mt_direct_batched_colmajor_solver(
         sol->decomp_scheme->batched_vecs[0].n - (num_iters * num_sets);
 
     FFTZ_INT32 n_threads = sol->decomp_scheme->thread_info->n_threads;
+    FFTZ_INTP block_sz = num_iters / n_threads;
+    // Remaining blocks to distribute
+    FFTZ_INTP rem_blocks = num_iters % n_threads;
 
     #pragma omp parallel for num_threads(n_threads) collapse(2) schedule(static)
     for (FFTZ_INTP i = 0; i < sol->decomp_scheme->vecs[0].n; i++)
     {
         for (FFTZ_INT32 block = 0; block < n_threads; block++)
         {
-            FFTZ_UINT8 num_sets = sol->solver->kernel_c2c->sets;
-            // FFTZ_INTP num_iters = sol->decomp_scheme->batched_vecs[0].n /
-            // num_sets; FFTZ_INTP rem_iters =
-            //     sol->decomp_scheme->batched_vecs[0].n - (num_iters *
-            //     num_sets);
-            FFTZ_INTP block_sz = num_iters / n_threads;
-            FFTZ_INTP rem_blocks =
-                num_iters % n_threads; // Remaining blocks to distribute
-
             // Calculate this thread's work chunk
             FFTZ_INTP start_iter =
                 block * block_sz + (block < rem_blocks ? block : rem_blocks);

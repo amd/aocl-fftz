@@ -31,11 +31,14 @@
  */
 typedef enum
 {
-    optlevel_scalar = 0, /* No SIMD, portable baseline */
-    optlevel_avx128 = 1, /* 128-bit SIMD (AVX + OS support) */
-    optlevel_avx256 =
-        2, /* 256-bit SIMD (AVX + FMA + OS support); no FMA → max AVX128 */
-    optlevel_avx512 = 3 /* 512-bit SIMD (AVX-512F + AVX-512DQ + OS support) */
+    // No SIMD, portable baseline
+    optlevel_scalar = 0,
+    // 128-bit SIMD (AVX + OS support, FMA when built with ENABLE_FMA)
+    optlevel_avx128 = 1,
+    // 256-bit SIMD (AVX + FMA + OS support); no FMA → max AVX128
+    optlevel_avx256 = 2,
+    // 512-bit SIMD (AVX-512F + AVX-512DQ + OS support)
+    optlevel_avx512 = 3
 } optimization_level_t;
 
 /* ============================================================================
@@ -60,7 +63,17 @@ typedef enum
 #define FEATURE_AVX512BW        ((FFTZ_UINT64)1ULL << 7)  /* AVX-512 BW + OS */
 
 /* Composite: minimum features required for each dispatch level (for checks) */
+// An ENABLE_FMA build compiles the 128-bit sources with -mfma, so the tier needs
+// FMA at run time too; without it those kernels would fault on an AVX-only CPU.
+// The condition must stay in step with the one guarding FMA emission in
+// core/kernels/simd_includes/simd_common.h: Windows builds AVX128 under
+// /arch:AVX and emits no FMA there, so requiring it would only keep AVX-only
+// CPUs off this tier for nothing.
+#if defined(ENABLE_FMA) && !defined(_WIN32)
+#define FEATURE_LEVEL_AVX128    (FEATURE_AVX | FEATURE_FMA)
+#else
 #define FEATURE_LEVEL_AVX128    (FEATURE_AVX)
+#endif
 #define FEATURE_LEVEL_AVX256    (FEATURE_AVX | FEATURE_FMA | FEATURE_AVX2)
 #define FEATURE_LEVEL_AVX512    (FEATURE_AVX512F | FEATURE_AVX512DQ)
 

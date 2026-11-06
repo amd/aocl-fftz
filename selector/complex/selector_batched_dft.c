@@ -14,6 +14,9 @@
 #include "selector/selector.h"
 #include "core/common/memory_manager.h"
 #include "utils/utils.h"
+#ifdef MULTI_THREADING
+#include "utils/thread_control.h"
+#endif
 
 FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 {
@@ -38,7 +41,8 @@ FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     FFTZ_INTP batch_size = 1;
     FFTZ_INT32 ret = SELECTOR_FAILURE;
 
-    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    cur_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                             sel->has_nested);
     if (cur_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -106,25 +110,30 @@ FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     FFTZ_INT32 inner_batch = sel->solution->decomp_scheme->vecs[0].n;
     if (sol->decomp_scheme->batched_vecs)
     {
-        // Avoid nested parallelism: use 1 thread if inner_batch is small,
-        // otherwise all threads
+        // batched_vecs means the problem batch is carried further down and
+        // vecs[0] holds only the CT sub-batch, which deep in the recursion is
+        // a handful of iterations. Spending the budget on a team that narrow
+        // buys nothing and nests it inside whatever is already running, so
+        // take the level whole or leave it serial for the batch loop below.
         n_threads = (inner_batch < avl_threads) ? 1 : avl_threads;
     }
     else
     {
-        // Standard case: use minimum of inner_batch and available threads
+        // The batch loop cannot employ more threads than it has iterations.
         n_threads = (inner_batch < avl_threads) ? inner_batch : avl_threads;
     }
+    n_threads = cap_batch_loop_threads(sel->solution->decomp_scheme, n_threads);
     sel->solution->decomp_scheme->thread_info->n_threads = n_threads;
 #endif
 
+    // Only the ST/MT decision (solver_type) is recorded here; binding the
+    // execute function pointer is the parent's responsibility (done at the
+    // selector level once this selector returns).
     if (n_threads == 1)
     {
         // Setup batched solver to find the next solution for a single set/unit
         // of the vector problem
         sel->solution->solver->solver_type = SOLVER_BATCHED;
-        sel->solution->solver->execute_solver =
-            register_execute_batched_solver();
         ret = setup_batched_solver(cur_sel->solution);
     }
 #ifdef MULTI_THREADING
@@ -133,9 +142,8 @@ FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         // Setup multi threaded batched solver to find solution for a
         // vector problem
         sel->solution->solver->solver_type = SOLVER_MT_BATCHED;
-        sel->solution->solver->execute_solver =
-            register_execute_mt_batched_solver();
-        ret = setup_mt_batched_solver(cur_sel->solution, n_threads);
+        ret = setup_mt_batched_solver(cur_sel->solution, n_threads,
+                                      sel->has_nested);
     }
 #endif
 
@@ -232,15 +240,7 @@ FFTZ_INT32 selector_batched_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
     {
         // capture stats
     }
-    // TODO: Instead of allocating an array of solutions (one sized), just allocate a single solution
-    sel->solution->next_sol = alloc_sol_array(1);
-    if (sel->solution->next_sol == NULL)
-    {
-        ret = AOCLFFTZ_MEMORY_FAILURE;
-        AOCLFFTZ_ERROR("alloc_sol_array failed: %s", get_status_string(ret));
-        goto exit_batched_dft;
-    }
-    sel->solution->next_sol[0] = cur_sel->solution;
+    sel->solution->next_sol = cur_sel->solution;
 
     // destroy only the selector not the solution within it
     destroy_selector_without_solution(cur_sel);

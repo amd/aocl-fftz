@@ -29,10 +29,8 @@ FFTZ_INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
         AOCLFFTZ_ERROR("copy_solution_obj failed: %s", get_status_string(ret));
         return ret;
     }
-    // Set buffered flag for radix-m sub-problem if the original problem is
-    // in-place.
-    if (sol->decomp_scheme->in_real != NULL &&
-        sol->decomp_scheme->in_real == sol->decomp_scheme->out_real)
+    // Set buffered flag for radix-m sub-problem if it runs in-place.
+    if (!IS_OUT_OF_PLACE(sol->decomp_scheme->flags))
     {
         SET_BUFFERED(sol_m->decomp_scheme->flags);
     }
@@ -67,6 +65,20 @@ FFTZ_INT32 setup_ct_solver(aoclfftz_solution_t *sol, aoclfftz_solution_t *sol_r,
         sol->decomp_scheme->dims[0].out_stride;
     sol_r->decomp_scheme->vecs[0].out_stride =
         sol->decomp_scheme->dims[0].out_stride;
+    // Radix-m is buffered iff its parent is in-place.
+    if (IS_BUFFERED(sol_m->decomp_scheme->flags))
+    {
+        // For an in-place parent, radix-m (buffered solver) writes to the CT buffer.
+        // Radix-r then reads from that CT buffer and writes to the parent's output,
+        // so its input and output are distinct.
+        SET_OUTOFPLACE(sol_r->decomp_scheme->flags);
+    }
+    else
+    {
+        // For an out-of-place parent, radix-m writes directly to the parent's
+        // output. Radix-r consumes and updates that same buffer in-place.
+        SET_INPLACE(sol_r->decomp_scheme->flags);
+    }
 
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
@@ -80,8 +92,8 @@ static FFTZ_INT32 execute_ct_solver(aoclfftz_solution_t *sol,
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
     FFTZ_INT32 status = SOLVER_SUCCESS;
-    aoclfftz_solution_t *radix_r_sol = sol->next_sol[0];
-    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol[0];
+    aoclfftz_solution_t *radix_r_sol = sol->next_sol;
+    aoclfftz_solution_t *radix_m_sol = radix_r_sol->next_sol;
 
     // Build child ctx for radix-m: same in/out as parent
     aoclfftz_mutable_ctx_t m_ctx = *ctx;

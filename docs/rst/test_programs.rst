@@ -30,7 +30,7 @@ The following test program shows the sample usage and calling sequence of AOCL-F
 .. literalinclude:: ../../examples/example_one_dim_complex.c
    :language: c
    :linenos:
-   :lines: 44-159
+   :lines: 19-140
 
 To build this example test program on a Linux system using GCC or AOCC, you must specify
 path to aoclfftz.h header file and link with libaocl_fftz.so file as follows:
@@ -39,7 +39,7 @@ GCC : ``gcc -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> exa
 
 Clang : ``clang -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_one_dim_complex.c -laocl_fftz -lm``
 
-Before running the example program, ensure it points to the right library dependencies for OpenMP for Multithreading.
+Before running the example program, ensure it points to the right library dependencies for OpenMP if multithreading is enabled.
 
 
 N Dimensional Complex
@@ -50,7 +50,7 @@ The following test program shows the sample usage and calling sequence of AOCL-F
 .. literalinclude:: ../../examples/example_n_dim_complex.c
    :language: c
    :linenos:
-   :lines: 44-160
+   :lines: 19-141
 
 To build this example test program on a Linux system using GCC or AOCC, you must specify
 path to aoclfftz.h header file and link with libaocl_fftz.so file as follows:
@@ -59,7 +59,7 @@ GCC : ``gcc -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> exa
 
 Clang : ``clang -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_n_dim_complex.c -laocl_fftz -lm``
 
-Before running the example program, ensure it points to the right library dependencies for OpenMP for Multithreading.
+Before running the example program, ensure it points to the right library dependencies for OpenMP if multithreading is enabled.
 
 
 One Dimensional Real Forward
@@ -70,7 +70,7 @@ The following test program shows the sample usage and calling sequence of AOCL-F
 .. literalinclude:: ../../examples/example_one_dim_real_forward.c
    :language: c
    :linenos:
-   :lines: 44-167
+   :lines: 19-145
 
 To build this example test program on a Linux system using GCC or AOCC, you must specify
 path to aoclfftz.h header file and link with libaocl_fftz.so file as follows:
@@ -79,7 +79,7 @@ GCC : ``gcc -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> exa
 
 Clang : ``clang -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_one_dim_real_forward.c -laocl_fftz -lm``
 
-Before running the example program, ensure it points to the right library dependencies for OpenMP for Multithreading.
+Before running the example program, ensure it points to the right library dependencies for OpenMP if multithreading is enabled.
 
 
 One Dimensional Real Backward
@@ -90,7 +90,7 @@ The following test program shows the sample usage and calling sequence of AOCL-F
 .. literalinclude:: ../../examples/example_one_dim_real_backward.c
    :language: c
    :linenos:
-   :lines: 44-167
+   :lines: 19-145
 
 
 To build this example test program on a Linux system using GCC or AOCC, you must specify
@@ -100,7 +100,7 @@ GCC : ``gcc -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> exa
 
 Clang : ``clang -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_one_dim_real_backward.c -laocl_fftz -lm``
 
-Before running the example program, ensure it points to the right library dependencies for OpenMP for Multithreading.
+Before running the example program, ensure it points to the right library dependencies for OpenMP if multithreading is enabled.
 
 
 N Dimensional Real Forward
@@ -111,7 +111,7 @@ The following test program shows the sample usage and calling sequence of AOCL-F
 .. literalinclude:: ../../examples/example_n_dim_real_forward.c
    :language: c
    :linenos:
-   :lines: 44-177
+   :lines: 19-157
 
 To build this example test program on a Linux system using GCC or AOCC, you must specify
 path to aoclfftz.h header file and link with libaocl_fftz.so file as follows:
@@ -120,7 +120,7 @@ GCC : ``gcc -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> exa
 
 Clang : ``clang -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_n_dim_real_forward.c -laocl_fftz -lm``
 
-Before running the example program, ensure it points to the right library dependencies for OpenMP for Multithreading.
+Before running the example program, ensure it points to the right library dependencies for OpenMP if multithreading is enabled.
 
 
 N Dimensional Real Backward
@@ -131,7 +131,7 @@ The following test program shows the sample usage and calling sequence of AOCL-F
 .. literalinclude:: ../../examples/example_n_dim_real_backward.c
    :language: c
    :linenos:
-   :lines: 44-178
+   :lines: 19-160
 
 To build this example test program on a Linux system using GCC or AOCC, you must specify
 path to aoclfftz.h header file and link with libaocl_fftz.so file as follows:
@@ -140,7 +140,7 @@ GCC : ``gcc -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> exa
 
 Clang : ``clang -I<aoclfftz.h file directory> -L<libaocl_fftz.so file directory> example_n_dim_real_backward.c -laocl_fftz -lm``
 
-Before running the example program, ensure it points to the right library dependencies for OpenMP for Multithreading.
+Before running the example program, ensure it points to the right library dependencies for OpenMP if multithreading is enabled.
 
 
 Helpers
@@ -152,4 +152,4 @@ preparing input data, setting default strides for dimensions and vectors, calcul
 .. literalinclude:: ../../examples/helpers.h
    :language: c
    :linenos:
-   :lines: 38-270
+   :lines: 13-290

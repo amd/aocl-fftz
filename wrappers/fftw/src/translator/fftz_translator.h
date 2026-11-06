@@ -9,6 +9,11 @@
  *  This file provides macros and enums for FFTW wrapper.
  */
 
+#ifndef FFTZ_TRANSLATOR_H
+#define FFTZ_TRANSLATOR_H
+
+#include <stdio.h>
+
 #include "../../utils/allocator.h"
 #include "aoclfftz.h"
 #include "api/fftw_wrapper.h"
@@ -18,7 +23,7 @@ extern FFTZ_INT32 thread_num;
 #define INIT_PTHR_FFT(pthr_fft)                                                \
     {                                                                          \
         pthr_fft.num_threads = thread_num;                                     \
-        pthr_fft.dynamic_load_model = 0;                                       \
+        pthr_fft.dynamic_load_model = 1;                                       \
     }
 
 #define INIT_CNTRL_PARAMS(cntrl_params)                                        \
@@ -39,6 +44,17 @@ extern FFTZ_INT32 thread_num;
         INIT_PTHR_FFT(problem->pthr_fft);                                      \
         INIT_CNTRL_PARAMS(problem->cntrl_params);                              \
     }
+
+#if defined(__GNUC__) && __GNUC__ >= 3
+#define FFTZ_WRAPPER_NAME __func__
+#else
+#define FFTZ_WRAPPER_NAME __FUNCTION__
+#endif
+
+#define FFTZ_WRAPPER_UNSUPPORTED()                                             \
+    fprintf(stderr,                                                            \
+            "[AOCL-FFTZ] WARNING: %s: r2r transforms are not supported\n",     \
+            FFTZ_WRAPPER_NAME)
 
 #define DESTROY_DESC(p_desc, dv_desc)                                          \
     {                                                                          \
@@ -172,4 +188,5 @@ dv_desc *get_fortran_guru_dv_desc(FFTZ_INT32 rank, const FFTZ_INT32 *n,
         mem_ptr = NULL;                                                        \
     }
 
-#endif
+#endif /* _WIN32 */
+#endif /* FFTZ_TRANSLATOR_H */

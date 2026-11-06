@@ -60,7 +60,9 @@ FFTZ_VOID *aoclfftz_setup_d_64_(aoclfftz_prob_desc_d_64_ *problem)
 }
 
 // Execute function for Single-threaded and multi-threaded FFT.
-// Uses the cached setup-time execution context.
+// Uses the cached setup-time execution context. Hence requires
+// non-NULL input and output buffers supplied at setup-time.
+// Otherwise, use aoclfftz_execute_io with non-NULL buffers.
 aoclfftz_error_type aoclfftz_execute(FFTZ_VOID *handle)
 {
     if (handle == NULL)
@@ -70,13 +72,19 @@ aoclfftz_error_type aoclfftz_execute(FFTZ_VOID *handle)
 
     aoclfftz_executor_t *executor_obj = (aoclfftz_executor_t *)handle;
     aoclfftz_mutable_ctx_t *base_ctx = &executor_obj->exec_metadata->base_ctx;
+    if ((base_ctx->in_real == NULL) || (base_ctx->out_real == NULL))
+    {
+        AOCLFFTZ_ERROR(
+            "One or both setup-time buffers are NULL; use aoclfftz_execute_io");
+        return AOCLFFTZ_EXECUTION_FAILURE;
+    }
     return executor_obj->execute(executor_obj, base_ctx);
 }
 
 // Execute function for Single-threaded and multi-threaded FFT on different
 // input, output buffers using the same solution from the handle.
 // This function is safe for concurrent calls on a shared handle. A call either
-// claims the setup-time scratch buffers if available or allocates fresh ones (C2C only).
+// claims the setup-time scratch buffers if available or allocates fresh ones.
 aoclfftz_error_type aoclfftz_execute_io(FFTZ_VOID *handle, FFTZ_VOID *in,
                                         FFTZ_VOID *out)
 {
@@ -85,8 +93,6 @@ aoclfftz_error_type aoclfftz_execute_io(FFTZ_VOID *handle, FFTZ_VOID *in,
         return AOCLFFTZ_EXECUTION_FAILURE;
     }
     aoclfftz_executor_t *executor_obj = (aoclfftz_executor_t *)handle;
-    aoclfftz_solution_t *sol = executor_obj->solution;
-    FFTZ_INT32 is_real = IS_REAL(sol->decomp_scheme->flags);
     aoclfftz_immutable_metadata_t *exec_metadata = executor_obj->exec_metadata;
     aoclfftz_mutable_ctx_t ctx = exec_metadata->base_ctx;
     FFTZ_UINT32 dt_bytes = CTX_DT_SIZE(&ctx);
@@ -94,18 +100,6 @@ aoclfftz_error_type aoclfftz_execute_io(FFTZ_VOID *handle, FFTZ_VOID *in,
     ctx.in_imag  = MOVE_ADDR(in, dt_bytes);
     ctx.out_real = out;
     ctx.out_imag = MOVE_ADDR(out, dt_bytes);
-
-    // Real (R2C/C2R) solvers in this branch still consume in/out from
-    // sol->decomp_scheme directly. Note: this part is NOT thread-safe.
-    if (is_real)
-    {
-        sol->decomp_scheme->in_real  = ctx.in_real;
-        sol->decomp_scheme->in_imag  = ctx.in_imag;
-        sol->decomp_scheme->out_real = ctx.out_real;
-        sol->decomp_scheme->out_imag = ctx.out_imag;
-
-        return executor_obj->execute(executor_obj, &ctx);
-    }
 
     FFTZ_INT32 expected_setup_buffers_acquired_val = 0;
     // Synchronize ownership with atomic builtins (wrapped in AOCLFFTZ_ATOMIC_*): they apply

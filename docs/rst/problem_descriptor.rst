@@ -44,9 +44,12 @@ Member-by-Member Guide
 - *out*: Points to the output data (frequency for forward FFT, signal for backward FFT).
 - **Constraints**:
 
-  - Must not be ``NULL``.
+  - May be ``NULL`` during setup. A handle whose descriptor leaves ``in`` or ``out`` as ``NULL`` must be run with :cpp:func:`aoclfftz_execute_io`; otherwise, :cpp:func:`aoclfftz_execute` returns ``AOCLFFTZ_EXECUTION_FAILURE``.
+  - When supplied, must be allocated with sufficient memory to accommodate the dimensions and strides specified by ``dims`` and ``vecs``. Insufficient allocation may result in out-of-bounds memory access.
   - For in-place transforms (``flags.fft_placement == 0``), ``in`` and ``out`` must be the same pointer.
   - For out-of-place transforms (``flags.fft_placement == 1``), ``in`` and ``out`` must be different pointers.
+  - ``NULL`` input and output pointers represent an in-place transform; exactly one ``NULL`` pointer represents an out-of-place transform.
+  - Buffers later passed to :cpp:func:`aoclfftz_execute_io` must preserve the setup-time placement (in-place/out-of-place); they are not re-checked against the flag.
 
 **2. Ranks (``vec_rank``, ``dim_rank``)**
 
@@ -60,8 +63,9 @@ Member-by-Member Guide
 
 - **Constraints for each element**:
 
-  - ``n`` (size): Must be > 0.
-  - ``in_stride``, ``out_stride``: Must be > 0.
+  - ``dims`` - ``n`` (size), ``in_stride`` and ``out_stride``: Must be > 0.
+  - ``vecs`` - ``in_stride`` and ``out_stride``: Must be > 0.
+  - ``vecs`` - ``n`` (batch size): Must be :math:`\geq 0`. A batch size of 0 is treated as a no-op. Negative values are rejected.
   - For in-place transforms, ``in_stride`` must equal ``out_stride`` for each dimension.
   - For real transforms (R2C/C2R), special stride rules must be followed (see :ref:`Stride Setting <stride-setting>`).
 
@@ -79,7 +83,7 @@ Member-by-Member Guide
 **5. Parallel FFT (``pthr_fft``)**
 
 - *num_threads*: Number of threads (:math:`\geq 1`). If greater than available CPUs, defaults to max CPUs. If less than 1, defaults to single-threaded execution.
-- *dynamic_load_model*: 0 (fixed threads) or 1 (dynamic threads - not supported in this release). Invalid values default to 0.
+- *dynamic_load_model*: 0 (fixed threads - *num_threads* is spent as given) or 1 (dynamic threads - *num_threads* remains the maximum, and fewer may be used when the problem is too small to keep them busy; default). Invalid values default to 1.
 
 **6. Control Parameters (``cntrl_params``)**
 
@@ -98,9 +102,10 @@ Validation Checklist
 
 Before calling setup function, :ref:`aoclfftz_setup_f <aoclfftz_setup_f>` in this case, ensure:
 
-- All pointers (``in``, ``out``, ``dims``, ``vecs``) are non-NULL.
+- ``dims`` and ``vecs`` are non-NULL.
+- If ``in`` or ``out`` is ``NULL`` during setup, use :ref:`aoclfftz_execute_io <aoclfftz_execute_io>` with both buffers allocated and initialized before execution.
 - All ranks (``vec_rank``, ``dim_rank``) are :math:`\geq 1`.
-- All dimension sizes and strides are > 0.
+- All ``dims`` sizes and strides are > 0, all ``vecs`` strides are > 0, and all ``vecs`` batch sizes are non-negative.
 - Stride rules for in-place/out-of-place and real/complex transforms are satisfied.
 - Flags are set to supported values.
 - Parallel and control parameters are within valid ranges.
@@ -113,9 +118,9 @@ Common Pitfalls
 ~~~~~~~~~~~~~~~
 
 - Using out-of-order storage or standalone transpose (not supported in this release).
-- Setting ``dim_rank > 1`` for real transforms for Multi thread execution.
 - Mismatched strides for in-place transforms.
-- Null pointers for required arrays or buffers.
+- Null ``dims`` or ``vecs`` arrays.
+- Calling :cpp:func:`aoclfftz_execute` on a handle set up with ``in`` or ``out`` buffer set to ``NULL``. That returns ``AOCLFFTZ_EXECUTION_FAILURE``; use :cpp:func:`aoclfftz_execute_io` with both pointers non-NULL instead.
 - Invalid thread or logger values (defaults will be applied).
 
 Example: Minimal Valid Descriptor
@@ -135,6 +140,6 @@ Example: Minimal Valid Descriptor
         .dims = dims,
         .vecs = vecs,
         .flags = {0, 0, 0, 1, 0, 0}, // Complex, Forward, In-order, Out-of-place, No transpose, Bit reproducibility disabled
-        .pthr_fft = {1, 0},
+        .pthr_fft = {1, 1},
         .cntrl_params = {3, 0, 0, 0}
     };

@@ -55,3 +55,19 @@ FFTZ_VOID fftwf_execute_dft_c2r(const fftwf_plan p, fftwf_complex *in,
 {
     aoclfftz_execute_io((FFTZ_VOID *)p, (FFTZ_VOID *)in, (FFTZ_VOID *)out);
 }
+
+FFTZ_VOID fftw_execute_r2r(const fftw_plan p, FFTZ_DOUBLE *in, FFTZ_DOUBLE *out)
+{
+    (FFTZ_VOID)p;
+    (FFTZ_VOID)in;
+    (FFTZ_VOID)out;
+    FFTZ_WRAPPER_UNSUPPORTED();
+}
+
+FFTZ_VOID fftwf_execute_r2r(const fftwf_plan p, FFTZ_FLOAT *in, FFTZ_FLOAT *out)
+{
+    (FFTZ_VOID)p;
+    (FFTZ_VOID)in;
+    (FFTZ_VOID)out;
+    FFTZ_WRAPPER_UNSUPPORTED();
+}

@@ -117,7 +117,7 @@ static FFTZ_INT32 execute_batched_solver(aoclfftz_solution_t *sol,
 
 
     FFTZ_INT32 status = SOLVER_SUCCESS;
-    aoclfftz_solution_t *next_sol = sol->next_sol[0];
+    aoclfftz_solution_t *next_sol = sol->next_sol;
 
     status = execute_batched_solver_internal(sol, next_sol,
                                              sol->decomp_scheme->vec_rank, ctx);

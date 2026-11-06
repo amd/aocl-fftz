@@ -17,6 +17,10 @@
 #include <string>
 #include <gtest/gtest.h>
 
+#ifdef MULTI_THREADING
+#include <omp.h>
+#endif
+
 extern "C"
 {
 #include "api/aoclfftz_internal.h"

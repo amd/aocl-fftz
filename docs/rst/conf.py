@@ -10,8 +10,8 @@ import os
 project = 'AOCL-FFTZ'
 copyright = '2026, Advanced Micro Devices, Inc'
 author = 'Advanced Micro Devices, Inc'
-version = '5.3.2'
-release = '5.3.2'
+version = '6.0.0'
+release = '6.0.0'
 
 extensions = ['breathe', 'myst_parser']
 pwd = os.path.dirname(os.path.abspath(__file__))

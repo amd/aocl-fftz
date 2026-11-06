@@ -13,12 +13,19 @@
  */
 
 #include "core/solvers/solver.h"
+#include "utils/thread_control.h"
 
 FFTZ_INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol,
-                                   FFTZ_INT32 num_threads_used)
+                                   FFTZ_INT32 num_threads_used,
+                                   FFTZ_UINT8 *has_nested)
 {
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Enter");
 
+    thread_info_t *thread_info = sol->decomp_scheme->thread_info;
+    if (thread_info->active_threads != 1)
+    {
+        *has_nested = 1;
+    }
 
     // Turn the vector problem into a single set/unit problem to find its
     // solution
@@ -31,6 +38,11 @@ FFTZ_INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol,
     sol->decomp_scheme->thread_info->avl_threads /= num_threads_used;
     sol->decomp_scheme->thread_info->active_threads *= num_threads_used;
 
+    // The quotient above is only what the batch loop could not absorb. Trim it
+    // to what the transform under the batch loop can actually feed.
+    sol->decomp_scheme->thread_info->avl_threads = cap_nested_thread_budget(
+        sol->decomp_scheme, sol->decomp_scheme->thread_info->avl_threads);
+
     AOCLFFTZ_LOG(TRACE, global_logger_mode, "Exit");
 
     return SOLVER_SUCCESS;
@@ -41,8 +53,8 @@ FFTZ_INT32 setup_mt_batched_solver(aoclfftz_solution_t *sol,
  *  MT_BATCHED composes two variables per-thread :
  *      ▪ ct_offset (consumed by buffered/ctl1d solver)
  *          - (descendant)ct_offset = (ancestor)ct_offset + tid * next_ct_size
- *      ▪ bs_slot_idx (consumed by Bluestein/MT_Bluestein)
- *          - (descendant)bs_slot_idx = (ancestor)bs_slot_idx * n_threads + tid
+ *      ▪ slot_idx (consumed by Bluestein/MT_Bluestein, pow2-iterative)
+ *          - (descendant)slot_idx = (ancestor)slot_idx * n_threads + tid
  *
  *  How ct_offset grows (example: "3v180x200 -o 3 -r i -n 6")
  *
@@ -137,8 +149,8 @@ static FFTZ_INT32 execute_mt_batched_solver_internal(aoclfftz_solution_t *sol,
             thr_ctx.ct_offset = ctx->ct_offset +
                 (FFTZ_INTP)tid * (FFTZ_INTP)next_sol->dft_bufs->ct_buf_size;
 
-            // Index used to slice the bs_[in/out]_base for Bluestein/MT_Bluestein.
-            thr_ctx.bs_slot_idx = ctx->bs_slot_idx * n_threads + tid;
+            // Per-thread slot index for the bs and pow2 scratch pools.
+            thr_ctx.slot_idx = ctx->slot_idx * n_threads + tid;
 
             local_status = next_sol->solver->execute_solver(next_sol, &thr_ctx);
             if (local_status != SOLVER_SUCCESS)
@@ -190,7 +202,7 @@ static FFTZ_INT32 execute_mt_batched_solver(aoclfftz_solution_t *sol,
 
 
     FFTZ_INT32 status = SOLVER_SUCCESS;
-    aoclfftz_solution_t *next_sol = sol->next_sol[0];
+    aoclfftz_solution_t *next_sol = sol->next_sol;
 
     status = execute_mt_batched_solver_internal(sol, next_sol,
                                                 sol->decomp_scheme->vec_rank,

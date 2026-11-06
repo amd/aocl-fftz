@@ -19,6 +19,11 @@
 #include <sys/sysinfo.h>
 #include "gtest/gtest.h"
 #include "fuzztest/fuzztest.h"
+
+#ifdef MULTI_THREADING
+#include <omp.h>
+#endif
+
 extern "C"
 {
 #include "api/aoclfftz_internal.h"
@@ -154,9 +159,10 @@ void init_bench_params(aoclfftz_bench_params_t* params, FFTZ_INT32 dim_rank,
  * @param dims pointer to store the dims structure
  * @param vecs pointer to store the vecs structure
  */
-FFTZ_VOID construct_dims_and_vecs(const std::array<FFTZ_INTP,8>&dims_vecs,
-                             aoclfftz_dim_t_64_ **dims,
-                             aoclfftz_dim_t_64_ **vecs)
+FFTZ_VOID construct_dims_and_vecs(const std::array<FFTZ_INTP,8> &dims_vecs,
+                                  aoclfftz_dim_t_64_ **dims,
+                                  aoclfftz_dim_t_64_ **vecs,
+                                  aoclfftz_bench_fft_type_t fft_type = C2C)
 {
     FFTZ_INT32 dim_rank = dims_vecs[0];
     FFTZ_INT32 vec_rank = dims_vecs[1];
@@ -172,9 +178,6 @@ FFTZ_VOID construct_dims_and_vecs(const std::array<FFTZ_INTP,8>&dims_vecs,
     (*vecs)[0].out_stride = dims_vecs[7];
     if (dim_rank == 2)
     {
-        (*dims)[0].n = dims_vecs[2];
-        (*dims)[0].in_stride = dims_vecs[3];
-        (*dims)[0].out_stride = dims_vecs[4];
         (*dims)[1].n = dims_vecs[5];
         (*dims)[1].in_stride = dims_vecs[6];
         (*dims)[1].out_stride = dims_vecs[7];
@@ -212,6 +215,22 @@ FFTZ_VOID construct_dims_and_vecs(const std::array<FFTZ_INTP,8>&dims_vecs,
             (*dims)[i].in_stride = (*dims)[i - 1].n * (*dims)[i - 1].in_stride;
             (*dims)[i].out_stride = (*dims)[i - 1].n *
                                     (*dims)[i - 1].out_stride;
+        }
+    }
+    // Every stride above steps over a complex dims[0], which only holds for
+    // C2C. For R2C/C2R drop the strides derived from it and let
+    // set_default_dims_vecs() rebuild them for the actual type and placement.
+    if (fft_type == R2C || fft_type == C2R)
+    {
+        for (i = 1; i < dim_rank; i++)
+        {
+            (*dims)[i].in_stride = 0;
+            (*dims)[i].out_stride = 0;
+        }
+        for (i = 0; i < vec_rank; i++)
+        {
+            (*vecs)[i].in_stride = 0;
+            (*vecs)[i].out_stride = 0;
         }
     }
 }
@@ -538,7 +557,7 @@ auto dims_and_vecs_ND()
             return fuzztest::ArrayOf(
                 fuzztest::Just(static_cast<FFTZ_INTP>(dim_rank)),
                 fuzztest::Just(static_cast<FFTZ_INTP>(1)),
-                fuzztest::InRange(static_cast<FFTZ_INTP>(2),
+                fuzztest::InRange(static_cast<FFTZ_INTP>(1),
                                   static_cast<FFTZ_INTP>(dim_size_max)),
                 fuzztest::Just(static_cast<FFTZ_INTP>(1)),
                 fuzztest::Just(static_cast<FFTZ_INTP>(1)),

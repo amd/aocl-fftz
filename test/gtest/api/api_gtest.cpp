@@ -100,24 +100,131 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_PROBLEM_DESCRIPTOR)
     this->run_setup_and_validate(INVALID); // Run setup with invalid case
 }
 
-TYPED_TEST_P(AoclfftzAPITest, NTEST_IN_BUFFER)
+/* Verify aoclfftz_execute rejects a handle created with a NULL input. */
+TYPED_TEST_P(AoclfftzAPITest, NTEST_NULL_INPUT_AT_SETUP)
 {
-    if (this->problem != NULL && this->problem->in != NULL)
+    auto *saved_in = this->problem->in;
+    this->problem->in = NULL;
+
+    this->handle = this->aoclfftz_setup(this->problem);
+    EXPECT_NE(this->handle, nullptr);
+    if (this->handle != NULL)
     {
-        delete[] this->problem->in;
-        this->problem->in = NULL;
+        EXPECT_EQ(aoclfftz_execute(this->handle), AOCLFFTZ_EXECUTION_FAILURE);
+        aoclfftz_destroy(this->handle);
+        this->handle = NULL;
     }
-    this->run_setup_and_validate(INVALID);
+
+    this->problem->in = saved_in;
 }
 
-TYPED_TEST_P(AoclfftzAPITest, NTEST_OUT_BUFFER)
+/* Verify aoclfftz_execute_io runs successfully a handle created with a NULL input. */
+TYPED_TEST_P(AoclfftzAPITest, PTEST_NULL_INPUT_AT_SETUP)
 {
-    if (this->problem->out != NULL)
+    auto *saved_in = this->problem->in;
+    this->problem->in = NULL;
+
+    this->handle = this->aoclfftz_setup(this->problem);
+    EXPECT_NE(this->handle, nullptr);
+    if (this->handle != NULL)
     {
-        delete[] this->problem->out;
-        this->problem->out = NULL;
+        EXPECT_EQ(aoclfftz_execute_io(this->handle, saved_in,
+                                      this->problem->out), AOCLFFTZ_SUCCESS);
+        aoclfftz_destroy(this->handle);
+        this->handle = NULL;
     }
-    this->run_setup_and_validate(INVALID);
+
+    this->problem->in = saved_in;
+}
+
+/* Verify aoclfftz_execute rejects a handle created with a NULL output. */
+TYPED_TEST_P(AoclfftzAPITest, NTEST_NULL_OUTPUT_AT_SETUP)
+{
+    auto *saved_out = this->problem->out;
+    this->problem->out = NULL;
+
+    this->handle = this->aoclfftz_setup(this->problem);
+    EXPECT_NE(this->handle, nullptr);
+    if (this->handle != NULL)
+    {
+        EXPECT_EQ(aoclfftz_execute(this->handle), AOCLFFTZ_EXECUTION_FAILURE);
+        aoclfftz_destroy(this->handle);
+        this->handle = NULL;
+    }
+
+    this->problem->out = saved_out;
+}
+
+/* Verify aoclfftz_execute_io runs successfully a handle created with a NULL output. */
+TYPED_TEST_P(AoclfftzAPITest, PTEST_NULL_OUTPUT_AT_SETUP)
+{
+    auto *saved_out = this->problem->out;
+    this->problem->out = NULL;
+
+    this->handle = this->aoclfftz_setup(this->problem);
+    EXPECT_NE(this->handle, nullptr);
+    if (this->handle != NULL)
+    {
+        EXPECT_EQ(aoclfftz_execute_io(this->handle, this->problem->in,
+                                      saved_out), AOCLFFTZ_SUCCESS);
+        aoclfftz_destroy(this->handle);
+        this->handle = NULL;
+    }
+
+    this->problem->out = saved_out;
+}
+
+/* Verify aoclfftz_execute rejects a handle created with NULL buffers. */
+TYPED_TEST_P(AoclfftzAPITest, NTEST_NULL_INOUT_AT_SETUP)
+{
+    this->cleanup_problem();
+    this->create_default_custom_pdesc(
+        {32768}, 2, true, true, InputValueStrategy::MID_RANGE, 2);
+    this->problem->cntrl_params.opt_level = 3;
+    this->problem->cntrl_params.opt_off = 0;
+    auto *saved_buffer = this->problem->in;
+    this->problem->in  = NULL;
+    this->problem->out = NULL;
+
+    this->handle = this->aoclfftz_setup(this->problem);
+    EXPECT_NE(this->handle, nullptr);
+    if (this->handle != NULL)
+    {
+        EXPECT_EQ(aoclfftz_execute(this->handle), AOCLFFTZ_EXECUTION_FAILURE);
+        aoclfftz_destroy(this->handle);
+        this->handle = NULL;
+    }
+
+    // Restore the in-place alias so teardown frees the allocation once.
+    this->problem->in  = saved_buffer;
+    this->problem->out = saved_buffer;
+}
+
+/* Verify execute_io runs an in-place CT handle created with NULL buffers. */
+TYPED_TEST_P(AoclfftzAPITest, PTEST_NULL_INOUT_AT_SETUP)
+{
+    this->cleanup_problem();
+    this->create_default_custom_pdesc(
+        {32768}, 2, true, true, InputValueStrategy::MID_RANGE, 2);
+    this->problem->cntrl_params.opt_level = 3;
+    this->problem->cntrl_params.opt_off = 0;
+    auto *saved_buffer = this->problem->in;
+    this->problem->in  = NULL;
+    this->problem->out = NULL;
+
+    this->handle = this->aoclfftz_setup(this->problem);
+    EXPECT_NE(this->handle, nullptr);
+    if (this->handle != NULL)
+    {
+        EXPECT_EQ(aoclfftz_execute_io(this->handle, saved_buffer,
+                                      saved_buffer), AOCLFFTZ_SUCCESS);
+        aoclfftz_destroy(this->handle);
+        this->handle = NULL;
+    }
+
+    // Restore the in-place alias so teardown frees the allocation once.
+    this->problem->in  = saved_buffer;
+    this->problem->out = saved_buffer;
 }
 
 TYPED_TEST_P(AoclfftzAPITest, NTEST_CNTRL_PARAMS)
@@ -164,6 +271,18 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_INPLACE_IO_STRIDES)
     this->problem->dims[2].in_stride = 200;
     this->problem->dims[2].out_stride = 250;
     this->run_setup_and_validate(INVALID);
+}
+
+TYPED_TEST_P(AoclfftzAPITest, NTEST_PLACEMENT_BUFFER_IDENTITY)
+{
+    /* The fixture default is out-of-place with two distinct buffers. Aliasing
+     * them contradicts the placement flag and must be rejected. */
+    auto *distinct_out = this->problem->out;
+    this->problem->out = this->problem->in;
+    this->run_setup_and_validate(INVALID);
+    /* Restored before teardown, which frees `out` only when it does not
+     * alias `in`. */
+    this->problem->out = distinct_out;
 }
 
 TYPED_TEST_P(AoclfftzAPITest, NTEST_DIM_RANK)
@@ -226,12 +345,17 @@ TYPED_TEST_P(AoclfftzAPITest, NTEST_VECS_STRIDES)
     {
         if (this->problem->vecs != NULL)
         {
-            this->problem->vecs->n = dist_invalid(prng);
+            this->problem->vecs->n = dist_negative(prng);
             this->problem->vecs->in_stride = dist_invalid(prng);
             this->problem->vecs->out_stride = dist_invalid(prng);
             this->run_setup_and_validate(INVALID);
         }
     }
+}
+
+TYPED_TEST_P(AoclfftzAPITest, PTEST_VECS_ZERO_SIZE)
+{
+    this->validate_zero_batch_is_nop();
 }
 
 // Execute API test cases
@@ -643,17 +767,23 @@ REGISTER_TYPED_TEST_SUITE_P(
     PTEST_THREADS,
     PTEST_COMBINE,
     NTEST_PROBLEM_DESCRIPTOR,
-    NTEST_IN_BUFFER,
-    NTEST_OUT_BUFFER,
+    NTEST_NULL_INPUT_AT_SETUP,
+    PTEST_NULL_INPUT_AT_SETUP,
+    NTEST_NULL_OUTPUT_AT_SETUP,
+    PTEST_NULL_OUTPUT_AT_SETUP,
+    NTEST_NULL_INOUT_AT_SETUP,
+    PTEST_NULL_INOUT_AT_SETUP,
     NTEST_CNTRL_PARAMS,
     NTEST_FLAGS,
     NTEST_INPLACE_IO_STRIDES,
+    NTEST_PLACEMENT_BUFFER_IDENTITY,
     NTEST_DIM_RANK,
     NTEST_VEC_RANK,
     NTEST_DIMS,
     NTEST_VECS,
     NTEST_DIMS_STRIDES,
     NTEST_VECS_STRIDES,
+    PTEST_VECS_ZERO_SIZE,
     PTEST_EXECUTE_VALIDHANDLE,
     PTEST_EXECUTE_IO_VALIDHANDLE_FORWARD,
     PTEST_EXECUTE_IO_VALIDHANDLE_BACKWARD,
@@ -720,33 +850,51 @@ namespace concurrent_exec_io
     // concurrently such that internal_threads * app_threads ~= cores
     template<typename Fixture>
     void sweep(Fixture *f, const std::vector<FFTZ_INT32> &dims,
-               FFTZ_INT32 batch)
+               FFTZ_INT32 batch, bool is_real = false)
     {
         const FFTZ_INT32 max_procs = omp_get_num_procs();
+        // The app thread count below is derived from max_procs, so on a single
+        // usable core every sweep reports success against a knowingly racy library,
+        // so skip rather than pass vacuously.
+        if (max_procs < 2)
+        {
+            GTEST_SKIP() << "concurrency sweep needs at least 2 usable cores, "
+                            "omp_get_num_procs() reports " << max_procs;
+        }
         // App threads always run concurrently; internal threads only matter in
         // a multi-threaded library, so a single-thread build sweeps just 1.
 #ifdef MULTI_THREADING
         const std::vector<FFTZ_INT32> internal_thread_counts =
-            {1, 3, 8, 40, 90, max_procs};
+            {1, 3, 8, 40, max_procs};
 #else
         const std::vector<FFTZ_INT32> internal_thread_counts = {1};
 #endif
+        // Both C2C directions share one solver tree, so sweeping forward covers
+        // the scratch surface. R2C and C2R are distinct trees and need both.
+        const bool directions[] = {true, false};
+        const FFTZ_INT32 num_directions = is_real ? 2 : 1;
 
-        for (bool inplace : {false, true})
+        for (FFTZ_INT32 d = 0; d < num_directions; d++)
         {
-            for (FFTZ_INT32 num_threads : internal_thread_counts)
+            const bool is_forward = directions[d];
+            for (bool inplace : {false, true})
             {
-                if (num_threads > max_procs)
+                for (FFTZ_INT32 num_threads : internal_thread_counts)
                 {
-                    continue;
-                }
-                const FFTZ_INT32 concurrent_api_count = max_procs / num_threads;
-                f->run_concurrent_execute_io(dims, batch, inplace,
-                                             /*is_forward=*/true,
-                                             concurrent_api_count, num_threads);
-                if (::testing::Test::HasFatalFailure())
-                {
-                    return;
+                    if (num_threads > max_procs)
+                    {
+                        continue;
+                    }
+                    const FFTZ_INT32 concurrent_api_count =
+                        max_procs / num_threads;
+                    f->run_concurrent_execute_io(dims, batch, inplace,
+                                                 is_forward,
+                                                 concurrent_api_count,
+                                                 num_threads, is_real);
+                    if (::testing::Test::HasFatalFailure())
+                    {
+                        return;
+                    }
                 }
             }
         }
@@ -815,6 +963,12 @@ TYPED_TEST_P(AoclfftzConcurrentTest, C2C_BATCHED_NDIM_BS_2)
     concurrent_exec_io::sweep(this, {97, 19}, 3);
 }
 
+// Four-step: power-of-2 size.
+TYPED_TEST_P(AoclfftzConcurrentTest, C2C_FOURSTEP)
+{
+    concurrent_exec_io::sweep(this, {32768}, 1);
+}
+
 REGISTER_TYPED_TEST_SUITE_P(
     AoclfftzConcurrentTest,
     C2C_DIRECT,
@@ -826,7 +980,8 @@ REGISTER_TYPED_TEST_SUITE_P(
     C2C_BLUESTEIN,
     C2C_BATCHED_BLUESTEIN,
     C2C_BATCHED_NDIM_BS_1,
-    C2C_BATCHED_NDIM_BS_2
+    C2C_BATCHED_NDIM_BS_2,
+    C2C_FOURSTEP
 );
 
 // Concurrency is the focus here, not type coverage, so run a single type
@@ -834,4 +989,154 @@ REGISTER_TYPED_TEST_SUITE_P(
 using ConcurrentTestTypes = ::testing::Types<aoclfftz_prob_desc_d>;
 INSTANTIATE_TYPED_TEST_SUITE_P(FFTZ_tests_concurrent_execute_io,
                                 AoclfftzConcurrentTest, ConcurrentTestTypes);
+
+// ===========================================================================
+// Concurrent aoclfftz_execute_io tests (REAL: R2C / C2R)
+// ---------------------------------------------------------------------------
+// Same intent as the C2C suite, for the real path made concurrency-safe via
+// the read-only tree + per-call ctx. Each case runs both R2C (forward) and C2R
+// (backward), each in both placements, over a range of internal thread counts.
+//
+// The cases reach every per-call scratch resource: the aux ping-pong pair,
+// the C2R-only ndim aux, the per-thread stride slots used by the real CT C2C
+// kernels (all sliced by slot_idx), the Bluestein pool, and in-place C2R packed
+// slots (real_packed_buf_base, sliced by slot_idx).
+// ===========================================================================
+
+template<typename ProblemType>
+class AoclfftzConcurrentRealTest : public AoclfftzAPITest<ProblemType>
+{
+};
+
+TYPED_TEST_SUITE_P(AoclfftzConcurrentRealTest);
+
+// 1D direct
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_DIRECT)
+{
+    concurrent_exec_io::sweep(this, {16}, 1, true);
+}
+
+// 1D fused batched-direct node.
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_BATCHED_DIRECT)
+{
+    concurrent_exec_io::sweep(this, {16}, 8, true);
+}
+
+// 1D even packed (n > MAX_REAL_KERNEL_RADIX). In-place C2R allocates a
+// per-call real_packed_buf_base slab; concurrent execute_io calls must not
+// share it. ST packed uses slot_idx 0; internal_threads>1 falls back to CT.
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_PACKED)
+{
+    concurrent_exec_io::sweep(this, {56}, 1, true);
+}
+
+// 3D even packed. In-place C2R allocates a per-call grid-sized
+// real_packed_buf_base slab; concurrent execute_io calls must not share it.
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_PACKED_3D)
+{
+    concurrent_exec_io::sweep(this, {4, 3, 32}, 1, true);
+}
+
+// Batched packed unit: leftover avl_threads==1 keeps packed. Concurrent
+// execute_io still gets disjoint slabs; MT parent slices slots by slot_idx.
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_BATCHED_PACKED)
+{
+    concurrent_exec_io::sweep(this, {50}, 8, true);
+}
+
+// CT One-level solver: checks ping-pong buffers are not shared between
+// concurrent execute_io calls.
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_CT_ONE_LEVEL)
+{
+    concurrent_exec_io::sweep(this, {60}, 1, true);
+}
+
+// Batched CT one-level solver: checks ping-pong buffers are partitioned within a
+// single execute_io call and also are not shared between concurrent execute_io calls.
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_BATCHED_CT_ONE_LEVEL)
+{
+    concurrent_exec_io::sweep(this, {60}, 8, true);
+}
+
+// Multi-level CT chain: checks ping-pong buffers are not shared between
+// concurrent execute_io calls.
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_CT_MULTILEVEL)
+{
+    concurrent_exec_io::sweep(this, {625}, 1, true);
+}
+
+// CT with a packed Batched -> Bluestein real stage.
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_CT_BLUESTEIN)
+{
+    concurrent_exec_io::sweep(this, {34}, 1, true);
+}
+
+// Batched multi-level CT chain: checks ping-pong buffers are partitioned within a
+// single execute_io call and also are not shared between concurrent execute_io calls.
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_BATCHED_CT_MULTILEVEL)
+{
+    concurrent_exec_io::sweep(this, {625}, 5, true);
+}
+
+// REAL_NDIM: checks aux_pool_base_ndim is not shared between concurrent execute_io calls.
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_NDIM)
+{
+    concurrent_exec_io::sweep(this, {21, 22, 25}, 1, true);
+}
+
+// Batched REAL_NDIM: checks aux_pool_base_ndim is partitioned within a single
+// execute_io call and also are not shared between concurrent execute_io calls.
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_BATCHED_NDIM)
+{
+    concurrent_exec_io::sweep(this, {21, 22, 25}, 3, true);
+}
+
+// Outer dim is prime, inner dim is composite.
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_BATCHED_NDIM_BS_1)
+{
+    concurrent_exec_io::sweep(this, {19, 21}, 5, true);
+}
+
+// Outer dim is prime, inner dim is prime: (outer dim < inner dim).
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_BATCHED_NDIM_BS_2)
+{
+    concurrent_exec_io::sweep(this, {19, 97}, 5, true);
+}
+
+// Outer dim is prime, inner dim is prime: (outer dim > inner dim).
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_BATCHED_NDIM_BS_3)
+{
+    concurrent_exec_io::sweep(this, {97, 19}, 5, true);
+}
+
+// Outer dim is composite, inner dim is prime.
+TYPED_TEST_P(AoclfftzConcurrentRealTest, REAL_BATCHED_NDIM_BS_4)
+{
+    concurrent_exec_io::sweep(this, {18, 23}, 5, true);
+}
+
+REGISTER_TYPED_TEST_SUITE_P(
+    AoclfftzConcurrentRealTest,
+    REAL_DIRECT,
+    REAL_BATCHED_DIRECT,
+    REAL_PACKED,
+    REAL_PACKED_3D,
+    REAL_BATCHED_PACKED,
+    REAL_CT_ONE_LEVEL,
+    REAL_BATCHED_CT_ONE_LEVEL,
+    REAL_CT_MULTILEVEL,
+    REAL_CT_BLUESTEIN,
+    REAL_BATCHED_CT_MULTILEVEL,
+    REAL_NDIM,
+    REAL_BATCHED_NDIM,
+    REAL_BATCHED_NDIM_BS_1,
+    REAL_BATCHED_NDIM_BS_2,
+    REAL_BATCHED_NDIM_BS_3,
+    REAL_BATCHED_NDIM_BS_4
+);
+
+using ConcurrentRealTestTypes = ::testing::Types<aoclfftz_prob_desc_d>;
+INSTANTIATE_TYPED_TEST_SUITE_P(FFTZ_tests_concurrent_execute_io_real,
+                               AoclfftzConcurrentRealTest,
+                               ConcurrentRealTestTypes);
 #endif // AOCLFFTZ_API_CONCURRENCY_TESTS

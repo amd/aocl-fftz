@@ -44,7 +44,7 @@ FFTZ_VOID init_bench_params(aoclfftz_bench_params_t *bench_params)
     bench_params->tolerance = 1E-10;
     bench_params->logger_mode = 0;
     bench_params->num_threads = 1;
-    bench_params->dynamic_load_model = 0;
+    bench_params->dynamic_load_model = 1;
     bench_params->selector_time = 0;
     bench_params->min_bench_time = 100; // 100 ms
     bench_params->measure_stats = 0;
@@ -268,10 +268,7 @@ FFTZ_INT32 prepare_bench_params(FFTZ_INT32 argc, FFTZ_CHAR **argv,
                                  ret, 0);
             break;
         case 302:
-            if (atoi(optarg) != 0)
-            {
-                bench_params->dynamic_load_model = atoi(optarg);
-            }
+            bench_params->dynamic_load_model = atoi(optarg);
             break;
         case 303:
             if (atoi(optarg) != 0)
@@ -951,7 +948,7 @@ FFTZ_VOID show_help_menu(FFTZ_VOID)
         "FFT [default: 1]\n"
         "--dynamic-load-model     '1' to allow the library to determine how "
         "many threads to be used, '0' to use value given in --num-threads as "
-        "maximum number of threads [default: 0]\n"
+        "maximum number of threads [default: 1]\n"
         "-o, --opt-level          optimization levels used for benchmarking\n"
         "                           -1 = no optimization\n"
         "                            0 = non-SIMD algorithmic optimization\n"

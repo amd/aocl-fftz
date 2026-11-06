@@ -24,9 +24,16 @@ FFTZ_INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 
     if (sel == NULL || sel->solution == NULL ||
         sel->solution->decomp_scheme == NULL || sel->kernel_tables == NULL ||
-        sel->kernel_tables->ele_mul[FORWARD_FFT_DIR] == NULL ||
-        sel->kernel_tables->ele_mul[BACKWARD_FFT_DIR] == NULL ||
-        sel->kernel_tables->normalize == NULL)
+        sel->kernel_tables->bs.ele_mul[FORWARD_FFT_DIR] == NULL ||
+        sel->kernel_tables->bs.ele_mul[BACKWARD_FFT_DIR] == NULL ||
+        sel->kernel_tables->bs.ele_mul_strided_in[FORWARD_FFT_DIR] == NULL ||
+        sel->kernel_tables->bs.ele_mul_strided_in[BACKWARD_FFT_DIR] == NULL ||
+        sel->kernel_tables->bs.ele_mul_fused_norm[FORWARD_FFT_DIR] == NULL ||
+        sel->kernel_tables->bs.ele_mul_fused_norm[BACKWARD_FFT_DIR] == NULL ||
+        sel->kernel_tables->bs.ele_mul_fused_norm_strided_out[FORWARD_FFT_DIR]
+            == NULL ||
+        sel->kernel_tables->bs.ele_mul_fused_norm_strided_out[BACKWARD_FFT_DIR]
+            == NULL)
     {
         AOCLFFTZ_LOG(INFO, global_logger_mode,
                      "Invalid selector or solution passed to "
@@ -45,10 +52,10 @@ FFTZ_INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
                            "Problem length %td, extended Bluestein length %td",
                            n, m);
 
-
     // To hold the selector to perform FFT with extended length m
     aoclfftz_selector_t *next_sel = NULL;
-    next_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables);
+    next_sel = alloc_selector(vec_rank, dim_rank, sel->kernel_tables,
+                              sel->has_nested);
     if (next_sel == NULL)
     {
         ret = AOCLFFTZ_MEMORY_FAILURE;
@@ -61,30 +68,16 @@ FFTZ_INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
 #ifdef MULTI_THREADING
     if (sel->solution->solver->solver_type == SOLVER_MT_BLUESTEIN)
     {
-        ret = setup_mt_bluestein_solver(sel->solution, next_sel->solution, m);
+        ret = setup_mt_bluestein_solver(sel->solution, next_sel->solution, m,
+                                        sel->kernel_tables, sel->has_nested);
     }
     else
 #endif
     {
-        ret = setup_bluestein_solver(sel->solution, next_sel->solution, m);
+        ret = setup_bluestein_solver(sel->solution, next_sel->solution, m,
+                                     sel->kernel_tables);
     }
     if (ret != SELECTOR_SUCCESS)
-    {
-        goto exit_bluestein_dft;
-    }
-
-    // Bind the elementwise multiplication and normalization kernels registered
-    // for the plan onto this Bluestein solution
-    sel->solution->dft_bufs->bluestein->ele_mul[FORWARD_FFT_DIR] =
-        sel->kernel_tables->ele_mul[FORWARD_FFT_DIR];
-    sel->solution->dft_bufs->bluestein->ele_mul[BACKWARD_FFT_DIR] =
-        sel->kernel_tables->ele_mul[BACKWARD_FFT_DIR];
-    sel->solution->dft_bufs->bluestein->normalize =
-        sel->kernel_tables->normalize;
-
-    // Initialize Bluestein sequence B
-    ret = compute_chirp_sequence(sel->solution, m);
-    if (ret != BLUESTEIN_SUCCESS)
     {
         goto exit_bluestein_dft;
     }
@@ -96,14 +89,7 @@ FFTZ_INT32 selector_bluestein_dft(aoclfftz_selector_t *sel, kernel_t *kertab)
         goto exit_bluestein_dft;
     }
 
-    sel->solution->next_sol = alloc_sol_array(1 /*n_threads*/);
-    if (sel->solution->next_sol == NULL)
-    {
-        ret = AOCLFFTZ_MEMORY_FAILURE;
-        AOCLFFTZ_ERROR("alloc_sol_array failed: %s", get_status_string(ret));
-        goto exit_bluestein_dft;
-    }
-    sel->solution->next_sol[0] = next_sel->solution;
+    sel->solution->next_sol = next_sel->solution;
 
     // destroy only the selector not the solution within it
     destroy_selector_without_solution(next_sel);

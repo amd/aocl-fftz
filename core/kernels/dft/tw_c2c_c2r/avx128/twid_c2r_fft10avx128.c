@@ -31,6 +31,12 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 30, 51, 49, 49, 9},
 #define LOAD_IN_D GATHER_NOTW_D
 #define LOAD_IN_128_D GATHER_NOTW_128_D
 
+#define LOAD_IN_H2_S GATHER_NOTW_H2_S
+#define LOAD_IN_H2_128_S GATHER_NOTW_H2_128_S
+#define LOAD_IN_H2_64_S GATHER_NOTW_H2_LOW_128_S
+#define LOAD_IN_H2_D GATHER_NOTW_H2_D
+#define LOAD_IN_H2_128_D GATHER_NOTW_H2_128_D
+
 #define STORE_OUT_S TW_SCATTER_S
 #define STORE_OUT_128_S TW_SCATTER_128_S
 #define STORE_OUT_64_S TW_SCATTER_LOW_128_S
@@ -55,6 +61,12 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{0, 30, 51, 49, 49, 9},
 #undef STORE_OUT_64_S
 #undef STORE_OUT_128_S
 #undef STORE_OUT_S
+
+#undef LOAD_IN_H2_128_D
+#undef LOAD_IN_H2_D
+#undef LOAD_IN_H2_64_S
+#undef LOAD_IN_H2_128_S
+#undef LOAD_IN_H2_S
 
 #undef LOAD_IN_128_D
 #undef LOAD_IN_D

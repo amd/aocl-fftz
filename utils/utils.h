@@ -188,7 +188,7 @@ FFTZ_INT32 setup_dynamic_dispatcher(FFTZ_INT32 opt_off, FFTZ_INT32 opt_level);
 #define PRINT_LP64_PROBLEM_DESCRIPTOR(problem, data_type)\
     PRINT_PROBLEM_DESCRIPTOR(problem, data_type, "%d", "LP64")
 #define PRINT_ILP64_PROBLEM_DESCRIPTOR(problem, data_type)\
-    PRINT_PROBLEM_DESCRIPTOR(problem, data_type, "%ld", "ILP64")
+    PRINT_PROBLEM_DESCRIPTOR(problem, data_type, "%td", "ILP64")
 
 #else
 

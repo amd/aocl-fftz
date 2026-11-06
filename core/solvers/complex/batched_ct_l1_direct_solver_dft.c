@@ -46,9 +46,9 @@ static FFTZ_INT32 fill_direct_strides(aoclfftz_strides_t *strides,
         return ret;
     }
 
-    strides->v_in_h2_stride = strides->v_in_stride =
+    strides->v_in_sym_stride = strides->v_in_stride =
         vec_in_stride * DATA_STRIDE;
-    strides->v_out_h2_stride = strides->v_out_stride =
+    strides->v_out_sym_stride = strides->v_out_stride =
         vec_out_stride * DATA_STRIDE;
     return SOLVER_SUCCESS;
 }

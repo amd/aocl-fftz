@@ -253,9 +253,9 @@ static inline FFTZ_INT32 validate_flags(aoclfftz_flags_t *flags)
     }                                                                          \
     for (FFTZ_INT32 i = 0; i < vec_rank; i++) \
     {                                                                          \
-        if (vecs[i].n <= 0)                                                    \
+        if (vecs[i].n < 0)                                                     \
         {                                                                      \
-            AOCLFFTZ_ERROR("Vector[%d]: size must be at least 1", i);          \
+            AOCLFFTZ_ERROR("Vector[%d]: size cannot be negative", i);          \
             errno = AOCLFFTZ_INVALID_INPUT;                                    \
             goto validation_exit;                                              \
         }                                                                      \
@@ -338,23 +338,16 @@ static inline FFTZ_INT32 validate_control_params(
     return AOCLFFTZ_SUCCESS;
 }
 
+ /* Input/output buffers are validated only for placement (pointer identity):
+  *   - In-place requires in == out
+  *   - Out-of-place requires in != out
+  * NULL is permitted at setup; aoclfftz_execute requires non-NULL setup-time buffers,
+  * otherwise use aoclfftz_execute_io with non-NULL buffers. */
 #define VALIDATE_PROBLEM_DESCRIPTOR(problem)                                   \
 {                                                                              \
     FFTZ_INT32 ret = AOCLFFTZ_SUCCESS; \
     if (problem == NULL)                                                       \
     {                                                                          \
-        ret = AOCLFFTZ_INVALID_INPUT;                                          \
-        goto validation_exit;                                                  \
-    }                                                                          \
-    if (problem->out == NULL)                                                  \
-    {                                                                          \
-        AOCLFFTZ_ERROR("Output buffer cannot be NULL");                        \
-        ret = AOCLFFTZ_INVALID_INPUT;                                          \
-        goto validation_exit;                                                  \
-    }                                                                          \
-    if (problem->in == NULL)                                                   \
-    {                                                                          \
-        AOCLFFTZ_ERROR("Input buffer cannot be NULL");                         \
         ret = AOCLFFTZ_INVALID_INPUT;                                          \
         goto validation_exit;                                                  \
     }                                                                          \
@@ -400,12 +393,13 @@ static inline FFTZ_INT32 validate_control_params(
     {                                                                          \
         VALIDATE_BUFFERS(problem->in, problem->out, 1 /* out_of_place */, ret) \
     }                                                                          \
-    if (problem->pthr_fft.dynamic_load_model != 0)                             \
+    if (problem->pthr_fft.dynamic_load_model != 0                              \
+        && problem->pthr_fft.dynamic_load_model != 1)                          \
     {                                                                          \
         AOCLFFTZ_LOG(INFO, global_logger_mode,                                 \
-                "dynamic_load_model is currently unsupported, "                \
-                "disabling it");                                               \
-        problem->pthr_fft.dynamic_load_model = 0;                              \
+                "dynamic_load_model must be 0 or 1, "                          \
+                "defaulting to 1");                                            \
+        problem->pthr_fft.dynamic_load_model = 1;                              \
     }                                                                          \
     if ((problem->pthr_fft.num_threads != 1))                                  \
     {                                                                          \

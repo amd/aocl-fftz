@@ -7,10 +7,6 @@
 #
 # Installs GTest library and link all the gtest based test cases to CTest.
 # Rebuild the AOCL-FFTZ library with wrapper files to make it work for gtests.
-# Compiles and installs the library and test bench binary with configured
-# options. Supports uninstall custom command to remove the installed files.
-# Enables CTest for adding and testing Gtest and test bench related tests.
-# Finds Doxygen installation and generates the documentation automatically.
 #
 # @author Srirammaswamy Srinivasan
 # @author Ashwin K. Godbole
@@ -103,11 +99,70 @@ if(ASAN)
     target_link_options(${gtest_lib_name} PUBLIC -fsanitize=address)
 endif()
 
+# Build FFTW wrapper as a test-local static library so fftw_wrapper tests
+# can link against it regardless of add_subdirectory ordering in the parent.
+if(BUILD_THIRD_PARTY_WRAPPERS)
+    # CONFIGURE_DEPENDS so adding/removing wrapper sources triggers a CMake
+    # reconfigure and fftw3_gtest cannot silently fall out of sync (matches the
+    # GTEST_SRC_FILES glob below).
+    file(GLOB FFTW_WRAPPER_GTEST_SRCS CONFIGURE_DEPENDS
+        ${CMAKE_SOURCE_DIR}/wrappers/fftw/api/*.c
+        ${CMAKE_SOURCE_DIR}/wrappers/fftw/src/c/*.c
+        ${CMAKE_SOURCE_DIR}/wrappers/fftw/src/fortran/*.c
+        ${CMAKE_SOURCE_DIR}/wrappers/fftw/src/translator/*.c
+    )
+    add_library(fftw3_gtest STATIC ${FFTW_WRAPPER_GTEST_SRCS})
+    target_include_directories(fftw3_gtest PRIVATE
+        ${CMAKE_SOURCE_DIR}/wrappers/fftw
+        ${CMAKE_SOURCE_DIR}/wrappers/fftw/api
+        ${CMAKE_SOURCE_DIR}/api)
+    target_link_libraries(fftw3_gtest PRIVATE ${gtest_lib_name})
+
+    # fftw3_gtest is the wrapper/translator code actually under test, so it must
+    # carry the same coverage / AddressSanitizer instrumentation as the core
+    # gtest library -- otherwise a leak or overflow inside the wrapper would be
+    # invisible to an ASAN build and the wrapper would be missing from coverage.
+    if(CODE_COVERAGE)
+        target_compile_options(fftw3_gtest PUBLIC --coverage -fprofile-abs-path)
+        target_link_options(fftw3_gtest PUBLIC --coverage)
+    endif()
+    if(ASAN)
+        target_compile_options(fftw3_gtest PUBLIC -fsanitize=address -O0 -gdwarf-5 -g3)
+        target_link_options(fftw3_gtest PUBLIC -fsanitize=address)
+    endif()
+endif()
+
 file(GLOB GTEST_SRC_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/${GTEST_DIR}/*/*.cpp)
+
+# gtest_discover_tests uses POST_BUILD discovery with a 5 s timeout by default.
+# Sanitizer builds (ASAN or FUZZTEST via FUZZ_FLAGS) are slower to enumerate
+# and can hit that limit under CI load, so use PRE_TEST and 60 s.
+set(GTEST_DISCOVERY_MODE POST_BUILD)
+set(GTEST_DISCOVERY_TIMEOUT 5)
+if(ASAN OR FUZZTEST)
+    set(GTEST_DISCOVERY_MODE PRE_TEST)
+    set(GTEST_DISCOVERY_TIMEOUT 60)
+endif()
+
+# FFTW wrapper tests require the test-local fftw3_gtest static library, which is
+# only defined when BUILD_THIRD_PARTY_WRAPPERS=ON. When it is OFF, note the skip
+# once here rather than emitting one message per fftw_wrapper_*_gtest file.
+if(NOT TARGET fftw3_gtest)
+    message(STATUS
+        "BUILD_THIRD_PARTY_WRAPPERS=OFF: skipping fftw_wrapper_*_gtest targets")
+endif()
 
 foreach(FILE ${GTEST_SRC_FILES})
     get_filename_component(TNAME ${FILE} NAME_WLE)
     if(NOT "${TNAME}" MATCHES "[A-Za-z0-9_]*_gtest")
+        continue()
+    endif()
+
+    # Skip fftw_wrapper files before creating any target when the wrapper
+    # library is unavailable, otherwise the default build (wrappers OFF) would
+    # emit fftw_wrapper_*_gtest targets with no include paths or link libraries
+    # and fail to compile. (Single summary message emitted above.)
+    if("${FILE}" MATCHES "fftw_wrapper" AND NOT TARGET fftw3_gtest)
         continue()
     endif()
 
@@ -158,7 +213,16 @@ foreach(FILE ${GTEST_SRC_FILES})
 
     add_executable(${TNAME} ${FILE})
     add_dependencies(${TNAME} ${deps_googletest})
-    target_link_libraries(${TNAME} PRIVATE ${gtest_lib_name} gtest gtest_main Threads::Threads)
+
+    if("${FILE}" MATCHES "fftw_wrapper")
+        target_link_libraries(${TNAME} PRIVATE fftw3_gtest ${gtest_lib_name} gtest gtest_main Threads::Threads)
+        target_include_directories(${TNAME} PRIVATE
+            ${CMAKE_SOURCE_DIR}/wrappers/fftw/api
+            ${CMAKE_SOURCE_DIR}/wrappers/fftw
+            ${CMAKE_SOURCE_DIR}/api)
+    else()
+        target_link_libraries(${TNAME} PRIVATE ${gtest_lib_name} gtest gtest_main Threads::Threads)
+    endif()
 
     if("${FILE}" MATCHES ".*/concurrency/.*" OR API_GTEST_HAS_OPENMP)
         if(WIN32 OR NOT OpenMP_libomp_LIBRARY)
@@ -169,13 +233,14 @@ foreach(FILE ${GTEST_SRC_FILES})
             target_link_libraries(${TNAME} PRIVATE ${OpenMP_libomp_LIBRARY})
         endif()
     endif()
-
     if(API_GTEST_HAS_OPENMP)
         target_compile_definitions(${TNAME}
             PRIVATE AOCLFFTZ_API_CONCURRENCY_TESTS)
     endif()
 
-    gtest_discover_tests(${TNAME})
+    gtest_discover_tests(${TNAME}
+        DISCOVERY_MODE ${GTEST_DISCOVERY_MODE}
+        DISCOVERY_TIMEOUT ${GTEST_DISCOVERY_TIMEOUT})
 endforeach()
 
 if(ENABLE_MULTI_THREADING)
@@ -243,6 +308,7 @@ if(NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "None")
 
         if(RUN_RESULT EQUAL 0)
             target_compile_definitions(kernel_gtest PRIVATE -DAVX512_SUPPORTED)
+            target_compile_definitions(fused_twiddle_transpose_kernel_gtest PRIVATE -DAVX512_SUPPORTED)
         else()
             message(WARNING "AVX512 not supported by hardware. Skipping AVX512 tests.")
         endif()
@@ -286,6 +352,7 @@ if(NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "None")
 
         if(RUN_RESULT EQUAL 0)
             target_compile_definitions(kernel_gtest PRIVATE -DAVX256_SUPPORTED)
+            target_compile_definitions(fused_twiddle_transpose_kernel_gtest PRIVATE -DAVX256_SUPPORTED)
         else()
             message(WARNING "AVX256 (with FMA) not supported by hardware. Skipping AVX256 tests.")
         endif()
@@ -329,6 +396,7 @@ if(NOT ENABLE_INSTRUCTIONS_UPTO STREQUAL "None")
 
         if(RUN_RESULT EQUAL 0)
             target_compile_definitions(kernel_gtest PRIVATE -DAVX128_SUPPORTED)
+            target_compile_definitions(fused_twiddle_transpose_kernel_gtest PRIVATE -DAVX128_SUPPORTED)
         else()
             message(WARNING "AVX128 (AVX) not supported by hardware. Skipping AVX128 tests.")
         endif()
@@ -414,5 +482,7 @@ if(FUZZTEST)
         endif()
     endif()
     target_link_libraries(fuzz_test PRIVATE fuzztest_fuzztest_gtest_main)
-    gtest_discover_tests(fuzz_test)
+    gtest_discover_tests(fuzz_test
+        DISCOVERY_MODE ${GTEST_DISCOVERY_MODE}
+        DISCOVERY_TIMEOUT ${GTEST_DISCOVERY_TIMEOUT})
 endif()

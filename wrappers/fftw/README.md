@@ -10,10 +10,10 @@ Prerequisites
 -------------
 1. CMake - Version 3.26 or above
 2. Linux :
-        GCC compiler - Version 7.1 or above  (or)
-        AOCC compiler - Version 2.0 or above
+        GCC compiler - Version 8.0 or above (or)
+        Clang/AOCC compiler - Version 8.0 or above (AOCC 2.0 or above)
 3. Windows :
-        Visual Studio with Clang 12 or above
+        Visual Studio with Clang 12 or above (ClangCl toolset)
 4. AOCL-FFTZ library and header file
 
 Setting up Dependencies
@@ -24,11 +24,11 @@ Building on Linux
 -----------------
 1. Run the following command in order to generate and configure fftw wrappers build system.
    ```
-   cmake -B <build directory> <CMakeLists.txt filepath>
+   cmake -B <build directory> <CMakeLists.txt directory>
    ```
    Additional options that can be specified for build configuration are:
    ```
-   cmake -B <build directory> <CMakeLists.txt filepath>
+   cmake -B <build directory> <CMakeLists.txt directory>
    -DFFTZ_LIB_PATH=<FFTZ library directory>
    <Additional Library Build Options>
    ```
@@ -38,9 +38,10 @@ Building on Linux
    cmake --build <build directory> --target install -j
    ```
    The library is generated in "lib" directory. <br>
-   The additional option `--target install` will install the library, binary, and <br>
-   interface header files in the installation path as specified with <br>
-   `-DCMAKE_INSTALL_PREFIX` option or in the local system path. <br>
+   The additional option `--target install` will install the library, interface <br>
+   header files, and the CMake package configuration and pkg-config files in the <br>
+   installation path as specified with `-DCMAKE_INSTALL_PREFIX` option or in the <br>
+   local system path. <br>
    The option `-j` will run the compilation process using multiple cores.
 
 3. To uninstall the installed files, run the following custom command:

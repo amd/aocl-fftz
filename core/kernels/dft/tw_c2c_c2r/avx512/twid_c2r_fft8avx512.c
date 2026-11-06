@@ -33,6 +33,14 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{7, 18, 26, 142, 62, 55},
 #define LOAD_IN_256_D GATHER_NOTW_256_D
 #define LOAD_IN_128_D GATHER_NOTW_128_D
 
+#define LOAD_IN_H2_S GATHER_NOTW_H2_S
+#define LOAD_IN_H2_256_S GATHER_NOTW_H2_256_S
+#define LOAD_IN_H2_128_S GATHER_NOTW_H2_128_S
+#define LOAD_IN_H2_64_S GATHER_NOTW_H2_LOW_128_S
+#define LOAD_IN_H2_D GATHER_NOTW_H2_D
+#define LOAD_IN_H2_256_D GATHER_NOTW_H2_256_D
+#define LOAD_IN_H2_128_D GATHER_NOTW_H2_128_D
+
 #define STORE_OUT_S TW_SCATTER_S
 #define STORE_OUT_256_S TW_SCATTER_256_S
 #define STORE_OUT_128_S TW_SCATTER_128_S
@@ -63,6 +71,14 @@ static const ops_cycles_t ops_cnt[NUM_PRECISIONS] = {{7, 18, 26, 142, 62, 55},
 #undef STORE_OUT_128_S
 #undef STORE_OUT_256_S
 #undef STORE_OUT_S
+
+#undef LOAD_IN_H2_128_D
+#undef LOAD_IN_H2_256_D
+#undef LOAD_IN_H2_D
+#undef LOAD_IN_H2_64_S
+#undef LOAD_IN_H2_128_S
+#undef LOAD_IN_H2_256_S
+#undef LOAD_IN_H2_S
 
 #undef LOAD_IN_128_D
 #undef LOAD_IN_256_D
